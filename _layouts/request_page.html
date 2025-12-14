@@ -1,0 +1,39 @@
+---
+layout: default
+---
+
+<div class="details-container request-theme" style="max-width: 900px; margin: 2rem auto; padding: 20px; border-top: 4px solid #0a84ff;">
+    
+    <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+                <i class="fas fa-bullhorn"></i> طلب شراء
+            </span>
+        </div>
+        <h1 style="color: #fff; font-size: 2rem; margin-bottom: 10px;">{{ page.title }}</h1>
+        <p style="color: var(--color-text-secondary); font-size: 1.1rem;">
+            <i class="fas fa-map-marker-alt" style="color: #0a84ff;"></i> {{ page.location }}
+        </p>
+    </div>
+
+    <!-- الميزانية -->
+    <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; margin-bottom: 30px;">
+        <span style="color: #888; font-size: 0.9rem;">الميزانية المرصودة</span>
+        <div style="color: #fff; font-size: 1.5rem; font-weight: bold; margin-top: 5px;">{{ page.budget }}</div>
+    </div>
+
+    <!-- تفاصيل الطلب -->
+    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ccc; line-height: 1.8; margin-bottom: 30px;">
+        <h3 style="color: #0a84ff; margin-bottom: 1rem;">مواصفات الطلب</h3>
+        {{ content }}
+    </div>
+
+    <!-- دعوة للفعل (لديك عقار؟) -->
+    <div class="actions" style="text-align: center;">
+        <h3 style="color: #fff; margin-bottom: 15px;">هل لديك عقار يناسب هذا الطلب؟</h3>
+        <a href="https://wa.me/201147758857?text=لدي عقار مناسب للطلب: {{ page.title }}" class="action-btn" style="background: #0a84ff; color: #fff; display: inline-block; padding: 15px 40px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(10, 132, 255, 0.3);">
+            <i class="fab fa-whatsapp"></i> تواصل معنا لعرضه
+        </a>
+    </div>
+
+</div>
