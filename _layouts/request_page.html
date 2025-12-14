@@ -2,38 +2,160 @@
 layout: default
 ---
 
-<div class="details-container request-theme" style="max-width: 900px; margin: 2rem auto; padding: 20px; border-top: 4px solid #0a84ff;">
+{% assign phone_number = "+201147758857" %}
+{% assign whatsapp_number = "201147758857" %}
+{% assign whatsapp_message = "لدي عقار يناسب طلبك: " | append: page.title | url_encode %}
+
+<!-- بيانات منظمة للطلب (Schema Markup) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Offer",
+  "name": "{{ page.title }}",
+  "description": "طلب شراء عقار في {{ page.location }}",
+  "url": "{{ page.url | absolute_url }}",
+  "priceSpecification": {
+    "@type": "PriceSpecification",
+    "price": "{{ page.budget | replace: 'جنيه', '' | replace: ',', '' | strip }}",
+    "priceCurrency": "EGP"
+  },
+  "itemOffered": {
+    "@type": "RealEstateListing",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "{{ page.location | split: ',' | first | default: 'مدينة نصر' }}",
+      "addressRegion": "القاهرة",
+      "addressCountry": "EG"
+    }
+  }
+}
+</script>
+
+<div class="details-container request-theme" itemscope itemtype="https://schema.org/Offer" style="max-width: 900px; margin: 2rem auto; padding: 20px; border-top: 4px solid #0a84ff;">
     
+    <!-- 1. رأس الصفحة -->
     <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff;">
                 <i class="fas fa-bullhorn"></i> طلب شراء
             </span>
+            <span style="background: rgba(255, 255, 255, 0.05); color: #ccc; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+                <i class="fas fa-clock"></i> {{ page.date | date: "%Y-%m-%d" | default: "جديد" }}
+            </span>
         </div>
-        <h1 style="color: #fff; font-size: 2rem; margin-bottom: 10px;">{{ page.title }}</h1>
-        <p style="color: var(--color-text-secondary); font-size: 1.1rem;">
+        
+        <h1 itemprop="name" style="color: #fff; font-size: 2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
+        
+        <p itemprop="address" style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
             <i class="fas fa-map-marker-alt" style="color: #0a84ff;"></i> {{ page.location }}
         </p>
     </div>
 
-    <!-- الميزانية -->
-    <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; margin-bottom: 30px;">
-        <span style="color: #888; font-size: 0.9rem;">الميزانية المرصودة</span>
-        <div style="color: #fff; font-size: 1.5rem; font-weight: bold; margin-top: 5px;">{{ page.budget }}</div>
+    <!-- 2. الميزانية -->
+    <div itemprop="priceSpecification" itemscope itemtype="https://schema.org/PriceSpecification" 
+         style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(10, 132, 255, 0.05)); padding: 25px; border-radius: 15px; border: 2px solid #0a84ff; text-align: center; margin-bottom: 30px;">
+        <span style="color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px;">
+            <i class="fas fa-money-bill-wave"></i> الميزانية المرصودة
+        </span>
+        <div style="color: #fff; font-size: 1.8rem; font-weight: bold; margin-top: 5px;">
+            <span itemprop="price">{{ page.budget }}</span>
+            <meta itemprop="priceCurrency" content="EGP">
+        </div>
     </div>
 
-    <!-- تفاصيل الطلب -->
-    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ccc; line-height: 1.8; margin-bottom: 30px;">
-        <h3 style="color: #0a84ff; margin-bottom: 1rem;">مواصفات الطلب</h3>
+    <!-- 3. تفاصيل الطلب -->
+    <div class="content-body" itemprop="description" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ccc; line-height: 1.8; margin-bottom: 30px;">
+        <h3 style="color: #0a84ff; margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">
+            <i class="fas fa-clipboard-list"></i> تفاصيل ومتطلبات الطلب
+        </h3>
         {{ content }}
+        
+        {% if page.requirements %}
+        <div style="margin-top: 2rem;">
+            <h4 style="color: #0a84ff; margin-bottom: 1rem;">المتطلبات الأساسية:</h4>
+            <ul style="padding-right: 1.5rem;">
+                {% for req in page.requirements %}
+                <li style="color: #ddd; margin-bottom: 10px; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                    <i class="fas fa-check-circle" style="color: #0a84ff; margin-left: 8px;"></i> {{ req }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- دعوة للفعل (لديك عقار؟) -->
-    <div class="actions" style="text-align: center;">
-        <h3 style="color: #fff; margin-bottom: 15px;">هل لديك عقار يناسب هذا الطلب؟</h3>
-        <a href="https://wa.me/201147758857?text=لدي عقار مناسب للطلب: {{ page.title }}" class="action-btn" style="background: #0a84ff; color: #fff; display: inline-block; padding: 15px 40px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(10, 132, 255, 0.3);">
-            <i class="fab fa-whatsapp"></i> تواصل معنا لعرضه
+    <!-- 4. قسم تواصل للملاك -->
+    <div style="background: rgba(10, 132, 255, 0.05); padding: 2rem; border-radius: 15px; border: 1px solid #0a84ff; margin-bottom: 30px;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <h3 style="color: #fff; margin-bottom: 10px; font-size: 1.5rem;">
+                <i class="fas fa-home" style="color: #0a84ff;"></i> هل لديك عقار يناسب هذا الطلب؟
+            </h3>
+            <p style="color: #88c7ff; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
+                يمكنك التواصل معنا لعرض عقارك على العميل مباشرة
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <p style="color: #ccc; font-size: 1.1rem;">اتصل بنا للتفاصيل:</p>
+            <div style="font-size: 1.3rem; color: #fff; direction: ltr; font-weight: bold; margin: 10px 0;">
+                {{ phone_number }}
+            </div>
+        </div>
+
+        <!-- 5. أزرار التواصل -->
+        <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
+               class="action-btn whatsapp-btn"
+               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp Request - {{ page.title }}')"
+               style="flex: 1; min-width: 250px; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i>
+                <span>عرض العقار عبر واتساب</span>
+            </a>
+            
+            <a href="tel:{{ phone_number }}" 
+               class="action-btn phone-btn"
+               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call Request - {{ page.title }}')"
+               style="flex: 1; min-width: 200px; background: transparent; border: 2px solid #0a84ff; color: #0a84ff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fas fa-phone-alt" style="font-size: 1.3rem;"></i>
+                <span>اتصال مباشر</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 6. روابط التنقل -->
+    <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333;">
+        <a href="{{ '/requests/' | relative_url }}" 
+           style="color: #0a84ff; text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-right"></i>
+            <span>عرض جميع الطلبات</span>
+        </a>
+        <span style="color: #666; margin: 0 10px;">|</span>
+        <a href="{{ '/add-your-property.html' | relative_url }}" 
+           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-plus-circle"></i>
+            <span>أضف عقارك للبيع</span>
         </a>
     </div>
-
 </div>
+
+<style>
+    @media (max-width: 768px) {
+        .details-container.request-theme {
+            padding: 15px;
+            margin: 1rem auto;
+        }
+        
+        .details-header h1 {
+            font-size: 1.6rem;
+        }
+        
+        .actions {
+            flex-direction: column;
+        }
+        
+        .action-btn {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+</style>
