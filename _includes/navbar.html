@@ -1,104 +1,75 @@
-<!-- =========================================================
-     شريط التنقل الماسي (Navbar) - متوافق مع النظام الجديد
-     ========================================================= -->
-<nav class="navbar">
-  
-  <!-- 1. الشعار (اللوجو) -->
-  <div class="navbar-logo">
-    <a href="{{ '/' | relative_url }}">
+<!-- 
+  شريط التنقل العلوي (Navbar) - النسخة المحسنة للـ SEO
+-->
+<nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
+  <!-- الشعار مع رابط للصفحة الرئيسية -->
+  <div class="navbar-logo" itemscope itemtype="https://schema.org/RealEstateAgent">
+    <a href="{{ '/' | relative_url }}" itemprop="url">
       <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
-           alt="{{ site.title }}" 
-           width="90" height="90" 
-           style="max-height: 70px; width: auto;">
+           alt="شقق للبيع في مدينة نصر - {{ site.title }}" 
+           width="120" 
+           height="120"
+           itemprop="logo"
+           loading="eager">
+      <meta itemprop="name" content="{{ site.title }}">
     </a>
   </div>
 
-  <!-- 2. الروابط (تم تصحيح المسارات لنظام المجموعات) -->
-  <div class="navbar-links" id="navLinks">
-    
-    <!-- زر الرئيسية -->
-    <a href="{{ '/' | relative_url }}" class="nav-link">
-      <i class="fas fa-home"></i> <span>الرئيسية</span>
+  <!-- الروابط الرئيسية -->
+  <div class="navbar-links">
+    <!-- زر تصفح العقارات (ذهبي) -->
+    <a href="{{ '/properties/' | relative_url }}" 
+       class="nav-link properties"
+       title="تصفح جميع العقارات للبيع والإيجار في مدينة نصر">
+      <i class="fas fa-home" aria-hidden="true"></i>
+      <span itemprop="name">عقارات</span>
     </a>
 
-    <!-- زر العقارات (رابط المجموعات الجديد) -->
-    <a href="{{ '/properties/' | relative_url }}" class="nav-link properties">
-      <i class="fas fa-building"></i> <span>العروض</span>
+    <!-- زر الطلبات (شفاف) -->
+    <a href="{{ '/requests/' | relative_url }}" 
+       class="nav-link requests"
+       title="طلبات العملاء للشقق والمحلات في مدينة نصر">
+      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+      <span itemprop="name">طلبات</span>
     </a>
 
-    <!-- زر الطلبات (رابط المجموعات الجديد) -->
-    <a href="{{ '/requests/' | relative_url }}" class="nav-link requests">
-      <i class="fas fa-bullhorn"></i> <span>الطلبات</span>
+    <!-- زر أضف عقارك (إطار ذهبي) -->
+    <a href="{{ '/add-your-property.html' | relative_url }}" 
+       class="nav-link add-property"
+       style="border: 2px solid var(--color-primary); color: var(--color-primary); background: transparent;"
+       title="أضف عقارك للبيع أو الإيجار مجاناً">
+      <i class="fas fa-plus-circle" aria-hidden="true"></i>
+      <span itemprop="name">أضف عقارك</span>
     </a>
 
-    <!-- زر من نحن -->
-    <a href="{{ '/about-us.html' | relative_url }}" class="nav-link">
-      <i class="fas fa-users"></i> <span>من نحن</span>
+    <!-- زر الاتصال المباشر (للجوال فقط) -->
+    <a href="tel:+201147758857" 
+       class="nav-link mobile-only"
+       style="background: linear-gradient(45deg, #25D366, #128C7E); color: white; display: none;"
+       onclick="trackPhoneCall('+201147758857', 'Navbar Mobile Button')"
+       title="اتصل بنا مباشرة للاستفسار عن العقارات">
+      <i class="fas fa-phone-alt" aria-hidden="true"></i>
+      <span>اتصل</span>
     </a>
-
-    <!-- زر أضف عقارك (المميز) -->
-    <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-link add-btn" style="border: 1px solid var(--color-primary); color: var(--color-primary);">
-      <i class="fas fa-plus-circle"></i> <span>أضف عقارك</span>
-    </a>
-
   </div>
-
-  <!-- 3. زر القائمة للموبايل (Hamburger Menu) -->
-  <div class="menu-toggle" onclick="toggleMenu()">
-    <i class="fas fa-bars" style="color: var(--color-primary); font-size: 1.5rem;"></i>
-  </div>
-
 </nav>
 
-<!-- =========================================================
-     ستايل وجافاسكربت خاص بالهيدر فقط (لضمان عمله فوراً)
-     ========================================================= -->
 <style>
-  /* تنسيق أساسي */
-  .navbar {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1rem 2rem; background: rgba(5,5,5,0.95);
-    border-bottom: 1px solid var(--color-border-light);
-    position: sticky; top: 0; z-index: 9999;
-  }
-  
-  .navbar-links { display: flex; gap: 15px; align-items: center; }
-  
-  .nav-link {
-    color: #fff; font-weight: bold; text-decoration: none;
-    font-size: 0.95rem; display: flex; align-items: center; gap: 8px;
-    padding: 8px 15px; border-radius: 10px; transition: 0.3s;
-  }
-  
-  .nav-link:hover { background: rgba(255,255,255,0.1); color: var(--color-primary); }
-  
-  /* تمييز الأزرار */
-  .nav-link.properties { background: var(--color-primary); color: #000 !important; }
-  .nav-link.requests { border: 1px solid #444; }
-  
-  .menu-toggle { display: none; cursor: pointer; }
-
-  /* --- استجابة الموبايل (Mobile Responsive) --- */
-  @media (max-width: 900px) {
-    .menu-toggle { display: block; }
-    
-    .navbar-links {
-      display: none; /* مخفي افتراضياً */
-      flex-direction: column;
-      position: absolute; top: 100%; left: 0; width: 100%;
-      background: #000; border-bottom: 2px solid var(--color-primary);
-      padding: 20px; gap: 15px;
+  /* إظهار زر الاتصال في الجوال فقط */
+  @media (max-width: 768px) {
+    .nav-link.mobile-only {
+      display: flex !important;
     }
-    
-    .navbar-links.active { display: flex; } /* يظهر عند الضغط */
-    
-    .nav-link { width: 100%; justify-content: center; padding: 12px; }
+  }
+  
+  /* تحسينات الشريط التنقل للجوال */
+  @media (max-width: 480px) {
+    .navbar-links {
+      gap: 0.5rem;
+    }
+    .nav-link {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
   }
 </style>
-
-<script>
-  function toggleMenu() {
-    const nav = document.getElementById('navLinks');
-    nav.classList.toggle('active');
-  }
-</script>
