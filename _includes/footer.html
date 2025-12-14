@@ -32,7 +32,7 @@
           <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-phone" style="color: var(--color-primary);"></i>
             <a href="tel:+201147758857" 
-               style="color: #fff; text-decoration: none; direction: ltr;"
+               style="color: #fff; text-decoration: none; direction: ltr; font-weight: bold;"
                onclick="trackPhoneCall('+201147758857', 'Footer Phone')"
                itemprop="telephone">+20 114 775 8857</a>
           </div>
@@ -64,8 +64,18 @@
             <a href="{{ '/requests/' | relative_url }}" 
                style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
                title="طلبات العملاء للعقارات في مدينة نصر">
-              <i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i>
+              <i class="fas fa-angle-left" style="color: #0a84ff; margin-left: 8px;"></i>
               طلبات العملاء
+            </a>
+          </li>
+          
+          <!-- رابط جديد: ابحث عن عقار -->
+          <li role="listitem">
+            <a href="{{ '/add-your-request.html' | relative_url }}" 
+               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
+               title="أضف طلبك للبحث عن عقار في مدينة نصر">
+              <i class="fas fa-angle-left" style="color: #0a84ff; margin-left: 8px;"></i>
+              ابحث عن عقار
             </a>
           </li>
           
@@ -129,10 +139,19 @@
              rel="noopener noreferrer">
             <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
           </a>
+          
+          <a href="https://wa.me/201147758857?text=أهلًا، أريد الاستفسار عن عقار في مدينة نصر" 
+             target="_blank" 
+             class="social-btn whatsapp" 
+             aria-label="تواصل معنا عبر واتساب"
+             rel="noopener noreferrer"
+             style="background: #25D366; border-color: #25D366;">
+            <i class="fab fa-whatsapp" aria-hidden="true"></i>
+          </a>
         </div>
 
         <!-- زر الاتصال السريع -->
-        <div style="margin-top: 25px; border: 2px solid var(--color-primary); padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+        <div style="margin-top: 25px; border: 2px solid var(--color-primary); padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px; background: rgba(212, 175, 55, 0.05);">
             <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);" aria-hidden="true"></i>
             <div>
                 <div style="font-size: 0.8rem; color: #ccc;">استشارة عقارية مجانية</div>
@@ -146,9 +165,15 @@
         </div>
 
         <!-- ساعات العمل -->
-        <div style="margin-top: 15px; color: #aaa; font-size: 0.85rem;">
+        <div style="margin-top: 15px; color: #aaa; font-size: 0.85rem; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
           <i class="fas fa-clock" style="color: var(--color-primary); margin-left: 5px;"></i>
-          ساعات العمل: 9 صباحاً - 9 مساءً
+          <span>ساعات العمل: 9 صباحاً - 9 مساءً</span>
+        </div>
+        
+        <!-- التخصص -->
+        <div style="margin-top: 10px; color: #888; font-size: 0.8rem; font-style: italic;">
+          <i class="fas fa-map-marker" style="color: #666;"></i>
+          متخصصون في عقارات مدينة نصر
         </div>
       </div>
 
@@ -198,11 +223,22 @@
   .social-btn.facebook:hover { background: #1877F2; border-color: #1877F2; }
   .social-btn.linkedin:hover { background: #0A66C2; border-color: #0A66C2; }
   .social-btn.maps:hover { background: #34A853; border-color: #34A853; }
+  .social-btn.whatsapp:hover { background: #128C7E; border-color: #128C7E; transform: translateY(-3px) scale(1.1); }
   
   /* تحسينات الروابط في الفوتر */
   .site-footer ul li a:hover { 
     color: var(--color-primary) !important; 
     padding-right: 5px; 
+  }
+  
+  /* تخصيص ألوان روابط الطلبات */
+  .site-footer ul li a[href*="requests"],
+  .site-footer ul li a[href*="add-your-request"] {
+    transition: all 0.3s ease;
+  }
+  .site-footer ul li a[href*="requests"]:hover,
+  .site-footer ul li a[href*="add-your-request"]:hover {
+    color: #0a84ff !important;
   }
   
   /* تحسينات التجاوب */
@@ -216,10 +252,16 @@
       text-align: center; 
       gap: 10px;
     }
+    
+    .social-icons-grid {
+      justify-content: center;
+    }
   }
   
   /* تحديث السنة تلقائياً */
   <script>
-    document.getElementById('current-year').textContent = new Date().getFullYear();
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('current-year').textContent = new Date().getFullYear();
+    });
   </script>
-  </style>
+</style>
