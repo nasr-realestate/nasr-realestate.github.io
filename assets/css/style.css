@@ -1,0 +1,134 @@
+/* =========================================================
+ * 🏢 سمسار طلبك - الهوية الذهبية (Luxury Dark Theme)
+ * ========================================================= */
+
+/* استيراد الخطوط (Cairo) */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+
+:root {
+  /* الألوان الملكية */
+  --color-primary: #d4af37;       /* ذهبي أساسي */
+  --color-secondary: #fce205;     /* أصفر ليموني (إيجار) */
+  --color-blue: #0a84ff;          /* أزرق ملكي (طلبات) */
+  
+  /* الخلفيات */
+  --color-background: #050505;
+  --color-surface-1: #0a0a0a;
+  --color-surface-2: #141414;
+  
+  /* النصوص والحدود */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b0b0b0;
+  --color-border: #333333;
+  --color-border-light: rgba(212, 175, 55, 0.2);
+}
+
+/* === الأساسيات === */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  overflow-x: hidden;
+}
+
+a { text-decoration: none; transition: 0.3s; }
+ul { list-style: none; }
+img { max-width: 100%; height: auto; display: block; }
+
+/* === الخلفية السينمائية === */
+.cinematic-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 30%, #1e1e2f 0%, #000000 70%);
+    z-index: -2;
+}
+.animated-overlay {
+    position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5; z-index: -1; animation: rotateBg 120s linear infinite;
+}
+@keyframes rotateBg { 100% { transform: rotate(360deg); } }
+
+/* === الهيدر (Navbar) === */
+.navbar {
+  background-color: rgba(5, 5, 5, 0.95);
+  padding: 1rem 2rem;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--color-border-light);
+  position: sticky; top: 0; z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+.navbar-links { display: flex; gap: 1rem; }
+.nav-link {
+  color: #fff; padding: 8px 15px; border-radius: 12px; font-weight: bold;
+  display: flex; align-items: center; gap: 5px;
+}
+.nav-link.properties { background: var(--color-primary); color: #000; }
+.nav-link.requests { border: 1px solid var(--color-border); color: #ccc; }
+
+/* === البطاقات (Cards) === */
+.properties-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem; padding: 2rem; max-width: 1200px; margin: 0 auto;
+}
+
+.property-card {
+    background: var(--color-surface-2);
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s;
+    border: 1px solid var(--color-border);
+    position: relative;
+    padding: 1.5rem;
+}
+.property-card:hover { transform: translateY(-5px); border-color: var(--color-primary); }
+
+/* الألوان حسب النوع */
+.property-card.sale { border-top: 4px solid var(--color-primary); }
+.property-card.rent { border-top: 4px solid var(--color-secondary); }
+.property-card.request { border-top: 4px solid var(--color-blue); background: linear-gradient(145deg, #111, #161616); }
+
+/* نصوص البطاقة */
+.property-header { border-bottom: 1px dashed #333; padding-bottom: 10px; margin-bottom: 15px; }
+.property-title { color: #fff; font-size: 1.2rem; margin: 5px 0; line-height: 1.4; }
+.property-details { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9rem; }
+.price-highlight { 
+    width: 100%; font-weight: bold; font-size: 1.1rem; 
+    padding: 5px; border-radius: 5px; margin-bottom: 5px;
+}
+.sale .price-highlight { color: var(--color-primary); background: rgba(212,175,55,0.1); }
+.rent .price-highlight { color: var(--color-secondary); background: rgba(252,226,5,0.1); }
+.request .price-highlight { color: var(--color-blue); background: rgba(10,132,255,0.1); }
+
+/* === الأزرار (إصلاح الشكل المستطيل) === */
+.action-btn, .nav-btn, .back-btn, .filter-btn {
+    border-radius: 10px !important;
+    padding: 10px 25px !important;
+    font-size: 0.95rem !important;
+    display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+    cursor: pointer; border: none; font-weight: bold;
+}
+
+/* === الفوتر === */
+.site-footer {
+    padding: 3rem 2rem; background: #000; border-top: 1px solid #222; margin-top: auto;
+}
+.social-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #111; border: 1px solid #333; color: #fff;
+}
+
+/* === استجابة الموبايل === */
+@media (max-width: 768px) {
+    .navbar { padding: 1rem; }
+    .navbar-logo img { height: 40px; width: auto; }
+    .nav-link span { display: none; } /* إخفاء النص والاكتفاء بالأيقونة في الموبايل */
+    .properties-grid { padding: 1rem; grid-template-columns: 1fr; }
+    
+    .property-details { gap: 15px; }
+    .property-details span { flex: 1 1 40%; }
+                  }
