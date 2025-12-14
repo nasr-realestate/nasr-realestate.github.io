@@ -1,16 +1,103 @@
-<footer class="site-footer">
-  <div class="footer-content" style="text-align: center; color: #b0b0b0;">
+<!-- 
+  تذييل الموقع (Footer) - نسخة التباين العالي والسرعة
+-->
+<footer class="site-footer" style="padding: 4rem 2rem 1.5rem 2rem; border-top: 1px solid #1a1a1a; background: #050505;">
+  <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
     
-    <div class="footer-logo" style="margin-bottom: 20px;">
-        <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="Logo" width="100" style="filter: grayscale(100%); opacity: 0.7;">
+    <!-- شبكة الفوتر (3 أعمدة) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
+      
+      <!-- العمود 1: عن الشركة -->
+      <div>
+        <div class="footer-logo" style="margin-bottom: 1.5rem;">
+          <a href="{{ '/' | relative_url }}">
+            <!-- اللوجو المحلي السريع مع Lazy Loading -->
+            <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
+                 alt="{{ site.title }}" 
+                 width="130" height="130"
+                 style="filter: grayscale(100%) brightness(200%); opacity: 0.9;" 
+                 loading="lazy">
+          </a>
+        </div>
+        <!-- تم تفتيح اللون هنا ليصبح مقروءاً بوضوح -->
+        <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;">
+          بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، إيجار) مبنية على الثقة، الشفافية، والخبرة الطويلة في السوق المصري.
+        </p>
+      </div>
+
+      <!-- العمود 2: روابط سريعة -->
+      <div>
+        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">روابط سريعة</h3>
+        <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
+          
+          <!-- تم تفتيح ألوان الروابط إلى #ccc -->
+          <li><a href="{{ '/properties/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تصفح العقارات</a></li>
+          
+          <li><a href="{{ '/requests/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> طلبات العملاء</a></li>
+          
+          <li><a href="{{ '/add-your-property.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> أضف عقارك مجاناً</a></li>
+          
+          <li><a href="{{ '/about-us.html' | relative_url }}" style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> من نحن (قصتنا)</a></li>
+          
+          <li><a href="{{ '/contact-us.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تواصل معنا</a></li>
+        </ul>
+      </div>
+
+      <!-- العمود 3: تواصل اجتماعي -->
+      <div>
+        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">تواصل اجتماعي</h3>
+        
+        <div class="social-icons-grid" style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a href="https://www.facebook.com/Tarekonly" target="_blank" class="social-btn facebook" aria-label="فيسبوك"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" target="_blank" class="social-btn linkedin" aria-label="لينكدإن"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" target="_blank" class="social-btn maps" aria-label="موقعنا"><i class="fas fa-map-marker-alt"></i></a>
+          <a href="https://pin.it/4tCl3jl6r" target="_blank" class="social-btn pinterest" aria-label="Pinterest"><i class="fab fa-pinterest"></i></a>
+        </div>
+
+        <div style="margin-top: 25px; border: 1px solid #222; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);"></i>
+            <div>
+                <div style="font-size: 0.8rem; color: #ccc;">هل تحتاج مساعدة؟</div>
+                <div style="font-size: 1rem; color: #fff; direction: ltr;">+20 114 775 8857</div>
+            </div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="footer-links" style="margin-bottom: 20px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-        <a href="{{ '/about-us.html' | relative_url }}" style="color: #ccc;">من نحن</a>
-        <a href="{{ '/contact-us.html' | relative_url }}" style="color: #ccc;">تواصل معنا</a>
-        <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #ccc;">الخصوصية</a>
+    <!-- الشريط السفلي -->
+    <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+      
+      <!-- لون فاتح للحقوق -->
+      <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
+        جميع الحقوق محفوظة &copy; {{ 'now' | date: "%Y" }} <span style="color: var(--color-primary);">سمسار طلبك</span>.
+      </p>
+
+      <div style="display: flex; gap: 20px;">
+          <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#b0b0b0'">سياسة الخصوصية</a>
+      </div>
+
     </div>
 
-    <p style="font-size: 0.9rem;">&copy; 2025 سمسار طلبك. جميع الحقوق محفوظة.</p>
   </div>
 </footer>
+
+<style>
+  .social-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #111; border: 1px solid #333; color: #fff;
+    font-size: 1.1rem; transition: all 0.3s ease; text-decoration: none;
+  }
+  .social-btn:hover { transform: translateY(-3px); border-color: var(--color-primary); }
+  .social-btn.facebook:hover { background: #1877F2; border-color: #1877F2; }
+  .social-btn.linkedin:hover { background: #0A66C2; border-color: #0A66C2; }
+  .social-btn.maps:hover { background: #34A853; border-color: #34A853; }
+  .social-btn.pinterest:hover { background: #E60023; border-color: #E60023; }
+  
+  .site-footer ul li a:hover { color: var(--color-primary) !important; padding-right: 5px; }
+  
+  @media (max-width: 768px) {
+      .copyright-bar { flex-direction: column; text-align: center; }
+  }
+</style>
