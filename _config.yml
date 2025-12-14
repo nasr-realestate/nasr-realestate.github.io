@@ -1,0 +1,66 @@
+# =========================================================
+# === ⚙️ إعدادات الموقع الجديد (GitHub Pages Edition) ===
+# =========================================================
+
+# 1. المعلومات الأساسية
+title: "سمسار طلبك"
+email: "elraikonly@outlook.sa"
+description: "بوابتك العقارية الأولى في مدينة نصر. بيع وشراء وإيجار."
+url: "https://nasr-realestate.github.io" # رابطك الجديد
+baseurl: "" # يترك فارغاً لأننا نستخدم رابط المستخدم الرئيسي
+lang: "ar"
+timezone: Africa/Cairo
+
+# 2. بيانات المالك (للسيو)
+author:
+  name: "طارق طنطاوي"
+logo: "/assets/img/logo.webp"
+
+# 3. إعدادات البناء (Markdown)
+markdown: kramdown
+permalink: pretty
+
+# 4. الإضافات (GitHub يدعم هذه الإضافات تلقائياً)
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# 5. 🔥 السر الجديد: المجموعات (Collections)
+# هذا هو الكود الذي سيجعل لكل عقار صفحة حقيقية وروابط قوية
+collections:
+  properties:
+    output: true
+    permalink: /properties/:path/ # الرابط سيكون: site.com/properties/flat-name
+  requests:
+    output: true
+    permalink: /requests/:path/
+
+# 6. الإعدادات الافتراضية
+defaults:
+  -
+    scope:
+      path: ""
+    values:
+      layout: "default"
+      image: "/assets/img/social-home.webp"
+  # إعداد افتراضي للعقارات (ليستخدموا قالب العقار تلقائياً)
+  -
+    scope:
+      path: ""
+      type: "properties"
+    values:
+      layout: "property_page"
+  # إعداد افتراضي للطلبات
+  -
+    scope:
+      path: ""
+      type: "requests"
+    values:
+      layout: "request_page"
+
+# 7. الملفات المستبعدة
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - README.md
