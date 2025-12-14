@@ -1,29 +1,24 @@
 /* =========================================================
  * 🏢 سمسار طلبك - الهوية الذهبية (Luxury Dark Theme)
+ * v3.0 - النسخة المصححة (الأزرار وقائمة الموبايل)
  * ========================================================= */
 
-/* استيراد الخطوط (Cairo) */
+/* استيراد الخطوط */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
 
 :root {
-  /* الألوان الملكية */
-  --color-primary: #d4af37;       /* ذهبي أساسي */
-  --color-secondary: #fce205;     /* أصفر ليموني (إيجار) */
-  --color-blue: #0a84ff;          /* أزرق ملكي (طلبات) */
-  
-  /* الخلفيات */
+  --color-primary: #d4af37;       /* ذهبي */
+  --color-secondary: #fce205;     /* أصفر */
+  --color-blue: #0a84ff;          /* أزرق */
   --color-background: #050505;
   --color-surface-1: #0a0a0a;
   --color-surface-2: #141414;
-  
-  /* النصوص والحدود */
   --color-text-primary: #ffffff;
   --color-text-secondary: #b0b0b0;
   --color-border: #333333;
   --color-border-light: rgba(212, 175, 55, 0.2);
 }
 
-/* === الأساسيات === */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
@@ -39,20 +34,40 @@ a { text-decoration: none; transition: 0.3s; }
 ul { list-style: none; }
 img { max-width: 100%; height: auto; display: block; }
 
-/* === الخلفية السينمائية === */
-.cinematic-bg {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(circle at 50% 30%, #1e1e2f 0%, #000000 70%);
-    z-index: -2;
+/* === 1. إصلاح الأزرار (للتخلص من اللون الأزرق) === */
+.nav-btn, .action-btn, .back-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none !important; /* إجبار إلغاء الخط */
+    transition: all 0.3s ease;
 }
-.animated-overlay {
-    position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.5; z-index: -1; animation: rotateBg 120s linear infinite;
-}
-@keyframes rotateBg { 100% { transform: rotate(360deg); } }
 
-/* === الهيدر (Navbar) === */
+/* زر العروض (ذهبي) */
+.nav-btn.properties {
+    background: linear-gradient(45deg, var(--color-primary), #b38f1d);
+    color: #000 !important; /* نص أسود */
+    border: none;
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+/* زر الطلبات (شفاف بحدود) */
+.nav-btn.requests {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff !important;
+}
+
+.nav-btn:hover { transform: translateY(-3px); }
+.nav-btn.requests:hover { border-color: var(--color-primary); color: var(--color-primary) !important; }
+
+/* === 2. الهيدر والقائمة (Navbar) === */
 .navbar {
   background-color: rgba(5, 5, 5, 0.95);
   padding: 1rem 2rem;
@@ -61,15 +76,63 @@ img { max-width: 100%; height: auto; display: block; }
   position: sticky; top: 0; z-index: 1000;
   backdrop-filter: blur(10px);
 }
-.navbar-links { display: flex; gap: 1rem; }
-.nav-link {
-  color: #fff; padding: 8px 15px; border-radius: 12px; font-weight: bold;
-  display: flex; align-items: center; gap: 5px;
-}
-.nav-link.properties { background: var(--color-primary); color: #000; }
-.nav-link.requests { border: 1px solid var(--color-border); color: #ccc; }
 
-/* === البطاقات (Cards) === */
+.navbar-links { display: flex; gap: 15px; align-items: center; }
+
+/* روابط الهيدر */
+.navbar .nav-link {
+    color: #fff !important;
+    font-weight: bold;
+    font-size: 0.95rem;
+    padding: 8px 15px;
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 8px;
+}
+.navbar .nav-link:hover { color: var(--color-primary) !important; background: rgba(255,255,255,0.05); }
+
+/* زر أضف عقارك في الهيدر */
+.navbar .add-btn {
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary) !important;
+}
+
+/* أيقونة الموبايل */
+.menu-toggle { display: none; cursor: pointer; font-size: 1.5rem; color: var(--color-primary); }
+
+/* === 3. إصلاحات الموبايل (القائمة المخفية) === */
+@media (max-width: 900px) {
+    .menu-toggle { display: block; } /* إظهار زر القائمة */
+    
+    .navbar-links {
+        display: none; /* مخفي افتراضياً */
+        flex-direction: column;
+        position: absolute;
+        top: 100%; left: 0; width: 100%;
+        background-color: #000; /* خلفية سوداء صريحة */
+        border-bottom: 2px solid var(--color-primary);
+        padding: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.8);
+    }
+    
+    /* عند تفعيل القائمة */
+    .navbar-links.active { display: flex; }
+    
+    .navbar .nav-link {
+        width: 100%;
+        justify-content: flex-start; /* محاذاة لليمين */
+        padding: 15px;
+        border-bottom: 1px solid #222;
+        font-size: 1.1rem; /* تكبير الخط */
+    }
+    
+    /* إظهار النصوص بوضوح */
+    .navbar .nav-link span { display: inline-block !important; }
+    
+    .hero-buttons { flex-direction: column; gap: 15px; width: 100%; }
+    .nav-btn { width: 100%; justify-content: center; }
+}
+
+/* === البطاقات والشبكة === */
 .properties-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem; padding: 2rem; max-width: 1200px; margin: 0 auto;
@@ -77,58 +140,16 @@ img { max-width: 100%; height: auto; display: block; }
 
 .property-card {
     background: var(--color-surface-2);
-    border-radius: 15px;
-    overflow: hidden;
-    transition: transform 0.3s;
+    border-radius: 15px; overflow: hidden;
     border: 1px solid var(--color-border);
-    position: relative;
-    padding: 1.5rem;
+    padding: 1.5rem; transition: 0.3s;
 }
 .property-card:hover { transform: translateY(-5px); border-color: var(--color-primary); }
-
-/* الألوان حسب النوع */
-.property-card.sale { border-top: 4px solid var(--color-primary); }
-.property-card.rent { border-top: 4px solid var(--color-secondary); }
-.property-card.request { border-top: 4px solid var(--color-blue); background: linear-gradient(145deg, #111, #161616); }
-
-/* نصوص البطاقة */
 .property-header { border-bottom: 1px dashed #333; padding-bottom: 10px; margin-bottom: 15px; }
 .property-title { color: #fff; font-size: 1.2rem; margin: 5px 0; line-height: 1.4; }
-.property-details { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9rem; }
-.price-highlight { 
-    width: 100%; font-weight: bold; font-size: 1.1rem; 
-    padding: 5px; border-radius: 5px; margin-bottom: 5px;
-}
-.sale .price-highlight { color: var(--color-primary); background: rgba(212,175,55,0.1); }
-.rent .price-highlight { color: var(--color-secondary); background: rgba(252,226,5,0.1); }
-.request .price-highlight { color: var(--color-blue); background: rgba(10,132,255,0.1); }
-
-/* === الأزرار (إصلاح الشكل المستطيل) === */
-.action-btn, .nav-btn, .back-btn, .filter-btn {
-    border-radius: 10px !important;
-    padding: 10px 25px !important;
-    font-size: 0.95rem !important;
-    display: inline-flex; justify-content: center; align-items: center; gap: 8px;
-    cursor: pointer; border: none; font-weight: bold;
-}
+.property-details { display: flex; flex-wrap: wrap; gap: 15px; color: #ccc; font-size: 0.9rem; }
 
 /* === الفوتر === */
 .site-footer {
     padding: 3rem 2rem; background: #000; border-top: 1px solid #222; margin-top: auto;
-}
-.social-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    background: #111; border: 1px solid #333; color: #fff;
-}
-
-/* === استجابة الموبايل === */
-@media (max-width: 768px) {
-    .navbar { padding: 1rem; }
-    .navbar-logo img { height: 40px; width: auto; }
-    .nav-link span { display: none; } /* إخفاء النص والاكتفاء بالأيقونة في الموبايل */
-    .properties-grid { padding: 1rem; grid-template-columns: 1fr; }
-    
-    .property-details { gap: 15px; }
-    .property-details span { flex: 1 1 40%; }
 }
