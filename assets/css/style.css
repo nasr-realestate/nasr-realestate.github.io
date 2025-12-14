@@ -1,41 +1,29 @@
 /* =========================================================
- * 🏢 سمسار طلبك - الإصدار الذهبي الفاخر (Gold Edition) v2.1
- * CSS متكامل مع إصلاحات التجاوب ومظهر أزرار محسن
+ * 🏢 سمسار طلبك - الهوية الذهبية (Luxury Dark Theme)
  * ========================================================= */
 
-/* 1. استيراد خط القاهرة (Cairo) */
+/* استيراد الخطوط (Cairo) */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
 
 :root {
-  /* --- 🎨 لوحة الألوان الذهبية الفاخرة --- */
-  --color-primary: #d4af37;      /* الذهبي الأساسي */
-  --color-secondary: #fce205;    /* أصفر لامع للإضاءة */
-  --color-primary-dark: #b38f1d; /* ذهبي داكن للظلال */
-  --color-secondary-dark: #998a00;
-
-  /* --- 🌑 الخلفيات (Royal Black) --- */
-  --color-background: #050505;   /* أسود حالك */
-  --color-surface-1: #0a0a0a;    /* رمادي أسود داكن جداً */
-  --color-surface-2: #141414;    /* لون البطاقات */
-  --color-surface-gradient: linear-gradient(145deg, #1a1a1a 0%, #000000 100%);
-
-  /* --- 📝 النصوص --- */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #b0b0b0; /* فضي مطفي */
-  --color-text-on-primary: #000000; /* نص أسود على خلفية ذهبية */
+  /* الألوان الملكية */
+  --color-primary: #d4af37;       /* ذهبي أساسي */
+  --color-secondary: #fce205;     /* أصفر ليموني (إيجار) */
+  --color-blue: #0a84ff;          /* أزرق ملكي (طلبات) */
   
-  /* --- 💡 الحدود والإضاءة --- */
+  /* الخلفيات */
+  --color-background: #050505;
+  --color-surface-1: #0a0a0a;
+  --color-surface-2: #141414;
+  
+  /* النصوص والحدود */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b0b0b0;
   --color-border: #333333;
-  --color-border-light: rgba(212, 175, 55, 0.2); /* حدود ذهبية شفافة */
-  --color-error: #ff4d4d;
-
-  /* --- ✨ الظلال الذهبية (Glow Effects) --- */
-  --shadow-glow-primary: 0 0 15px rgba(212, 175, 55, 0.2), 0 0 30px rgba(212, 175, 55, 0.1);
-  --shadow-glow-secondary: 0 0 15px rgba(252, 226, 5, 0.15);
-  --shadow-interactive: 0 10px 40px rgba(0, 0, 0, 0.8);
+  --color-border-light: rgba(212, 175, 55, 0.2);
 }
 
-/* === 🌍 الإعدادات العامة === */
+/* === الأساسيات === */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
@@ -43,420 +31,104 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   font-family: 'Cairo', sans-serif;
-  line-height: 1.6;
   direction: rtl;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  overflow-x: hidden; /* لمنع أي تمرير عرضي غير مقصود */
+  overflow-x: hidden;
 }
 
-main { flex-grow: 1; position: relative; z-index: 2; }
+a { text-decoration: none; transition: 0.3s; }
+ul { list-style: none; }
+img { max-width: 100%; height: auto; display: block; }
 
-/* ========================================================= */
-/* === 🎥 الخلفيات السينمائية (جديد) 🎥 === */
-/* ========================================================= */
+/* === الخلفية السينمائية === */
 .cinematic-bg {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: radial-gradient(circle at 50% 30%, #1e1e2f 0%, #000000 70%);
     z-index: -2;
 }
-
 .animated-overlay {
-    position: fixed;
-    top: -50%; left: -50%; width: 200%; height: 200%;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    animation: rotateBg 120s linear infinite;
-    z-index: -1;
-    opacity: 0.5;
+    position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5; z-index: -1; animation: rotateBg 120s linear infinite;
 }
 @keyframes rotateBg { 100% { transform: rotate(360deg); } }
 
-/* ========================================================= */
-/* === 🧭 شريط التنقل العلوي (Luxury Navbar) 🧭 === */
-/* ========================================================= */
+/* === الهيدر (Navbar) === */
 .navbar {
-  background-color: rgba(5, 5, 5, 0.9);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  background-color: rgba(5, 5, 5, 0.95);
   padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  display: flex; justify-content: space-between; align-items: center;
   border-bottom: 1px solid var(--color-border-light);
+  position: sticky; top: 0; z-index: 1000;
+  backdrop-filter: blur(10px);
 }
-.navbar-logo a {
-  text-decoration: none; 
-  color: var(--color-primary);
-  font-size: 1.6rem; 
-  font-weight: 800;
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3));
-}
-.navbar-logo a:hover {
-  color: #fff;
-  filter: drop-shadow(0 0 15px var(--color-primary));
-}
-.navbar-logo img {
-    max-height: 50px;
-    width: auto;
-}
-
-.navbar-links { 
-    display: flex; 
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
+.navbar-links { display: flex; gap: 1rem; }
 .nav-link {
-  display: flex; align-items: center; gap: 0.5rem;
-  color: var(--color-text-primary); padding: 0.6rem 1.5rem;
-  border-radius: 50px; text-decoration: none; font-weight: 700;
-  transition: all 0.3s ease;
-  font-size: 0.95rem;
+  color: #fff; padding: 8px 15px; border-radius: 12px; font-weight: bold;
+  display: flex; align-items: center; gap: 5px;
+}
+.nav-link.properties { background: var(--color-primary); color: #000; }
+.nav-link.requests { border: 1px solid var(--color-border); color: #ccc; }
+
+/* === البطاقات (Cards) === */
+.properties-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem; padding: 2rem; max-width: 1200px; margin: 0 auto;
 }
 
-.nav-link.properties {
-  background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
-  color: #000;
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
-}
-.nav-link.requests {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-}
-
-.nav-link:hover { transform: translateY(-3px); }
-.nav-link.properties:hover {
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
-}
-.nav-link.requests:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-/* ========================================================= */
-/* === 🏠 تنسيقات الصفحة الرئيسية (Home Hero) 🏠 === */
-/* ========================================================= */
-.home-hero {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 80vh; text-align: center; padding: 2rem;
-  position: relative; z-index: 1;
-  background-size: cover !important;
-  background-position: center center !important;
-  background-repeat: no-repeat !important;
-}
-
-.home-hero h1 {
-  font-size: 3.5rem; font-weight: 900;
-  background: linear-gradient(45deg, var(--color-primary), #fffeb3);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  text-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
-  margin-bottom: 1rem;
-  animation: text-glow 4s ease-in-out infinite alternate;
-}
-@keyframes text-glow {
-  from { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3)); }
-  to { filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6)); }
-}
-
-.home-hero p {
-  font-size: 1.5rem; color: var(--color-text-secondary);
-  margin-bottom: 3rem; max-width: 700px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-}
-
-.hero-buttons { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
-.hero-buttons a {
-  text-decoration: none; font-weight: bold; font-size: 1.2rem;
-  border-radius: 50px; padding: 1.2rem 3rem;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid transparent;
-}
-
-.hero-buttons a:first-child { 
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  color: #000;
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-}
-.hero-buttons a:last-child { 
-  background: rgba(0,0,0,0.5); 
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.hero-buttons a:hover { transform: translateY(-5px); }
-.hero-buttons a:first-child:hover { box-shadow: 0 10px 40px rgba(212, 175, 55, 0.5); }
-.hero-buttons a:last-child:hover { background: var(--color-primary); color: #000; }
-
-/* ========================================================= */
-/* === 🌟 رأس الصفحات الداخلية (Header) === */
-/* ========================================================= */
-.page-header {
-  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
-  padding: 4rem 1rem; text-align: center; 
-  border-bottom: 1px solid var(--color-border-light);
-  margin-bottom: 3rem; position: relative; overflow: hidden;
-}
-.page-header h1 {
-  font-size: 3rem; 
-  background: linear-gradient(45deg, var(--color-primary), #fff);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  margin: 0; font-weight: 800;
-}
-.page-header p {
-  color: var(--color-text-secondary); font-size: 1.2rem; margin-top: 1rem;
-}
-
-/* === 🎯 الفلاتر === */
-.filter-container {
-  display: flex; justify-content: center; flex-wrap: wrap;
-  gap: 1rem; margin: 2rem 0; padding: 0 1rem;
-}
-.filter-btn {
-  padding: 0.8rem 1.8rem; background: var(--color-surface-2); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); border-radius: 50px; cursor: pointer;
-  transition: all 0.3s ease; font-weight: 600;
-}
-.filter-btn:hover, .filter-btn.active {
-  background: var(--color-primary);
-  color: #000; border-color: var(--color-primary);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-}
-
-/* === 🏙️ شبكة العقارات === */
-.properties-grid, .requests-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem; 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 0 1rem;
-}
-
-/* === 💳 بطاقة العقار (نسخة الفخامة) === */
 .property-card {
-  background: var(--color-surface-2); 
-  border: 1px solid var(--color-border-light);
-  border-radius: 20px; padding: 1.5rem;
-  transition: all 0.4s ease;
-  cursor: pointer; position: relative; overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  display: flex; flex-direction: column;
-}
-.property-card:hover {
-  transform: translateY(-10px); 
-  border-color: var(--color-primary);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 15px rgba(212, 175, 55, 0.1);
-}
-
-.property-header {
-  display: flex; align-items: center; gap: 15px; margin-bottom: 1rem;
-  padding-bottom: 1rem; border-bottom: 1px solid var(--color-border);
-}
-.property-logo {
-  width: 50px; height: 50px; border-radius: 50%;
-  border: 2px solid var(--color-primary);
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-}
-.property-title {
-  color: var(--color-text-primary); font-size: 1.4rem; font-weight: 700;
-  margin: 0; line-height: 1.3;
-}
-.property-title span, .highlight-text { color: var(--color-primary); }
-
-.property-details { display: grid; gap: 0.8rem; margin: 1.5rem 0; }
-.property-detail {
-  display: flex; align-items: center; gap: 10px; padding: 0.6rem;
-  background: rgba(255, 255, 255, 0.03); border-radius: 10px;
-  border-right: 3px solid var(--color-primary);
-  border-left: none;
-}
-.detail-icon { font-size: 1.2rem; width: 25px; text-align: center; color: var(--color-primary); }
-.detail-label { font-weight: 600; color: var(--color-text-secondary); min-width: 80px; }
-.detail-value { color: var(--color-text-primary); flex: 1; font-weight: bold; }
-
-.property-description {
-  background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 10px;
-  margin: 1rem 0; border: 1px solid var(--color-border);
-  color: #aaa; line-height: 1.6; flex-grow: 1; font-size: 0.95rem;
-}
-
-/* === 📄 صفحة التفاصيل === */
-.details-container {
-  max-width: 900px; margin: 40px auto; padding: 2.5rem;
-  background: var(--color-surface-2); 
-  border: 1px solid var(--color-border-light);
-  border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-}
-.details-container img {
+    background: var(--color-surface-2);
     border-radius: 15px;
-    margin: 20px auto;
-    display: block;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    overflow: hidden;
+    transition: transform 0.3s;
     border: 1px solid var(--color-border);
+    position: relative;
+    padding: 1.5rem;
 }
-.details-header h1 { font-size: 2.2rem; color: var(--color-primary); }
-.details-price {
-  font-size: 1.8rem; color: #000; font-weight: bold;
-  margin-bottom: 1.5rem; text-align: center; 
-  background: linear-gradient(90deg, var(--color-primary), #b38f1d);
-  padding: 0.8rem; border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
-}
-.detail-item {
-  background: #000; padding: 1rem; border: 1px solid #333;
-  border-radius: 10px; border-right: 3px solid var(--color-primary);
-  border-left: none; color: #fff;
-}
-.details-description h2 {
-  font-size: 1.6rem; color: var(--color-primary);
-  border-bottom: 1px solid var(--color-border);
-}
-.action-btn {
-  border: none; padding: 15px 25px; border-radius: 50px; 
-  font-weight: bold; font-size: 1.1rem;
-}
-.whatsapp-btn { 
-  background-color: #25D366; color: white; 
-  box-shadow: 0 5px 15px rgba(37, 211, 102, 0.2);
-}
-.whatsapp-btn:hover { background-color: #1ebe5d; transform: translateY(-3px); }
+.property-card:hover { transform: translateY(-5px); border-color: var(--color-primary); }
 
-.copy-btn {
-  background-color: transparent; border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-}
-.copy-btn:hover { background: var(--color-primary); color: #000; }
+/* الألوان حسب النوع */
+.property-card.sale { border-top: 4px solid var(--color-primary); }
+.property-card.rent { border-top: 4px solid var(--color-secondary); }
+.property-card.request { border-top: 4px solid var(--color-blue); background: linear-gradient(145deg, #111, #161616); }
 
-/* === 🦶 الفوتر (Footer) === */
+/* نصوص البطاقة */
+.property-header { border-bottom: 1px dashed #333; padding-bottom: 10px; margin-bottom: 15px; }
+.property-title { color: #fff; font-size: 1.2rem; margin: 5px 0; line-height: 1.4; }
+.property-details { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9rem; }
+.price-highlight { 
+    width: 100%; font-weight: bold; font-size: 1.1rem; 
+    padding: 5px; border-radius: 5px; margin-bottom: 5px;
+}
+.sale .price-highlight { color: var(--color-primary); background: rgba(212,175,55,0.1); }
+.rent .price-highlight { color: var(--color-secondary); background: rgba(252,226,5,0.1); }
+.request .price-highlight { color: var(--color-blue); background: rgba(10,132,255,0.1); }
+
+/* === الأزرار (إصلاح الشكل المستطيل) === */
+.action-btn, .nav-btn, .back-btn, .filter-btn {
+    border-radius: 10px !important;
+    padding: 10px 25px !important;
+    font-size: 0.95rem !important;
+    display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+    cursor: pointer; border: none; font-weight: bold;
+}
+
+/* === الفوتر === */
 .site-footer {
-  background-color: #000;
-  color: var(--color-text-secondary);
-  padding: 4rem 2rem;
-  border-top: 1px solid #222;
+    padding: 3rem 2rem; background: #000; border-top: 1px solid #222; margin-top: auto;
 }
-.footer-logo a { color: var(--color-primary); font-size: 2rem; }
-.footer-links a:hover { color: var(--color-primary); }
-.social-links a {
-  background-color: #111; border: 1px solid #333;
-  color: #fff;
-}
-.social-links a:hover {
-  background-color: var(--color-primary); color: #000;
-  border-color: var(--color-primary);
-}
-.copyright a { color: var(--color-primary); }
-
-.back-btn {
-  background: transparent; border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-}
-.back-btn:hover { background: var(--color-primary); color: #000; }
-
-/* === 📝 صفحة أضف عقارك === */
-.lead-text strong { color: var(--color-primary); }
-.whatsapp-btn-large {
-  background-color: #25D366; color: #fff;
-  border-radius: 50px; padding: 1.2rem 2rem;
-  box-shadow: 0 5px 20px rgba(37, 211, 102, 0.3);
-}
-.info-item {
-  background: var(--color-surface-2); border: 1px solid var(--color-border-light);
-}
-.info-icon { color: var(--color-primary); }
-.info-item:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-5px);
+.social-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #111; border: 1px solid #333; color: #fff;
 }
 
-/* === 🖼️ إصلاحات الصور العامة === */
-img {
-    max-width: 100%;
-    height: auto;
-}
-.hero-logo-container img {
-    max-width: 160px !important;
-    width: 160px;
-    height: auto;
-}
-
-/* =========================================================
- * === 📱 حزمة الإصلاح الشاملة للتجاوب (Responsive Fix Pack) 📱 ===
- * ========================================================= */
-
-/* --- 1. تحسينات الموبايل العامة (أقل من 768px) --- */
+/* === استجابة الموبايل === */
 @media (max-width: 768px) {
-  .navbar { 
-    padding: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .home-hero h1 { 
-    font-size: 2.5rem; 
-    line-height: 1.3;
-  }
-  
-  .home-hero p {
-    font-size: 1.1rem;
-  }
-
-  .properties-grid, .requests-grid { 
-    gap: 1.5rem; 
-  }
-
-  .property-card { 
-    padding: 1rem; 
-  }
-
-  .hero-buttons {
-    gap: 1rem;
-  }
-
-  .hero-buttons a { 
-    width: 90%; 
-    text-align: center; 
-    margin: 0 auto;
-  }
-  
-  .page-header {
-    padding: 3rem 1rem;
-    margin-bottom: 2rem;
-  }
-}
-
-/* --- 2. تحسينات الهواتف الضيقة جداً (أقل من 420px) --- */
-@media (max-width: 420px) {
-    .navbar-links {
-        gap: 0.75rem; /* زيادة المسافة بين الأزرار قليلاً */
-        justify-content: center; 
-        width: 100%; 
-        margin-top: 0.75rem; 
-    }
-
-    .nav-link {
-        /* ✨ تعديل: زيادة حجم الزر ليبدو أفخم */
-        padding: 0.6rem 1.2rem; 
-        /* ✨ تعديل: زيادة حجم الخط ليتناسب مع الزر */
-        font-size: 0.9rem;   
-    }
+    .navbar { padding: 1rem; }
+    .navbar-logo img { height: 40px; width: auto; }
+    .nav-link span { display: none; } /* إخفاء النص والاكتفاء بالأيقونة في الموبايل */
+    .properties-grid { padding: 1rem; grid-template-columns: 1fr; }
     
-    .navbar-logo {
-        width: 100%; 
-        text-align: center; 
-        margin-bottom: 0.5rem;
-    }
-}
-
-/* --- 3. ضمان عدم انزياح أي حاوية عن الشاشة --- */
-#latest-opportunities {
-    padding-left: 0;
-    padding-right: 0;
+    .property-details { gap: 15px; }
+    .property-details span { flex: 1 1 40%; }
 }
