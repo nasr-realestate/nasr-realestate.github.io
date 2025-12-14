@@ -2,25 +2,63 @@
 layout: default
 ---
 
-<div class="details-container" style="max-width: 1000px; margin: 2rem auto; padding: 20px; min-height: 80vh;">
+{% assign phone_number = page.phone_primary | default: "+201147758857" %}
+{% assign whatsapp_number = "201147758857" %}
+{% assign whatsapp_message = "استفسار بخصوص العقار: " | append: page.title | url_encode %}
+
+<!-- بيانات منظمة للعقار (Schema Markup) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateListing",
+  "name": "{{ page.title }}",
+  "description": "{{ page.description | default: page.title }}",
+  "url": "{{ page.url | absolute_url }}",
+  "image": "{% if page.image %}{{ page.image | absolute_url }}{% else %}{{ '/assets/img/social-home.webp' | absolute_url }}{% endif %}",
+  "offers": {
+    "@type": "Offer",
+    "price": "{{ page.price | replace: 'جنيه', '' | replace: ',', '' | strip }}",
+    "priceCurrency": "EGP",
+    "availability": "https://schema.org/InStock"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "{{ page.location | split: ',' | first | default: 'مدينة نصر' }}",
+    "addressRegion": "القاهرة",
+    "addressCountry": "EG"
+  },
+  "numberOfRooms": {{ page.rooms | default: 0 }},
+  "floorSize": {
+    "@type": "QuantitativeValue",
+    "value": "{{ page.area | split: ' ' | first }}",
+    "unitCode": "MTK"
+  }
+}
+</script>
+
+<div class="details-container" itemscope itemtype="https://schema.org/RealEstateListing" style="max-width: 1000px; margin: 2rem auto; padding: 20px; min-height: 80vh;">
     
     <!-- 1. رأس الصفحة (العنوان والسعر) -->
     <div class="details-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 20px; margin-bottom: 30px;">
-        <div style="margin-bottom: 15px;">
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
             <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
                 <i class="fas fa-hashtag"></i> كود: {{ page.ref_id | default: 'جديد' }}
             </span>
+            <span style="background: rgba(212, 175, 55, 0.1); color: var(--color-primary); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+                <i class="fas fa-tag"></i> {{ page.category | default: 'للبيع' }}
+            </span>
         </div>
         
-        <h1 style="color: #fff; font-size: 2.2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
+        <h1 itemprop="name" style="color: #fff; font-size: 2.2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
         
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-            <p style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
+            <p itemprop="address" style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
                 <i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}
             </p>
             
-            <div class="price-tag" style="background: linear-gradient(135deg, var(--color-primary), #b38f1d); color: #000; padding: 10px 25px; border-radius: 12px; font-weight: bold; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);">
-                {{ page.price }}
+            <div class="price-tag" itemprop="offers" itemscope itemtype="https://schema.org/Offer" style="background: linear-gradient(135deg, var(--color-primary), #b38f1d); color: #000; padding: 10px 25px; border-radius: 12px; font-weight: bold; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);">
+                <span itemprop="price">{{ page.price }}</span>
+                <meta itemprop="priceCurrency" content="EGP">
             </div>
         </div>
     </div>
@@ -28,7 +66,10 @@ layout: default
     <!-- 2. صورة العقار (إن وجدت) -->
     {% if page.image %}
     <div class="property-main-image" style="margin-bottom: 30px; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
-        <img src="{{ page.image | relative_url }}" alt="{{ page.title }}" style="width: 100%; height: auto; display: block;">
+        <img src="{{ page.image | relative_url }}" 
+             alt="{{ page.title }}" 
+             itemprop="image"
+             style="width: 100%; height: auto; display: block; max-height: 500px; object-fit: cover;">
     </div>
     {% endif %}
 
@@ -38,7 +79,7 @@ layout: default
         <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
             <i class="fas fa-ruler-combined" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
             <div style="font-size: 0.9rem; color: #888;">المساحة</div>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.area }}</div>
+            <div style="font-weight: bold; font-size: 1.1rem;" itemprop="floorSize">{{ page.area }}</div>
         </div>
         {% endif %}
         
@@ -46,7 +87,7 @@ layout: default
         <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
             <i class="fas fa-bed" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
             <div style="font-size: 0.9rem; color: #888;">الغرف</div>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.rooms }}</div>
+            <div style="font-weight: bold; font-size: 1.1rem;" itemprop="numberOfRooms">{{ page.rooms }}</div>
         </div>
         {% endif %}
         
@@ -65,22 +106,101 @@ layout: default
             <div style="font-weight: bold; font-size: 1.1rem;">{{ page.floor }}</div>
         </div>
         {% endif %}
+        
+        {% if page.property_type %}
+        <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
+            <i class="fas fa-home" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <div style="font-size: 0.9rem; color: #888;">النوع</div>
+            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.property_type }}</div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- 4. الوصف (المحتوى النصي) -->
-    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; font-size: 1.1rem; margin-bottom: 30px;">
-        <h3 style="color: var(--color-primary); margin-bottom: 1rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">التفاصيل الكاملة</h3>
+    <div class="content-body" itemprop="description" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; font-size: 1.1rem; margin-bottom: 30px;">
+        <h3 style="color: var(--color-primary); margin-bottom: 1rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">
+            <i class="fas fa-info-circle"></i> التفاصيل الكاملة
+        </h3>
         {{ content }}
+        
+        {% if page.features %}
+        <div style="margin-top: 2rem;">
+            <h4 style="color: var(--color-primary); margin-bottom: 1rem;">المميزات:</h4>
+            <ul style="padding-right: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                {% for feature in page.features %}
+                <li style="color: #ccc; margin-bottom: 8px;">
+                    <i class="fas fa-check" style="color: var(--color-primary); margin-left: 8px;"></i> {{ feature }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- 5. أزرار التواصل -->
-    <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap;">
-        <a href="https://wa.me/201147758857?text=استفسار بخصوص: {{ page.title }}" class="action-btn" style="flex: 2; background: #25D366; color: #fff; text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.2rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2);">
-            <i class="fab fa-whatsapp"></i> تواصل واتساب
-        </a>
-        <a href="tel:+201147758857" class="action-btn" style="flex: 1; background: transparent; border: 2px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.2rem;">
-            <i class="fas fa-phone"></i> اتصال
-        </a>
+    <!-- 5. قسم الاستفسار (Call to Action) -->
+    <div style="background: rgba(212, 175, 55, 0.1); padding: 2rem; border-radius: 15px; border: 1px solid var(--color-border-light); margin-bottom: 30px;">
+        <h3 style="color: #fff; text-align: center; margin-bottom: 1.5rem;">
+            <i class="fas fa-headset"></i> استفسر عن هذا العقار
+        </h3>
+        
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <p style="color: #ccc; font-size: 1.1rem;">للاستفسار أو حجز زيارة، تواصل معنا مباشرة:</p>
+            <div style="font-size: 1.3rem; color: #fff; direction: ltr; font-weight: bold; margin: 10px 0;">
+                {{ phone_number }}
+            </div>
+            <p style="color: #aaa; font-size: 0.9rem;">
+                <i class="fas fa-clock"></i> متاحون يومياً من 9 صباحاً حتى 9 مساءً
+            </p>
+        </div>
+
+        <!-- 6. أزرار التواصل -->
+        <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
+               class="action-btn whatsapp-btn"
+               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp - {{ page.title }}')"
+               style="flex: 1; min-width: 200px; background: #25D366; color: #fff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i>
+                <span>تواصل عبر واتساب</span>
+            </a>
+            
+            <a href="tel:{{ phone_number }}" 
+               class="action-btn phone-btn"
+               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call - {{ page.title }}')"
+               style="flex: 1; min-width: 200px; background: transparent; border: 2px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fas fa-phone-alt" style="font-size: 1.3rem;"></i>
+                <span>اتصال مباشر</span>
+            </a>
+        </div>
     </div>
 
+    <!-- 7. روابط التنقل -->
+    <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333;">
+        <a href="{{ '/properties/' | relative_url }}" 
+           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-right"></i>
+            <span>عرض جميع العقارات</span>
+        </a>
+    </div>
 </div>
+
+<style>
+    @media (max-width: 768px) {
+        .details-container {
+            padding: 15px;
+            margin: 1rem auto;
+        }
+        
+        .details-header h1 {
+            font-size: 1.8rem;
+        }
+        
+        .actions {
+            flex-direction: column;
+        }
+        
+        .action-btn {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+            </style>
