@@ -1,0 +1,39 @@
+---
+layout: default
+title: "طلبات العملاء | سمسار طلبك"
+description: "قائمة بطلبات الشراء والإيجار الحالية من عملاء جادين."
+permalink: /requests/
+---
+
+<!-- رأس الصفحة -->
+<header class="page-header">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">طلبات العملاء الجادة</h1>
+    <p style="opacity: 0.8; margin-top: 10px;">
+      هؤلاء مشترون ومستأجرون جاهزون للتعاقد. هل لديك عقار يناسبهم؟
+    </p>
+  </div>
+</header>
+
+<main>
+  <!-- شبكة العرض -->
+  <section class="properties-grid" style="min-height: 50vh;">
+    
+    <!-- حلقة تكرارية لجلب كل الطلبات -->
+    {% assign all_requests = site.requests | sort: 'date' | reverse %}
+    
+    {% for req in all_requests %}
+        
+        <!-- استدعاء تصميم البطاقة (نوع طلب) -->
+        {% include property_card.html item=req type="request" %}
+
+    {% else %}
+        <!-- رسالة في حالة عدم وجود طلبات -->
+        <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: #666;">
+            <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h3>لا توجد طلبات نشطة حالياً</h3>
+        </div>
+    {% endfor %}
+
+  </section>
+</main>
