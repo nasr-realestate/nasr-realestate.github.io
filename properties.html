@@ -1,0 +1,46 @@
+---
+layout: default
+title: "كل العروض العقارية | سمسار طلبك"
+description: "تصفح كافة العقارات المتاحة للبيع والإيجار في مدينة نصر."
+permalink: /properties/
+---
+
+<!-- رأس الصفحة -->
+<header class="page-header">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">معرض العقارات المتاحة</h1>
+    <p style="opacity: 0.8; margin-top: 10px;">
+      شقق، محلات، ومقرات إدارية تم التحقق منها
+    </p>
+  </div>
+</header>
+
+<main>
+  <!-- شبكة العرض -->
+  <section class="properties-grid" style="min-height: 50vh;">
+    
+    <!-- حلقة تكرارية لجلب كل العقارات من المجلد -->
+    {% assign all_properties = site.properties | sort: 'date' | reverse %}
+    
+    {% for prop in all_properties %}
+        
+        <!-- تحديد نوع البطاقة (بيع أم إيجار) -->
+        {% assign type = "sale" %}
+        {% if prop.title contains "إيجار" %}
+            {% assign type = "rent" %}
+        {% endif %}
+
+        <!-- استدعاء تصميم البطاقة -->
+        {% include property_card.html item=prop type=type %}
+
+    {% else %}
+        <!-- رسالة في حالة عدم وجود عقارات -->
+        <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: #666;">
+            <i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h3>لا توجد عروض مضافة حالياً</h3>
+            <p>جاري تحديث القائمة...</p>
+        </div>
+    {% endfor %}
+
+  </section>
+</main>
