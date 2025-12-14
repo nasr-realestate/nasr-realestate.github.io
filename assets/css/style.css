@@ -1,15 +1,13 @@
 /* =========================================================
- * 🏢 سمسار طلبك - الهوية الذهبية (Luxury Dark Theme)
- * v3.0 - النسخة المصححة (الأزرار وقائمة الموبايل)
+ * 🏢 سمسار طلبك - الستايل الذهبي (نسخة الرشاقة والأزرار البيضاوية)
  * ========================================================= */
 
-/* استيراد الخطوط */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
 
 :root {
-  --color-primary: #d4af37;       /* ذهبي */
-  --color-secondary: #fce205;     /* أصفر */
-  --color-blue: #0a84ff;          /* أزرق */
+  --color-primary: #d4af37;
+  --color-secondary: #fce205;
+  --color-blue: #0a84ff;
   --color-background: #050505;
   --color-surface-1: #0a0a0a;
   --color-surface-2: #141414;
@@ -34,110 +32,145 @@ a { text-decoration: none; transition: 0.3s; }
 ul { list-style: none; }
 img { max-width: 100%; height: auto; display: block; }
 
-/* === 1. إصلاح الأزرار (للتخلص من اللون الأزرق) === */
+/* === الخلفية === */
+.cinematic-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 30%, #1e1e2f 0%, #000000 70%);
+    z-index: -2;
+}
+.animated-overlay {
+    position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5; z-index: -1; animation: rotateBg 120s linear infinite;
+}
+@keyframes rotateBg { 100% { transform: rotate(360deg); } }
+
+/* === الأزرار (عودة الشكل البيضاوي) === */
 .nav-btn, .action-btn, .back-btn {
     display: inline-flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
     padding: 12px 30px;
-    border-radius: 10px;
+    /* 🔴 التعديل: 50px لجعلها بيضاوية كاملة */
+    border-radius: 50px !important; 
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    text-decoration: none !important; /* إجبار إلغاء الخط */
+    text-decoration: none !important;
     transition: all 0.3s ease;
+    /* منع التمدد */
+    width: auto !important;
+    min-width: 160px;
 }
 
-/* زر العروض (ذهبي) */
 .nav-btn.properties {
     background: linear-gradient(45deg, var(--color-primary), #b38f1d);
-    color: #000 !important; /* نص أسود */
+    color: #000 !important;
     border: none;
     box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
 
-/* زر الطلبات (شفاف بحدود) */
 .nav-btn.requests {
     background: transparent;
     border: 1px solid #fff;
     color: #fff !important;
 }
-
 .nav-btn:hover { transform: translateY(-3px); }
 .nav-btn.requests:hover { border-color: var(--color-primary); color: var(--color-primary) !important; }
 
-/* === 2. الهيدر والقائمة (Navbar) === */
+/* === الهيدر (Navbar) === */
 .navbar {
   background-color: rgba(5, 5, 5, 0.95);
-  padding: 1rem 2rem;
+  padding: 0.8rem 1.5rem;
   display: flex; justify-content: space-between; align-items: center;
   border-bottom: 1px solid var(--color-border-light);
   position: sticky; top: 0; z-index: 1000;
   backdrop-filter: blur(10px);
 }
 
-.navbar-links { display: flex; gap: 15px; align-items: center; }
+.navbar-links { display: flex; gap: 10px; align-items: center; }
 
-/* روابط الهيدر */
 .navbar .nav-link {
     color: #fff !important;
     font-weight: bold;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     padding: 8px 15px;
-    border-radius: 8px;
-    display: flex; align-items: center; gap: 8px;
+    border-radius: 50px; /* بيضاوي */
+    display: flex; align-items: center; gap: 6px;
 }
 .navbar .nav-link:hover { color: var(--color-primary) !important; background: rgba(255,255,255,0.05); }
 
-/* زر أضف عقارك في الهيدر */
 .navbar .add-btn {
     border: 1px solid var(--color-primary);
     color: var(--color-primary) !important;
 }
 
-/* أيقونة الموبايل */
-.menu-toggle { display: none; cursor: pointer; font-size: 1.5rem; color: var(--color-primary); }
+.menu-toggle { display: none; cursor: pointer; font-size: 1.4rem; color: var(--color-primary); }
 
-/* === 3. إصلاحات الموبايل (القائمة المخفية) === */
+/* === 🔴 إصلاحات الموبايل (الشكل المضغوط) === */
 @media (max-width: 900px) {
-    .menu-toggle { display: block; } /* إظهار زر القائمة */
+    .menu-toggle { display: block; }
     
+    /* تصغير الشعار السينمائي */
+    .hero-logo-container {
+        width: 130px !important;
+        height: 130px !important;
+    }
+    .hero-logo-container img {
+        width: 80px !important;
+        height: 80px !important;
+    }
+
+    /* إصلاح القائمة المنسدلة لتكون أفقية (أزرار بجانب بعض) */
     .navbar-links {
-        display: none; /* مخفي افتراضياً */
-        flex-direction: column;
+        display: none;
+        flex-direction: row; /* أفقي وليس عمودي */
+        flex-wrap: wrap;     /* يسمح بالنزول لسطر */
+        justify-content: center;
         position: absolute;
         top: 100%; left: 0; width: 100%;
-        background-color: #000; /* خلفية سوداء صريحة */
+        background-color: rgba(0,0,0,0.95);
         border-bottom: 2px solid var(--color-primary);
-        padding: 20px;
+        padding: 15px;
         box-shadow: 0 10px 20px rgba(0,0,0,0.8);
+        gap: 10px;
     }
     
-    /* عند تفعيل القائمة */
     .navbar-links.active { display: flex; }
     
+    /* تصغير أزرار القائمة */
     .navbar .nav-link {
-        width: 100%;
-        justify-content: flex-start; /* محاذاة لليمين */
-        padding: 15px;
-        border-bottom: 1px solid #222;
-        font-size: 1.1rem; /* تكبير الخط */
+        width: auto !important; /* ليس عرض كامل */
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border: 1px solid #333;
+        border-radius: 20px;
+        background: #111;
+        flex-direction: column; /* الأيقونة فوق النص */
+        gap: 5px;
     }
     
-    /* إظهار النصوص بوضوح */
-    .navbar .nav-link span { display: inline-block !important; }
+    /* أزرار الهيرو (لا تأكل الشاشة) */
+    .hero-buttons { 
+        flex-direction: column; 
+        gap: 15px; 
+        width: auto;
+        align-items: center;
+    }
     
-    .hero-buttons { flex-direction: column; gap: 15px; width: 100%; }
-    .nav-btn { width: 100%; justify-content: center; }
+    /* منع التمدد الكامل */
+    .nav-btn { 
+        width: auto !important; 
+        min-width: 200px; /* عرض معقول */
+    }
 }
 
-/* === البطاقات والشبكة === */
+/* === البطاقات === */
 .properties-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem; padding: 2rem; max-width: 1200px; margin: 0 auto;
 }
-
 .property-card {
     background: var(--color-surface-2);
     border-radius: 15px; overflow: hidden;
@@ -153,3 +186,10 @@ img { max-width: 100%; height: auto; display: block; }
 .site-footer {
     padding: 3rem 2rem; background: #000; border-top: 1px solid #222; margin-top: auto;
 }
+.social-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #111; border: 1px solid #333; color: #fff;
+    transition: 0.3s;
+}
+.social-btn:hover { transform: scale(1.1); border-color: var(--color-primary); }
