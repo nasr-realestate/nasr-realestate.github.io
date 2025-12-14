@@ -1,0 +1,86 @@
+---
+layout: default
+---
+
+<div class="details-container" style="max-width: 1000px; margin: 2rem auto; padding: 20px; min-height: 80vh;">
+    
+    <!-- 1. رأس الصفحة (العنوان والسعر) -->
+    <div class="details-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 20px; margin-bottom: 30px;">
+        <div style="margin-bottom: 15px;">
+            <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+                <i class="fas fa-hashtag"></i> كود: {{ page.ref_id | default: 'جديد' }}
+            </span>
+        </div>
+        
+        <h1 style="color: #fff; font-size: 2.2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <p style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
+                <i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}
+            </p>
+            
+            <div class="price-tag" style="background: linear-gradient(135deg, var(--color-primary), #b38f1d); color: #000; padding: 10px 25px; border-radius: 12px; font-weight: bold; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);">
+                {{ page.price }}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. صورة العقار (إن وجدت) -->
+    {% if page.image %}
+    <div class="property-main-image" style="margin-bottom: 30px; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+        <img src="{{ page.image | relative_url }}" alt="{{ page.title }}" style="width: 100%; height: auto; display: block;">
+    </div>
+    {% endif %}
+
+    <!-- 3. شبكة المواصفات (Grid) -->
+    <div class="details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 40px;">
+        {% if page.area %}
+        <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
+            <i class="fas fa-ruler-combined" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <div style="font-size: 0.9rem; color: #888;">المساحة</div>
+            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.area }}</div>
+        </div>
+        {% endif %}
+        
+        {% if page.rooms %}
+        <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
+            <i class="fas fa-bed" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <div style="font-size: 0.9rem; color: #888;">الغرف</div>
+            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.rooms }}</div>
+        </div>
+        {% endif %}
+        
+        {% if page.bathrooms %}
+        <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
+            <i class="fas fa-bath" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <div style="font-size: 0.9rem; color: #888;">الحمامات</div>
+            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.bathrooms }}</div>
+        </div>
+        {% endif %}
+        
+        {% if page.floor %}
+        <div class="detail-item" style="background: #111; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; color: #fff;">
+            <i class="fas fa-building" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <div style="font-size: 0.9rem; color: #888;">الدور</div>
+            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.floor }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 4. الوصف (المحتوى النصي) -->
+    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; font-size: 1.1rem; margin-bottom: 30px;">
+        <h3 style="color: var(--color-primary); margin-bottom: 1rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">التفاصيل الكاملة</h3>
+        {{ content }}
+    </div>
+
+    <!-- 5. أزرار التواصل -->
+    <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <a href="https://wa.me/201147758857?text=استفسار بخصوص: {{ page.title }}" class="action-btn" style="flex: 2; background: #25D366; color: #fff; text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.2rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2);">
+            <i class="fab fa-whatsapp"></i> تواصل واتساب
+        </a>
+        <a href="tel:+201147758857" class="action-btn" style="flex: 1; background: transparent; border: 2px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.2rem;">
+            <i class="fas fa-phone"></i> اتصال
+        </a>
+    </div>
+
+</div>
