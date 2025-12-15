@@ -1,6 +1,3 @@
-<!-- 
-  تذييل الموقع (Footer) - نسخة التباين العالي والسرعة
--->
 <footer class="site-footer" style="padding: 4rem 2rem 1.5rem 2rem; border-top: 1px solid #1a1a1a; background: #050505;">
   <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
     
@@ -11,7 +8,6 @@
       <div>
         <div class="footer-logo" style="margin-bottom: 1.5rem;">
           <a href="{{ '/' | relative_url }}">
-            <!-- اللوجو المحلي السريع مع Lazy Loading -->
             <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
                  alt="{{ site.title }}" 
                  width="130" height="130"
@@ -19,21 +15,19 @@
                  loading="lazy">
           </a>
         </div>
-        <!-- تم تفتيح اللون هنا ليصبح مقروءاً بوضوح -->
         <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;">
           بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، إيجار) مبنية على الثقة، الشفافية، والخبرة الطويلة في السوق المصري.
         </p>
       </div>
 
-      <!-- العمود 2: روابط سريعة -->
+      <!-- العمود 2: روابط سريعة (محدثة) -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">روابط سريعة</h3>
         <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
           
-          <!-- تم تفتيح ألوان الروابط إلى #ccc -->
-          <li><a href="{{ '/properties-filtered.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تصفح العقارات</a></li>
+          <li><a href="{{ '/properties/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تصفح العقارات</a></li>
           
-          <li><a href="{{ '/requests-filtered.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> طلبات العملاء</a></li>
+          <li><a href="{{ '/requests/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> طلبات العملاء</a></li>
           
           <li><a href="{{ '/add-your-property.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> أضف عقارك مجاناً</a></li>
           
@@ -67,8 +61,6 @@
 
     <!-- الشريط السفلي -->
     <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
-      
-      <!-- لون فاتح للحقوق -->
       <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
         جميع الحقوق محفوظة &copy; {{ 'now' | date: "%Y" }} <span style="color: var(--color-primary);">سمسار طلبك</span>.
       </p>
@@ -76,7 +68,6 @@
       <div style="display: flex; gap: 20px;">
           <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#b0b0b0'">سياسة الخصوصية</a>
       </div>
-
     </div>
 
   </div>
@@ -100,4 +91,4 @@
   @media (max-width: 768px) {
       .copyright-bar { flex-direction: column; text-align: center; }
   }
-                                                             </style>
+</style>
