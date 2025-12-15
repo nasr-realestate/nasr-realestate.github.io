@@ -1,103 +1,24 @@
-<!-- 
-  شريط التنقل العلوي (Navbar) - النسخة المحسنة للـ SEO
--->
-<nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
-  <!-- الشعار مع رابط للصفحة الرئيسية -->
-  <div class="navbar-logo" itemscope itemtype="https://schema.org/RealEstateAgent">
-    <a href="{{ '/' | relative_url }}" itemprop="url">
-      <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
-           alt="شقق للبيع في مدينة نصر - {{ site.title }}" 
-           width="120" 
-           height="120"
-           itemprop="logo"
-           loading="eager">
-      <meta itemprop="name" content="{{ site.title }}">
+<!-- Navbar (Original Design) -->
+<nav class="navbar">
+  <!-- الشعار -->
+  <div class="navbar-logo">
+    <a href="{{ '/' | relative_url }}">
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="{{ site.title }}">
     </a>
   </div>
 
-  <!-- الروابط الرئيسية -->
+  <!-- الروابط -->
   <div class="navbar-links">
-    <!-- زر تصفح العقارات (ذهبي) -->
-    <a href="{{ '/properties/' | relative_url }}" 
-       class="nav-link properties"
-       title="تصفح جميع العقارات للبيع والإيجار في مدينة نصر">
-      <i class="fas fa-home" aria-hidden="true"></i>
-      <span itemprop="name">عقارات</span>
+    <!-- زر تصفح العقارات -->
+    <a href="{{ '/properties/' | relative_url }}" class="nav-link properties">
+      <i class="fas fa-search"></i>
+      <span>أبحث عن عقار</span>
     </a>
 
-    <!-- زر الطلبات (شفاف) -->
-    <a href="{{ '/requests/' | relative_url }}" 
-       class="nav-link requests"
-       title="طلبات العملاء للشقق والمحلات في مدينة نصر">
-      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-      <span itemprop="name">طلبات</span>
-    </a>
-
-    <!-- زر أضف طلبك (أزرق) - بدلاً من زر الاتصال -->
-    <a href="{{ '/add-your-request.html' | relative_url }}" 
-       class="nav-link add-request"
-       style="background: linear-gradient(45deg, #0a84ff, #0066cc); color: white; border: none;"
-       title="أضف طلبك للبحث عن عقار في مدينة نصر">
-      <i class="fas fa-search" aria-hidden="true"></i>
-      <span itemprop="name">ابحث عن عقار</span>
-    </a>
-
-    <!-- زر أضف عقارك (ذهبي) -->
-    <a href="{{ '/add-your-property.html' | relative_url }}" 
-       class="nav-link add-property"
-       style="border: 2px solid var(--color-primary); color: var(--color-primary); background: transparent;"
-       title="أضف عقارك للبيع أو الإيجار مجاناً">
-      <i class="fas fa-plus-circle" aria-hidden="true"></i>
-      <span itemprop="name">أضف عقارك</span>
-    </a>
-
-    <!-- زر الاتصال المباشر (للجوال فقط - أخضر واتساب) -->
-    <a href="tel:+201147758857" 
-       class="nav-link mobile-only"
-       style="background: linear-gradient(45deg, #25D366, #128C7E); color: white; display: none;"
-       onclick="trackPhoneCall('+201147758857', 'Navbar Mobile Button')"
-       title="اتصل بنا مباشرة للاستفسار عن العقارات">
-      <i class="fas fa-phone-alt" aria-hidden="true"></i>
-      <span>اتصل</span>
+    <!-- زر الطلبات -->
+    <a href="{{ '/requests/' | relative_url }}" class="nav-link requests">
+      <i class="fas fa-bullhorn"></i>
+      <span>لدي عقار</span>
     </a>
   </div>
 </nav>
-
-<style>
-  /* تخصيص ألوان أزرار الطلبات */
-  .nav-link.add-request:hover {
-    background: linear-gradient(45deg, #0066cc, #0052a3) !important;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(10, 132, 255, 0.4);
-  }
-  
-  /* إظهار زر الاتصال في الجوال فقط */
-  @media (max-width: 768px) {
-    .nav-link.mobile-only {
-      display: flex !important;
-    }
-    
-    .navbar-links {
-      gap: 0.5rem;
-      justify-content: center;
-      width: 100%;
-    }
-  }
-  
-  /* تحسينات الشريط التنقل للجوال */
-  @media (max-width: 480px) {
-    .navbar-links {
-      gap: 0.5rem;
-    }
-    
-    .nav-link {
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-    }
-    
-    .navbar-logo img {
-      width: 90px !important;
-      height: 90px !important;
-    }
-  }
-</style>
