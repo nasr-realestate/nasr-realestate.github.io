@@ -1,267 +1,29 @@
-<!-- 
-  تذييل الموقع (Footer) - نسخة محسنة للـ SEO والوصولية
--->
-<footer class="site-footer" style="padding: 4rem 2rem 1.5rem 2rem; border-top: 1px solid #1a1a1a; background: #050505;" 
-        role="contentinfo" 
-        itemscope itemtype="https://schema.org/RealEstateAgent">
-  
-  <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
+<!-- Footer (Original Design) -->
+<footer class="site-footer">
+  <div class="footer-content">
     
-    <!-- شبكة الفوتر (3 أعمدة) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
-      
-      <!-- العمود 1: عن الشركة -->
-      <div itemprop="description">
-        <div class="footer-logo" style="margin-bottom: 1.5rem;">
-          <a href="{{ '/' | relative_url }}" itemprop="url">
-            <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
-                 alt="شقق للبيع في مدينة نصر - {{ site.title }}" 
-                 width="130" 
-                 height="130"
-                 itemprop="logo"
-                 style="filter: grayscale(100%) brightness(200%); opacity: 0.9;" 
-                 loading="lazy">
-          </a>
-        </div>
-        <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;" itemprop="description">
-          بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، إيجار) مبنية على الثقة، الشفافية، والخبرة الطويلة في السوق المصري.
-        </p>
-        
-        <!-- معلومات الاتصال في Schema -->
-        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-phone" style="color: var(--color-primary);"></i>
-            <a href="tel:+201147758857" 
-               style="color: #fff; text-decoration: none; direction: ltr; font-weight: bold;"
-               onclick="trackPhoneCall('+201147758857', 'Footer Phone')"
-               itemprop="telephone">+20 114 775 8857</a>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px; margin-top: 0.5rem;">
-            <i class="fas fa-envelope" style="color: var(--color-primary);"></i>
-            <a href="mailto:elraikonly@outlook.sa" 
-               style="color: #ccc; text-decoration: none;"
-               itemprop="email">elraikonly@outlook.sa</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- العمود 2: روابط سريعة -->
-      <div>
-        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          روابط سريعة
-        </h3>
-        <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;" role="list">
-          <li role="listitem">
-            <a href="{{ '/properties/' | relative_url }}" 
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="تصفح جميع العقارات في مدينة نصر">
-              <i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i>
-              تصفح العقارات
-            </a>
-          </li>
-          
-          <li role="listitem">
-            <a href="{{ '/requests/' | relative_url }}" 
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="طلبات العملاء للعقارات في مدينة نصر">
-              <i class="fas fa-angle-left" style="color: #0a84ff; margin-left: 8px;"></i>
-              طلبات العملاء
-            </a>
-          </li>
-          
-          <!-- رابط جديد: ابحث عن عقار -->
-          <li role="listitem">
-            <a href="{{ '/add-your-request.html' | relative_url }}" 
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="أضف طلبك للبحث عن عقار في مدينة نصر">
-              <i class="fas fa-angle-left" style="color: #0a84ff; margin-left: 8px;"></i>
-              ابحث عن عقار
-            </a>
-          </li>
-          
-          <li role="listitem">
-            <a href="{{ '/add-your-property.html' | relative_url }}" 
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="أضف عقارك للبيع أو الإيجار مجاناً">
-              <i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i>
-              أضف عقارك مجاناً
-            </a>
-          </li>
-          
-          <li role="listitem">
-            <a href="{{ '/about-us.html' | relative_url }}" 
-               style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="تعرف على شركة سمسار طلبك ومديرها طارق طنطاوي">
-              <i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i>
-              من نحن (قصتنا)
-            </a>
-          </li>
-          
-          <li role="listitem">
-            <a href="{{ '/contact-us.html' | relative_url }}" 
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem; display: flex; align-items: center;"
-               title="تواصل معنا للاستفسار عن العقارات">
-              <i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i>
-              تواصل معنا
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      <!-- العمود 3: تواصل اجتماعي ووسائل اتصال -->
-      <div>
-        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          تواصل اجتماعي
-        </h3>
-        
-        <!-- روابط التواصل الاجتماعي -->
-        <div class="social-icons-grid" style="display: flex; gap: 12px; flex-wrap: wrap;" aria-label="روابط التواصل الاجتماعي">
-          <a href="https://www.facebook.com/Tarekonly" 
-             target="_blank" 
-             class="social-btn facebook" 
-             aria-label="صفحتنا على فيسبوك"
-             rel="noopener noreferrer">
-            <i class="fab fa-facebook-f" aria-hidden="true"></i>
-          </a>
-          
-          <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" 
-             target="_blank" 
-             class="social-btn linkedin" 
-             aria-label="صفحتنا على لينكدإن"
-             rel="noopener noreferrer">
-            <i class="fab fa-linkedin-in" aria-hidden="true"></i>
-          </a>
-          
-          <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" 
-             target="_blank" 
-             class="social-btn maps" 
-             aria-label="موقعنا على خرائط جوجل"
-             rel="noopener noreferrer">
-            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
-          </a>
-          
-          <a href="https://wa.me/201147758857?text=أهلًا، أريد الاستفسار عن عقار في مدينة نصر" 
-             target="_blank" 
-             class="social-btn whatsapp" 
-             aria-label="تواصل معنا عبر واتساب"
-             rel="noopener noreferrer"
-             style="background: #25D366; border-color: #25D366;">
-            <i class="fab fa-whatsapp" aria-hidden="true"></i>
-          </a>
-        </div>
-
-        <!-- زر الاتصال السريع -->
-        <div style="margin-top: 25px; border: 2px solid var(--color-primary); padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px; background: rgba(212, 175, 55, 0.05);">
-            <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);" aria-hidden="true"></i>
-            <div>
-                <div style="font-size: 0.8rem; color: #ccc;">استشارة عقارية مجانية</div>
-                <a href="tel:+201147758857" 
-                   style="font-size: 1rem; color: #fff; direction: ltr; text-decoration: none; font-weight: bold;"
-                   onclick="trackPhoneCall('+201147758857', 'Footer Consultation')"
-                   title="اتصل للحصول على استشارة عقارية مجانية">
-                    +20 114 775 8857
-                </a>
-            </div>
-        </div>
-
-        <!-- ساعات العمل -->
-        <div style="margin-top: 15px; color: #aaa; font-size: 0.85rem; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
-          <i class="fas fa-clock" style="color: var(--color-primary); margin-left: 5px;"></i>
-          <span>ساعات العمل: 9 صباحاً - 9 مساءً</span>
-        </div>
-        
-        <!-- التخصص -->
-        <div style="margin-top: 10px; color: #888; font-size: 0.8rem; font-style: italic;">
-          <i class="fas fa-map-marker" style="color: #666;"></i>
-          متخصصون في عقارات مدينة نصر
-        </div>
-      </div>
-
+    <div class="footer-logo">
+      <a href="{{ '/' | relative_url }}">
+        {{ site.title }}
+      </a>
     </div>
 
-    <!-- الشريط السفلي -->
-    <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
-      
-      <!-- الحقوق -->
-      <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;" itemprop="copyrightNotice">
-        جميع الحقوق محفوظة &copy; <span id="current-year">{{ 'now' | date: "%Y" }}</span> 
-        <span style="color: var(--color-primary);" itemprop="name">{{ site.title }}</span>.
-      </p>
+    <p class="footer-description">نخدمك في مدينة نصر وما حولها - بيع، شراء، وتأجير بأمان واحترافية.</p>
 
-      <!-- روابط إضافية -->
-      <div style="display: flex; gap: 20px;">
-          <a href="{{ '/privacy-policy.html' | relative_url }}" 
-             style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" 
-             onmouseover="this.style.color='#fff'" 
-             onmouseout="this.style.color='#b0b0b0'"
-             title="اطلع على سياسة الخصوصية">
-            سياسة الخصوصية
-          </a>
-          <a href="{{ '/terms.html' | relative_url }}" 
-             style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" 
-             onmouseover="this.style.color='#fff'" 
-             onmouseout="this.style.color='#b0b0b0'"
-             title="شروط الاستخدام">
-            شروط الاستخدام
-          </a>
-      </div>
+    <nav class="footer-links">
+      <a href="{{ '/privacy-policy.html' | relative_url }}">سياسة الخصوصية</a>
+      <a href="{{ '/contact-us.html' | relative_url }}">تواصل معنا</a>
+      <a href="{{ '/about-us.html' | relative_url }}">عنّا</a>
+    </nav>
 
+    <div class="social-links">
+      <a href="https://www.facebook.com/Tarekonly" target="_blank" title="فيسبوك"><i class="fab fa-facebook-f"></i></a>
+      <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" target="_blank" title="لينكدإن"><i class="fab fa-linkedin-in"></i></a>
+      <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" target="_blank" title="خرائط جوجل"><i class="fas fa-map-marker-alt"></i></a>
+      <a href="https://pin.it/4tCl3jl6r" target="_blank" title="Pinterest"><i class="fab fa-pinterest"></i></a>
     </div>
+
+    <p class="copyright">© {{ 'now' | date: "%Y" }} <a href="{{ '/' | relative_url }}">{{ site.title }}</a>. جميع الحقوق محفوظة.</p>
 
   </div>
 </footer>
-
-<style>
-  /* تنسيقات أزرار التواصل الاجتماعي */
-  .social-btn {
-    width: 42px; height: 42px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    background: #111; border: 1px solid #333; color: #fff;
-    font-size: 1.1rem; transition: all 0.3s ease; text-decoration: none;
-  }
-  .social-btn:hover { transform: translateY(-3px); border-color: var(--color-primary); }
-  .social-btn.facebook:hover { background: #1877F2; border-color: #1877F2; }
-  .social-btn.linkedin:hover { background: #0A66C2; border-color: #0A66C2; }
-  .social-btn.maps:hover { background: #34A853; border-color: #34A853; }
-  .social-btn.whatsapp:hover { background: #128C7E; border-color: #128C7E; transform: translateY(-3px) scale(1.1); }
-  
-  /* تحسينات الروابط في الفوتر */
-  .site-footer ul li a:hover { 
-    color: var(--color-primary) !important; 
-    padding-right: 5px; 
-  }
-  
-  /* تخصيص ألوان روابط الطلبات */
-  .site-footer ul li a[href*="requests"],
-  .site-footer ul li a[href*="add-your-request"] {
-    transition: all 0.3s ease;
-  }
-  .site-footer ul li a[href*="requests"]:hover,
-  .site-footer ul li a[href*="add-your-request"]:hover {
-    color: #0a84ff !important;
-  }
-  
-  /* تحسينات التجاوب */
-  @media (max-width: 768px) {
-    .footer-content > div {
-      grid-template-columns: 1fr;
-      gap: 2rem;
-    }
-    .copyright-bar { 
-      flex-direction: column; 
-      text-align: center; 
-      gap: 10px;
-    }
-    
-    .social-icons-grid {
-      justify-content: center;
-    }
-  }
-  
-  /* تحديث السنة تلقائياً */
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      document.getElementById('current-year').textContent = new Date().getFullYear();
-    });
-  </script>
-</style>
