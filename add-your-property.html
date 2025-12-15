@@ -11,7 +11,7 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
 <!-- ================================== -->
 <style>
   .smart-form-container {
-    background: var(--color-surface-2);
+    background: var(--color-surface-2); /* خلفية داكنة */
     border-radius: 25px;
     padding: 3rem;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -142,8 +142,11 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
     <div class="progress-step" data-step="3">3</div>
   </div>
 
-  <!-- الفورم الذي سيتم تحويل بياناته إلى واتساب -->
-  <form id="smart-form" class="property-form">
+  <!-- فورم Netlify -->
+  <form id="smart-form" name="smart-property-submission-v2" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/form-success.html" class="property-form">
+    <input type="hidden" name="form-name" value="smart-property-submission-v2" />
+    <p style="display: none;"><label>Don’t fill this out: <input name="bot-field" /></label></p>
+
     <!-- الخطوة 1: المعلومات الأساسية -->
     <div class="form-step active" data-step="1">
       <h2><i class="fas fa-info-circle"></i> بيانات العقار الأساسية</h2>
@@ -244,7 +247,7 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
     <div class="form-navigation">
       <button type="button" class="nav-btn prev-btn" style="display: none;">السابق</button>
       <button type="button" class="nav-btn next-btn">التالي <i class="fas fa-arrow-left"></i></button>
-      <button type="button" class="nav-btn submit-btn" style="display: none;">إرسال العرض عبر واتساب <i class="fab fa-whatsapp"></i></button>
+      <button type="submit" class="nav-btn submit-btn" style="display: none;">إرسال العرض فوراً <i class="fas fa-paper-plane"></i></button>
     </div>
   </form>
 </div>
@@ -290,9 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!input.value.trim()) isValid = false;
         });
         nextBtn.disabled = !isValid;
-        if (submitBtn.style.display !== 'none') {
-            submitBtn.disabled = !isValid;
-        }
     };
 
     // الانتقال لخطوة معينة
@@ -301,37 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
         currentStep = step;
         updateUI();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    // 1. دالة جديدة: تجميع البيانات وإرسالها إلى واتساب
-    const sendToWhatsApp = () => {
-        const form = document.getElementById('smart-form');
-        const formData = new FormData(form);
-
-        // بناء نص الرسالة بتنسيق مرتب
-        let whatsappMessage = `*عرض عقاري جديد - موقع سمسار طلبك*\n`;
-        whatsappMessage += `==============================\n\n`;
-        whatsappMessage += `*🏠 عنوان الإعلان:*\n${formData.get('title')}\n\n`;
-        whatsappMessage += `*📌 نوع العقار:* ${formData.get('property-type')}\n`;
-        whatsappMessage += `*💰 السعر المطلوب:* ${formData.get('price_display')} جنيه مصري\n`;
-        whatsappMessage += `*📐 المساحة:* ${formData.get('area_display')} متر مربع\n`;
-        whatsappMessage += `*🚪 التفاصيل:* ${formData.get('rooms')} غرف | ${formData.get('bathrooms')} حمام\n`;
-        whatsappMessage += `*🏢 الدور:* ${formData.get('floor')} | *التشطيب:* ${formData.get('finish')}\n\n`;
-        whatsappMessage += `*📍 العنوان التفصيلي:*\n${formData.get('location')}\n\n`;
-        whatsappMessage += `*📝 الوصف الإضافي:*\n${formData.get('description')}\n\n`;
-        whatsappMessage += `==============================\n`;
-        whatsappMessage += `*📱 رقم هاتف المعلن للتواصل:*\n${formData.get('phone')}\n\n`;
-        whatsappMessage += `_تم إرسال هذا العرض من خلال صفحة "أضف عقارك" على الموقع._`;
-
-        // تشفير النص ليكون جزءًا من URL
-        const encodedMessage = encodeURIComponent(whatsappMessage);
-        // 🔧 **هام: استبدل الرقم التالي برقم واتساب التجاري الخاص بك**
-        const yourWhatsAppNumber = "201147758857"; // مثال: 201147758857
-        const whatsappUrl = `https://wa.me/${yourWhatsAppNumber}?text=${encodedMessage}`;
-
-        // فتح رابط واتساب في نافذة جديدة
-        window.open(whatsappUrl, '_blank');
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // الصعود لأعلى الصفحة
     };
 
     // الأحداث
@@ -342,28 +312,13 @@ document.addEventListener('DOMContentLoaded', () => {
     prevBtn.addEventListener('click', () => {
         if (currentStep > 1) goToStep(currentStep - 1);
     });
-
-    // 2. ربط زر الإرسال بالدالة الجديدة
-    submitBtn.addEventListener('click', () => {
-        // التحقق النهائي من جميع الحقول قبل الإرسال
-        let allValid = true;
-        document.querySelectorAll('#smart-form [required]').forEach(field => {
-            if (!field.value.trim()) allValid = false;
-        });
-
-        if (allValid) {
-            sendToWhatsApp();
-        } else {
-            alert('⚠️ يرجى التأكد من ملء جميع الحقول المطلوبة بشكل صحيح.');
-        }
-    });
     
-    // مراقبة الكتابة لتفعيل أزرار التالي والإرسال
+    // مراقبة الكتابة لتفعيل زر التالي
     document.querySelectorAll('input, select, textarea').forEach(input => {
         input.addEventListener('input', validateStep);
         input.addEventListener('change', validateStep);
     });
 
-    updateUI();
+    updateUI(); // التشغيل الأولي
 });
-</script>
+              </script>
