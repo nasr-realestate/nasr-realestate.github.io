@@ -1,4 +1,8 @@
-<footer class="site-footer" style="padding: 4rem 2rem 1.5rem 2rem; border-top: 1px solid #1a1a1a; background: #050505;">
+<!-- 
+  تذييل الموقع (Footer) - نسخة الـ Safe Area (إصلاح تداخل الزر)
+-->
+<!-- 👇 التعديل هنا: 6rem في الأسفل لرفع الكلام فوق زر الاتصال -->
+<footer class="site-footer" style="padding: 4rem 2rem 6rem 2rem; border-top: 1px solid #1a1a1a; background: #050505;">
   <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
     
     <!-- شبكة الفوتر (3 أعمدة) -->
@@ -20,19 +24,14 @@
         </p>
       </div>
 
-      <!-- العمود 2: روابط سريعة (محدثة) -->
+      <!-- العمود 2: روابط سريعة -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">روابط سريعة</h3>
         <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
-          
           <li><a href="{{ '/properties/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تصفح العقارات</a></li>
-          
           <li><a href="{{ '/requests/' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> طلبات العملاء</a></li>
-          
           <li><a href="{{ '/add-your-property.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> أضف عقارك مجاناً</a></li>
-          
           <li><a href="{{ '/about-us.html' | relative_url }}" style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> من نحن (قصتنا)</a></li>
-          
           <li><a href="{{ '/contact-us.html' | relative_url }}" style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;"><i class="fas fa-angle-left" style="color: var(--color-primary); margin-left: 8px;"></i> تواصل معنا</a></li>
         </ul>
       </div>
@@ -61,6 +60,7 @@
 
     <!-- الشريط السفلي -->
     <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+      
       <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
         جميع الحقوق محفوظة &copy; {{ 'now' | date: "%Y" }} <span style="color: var(--color-primary);">سمسار طلبك</span>.
       </p>
@@ -68,6 +68,7 @@
       <div style="display: flex; gap: 20px;">
           <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#b0b0b0'">سياسة الخصوصية</a>
       </div>
+
     </div>
 
   </div>
