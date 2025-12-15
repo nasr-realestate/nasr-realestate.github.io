@@ -1,187 +1,178 @@
 ---
 layout: default
-title: "طلبات عقارية في مدينة نصر | مشترون ومستأجرون جادون"
-description: "⭐ تصفح طلبات الشراء والإيجار من عملاء جادين في مدينة نصر. هل لديك عقار يناسب هذه الطلبات؟ تواصل: 01147758857"
+title: "طلبات العملاء | سمسار طلبك"
+description: "قائمة محدثة بطلبات الشراء والإيجار الحالية من عملاء جادين ومستعدين للتعاقد. هل لديك عقار يناسبهم؟"
 permalink: /requests/
-breadcrumb: الطلبات
-body_class: requests-page
+image: "/assets/img/social-requests.webp"
 ---
 
-<!-- بيانات منظمة للصفحة الجماعية -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": "طلبات عقارية في مدينة نصر",
-  "description": "قائمة بالمشترين والمستأجرين الجادين الراغبين في الشراء أو الإيجار",
-  "url": "{{ '/requests/' | absolute_url }}",
-  "mainEntity": {
-    "@type": "ItemList",
-    "numberOfItems": {{ site.requests | size }},
-    "itemListElement": [
-      {% for req in site.requests limit:10 %}
-      {
-        "@type": "ListItem",
-        "position": {{ forloop.index }},
-        "url": "{{ req.url | absolute_url }}",
-        "name": "{{ req.title }}"
-      }{% unless forloop.last %},{% endunless %}
-      {% endfor %}
-    ]
-  }
-}
-</script>
-
-<!-- رأس الصفحة -->
+<!-- =========================================================
+     1. رأس الصفحة (Header)
+     ========================================================= -->
 <header class="page-header">
-  <div style="max-width: 1200px; margin: 0 auto; padding: 0 1rem;">
-    <h1 class="page-title" style="color: #fff; font-size: 2.5rem; margin-bottom: 10px;">
-      <i class="fas fa-bullhorn" style="color: #0a84ff;"></i> طلبات العملاء
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">
+      <i class="fas fa-bullhorn" style="color: #0a84ff;"></i> طلبات العملاء الجادة
     </h1>
-    
-    <p style="opacity: 0.8; margin-top: 10px; color: #b0b0b0; font-size: 1.1rem; max-width: 800px;">
-      مشترون ومستأجرون جادون يبحثون عن عقارات في مدينة نصر. هل لديك عقار يناسبهم؟ تواصل معنا للربط بين الطرفين.
+    <p style="opacity: 0.8; margin-top: 10px;">
+      هؤلاء عملاء جاهزون للتعاقد فوراً. هل تملك عقاراً يطابق مواصفاتهم؟
     </p>
-
-    <!-- شريط الإحصاء -->
-    <div style="display: flex; gap: 20px; margin-top: 2rem; flex-wrap: wrap;">
-      <div style="background: rgba(10, 132, 255, 0.1); padding: 10px 20px; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.3);">
-        <span style="color: #ccc; font-size: 0.9rem;">إجمالي الطلبات</span>
-        <div style="color: #0a84ff; font-size: 1.5rem; font-weight: bold;">{{ site.requests | size }}</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.05); padding: 10px 20px; border-radius: 10px; border: 1px solid #333;">
-        <span style="color: #ccc; font-size: 0.9rem;">فرصة لزيادة المبيعات</span>
-        <div style="color: #fff; font-size: 1rem;">مباشرة إلى المشتري</div>
-      </div>
-    </div>
   </div>
 </header>
 
 <main>
-  <!-- قسم الإرشاد السريع -->
-  <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
-    <div style="background: rgba(10, 132, 255, 0.05); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 10px; padding: 15px; color: #ccc; font-size: 0.9rem; display: flex; align-items: center; gap: 10px;">
-      <i class="fas fa-lightbulb" style="color: #0a84ff;"></i>
-      <span>💡 <strong>معلومة:</strong> هذه طلبات من عملاء جادين. تواصل معنا إذا كان لديك عقار يناسب أي طلب وسنقوم بالربط مباشرة.</span>
-    </div>
+
+  <!-- =========================================================
+       2. أزرار الفلترة (Filters)
+       ========================================================= -->
+  <div class="filter-container" style="margin-bottom: 2rem;">
+      <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
+      <button class="filter-btn" onclick="filterSelection('residential')"><i class="fas fa-home"></i> طلبات سكنية</button>
+      <button class="filter-btn" onclick="filterSelection('commercial')"><i class="fas fa-briefcase"></i> تجاري وإداري</button>
+      <button class="filter-btn" onclick="filterSelection('cash')"><i class="fas fa-money-bill-wave"></i> كاش فوري</button>
   </div>
 
-  <!-- شبكة العرض -->
-  <section class="properties-grid-container" style="max-width: 1200px; margin: 0 auto; padding: 0 1rem 4rem;">
+  <!-- =========================================================
+       3. شبكة الطلبات (Requests Grid)
+       ========================================================= -->
+  <section class="properties-grid" style="min-height: 60vh;">
     
-    <!-- حلقة تكرارية لجلب كل الطلبات -->
+    {% comment %} 
+      جلب الطلبات وترتيبها بالتاريخ (الأحدث أولاً) 
+    {% endcomment %}
     {% assign all_requests = site.requests | sort: 'date' | reverse %}
     
-    {% if all_requests.size > 0 %}
-      <div class="properties-grid" id="requestsGrid">
-        {% for req in all_requests %}
-          <!-- استدعاء تصميم البطاقة (نوع طلب) -->
-          <div class="request-item">
+    {% for req in all_requests %}
+        
+        <!-- 
+           ذكاء التصنيف التلقائي للطلبات
+        -->
+        {% assign category_class = "residential" %} <!-- الافتراضي: سكني -->
+        
+        <!-- تصنيف تجاري -->
+        {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
+            {% assign category_class = "commercial" %}
+        {% endif %}
+
+        <!-- تصنيف كاش (يضاف ككلاس إضافي) -->
+        {% if req.title contains "كاش" or req.budget contains "كاش" %}
+            {% assign category_class = category_class | append: " cash" %}
+        {% endif %}
+
+        <!-- غلاف البطاقة (يحتوي على اسم الفئة للفلترة) -->
+        <div class="filter-item {{ category_class }}">
+            <!-- 
+                هام: type="request"
+                هذا يخبر البطاقة أن تظهر باللون الأزرق وتغير كلمة "السعر" إلى "الميزانية"
+            -->
             {% include property_card.html item=req type="request" %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <!-- رسالة في حالة عدم وجود طلبات -->
-      <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: #666; background: #0a0a0a; border-radius: 15px; border: 1px solid #333;">
-        <i class="fas fa-clipboard-check" style="font-size: 4rem; margin-bottom: 1.5rem; color: #0a84ff;"></i>
-        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.8rem;">لا توجد طلبات حالياً</h3>
-        <p style="color: #aaa; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-          يمكنك إضافة طلبك مجاناً أو الاتصال بنا للاستفسار عن الطلبات الجديدة:
-        </p>
-        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-          <a href="tel:+201147758857" 
-             class="nav-btn" 
-             style="background: linear-gradient(45deg, #0a84ff, #0066cc); color: #fff; padding: 12px 30px; font-weight: bold;"
-             onclick="trackPhoneCall('+201147758857', 'Requests Page - No Listings')">
-            <i class="fas fa-phone-alt"></i> اتصل للاستفسار
-          </a>
-          <a href="{{ '/add-your-property.html' | relative_url }}" 
-             class="nav-btn" 
-             style="background: transparent; border: 2px solid #0a84ff; color: #0a84ff; padding: 12px 30px;">
-            <i class="fas fa-plus-circle"></i> أضف طلبك
-          </a>
         </div>
-      </div>
-    {% endif %}
+
+    {% else %}
+        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
+            <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <h3>لا توجد طلبات نشطة حالياً</h3>
+            <p>تم إغلاق جميع الطلبات السابقة بنجاح.</p>
+        </div>
+    {% endfor %}
+
   </section>
 
-  <!-- قسم كيف يعمل النظام -->
-  <div style="max-width: 1200px; margin: 3rem auto; padding: 0 1rem;">
-    <div style="background: linear-gradient(135deg, rgba(10, 10, 10, 0.9), rgba(20, 20, 20, 0.9)); border: 1px solid #0a84ff; border-radius: 15px; padding: 2rem;">
-      <h3 style="color: #fff; margin-bottom: 1.5rem; text-align: center; font-size: 1.5rem;">
-        <i class="fas fa-cogs" style="color: #0a84ff;"></i> كيف تعمل خدمة الربط؟
-      </h3>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 1.5rem;">
-        <div style="background: rgba(10, 132, 255, 0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.3);">
-          <div style="font-size: 2rem; color: #0a84ff; margin-bottom: 10px; text-align: center;">1</div>
-          <h4 style="color: #fff; margin-bottom: 10px; text-align: center;">تجد طلباً مناسباً</h4>
-          <p style="color: #ccc; font-size: 0.9rem; text-align: center;">تصفح الطلبات وابحث عن ما يناسب عقارك</p>
-        </div>
-        
-        <div style="background: rgba(10, 132, 255, 0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.3);">
-          <div style="font-size: 2rem; color: #0a84ff; margin-bottom: 10px; text-align: center;">2</div>
-          <h4 style="color: #fff; margin-bottom: 10px; text-align: center;">تواصل معنا</h4>
-          <p style="color: #ccc; font-size: 0.9rem; text-align: center;">اتصل أو راسلنا على واتساب لعرض عقارك</p>
-        </div>
-        
-        <div style="background: rgba(10, 132, 255, 0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.3);">
-          <div style="font-size: 2rem; color: #0a84ff; margin-bottom: 10px; text-align: center;">3</div>
-          <h4 style="color: #fff; margin-bottom: 10px; text-align: center;">نربطك بالمشتري</h4>
-          <p style="color: #ccc; font-size: 0.9rem; text-align: center;">نقوم بتنسيق لقاء أو اتصال مباشر</p>
-        </div>
-      </div>
-      
-      <div style="text-align: center; margin-top: 2.5rem;">
-        <a href="tel:+201147758857" 
-           class="nav-btn" 
-           style="background: linear-gradient(45deg, #0a84ff, #0066cc); color: #fff; padding: 15px 40px; font-size: 1.1rem; font-weight: bold; display: inline-flex; align-items: center; gap: 10px;"
-           onclick="trackPhoneCall('+201147758857', 'Requests Page - How It Works')">
-          <i class="fas fa-handshake"></i> ابدأ الربط الآن
-        </a>
-      </div>
-    </div>
+  <!-- زر الانتقال لإضافة عقار -->
+  <div style="text-align: center; margin: 3rem 0;">
+      <p style="color: #888; margin-bottom: 1rem;">لديك عقار ولكن لا يوجد طلب مطابق؟</p>
+      <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">
+          اعرض عقارك وسنجد لك المشتري <i class="fas fa-plus-circle"></i>
+      </a>
   </div>
 
-  <!-- قسم إضافة طلب جديد -->
-  <div style="max-width: 800px; margin: 3rem auto; padding: 0 1rem;">
-    <div style="background: #0a0a0a; border: 2px dashed #0a84ff; border-radius: 15px; padding: 2.5rem; text-align: center;">
-      <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.5rem;">
-        <i class="fas fa-user-plus" style="color: #0a84ff;"></i> هل أنت مشتري أو مستأجر؟
-      </h3>
-      <p style="color: #b0b0b0; margin-bottom: 1.5rem;">
-        ابحث عن عقار ولا تجده؟ أضف طلبك مجاناً وسنساعدك في العثور على ما تبحث عنه.
-      </p>
-      <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <a href="{{ '/add-your-property.html' | relative_url }}" 
-           class="nav-btn" 
-           style="background: linear-gradient(45deg, #0a84ff, #0066cc); color: #fff; padding: 12px 30px; font-weight: bold;">
-          <i class="fas fa-plus-circle"></i> أضف طلب شراء/إيجار
-        </a>
-        <a href="tel:+201147758857" 
-           class="nav-btn" 
-           style="background: transparent; border: 2px solid #0a84ff; color: #0a84ff; padding: 12px 30px;"
-           onclick="trackPhoneCall('+201147758857', 'Requests Page - Add Request')">
-          <i class="fas fa-headset"></i> استشارة مجانية
-        </a>
-      </div>
-    </div>
-  </div>
 </main>
 
-<style>
-  .requests-page .page-title {
-    color: #fff !important;
+<!-- =========================================================
+     4. سكربت الفلترة (نفس المنطق السريع)
+     ========================================================= -->
+<script>
+function filterSelection(c) {
+  var x, i;
+  x = document.getElementsByClassName("filter-item");
+  
+  // تحديث شكل الأزرار
+  var btns = document.getElementsByClassName("filter-btn");
+  for (i = 0; i < btns.length; i++) {
+    btns[i].classList.remove("active");
+    btns[i].style.backgroundColor = "transparent";
+    btns[i].style.color = "#b0b0b0";
+    btns[i].style.borderColor = "#333";
   }
   
-  @media (max-width: 768px) {
-    .page-title {
-      font-size: 2rem !important;
-    }
-    
-    .properties-grid-container {
-      padding: 0 0.5rem !important;
+  // تفعيل الزر المختار (باللون الأزرق هذه المرة ليتناسب مع الطلبات)
+  event.currentTarget.classList.add("active");
+  // هنا نستخدم اللون الأزرق للطلبات
+  event.currentTarget.style.backgroundColor = "#0a84ff"; 
+  event.currentTarget.style.color = "#fff";
+  event.currentTarget.style.borderColor = "#0a84ff";
+
+  // إخفاء/إظهار العناصر
+  if (c == "all") c = "";
+  for (i = 0; i < x.length; i++) {
+    w3RemoveClass(x[i], "show");
+    if (x[i].className.indexOf(c) > -1) w3AddClass(x[i], "show");
+  }
+}
+
+function w3AddClass(element, name) {
+  var i, arr1, arr2;
+  arr1 = element.className.split(" ");
+  arr2 = name.split(" ");
+  for (i = 0; i < arr2.length; i++) {
+    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
+  }
+}
+
+function w3RemoveClass(element, name) {
+  var i, arr1, arr2;
+  arr1 = element.className.split(" ");
+  arr2 = name.split(" ");
+  for (i = 0; i < arr2.length; i++) {
+    while (arr1.indexOf(arr2[i]) > -1) {
+      arr1.splice(arr1.indexOf(arr2[i]), 1);     
     }
   }
+  element.className = arr1.join(" ");
+}
+
+// تشغيل الفلتر الافتراضي
+document.addEventListener("DOMContentLoaded", function() {
+    filterSelection("all");
+});
+</script>
+
+<!-- ستايل خاص للفلترة (مكرر لضمان العمل المستقل) -->
+<style>
+.filter-item { display: none; }
+.show { display: block; animation: fadeIn 0.5s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.filter-btn {
+    border: 1px solid #333;
+    background: transparent;
+    color: #b0b0b0;
+    padding: 8px 20px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 50px;
+    font-family: 'Cairo';
+    font-weight: bold;
+    transition: 0.3s;
+}
+.filter-btn:hover { border-color: #0a84ff; color: #0a84ff; }
+.filter-btn.active {
+    background-color: #0a84ff;
+    color: #fff;
+    border-color: #0a84ff;
+}
 </style>
