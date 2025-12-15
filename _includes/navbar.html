@@ -1,14 +1,7 @@
-<!-- 
-  شريط التنقل العلوي (Navbar) - النسخة السريعة (Local Logo)
--->
 <nav class="navbar">
   <!-- الشعار -->
   <div class="navbar-logo">
     <a href="{{ '/' | relative_url }}">
-      <!-- 
-        تحديد العرض والارتفاع ضروري جداً لمنع اهتزاز الصفحة (CLS) 
-        واستخدام الصورة المحلية (WebP) للسرعة
-      -->
       <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
            alt="{{ site.title }}" 
            width="120" height="120">
@@ -16,23 +9,36 @@
   </div>
 
   <!-- الروابط -->
-  <div class="navbar-links">
-    <!-- زر تصفح العقارات (ذهبي) -->
-    <a href="{{ '/properties.html' | relative_url }}" class="nav-link properties">
+  <div class="navbar-links" id="navLinks">
+    <!-- زر تصفح العقارات -->
+    <a href="{{ '/properties/' | relative_url }}" class="nav-link properties">
       <i class="fas fa-home"></i>
       <span>عقارات</span>
     </a>
 
-    <!-- زر الطلبات (شفاف) -->
-    <a href="{{ '/requests.html' | relative_url }}" class="nav-link requests">
+    <!-- زر الطلبات -->
+    <a href="{{ '/requests/' | relative_url }}" class="nav-link requests">
       <i class="fas fa-clipboard-list"></i>
       <span>طلبات</span>
     </a>
 
-    <!-- زر أضف عقارك (إطار ذهبي) -->
+    <!-- زر أضف عقارك -->
     <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-link" style="border: 1px solid var(--color-primary); color: var(--color-primary);">
       <i class="fas fa-plus-circle"></i>
       <span>أضف عقارك</span>
     </a>
   </div>
+
+  <!-- زر الموبايل (ضروري لكي تعمل القائمة على الهاتف) -->
+  <div class="menu-toggle" onclick="toggleMenu()">
+    <i class="fas fa-bars" style="color: var(--color-primary); font-size: 1.5rem;"></i>
+  </div>
 </nav>
+
+<!-- سكربت فتح القائمة في الموبايل -->
+<script>
+  function toggleMenu() {
+    const nav = document.getElementById('navLinks');
+    nav.classList.toggle('active');
+  }
+</script>
