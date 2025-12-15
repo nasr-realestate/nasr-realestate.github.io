@@ -3,7 +3,7 @@ layout: default
 title: "أضف عقارك مجاناً | سمسار طلبك"
 description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
 permalink: /add-your-property.html
-image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-page.webp"
+image: "/assets/img/social-add.webp"
 ---
 
 <!-- ================================== -->
@@ -121,7 +121,6 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
 <!-- === 🧱 المحتوى (HTML) === -->
 <!-- ================================== -->
 
-<!-- هيدر الصفحة -->
 <header class="page-header">
   <div style="max-width: 700px; margin: 0 auto;">
     <h1 class="page-title">أضف عقارك للبيع أو الإيجار</h1>
@@ -142,10 +141,12 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
     <div class="progress-step" data-step="3">3</div>
   </div>
 
-  <!-- فورم Netlify -->
-  <form id="smart-form" name="smart-property-submission-v2" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/form-success.html" class="property-form">
-    <input type="hidden" name="form-name" value="smart-property-submission-v2" />
-    <p style="display: none;"><label>Don’t fill this out: <input name="bot-field" /></label></p>
+<form id="smart-form" action="https://formspree.io/f/xpwvedwp" method="POST" class="property-form">
+    
+    <!-- حقول مخفية للتحكم -->
+    <input type="hidden" name="_subject" value="عرض عقاري جديد من الموقع!">
+    <!-- صفحة النجاح (يجب أن تنشئها لاحقاً) -->
+    <input type="hidden" name="_next" value="https://nasr-realestate.github.io/form-success.html">
 
     <!-- الخطوة 1: المعلومات الأساسية -->
     <div class="form-step active" data-step="1">
@@ -254,7 +255,7 @@ image: "https://i.postimg.cc/8PB4WFVK/Image-shared-on-social-media-for-the-Add-p
 </main>
 
 <!-- ================================== -->
-<!-- === ⚙️ JS: منطق العمل === -->
+<!-- === ⚙️ JS: منطق العمل (كما هو) === -->
 <!-- ================================== -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -267,24 +268,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentStep = 1;
 
-    // تحديث الواجهة بناء على الخطوة الحالية
     const updateUI = () => {
-        // تحديث شريط التقدم
         progressSteps.forEach((step, index) => {
             if (index < currentStep) step.classList.add('active');
             else step.classList.remove('active');
         });
         progressLine.style.width = `${((currentStep - 1) / (formSteps.length - 1)) * 100}%`;
 
-        // إظهار/إخفاء الأزرار
         prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
         nextBtn.style.display = currentStep < formSteps.length ? 'inline-block' : 'none';
         submitBtn.style.display = currentStep === formSteps.length ? 'inline-block' : 'none';
 
-        validateStep(); // التحقق من صحة الحقول
+        validateStep();
     };
 
-    // التحقق من صحة الحقول في الخطوة الحالية
     const validateStep = () => {
         const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
         const inputs = currentFormStep.querySelectorAll('input[required], select[required], textarea[required]');
@@ -295,30 +292,22 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBtn.disabled = !isValid;
     };
 
-    // الانتقال لخطوة معينة
     const goToStep = (step) => {
         formSteps.forEach(s => s.classList.remove('active'));
         document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
         currentStep = step;
         updateUI();
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // الصعود لأعلى الصفحة
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // الأحداث
-    nextBtn.addEventListener('click', () => {
-        if (currentStep < formSteps.length) goToStep(currentStep + 1);
-    });
-
-    prevBtn.addEventListener('click', () => {
-        if (currentStep > 1) goToStep(currentStep - 1);
-    });
+    nextBtn.addEventListener('click', () => { if (currentStep < formSteps.length) goToStep(currentStep + 1); });
+    prevBtn.addEventListener('click', () => { if (currentStep > 1) goToStep(currentStep - 1); });
     
-    // مراقبة الكتابة لتفعيل زر التالي
     document.querySelectorAll('input, select, textarea').forEach(input => {
         input.addEventListener('input', validateStep);
         input.addEventListener('change', validateStep);
     });
 
-    updateUI(); // التشغيل الأولي
+    updateUI();
 });
-              </script>
+</script>
