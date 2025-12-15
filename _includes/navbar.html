@@ -1,24 +1,38 @@
-<!-- Navbar (Original Design) -->
+<!-- 
+  شريط التنقل العلوي (Navbar) - النسخة السريعة (Local Logo)
+-->
 <nav class="navbar">
   <!-- الشعار -->
   <div class="navbar-logo">
     <a href="{{ '/' | relative_url }}">
-      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="{{ site.title }}">
+      <!-- 
+        تحديد العرض والارتفاع ضروري جداً لمنع اهتزاز الصفحة (CLS) 
+        واستخدام الصورة المحلية (WebP) للسرعة
+      -->
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}" 
+           alt="{{ site.title }}" 
+           width="120" height="120">
     </a>
   </div>
 
   <!-- الروابط -->
   <div class="navbar-links">
-    <!-- زر تصفح العقارات -->
-    <a href="{{ '/properties/' | relative_url }}" class="nav-link properties">
-      <i class="fas fa-search"></i>
-      <span>أبحث عن عقار</span>
+    <!-- زر تصفح العقارات (ذهبي) -->
+    <a href="{{ '/properties-filtered.html' | relative_url }}" class="nav-link properties">
+      <i class="fas fa-home"></i>
+      <span>عقارات</span>
     </a>
 
-    <!-- زر الطلبات -->
-    <a href="{{ '/requests/' | relative_url }}" class="nav-link requests">
-      <i class="fas fa-bullhorn"></i>
-      <span>لدي عقار</span>
+    <!-- زر الطلبات (شفاف) -->
+    <a href="{{ '/requests-filtered.html' | relative_url }}" class="nav-link requests">
+      <i class="fas fa-clipboard-list"></i>
+      <span>طلبات</span>
+    </a>
+
+    <!-- زر أضف عقارك (إطار ذهبي) -->
+    <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-link" style="border: 1px solid var(--color-primary); color: var(--color-primary);">
+      <i class="fas fa-plus-circle"></i>
+      <span>أضف عقارك</span>
     </a>
   </div>
 </nav>
