@@ -8,8 +8,8 @@
     </a>
   </div>
 
-  <!-- الروابط -->
-  <div class="navbar-links" id="navLinks">
+  <!-- الروابط (ظاهرة دائماً) -->
+  <div class="navbar-links">
     <!-- زر تصفح العقارات -->
     <a href="{{ '/properties/' | relative_url }}" class="nav-link properties">
       <i class="fas fa-home"></i>
@@ -28,17 +28,4 @@
       <span>أضف عقارك</span>
     </a>
   </div>
-
-  <!-- زر الموبايل (ضروري لكي تعمل القائمة على الهاتف) -->
-  <div class="menu-toggle" onclick="toggleMenu()">
-    <i class="fas fa-bars" style="color: var(--color-primary); font-size: 1.5rem;"></i>
-  </div>
 </nav>
-
-<!-- سكربت فتح القائمة في الموبايل -->
-<script>
-  function toggleMenu() {
-    const nav = document.getElementById('navLinks');
-    nav.classList.toggle('active');
-  }
-</script>
