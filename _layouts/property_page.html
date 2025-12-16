@@ -2,156 +2,64 @@
 layout: default
 ---
 
-{% assign phone_number = "+201147758857" %}
-{% assign whatsapp_number = "201147758857" %}
-{% assign whatsapp_message = "استفسار بخصوص العقار: " | append: page.title | url_encode %}
-
-<div class="details-container" style="max-width: 1000px; margin: 2rem auto; padding: 20px; min-height: 80vh;">
+<div class="details-container" style="max-width: 900px; margin: 2rem auto; padding: 20px;">
     
-    <!-- 1. رأس الصفحة (العنوان والسعر) -->
-    <div class="details-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 20px; margin-bottom: 30px;">
-        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <!-- الكود المرجعي -->
-            <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
-                <i class="fas fa-hashtag"></i> كود: {{ page.id | default: 'جديد' }}
-            </span>
-            <!-- نوع العرض -->
-            <span style="background: rgba(212, 175, 55, 0.1); color: var(--color-primary); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
-                <i class="fas fa-certificate"></i> عرض عقاري
-            </span>
-        </div>
-        
-        <!-- العنوان (H1 للسيو) -->
-        <h1 style="color: #fff; font-size: 2.2rem; margin-bottom: 15px; line-height: 1.4;">{{ page.title }}</h1>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-            <p style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
-                <i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}
-            </p>
-            
-            <!-- السعر (تصميم لافت) -->
-            <div class="price-tag" style="background: linear-gradient(135deg, var(--color-primary), #b38f1d); color: #000; padding: 10px 25px; border-radius: 12px; font-weight: bold; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);">
-                {{ page.price_display | default: page.price }}
-            </div>
-        </div>
-    </div>
+    <!-- العنوان -->
+    <header style="margin-bottom: 2rem; border-bottom: 1px solid #333; padding-bottom: 1rem;">
+        <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 2px 10px; border-radius: 15px; font-size: 0.8rem;">
+            كود: {{ page.id }}
+        </span>
+        <h1 style="color: #fff; font-size: 2rem; margin: 10px 0;">{{ page.title }}</h1>
+        <p style="color: #ccc;"><i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}</p>
+    </header>
 
-    <!-- 2. صورة العقار (تظهر فقط إذا تم تحديد صورة في الملف) -->
+    <!-- 🖼️ الصورة الرئيسية -->
     {% if page.image %}
-    <div class="property-main-image" style="margin-bottom: 30px; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
-        <img src="{{ page.image | relative_url }}" 
-             alt="{{ page.title }}" 
-             style="width: 100%; height: auto; display: block; max-height: 500px; object-fit: cover;">
+    <div style="margin-bottom: 2rem; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+        <img src="{{ page.image | relative_url }}" alt="{{ page.title }}" style="width: 100%; max-height: 500px; object-fit: cover;">
     </div>
     {% endif %}
 
-    <!-- 3. شبكة المواصفات (Grid System) -->
-    <!-- تعرض البيانات المتوفرة فقط وتخفي الفارغ تلقائياً -->
-    <div class="details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 40px;">
-        
+    <!-- المواصفات (Grid) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 2rem;">
+        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
+            <div style="color: #888; font-size: 0.9rem;">السعر</div>
+            <div style="color: var(--color-primary); font-weight: bold; font-size: 1.1rem;">{{ page.price }}</div>
+        </div>
         {% if page.area %}
-        <div class="detail-item" style="background: var(--color-surface-2); padding: 15px; border-radius: 10px; border: 1px solid var(--color-border-light); text-align: center; color: #fff;">
-            <i class="fas fa-ruler-combined" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 0.9rem; color: #888;">المساحة</span>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.area }}</div>
+        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
+            <div style="color: #888; font-size: 0.9rem;">المساحة</div>
+            <div style="color: #fff; font-weight: bold;">{{ page.area }}</div>
         </div>
         {% endif %}
-        
         {% if page.rooms %}
-        <div class="detail-item" style="background: var(--color-surface-2); padding: 15px; border-radius: 10px; border: 1px solid var(--color-border-light); text-align: center; color: #fff;">
-            <i class="fas fa-bed" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 0.9rem; color: #888;">الغرف</span>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.rooms }}</div>
-        </div>
-        {% endif %}
-        
-        {% if page.bathrooms %}
-        <div class="detail-item" style="background: var(--color-surface-2); padding: 15px; border-radius: 10px; border: 1px solid var(--color-border-light); text-align: center; color: #fff;">
-            <i class="fas fa-bath" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 0.9rem; color: #888;">الحمامات</span>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.bathrooms }}</div>
-        </div>
-        {% endif %}
-        
-        {% if page.floor %}
-        <div class="detail-item" style="background: var(--color-surface-2); padding: 15px; border-radius: 10px; border: 1px solid var(--color-border-light); text-align: center; color: #fff;">
-            <i class="fas fa-building" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 0.9rem; color: #888;">الدور</span>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.floor }}</div>
-        </div>
-        {% endif %}
-
-        {% if page.finish %}
-        <div class="detail-item" style="background: var(--color-surface-2); padding: 15px; border-radius: 10px; border: 1px solid var(--color-border-light); text-align: center; color: #fff;">
-            <i class="fas fa-paint-roller" style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 0.9rem; color: #888;">التشطيب</span>
-            <div style="font-weight: bold; font-size: 1.1rem;">{{ page.finish }}</div>
+        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
+            <div style="color: #888; font-size: 0.9rem;">الغرف</div>
+            <div style="color: #fff; font-weight: bold;">{{ page.rooms }}</div>
         </div>
         {% endif %}
     </div>
 
-    <!-- 4. الوصف (المحتوى النصي) -->
-    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; font-size: 1.1rem; margin-bottom: 30px;">
-        <h3 style="color: var(--color-primary); margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">
-            <i class="fas fa-info-circle"></i> التفاصيل الكاملة
-        </h3>
-        
-        <!-- هنا يتم عرض النص المكتوب في ملف الماركداون -->
+    <!-- المحتوى النصي -->
+    <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; margin-bottom: 2rem;">
         {{ content }}
-        
-        <!-- قسم التفاصيل الإضافية (إن وجدت) -->
-        {% if page.extra_details %}
-        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #222;">
-            <h4 style="color: var(--color-primary); margin-bottom: 0.5rem;"><i class="fas fa-star"></i> ملاحظات إضافية:</h4>
-            <p>{{ page.extra_details }}</p>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- 5. قسم الاستفسار (Call to Action) -->
-    <div style="background: rgba(212, 175, 55, 0.05); padding: 2rem; border-radius: 15px; border: 1px solid var(--color-primary); margin-bottom: 30px; text-align: center;">
-        <h3 style="color: #fff; margin-bottom: 1.5rem;">
-            <i class="fas fa-headset"></i> هل أنت مهتم بهذا العقار؟
-        </h3>
-        
-        <p style="color: #ccc; margin-bottom: 1.5rem;">تواصل معنا فوراً لحجز موعد للمعاينة أو لمعرفة التفاصيل النهائية</p>
-
-        <!-- أزرار التواصل -->
-        <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-            <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
-               class="action-btn whatsapp-btn"
-               target="_blank"
-               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp - {{ page.title }}')"
-               style="flex: 1; min-width: 250px; background: #25D366; color: #fff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2); display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i>
-                <span>تواصل عبر واتساب</span>
-            </a>
-            
-            <a href="tel:{{ phone_number }}" 
-               class="action-btn phone-btn"
-               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call - {{ page.title }}')"
-               style="flex: 1; min-width: 250px; background: transparent; border: 2px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <i class="fas fa-phone-alt" style="font-size: 1.3rem;"></i>
-                <span>اتصال مباشر</span>
-            </a>
-        </div>
+    <!-- 🖼️ صورة إضافية (إن وجدت) -->
+    {% if page.image2 %}
+    <div style="margin-bottom: 2rem; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+        <img src="{{ page.image2 | relative_url }}" alt="تفاصيل إضافية" loading="lazy" style="width: 100%; max-height: 500px; object-fit: cover;">
     </div>
+    {% endif %}
 
-    <!-- 6. روابط التنقل -->
-    <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333;">
-        <a href="{{ '/properties/' | relative_url }}" 
-           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-arrow-right"></i>
-            <span>العودة لمعرض العقارات</span>
+    <!-- أزرار التواصل -->
+    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <a href="https://wa.me/201147758857?text=استفسار بخصوص: {{ page.title }}" target="_blank" class="action-btn" style="flex: 2; background: #25D366; color: #fff; text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none;">
+            <i class="fab fa-whatsapp"></i> واتساب
+        </a>
+        <a href="tel:+201147758857" class="action-btn" style="flex: 1; border: 1px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px; border-radius: 50px; text-decoration: none;">
+            <i class="fas fa-phone"></i> اتصال
         </a>
     </div>
-</div>
 
-<style>
-    @media (max-width: 768px) {
-        .details-container { padding: 15px; margin: 1rem auto; }
-        .details-header h1 { font-size: 1.8rem; }
-        .actions { flex-direction: column; }
-        .action-btn { width: 100%; min-width: unset; }
-    }
-</style>
+</div>
