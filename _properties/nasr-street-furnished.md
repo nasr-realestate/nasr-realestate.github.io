@@ -6,6 +6,7 @@ location: "شارع النصر - أمام المخابرات العامة - بج
 price: "4,200,000 ج.م (شامل الفرش)"
 category: "apartments"
 id: "nasr-street-furnished"
+image: "/assets/img/properties/nasr-street.webp"
 area: "غرفتين وصالة (مساحة ممتازة)"
 rooms: "2 غرف نوم"
 bathrooms: "2 حمام"
