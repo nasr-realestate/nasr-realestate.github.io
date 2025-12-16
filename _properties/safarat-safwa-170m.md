@@ -6,6 +6,7 @@ location: "حي السفارات - شارع أحباب الرسول - برج ا�
 price: "4,500,000 ج.م"
 category: "apartments"
 id: "safarat-safwa-170m"
+image: "/assets/img/properties/hai-elswfarat.webp"
 area: "170 متر مربع"
 rooms: "3 غرف نوم"
 bathrooms: "3 حمام (ميزة نادرة)"
