@@ -6,6 +6,7 @@ location: "شارع توفيق البكري - خلف مستشفى حسبو ال�
 price: "5,000,000 ج.م (قابل للتفاوض)"
 category: "apartments"
 id: "tawfik-al-bakry-250m"
+image: "/assets/img/properties/tawfiqal-Bakri-st.webp"
 area: "250 متر مربع"
 rooms: "3 غرف + ليفينج روم ضخم"
 bathrooms: "2 حمام"
