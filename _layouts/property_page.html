@@ -6,11 +6,23 @@ layout: default
     
     <!-- العنوان -->
     <header style="margin-bottom: 2rem; border-bottom: 1px solid #333; padding-bottom: 1rem;">
-        <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 2px 10px; border-radius: 15px; font-size: 0.8rem;">
-            كود: {{ page.id }}
-        </span>
-        <h1 style="color: #fff; font-size: 2rem; margin: 10px 0;">{{ page.title }}</h1>
-        <p style="color: #ccc;"><i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+            <div>
+                <span style="color: var(--color-primary); border: 1px solid var(--color-primary); padding: 2px 10px; border-radius: 15px; font-size: 0.8rem;">
+                    كود: {{ page.id }}
+                </span>
+                <h1 style="color: #fff; font-size: 2rem; margin: 10px 0;">{{ page.title }}</h1>
+            </div>
+            
+            <!-- السعر في الهيدر أيضاً -->
+            <div style="background: rgba(212, 175, 55, 0.1); padding: 10px 20px; border-radius: 10px; border: 1px solid var(--color-primary);">
+                <span style="color: var(--color-primary); font-weight: bold; font-size: 1.2rem;">{{ page.price }}</span>
+            </div>
+        </div>
+        
+        <p style="color: #ccc; margin-top: 10px;">
+            <i class="fas fa-map-marker-alt" style="color: var(--color-primary);"></i> {{ page.location }}
+        </p>
     </header>
 
     <!-- 🖼️ الصورة الرئيسية -->
@@ -21,11 +33,7 @@ layout: default
     {% endif %}
 
     <!-- المواصفات (Grid) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 2rem;">
-        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
-            <div style="color: #888; font-size: 0.9rem;">السعر</div>
-            <div style="color: var(--color-primary); font-weight: bold; font-size: 1.1rem;">{{ page.price }}</div>
-        </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-bottom: 2rem;">
         {% if page.area %}
         <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
             <div style="color: #888; font-size: 0.9rem;">المساحة</div>
@@ -38,11 +46,30 @@ layout: default
             <div style="color: #fff; font-weight: bold;">{{ page.rooms }}</div>
         </div>
         {% endif %}
+        {% if page.bathrooms %}
+        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
+            <div style="color: #888; font-size: 0.9rem;">الحمامات</div>
+            <div style="color: #fff; font-weight: bold;">{{ page.bathrooms }}</div>
+        </div>
+        {% endif %}
+        {% if page.floor %}
+        <div style="background: #111; padding: 15px; text-align: center; border-radius: 10px; border: 1px solid #333;">
+            <div style="color: #888; font-size: 0.9rem;">الدور</div>
+            <div style="color: #fff; font-weight: bold;">{{ page.floor }}</div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- المحتوى النصي -->
     <div class="content-body" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ddd; line-height: 1.8; margin-bottom: 2rem;">
+        <h3 style="color: var(--color-primary); margin-bottom: 1rem;">التفاصيل والمميزات</h3>
         {{ content }}
+        
+        {% if page.extra_details %}
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #444;">
+            <strong>ملاحظات:</strong> {{ page.extra_details }}
+        </div>
+        {% endif %}
     </div>
 
     <!-- 🖼️ صورة إضافية (إن وجدت) -->
@@ -53,12 +80,19 @@ layout: default
     {% endif %}
 
     <!-- أزرار التواصل -->
-    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-        <a href="https://wa.me/201147758857?text=استفسار بخصوص: {{ page.title }}" target="_blank" class="action-btn" style="flex: 2; background: #25D366; color: #fff; text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none;">
-            <i class="fab fa-whatsapp"></i> واتساب
+    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 3rem;">
+        <a href="https://wa.me/201147758857?text=استفسار بخصوص: {{ page.title }}" target="_blank" class="action-btn" style="flex: 2; background: #25D366; color: #fff; text-align: center; padding: 15px; border-radius: 50px; font-weight: bold; text-decoration: none; box-shadow: 0 5px 15px rgba(37,211,102,0.2);">
+            <i class="fab fa-whatsapp"></i> تواصل واتساب
         </a>
         <a href="tel:+201147758857" class="action-btn" style="flex: 1; border: 1px solid var(--color-primary); color: var(--color-primary); text-align: center; padding: 15px; border-radius: 50px; text-decoration: none;">
             <i class="fas fa-phone"></i> اتصال
+        </a>
+    </div>
+
+    <!-- 👇 زر العودة المفقود (تمت إضافته) 👇 -->
+    <div style="text-align: center; border-top: 1px solid #333; padding-top: 2rem;">
+        <a href="{{ '/properties/' | relative_url }}" style="color: #888; text-decoration: none; border-bottom: 1px solid #555; padding-bottom: 5px; transition: 0.3s;">
+            <i class="fas fa-arrow-right"></i> العودة لمعرض العقارات
         </a>
     </div>
 
