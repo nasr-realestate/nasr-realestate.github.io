@@ -6,6 +6,7 @@ location: "شارع محي الدين عبد الحميد - ناصية مكتب�
 price: "5,500,000 ج.م (بدون فرش) / 6,000,000 ج.م (بالفرش)"
 category: "apartments"
 id: "mohie-eldin-abbas-akkad-4rooms"
+image: "/assets/img/properties/mohiedin.webp"
 area: "مساحة عائلية ضخمة (4 غرف + 4 ريسبشن)"
 rooms: "4 غرف نوم"
 bathrooms: "3 حمام"
