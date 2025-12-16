@@ -6,6 +6,7 @@ location: "عمارات التعاونيات - آخر شارع حسن المأم
 price: "1,650,000 ج.م (كاش)"
 category: "apartments"
 id: "taawuniyat-hassan-maamoun"
+image: "/assets/img/properties/tawnit.webp"
 area: "غرفتين وصالة (المساحة القياسية)"
 rooms: "2 غرفة نوم"
 bathrooms: "1 حمام"
