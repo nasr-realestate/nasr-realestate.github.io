@@ -6,6 +6,7 @@ location: "ميدان رابعة العدوية - طريق النصر الرئي
 price: "5,000,000 ج.م (شامل الأجهزة والمطبخ)"
 category: "apartments"
 id: "rabaa-square-135m-lux"
+image: "/assets/img/properties/raba-nasr.webp"
 area: "135 متر مربع"
 rooms: "2 غرفة (قابلة للتعديل لـ 3) + صالون وسفرة"
 bathrooms: "2 حمام"
