@@ -1,89 +1,71 @@
-<!-- 
-  ملف: _includes/property_card.html
-  الوظيفة: بطاقة العرض الفاخرة (Text-Only Luxury Card)
--->
+<!-- ملف البطاقة (النسخة الهجين: صور + نص) -->
 
-{% comment %} 
-  1. ضبط الألوان والأيقونات بناءً على نوع العقار 
-{% endcomment %}
-{% assign main_color = "#d4af37" %}      <!-- ذهبي (افتراضي للبيع) -->
-{% assign bg_tone = "rgba(212, 175, 55, 0.1)" %}
+{% assign main_color = "#d4af37" %}
+{% assign label_text = "عرض" %}
 {% assign icon_type = "fa-certificate" %}
-{% assign label_text = "عرض بيع" %}
 
-{% if include.type == 'request' %}
-    {% assign main_color = "#0a84ff" %}  <!-- أزرق (للطلبات) -->
-    {% assign bg_tone = "rgba(10, 132, 255, 0.1)" %}
-    {% assign icon_type = "fa-bullhorn" %}
+{% if include.item.collection == 'requests' %}
+    {% assign main_color = "#0a84ff" %}
     {% assign label_text = "مطلوب" %}
-{% elsif include.type == 'rent' %}
-    {% assign main_color = "#fce205" %}  <!-- أصفر (للإيجار) -->
-    {% assign bg_tone = "rgba(252, 226, 5, 0.1)" %}
-    {% assign icon_type = "fa-key" %}
+    {% assign icon_type = "fa-bullhorn" %}
+{% elsif include.item.title contains "إيجار" %}
+    {% assign main_color = "#fce205" %}
     {% assign label_text = "إيجار" %}
+    {% assign icon_type = "fa-key" %}
 {% endif %}
 
-<div class="property-card text-mode" onclick="window.location.href='{{ include.item.url | relative_url }}'" style="cursor: pointer; border-top: 4px solid {{ main_color }}; position: relative; transition: transform 0.3s ease;">
+<div class="property-card" onclick="window.location.href='{{ include.item.url | relative_url }}'" style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden;">
     
-    <!-- رأس البطاقة -->
-    <div class="property-header" style="border-bottom: 1px dashed #333; padding-bottom: 12px; margin-bottom: 15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <!-- الشارة الملونة -->
-            <span style="color: {{ main_color }}; background: {{ bg_tone }}; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; border: 1px solid {{ main_color }}; font-weight: bold;">
-                <i class="fas {{ icon_type }}"></i> {{ label_text }}
-            </span>
-            <!-- التاريخ -->
-            <span style="color:#888; font-size: 0.8rem;">
-                <i class="far fa-clock"></i> {{ include.item.date | date: "%Y-%m-%d" }}
-            </span>
-        </div>
+    <!-- 🖼️ عرض الصورة إذا وجدت -->
+    {% if include.item.image %}
+    <div class="card-image" style="height: 200px; overflow: hidden; position: relative;">
+        <img src="{{ include.item.image | relative_url }}" 
+             alt="{{ include.item.title }}" 
+             loading="lazy"
+             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
         
-        <!-- العنوان -->
-        <h3 class="property-title" style="color:#fff; font-size:1.15rem; margin:5px 0; line-height: 1.5;">
+        <!-- الشارة فوق الصورة -->
+        <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: {{ main_color }}; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; border: 1px solid {{ main_color }};">
+            <i class="fas {{ icon_type }}"></i> {{ label_text }}
+        </span>
+    </div>
+    {% else %}
+    <!-- 📄 الشارة في حالة عدم وجود صورة (النظام القديم) -->
+    <div style="padding: 15px 15px 0 15px; display:flex; justify-content:space-between;">
+        <span style="color: {{ main_color }}; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid {{ main_color }};">
+            <i class="fas {{ icon_type }}"></i> {{ label_text }}
+        </span>
+        <span style="color:#666; font-size: 0.8rem;">جديد</span>
+    </div>
+    {% endif %}
+
+    <div class="card-content" style="padding: 15px;">
+        <h3 class="property-title" style="color:#fff; font-size:1.1rem; margin: 0 0 10px 0; line-height: 1.4;">
             {{ include.item.title }}
         </h3>
         
-        <!-- الموقع -->
-        <p style="color:#b0b0b0; font-size:0.9rem; margin-top: 5px;">
+        <p style="color:#b0b0b0; font-size:0.9rem; margin-bottom: 15px;">
             <i class="fas fa-map-marker-alt" style="color: {{ main_color }};"></i> {{ include.item.location }}
         </p>
-    </div>
 
-    <!-- تفاصيل البطاقة (السعر والمواصفات) -->
-    <div class="property-details">
-         
-         <!-- السعر / الميزانية (مميز جداً) -->
-         <div style="width: 100%; color: {{ main_color }}; font-weight: 800; font-size: 1.2rem; margin-bottom: 12px; background: linear-gradient(to left, {{ bg_tone }}, transparent); padding: 5px; border-radius: 5px;">
+        <!-- السعر -->
+        <div style="color: {{ main_color }}; font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">
             {% if include.item.budget %} 
                 ميزانية: {{ include.item.budget }} 
             {% else %} 
                 {{ include.item.price }} 
             {% endif %}
-         </div>
+        </div>
 
-         <!-- شريط المواصفات (يظهر فقط إذا توفرت البيانات) -->
-         <div style="display: flex; gap: 15px; font-size: 0.9rem; color: #ccc; width: 100%;">
-            
-            {% if include.item.area %}
-            <span><i class="fas fa-ruler-combined" style="color: #666;"></i> {{ include.item.area }}</span>
-            {% endif %}
-
-            {% if include.item.rooms %}
-            <span><i class="fas fa-bed" style="color: #666;"></i> {{ include.item.rooms }}</span>
-            {% endif %}
-            
-            {% if include.item.floor %}
-            <span><i class="fas fa-layer-group" style="color: #666;"></i> {{ include.item.floor }}</span>
-            {% endif %}
-
-         </div>
+        <!-- المواصفات -->
+        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #ccc; border-top: 1px solid #333; padding-top: 10px;">
+            {% if include.item.area %}<span><i class="fas fa-ruler-combined"></i> {{ include.item.area }}</span>{% endif %}
+            {% if include.item.rooms %}<span><i class="fas fa-bed"></i> {{ include.item.rooms }}</span>{% endif %}
+        </div>
     </div>
-
-    <!-- تذييل البطاقة (السهم) -->
-    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; text-align: left;">
-        <span style="color:#aaa; font-size:0.9rem; transition: 0.3s;">
-            التفاصيل الكاملة <i class="fas fa-arrow-left" style="color: {{ main_color }}; margin-right: 5px;"></i>
-        </span>
-    </div>
-
 </div>
+
+<style>
+    /* تأثير زووم خفيف للصورة عند الماوس */
+    .property-card:hover img { transform: scale(1.1); }
+</style>
