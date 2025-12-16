@@ -1,4 +1,4 @@
-<!-- ملف البطاقة (النسخة الهجين: صور + نص) -->
+<!-- ملف البطاقة (النسخة الكاملة: صور + نص + زر التفاصيل) -->
 
 {% assign main_color = "#d4af37" %}
 {% assign label_text = "عرض" %}
@@ -14,9 +14,9 @@
     {% assign icon_type = "fa-key" %}
 {% endif %}
 
-<div class="property-card" onclick="window.location.href='{{ include.item.url | relative_url }}'" style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden;">
+<div class="property-card" onclick="window.location.href='{{ include.item.url | relative_url }}'" style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;">
     
-    <!-- 🖼️ عرض الصورة إذا وجدت -->
+    <!-- 🖼️ حالة وجود صورة -->
     {% if include.item.image %}
     <div class="card-image" style="height: 200px; overflow: hidden; position: relative;">
         <img src="{{ include.item.image | relative_url }}" 
@@ -29,9 +29,10 @@
             <i class="fas {{ icon_type }}"></i> {{ label_text }}
         </span>
     </div>
+    
+    <!-- 📄 حالة النص فقط (بدون صورة) -->
     {% else %}
-    <!-- 📄 الشارة في حالة عدم وجود صورة (النظام القديم) -->
-    <div style="padding: 15px 15px 0 15px; display:flex; justify-content:space-between;">
+    <div style="padding: 15px 15px 0 15px; display:flex; justify-content:space-between; align-items: center;">
         <span style="color: {{ main_color }}; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid {{ main_color }};">
             <i class="fas {{ icon_type }}"></i> {{ label_text }}
         </span>
@@ -39,11 +40,15 @@
     </div>
     {% endif %}
 
-    <div class="card-content" style="padding: 15px;">
+    <!-- محتوى البطاقة -->
+    <div class="card-content" style="padding: 15px; flex-grow: 1; display: flex; flex-direction: column;">
+        
+        <!-- العنوان -->
         <h3 class="property-title" style="color:#fff; font-size:1.1rem; margin: 0 0 10px 0; line-height: 1.4;">
             {{ include.item.title }}
         </h3>
         
+        <!-- الموقع -->
         <p style="color:#b0b0b0; font-size:0.9rem; margin-bottom: 15px;">
             <i class="fas fa-map-marker-alt" style="color: {{ main_color }};"></i> {{ include.item.location }}
         </p>
@@ -58,14 +63,22 @@
         </div>
 
         <!-- المواصفات -->
-        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #ccc; border-top: 1px solid #333; padding-top: 10px;">
+        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">
             {% if include.item.area %}<span><i class="fas fa-ruler-combined"></i> {{ include.item.area }}</span>{% endif %}
             {% if include.item.rooms %}<span><i class="fas fa-bed"></i> {{ include.item.rooms }}</span>{% endif %}
         </div>
+
+        <!-- 👇 زر التفاصيل (تمت إعادته) 👇 -->
+        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #333; text-align: left;">
+            <span style="color: #aaa; font-size: 0.9rem; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px;">
+                عرض التفاصيل <i class="fas fa-arrow-left" style="color: {{ main_color }};"></i>
+            </span>
+        </div>
+
     </div>
 </div>
 
 <style>
-    /* تأثير زووم خفيف للصورة عند الماوس */
     .property-card:hover img { transform: scale(1.1); }
+    .property-card:hover { transform: translateY(-5px); }
 </style>
