@@ -6,6 +6,7 @@ location: "المنطقة الأولى - شارع زهير صبري (خلف أو
 price: "7,500,000 ج.م (شامل الجراج والتكييفات)"
 category: "apartments"
 id: "zone1-luxury-225m"
+image: "/assets/img/properties/zuhair-sabri.webp"
 area: "225 متر مربع"
 rooms: "4 غرف نوم (مساحات واسعة)"
 bathrooms: "2 حمام"
