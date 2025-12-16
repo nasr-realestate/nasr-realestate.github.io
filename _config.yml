@@ -1,105 +1,70 @@
 # =========================================================
-# === ⚙️ إعدادات الموقع المحسنة لـ SEO والمكالمات ===
+# === ⚙️ إعدادات الموقع النهائية (GitHub Pages) ===
 # =========================================================
 
-# 1. المعلومات الأساسية (محسنة للـ SEO)
-title: "شقق للبيع في مدينة نصر | سمسار طلبك"
+# 1. المعلومات الأساسية
+title: "سمسار طلبك | شقق للبيع في مدينة نصر"
 email: "elraikonly@outlook.sa"
-description: "⭐ تبحث عن شقق للبيع في مدينة نصر؟ تصفح أحدث عروض الشقق في جميع مناطق مدينة نصر. تواصل مع خبيرنا طارق طنطاوي مباشرة: 01147758857"
+description: "بوابتك العقارية الأولى في مدينة نصر. تصفح أحدث الشقق والمحلات والمكاتب التجارية للبيع والإيجار."
 url: "https://nasr-realestate.github.io"
 baseurl: ""
 lang: "ar"
 timezone: Africa/Cairo
 
-# 2. بيانات المالك (محسنة للـ Schema Markup)
+# 2. بيانات المالك (Schema)
 author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
   email: "elraikonly@outlook.sa"
 logo: "/assets/img/logo.webp"
 
-# 3. إعدادات البناء (Markdown)
+# 3. إعدادات البناء والروابط
 markdown: kramdown
 permalink: pretty
 
-# 4. الإضافات (GitHub يدعم هذه الإضافات تلقائياً)
+# 4. الإضافات (عضلات الموقع)
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
 
-# 5. Google Analytics (جديد - لتتبع المكالمات)
-google_analytics: UA-XXXXXXXXX-X # ⚠️ استبدل برقم التتبع الخاص بك
+# 5. تحليلات جوجل (تحديث: GA4 يبدأ بـ G- وليس UA-)
+# google_analytics: G-XXXXXXXXXX
 
-# 6. 🔥 المجموعات (Collections) - محسن لـ SEO
+# 6. 🔥 الروابط الذكية (Collections)
 collections:
   properties:
     output: true
-    permalink: /شقق-للبيع-في-مدينة-نصر/:title/ # ⚡ رابط صديق لمحركات البحث
+    permalink: /properties/:title/
   requests:
     output: true
-    permalink: /طلبات-عقارية/:title/
+    permalink: /requests/:title/
 
-# 7. الإعدادات الافتراضية (محدثة)
+# 7. الإعدادات الافتراضية
 defaults:
-  # الإعدادات العامة
   - scope:
       path: ""
     values:
       layout: "default"
       image: "/assets/img/social-home.webp"
-      phone_primary: "+201147758857"
-      phone_secondary: "+201098765432"
   
-  # إعدادات العقارات
+  # تخصيص العقارات
   - scope:
       path: ""
       type: "properties"
     values:
       layout: "property_page"
-      category: "للبيع"
-      property_type: "شقة"
   
-  # إعدادات الطلبات
+  # تخصيص الطلبات
   - scope:
       path: ""
       type: "requests"
     values:
       layout: "request_page"
-      category: "مطلوب"
 
-# 8. الإعدادات المخصصة (جديدة)
-sitemap:
-  priority: 0.7
-  changefreq: weekly
-
-# 9. التصاريح (للروابط الخارجية)
-permissions_policy:
-  camera: "()"
-  microphone: "()"
-  geolocation: "()"
-
-# 10. الملفات المستبعدة
+# 8. الملفات المستبعدة
 exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules
   - README.md
   - vendor
-  - .gitignore
-  - .DS_Store
-
-# 11. الإعدادات الإضافية (جديدة)
-future: false
-safe: true
-lsi: false
-incremental: false
-highlighter: rouge
-
-# 12. ضغط HTML (لتحسين السرعة)
-compress_html:
-  clippings: all
-  comments: all
-  endings: all
-  startings: []
-  blanklines: false
-  profile: false
