@@ -4,11 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- التحقق من ملكية جوجل -->
- 
-  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
   <!-- =========================================================
-       1. التحميل المسبق (Preload) - حل مشكلة LCP 🚀
+       1. Google Tag Manager (Head Part)
+       أهم كود للتحليلات - يوضع في الأعلى
+       ========================================================= -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+  <!-- End Google Tag Manager -->
+
+  <!-- التحقق من ملكية جوجل -->
+  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
+  
+  <!-- =========================================================
+       2. التحميل المسبق (Preload) - حل مشكلة LCP 🚀
        ========================================================= -->
   <link rel="preload" as="image" href="{{ '/assets/img/hero-bg.webp' | relative_url }}">
   
@@ -18,12 +29,12 @@
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
   <!-- =========================================================
-       2. السيو (SEO Tags)
+       3. السيو (SEO Tags)
        ========================================================= -->
   {% seo %}
 
   <!-- =========================================================
-       3. الخطوط والأيقونات (Non-Blocking / Async) ⚡
+       4. الخطوط والأيقونات (Non-Blocking / Async) ⚡
        ========================================================= -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   
@@ -37,13 +48,12 @@
   </noscript>
 
   <!-- =========================================================
-       4. ملف التصميم الأساسي (Critical CSS)
+       5. ملف التصميم الأساسي (Critical CSS)
        ========================================================= -->
-  <!-- ✅ إصلاح المسار لضمان العمل على GitHub Pages -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
 
   <!-- =========================================================
-       5. أيقونة الموقع (Favicon)
+       6. أيقونة الموقع (Favicon)
        ========================================================= -->
   <link rel="shortcut icon" type="image/x-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
@@ -51,7 +61,7 @@
   <meta name="twitter:card" content="summary_large_image">
   
   <!-- =========================================================
-       6. إضافة تتبع جوجل أناليتكس (مصحح) 📞
+       7. إضافة تتبع جوجل أناليتكس (مصحح) 📞
        ========================================================= -->
   <script>
     // تعريف الدالة خارج الشرط لمنع الأخطاء في الكونسول
@@ -61,6 +71,14 @@
           'event_category': 'Phone',
           'event_label': label,
           'phone_number': phoneNumber
+        });
+      }
+      // إرسال الحدث لـ GTM أيضاً إذا لزم الأمر
+      if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({
+          'event': 'phone_click',
+          'phone_number': phoneNumber,
+          'label': label
         });
       }
       console.log('Call tracked: ' + label + ' - ' + phoneNumber);
@@ -78,7 +96,7 @@
   {% endif %}
   
   <!-- =========================================================
-       7. بيانات منظمة إضافية (Schema Markup)
+       8. بيانات منظمة إضافية (Schema Markup)
        ========================================================= -->
   {% if page.layout == 'property_page' %}
   <script type="application/ld+json">
@@ -97,6 +115,14 @@
 
 <body class="{{ page.body_class }}">
 
+  <!-- =========================================================
+       Google Tag Manager (Body Part - NoScript)
+       يعمل في حالة تعطيل الجافاسكربت
+       ========================================================= -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+
   <div class="cinematic-bg"></div>
   <div class="animated-overlay"></div>
 
@@ -109,7 +135,7 @@
   {% include footer.html %}
 
   <!-- =========================================================
-       8. زر الهاتف الثابت (مع aria-label للسيو) 📞
+       زر الهاتف الثابت (مع aria-label للسيو) 📞
        ========================================================= -->
   <a href="tel:+201147758857" 
      class="fixed-call-button"
@@ -119,5 +145,12 @@
     <span>اتصل الآن: 01147758857</span>
   </a>
 
+  <!-- تحميل JS اللازم بشكل غير متزامن -->
+  {% if page.scripts %}
+    {% for script in page.scripts %}
+      <script src="{{ script | relative_url }}" defer></script>
+    {% endfor %}
+  {% endif %}
+
 </body>
-</html>
+</html> 
