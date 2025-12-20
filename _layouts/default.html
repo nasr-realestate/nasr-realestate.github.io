@@ -4,22 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- =========================================================
-       1. Google Tag Manager - كما هو لم يتغير ⚠️
-       ========================================================= -->
+  <!-- Google Tag Manager - كما هو لم يتغير -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
   
-  <!-- التحقق من ملكية جوجل - لم يتغير ⚠️ -->
+  <!-- التحقق من ملكية جوجل - كما هو -->
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
   
   <!-- =========================================================
-       2. تحسينات SEO إضافية
+       تحسينات SEO إضافية
        ========================================================= -->
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="طارق طنطاوي">
   <meta name="geo.region" content="EG-C">
   <meta name="geo.placename" content="Nasr City, Cairo">
@@ -27,24 +25,11 @@
   <meta name="ICBM" content="30.0635, 31.311">
   
   <!-- =========================================================
-       3. التحميل المسبق للصفحات الداخلية
-       ========================================================= -->
-  <link rel="preload" as="image" href="{{ '/assets/img/hero-bg.webp' | relative_url }}">
-  <link rel="preload" href="{{ '/assets/css/style.css' | relative_url }}" as="style">
-  
-  <!-- =========================================================
-       4. الاتصال المبكر
-       ========================================================= -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-  
-  <!-- =========================================================
-       5. السيو (SEO Tags) - تم التعديل ليشمل كلمات البحث
+       السيو (SEO Tags)
        ========================================================= -->
   {% seo %}
   
-  <!-- تعديل العنوان والوصف إذا كانا غير محددين -->
+  <!-- تعديل العنوان والوصف للسيو -->
   {% if page.title %}
     <meta property="og:title" content="{{ page.title }} | سمسار طلبك - شقق للبيع في مدينة نصر">
   {% endif %}
@@ -56,8 +41,10 @@
   {% endif %}
   
   <!-- =========================================================
-       6. الخطوط والأيقونات
+       الخطوط والأيقونات
        ========================================================= -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
@@ -65,12 +52,12 @@
         crossorigin="anonymous" referrerpolicy="no-referrer">
   
   <!-- =========================================================
-       7. ملف التصميم الأساسي
+       ملف التصميم الأساسي
        ========================================================= -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
   
   <!-- =========================================================
-       8. أيقونة الموقع
+       أيقونة الموقع
        ========================================================= -->
   <link rel="shortcut icon" type="image/x-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
@@ -78,24 +65,7 @@
   <meta name="twitter:card" content="summary_large_image">
   
   <!-- =========================================================
-       9. بيانات منظمة للصفحة الحالية
-       ========================================================= -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "{{ site.title }}",
-    "url": "{{ site.url }}",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "{{ site.url }}/properties/?q={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
-  }
-  </script>
-  
-  <!-- =========================================================
-       10. Google Analytics - كما هو لم يتغير ⚠️
+       Google Analytics - كما هو
        ========================================================= -->
   {% if site.google_analytics %}
   <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"></script>
@@ -130,13 +100,13 @@
 <body class="{{ page.body_class | default: 'default-page' }}">
 
   <!-- =========================================================
-       Google Tag Manager (Body Part) - كما هو لم يتغير ⚠️
+       Google Tag Manager (Body Part) - كما هو
        ========================================================= -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   
   <!-- =========================================================
-       11. الهيكل الرئيسي
+       الهيكل الرئيسي
        ========================================================= -->
   <div class="cinematic-bg"></div>
   <div class="animated-overlay"></div>
@@ -150,7 +120,7 @@
   {% include footer.html %}
 
   <!-- =========================================================
-       12. زر الهاتف الثابت مع تحسينات SEO
+       زر الهاتف الثابت
        ========================================================= -->
   <a href="tel:+201147758857" 
      class="fixed-call-button"
@@ -159,15 +129,6 @@
     <i class="fas fa-phone-alt"></i>
     <span>اتصل الآن: 01147758857</span>
   </a>
-
-  <!-- =========================================================
-       13. تحميل JS اللازم
-       ========================================================= -->
-  {% if page.scripts %}
-    {% for script in page.scripts %}
-      <script src="{{ script | relative_url }}" defer></script>
-    {% endfor %}
-  {% endif %}
 
 </body>
 </html>
