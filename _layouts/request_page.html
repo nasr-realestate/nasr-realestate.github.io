@@ -21,16 +21,23 @@ layout: default
   },
   "seller": {
     "@type": "RealEstateAgent",
-    "name": "سمسار طلبك"
+    "name": "سمسار طلبك",
+    "url": "{{ site.url }}",
+    "telephone": "+201147758857"
   },
   "itemOffered": {
     "@type": "RealEstateListing",
+    "name": "طلب {{ page.title }}",
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "{{ page.location | split: ',' | first | default: 'مدينة نصر' }}",
       "addressRegion": "القاهرة",
       "addressCountry": "EG"
     }
+  },
+  "areaServed": {
+    "@type": "City",
+    "name": "Nasr City"
   }
 }
 </script>
@@ -40,10 +47,12 @@ layout: default
     <!-- 1. رأس الصفحة -->
     <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff;">
+            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff;"
+                  aria-label="نوع الطلب: طلب شراء">
                 <i class="fas fa-bullhorn"></i> طلب شراء
             </span>
-            <span style="background: rgba(255, 255, 255, 0.05); color: #ccc; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
+            <span style="background: rgba(255, 255, 255, 0.05); color: #ccc; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;"
+                  aria-label="تاريخ الطلب: {{ page.date | date: '%Y-%m-%d' }}">
                 <i class="fas fa-clock"></i> {{ page.date | date: "%Y-%m-%d" | default: "جديد" }}
             </span>
         </div>
@@ -101,7 +110,8 @@ layout: default
         
         <div style="text-align: center; margin-bottom: 1.5rem;">
             <p style="color: #ccc; font-size: 1.1rem;">اتصل بنا للتفاصيل:</p>
-            <div style="font-size: 1.3rem; color: #fff; direction: ltr; font-weight: bold; margin: 10px 0;">
+            <div style="font-size: 1.3rem; color: #fff; direction: ltr; font-weight: bold; margin: 10px 0;"
+                 aria-label="رقم الهاتف: 01147758857">
                 {{ phone_number }}
             </div>
         </div>
@@ -111,6 +121,7 @@ layout: default
             <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
                class="action-btn whatsapp-btn"
                onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp Request - {{ page.title }}')"
+               aria-label="عرض العقار عبر واتساب"
                style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2); display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i>
                 <span>عرض العقار عبر واتساب</span>
@@ -119,6 +130,7 @@ layout: default
             <a href="tel:{{ phone_number }}" 
                class="action-btn phone-btn"
                onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call Request - {{ page.title }}')"
+               aria-label="الاتصال المباشر على الرقم 01147758857"
                style="flex: 1; min-width: 200px; background: transparent; border: 2px solid #0a84ff; color: #0a84ff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <i class="fas fa-phone-alt" style="font-size: 1.3rem;"></i>
                 <span>اتصال مباشر</span>
@@ -129,15 +141,17 @@ layout: default
     <!-- 6. روابط التنقل -->
     <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333;">
         <a href="{{ '/requests/' | relative_url }}" 
-           style="color: #0a84ff; text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
+           style="color: #0a84ff; text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;"
+           aria-label="العودة إلى صفحة جميع الطلبات">
             <i class="fas fa-arrow-right"></i>
             <span>عرض جميع الطلبات</span>
         </a>
         <span style="color: #666; margin: 0 10px;">|</span>
-        <a href="{{ '/add-your-property.html' | relative_url }}" 
-           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-plus-circle"></i>
-            <span>أضف عقارك للبيع</span>
+        <a href="{{ '/properties/' | relative_url }}" 
+           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;"
+           aria-label="تصفح جميع العقارات المتاحة">
+            <i class="fas fa-home"></i>
+            <span>تصفح العقارات</span>
         </a>
     </div>
 </div>
@@ -153,3 +167,30 @@ layout: default
         .action-btn { width: 100%; min-width: unset; }
     }
 </style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "{{ site.url }}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "طلبات العملاء",
+      "item": "{{ site.url }}/requests/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ page.title }}",
+      "item": "{{ page.url | absolute_url }}"
+    }
+  ]
+}
+</script>
