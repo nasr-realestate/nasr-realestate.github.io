@@ -1,4 +1,20 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /private/
 
 Sitemap: https://nasr-realestate.github.io/sitemap.xml
+
+# تفضيلات لمحركات البحث
+Crawl-delay: 1
+
+User-agent: Googlebot
+Allow: /
+Disallow: /search/
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Yandex
+Allow: /
+Disallow: /cgi-bin
