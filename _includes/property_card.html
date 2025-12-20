@@ -20,10 +20,17 @@
      style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
      itemscope itemtype="https://schema.org/RealEstateListing">
     
-    <!-- 🖼️ حالة وجود صورة -->
-    {% if include.item.image %}
+    <!-- 🖼️ حالة وجود صورة (دعم image_file أو image) -->
+    {% if include.item.image_file or include.item.image %}
     <div class="card-image" style="height: 200px; overflow: hidden; position: relative;">
-        <img src="{{ include.item.image | relative_url }}" 
+        
+        {% if include.item.image_file %}
+            {% assign img_src = "/assets/img/properties/" | append: include.item.image_file | relative_url %}
+        {% else %}
+            {% assign img_src = include.item.image | relative_url %}
+        {% endif %}
+
+        <img src="{{ img_src }}" 
              alt="{{ include.item.title }} - شقة للبيع في مدينة نصر" 
              loading="lazy"
              itemprop="image"
