@@ -1,11 +1,11 @@
 ---
 layout: property_page
 title: "شقة 180م الترا سوبر لوكس للبيع - المنطقة العاشرة، مدينة نصر"
-date: 2025-12-20
-location: "المنطقة العاشرة، مدينة نصر، القاهرة"
+date: 2025-11-28
+location: "أول محور شنرو آبي - المنطقة العاشرة - مدينة نصر"
 price: "3,700,000 ج.م"
 category: "apartments"
-id: "شقة-180م-المنطقة-العاشرة"
+id: "10th-district-180m"
 area: "180 متر مربع"
 rooms: "3 غرف نوم + ريسبشن كبير"
 bathrooms: "2 حمام"
@@ -23,162 +23,562 @@ keywords: "شقق للبيع مدينة نصر, شقة 180م للبيع, الم�
 images: "شقة-180م-المنطقة-العاشرة.webp"
 ---
 
-# شقة 180م الترا سوبر لوكس للبيع - المنطقة العاشرة، مدينة نصر
+<div class="property-detail-container">
 
-## 🏠 **نظرة عامة على العقار**
+<!-- البطاقة الملخصة في الأعلى -->
+<div class="summary-card">
+    <div class="summary-grid">
+        <div class="summary-item">
+            <div class="summary-label">السعر</div>
+            <div class="summary-value price-highlight">3,700,000 ج.م</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">المساحة</div>
+            <div class="summary-value">180 متر مربع</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">الغرف</div>
+            <div class="summary-value">3 غرف + ريسبشن</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">الدور</div>
+            <div class="summary-value">الثالث</div>
+        </div>
+    </div>
+</div>
 
-شقة سكنية فاخرة بمساحة **180 متر مربع** في أحد أفضل أحياء مدينة نصر. الشقة في حالة **الترا سوبر لوكس** وجاهزة للسكن الفوري. تقع في **الدور الثالث** بمبنى حديث يوفر الخصوصية والراحة.
+<!-- القسم 1: نظرة عامة -->
+<section class="info-section">
+    <h2 class="section-title"><i class="fas fa-eye"></i> نظرة عامة</h2>
+    <div class="section-content">
+        <p>شقة سكنية فاخرة بمساحة <strong>180 متر مربع</strong> في أحد أفضل أحياء مدينة نصر. الشقة في حالة <strong>الترا سوبر لوكس</strong> وجاهزة للسكن الفوري.</p>
+        <p>تقع في <strong>الدور الثالث</strong> بمبنى حديث يوفر الخصوصية والراحة مع إطلالة مميزة على الشارع الرئيسي.</p>
+    </div>
+</section>
 
-## 📊 **المواصفات الفنية**
+<!-- القسم 2: المواصفات -->
+<section class="info-section">
+    <h2 class="section-title"><i class="fas fa-list-alt"></i> المواصفات الرئيسية</h2>
+    <div class="specs-container">
+        <div class="spec-row">
+            <span class="spec-label">المساحة:</span>
+            <span class="spec-value">180 متر مربع</span>
+        </div>
+        <div class="spec-row">
+            <span class="spec-label">الغرف:</span>
+            <span class="spec-value">3 غرف نوم + ريسبشن كبير</span>
+        </div>
+        <div class="spec-row">
+            <span class="spec-label">الحمامات:</span>
+            <span class="spec-value">2 حمام كامل</span>
+        </div>
+        <div class="spec-row">
+            <span class="spec-label">الدور:</span>
+            <span class="spec-value">الثالث (من 6 أدوار)</span>
+        </div>
+        <div class="spec-row">
+            <span class="spec-label">التشطيب:</span>
+            <span class="spec-value">الترا سوبر لوكس</span>
+        </div>
+        <div class="spec-row">
+            <span class="spec-label">العمران:</span>
+            <span class="spec-value">مباني 2015</span>
+        </div>
+    </div>
+</section>
 
-| الخاصية | التفاصيل |
-|---------|----------|
-| **المساحة الإجمالية** | 180 متر مربع |
-| **عدد الغرف** | 3 غرف نوم + ريسبشن كبير |
-| **عدد الحمامات** | 2 حمام (تأسيس كامل) |
-| **الدور** | الثالث (من أصل 6 أدوار) |
-| **نوع التشطيب** | الترا سوبر لوكس |
-| **التوجيه** | شمال شرقي (إضاءة طبيعية ممتازة) |
-| **العمران** | مبنى تم إنشاؤه عام 2015 |
-| **الحالة** | شبه جديدة - مستخدمة استخدام راقي |
+<!-- القسم 3: المميزات -->
+<section class="info-section">
+    <h2 class="section-title"><i class="fas fa-star"></i> المميزات</h2>
+    <div class="features-grid">
+        <div class="feature-category">
+            <h3><i class="fas fa-paint-roller"></i> تشطيب فاخر</h3>
+            <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> أرضيات سيراميك مستورد</li>
+                <li><i class="fas fa-check-circle"></i> أبواب خشب طبيعي</li>
+                <li><i class="fas fa-check-circle"></i> نوافذ ألومنيوم مزدوج</li>
+                <li><i class="fas fa-check-circle"></i> إضاءة LED مدمجة</li>
+            </ul>
+        </div>
+        
+        <div class="feature-category">
+            <h3><i class="fas fa-map-marker-alt"></i> موقع مميز</h3>
+            <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> قلب المنطقة العاشرة</li>
+                <li><i class="fas fa-check-circle"></i> قرب المراكز التجارية</li>
+                <li><i class="fas fa-check-circle"></i> مواصلات أمام العمارة</li>
+                <li><i class="fas fa-check-circle"></i> منطقة هادئة وآمنة</li>
+            </ul>
+        </div>
+        
+        <div class="feature-category">
+            <h3><i class="fas fa-plus-circle"></i> إضافات قيمة</h3>
+            <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> جراج خاص للسيارة</li>
+                <li><i class="fas fa-check-circle"></i> إنترنت ألياف بصرية</li>
+                <li><i class="fas fa-check-circle"></i> حمام سباحة على السطح</li>
+                <li><i class="fas fa-check-circle"></i> كاميرات مراقبة 24/7</li>
+            </ul>
+        </div>
+    </div>
+</section>
 
-## ✨ **المميزات الرئيسية**
+<!-- القسم 4: الخدمات القريبة -->
+<section class="info-section">
+    <h2 class="section-title"><i class="fas fa-store"></i> الخدمات القريبة</h2>
+    <div class="services-grid">
+        <div class="service-item">
+            <i class="fas fa-shopping-cart"></i>
+            <div>
+                <h4>كارفور</h4>
+                <p>1.5 كم - 5 دقائق</p>
+            </div>
+        </div>
+        <div class="service-item">
+            <i class="fas fa-hospital"></i>
+            <div>
+                <h4>مستشفى السلام</h4>
+                <p>3 كم - 10 دقائق</p>
+            </div>
+        </div>
+        <div class="service-item">
+            <i class="fas fa-school"></i>
+            <div>
+                <h4>مدارس دولية</h4>
+                <p>2 كم - 7 دقائق</p>
+            </div>
+        </div>
+        <div class="service-item">
+            <i class="fas fa-mosque"></i>
+            <div>
+                <h4>مسجد الرحمن</h4>
+                <p>500 متر - 3 دقائق</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-### ✅ **مزايا الموقع:**
-- 📍 **موقع مميز:** في قلب المنطقة العاشرة
-- 🛒 **قرب الخدمات:** 5 دقائق للمراكز التجارية
-- 🏥 **قرب المستشفيات:** 10 دقائق لأكبر المستشفيات
-- 🚌 **مواصلات:** موقف ميكروباص أمام العمارة
-- 🌳 **منطقة هادئة:** بعيدة عن الضوضاء
+<!-- القسم 5: خيارات الدفع -->
+<section class="info-section">
+    <h2 class="section-title"><i class="fas fa-credit-card"></i> خيارات الدفع</h2>
+    <div class="payment-options">
+        <div class="payment-card">
+            <div class="payment-header">
+                <i class="fas fa-money-bill-wave"></i>
+                <h3>دفع كاش</h3>
+            </div>
+            <div class="payment-body">
+                <div class="payment-price">3,700,000 ج.م</div>
+                <p class="payment-note">خصم 3% للدفع الكامل</p>
+            </div>
+        </div>
+        
+        <div class="payment-card">
+            <div class="payment-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>تقسيط</h3>
+            </div>
+            <div class="payment-body">
+                <div class="payment-price">حتى 7 سنوات</div>
+                <p class="payment-note">عبر البنوك المعتمدة</p>
+            </div>
+        </div>
+        
+        <div class="payment-card">
+            <div class="payment-header">
+                <i class="fas fa-handshake"></i>
+                <h3>بدل رهن</h3>
+            </div>
+            <div class="payment-body">
+                <div class="payment-price">50% من القيمة</div>
+                <p class="payment-note">لمدة سنة قابلة للتجديد</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-### ✅ **مزايا التشطيب:**
-- 🔨 **الأرضيات:** سيراميك فاخر مستورد
-- 🚪 **الأبواب:** خشب طبيعي عالي الجودة
-- 🪟 **النوافذ:** ألومنيوم مزدوج (عازل للصوت)
-- 💡 **الإضاءة:** نظام إضاءة LED مدمج
-- ❄️ **التكييف:** 3 مكيفات سبليت (مرفقة مع الشقة)
+<!-- زر الاتصال الرئيسي -->
+<div class="main-cta">
+    <a href="tel:+201147758857" class="cta-button-large" onclick="trackPhoneCall('+201147758857', 'Property Detail CTA');">
+        <div class="cta-icon">
+            <i class="fas fa-phone-alt"></i>
+        </div>
+        <div class="cta-content">
+            <div class="cta-title">اتصل الآن للاستفسار</div>
+            <div class="cta-subtitle">خبير العقارات: طارق طنطاوي</div>
+            <div class="cta-phone">01147758857</div>
+        </div>
+    </a>
+</div>
 
-### ✅ **مزايا إضافية:**
-- 🅿️ **جراج خاص:** مكان مخصص للسيارة
-- 📡 **الإنترنت:** ألياف بصرية (Fiber)
-- 🔒 **الأمان:** كاميرات مراقبة في العمارة
-- 🏊 **المرافق:** حمام سباحة على السطح
-- 🌅 **الإطلالة:** تطل على شارع رئيسي واسع
+</div>
 
-## 🗺️ **الموقع والخدمات القريبة**
+<style>
+/* الحاوية الرئيسية */
+.property-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Cairo', sans-serif;
+    line-height: 1.6;
+}
 
-### **العنوان الدقيق:**
-المنطقة العاشرة، مدينة نصر، محافظة القاهرة
+/* البطاقة الملخصة */
+.summary-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
 
-### **المسافات للخدمات الهامة:**
-- 🛒 **كارفور:** 1.5 كم (5 دقائق بالسيارة)
-- 🏥 **مستشفى السلام:** 3 كم (10 دقائق)
-- 🏫 **مدارس النيل الدولية:** 2 كم (7 دقائق)
-- 🕌 **مسجد الرحمن:** 500 متر (3 دقائق سيراً)
-- ⛽ **محطة بنزين:** 700 متر (4 دقائق)
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
 
-## 💰 **تفاصيل السعر والدفع**
+.summary-item {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.3s;
+}
 
-### **السعر الإجمالي:** 3,700,000 جنيه مصري
-- **سعر المتر:** 20,556 جنيهاً
-- **الدفعة المقدمة:** 30% (1,110,000 جنيهاً)
-- **المتبقي:** 2,590,000 جنيهاً
+.summary-item:hover {
+    transform: translateY(-5px);
+    background: rgba(212, 175, 55, 0.1);
+}
 
-### **خيارات الدفع:**
-1. **الدفع الكاش:** خصم 3% على السعر الإجمالي
-2. **التقسيط:** حتى 7 سنوات عبر البنوك
-3. **بدل رهن:** 50% من القيمة لمدة سنة قابلة للتجديد
+.summary-label {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    display: block;
+}
 
-### **التكاليف الإضافية:**
-- 📝 **الشهر العقاري:** 2% (74,000 جنيهاً) - يتحمله البائع
-- 🏢 **إدارة المبنى:** 200 جنيهاً شهرياً
-- ⚡ **فواتير المرافق:** حسب الاستهلاك
+.summary-value {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: block;
+}
 
-## 📈 **مقارنة بسوق العقارات المحلي**
+.price-highlight {
+    color: #d4af37;
+    font-size: 1.4rem;
+}
 
-| الخاصية | هذه الشقة | متوسط السوق | التوفير |
-|---------|-----------|-------------|---------|
-| **المساحة** | 180م | 180م | متساوي |
-| **السعر** | 3,700,000 ج.م | 3,900,000 ج.م | **200,000 ج.م** |
-| **سعر المتر** | 20,556 ج.م | 21,667 ج.م | **1,111 ج.م/م** |
-| **التشطيب** | الترا سوبر لوكس | سوبر لوكس | **أفضل تشطيب** |
-| **الدور** | الثالث (مميز) | مختلف | **دور مفضل** |
+/* الأقسام */
+.info-section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
 
-## 📋 **الأوراق والمستندات**
+.section-title {
+    color: #d4af37;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-### **✅ الأوراق المكتملة:**
-- عقد تمليك مسجل شهر عقاري
-- خريطة مساحة معتمدة من المساحة
-- شهادة عدم وجود مطالبات
-- إقرار من البائع بخلو العقار من الديون
-- فواتير الكهرباء والمياه سداد
+.section-content {
+    color: #e0e0e0;
+    line-height: 1.8;
+}
 
-### **✅ الأمان القانوني:**
-- العقار خالي من أي نزاعات قضائية
-- الملكية نقية وواضحة (ورثة)
-- جميع الرسوم الحكومية مسددة
-- قابل للتمويل البنكي
+.section-content p {
+    margin-bottom: 15px;
+}
 
-## 📞 **معلومات الاتصال والزيارة**
+/* المواصفات */
+.specs-container {
+    display: grid;
+    gap: 15px;
+}
 
-### **👤 وسيط العقار:**
-طارق طنطاوي - خبير عقارات مدينة نصر
+.spec-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border-right: 3px solid #d4af37;
+}
 
-### **📞 طرق التواصل:**
-- **الهاتف:** [01147758857](tel:+201147758857)
-- **الواتساب:** [01147758857](https://wa.me/201147758857)
-- **البريد:** [elraikonly@outlook.sa](mailto:elraikonly@outlook.sa)
+.spec-label {
+    color: #aaa;
+    font-weight: 600;
+}
 
-### **🕐 مواعيد العمل:**
-- من الأحد إلى الخميس: 10 صباحاً - 10 مساءً
-- الجمعة والسبت: 12 ظهراً - 8 مساءً
+.spec-value {
+    color: #fff;
+    font-weight: 600;
+}
 
-### **📍 موقع المكتب:**
-16 شارع محمد حسن الجمل، المنطقة السادسة، مدينة نصر، القاهرة
+/* المميزات */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
 
-## ⚠️ **معلومات هامة للمشتري**
+.feature-category {
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 10px;
+    border-top: 3px solid #d4af37;
+}
 
-1. **الحيازة:** التسليم فوري بعد إتمام التعاقد
-2. **المشاهدة:** يمكن ترتيب زيارة في أي وقت
-3. **التفاوض:** السعر قابل للتفاوض للمشتري الجاد
-4. **الحجز:** يتم بحجز مبدئي 50,000 جنيهاً
-5. **الضمان:** جميع الأوراق مضمونة قانونياً
+.feature-category h3 {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
----
+.feature-list {
+    list-style: none;
+    padding: 0;
+}
 
-## ❓ **أسئلة شائعة**
+.feature-list li {
+    color: #ccc;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-### **س: هل الشقة تحتاج أي تجديدات قبل السكن؟**
-**ج:** لا، الشقة جاهزة للسكن مباشرة ولا تحتاج لأي مصاريف إضافية.
+.feature-list li i {
+    color: #d4af37;
+}
 
-### **س: هل يوجد مصعد في المبنى؟**
-**ج:** نعم، المبنى به مصعد كهربائي حديث يتسع لـ 8 أشخاص.
+/* الخدمات */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
 
-### **س: ما هي مدة التقسيط المتاحة؟**
-**ج:** يمكن التقسيط حتى 7 سنوات حسب اتفاق البنك والمشتري.
+.service-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
 
-### **س: هل يمكن رؤية الشقة مساءً؟**
-**ج:** نعم، يمكن ترتيب زيارة مسائية حتى الساعة 10 مساءً.
+.service-item:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: translateX(5px);
+}
 
-### **س: ما هو نظام الأمن في العمارة؟**
-**ج:** العمارة بها حراسة 24 ساعة وكاميرات مراقبة في المدخل والسلالم.
+.service-item i {
+    font-size: 1.5rem;
+    color: #d4af37;
+    background: rgba(212, 175, 55, 0.1);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-### **س: هل يمكنني الحصول على تمويل بنكي؟**
-**ج:** نعم، العقار مؤهل للتمويل من جميع البنوك المصرية.
+.service-item h4 {
+    color: #fff;
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
 
----
+.service-item p {
+    color: #aaa;
+    font-size: 0.9rem;
+}
 
-## 🏢 **عن الشركة الوسيطة**
+/* خيارات الدفع */
+.payment-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
 
-**سمسار طلبك** هي بوابة العقارات الأولى في مدينة نصر. نحن نقدم:
+.payment-card {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
 
-- 🔍 **عروض حصرية** لا توجد في السوق المفتوحة
-- 📝 **استشارات قانونية** مجانية
-- 🤝 **وساطة نزيهة** بين البائع والمشتري
-- ⚖️ **ضمان الأوراق** القانونية للعقار
-- 💰 **أفضل الأسعار** في السوق
+.payment-card:hover {
+    border-color: #d4af37;
+    transform: translateY(-5px);
+}
 
----
+.payment-header {
+    margin-bottom: 15px;
+}
 
-**📞 اتصل الآن لترتيب زيارة: 01147758857**
-*العرض ساري حتى نفاذ الكمية*
+.payment-header i {
+    font-size: 2rem;
+    color: #d4af37;
+    margin-bottom: 10px;
+}
+
+.payment-header h3 {
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+.payment-body {
+    margin-top: 10px;
+}
+
+.payment-price {
+    color: #d4af37;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.payment-note {
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+/* زر الاتصال الرئيسي */
+.main-cta {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.cta-button-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: white;
+    padding: 25px 40px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: bold;
+    box-shadow: 0 15px 35px rgba(37, 211, 102, 0.3);
+    border: 3px solid white;
+    animation: pulse 2s infinite;
+    transition: all 0.3s;
+}
+
+.cta-button-large:hover {
+    transform: scale(1.05);
+    box-shadow: 0 20px 40px rgba(37, 211, 102, 0.4);
+}
+
+.cta-icon {
+    font-size: 2rem;
+    background: rgba(255,255,255,0.2);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cta-content {
+    text-align: right;
+}
+
+.cta-title {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.cta-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.cta-phone {
+    font-size: 1.8rem;
+    direction: ltr;
+    font-weight: 900;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* التجاوب مع الشاشات الصغيرة */
+@media (max-width: 768px) {
+    .property-detail-container {
+        padding: 10px;
+    }
+    
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .features-grid,
+    .services-grid,
+    .payment-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-section {
+        padding: 20px;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+    }
+    
+    .spec-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .cta-button-large {
+        flex-direction: column;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .cta-content {
+        text-align: center;
+    }
+}
+
+/* تحسينات عامة للقراءة */
+p {
+    line-height: 1.8;
+    color: #e0e0e0;
+}
+
+strong {
+    color: #d4af37;
+    font-weight: 700;
+}
+</style>
