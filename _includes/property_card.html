@@ -15,22 +15,6 @@
     {% assign icon_type = "fa-key" %}
 {% endif %}
 
-<!-- بيانات منظمة للبطاقة -->
-<script type="application/ld+json" class="property-card-schema">
-{
-  "@context": "https://schema.org",
-  "@type": "ListItem",
-  "position": {{ forloop.index | default: 1 }},
-  "item": {
-    "@type": "RealEstateListing",
-    "name": "{{ include.item.title }}",
-    "url": "{{ site.url }}{{ item_url }}",
-    "description": "{{ include.item.title }} في {{ include.item.location | default: 'مدينة نصر' }}",
-    "price": "{{ include.item.price | default: include.item.budget }}"
-  }
-}
-</script>
-
 <div class="property-card" 
      onclick="window.location.href='{{ item_url }}'" 
      style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
