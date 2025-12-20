@@ -5,86 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- =========================================================
-       1. Google Tag Manager (Head Part)
-       أهم كود للتحليلات - يوضع في الأعلى
+       1. Google Tag Manager - كما هو لم يتغير ⚠️
        ========================================================= -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
-  <!-- End Google Tag Manager -->
-
-  <!-- التحقق من ملكية جوجل -->
+  
+  <!-- التحقق من ملكية جوجل - لم يتغير ⚠️ -->
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
   
   <!-- =========================================================
-       2. التحميل المسبق (Preload) - حل مشكلة LCP 🚀
+       2. تحسينات SEO إضافية
+       ========================================================= -->
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="author" content="طارق طنطاوي">
+  <meta name="geo.region" content="EG-C">
+  <meta name="geo.placename" content="Nasr City, Cairo">
+  <meta name="geo.position" content="30.0635;31.311">
+  <meta name="ICBM" content="30.0635, 31.311">
+  
+  <!-- =========================================================
+       3. التحميل المسبق للصفحات الداخلية
        ========================================================= -->
   <link rel="preload" as="image" href="{{ '/assets/img/hero-bg.webp' | relative_url }}">
+  <link rel="preload" href="{{ '/assets/css/style.css' | relative_url }}" as="style">
   
-  <!-- الاتصال المبكر بالسيرفرات الخارجية -->
+  <!-- =========================================================
+       4. الاتصال المبكر
+       ========================================================= -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-
+  
   <!-- =========================================================
-       3. السيو (SEO Tags)
+       5. السيو (SEO Tags) - تم التعديل ليشمل كلمات البحث
        ========================================================= -->
   {% seo %}
-
+  
+  <!-- تعديل العنوان والوصف إذا كانا غير محددين -->
+  {% if page.title %}
+    <meta property="og:title" content="{{ page.title }} | سمسار طلبك - شقق للبيع في مدينة نصر">
+  {% endif %}
+  
+  {% if page.description %}
+    <meta property="og:description" content="{{ page.description }}">
+  {% else %}
+    <meta property="og:description" content="بوابتك العقارية الأولى في مدينة نصر. شقق للبيع وإيجار في جميع مناطق المدينة.">
+  {% endif %}
+  
   <!-- =========================================================
-       4. الخطوط والأيقونات (Non-Blocking / Async) ⚡
+       6. الخطوط والأيقونات
        ========================================================= -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" 
-        crossorigin="anonymous" referrerpolicy="no-referrer"
-        media="print" onload="this.media='all'">
+        crossorigin="anonymous" referrerpolicy="no-referrer">
   
-  <noscript>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  </noscript>
-
   <!-- =========================================================
-       5. ملف التصميم الأساسي (Critical CSS)
+       7. ملف التصميم الأساسي
        ========================================================= -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-
+  
   <!-- =========================================================
-       6. أيقونة الموقع (Favicon)
+       8. أيقونة الموقع
        ========================================================= -->
   <link rel="shortcut icon" type="image/x-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
-
+  
   <meta name="twitter:card" content="summary_large_image">
   
   <!-- =========================================================
-       7. إضافة تتبع جوجل أناليتكس (مصحح) 📞
+       9. بيانات منظمة للصفحة الحالية
        ========================================================= -->
-  <script>
-    // تعريف الدالة خارج الشرط لمنع الأخطاء في الكونسول
-    function trackPhoneCall(phoneNumber, label) {
-      if (typeof gtag === 'function') {
-        gtag('event', 'phone_click', {
-          'event_category': 'Phone',
-          'event_label': label,
-          'phone_number': phoneNumber
-        });
-      }
-      // إرسال الحدث لـ GTM أيضاً إذا لزم الأمر
-      if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({
-          'event': 'phone_click',
-          'phone_number': phoneNumber,
-          'label': label
-        });
-      }
-      console.log('Call tracked: ' + label + ' - ' + phoneNumber);
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ site.title }}",
+    "url": "{{ site.url }}",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "{{ site.url }}/properties/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
     }
+  }
   </script>
-
+  
+  <!-- =========================================================
+       10. Google Analytics - كما هو لم يتغير ⚠️
+       ========================================================= -->
   {% if site.google_analytics %}
   <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"></script>
   <script>
@@ -92,37 +104,40 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', '{{ site.google_analytics }}');
+    
+    // دالة تتبع المكالمات
+    function trackPhoneCall(phoneNumber, label) {
+      gtag('event', 'phone_click', {
+        'event_category': 'Phone',
+        'event_label': label,
+        'phone_number': phoneNumber
+      });
+      
+      // إرسال الحدث لـ GTM أيضاً
+      if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({
+          'event': 'phone_click',
+          'phone_number': phoneNumber,
+          'label': label
+        });
+      }
+    }
   </script>
   {% endif %}
   
-  <!-- =========================================================
-       8. بيانات منظمة إضافية (Schema Markup)
-       ========================================================= -->
-  {% if page.layout == 'property_page' %}
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "RealEstateListing",
-    "name": "{{ page.title }}",
-    "description": "{{ page.description | strip_html | strip_newlines | escape }}",
-    "price": "{{ page.price }}",
-    "telephone": "{{ page.phone_primary }}",
-    "availability": "https://schema.org/InStock"
-  }
-  </script>
-  {% endif %}
 </head>
 
-<body class="{{ page.body_class }}">
+<body class="{{ page.body_class | default: 'default-page' }}">
 
   <!-- =========================================================
-       Google Tag Manager (Body Part - NoScript)
-       يعمل في حالة تعطيل الجافاسكربت
+       Google Tag Manager (Body Part) - كما هو لم يتغير ⚠️
        ========================================================= -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
-
+  
+  <!-- =========================================================
+       11. الهيكل الرئيسي
+       ========================================================= -->
   <div class="cinematic-bg"></div>
   <div class="animated-overlay"></div>
 
@@ -135,17 +150,19 @@
   {% include footer.html %}
 
   <!-- =========================================================
-       زر الهاتف الثابت (مع aria-label للسيو) 📞
+       12. زر الهاتف الثابت مع تحسينات SEO
        ========================================================= -->
   <a href="tel:+201147758857" 
      class="fixed-call-button"
-     aria-label="اتصل الآن بسمسار طلبك"
+     aria-label="اتصل الآن بسمسار طلبك للاستفسار عن شقق للبيع في مدينة نصر"
      onclick="trackPhoneCall('+201147758857', 'Fixed Button - {{ page.title | default: site.title }}');">
     <i class="fas fa-phone-alt"></i>
     <span>اتصل الآن: 01147758857</span>
   </a>
 
-  <!-- تحميل JS اللازم بشكل غير متزامن -->
+  <!-- =========================================================
+       13. تحميل JS اللازم
+       ========================================================= -->
   {% if page.scripts %}
     {% for script in page.scripts %}
       <script src="{{ script | relative_url }}" defer></script>
@@ -153,4 +170,4 @@
   {% endif %}
 
 </body>
-</html> 
+</html>
