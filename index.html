@@ -185,7 +185,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     4. الشقق حسب المنطقة (قسم SEO مهم)
+     4. الشقق حسب المنطقة (قسم SEO مهم) - تم الإصلاح ✅
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
@@ -194,26 +194,42 @@ body_class: "homepage"
     </h2>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-      <a href="/شقق-للبيع-في-مدينة-نصر/?region=10th" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center;">
+      <a href="{{ '/properties/' | relative_url }}" 
+         style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s;"
+         onmouseover="this.style.borderColor='var(--color-primary)'; this.style.transform='translateY(-3px)';"
+         onmouseout="this.style.borderColor='#333'; this.style.transform='translateY(0)';">
         <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة العاشرة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شقق للبيع - إيجار - تمليك</p>
       </a>
       
-      <a href="/شقق-للبيع-في-مدينة-نصر/?region=9th" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center;">
+      <a href="{{ '/properties/' | relative_url }}" 
+         style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s;"
+         onmouseover="this.style.borderColor='var(--color-primary)'; this.style.transform='translateY(-3px)';"
+         onmouseout="this.style.borderColor='#333'; this.style.transform='translateY(0)';">
         <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة التاسعة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">مكاتب - محلات - عقارات تجارية</p>
       </a>
       
-      <a href="/شقق-للبيع-في-مدينة-نصر/?region=6th" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center;">
+      <a href="{{ '/properties/' | relative_url }}" 
+         style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s;"
+         onmouseover="this.style.borderColor='var(--color-primary)'; this.style.transform='translateY(-3px)';"
+         onmouseout="this.style.borderColor='#333'; this.style.transform='translateY(0)';">
         <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة السادسة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شقق سكنية - عائلات - هدوء</p>
       </a>
       
-      <a href="/شقق-للبيع-في-مدينة-نصر/?region=andalus" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center;">
+      <a href="{{ '/properties/' | relative_url }}" 
+         style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s;"
+         onmouseover="this.style.borderColor='var(--color-primary)'; this.style.transform='translateY(-3px)';"
+         onmouseout="this.style.borderColor='#333'; this.style.transform='translateY(0)';">
         <h3 style="color: var(--color-primary); margin-bottom: 5px;">حي الأندلس</h3>
         <p style="font-size: 0.9rem; color: #aaa;">فلل - دوبلكس - مساحات كبيرة</p>
       </a>
     </div>
+    
+    <p style="text-align: center; color: #888; margin-top: 20px; font-size: 0.9rem;">
+      <i class="fas fa-info-circle"></i> انقر على أي منطقة لتصفح العقارات المتاحة
+    </p>
   </div>
 </section>
 
@@ -322,4 +338,4 @@ body_class: "homepage"
         padding: 12px 20px;
     }
   }
-             </style>
+</style>
