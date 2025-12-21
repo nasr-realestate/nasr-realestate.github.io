@@ -4,19 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Google Tag Manager - كما هو لم يتغير -->
+  <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
   
-  <!-- التحقق من ملكية جوجل - كما هو -->
+  <!-- التحقق من ملكية جوجل -->
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
   
-  <!-- =========================================================
-       تحسينات SEO إضافية
-       ========================================================= -->
+  <!-- تحسينات SEO إضافية -->
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="طارق طنطاوي">
   <meta name="geo.region" content="EG-C">
@@ -25,21 +23,32 @@
   <meta name="ICBM" content="30.0635, 31.311">
   
   <!-- =========================================================
-       السيو (SEO Tags)
+       السيو والمشاركة على السوشيال ميديا (WhatsApp & Facebook)
        ========================================================= -->
   {% seo %}
-  
-  <!-- تعديل العنوان والوصف للسيو -->
-  {% if page.title %}
-    <meta property="og:title" content="{{ page.title }} | سمسار طلبك - شقق للبيع في مدينة نصر">
-  {% endif %}
-  
-  {% if page.description %}
-    <meta property="og:description" content="{{ page.description }}">
+
+  <!-- إعدادات Open Graph المخصصة لضمان ظهور الصور -->
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:site_name" content="سمسار طلبك">
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} | سمسار طلبك{% else %}سمسار طلبك - عقارات مدينة نصر{% endif %}">
+
+  {% if page.image_file %}
+    <!-- 1. إذا كانت صفحة عقار ولها صورة محددة -->
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+  {% elsif page.collection == 'requests' or page.layout == 'request_page' %}
+    <!-- 2. إذا كانت صفحة طلب عميل (نستخدم الصورة الزرقاء الثابتة) -->
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
   {% else %}
-    <meta property="og:description" content="بوابتك العقارية الأولى في مدينة نصر. شقق للبيع وإيجار في جميع مناطق المدينة.">
+    <!-- 3. الصورة الافتراضية (اللوجو) لباقي صفحات الموقع -->
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/logo.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/logo.webp">
   {% endif %}
-  
+
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
   <!-- =========================================================
        الخطوط والأيقونات
        ========================================================= -->
@@ -51,22 +60,14 @@
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" 
         crossorigin="anonymous" referrerpolicy="no-referrer">
   
-  <!-- =========================================================
-       ملف التصميم الأساسي
-       ========================================================= -->
+  <!-- ملف التصميم الأساسي -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
   
-  <!-- =========================================================
-       أيقونة الموقع
-       ========================================================= -->
+  <!-- أيقونة الموقع -->
   <link rel="shortcut icon" type="image/x-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
   
-  <meta name="twitter:card" content="summary_large_image">
-  
-  <!-- =========================================================
-       Google Analytics - كما هو
-       ========================================================= -->
+  <!-- Google Analytics -->
   {% if site.google_analytics %}
   <script async src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"></script>
   <script>
@@ -75,15 +76,12 @@
     gtag('js', new Date());
     gtag('config', '{{ site.google_analytics }}');
     
-    // دالة تتبع المكالمات
     function trackPhoneCall(phoneNumber, label) {
       gtag('event', 'phone_click', {
         'event_category': 'Phone',
         'event_label': label,
         'phone_number': phoneNumber
       });
-      
-      // إرسال الحدث لـ GTM أيضاً
       if (typeof dataLayer !== 'undefined') {
         dataLayer.push({
           'event': 'phone_click',
@@ -99,15 +97,11 @@
 
 <body class="{{ page.body_class | default: 'default-page' }}">
 
-  <!-- =========================================================
-       Google Tag Manager (Body Part) - كما هو
-       ========================================================= -->
+  <!-- Google Tag Manager (Body Part) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   
-  <!-- =========================================================
-       الهيكل الرئيسي
-       ========================================================= -->
+  <!-- الهيكل الرئيسي -->
   <div class="cinematic-bg"></div>
   <div class="animated-overlay"></div>
 
@@ -119,12 +113,10 @@
 
   {% include footer.html %}
 
-  <!-- =========================================================
-       زر الهاتف الثابت
-       ========================================================= -->
+  <!-- زر الهاتف الثابت -->
   <a href="tel:+201147758857" 
      class="fixed-call-button"
-     aria-label="اتصل الآن بسمسار طلبك للاستفسار عن شقق للبيع في مدينة نصر"
+     aria-label="اتصل الآن بسمسار طلبك"
      onclick="trackPhoneCall('+201147758857', 'Fixed Button - {{ page.title | default: site.title }}');">
     <i class="fas fa-phone-alt"></i>
     <span>اتصل الآن: 01147758857</span>
