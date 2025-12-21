@@ -42,6 +42,15 @@ layout: default
 }
 </script>
 
+<!-- 🌐 إعدادات المشاركة على السوشيال ميديا -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="طلب شراء عقار في {{ page.location }} - ميزانية {{ page.budget }}">
+<meta property="og:image" content="{{ site.baseurl }}/assets/img/social-request-default.webp">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
+<meta property="og:site_name" content="سمسار طلبك">
+<meta name="twitter:card" content="summary_large_image">
+
 <div class="details-container request-theme" itemscope itemtype="https://schema.org/Offer" style="max-width: 900px; margin: 2rem auto; padding: 20px; border-top: 4px solid #0a84ff;">
     
     <!-- 1. رأس الصفحة -->
