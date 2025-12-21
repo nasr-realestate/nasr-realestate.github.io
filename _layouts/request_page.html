@@ -5,6 +5,18 @@ layout: default
 {% assign phone_number = "+201147758857" %}
 {% assign whatsapp_number = "201147758857" %}
 {% assign whatsapp_message = "لدي عقار يناسب طلبك: " | append: page.title | url_encode %}
+{% assign default_request_image = "/assets/img/social-request-default.webp" %}
+
+<!-- 🌐 وسوم Open Graph للواتساب وفيسبوك (باستخدام الصورة الموحدة للطلبات) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ site.url }}{{ page.url }}">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="مطلوب شراء عقار في {{ page.location }} - ميزانية {{ page.budget }}">
+<meta property="og:image" content="{{ site.url }}{{ site.baseurl }}{{ default_request_image }}">
+
+<!-- وسوم تويتر -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}{{ default_request_image }}">
 
 <!-- بيانات منظمة للطلب (Schema Markup) -->
 <script type="application/ld+json">
@@ -34,172 +46,150 @@ layout: default
       "addressRegion": "القاهرة",
       "addressCountry": "EG"
     }
-  },
-  "areaServed": {
-    "@type": "City",
-    "name": "Nasr City"
   }
 }
 </script>
 
-<!-- 🌐 إعدادات المشاركة على السوشيال ميديا -->
-<meta property="og:type" content="website">
-<meta property="og:title" content="{{ page.title }}">
-<meta property="og:description" content="طلب شراء عقار في {{ page.location }} - ميزانية {{ page.budget }}">
-<meta property="og:image" content="{{ site.baseurl }}/assets/img/social-request-default.webp">
-<meta property="og:url" content="{{ page.url | absolute_url }}">
-<meta property="og:site_name" content="سمسار طلبك">
-<meta name="twitter:card" content="summary_large_image">
-
-<div class="details-container request-theme" itemscope itemtype="https://schema.org/Offer" style="max-width: 900px; margin: 2rem auto; padding: 20px; border-top: 4px solid #0a84ff;">
+<div class="details-container request-theme" itemscope itemtype="https://schema.org/Offer">
     
-    <!-- 1. رأس الصفحة -->
+    <!-- 1. شريط العودة (تصميم موحد) -->
+    <nav class="property-nav" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; margin-bottom: 30px;">
+        <a href="{{ '/requests/' | relative_url }}" class="back-link" style="color: #0a84ff !important; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-right"></i> العودة لطلبات العملاء
+        </a>
+    </nav>
+
+    <!-- 2. رأس الصفحة -->
     <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-            <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff;"
-                  aria-label="نوع الطلب: طلب شراء">
+            <span class="request-tag">
                 <i class="fas fa-bullhorn"></i> طلب شراء
             </span>
-            <span style="background: rgba(255, 255, 255, 0.05); color: #ccc; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;"
-                  aria-label="تاريخ الطلب: {{ page.date | date: '%Y-%m-%d' }}">
+            <span class="date-tag">
                 <i class="fas fa-clock"></i> {{ page.date | date: "%Y-%m-%d" | default: "جديد" }}
             </span>
         </div>
         
         <h1 itemprop="name" style="color: #fff; font-size: 2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
         
-        <p itemprop="address" style="color: var(--color-text-secondary); font-size: 1.1rem; margin: 0;">
+        <p itemprop="address" style="color: #ccc; font-size: 1.1rem; margin: 0;">
             <i class="fas fa-map-marker-alt" style="color: #0a84ff;"></i> {{ page.location }}
         </p>
     </div>
 
-    <!-- 2. الميزانية -->
-    <div itemprop="priceSpecification" itemscope itemtype="https://schema.org/PriceSpecification" 
-         style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(10, 132, 255, 0.05)); padding: 25px; border-radius: 15px; border: 2px solid #0a84ff; text-align: center; margin-bottom: 30px;">
-        <span style="color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px;">
+    <!-- 3. الميزانية (تصميم بارز) -->
+    <div itemprop="priceSpecification" itemscope itemtype="https://schema.org/PriceSpecification" class="budget-card">
+        <span class="budget-label">
             <i class="fas fa-money-bill-wave"></i> الميزانية المرصودة
         </span>
-        <div style="color: #fff; font-size: 1.8rem; font-weight: bold; margin-top: 5px;">
+        <div class="budget-value">
             <span itemprop="price">{{ page.budget }}</span>
             <meta itemprop="priceCurrency" content="EGP">
         </div>
     </div>
 
-    <!-- 3. تفاصيل الطلب -->
-    <div class="content-body" itemprop="description" style="background: #0a0a0a; padding: 2rem; border-radius: 15px; border: 1px solid #333; color: #ccc; line-height: 1.8; margin-bottom: 30px;">
-        <h3 style="color: #0a84ff; margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">
+    <!-- 4. تفاصيل الطلب -->
+    <div class="content-body" itemprop="description">
+        <h3 class="section-subtitle">
             <i class="fas fa-clipboard-list"></i> تفاصيل ومتطلبات الطلب
         </h3>
-        {{ content }}
+        <div class="main-content">
+            {{ content }}
+        </div>
         
         {% if page.requirements %}
-        <div style="margin-top: 2rem;">
-            <h4 style="color: #0a84ff; margin-bottom: 1rem;">المتطلبات الأساسية:</h4>
-            <ul style="padding-right: 1.5rem;">
+        <div class="requirements-section">
+            <h4 class="req-title">المتطلبات الأساسية للعميل:</h4>
+            <ul class="req-list">
                 {% for req in page.requirements %}
-                <li style="color: #ddd; margin-bottom: 10px; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                    <i class="fas fa-check-circle" style="color: #0a84ff; margin-left: 8px;"></i> {{ req }}
-                </li>
+                <li><i class="fas fa-check-circle"></i> {{ req }}</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
     </div>
 
-    <!-- 4. قسم تواصل للملاك -->
-    <div style="background: rgba(10, 132, 255, 0.05); padding: 2rem; border-radius: 15px; border: 1px solid #0a84ff; margin-bottom: 30px;">
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <h3 style="color: #fff; margin-bottom: 10px; font-size: 1.5rem;">
-                <i class="fas fa-home" style="color: #0a84ff;"></i> هل لديك عقار يناسب هذا الطلب؟
-            </h3>
-            <p style="color: #88c7ff; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
-                يمكنك التواصل معنا لعرض عقارك على العميل مباشرة
-            </p>
+    <!-- 5. قسم تواصل للملاك (CTA) -->
+    <div class="contact-seller-box">
+        <div class="box-text">
+            <h3>هل لديك عقار يناسب هذا الطلب؟</h3>
+            <p>يمكنك التواصل معنا لعرض عقارك على العميل صاحب هذا الطلب مباشرة.</p>
         </div>
         
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <p style="color: #ccc; font-size: 1.1rem;">اتصل بنا للتفاصيل:</p>
-            <div style="font-size: 1.3rem; color: #fff; direction: ltr; font-weight: bold; margin: 10px 0;"
-                 aria-label="رقم الهاتف: 01147758857">
-                {{ phone_number }}
-            </div>
-        </div>
-
-        <!-- 5. أزرار التواصل -->
-        <div class="actions" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+        <div class="actions-grid">
             <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
-               class="action-btn whatsapp-btn"
-               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp Request - {{ page.title }}')"
-               aria-label="عرض العقار عبر واتساب"
-               style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 5px 20px rgba(37,211,102,0.2); display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i>
-                <span>عرض العقار عبر واتساب</span>
+               class="wa-action-btn"
+               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp Request - {{ page.title }}')">
+                <i class="fab fa-whatsapp"></i> عرض العقار عبر واتساب
             </a>
             
             <a href="tel:{{ phone_number }}" 
-               class="action-btn phone-btn"
-               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call Request - {{ page.title }}')"
-               aria-label="الاتصال المباشر على الرقم 01147758857"
-               style="flex: 1; min-width: 200px; background: transparent; border: 2px solid #0a84ff; color: #0a84ff; text-align: center; padding: 15px 25px; border-radius: 50px; font-weight: bold; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <i class="fas fa-phone-alt" style="font-size: 1.3rem;"></i>
-                <span>اتصال مباشر</span>
+               class="tel-action-btn"
+               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call Request - {{ page.title }}')">
+                <i class="fas fa-phone-alt"></i> اتصل بنا فوراً
             </a>
         </div>
-    </div>
-
-    <!-- 6. روابط التنقل -->
-    <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333;">
-        <a href="{{ '/requests/' | relative_url }}" 
-           style="color: #0a84ff; text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;"
-           aria-label="العودة إلى صفحة جميع الطلبات">
-            <i class="fas fa-arrow-right"></i>
-            <span>عرض جميع الطلبات</span>
-        </a>
-        <span style="color: #666; margin: 0 10px;">|</span>
-        <a href="{{ '/properties/' | relative_url }}" 
-           style="color: var(--color-primary); text-decoration: none; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;"
-           aria-label="تصفح جميع العقارات المتاحة">
-            <i class="fas fa-home"></i>
-            <span>تصفح العقارات</span>
-        </a>
     </div>
 </div>
 
 <style>
-    @media (max-width: 768px) {
-        .details-container.request-theme {
-            padding: 15px;
-            margin: 1rem auto;
-        }
-        .details-header h1 { font-size: 1.6rem; }
-        .actions { flex-direction: column; }
-        .action-btn { width: 100%; min-width: unset; }
-    }
+/* التنسيقات الأساسية لصفحة الطلب */
+.details-container.request-theme {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 20px;
+    direction: rtl;
+    font-family: 'Cairo', sans-serif;
+}
+
+/* التاجات */
+.request-tag { background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff; }
+.date-tag { background: rgba(255, 255, 255, 0.05); color: #aaa; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; }
+
+/* بطاقة الميزانية */
+.budget-card {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(10, 132, 255, 0.05));
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid #0a84ff;
+    text-align: center;
+    margin-bottom: 30px;
+}
+.budget-label { color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px; }
+.budget-value { color: #fff; font-size: 2rem; font-weight: 800; }
+
+/* جسم المحتوى */
+.content-body { background: rgba(255,255,255,0.02); padding: 30px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px; line-height: 1.8; color: #ddd; }
+.section-subtitle { color: #0a84ff; margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px; }
+.main-content p { margin-bottom: 15px; }
+
+.req-title { color: #0a84ff; margin: 2rem 0 1rem; font-size: 1.1rem; }
+.req-list { list-style: none; padding: 0; }
+.req-list li { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.req-list li i { color: #0a84ff; }
+
+/* صندوق التواصل */
+.contact-seller-box { background: rgba(10, 132, 255, 0.05); padding: 30px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; }
+.box-text h3 { color: #fff; margin-bottom: 10px; }
+.box-text p { color: #88c7ff; margin-bottom: 25px; }
+
+.actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.wa-action-btn { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; padding: 15px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+.tel-action-btn { border: 2px solid #0a84ff; color: #0a84ff; padding: 15px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+
+.wa-action-btn:hover, .tel-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+@media (max-width: 768px) {
+    .actions-grid { grid-template-columns: 1fr; }
+    .details-header h1 { font-size: 1.6rem; }
+}
 </style>
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "الرئيسية",
-      "item": "{{ site.url }}"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "طلبات العملاء",
-      "item": "{{ site.url }}/requests/"
-    },
-    {
-      "@type": "ListItem",
-      "position": 3,
-      "name": "{{ page.title }}",
-      "item": "{{ page.url | absolute_url }}"
+<script>
+function trackPhoneCall(number, label) {
+    if (typeof gtag === 'function') {
+        gtag('event', 'contact_click', { 'event_category': 'Leads', 'event_label': label });
     }
-  ]
+    console.log('Lead tracked: ' + label);
 }
-</script>
+                  </script>
