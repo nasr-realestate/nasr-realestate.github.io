@@ -4,38 +4,168 @@ title: "الصفحة غير موجودة | سمسار طلبك"
 permalink: /404.html
 ---
 
-<main class="content-wrapper" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; text-align: center;">
+<main class="content-wrapper error-page-wrapper">
   
-  <div class="error-container" style="max-width: 600px; padding: 3rem 2rem; background: var(--color-surface-2); border-radius: 20px; border: 1px solid var(--color-border-light); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+  <div class="error-container">
     
-    <!-- أيقونة خطأ ذهبية -->
-    <div style="font-size: 5rem; color: var(--color-primary); margin-bottom: 1.5rem;">
-      <i class="fas fa-search-location"></i>
+    <!-- أيقونة خطأ ذهبية فخمة -->
+    <div class="error-icon">
+      <i class="fas fa-map-marked-alt"></i>
     </div>
 
-    <h1 style="color: #fff; font-size: 4rem; margin-bottom: 10px; font-weight: 900;">404</h1>
-    <h2 style="color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem;">عذراً، لم نجد ما تبحث عنه!</h2>
+    <h1 class="error-code">404</h1>
+    <h2 class="error-title">عذراً، ضللنا الطريق إلى هذا العقار!</h2>
     
-    <p style="color: #aaa; line-height: 1.8; margin-bottom: 3rem;">
-        ربما تم نقل العقار، أو أن الرابط الذي استخدمته غير صحيح. <br>
-        لا تقلق، يمكنك العودة فوراً وتصفح أحدث العروض المتاحة الآن.
+    <p class="error-message">
+        يبدو أن الرابط الذي اتبعته قديم أو تم نقل العقار لمكان آخر. <br>
+        لا تدع رحلتك تتوقف هنا، فلدينا عروض أخرى بانتظارك.
     </p>
 
-    <!-- أزرار التوجيه -->
-    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <a href="{{ '/' | relative_url }}" class="nav-btn properties" style="padding: 12px 30px;">
-            <i class="fas fa-home"></i> الرئيسية
+    <!-- أزرار التوجيه المحدثة (الهوية الذهبية) -->
+    <div class="error-actions">
+        <a href="{{ '/' | relative_url }}" class="gold-btn-main">
+            <i class="fas fa-home"></i> العودة للرئيسية
         </a>
-        <a href="{{ '/properties/' | relative_url }}" class="nav-btn" style="border: 1px solid var(--color-primary); color: var(--color-primary); background: transparent;">
-            تصفح العقارات
+        <a href="{{ '/properties/' | relative_url }}" class="gold-btn-outline">
+            تصفح العقارات المتاحة
         </a>
     </div>
 
-    <!-- نصيحة سريعة -->
-    <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #333; color: #666; font-size: 0.9rem;">
-        إذا كنت تعتقد أن هناك مشكلة فنية، يمكنك مراسلتنا عبر واتساب
+    <!-- تواصل سريع -->
+    <div class="error-footer">
+        هل تواجه مشكلة؟ <a href="https://wa.me/201147758857" target="_blank">راسلنا عبر واتساب للمساعدة</a>
     </div>
 
   </div>
 
 </main>
+
+<style>
+/* تنسيق الحاوية الرئيسية */
+.error-page-wrapper {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+    padding: 20px;
+}
+
+.error-container {
+    max-width: 650px;
+    width: 100%;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 25px;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+}
+
+.error-icon {
+    font-size: 5rem;
+    color: #d4af37;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+}
+
+.error-code {
+    color: #fff;
+    font-size: 6rem;
+    margin: 0;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+    background: linear-gradient(to bottom, #fff, #666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.error-title {
+    color: #d4af37;
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}
+
+.error-message {
+    color: #bbb;
+    line-height: 1.8;
+    margin-bottom: 3.5rem;
+    font-size: 1.1rem;
+}
+
+/* --- أزرار الهوية البصرية الذهبية --- */
+.error-actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.gold-btn-main {
+    background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+    color: #000 !important;
+    padding: 14px 35px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2);
+}
+
+.gold-btn-main:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(212, 175, 55, 0.4);
+    filter: brightness(1.1);
+}
+
+.gold-btn-outline {
+    background: transparent;
+    color: #d4af37 !important;
+    padding: 13px 35px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    border: 2px solid #d4af37;
+    transition: all 0.3s ease;
+}
+
+.gold-btn-outline:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: translateY(-3px);
+}
+
+.error-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.error-footer a {
+    color: #25D366;
+    text-decoration: none;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.error-footer a:hover {
+    text-decoration: underline;
+}
+
+/* التجاوب مع الجوال */
+@media (max-width: 600px) {
+    .error-code { font-size: 4rem; }
+    .error-title { font-size: 1.4rem; }
+    .error-actions { flex-direction: column; width: 100%; }
+    .gold-btn-main, .gold-btn-outline { width: 100%; justify-content: center; }
+}
+  </style>
