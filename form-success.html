@@ -4,57 +4,183 @@ title: "تم استلام عقارك بنجاح | سمسار طلبك"
 permalink: /form-success.html
 ---
 
-<main class="content-wrapper" style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
+<main class="content-wrapper success-page-wrapper">
   
-  <div class="success-card" style="background: var(--color-surface-2); padding: 4rem 2rem; border-radius: 25px; border: 1px solid var(--color-border-light); text-align: center; max-width: 700px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+  <div class="success-card">
     
-    <!-- أيقونة النجاح المتحركة -->
-    <div style="margin-bottom: 2rem;">
-        <i class="fas fa-check-circle" style="font-size: 5rem; color: #25D366; animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);"></i>
+    <!-- أيقونة النجاح المتحركة الذهبية -->
+    <div class="success-icon-container">
+        <i class="fas fa-check-circle success-icon"></i>
     </div>
 
-    <h1 style="color: #fff; font-size: 2.5rem; margin-bottom: 10px;">تم استلام طلبك بنجاح!</h1>
-    <p style="color: var(--color-primary); font-size: 1.2rem; margin-bottom: 3rem;">عقارك الآن في أيدٍ أمينة.. شكراً لثقتك بنا</p>
+    <h1 class="success-title">تم استلام طلبك بنجاح!</h1>
+    <p class="success-subtitle">عقارك الآن في أيدٍ أمينة.. شكراً لثقتك بنا</p>
 
-    <!-- ماذا يحدث الآن؟ (Roadmap) -->
-    <div style="background: #0a0a0a; padding: 20px; border-radius: 15px; margin-bottom: 3rem; text-align: right; border-right: 4px solid var(--color-primary);">
-        <h3 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem;">ماذا سيحدث الآن؟</h3>
-        <ul style="list-style: none; padding: 0; color: #ccc; line-height: 1.8;">
-            <li style="margin-bottom: 10px;">
-                <i class="fas fa-search" style="color: var(--color-primary); margin-left: 10px;"></i> 
-                <strong>المراجعة:</strong> سيقوم فريقنا بمراجعة البيانات التي أرسلتها.
-            </li>
-            <li style="margin-bottom: 10px;">
-                <i class="fas fa-phone-alt" style="color: var(--color-primary); margin-left: 10px;"></i> 
-                <strong>التواصل:</strong> سنتصل بك خلال 24 ساعة لتأكيد التفاصيل.
+    <!-- ماذا يحدث الآن؟ (Roadmap) بتصميم فخم -->
+    <div class="status-roadmap">
+        <h3 class="roadmap-title">ماذا سيحدث الآن؟</h3>
+        <ul class="roadmap-list">
+            <li>
+                <div class="roadmap-icon"><i class="fas fa-search"></i></div>
+                <div class="roadmap-text"><strong>المراجعة:</strong> سيقوم فريقنا بمراجعة البيانات التي أرسلتها للتأكد من جودتها.</div>
             </li>
             <li>
-                <i class="fas fa-rocket" style="color: var(--color-primary); margin-left: 10px;"></i> 
-                <strong>النشر:</strong> سيتم عرض عقارك على آلاف المشترين الجادين.
+                <div class="roadmap-icon"><i class="fas fa-phone-alt"></i></div>
+                <div class="roadmap-text"><strong>التواصل:</strong> سنتصل بك خلال 24 ساعة لتأكيد التفاصيل النهائية.</div>
+            </li>
+            <li>
+                <div class="roadmap-icon"><i class="fas fa-rocket"></i></div>
+                <div class="roadmap-text"><strong>النشر:</strong> سيتم عرض عقارك فوراً على آلاف المشترين الجادين في شبكتنا.</div>
             </li>
         </ul>
     </div>
 
-    <!-- الأزرار -->
-    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <a href="{{ '/' | relative_url }}" class="nav-btn" style="background: var(--color-primary); color: #000; border: none; padding: 12px 30px;">
+    <!-- الأزرار المحدثة للهوية البصرية -->
+    <div class="success-actions">
+        <a href="{{ '/' | relative_url }}" class="gold-btn-main">
             <i class="fas fa-home"></i> العودة للرئيسية
         </a>
         
-        <!-- زر واتساب للطوارئ -->
-        <a href="https://wa.me/201147758857?text=لقد قمت بإرسال عقار الآن وأريد المتابعة" target="_blank" class="nav-btn" style="background: transparent; border: 1px solid #25D366; color: #25D366;">
-            <i class="fab fa-whatsapp"></i> متابعة الطلب
+        <a href="https://wa.me/201147758857?text=لقد قمت بإرسال عقار الآن عبر الموقع وأريد المتابعة" target="_blank" class="gold-btn-outline">
+            <i class="fab fa-whatsapp"></i> متابعة عبر واتساب
         </a>
     </div>
+
+    <p class="auto-redirect-text">سيتم توجيهك تلقائياً للرئيسية خلال 10 ثوانٍ...</p>
 
   </div>
 
 </main>
 
 <style>
-    @keyframes popIn {
-        0% { transform: scale(0); opacity: 0; }
-        80% { transform: scale(1.1); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-    }
+/* الحاوية الكبرى */
+.success-page-wrapper {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+}
+
+/* البطاقة الرئيسية */
+.success-card {
+    background: var(--color-surface-2);
+    padding: 4rem 2.5rem;
+    border-radius: 30px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    text-align: center;
+    max-width: 650px;
+    width: 100%;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+/* الأيقونة المتحركة */
+.success-icon-container { margin-bottom: 2rem; }
+.success-icon {
+    font-size: 5.5rem;
+    color: #d4af37; /* ذهبي بدلاً من الأخضر التقليدي لتوحيد الهوية */
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+    animation: popIn 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+}
+
+.success-title { color: #fff; font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; }
+.success-subtitle { color: #d4af37; font-size: 1.1rem; margin-bottom: 3rem; font-weight: 600; }
+
+/* خريطة الطريق (Roadmap) */
+.status-roadmap {
+    background: rgba(0,0,0,0.3);
+    padding: 25px;
+    border-radius: 20px;
+    margin-bottom: 3rem;
+    text-align: right;
+    border-right: 4px solid #d4af37;
+}
+
+.roadmap-title { color: #fff; margin-bottom: 20px; font-size: 1.1rem; font-weight: 800; }
+.roadmap-list { list-style: none; padding: 0; }
+.roadmap-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+    color: #bbb;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.roadmap-icon { color: #d4af37; font-size: 1rem; margin-top: 4px; }
+
+/* --- أزرار الهوية البصرية (النسخة النهائية) --- */
+.success-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.gold-btn-main {
+    background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+    color: #000 !important;
+    padding: 14px 35px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2);
+}
+
+.gold-btn-main:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(212, 175, 55, 0.4);
+}
+
+.gold-btn-outline {
+    background: transparent;
+    color: #d4af37 !important;
+    padding: 13px 35px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    border: 2px solid #d4af37;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.gold-btn-outline:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: translateY(-3px);
+}
+
+.auto-redirect-text {
+    margin-top: 2.5rem;
+    color: #555;
+    font-size: 0.85rem;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    80% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .success-card { padding: 3rem 1.5rem; }
+    .success-actions { flex-direction: column; }
+    .gold-btn-main, .gold-btn-outline { width: 100%; justify-content: center; }
+}
 </style>
+
+<script>
+    // توجيه تلقائي بعد 10 ثوانٍ لزيادة سهولة الاستخدام
+    setTimeout(function() {
+        window.location.href = "{{ '/' | relative_url }}";
+    }, 10000);
+</script>
