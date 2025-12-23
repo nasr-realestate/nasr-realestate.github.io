@@ -1,357 +1,268 @@
 ---
 layout: default
-title: "أضف عقارك مجاناً | سمسار طلبك"
+title: "أضف عقاركheight: 4px; background: #222; border-radius: 10px; margin-bottom: 2rem; overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%; background: var(--gold); width: 25%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+/* تصميم البطاقة */
+.cards-container { position: relative; min-height: 450px; }
+
+. مجاناً | سمسار طلبك"
 description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
 permalink: /add-your-property.html
-image: "/assets/img/social-add.webp"
 ---
 
-<!-- ================================== -->
-<!-- === 🎨 تنسيقات الفورم الفاخر === -->
-<!-- ================================== -->
-<style>
-  .smart-form-container {
-    background: var(--color-surface-2); /* خلفية داكنة */
-    border-radius: 25px;
-    padding: 3rem;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    border: 1px solid var(--color-border-light);
-    max-width: 900px;
-    margin: 3rem auto;
-    position: relative;
-    overflow: hidden;
-  }
+<div class="card-form-wrapper">
+    <!-- العنوان العلوي -->
+    <header class="form-intro">
+        <h1 class="gold-text">ابدأ بعرض عقارك الآن</h1>
+        <p>خطوات بسيطة تفصلك عن المشتري المناسب</p>
+    </header>
 
-  /* شريط التقدم الذهبي */
-  .progress-bar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3rem;
-    position: relative;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .progress-bar::before {
-    content: '';
-    position: absolute; top: 50%; left: 0; right: 0;
-    height: 2px; background-color: #333; z-index: 1; transform: translateY(-50%);
-  }
-  .progress-line {
-    position: absolute; top: 50%; left: 0; height: 2px;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
-    z-index: 2; width: 0%; transition: width 0.5s ease;
-  }
-  .progress-step {
-    position: relative; z-index: 3; width: 45px; height: 45px;
-    border-radius: 50%; background-color: #111;
-    border: 2px solid #444; color: #888;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; transition: all 0.4s ease; font-size: 1.1rem;
-  }
-  .progress-step.active {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #000; box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
-  }
+    <!-- حاوية البطاقات -->
+    <div class="card-viewport">
+        <!-- شريط التقدم العلوي -->
+        <div class="progress-indicator">
+            <divstep-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    padding: 40px 30px;
+    border- class="progress-fill" id="progressBar"></div>
+        </div>
 
-  /* خطوات الفورم */
-  .form-step { display: none; animation: fadeInUp 0.6s ease; }
-  .form-step.active { display: block; }
-  
-  .form-step h2 {
-    color: var(--color-primary); text-align: center;
-    margin-bottom: 2rem; font-size: 1.8rem; font-weight: 800;
-  }
-  
-  /* الحقول */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-  .form-group { display: flex; flex-direction: column; }
-  .form-group.full-width { grid-column: 1 / -1; }
-  
-  .form-group label {
-    margin-bottom: 0.8rem; color: #ccc; font-size: 0.95rem; font-weight: 600;
-  }
-  
-  .property-form input, .property-form select, .property-form textarea {
-    background-color: #0a0a0a;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 15px;
-    color: #fff;
-    font-size: 1rem;
-    font-family: 'Cairo', sans-serif;
-    transition: all 0.3s ease;
-  }
-  
-  .property-form input:focus, .property-form select:focus, .property-form textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-    background-color: #111;
-  }
+        <form id="propertyCardForm" action="https://formspradius: 25px;
+    position: absolute;
+    width: 100%;
+    ree.io/f/xpwvedwp" method="POST">
+            
+            <!-- حقول التحكم المخفية -->
+            <input type="hidden" name="_subject" value="عرض عقاري جديد من الموقع!">
+            <input type="opacity: 0;
+    visibility: hidden;
+    transform: translateX(50px) rotateY(-10deg);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, hidden" name="_next" value="https://nasr-realestate.github.io/form-success.1);
+    box-shadow: 0 20px 50px rgba(0,0,html">
 
-  /* أزرار التنقل */
-  .form-navigation { display: flex; justify-content: space-between; margin-top: 3rem; border-top: 1px solid #222; padding-top: 2rem; }
-  
-  .nav-btn {
-    background: transparent; color: #ccc;
-    border: 1px solid #444; padding: 12px 30px;
-    border-radius: 50px; cursor: pointer;
-    font-weight: bold; font-family: 'Cairo'; transition: all 0.3s;
-  }
-  .nav-btn:hover { background: #222; color: #fff; }
-  
-  .nav-btn.next-btn, .nav-btn.submit-btn {
-    background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
-    color: #000; border: none;
-    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
-  }
-  .nav-btn.next-btn:hover, .nav-btn.submit-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
-  }
-  .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+            <div class="cards-container" id="cardsStack">
+                
+                <!-- البطاقة0,0.4);
+    text-align: center;
+}
 
-  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .smart-form-container { padding: 1.5rem; } }
+.step-card.active {
+    opacity:  1: نوع العقار -->
+                <div class="form-card active">
+                    <div class="card-icon1;
+    visibility: visible;
+    transform: translateX(0) rotateY(0deg);
+}
+
+.step-card."><i class="fas fa-building"></i></div>
+                    <h2>ما هو نوع العقار؟</h2>
+                    <divexit {
+    opacity: 0;
+    transform: translateX(-50px) rotateY(10deg);
+} class="options-grid">
+                        <label class="option-item">
+                            <input type="radio" name="property-type" value
+
+/* العناصر الداخلية */
+.card-icon { font-size: 3rem; color: var(--gold); margin="شقة للبيع" required checked>
+                            <span class="option-box">شقة للبيع</span>
+                        -bottom: 1.5rem; }
+.step-card h2 { color: #fff; font-size: 1.5rem; margin-bottom: 2rem; font-weight: 700; }
+
+/* خيارات الر</label>
+                        <label class="option-item">
+                            <input type="radio" name="property-type" value="شقة للإيجار">
+                            <span class="option-box">شقة للإاديو الجذابة */
+.options-grid { display: flex; flex-direction: column; gap: 12يجار</span>
+                        </label>
+                        <label class="option-item">
+                            <input type="px; margin-bottom: 2rem; }
+.option-item { cursor: pointer; }
+.option-radio" name="property-type" value="محل تجاري">
+                            <span class="option-boxitem input { display: none; }
+.option-content {
+    background: #111; border: 1px solid #333; padding: 15px; border-radius: 12">محل تجاري</span>
+                        </label>
+                        <label class="option-item">
+                            <input type="radio" name="property-type" value="مكتب إداري">
+                            <span class="option-box">مكتب إداري</span>
+                        </label>
+                    </div>
+                </div>
+
+                px;
+    color: #aaa; transition: 0.3s; font-weight: 600;
+}
+.option-item input:checked + .option-content {
+    border-color: var(--<!-- البطاقة 2: العنوان والبيان -->
+                <div class="form-card">
+                    <div class="gold); background: rgba(212, 175, 55, 0.1); color: var(--gold);
+}
+
+/* الحقول */
+.input-group { text-align: right; margin-bottom: 1.card-icon"><i class="fas fa-edit"></i></div>
+                    <h2>عنوان جذاب لإعلانك</h2>
+                    <div class="input-group">
+                        <input type="text" name="title" placeholder="مثال: شقة لقطة ب5rem; }
+.input-group label { display: block; color: #888; margin-bottom: 8px; font-size: 0.9rem; }
+.input-group input {
+    width: 100%;فيو مفتوح في المنطقة العاشرة" required>
+                        <small>العنوان الجذاب يزيد من نسبة المشاهدات background: #0a0a0a; border: 1px solid #333; padding: </small>
+                    </div>
+                </div>
+
+                <!-- البطاقة 3: السعر والمساحة -->
+12px;
+    border-radius: 10px; color: #fff; font-family: 'Cairo';                <div class="form-card">
+                    <div class="card-icon"><i class="fas fa-coins"></i></div>
+                    <h2>السعر والمساحة</h2>
+                    <div class="dual-inputs">
+                        <div
+}
+.input-group input:focus { border-color: var(--gold); outline: none; }
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1 class="input-group">
+                            <label>المساحة (م²)</label>
+                            <input type5px; }
+
+/* أزرار التنقل */
+.card-nav { display: flex; justify-content: space-between; margin="number" name="area" placeholder="مثال: 180" required>
+                        </div>
+                        <div class="input-group-top: 2rem; gap: 10px; }
+.btn-next, .btn-">
+                            <label>السعر المطلوب</label>
+                            <input type="text" name="price" placeholdersubmit {
+    flex: 2; background: var(--gold); color: #000; border: none; padding:="مثال: 3,500,000" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- البطاقة 4: الموقع والتفاصيل -->
+                <div class="form-card">
+                    <div class=" 12px;
+    border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s;
+}
+.btn-prev {
+    flex: 1; background:card-icon"><i class="fas fa-map-marker-alt"></i></div>
+                    <h2>الموقع والوصف</h2>
+                    <div class="input-group">
+                        <input type="text" name="location transparent; border: 1px solid #444; color: #888;
+    padding: 12px; border-radius: 12px; cursor: pointer;
+}
+.btn-next:hover, .btn-submit:hover { transform" placeholder="المنطقة، الشارع، المعالم القريبة" required>
+                    </div>
+                    <div class="input-group: translateY(-3px); box-shadow: 0 5px 15px rgba(212, 17">
+                        <textarea name="description" rows="4" placeholder="اكتب تفاصيل إضافية عن الدور، التشطيب، والخدمات..." required></textarea>
+                    </div>
+                </div>
+
+                <!-- البطاقة 5: التواصل (الأ5, 55, 0.3); }
+
+/* الجوال */
+@media (max-width: 480px)خيرة) -->
+                <div class="form-card">
+                    <div class="card-icon">< {
+    .card-form-wrapper { margin: 1rem auto; padding: 10px; }
+    .stepi class="fab fa-whatsapp"></i></div>
+                    <h2>بيانات التواصل</h2>
+                    <p>سيتم التواصل معك فور-card { padding: 30px 20px; }
+}
 </style>
 
-<!-- ================================== -->
-<!-- === 🧱 المحتوى (HTML) === -->
-<!-- ================================== -->
-
-<header class="page-header">
-  <div style="max-width: 700px; margin: 0 auto;">
-    <h1 class="page-title">أضف عقارك للبيع أو الإيجار</h1>
-    <p style="opacity: 0.8; margin-top: 10px;">
-      خطوات بسيطة تفصلك عن الوصول للمشتري المناسب. ابدأ الآن مجاناً.
-    </p>
-  </div>
-</header>
-
-<main>
-<div class="smart-form-container">
-  
-  <!-- شريط التقدم -->
-  <div class="progress-bar">
-    <div class="progress-line"></div>
-    <div class="progress-step active" data-step="1">1</div>
-    <div class="progress-step" data-step="2">2</div>
-    <div class="progress-step" data-step="3">3</div>
-  </div>
-
-<form id="smart-form" action="https://formspree.io/f/xpwvedwp" method="POST" class="property-form">
-    
-    <!-- حقول مخفية للتحكم -->
-    <input type="hidden" name="_subject" value="عرض عقاري جديد من الموقع!">
-    <!-- صفحة النجاح (يجب أن تنشئها لاحقاً) -->
-    <input type="hidden" name="_next" value="https://nasr-realestate.github.io/form-success.html">
-
-    <!-- الخطوة 1: المعلومات الأساسية -->
-    <div class="form-step active" data-step="1">
-      <h2><i class="fas fa-info-circle"></i> بيانات العقار الأساسية</h2>
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label for="title">عنوان الإعلان (اجعله جذاباً)</label>
-          <input type="text" id="title" name="title" placeholder="مثال: شقة لقطة 180م ببرج حديث في شارع الطيران" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="property-type">نوع العقار</label>
-          <select id="property-type" name="property-type" required>
-            <option value="" disabled selected>اختر النوع...</option>
-            <option value="شقة للبيع">شقة للبيع</option>
-            <option value="شقة للإيجار">شقة للإيجار</option>
-            <option value="محل تجاري">محل تجاري</option>
-            <option value="مكتب إداري">مكتب إداري</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="price_display">السعر المطلوب (جنية مصري)</label>
-          <input type="text" id="price_display" name="price_display" placeholder="مثال: 2,500,000" required>
-        </div>
-
-        <div class="form-group full-width">
-            <label for="area_display">المساحة (متر مربع)</label>
-            <input type="text" id="area_display" name="area_display" placeholder="مثال: 150" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- الخطوة 2: التفاصيل الفنية -->
-    <div class="form-step" data-step="2">
-      <h2><i class="fas fa-layer-group"></i> تفاصيل ومواصفات</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="rooms">عدد الغرف</label>
-          <select id="rooms" name="rooms" required>
-            <option value="2">2 غرفة</option>
-            <option value="3" selected>3 غرف</option>
-            <option value="4">4 غرف</option>
-            <option value="5">5 غرف أو أكثر</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="bathrooms">عدد الحمامات</label>
-          <select id="bathrooms" name="bathrooms" required>
-            <option value="1">1 حمام</option>
-            <option value="2" selected>2 حمام</option>
-            <option value="3">3 حمامات</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="floor">الدور</label>
-          <select id="floor" name="floor" required>
-              <option value="أرضي">أرضي</option>
-              <option value="متكرر" selected>أدوار متكررة</option>
-              <option value="أخير">أخير / روف</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="finish">نوع التشطيب</label>
-          <select id="finish" name="finish" required>
-            <option value="سوبر لوكس">سوبر لوكس (جاهز للسكن)</option>
-            <option value="نصف تشطيب">نصف تشطيب (محارة وحلوق)</option>
-            <option value="طوب أحمر">بدون تشطيب (طوب أحمر)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- الخطوة 3: الموقع والوصف -->
-    <div class="form-step" data-step="3">
-      <h2><i class="fas fa-map-marked-alt"></i> الموقع والتواصل</h2>
-      <div class="form-grid">
-        <div class="form-group full-width">
-            <label for="location">العنوان التفصيلي</label>
-            <input type="text" id="location" name="location" placeholder="المنطقة، اسم الشارع، رقم العقار (إن أمكن)" required>
-        </div>
-        
-        <div class="form-group full-width">
-            <label for="description">وصف إضافي (مهم جداً)</label>
-            <textarea id="description" name="description" rows="5" placeholder="اكتب هنا أي تفاصيل أخرى: الواجهة، سنة البناء، هل يوجد أسانسير، حصة في الأرض، إلخ..." required></textarea>
-        </div>
-
-        <div class="form-group full-width">
-            <label for="phone">رقم هاتفك للتواصل (واتساب)</label>
-            <input type="tel" id="phone" name="phone" placeholder="01xxxxxxxxx" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- أزرار التحكم -->
-    <div class="form-navigation">
-      <button type="button" class="nav-btn prev-btn" style="display: none;">السابق</button>
-      <button type="button" class="nav-btn next-btn">التالي <i class="fas fa-arrow-left"></i></button>
-      <button type="submit" class="nav-btn submit-btn" style="display: none;">إرسال العرض فوراً <i class="fas fa-paper-plane"></i></button>
-    </div>
-  </form>
-</div>
-</main>
-<!-- ================================== -->
-<!-- === ⚙️ JS: منطق العمل والإرسال === -->
-<!-- ================================== -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('smart-form');
-    const prevBtn = document.querySelector('.prev-btn');
-    const nextBtn = document.querySelector('.next-btn');
-    const submitBtn = document.querySelector('.submit-btn');
-    const formSteps = document.querySelectorAll('.form-step');
-    const progressSteps = document.querySelectorAll('.progress-step');
-    const progressLine = document.querySelector('.progress-line');
-    
-    let currentStep = 1;
+    const cards = document.querySelectorAll('.step-card');
+    const nextBtns = document.querySelectorAll('.btn-next');
+    const prevBtns = document.querySelectorAll('.btn-prev');
+ مراجعة الإعلان</p>
+                    <div class="input-group">
+                        <input type="tel" name="phone" placeholder="رقم هاتفك (واتساب)" required>
+                    </div>
+                    <div class="submit-notice    const progressFill = document.getElementById('progressFill');
+    let currentIdx = 0;
 
-    // --- 1. منطق التنقل بين الخطوات ---
-    const updateUI = () => {
-        progressSteps.forEach((step, index) => {
-            if (index < currentStep) step.classList.add('active');
-            else step.classList.remove('active');
+    function updateCards() {
+        cards.forEach((card, index) => {
+            card.classList.remove('active', 'exit');
+            if (index === currentIdx) {
+                card.classList.add('active');
+">
+                        بالضغط على إرسال، أنت توافق على عرض عقارك في "سمسار طلبك".            } else if (index < currentIdx) {
+                card.classList.add('exit');
+            }
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- أزرار التحكم -->
+            <div class="card-navigation">
+                <button
         });
-        progressLine.style.width = `${((currentStep - 1) / (formSteps.length - 1)) * 100}%`;
+        const progress = ((currentIdx + 1) / cards.length) * 100 type="button" id="prevBtn" class="btn-secondary" style="visibility: hidden;">السابق</button>;
+        progressFill.style.width = `${progress}%`;
+    }
 
-        prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
-        nextBtn.style.display = currentStep < formSteps.length ? 'inline-block' : 'none';
-        submitBtn.style.display = currentStep === formSteps.length ? 'inline-block' : 'none';
+    nextBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const currentCard = cards[currentIdx];
+            const
+                <button type="button" id="nextBtn" class="btn-gold">التالي <i class="fas fa-chevron-left"></i></button>
+                <button type="submit" id="submitBtn" class="btn-gold" inputs = currentCard.querySelectorAll('input[required]');
+            let valid = true;
+            
+            inputs.forEach(input => { style="display: none;">إرسال العرض <i class="fas fa-paper-plane"></i></
+                if (input.type === 'radio') {
+                    const checked = currentCard.querySelector('input[name="'button>
+            </div>
+        </form>
+    </div>
+</div>
 
-        validateStep();
-    };
+<style>
+/* --- تصميم نظام + input.name + '"]:checked');
+                    if (!checked) valid = false;
+                } else if (!input.value البطاقات (The Card Form Design) --- */
+.card-form-wrapper {
+    max-width: 7.trim()) {
+                    valid = false;
+                }
+            });
 
-    const validateStep = () => {
-        const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-        const inputs = currentFormStep.querySelectorAll('input[required], select[required], textarea[required]');
-        let isValid = true;
-        inputs.forEach(input => {
-            if (!input.value.trim()) isValid = false;
+            if (valid) {
+                current00px;
+    margin: 4rem auto;
+    padding: 0 20px;Idx++;
+                updateCards();
+            } else {
+                alert('يرجى إكمال الحقول المطلوبة للم
+    direction: rtl;
+    font-family: 'Cairo', sans-serif;
+}
+
+.form-intro { text-align: center; margin-bottom: 2.5rem; }
+.form-intro pتابعة');
+            }
         });
-        // تفعيل الأزرار بناء على الصلاحية
-        if (currentStep < formSteps.length) nextBtn.disabled = !isValid;
-        else submitBtn.disabled = !isValid;
-    };
-
-    const goToStep = (step) => {
-        formSteps.forEach(s => s.classList.remove('active'));
-        document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
-        currentStep = step;
-        updateUI();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    nextBtn.addEventListener('click', () => { if (currentStep < formSteps.length) goToStep(currentStep + 1); });
-    prevBtn.addEventListener('click', () => { if (currentStep > 1) goToStep(currentStep - 1); });
-    
-    document.querySelectorAll('input, select, textarea').forEach(input => {
-        input.addEventListener('input', validateStep);
-        input.addEventListener('change', validateStep);
     });
 
-    updateUI();
-
-    // --- 2. منطق الإرسال الذكي (AJAX Submission) ---
-    // هذا الجزء هو المسؤول عن منع ظهور صفحة Formspree البيضاء
-    form.addEventListener("submit", function(event) {
-        event.preventDefault(); // إيقاف الانتقال التقليدي
-        
-        // تغيير نص الزر ليعرف العميل أن هناك عملية جارية
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-
-        const data = new FormData(form);
-        
-        fetch(form.action, {
-            method: form.method,
-            body: data,
-            headers: {
-                'Accept': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                // ✅ نجح الإرسال: نذهب لصفحة النجاح الخاصة بنا فوراً
-                window.location.href = "/form-success.html";
-            } else {
-                // ❌ فشل الإرسال
-                response.json().then(data => {
-                    if (Object.hasOwn(data, 'errors')) {
-                        alert(data["errors"].map(error => error["message"]).join(", "));
-                    } else {
-                        alert("حدث خطأ أثناء الإرسال. يرجى المحاولة مرة أخرى أو التواصل واتساب.");
-                    }
-                    // إعادة الزر لحالته
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'إرسال العرض فوراً <i class="fas fa-paper-plane"></i>';
-                });
-            }
-        }).catch(error => {
-            alert("حدث خطأ في الاتصال. يرجى التحقق من الإنترنت.");
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = 'إرسال العرض فوراً <i class="fas fa-paper-plane"></i>';
+    prevBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentIdx--;
+            updateCards();
         });
     });
 });
-</script>
+</script> { color: #888; }
+
+.card-viewport {
+    background: #111;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 25px;
+    padding: 40px;
+    box-
