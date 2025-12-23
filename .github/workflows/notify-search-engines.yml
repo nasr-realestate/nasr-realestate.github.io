@@ -1,0 +1,23 @@
+name: Notify Search Engines (IndexNow)
+
+on:
+  push:
+    branches:
+      - main  # أو master حسب اسم الفرع عندك
+    paths:
+      - '_properties/**'
+      - '_requests/**'
+      - 'sitemap.xml'
+
+jobs:
+  indexnow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send IndexNow Ping
+        run: |
+          curl -X GET "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/sitemap.xml&key=48316278893d467499696316278893d4"
+          # ملاحظة: الكود أعلاه ينبه Bing و Yandex و Seznam فوراً
+          
+      - name: Verify Sitemap Accessibility
+        run: |
+          curl -I https://nasr-realestate.github.io/sitemap.xml
