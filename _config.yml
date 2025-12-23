@@ -11,7 +11,7 @@ baseurl: ""
 lang: "ar"
 timezone: Africa/Cairo
 
-# 2. بيانات المالك (Schema)
+# 2. بيانات المالك
 author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
@@ -22,22 +22,23 @@ logo: "/assets/img/logo.webp"
 markdown: kramdown
 permalink: pretty
 
-# 4. الإضافات (عضلات الموقع)
+# 4. الإضافات
 plugins:
   - jekyll-seo-tag
-  # 🔥 معطل: - jekyll-sitemap  # لأننا سنستخدم sitemap يدوي
+  - jekyll-sitemap
 
-# 5. تحليلات جوجل (تم التفعيل)
+# 5. تحليلات جوجل
 google_analytics: "G-8NBQRQ6N10"
 
-# 6. 🔥 روابط العقارات بالإنجليزية (باستخدام basename) 🔥
+# 6. الروابط العربية الاحترافية (Properties & Requests)
 collections:
   properties:
     output: true
-    permalink: /property/:basename/  # 🔥 يستخدم اسم الملف الإنجليزي
+    permalink: /شقق-للبيع-في-مدينة-نصر/:slug/
   requests:
     output: true
-    permalink: /request/:basename/   # 🔥 يستخدم اسم الملف الإنجليزي
+    # تم تغيير هذا السطر لرفع قوة سيو "طلبات الشراء"
+    permalink: /طلبات-عقارات-مدينة-نصر/:slug/
 
 # 7. الإعدادات الافتراضية
 defaults:
@@ -46,18 +47,11 @@ defaults:
     values:
       layout: "default"
       image: "/assets/img/social-home.webp"
-      language: "ar"
-  
-  # تخصيص العقارات
   - scope:
       path: ""
       type: "properties"
     values:
       layout: "property_page"
-      business_type: "RealEstateAgent"
-      price_currency: "EGP"
-  
-  # تخصيص الطلبات
   - scope:
       path: ""
       type: "requests"
@@ -71,4 +65,3 @@ exclude:
   - node_modules
   - README.md
   - vendor
-  - generate_sitemap.py  # 🔥 مستبعد
