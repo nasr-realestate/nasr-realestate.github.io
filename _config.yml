@@ -20,34 +20,33 @@ logo: "/assets/img/logo.webp"
 
 # 3. إعدادات البناء والروابط
 markdown: kramdown
-
-# 4. 🔥 🔥 🔥 التغيير الأساسي: الروابط العربية للشقق 🔥 🔥 🔥
 permalink: pretty
 
-# 5. الإضافات (عضلات الموقع)
+# 4. الإضافات (عضلات الموقع)
 plugins:
   - jekyll-seo-tag
-  - jekyll-sitemap
+  # 🔥 معطل: - jekyll-sitemap  # لأننا سنستخدم sitemap يدوي
 
-# 6. تحليلات جوجل (تم التفعيل)
+# 5. تحليلات جوجل (تم التفعيل)
 google_analytics: "G-8NBQRQ6N10"
 
-# 7. 🔥 🔥 🔥 التغيير الأساسي: روابط العقارات بالانجليزية 🔥 🔥 🔥
+# 6. 🔥 روابط العقارات بالإنجليزية (باستخدام basename) 🔥
 collections:
   properties:
     output: true
-    permalink: /property/:slug/  # 🔥 تغيير من عربي إلى إنجليزي
+    permalink: /property/:basename/  # 🔥 يستخدم اسم الملف الإنجليزي
   requests:
     output: true
-    permalink: /request/:slug/   # 🔥 تغيير من عربي إلى إنجليزي
+    permalink: /request/:basename/   # 🔥 يستخدم اسم الملف الإنجليزي
 
-# 8. الإعدادات الافتراضية
+# 7. الإعدادات الافتراضية
 defaults:
   - scope:
       path: ""
     values:
       layout: "default"
       image: "/assets/img/social-home.webp"
+      language: "ar"
   
   # تخصيص العقارات
   - scope:
@@ -55,6 +54,8 @@ defaults:
       type: "properties"
     values:
       layout: "property_page"
+      business_type: "RealEstateAgent"
+      price_currency: "EGP"
   
   # تخصيص الطلبات
   - scope:
@@ -63,10 +64,11 @@ defaults:
     values:
       layout: "request_page"
 
-# 9. الملفات المستبعدة
+# 8. الملفات المستبعدة
 exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules
   - README.md
   - vendor
+  - generate_sitemap.py  # 🔥 مستبعد
