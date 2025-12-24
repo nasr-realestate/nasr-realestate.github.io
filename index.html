@@ -18,7 +18,7 @@ body_class: "homepage"
   "founder": "طارق طنطاوي",
   "url": "https://nasr-realestate.github.io",
   "logo": "https://nasr-realestate.github.io/assets/img/logo.webp",
-  "image": "https://nasr-realestate.github.io/assets/img/hero-bg.webp",
+  "image": "https://nasr-realestate.github.io/assets/img/social-home.webp",
   "description": "بوابتك العقارية الأولى في مدينة نصر. شقق للبيع وإيجار في جميع المناطق.",
   "address": {
     "@type": "PostalAddress",
@@ -45,9 +45,9 @@ body_class: "homepage"
 </script>
 
 <!-- =========================================================
-     2. الواجهة السينمائية (Hero Section) - بدون صورة خلفية وبدون لوجو كبير
+     2. الواجهة الرئيسية المحسنة (بدون صور خلفية معتمة)
      ========================================================= -->
-<section class="home-hero" style="position: relative; padding: 6rem 1rem; overflow: hidden; min-height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);">
+<section class="home-hero" style="position: relative; padding: 6rem 1rem; overflow: hidden; min-height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #0f0f0f 0%, #000000 100%);">
   
   <!-- تأثير ضوئي خفيف خلف النص لزيادة الفخامة -->
   <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; background: var(--color-primary); filter: blur(150px); opacity: 0.1; z-index: 1;"></div>
@@ -149,26 +149,28 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     4. الشقق حسب المنطقة
+     4. الشقق حسب المنطقة (مهم لـ SEO)
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
-    <h2 style="text-align: center; color: #fff; margin-bottom: 2rem;"><i class="fas fa-map-marked-alt"></i> الشقق للبيع في مناطق مدينة نصر</h2>
+    <h2 style="text-align: center; color: #fff; margin-bottom: 2rem; font-size: 1.8rem;">
+      <i class="fas fa-map-marked-alt"></i> الشقق للبيع في مناطق مدينة نصر
+    </h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-      <a href="{{ '/properties/' | relative_url }}" class="area-link">
-        <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة العاشرة</h3>
+      <a href="{{ '/properties/' | relative_url }}?area=10" class="area-link">
+        <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة العاشرة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شقق للبيع - إيجار - تمليك</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}" class="area-link">
-        <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة التاسعة</h3>
+      <a href="{{ '/properties/' | relative_url }}?area=9" class="area-link">
+        <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة التاسعة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">مكاتب - محلات - عقارات تجارية</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}" class="area-link">
-        <h3 style="color: var(--color-primary); margin-bottom: 5px;">المنطقة السادسة</h3>
+      <a href="{{ '/properties/' | relative_url }}?area=6" class="area-link">
+        <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة السادسة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شقق سكنية - عائلات - هدوء</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}" class="area-link">
-        <h3 style="color: var(--color-primary); margin-bottom: 5px;">حي الأندلس</h3>
+      <a href="{{ '/properties/' | relative_url }}?area=andalus" class="area-link">
+        <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">حي الأندلس</h3>
         <p style="font-size: 0.9rem; color: #aaa;">فلل - دوبلكس - مساحات كبيرة</p>
       </a>
     </div>
@@ -176,11 +178,11 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     5. أرقام الثقة (Social Proof)
+     5. أرقام الثقة (بدون صورة خلفية)
      ========================================================= -->
-<section class="trust-section" style="position: relative; padding: 5rem 2rem; background: #000; border-top: 1px solid #222;">
+<section class="trust-section" style="position: relative; padding: 5rem 2rem; background: radial-gradient(circle at center, #111 0%, #000 100%); border-top: 1px solid #222;">
     <div style="position: relative; z-index: 2; max-width: 1000px; margin: 0 auto; text-align: center;">
-        <h2 style="color: #fff; font-size: 2.2rem; margin-bottom: 3rem;">أرقام تبني الثقة</h2>
+        <h2 style="color: #fff; font-size: 2.2rem; margin-bottom: 3rem; font-weight: 800;">أرقام تبني الثقة</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
             <div class="stat-box">
                 <i class="fas fa-calendar-check" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
@@ -188,7 +190,7 @@ body_class: "homepage"
                 <div style="color: #aaa; font-size: 1rem;">سنة التأسيس</div>
             </div>
             <div class="stat-box">
-                <a href="https://maps.app.goo.gl/YMXq48W16dg1EcseA?g_st=ac" target="_blank" style="text-decoration: none;">
+                <a href="https://maps.app.goo.gl/YMXq48W16dg1EcseA?g_st=ac" target="_blank" style="text-decoration: none; color: inherit;">
                     <i class="fas fa-medal" style="font-size: 3rem; color: #fce205; margin-bottom: 15px;"></i>
                     <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">Level 7</div>
                     <div style="color: #aaa; font-size: 1rem;">مرشد محلي موثوق</div>
@@ -211,40 +213,129 @@ body_class: "homepage"
 </a>
 
 <!-- =========================================================
-     7. ستايلات محسنة
+     7. ستايلات محسنة ومتجاوبة
      ========================================================= -->
 <style>
   /* تحسين روابط المناطق */
   .area-link {
-    background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; 
-    text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s ease;
+    background: rgba(255,255,255,0.03); 
+    padding: 20px; 
+    border-radius: 12px; 
+    text-decoration: none; 
+    color: #ccc; 
+    border: 1px solid #333; 
+    text-align: center; 
+    transition: all 0.3s ease;
+    display: block;
   }
-  .area-link:hover { border-color: var(--color-primary); transform: translateY(-5px); background: rgba(212, 175, 55, 0.05); }
+  .area-link:hover { 
+    border-color: var(--color-primary); 
+    transform: translateY(-5px); 
+    background: rgba(212, 175, 55, 0.05); 
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  }
 
   /* الأنيميشن للنصوص */
   .home-hero h1, .home-hero p, .hero-buttons, .pain-point-box, .services-preview, .stat-box {
-    animation: fadeInUp 0.8s ease-out forwards; opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards; 
+    opacity: 0;
   }
-  .home-hero h1 {animation-delay: 0.1s;} 
-  .home-hero p {animation-delay: 0.3s;}
-  .hero-buttons {animation-delay: 0.5s;} 
-  .pain-point-box {animation-delay: 0.7s;}
+  .home-hero h1 { animation-delay: 0.1s; } 
+  .home-hero p { animation-delay: 0.3s; }
+  .hero-buttons { animation-delay: 0.5s; } 
+  .pain-point-box { animation-delay: 0.7s; }
+  .services-preview { animation-delay: 0.9s; }
   
-  @keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes fadeInUp { 
+    from { opacity: 0; transform: translateY(20px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
 
   /* زر الهاتف */
   .fixed-call-button {
-    position: fixed; bottom: 20px; left: 20px; z-index: 9999;
-    background: linear-gradient(45deg, #25D366, #128C7E); color: white;
-    padding: 15px 25px; border-radius: 50px; font-weight: bold; font-size: 1.2rem;
-    text-decoration: none; box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
-    animation: pulse 2s infinite; border: 2px solid white; display: flex; align-items: center; gap: 10px;
+    position: fixed; 
+    bottom: 20px; 
+    left: 20px; 
+    z-index: 9999;
+    background: linear-gradient(45deg, #25D366, #128C7E); 
+    color: white;
+    padding: 15px 25px; 
+    border-radius: 50px; 
+    font-weight: bold; 
+    font-size: 1.2rem;
+    text-decoration: none; 
+    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
+    animation: pulse 2s infinite; 
+    border: 2px solid white; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
   }
 
-  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  @keyframes pulse { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+    100% { transform: scale(1); } 
+  }
 
+  /* تجاوب محسن للجوال */
   @media (max-width: 768px) {
-    .home-hero h1 span { font-size: 2rem; }
-    .fixed-call-button { bottom: 15px; left: 15px; right: 15px; text-align: center; justify-content: center; font-size: 1rem; padding: 12px 20px; }
+    .home-hero {
+      padding: 4rem 1rem;
+      min-height: 60vh;
+    }
+    
+    .home-hero h1 span { 
+      font-size: 2rem; 
+    }
+    
+    .home-hero p {
+      font-size: 1rem;
+      padding: 0 1rem;
+    }
+    
+    .pain-point-box {
+      margin: 3rem 1rem 0 1rem;
+      padding: 20px;
+    }
+    
+    .services-preview {
+      gap: 30px;
+      margin-top: 3rem;
+    }
+    
+    .stat-box {
+      padding: 1rem;
+    }
+    
+    .fixed-call-button { 
+      bottom: 15px; 
+      left: 15px; 
+      right: 15px; 
+      text-align: center; 
+      justify-content: center; 
+      font-size: 1rem; 
+      padding: 12px 20px; 
+    }
+    
+    .properties-grid {
+      grid-template-columns: 1fr !important;
+      gap: 20px;
+    }
   }
-</style>
+
+  @media (max-width: 480px) {
+    .home-hero h1 span { 
+      font-size: 1.8rem; 
+    }
+    
+    .hero-buttons {
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .area-link {
+      padding: 15px;
+    }
+  }
+             </style>
