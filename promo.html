@@ -1,194 +1,350 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Template - سمسار طلبك</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-deep: #0a0a0a;
-            --gold: #d4af37;
-            --white: #ffffff;
-            /* سرعة العرض: 6 ثوانٍ لكل شقة (إجمالي العرض 12 مشهد × 6 = 72 ثانية) */
-            --duration: 72s; 
-        }
+---
+layout: default
+title: "معرض النخبة العقاري - طارق طنطاوي"
+description: "تصفح أفخم الوحدات السكنية والإدارية في مدينة نصر عبر معرضنا التفاعلي الذكي."
+permalink: /luxury-gallery.html
+---
 
-        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; /* إخفاء الماوس للتسجيل */ }
-        
-        body {
-            background-color: var(--bg-deep);
-            color: var(--white);
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            font-family: 'Cairo', sans-serif;
-        }
+<div class="luxury-viewer-container">
+    <!-- شريط العودة -->
+    <nav class="gallery-nav">
+        <a href="{{ '/' | relative_url }}" class="back-link">
+            <i class="fas fa-arrow-right"></i> العودة للرئيسية
+        </a>
+    </nav>
 
-        /* حاوية الشريط السينمائي */
-        .film-strip {
-            display: flex;
-            width: 1200vw; /* 12 مشهد (انترو + 10 شقق + أوتـرو) */
-            height: 100vh;
-            animation: cinematicSlide var(--duration) linear forwards;
-        }
-
-        @keyframes cinematicSlide {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(1100vw); } /* التحرك لليسار ليعرض المشاهد من اليمين */
-        }
-
-        .scene {
-            width: 100vw;
-            height: 100vh;
-            flex-shrink: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        /* تصميم مشهد البداية والنهاية */
-        .intro-content, .outro-content {
-            text-align: center;
-            max-width: 800px;
-        }
-
-        .intro-content h1, .outro-content h1 {
-            color: var(--gold);
-            font-size: 5rem;
-            font-weight: 900;
-            margin-bottom: 20px;
-            text-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
-        }
-
-        /* تصميم بطاقة الشقة */
-        .property-card {
-            width: 90%;
-            height: 85%;
-            display: flex;
-            flex-direction: column;
-            background: rgba(255, 255, 255, 0.02);
-            border: 2px solid rgba(212, 175, 55, 0.2);
-            border-radius: 30px;
-            padding: 30px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-        }
-
-        .image-frame {
-            width: 100%;
-            height: 70%;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid #333;
-            margin-bottom: 25px;
-        }
-
-        .image-frame img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .info-frame {
-            text-align: center;
-            flex-grow: 1;
-        }
-
-        .prop-title {
-            color: var(--gold);
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .prop-details {
-            font-size: 1.5rem;
-            color: #ccc;
-            margin-bottom: 15px;
-        }
-
-        .prop-price {
-            font-size: 2.5rem;
-            color: #fff;
-            font-weight: 900;
-            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent);
-            display: inline-block;
-            padding: 5px 40px;
-            border-radius: 50px;
-        }
-
-        /* تأثيرات سينمائية */
-        .vignette {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 50%, black 150%);
-            pointer-events: none;
-            z-index: 10;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="vignette"></div>
-    
-    <div class="film-strip" id="mainContainer">
-        <!-- 1. مشهد البداية -->
-        <div class="scene">
-            <div class="intro-content">
-                <i class="fas fa-crown" style="font-size: 4rem; color: var(--gold); margin-bottom: 20px;"></i>
-                <h1>سمسار طلبك</h1>
-                <p style="font-size: 2rem;">جولة في عالم العقارات الأكثر فخامة بمدينة نصر</p>
-            </div>
-        </div>
-
-        <!-- سيتم توليد الـ 10 شقق هنا بواسطة الجافاسكريبت -->
-
-        <!-- 12. مشهد النهاية -->
-        <div class="scene">
-            <div class="outro-content">
-                <h1>عقارك القادم بانتظارك</h1>
-                <p style="font-size: 2rem; color: var(--gold);">تواصل معنا الآن للحجز والمعاينة</p>
-                <div style="font-size: 3.5rem; margin-top: 30px; font-weight: 900;">01147758857</div>
-            </div>
-        </div>
+    <!-- شريط التقدم العلوي -->
+    <div class="slider-progress-container">
+        <div class="slider-progress-bar" id="progressBar"></div>
     </div>
 
-    <script>
-        const properties = [
-            { title: "شقة 180م المنطقة العاشرة", price: "3,700,000 ج.م", img: "شقة-180م-المنطقة-العاشرة.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية" },
-            { title: "شقة 135م ميدان رابعة", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس - شامل التكييفات والمطبخ" },
-            { title: "دوبلكس 285م حي الأندلس", price: "5,500,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص - حديقة 65م - أمام ماونتن فيو" },
-            { title: "شقة 165م شيراتون النزهة", price: "25,000 ج.م / شهر", img: "sheraton-nozha.webp", desc: "أرضي مرتفع - تصلح سكني أو إداري" },
-            { title: "دوبلكس استثماري حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "فيو بانوراما - عائد استثماري فوري (مؤجر)" },
-            { title: "شقة 225م المنطقة الأولى", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور - أرو مسمار ورخام - شامل الجراج" },
-            { title: "شقة 86م زهراء مدينة نصر", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "دور ثالث مميز - فيو مفتوح - سعر لقطة" },
-            { title: "شقة 225م شارع الطيران", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس" },
-            { title: "شقة 250م شارع توفيق البكري", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "ناصية بحري - ليفينج 30م - مسجلة شهر عقاري" },
-            { title: "شقة لقطة حسن المأمون", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات - موقع حيوي - استثمار ناجح" }
-        ];
+    <!-- حاوية العرض الرئيسية -->
+    <div class="slider-viewport">
+        <div class="slider-track" id="sliderTrack">
+            <!-- يتم التوليد بواسطة JS -->
+        </div>
 
-        const container = document.getElementById('mainContainer');
-        const outro = container.lastElementChild;
+        <!-- أزرار التنقل السريع -->
+        <button class="nav-arrow prev" onclick="moveSlide(-1)" aria-label="السابق"><i class="fas fa-chevron-right"></i></button>
+        <button class="nav-arrow next" onclick="moveSlide(1)" aria-label="التالي"><i class="fas fa-chevron-left"></i></button>
+    </div>
 
-        properties.forEach(prop => {
-            const scene = document.createElement('div');
-            scene.className = 'scene';
-            scene.innerHTML = `
-                <div class="property-card">
-                    <div class="image-frame">
-                        <img src="assets/img/properties/${prop.img}" alt="${prop.title}">
-                    </div>
-                    <div class="info-frame">
-                        <div class="prop-title">${prop.title}</div>
-                        <div class="prop-details">${prop.desc}</div>
-                        <div class="prop-price">${prop.price}</div>
-                    </div>
+    <!-- لوحة التحكم الذكية -->
+    <div class="slider-controls-panel">
+        <button id="playPauseBtn" class="control-btn" onclick="toggleAutoPlay()">
+            <i class="fas fa-pause"></i> <span id="playPauseText">إيقاف مؤقت</span>
+        </button>
+        
+        <a id="detailsLink" href="#" class="details-btn gold-glow">
+            <i class="fas fa-external-link-alt"></i> عرض التفاصيل الكاملة
+        </a>
+    </div>
+
+    <!-- بطاقة المالك (طارق طنطاوي) -->
+    <div class="owner-branding-card">
+        <div class="owner-info">
+            <div class="owner-text">
+                <span class="label">خبير العقارات المسؤول:</span>
+                <h3>أ/ طارق طنطاوي</h3>
+            </div>
+            <a href="tel:+201147758857" class="call-owner-btn">
+                <i class="fas fa-phone-alt"></i> 01147758857
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+/* --- الهوية البصرية الكاملة (Deep Charcoal & Royal Gold) --- */
+:root {
+    --gold-clr: #d4af37;
+    --bg-dark-clr: #0a0a0a;
+}
+
+.luxury-viewer-container {
+    max-width: 1200px;
+    margin: 1rem auto 4rem;
+    padding: 0 20px;
+    direction: rtl;
+    font-family: 'Cairo', sans-serif;
+}
+
+/* شريط التقدم */
+.slider-progress-container {
+    width: 100%; height: 4px; background: #222; 
+    margin-bottom: 15px; border-radius: 10px; overflow: hidden;
+}
+.slider-progress-bar {
+    height: 100%; width: 0%; background: var(--gold-clr);
+    box-shadow: 0 0 15px var(--gold-clr);
+    transition: width 0.1s linear;
+}
+
+/* المسرح (Viewport) */
+.slider-viewport {
+    position: relative;
+    width: 100%;
+    height: 650px;
+    border-radius: 25px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+}
+
+.slider-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.slide-item {
+    min-width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.slide-image {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+}
+.slide-image img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 10s linear;
+}
+.slide-item.active .slide-image img {
+    transform: scale(1.1); /* تأثير زووم سينمائي بطيء */
+}
+
+.slide-overlay {
+    position: absolute;
+    bottom: 0; left: 0; width: 100%; height: 70%;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 10%, rgba(0,0,0,0.4) 50%, transparent 100%);
+    z-index: 2;
+}
+
+.slide-content {
+    position: absolute;
+    bottom: 0; right: 0;
+    z-index: 3;
+    padding: 60px;
+    width: 100%;
+}
+
+.slide-content h2 { color: var(--gold-clr); font-size: 2.8rem; font-weight: 900; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+.slide-content p { color: #ddd; font-size: 1.4rem; margin-bottom: 25px; max-width: 800px; }
+.slide-price { font-size: 2.5rem; color: #fff; font-weight: 900; letter-spacing: 1px; }
+
+/* أزرار التنقل */
+.nav-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.6); border: 1px solid var(--gold-clr);
+    color: var(--gold-clr); width: 55px; height: 55px; border-radius: 50%;
+    z-index: 10; cursor: pointer; transition: 0.3s;
+}
+.nav-arrow:hover { background: var(--gold-clr); color: #000; box-shadow: 0 0 20px var(--gold-clr); }
+.nav-arrow.prev { right: 30px; }
+.nav-arrow.next { left: 30px; }
+
+/* لوحة التحكم */
+.slider-controls-panel {
+    display: flex; justify-content: center; align-items: center;
+    gap: 20px; margin: 30px 0;
+}
+
+.control-btn, .details-btn {
+    padding: 18px 40px; border-radius: 50px; font-weight: 800;
+    cursor: pointer; transition: 0.3s; text-decoration: none; font-family: 'Cairo';
+}
+
+.control-btn { background: #1a1a1a; color: #fff; border: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+.details-btn { background: var(--gold-clr); color: #000; border: none; font-size: 1.1rem; }
+.gold-glow:hover { box-shadow: 0 0 30px rgba(212, 175, 55, 0.4); transform: translateY(-3px); }
+
+/* بطاقة المالك */
+.owner-branding-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(212,175,55,0.15);
+    border-radius: 20px;
+    padding: 25px 40px;
+    margin-top: 20px;
+}
+.owner-info { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.owner-text h3 { color: #fff; font-size: 1.8rem; font-weight: 800; }
+.owner-text .label { color: var(--gold-clr); font-size: 0.9rem; font-weight: 700; }
+.call-owner-btn {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #fff; text-decoration: none; padding: 15px 35px; border-radius: 50px;
+    font-weight: 900; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 10px 20px rgba(37,211,102,0.2);
+}
+
+@media (max-width: 768px) {
+    .slider-viewport { height: 500px; }
+    .slide-content { padding: 30px; }
+    .slide-content h2 { font-size: 1.8rem; }
+    .slide-content p { font-size: 1.1rem; }
+    .slide-price { font-size: 1.8rem; }
+    .slider-controls-panel { flex-direction: column; }
+    .owner-info { justify-content: center; text-align: center; }
+}
+</style>
+
+<script>
+    // بيانات العقارات العشرة (الحقيقية)
+    const properties = [
+        { 
+            title: "شقة 180م المنطقة العاشرة", 
+            price: "3,700,000 ج.م", 
+            img: "شقة-180م-المنطقة-العاشرة.webp", 
+            desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" 
+        },
+        { 
+            title: "شقة 135م ميدان رابعة", 
+            price: "5,000,000 ج.م", 
+            img: "raba-nasr.webp", 
+            desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" 
+        },
+        { 
+            title: "فيلا دوبلكس حي الأندلس", 
+            price: "إيجار إداري 55,000 ج.م", 
+            img: "duplex-andalus.webp", 
+            desc: "285م - مدخل خاص - حديقة 65م - أمام ماونتن فيو بالتجمع الخامس", 
+            url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" 
+        },
+        { 
+            title: "شقة 225م شارع الطيران", 
+            price: "8,000,000 ج.م", 
+            img: "al-Tayaranstreet.webp", 
+            desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس - حصة بالجراج", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" 
+        },
+        { 
+            title: "دوبلكس استثماري حي السفارات", 
+            price: "4,850,000 ج.م", 
+            img: "elsfarat-duplex.webp", 
+            desc: "الحي السابع - فيو بانوراما - عائد استثماري فوري (مؤجر حالياً)", 
+            url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" 
+        },
+        { 
+            title: "شقة 225م المنطقة الأولى", 
+            price: "7,500,000 ج.م", 
+            img: "zuhair-sabri.webp", 
+            desc: "تشطيب قصور (أرو مسمار ورخام) - شارع زهير صبري - شامل الجراج", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" 
+        },
+        { 
+            title: "شقة 86م زهراء مدينة نصر", 
+            price: "1,650,000 ج.م", 
+            img: "zahraa-thirdfloor.webp", 
+            desc: "دور ثالث مميز - فيو مفتوح غير مجروح - موقع حيوي وسعر لقطة", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" 
+        },
+        { 
+            title: "شقة 250م شارع توفيق البكري", 
+            price: "5,000,000 ج.م", 
+            img: "tawfiqal-Bakri-st.webp", 
+            desc: "ناصية بحري - ليفينج روم 30م - مسجلة شهر عقاري - خلف مستشفى حسبو", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" 
+        },
+        { 
+            title: "شقة لقطة حسن المأمون", 
+            price: "1,650,000 ج.م", 
+            img: "tawnit.webp", 
+            desc: "عمارات التعاونيات - آخر حسن المأمون - موقع استراتيجي للشباب", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" 
+        },
+        { 
+            title: "شقة 288م أبراج صن رايز", 
+            price: "7,000,000 ج.م", 
+            img: "sunrise.webp", 
+            desc: "حي السفارات - فيو مفتوح بحري 100% - تشطيب مودرن فاخر - أمن 24 ساعة", 
+            url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" 
+        }
+    ];
+
+    let currentIdx = 0;
+    let isAutoPlaying = true;
+    let progress = 0;
+    const intervalTime = 6000; // 6 ثوانٍ لكل شقة
+    let autoPlayTimer;
+
+    function initSlider() {
+        const track = document.getElementById('sliderTrack');
+        properties.forEach((prop, index) => {
+            const slide = document.createElement('div');
+            slide.className = `slide-item ${index === 0 ? 'active' : ''}`;
+            slide.innerHTML = `
+                <div class="slide-image"><img src="assets/img/properties/${prop.img}" alt="${prop.title}"></div>
+                <div class="slide-overlay"></div>
+                <div class="slide-content">
+                    <h2>${prop.title}</h2>
+                    <p>${prop.desc}</p>
+                    <div class="slide-price">${prop.price}</div>
                 </div>
             `;
-            container.insertBefore(scene, outro);
+            track.appendChild(slide);
         });
-    </script>
-</body>
-</html>
+        updateControls();
+        startAutoPlay();
+    }
+
+    function moveSlide(direction) {
+        currentIdx = (currentIdx + direction + properties.length) % properties.length;
+        renderSlide();
+        resetProgress();
+    }
+
+    function renderSlide() {
+        const track = document.getElementById('sliderTrack');
+        const slides = document.querySelectorAll('.slide-item');
+        track.style.transform = `translateX(${currentIdx * 100}%)`; 
+        
+        slides.forEach(s => s.classList.remove('active'));
+        slides[currentIdx].classList.add('active');
+        
+        updateControls();
+    }
+
+    function updateControls() {
+        document.getElementById('detailsLink').href = properties[currentIdx].url;
+    }
+
+    function startAutoPlay() {
+        if(autoPlayTimer) clearInterval(autoPlayTimer);
+        autoPlayTimer = setInterval(() => {
+            if(isAutoPlaying) {
+                progress += 1.67; // لتكملة 100% خلال 6 ثواني تقريباً
+                document.getElementById('progressBar').style.width = progress + '%';
+                if(progress >= 100) {
+                    moveSlide(1);
+                }
+            }
+        }, 100);
+    }
+
+    function resetProgress() {
+        progress = 0;
+        document.getElementById('progressBar').style.width = '0%';
+    }
+
+    function toggleAutoPlay() {
+        isAutoPlaying = !isAutoPlaying;
+        const btnText = document.getElementById('playPauseText');
+        const btnIcon = document.querySelector('#playPauseBtn i');
+        
+        if(isAutoPlaying) {
+            btnText.innerText = "إيقاف مؤقت";
+            btnIcon.className = "fas fa-pause";
+        } else {
+            btnText.innerText = "تشغيل العرض";
+            btnIcon.className = "fas fa-play";
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initSlider);
+</script>
