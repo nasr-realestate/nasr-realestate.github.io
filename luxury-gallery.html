@@ -1,152 +1,152 @@
 ---
 layout: null
+# لا تضع أي سطر آخر هنا لضمان عزل الصفحة
 ---
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>معرض النخبة | سمسار طلبك</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- 1. الميتا تاجز (SEO & WhatsApp) -->
+    <title>معرض النخبة العقاري | سمسار طلبك</title>
+    <meta name="description" content="جولة سينمائية في أفخم وحدات مدينة نصر العقارية - تجربة بصرية فريدة.">
+    <meta property="og:title" content="معرض النخبة العقاري - سمسار طلبك">
+    <meta property="og:description" content="شاهد الآن أفخم 11 وحدة عقارية في مدينة نصر بعرض سينمائي واحد.">
+    <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/properties/luxury-palace-nasr-city.webp">
+    <meta property="og:url" content="https://nasr-realestate.github.io/luxury-gallery.html">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        :root {
-            --gold: #d4af37;
-            --bg: #0a0a0a;
-            --white: #ffffff;
+        /* --- 2. كود الإخفاء القسري (Force Hide) --- */
+        /* هذا الجزء يقتل أي هيدر أو فوتر أو أسهم تأتي من القالب الأصلي */
+        header, footer, nav, .navbar, .site-footer, .side-arrows, .back-to-top {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
-        /* تصفير الشاشة بالكامل */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root { --gold: #d4af37; --bg: #0a0a0a; --white: #ffffff; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body, html {
-            height: 100%; width: 100%;
+            height: 100vh; width: 100vw;
             background-color: var(--bg);
             color: var(--white);
             font-family: 'Cairo', sans-serif;
-            overflow: hidden; /* منع التمرير نهائياً */
+            overflow: hidden !important; /* منع أي تمرير */
+            position: fixed; /* تثبيت الشاشة لمنع الاهتزاز */
         }
 
         /* --- الهوية العائمة (اللوجو والعودة) --- */
-        .floating-nav {
-            position: fixed; top: 20px; left: 20px; right: 20px;
+        .top-ui {
+            position: fixed; top: env(safe-area-inset-top, 20px); 
+            left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: center;
-            z-index: 1000;
+            z-index: 9999;
         }
-        .brand-logo { 
-            color: var(--gold); font-weight: 900; font-size: 1.4rem; 
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-        }
-        .back-home {
+        .brand { color: var(--gold); font-weight: 900; font-size: 1.2rem; text-shadow: 0 2px 10px #000; }
+        .exit-btn {
             color: var(--gold) !important; text-decoration: none !important;
-            background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 50px;
-            border: 1px solid rgba(212,175,55,0.3); font-weight: 700; font-size: 0.9rem;
-            backdrop-filter: blur(5px);
+            background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 50px;
+            border: 1px solid rgba(212,175,55,0.4); font-weight: 700; font-size: 0.8rem;
+            backdrop-filter: blur(10px);
         }
 
-        /* --- شاشة الانترو (الترحيب والتحميل) --- */
-        #introScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 2000;
+        /* --- شاشة الانترو التحفيزية --- */
+        #intro {
+            position: fixed; inset: 0; background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; padding: 30px;
-            transition: opacity 1s ease;
+            text-align: center; padding: 40px; transition: all 1s ease;
         }
-        .intro-text h1 { color: var(--gold); font-size: 2.5rem; font-weight: 900; margin-bottom: 20px; }
-        .intro-text p { font-size: 1.2rem; color: #ccc; max-width: 500px; line-height: 1.8; }
+        .intro-h { color: var(--gold); font-size: 2.8rem; font-weight: 900; margin-bottom: 20px; }
+        .intro-p { font-size: 1.3rem; color: #aaa; max-width: 450px; line-height: 1.8; }
+        .loader-bar { width: 150px; height: 2px; background: #222; margin-top: 40px; position: relative; overflow: hidden; }
+        .loader-bar::after {
+            content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%;
+            background: var(--gold); animation: load 2s infinite;
+        }
+        @keyframes load { 0% { left: -100%; } 100% { left: 100%; } }
+
+        /* --- مسرح العرض (Slider) --- */
+        .stage { width: 100vw; height: 100vh; position: relative; }
+        .track { display: flex; width: 100%; height: 100%; transition: transform 0.9s cubic-bezier(0.19, 1, 0.22, 1); }
+        .slide { min-width: 100%; height: 100%; position: relative; overflow: hidden; }
         
-        /* مؤشر تحميل ذهبي */
-        .loader {
-            width: 50px; height: 50px; border: 3px solid #222; border-top: 3px solid var(--gold);
-            border-radius: 50%; margin-top: 30px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* --- حاوية العرض الرئيسية --- */
-        .viewer-main {
-            width: 100%; height: 100%;
-            position: relative; visibility: hidden; /* مخفي حتى انتهاء الانترو */
-        }
-
-        .slider-track {
-            display: flex; width: 100%; height: 100%;
-            transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .slide {
-            min-width: 100%; height: 100%; position: relative;
-        }
-
         .slide img {
             width: 100%; height: 100%; object-fit: cover;
-            transition: transform 12s linear;
+            transition: transform 15s linear;
         }
-        .slide.active img { transform: scale(1.15); }
+        .slide.active img { transform: scale(1.2); }
 
-        /* تدرج الظل السفلي للنصوص */
-        .overlay {
-            position: absolute; bottom: 0; width: 100%; height: 60%;
-            background: linear-gradient(to top, rgba(0,0,0,1) 15%, rgba(0,0,0,0.5) 50%, transparent 100%);
+        .slide-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0.4) 40%, transparent 80%);
             z-index: 2;
         }
 
-        .content {
-            position: absolute; bottom: 40px; right: 25px; left: 25px;
-            z-index: 3;
+        /* --- نصوص البطاقة --- */
+        .slide-data {
+            position: absolute; bottom: 50px; right: 25px; left: 25px;
+            z-index: 5; text-align: right;
         }
-        .content h2 { color: var(--gold); font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
-        .content p { color: #eee; font-size: 1rem; margin-bottom: 20px; line-height: 1.5; height: 3em; overflow: hidden; }
-        
-        .price-tag { font-size: 1.8rem; font-weight: 900; color: #fff; margin-bottom: 25px; display: block; }
+        .slide-data h2 { color: var(--gold); font-size: 2rem; font-weight: 900; margin-bottom: 10px; }
+        .slide-data p { color: #fff; font-size: 1.1rem; margin-bottom: 20px; opacity: 0.9; }
+        .slide-price { font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 30px; display: block; }
 
-        /* الأزرار التفاعلية */
-        .actions { display: flex; gap: 10px; }
-        .btn-more {
+        .btn-group { display: flex; gap: 12px; }
+        .btn-main {
             flex: 1; background: var(--gold); color: #000; text-align: center;
-            padding: 15px; border-radius: 12px; text-decoration: none; font-weight: 800;
+            padding: 18px; border-radius: 15px; text-decoration: none; font-weight: 900;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
         .btn-pause {
-            width: 55px; background: rgba(255,255,255,0.1); border: 1px solid #444;
-            color: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            width: 65px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; border-radius: 15px; cursor: pointer;
         }
 
-        /* شريط التقدم النحيف جداً في الأسفل */
-        .progress-line {
-            position: absolute; bottom: 0; left: 0; width: 0%; height: 4px;
-            background: var(--gold); z-index: 10; box-shadow: 0 0 10px var(--gold);
+        /* شريط التقدم السفلي */
+        .timer-line {
+            position: fixed; bottom: 0; left: 0; width: 0%; height: 5px;
+            background: var(--gold); z-index: 100; box-shadow: 0 0 15px var(--gold);
         }
-
     </style>
 </head>
 <body>
 
-    <!-- 1. الهوية العائمة -->
-    <div class="floating-nav">
-        <div class="brand-logo">سمسار طلبك</div>
-        <a href="/" class="back-home"><i class="fas fa-arrow-right"></i> الرئيسية</a>
+    <!-- 1. واجهة التحكم العلوية -->
+    <div class="top-ui">
+        <div class="brand">سمسار طلبك</div>
+        <a href="/" class="exit-btn"><i class="fas fa-times"></i> إغلاق العرض</a>
     </div>
 
-    <!-- 2. شاشة الانترو والتحميل -->
-    <div id="introScreen">
-        <div class="intro-text">
-            <i class="fas fa-crown" style="font-size: 3rem; color: var(--gold); margin-bottom: 20px;"></i>
-            <h1>مرحباً بك في عالم الفخامة</h1>
-            <p>نستعرض لك الآن نخبة الوحدات العقارية المختارة بعناية في مدينة نصر..</p>
-        </div>
-        <div class="loader"></div>
-        <div style="margin-top: 20px; font-size: 0.8rem; color: #555;">جاري تجهيز العرض السينمائي...</div>
+    <!-- 2. شاشة البداية التحفيزية -->
+    <div id="intro">
+        <i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); margin-bottom: 30px;"></i>
+        <h1 class="intro-h">نخبة عقارات مدينة نصر</h1>
+        <p class="intro-p">استعد لخوض تجربة بصرية فريدة.. نحن نأخذك في جولة حصرية لأرقى الوحدات التي صُممت خصيصاً لتناسب تطلعاتك.</p>
+        <div class="loader-bar"></div>
     </div>
 
-    <!-- 3. مسرح العرض -->
-    <div class="viewer-main" id="viewerMain">
-        <div class="slider-track" id="sliderTrack">
-            <!-- يتم توليد الشقق الـ 11 هنا -->
+    <!-- 3. مسرح العرض الرئيسي -->
+    <div class="stage">
+        <div class="track" id="sliderTrack">
+            <!-- الوحدات الـ 11 سيتم توليدها هنا -->
         </div>
-        <div class="progress-line" id="progressLine"></div>
+        <div class="timer-line" id="timerLine"></div>
     </div>
 
     <script>
-        const properties = [
+        // مصفوفة البيانات الكاملة (11 عقار)
+        const items = [
             { title: "جوهرة المنطقة الأولى (320م)", price: "15,000,000 ج.م", img: "luxury-palace-nasr-city.webp", desc: "تشطيب ملكي نادِر - أرو مسمار ورخام إيطالي - موقع النخبة.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-قصور/" },
             { title: "شقة 180م المنطقة العاشرة", price: "3,700,000 ج.م", img: "شقة-180م-المنطقة-العاشرة.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري", url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
             { title: "شقة 135م ميدان رابعة", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
@@ -160,75 +160,68 @@ layout: null
             { title: "شقة 288م أبراج صن رايز", price: "7,000,000 ج.م", img: "sunrise.webp", desc: "حي السفارات - فيو مفتوح بحري 100% - تشطيب مودرن فاخر - أمن 24 ساعة", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
         ];
 
-        let currentIdx = 0;
-        let isPaused = false;
+        let idx = 0;
+        let paused = false;
         let progress = 0;
-        const durationPerSlide = 6000; // 6 ثواني
 
-        function init() {
+        function build() {
             const track = document.getElementById('sliderTrack');
-            properties.forEach((p, i) => {
+            items.forEach((p, i) => {
                 const slide = document.createElement('div');
                 slide.className = `slide ${i === 0 ? 'active' : ''}`;
                 slide.innerHTML = `
                     <img src="/assets/img/properties/${p.img}">
-                    <div class="overlay"></div>
-                    <div class="content">
+                    <div class="slide-overlay"></div>
+                    <div class="slide-data">
                         <h2>${p.title}</h2>
                         <p>${p.desc}</p>
-                        <span class="price-tag">${p.price}</span>
-                        <div class="actions">
-                            <a href="${p.url}" class="btn-more">عرض التفاصيل</a>
-                            <button class="btn-pause" id="btnPause-${i}" onclick="togglePause()"><i class="fas fa-pause"></i></button>
+                        <span class="slide-price">${p.price}</span>
+                        <div class="btn-group">
+                            <a href="${p.url}" class="btn-main">اكتشف التفاصيل</a>
+                            <button class="btn-pause" onclick="toggle()"><i class="fas fa-pause"></i></button>
                         </div>
                     </div>
                 `;
                 track.appendChild(slide);
             });
 
-            // بدء العرض بعد 4 ثواني انترو
+            // إخفاء الانترو وبدء العرض بعد 5 ثواني
             setTimeout(() => {
-                document.getElementById('introScreen').style.opacity = '0';
+                document.getElementById('intro').style.opacity = '0';
                 setTimeout(() => {
-                    document.getElementById('introScreen').style.display = 'none';
-                    document.getElementById('viewerMain').style.visibility = 'visible';
-                    startCycle();
+                    document.getElementById('intro').style.display = 'none';
+                    run();
                 }, 1000);
-            }, 4000);
+            }, 5000);
         }
 
-        function startCycle() {
+        function run() {
             setInterval(() => {
-                if (!isPaused) {
-                    progress += 1.67; // لتكملة 100% في 6 ثواني تقريباً
-                    document.getElementById('progressLine').style.width = progress + '%';
+                if (!paused) {
+                    progress += 1.33; // سرعة الشريط (6-7 ثواني لكل شقة)
+                    document.getElementById('timerLine').style.width = progress + '%';
                     if (progress >= 100) {
-                        nextSlide();
+                        next();
                     }
                 }
             }, 100);
         }
 
-        function nextSlide() {
+        function next() {
             progress = 0;
-            currentIdx = (currentIdx + 1) % properties.length;
-            const track = document.getElementById('sliderTrack');
-            track.style.transform = `translateX(${currentIdx * 100}%)`;
-            
-            document.querySelectorAll('.slide').forEach((s, i) => {
-                s.classList.toggle('active', i === currentIdx);
-            });
+            idx = (idx + 1) % items.length;
+            document.getElementById('sliderTrack').style.transform = `translateX(${idx * 100}%)`;
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((s, i) => s.classList.toggle('active', i === idx));
         }
 
-        function togglePause() {
-            isPaused = !isPaused;
+        function toggle() {
+            paused = !paused;
             const icons = document.querySelectorAll('.btn-pause i');
-            icons.forEach(icon => {
-                icon.className = isPaused ? "fas fa-play" : "fas fa-pause";
-            });
+            icons.forEach(i => i.className = paused ? "fas fa-play" : "fas fa-pause");
         }
 
-        window.onload = init;
+        window.onload = build;
     </script>
 </body>
 </html>
