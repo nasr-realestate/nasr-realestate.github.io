@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Template - سمسار طلبك</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-deep: #0a0a0a;
+            --gold: #d4af37;
+            --white: #ffffff;
+            /* سرعة العرض: 6 ثوانٍ لكل شقة (إجمالي العرض 12 مشهد × 6 = 72 ثانية) */
+            --duration: 72s; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; /* إخفاء الماوس للتسجيل */ }
+        
+        body {
+            background-color: var(--bg-deep);
+            color: var(--white);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        /* حاوية الشريط السينمائي */
+        .film-strip {
+            display: flex;
+            width: 1200vw; /* 12 مشهد (انترو + 10 شقق + أوتـرو) */
+            height: 100vh;
+            animation: cinematicSlide var(--duration) linear forwards;
+        }
+
+        @keyframes cinematicSlide {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(1100vw); } /* التحرك لليسار ليعرض المشاهد من اليمين */
+        }
+
+        .scene {
+            width: 100vw;
+            height: 100vh;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* تصميم مشهد البداية والنهاية */
+        .intro-content, .outro-content {
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .intro-content h1, .outro-content h1 {
+            color: var(--gold);
+            font-size: 5rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+        }
+
+        /* تصميم بطاقة الشقة */
+        .property-card {
+            width: 90%;
+            height: 85%;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(212, 175, 55, 0.2);
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+
+        .image-frame {
+            width: 100%;
+            height: 70%;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #333;
+            margin-bottom: 25px;
+        }
+
+        .image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .info-frame {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .prop-title {
+            color: var(--gold);
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .prop-details {
+            font-size: 1.5rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .prop-price {
+            font-size: 2.5rem;
+            color: #fff;
+            font-weight: 900;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent);
+            display: inline-block;
+            padding: 5px 40px;
+            border-radius: 50px;
+        }
+
+        /* تأثيرات سينمائية */
+        .vignette {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 50%, black 150%);
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="vignette"></div>
+    
+    <div class="film-strip" id="mainContainer">
+        <!-- 1. مشهد البداية -->
+        <div class="scene">
+            <div class="intro-content">
+                <i class="fas fa-crown" style="font-size: 4rem; color: var(--gold); margin-bottom: 20px;"></i>
+                <h1>سمسار طلبك</h1>
+                <p style="font-size: 2rem;">جولة في عالم العقارات الأكثر فخامة بمدينة نصر</p>
+            </div>
+        </div>
+
+        <!-- سيتم توليد الـ 10 شقق هنا بواسطة الجافاسكريبت -->
+
+        <!-- 12. مشهد النهاية -->
+        <div class="scene">
+            <div class="outro-content">
+                <h1>عقارك القادم بانتظارك</h1>
+                <p style="font-size: 2rem; color: var(--gold);">تواصل معنا الآن للحجز والمعاينة</p>
+                <div style="font-size: 3.5rem; margin-top: 30px; font-weight: 900;">01147758857</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const properties = [
+            { title: "شقة 180م المنطقة العاشرة", price: "3,700,000 ج.م", img: "شقة-180م-المنطقة-العاشرة.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية" },
+            { title: "شقة 135م ميدان رابعة", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس - شامل التكييفات والمطبخ" },
+            { title: "دوبلكس 285م حي الأندلس", price: "5,500,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص - حديقة 65م - أمام ماونتن فيو" },
+            { title: "شقة 165م شيراتون النزهة", price: "25,000 ج.م / شهر", img: "sheraton-nozha.webp", desc: "أرضي مرتفع - تصلح سكني أو إداري" },
+            { title: "دوبلكس استثماري حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "فيو بانوراما - عائد استثماري فوري (مؤجر)" },
+            { title: "شقة 225م المنطقة الأولى", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور - أرو مسمار ورخام - شامل الجراج" },
+            { title: "شقة 86م زهراء مدينة نصر", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "دور ثالث مميز - فيو مفتوح - سعر لقطة" },
+            { title: "شقة 225م شارع الطيران", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس" },
+            { title: "شقة 250م شارع توفيق البكري", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "ناصية بحري - ليفينج 30م - مسجلة شهر عقاري" },
+            { title: "شقة لقطة حسن المأمون", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات - موقع حيوي - استثمار ناجح" }
+        ];
+
+        const container = document.getElementById('mainContainer');
+        const outro = container.lastElementChild;
+
+        properties.forEach(prop => {
+            const scene = document.createElement('div');
+            scene.className = 'scene';
+            scene.innerHTML = `
+                <div class="property-card">
+                    <div class="image-frame">
+                        <img src="assets/img/properties/${prop.img}" alt="${prop.title}">
+                    </div>
+                    <div class="info-frame">
+                        <div class="prop-title">${prop.title}</div>
+                        <div class="prop-details">${prop.desc}</div>
+                        <div class="prop-price">${prop.price}</div>
+                    </div>
+                </div>
+            `;
+            container.insertBefore(scene, outro);
+        });
+    </script>
+</body>
+</html>
