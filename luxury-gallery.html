@@ -1,10 +1,3 @@
----
-layout: null
-title: "معرض النخبة العقاري | سمسار طلبك"
-description: "عرض سينمائي تفاعلي لأفخم 10 شقق في مدينة نصر."
-sitemap: true
----
-{% raw %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -22,8 +15,8 @@ sitemap: true
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* إخفاء قسري لأي عناصر خارجية */
-        header, footer, nav, .navbar, .site-footer, #back-to-top, .side-arrows { 
+        /* إخفاء قسري لأي شوائب إضافية */
+        header, footer, nav, .navbar, .site-footer, #back-to-top, .fixed-call-button { 
             display: none !important; opacity: 0 !important; visibility: hidden !important; 
         }
 
@@ -53,7 +46,7 @@ sitemap: true
             backdrop-filter: blur(10px);
         }
 
-        /* شاشة الترحيب */
+        /* شاشة الترحيب (Intro) لضمان تحميل الصور */
         #introLayer {
             position: fixed; inset: 0; background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -68,7 +61,7 @@ sitemap: true
         }
         @keyframes animLoad { 0% { left: -100%; } 100% { left: 100%; } }
 
-        /* السلايدر */
+        /* مسرح العرض */
         .stage { width: 100vw; height: 100vh; position: relative; }
         .track { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
         .slide { min-width: 100%; height: 100%; position: relative; overflow: hidden; }
@@ -129,7 +122,7 @@ sitemap: true
         const properties = [
             { title: "شقة 180م المنطقة العاشرة", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
             { title: "شقة 135م ميدان رابعة", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
-            { title: "فيلا دوبلكس حي الأندلس", price: "إيجار 55,000 ج.م", img: "duplex-andalus.webp", desc: "285م بمدخل خاص وحديقة - أمام ماونتن فيو بالتجمع الخامس.", url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
+            { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "285م بمدخل خاص وحديقة - أمام ماونتن فيو بالتجمع الخامس.", url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
             { title: "شقة 225م شارع الطيران", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس - حصة بالجراج.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
             { title: "دوبلكس استثماري حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "الحي السابع - فيو بانوراما - عائد استثماري فوري (مؤجر حالياً).", url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
             { title: "شقة 225م المنطقة الأولى", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور (أرو مسمار ورخام) - شارع زهير صبري - شامل الجراج.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
@@ -161,10 +154,13 @@ sitemap: true
                 `;
                 track.appendChild(slide);
             });
+            
+            // إخفاء الانترو بعد 5 ثواني
             setTimeout(() => {
-                document.getElementById('introLayer').style.opacity = '0';
+                const intro = document.getElementById('introLayer');
+                intro.style.opacity = '0';
                 setTimeout(() => {
-                    document.getElementById('introLayer').style.display = 'none';
+                    intro.style.display = 'none';
                     startEngine();
                 }, 800);
             }, 5000);
@@ -173,7 +169,7 @@ sitemap: true
         function startEngine() {
             setInterval(() => {
                 if (!isPaused) {
-                    progress += 1.67;
+                    progress += 1.67; 
                     document.getElementById('progressBar').style.width = progress + '%';
                     if (progress >= 100) {
                         progress = 0;
@@ -186,7 +182,8 @@ sitemap: true
 
         function updateSlide() {
             document.getElementById('mainTrack').style.transform = `translateX(${currentIdx * 100}%)`;
-            document.querySelectorAll('.slide').forEach((s, i) => s.classList.toggle('active', i === currentIdx));
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
         }
 
         function togglePlay() {
@@ -198,4 +195,3 @@ sitemap: true
     </script>
 </body>
 </html>
-{% endraw %}
