@@ -3,12 +3,21 @@ layout: null
 ---
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- 1. رابط الصفحة الرئيسية -->
   <url>
     <loc>{{ site.url }}/</loc>
     <priority>1.0</priority>
   </url>
+
+  <!-- 2. إضافة رابط معرض النخبة يدوياً (لضمان الأرشفة) -->
+  <url>
+    <loc>https://nasr-realestate.github.io/luxury-gallery.html</loc>
+    <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
+    <priority>1.0</priority>
+  </url>
   
-  <!-- روابط الشقق -->
+  <!-- 3. روابط الشقق (تلقائي) -->
   {% for post in site.properties %}
   <url>
     <loc>{{ site.url }}{{ post.url }}</loc>
@@ -17,7 +26,7 @@ layout: null
   </url>
   {% endfor %}
   
-  <!-- روابط الطلبات -->
+  <!-- 4. روابط الطلبات (تلقائي) -->
   {% for req in site.requests %}
   <url>
     <loc>{{ site.url }}{{ req.url }}</loc>
@@ -26,9 +35,9 @@ layout: null
   </url>
   {% endfor %}
 
-  <!-- باقي الصفحات -->
+  <!-- 5. باقي صفحات الموقع -->
   {% for page in site.pages %}
-  {% if page.url contains '.html' and page.url != '/404.html' %}
+  {% if page.url contains '.html' and page.url != '/404.html' and page.url != '/luxury-gallery.html' %}
   <url>
     <loc>{{ site.url }}{{ page.url }}</loc>
     <priority>0.5</priority>
