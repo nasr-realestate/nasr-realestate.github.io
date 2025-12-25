@@ -3,11 +3,12 @@ name: Notify Search Engines (IndexNow)
 on:
   push:
     branches:
-      - main  # أو master حسب اسم الفرع عندك
+      - main  # تأكد إذا كان اسم الفرع عندك main أو master
     paths:
       - '_properties/**'
       - '_requests/**'
       - 'sitemap.xml'
+      - 'luxury-gallery.html'
 
 jobs:
   indexnow:
@@ -16,8 +17,13 @@ jobs:
       - name: Send IndexNow Ping
         run: |
           curl -X GET "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/sitemap.xml&key=48316278893d467499696316278893d4"
-          # ملاحظة: الكود أعلاه ينبه Bing و Yandex و Seznam فوراً
           
+      - name: Force Index Gallery
+        run: |
+          # تنبيه المحركات بوجود صفحة المعرض بشكل مستقل
+          curl -I https://nasr-realestate.github.io/luxury-gallery.html
+
       - name: Verify Sitemap Accessibility
         run: |
+          # التأكد من أن خريطة الموقع تعمل ولا تظهر خطأ 404
           curl -I https://nasr-realestate.github.io/sitemap.xml
