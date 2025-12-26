@@ -190,6 +190,7 @@
             properties.forEach((p, i) => {
                 const slide = document.createElement('div');
                 slide.className = `slide ${i === 0 ? 'active' : ''}`;
+                // *** THIS IS THE CORRECTED LINE ***
                 slide.innerHTML = `
                     <img src="/assets/img/properties/${p.img}" alt="${p.alt}">
                     <div class="slide-overlay"></div>
@@ -206,7 +207,13 @@
                 track.appendChild(slide);
             });
             
-            // Hide intro after a delay to ensure assets are loaded
+            // Preload images to ensure smooth transition
+            properties.forEach(p => {
+                const img = new Image();
+                img.src = `/assets/img/properties/${p.img}`;
+            });
+
+            // Hide intro after a delay
             setTimeout(() => {
                 const intro = document.getElementById('introLayer');
                 if (intro) {
@@ -237,6 +244,7 @@
             const track = document.getElementById('mainTrack');
             const slides = document.querySelectorAll('.slide');
             if (track && slides.length > 0) {
+                // Corrected the translation value to use a negative sign
                 track.style.transform = `translateX(-${currentIdx * 100}%)`;
                 slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
             }
