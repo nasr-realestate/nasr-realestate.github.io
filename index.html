@@ -45,7 +45,7 @@ body_class: "homepage"
 </script>
 
 <!-- =========================================================
-     2. الواجهة الرئيسية المحسنة
+     2. الواجهة الرئيسية
      ========================================================= -->
 <section class="home-hero" style="position: relative; padding: 6rem 1rem; overflow: hidden; min-height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #0f0f0f 0%, #000000 100%);">
   
@@ -76,7 +76,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     🌟 الجديد: قسم المعرض السينمائي (Elite Showcase)
+     🌟 قسم المعرض السينمائي (Elite Showcase)
      ========================================================= -->
 <section class="luxury-teaser-section">
     <div class="teaser-overlay"></div>
@@ -148,103 +148,105 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     4. الشقق حسب المنطقة
+     4. الشقق حسب المنطقة (روابط مباشرة للوحدات المتميزة)
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
     <h2 style="text-align: center; color: #fff; margin-bottom: 2rem; font-size: 1.8rem;">
-      <i class="fas fa-map-marked-alt"></i> الشقق للبيع في مناطق مدينة نصر
+      <i class="fas fa-map-marked-alt"></i> تصفح عقاراتنا حسب المنطقة
     </h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-      <a href="{{ '/properties/' | relative_url }}?area=10" class="area-link">
+      <!-- رابط المنطقة العاشرة يذهب لشقة الـ 180م -->
+      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة العاشرة</h3>
-        <p style="font-size: 0.9rem; color: #aaa;">شقق للبيع - إيجار - تمليك</p>
+        <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 180م الترا سوبر لوكس</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}?area=9" class="area-link">
+      <!-- رابط المنطقة التاسعة يذهب لشقة الحديقة الخاصة -->
+      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-بحديقة-خاصة-للبيع-مدينة-نصر-المنطقة-التاسعة/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة التاسعة</h3>
-        <p style="font-size: 0.9rem; color: #aaa;">مكاتب - محلات - عقارات تجارية</p>
+        <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة بحديقة خاصة ومدخل مستقل</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}?area=6" class="area-link">
+      <!-- رابط المنطقة السادسة يذهب لشقة الفريق علي عامر -->
+      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-علي-عامر-مكرم-عبيد-مدينة-نصر/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة السادسة</h3>
-        <p style="font-size: 0.9rem; color: #aaa;">شقق سكنية - عائلات - هدوء</p>
+        <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 240م تشطيب ملكي بمكرم عبيد</p>
       </a>
-      <a href="{{ '/properties/' | relative_url }}?area=andalus" class="area-link">
+      <!-- رابط حي الأندلس يذهب لفيلا الدوبلكس -->
+      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">حي الأندلس</h3>
-        <p style="font-size: 0.9rem; color: #aaa;">فلل - دوبلكس - مساحات كبيرة</p>
+        <p style="font-size: 0.9rem; color: #aaa;">شاهد: فيلا دوبلكس 285م أمام ماونتن فيو</p>
       </a>
     </div>
   </div>
 </section>
 
-<!-- أرقام الثقة وزر الهاتف (باقي الكود كما هو) -->
+<!-- =========================================================
+     5. أرقام الثقة
+     ========================================================= -->
+<section class="trust-section" style="position: relative; padding: 5rem 2rem; background: radial-gradient(circle at center, #111 0%, #000 100%); border-top: 1px solid #222;">
+    <div style="position: relative; z-index: 2; max-width: 1000px; margin: 0 auto; text-align: center;">
+        <h2 style="color: #fff; font-size: 2.2rem; margin-bottom: 3rem; font-weight: 800;">أرقام تبني الثقة</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
+            <div class="stat-box">
+                <i class="fas fa-calendar-check" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">2014</div>
+                <div style="color: #aaa; font-size: 1rem;">سنة التأسيس</div>
+            </div>
+            <div class="stat-box">
+                <a href="https://maps.app.goo.gl/YMXq48W16dg1EcseA?g_st=ac" target="_blank" style="text-decoration: none; color: inherit;">
+                    <i class="fas fa-medal" style="font-size: 3rem; color: #fce205; margin-bottom: 15px;"></i>
+                    <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">Level 7</div>
+                    <div style="color: #aaa; font-size: 1rem;">مرشد محلي موثوق</div>
+                </a>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-eye" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #fff;">+15M</div>
+                <div style="color: #aaa; font-size: 1rem;">مشاهدة</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========================================================
+     6. زر الهاتف الثابت 
+     ========================================================= -->
+<a href="tel:+201147758857" class="fixed-call-button">
+    📞 اتصل الآن: 01147758857
+</a>
 
 <style>
-  /* --- تصميم القسم التشويقي الجديد --- */
+  /* --- تصميم القسم التشويقي --- */
   .luxury-teaser-section {
-      position: relative;
-      padding: 5rem 1rem;
-      background: #050505;
-      background-image: url('assets/img/properties/شقة-180م-المنطقة-العاشرة.webp');
-      background-attachment: fixed;
-      background-size: cover;
-      background-position: center;
-      text-align: center;
-      border-top: 1px solid var(--color-border-light);
-      border-bottom: 1px solid var(--color-border-light);
+      position: relative; padding: 5rem 1rem; background: #050505;
+      background-image: url('assets/img/properties/apartment-180m-nasr-city.webp');
+      background-attachment: fixed; background-size: cover; background-position: center;
+      text-align: center; border-top: 1px solid var(--color-border-light); border-bottom: 1px solid var(--color-border-light);
   }
-
-  .teaser-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: linear-gradient(to right, rgba(0,0,0,0.9), rgba(0,0,0,0.7), rgba(0,0,0,0.9));
-      z-index: 1;
-  }
-
+  .teaser-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba(0,0,0,0.9), rgba(0,0,0,0.7), rgba(0,0,0,0.9)); z-index: 1; }
   .teaser-container { position: relative; z-index: 2; max-width: 800px; margin: 0 auto; }
+  .elite-badge { display: inline-block; padding: 5px 20px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--color-primary); color: var(--color-primary); border-radius: 50px; font-weight: bold; margin-bottom: 20px; font-size: 0.9rem; }
+  .teaser-content h2 { color: #fff; font-size: 2.5rem; font-weight: 900; margin-bottom: 15px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+  .teaser-content p { color: #ccc; font-size: 1.2rem; margin-bottom: 30px; line-height: 1.7; }
+  .gold-pulse-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--color-primary); color: #000; padding: 15px 40px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 1.1rem; transition: 0.3s; animation: gold-pulse 2s infinite; }
+  @keyframes gold-pulse { 0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(212, 175, 55, 0); } 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); } }
 
-  .elite-badge {
-      display: inline-block;
-      padding: 5px 20px;
-      background: rgba(212, 175, 55, 0.1);
-      border: 1px solid var(--color-primary);
-      color: var(--color-primary);
-      border-radius: 50px;
-      font-weight: bold;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-  }
+  /* روابط المناطق المحدثة */
+  .area-link { background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s ease; display: block; }
+  .area-link:hover { border-color: var(--color-primary); transform: translateY(-5px); background: rgba(212, 175, 55, 0.05); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-  .teaser-content h2 {
-      color: #fff; font-size: 2.5rem; font-weight: 900; margin-bottom: 15px;
-      text-shadow: 0 5px 15px rgba(0,0,0,0.5);
-  }
+  /* الأنيميشن */
+  .home-hero h1, .home-hero p, .hero-buttons, .pain-point-box, .stat-box { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .teaser-content p {
-      color: #ccc; font-size: 1.2rem; margin-bottom: 30px; line-height: 1.7;
-  }
-
-  .gold-pulse-btn {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: var(--color-primary); color: #000;
-      padding: 15px 40px; border-radius: 50px; text-decoration: none;
-      font-weight: 800; font-size: 1.1rem;
-      transition: 0.3s;
-      animation: gold-pulse 2s infinite;
-  }
-
-  @keyframes gold-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-      70% { box-shadow: 0 0 0 20px rgba(212, 175, 55, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-  }
-
-  .gold-pulse-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
-
-  /* تنسيقات أخرى (موجودة سابقاً) */
-  .area-link { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; text-decoration: none; color: #ccc; border: 1px solid #333; text-align: center; transition: all 0.3s ease; display: block; }
-  .area-link:hover { border-color: var(--color-primary); transform: translateY(-5px); background: rgba(212, 175, 55, 0.05); }
+  /* زر الهاتف الثابت */
+  .fixed-call-button { position: fixed; bottom: 20px; left: 20px; z-index: 9999; background: linear-gradient(45deg, #25D366, #128C7E); color: white; padding: 15px 25px; border-radius: 50px; font-weight: bold; font-size: 1.2rem; text-decoration: none; box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4); animation: pulse 2s infinite; border: 2px solid white; display: flex; align-items: center; gap: 10px; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
   @media (max-width: 768px) {
+    .home-hero h1 span { font-size: 2rem; }
     .teaser-content h2 { font-size: 1.8rem; }
-    .luxury-teaser-section { padding: 4rem 1rem; background-attachment: scroll; }
+    .fixed-call-button { left: 10px; bottom: 10px; right: 10px; justify-content: center; }
+    .properties-grid { grid-template-columns: 1fr !important; }
   }
-</style>
+             </style>
