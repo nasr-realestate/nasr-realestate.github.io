@@ -46,7 +46,7 @@
             backdrop-filter: blur(10px);
         }
 
-        /* شاشة الترحيب (Intro) لضمان تحميل الصور */
+        /* شاشة الترحيب (Intro) */
         #introLayer {
             position: fixed; inset: 0; background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -155,12 +155,10 @@
                 track.appendChild(slide);
             });
             
-            // إخفاء الانترو بعد 5 ثواني
             setTimeout(() => {
-                const intro = document.getElementById('introLayer');
-                intro.style.opacity = '0';
+                document.getElementById('introLayer').style.opacity = '0';
                 setTimeout(() => {
-                    intro.style.display = 'none';
+                    document.getElementById('introLayer').style.display = 'none';
                     startEngine();
                 }, 800);
             }, 5000);
@@ -186,10 +184,13 @@
             slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
         }
 
+        // الإصلاح هنا: تحديث كافة الأيقونات في جميع البطاقات لضمان تزامن الحالة
         function togglePlay() {
             isPaused = !isPaused;
-            const icon = document.querySelector('.btn-pause i');
-            icon.className = isPaused ? "fas fa-play" : "fas fa-pause";
+            const allIcons = document.querySelectorAll('.btn-pause i');
+            allIcons.forEach(icon => {
+                icon.className = isPaused ? "fas fa-play" : "fas fa-pause";
+            });
         }
         window.onload = buildGallery;
     </script>
