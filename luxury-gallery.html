@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
+    <!-- الميتا تاجز للمشاركة والأرشفة -->
     <title>معرض النخبة العقاري | سمسار طلبك</title>
-    <meta name="description" content="تجربة بصرية فريدة لأرقى العقارات في مدينة نصر بأسلوب سينمائي.">
+    <meta name="description" content="شاهد أفضل 10 شقق للبيع في مدينة نصر بعرض سينمائي تفاعلي واحد.">
     <meta property="og:title" content="معرض النخبة - سمسار طلبك">
     <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/properties/apartment-180m-nasr-city.webp">
     <meta property="og:url" content="https://nasr-realestate.github.io/luxury-gallery.html">
@@ -15,9 +16,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* إخفاء قسري لأي شوائب إضافية */
+        /* إخفاء قسري لأي عناصر خارجية من القوالب لضمان ملء الشاشة */
         header, footer, nav, .navbar, .site-footer, #back-to-top, .fixed-call-button { 
-            display: none !important; opacity: 0 !important; visibility: hidden !important; 
+            display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; 
         }
 
         :root { --gold: #d4af37; --bg: #0a0a0a; --white: #ffffff; }
@@ -32,7 +33,7 @@
             position: fixed;
         }
 
-        /* واجهة التحكم */
+        /* واجهة التحكم العائمة */
         .ui-overlay {
             position: fixed; top: 25px; left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: center;
@@ -70,7 +71,7 @@
             width: 100%; height: 100%; object-fit: cover;
             transition: transform 12s linear;
         }
-        .slide.active img { transform: scale(1.15); }
+        .slide.active img { transform: scale(1.15); } /* تأثير الزووم السينمائي */
 
         .slide-overlay {
             position: absolute; inset: 0;
@@ -78,6 +79,7 @@
             z-index: 2;
         }
 
+        /* بيانات العقار */
         .prop-data { position: absolute; bottom: 50px; right: 25px; left: 25px; z-index: 5; }
         .prop-data h2 { color: var(--gold); font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
         .prop-data p { color: #fff; font-size: 1rem; margin-bottom: 20px; line-height: 1.5; opacity: 0.9; }
@@ -93,6 +95,7 @@
             color: #fff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
+        /* شريط التوقيت السفلي */
         .progress-bar {
             position: fixed; bottom: 0; left: 0; width: 0%; height: 4px;
             background: var(--gold); z-index: 100; transition: width 0.1s linear;
@@ -101,11 +104,13 @@
 </head>
 <body>
 
+    <!-- واجهة التحكم العلوية -->
     <div class="ui-overlay">
         <div class="ui-brand">سمسار طلبك</div>
         <a href="/" class="ui-exit"><i class="fas fa-times"></i> إغلاق</a>
     </div>
 
+    <!-- شاشة الانترو -->
     <div id="introLayer">
         <i class="fas fa-crown" style="font-size: 3.5rem; color: var(--gold); margin-bottom: 25px;"></i>
         <h1 class="intro-h">معرض التميز العقاري</h1>
@@ -113,23 +118,85 @@
         <div class="load-indicator"></div>
     </div>
 
+    <!-- مسرح السلايدر -->
     <div class="stage">
         <div class="track" id="mainTrack"></div>
         <div class="progress-bar" id="progressBar"></div>
     </div>
 
     <script>
+        // مصفوفة الـ 10 عقارات الحقيقية والمحدثة
         const properties = [
-            { title: "شقة 180م المنطقة العاشرة", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
-            { title: "شقة 135م ميدان رابعة", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
-            { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "285م بمدخل خاص وحديقة - أمام ماونتن فيو بالتجمع الخامس.", url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
-            { title: "شقة 225م شارع الطيران", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس - حصة بالجراج.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
-            { title: "دوبلكس استثماري حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "الحي السابع - فيو بانوراما - عائد استثماري فوري (مؤجر حالياً).", url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
-            { title: "شقة 225م المنطقة الأولى", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور (أرو مسمار ورخام) - شارع زهير صبري - شامل الجراج.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
-            { title: "شقة 86م زهراء مدينة نصر", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "دور ثالث مميز - فيو مفتوح غير مجروح - موقع حيوي وسعر لقطة.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" },
-            { title: "شقة 250م شارع توفيق البكري", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "ناصية بحري - ليفينج روم 30م - مسجلة شهر عقاري - خلف مستشفى حسبو.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" },
-            { title: "شقة لقطة حسن المأمون", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات - آخر حسن المأمون - موقع استراتيجي للشباب.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" },
-            { title: "شقة 288م أبراج صن رايز", price: "7,000,000 ج.م", img: "sunrise.webp", desc: "حي السفارات - فيو مفتوح بحري 100% - تشطيب مودرن فاخر - أمن 24 ساعة.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
+            { 
+                title: "شقة 180م المنطقة العاشرة", 
+                price: "3,700,000 ج.م", 
+                img: "apartment-180m-nasr-city.webp", 
+                desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" 
+            },
+            { 
+                title: "شقة 135م ميدان رابعة", 
+                price: "5,000,000 ج.م", 
+                img: "raba-nasr.webp", 
+                desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" 
+            },
+            { 
+                title: "فيلا دوبلكس حي الأندلس", 
+                price: "إيجار إداري 55,000 ج.م", 
+                img: "duplex-andalus.webp", 
+                desc: "285م بمدخل خاص وحديقة - أمام ماونتن فيو بالتجمع الخامس.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" 
+            },
+            { 
+                title: "شقة 225م شارع الطيران", 
+                price: "8,000,000 ج.م", 
+                img: "al-Tayaranstreet.webp", 
+                desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس - حصة بالجراج.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" 
+            },
+            { 
+                title: "دوبلكس استثماري حي السفارات", 
+                price: "4,850,000 ج.م", 
+                img: "elsfarat-duplex.webp", 
+                desc: "الحي السابع - فيو بانوراما - عائد استثماري فوري (مؤجر حالياً).", 
+                url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" 
+            },
+            { 
+                title: "شقة 225م المنطقة الأولى", 
+                price: "7,500,000 ج.م", 
+                img: "zuhair-sabri.webp", 
+                desc: "تشطيب قصور (أرو مسمار ورخام) - شارع زهير صبري - شامل الجراج.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" 
+            },
+            { 
+                title: "شقة 86م زهراء مدينة نصر", 
+                price: "1,650,000 ج.م", 
+                img: "zahraa-thirdfloor.webp", 
+                desc: "دور ثالث مميز - فيو مفتوح غير مجروح - موقع حيوي وسعر لقطة.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" 
+            },
+            { 
+                title: "شقة 250م شارع توفيق البكري", 
+                price: "5,000,000 ج.م", 
+                img: "tawfiqal-Bakri-st.webp", 
+                desc: "ناصية بحري - ليفينج روم 30م - مسجلة شهر عقاري - خلف مستشفى حسبو.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" 
+            },
+            { 
+                title: "شقة لقطة حسن المأمون", 
+                price: "1,650,000 ج.م", 
+                img: "tawnit.webp", 
+                desc: "عمارات التعاونيات - آخر حسن المأمون - موقع استراتيجي للشباب.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" 
+            },
+            { 
+                title: "شقة 288م أبراج صن رايز", 
+                price: "7,000,000 ج.م", 
+                img: "sunrise.webp", 
+                desc: "حي السفارات - فيو مفتوح بحري 100% - تشطيب مودرن فاخر - أمن 24 ساعة.", 
+                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" 
+            }
         ];
 
         let currentIdx = 0, isPaused = false, progress = 0;
@@ -155,10 +222,12 @@
                 track.appendChild(slide);
             });
             
+            // إخفاء الانترو بعد 5 ثواني
             setTimeout(() => {
-                document.getElementById('introLayer').style.opacity = '0';
+                const intro = document.getElementById('introLayer');
+                intro.style.opacity = '0';
                 setTimeout(() => {
-                    document.getElementById('introLayer').style.display = 'none';
+                    intro.style.display = 'none';
                     startEngine();
                 }, 800);
             }, 5000);
@@ -184,7 +253,7 @@
             slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
         }
 
-        // الإصلاح هنا: تحديث كافة الأيقونات في جميع البطاقات لضمان تزامن الحالة
+        // الإصلاح النهائي لزر الإيقاف (ليشمل كافة الأيقونات المتولدة)
         function togglePlay() {
             isPaused = !isPaused;
             const allIcons = document.querySelectorAll('.btn-pause i');
