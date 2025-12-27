@@ -8,7 +8,7 @@ category: apartments
 id: "helmy-hassan-ali-160m"
 # سطر الـ slug الاحترافي للأرشفة بجوار السراج مول ومصطفى النحاس
 slug: "شقة-للبيع-شارع-حلمي-حسن-علي-مدينة-نصر-160م"
-image_file: "Helmy-hassan-ali-street.webp"
+image_file: "hlmy-hassan-ali-street.webp"
 area: "160 متر مربع (صافي)"
 rooms: "3 غرف نوم + ريسبشن واسع"
 bathrooms: "2 حمام"
