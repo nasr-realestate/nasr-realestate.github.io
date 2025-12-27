@@ -1,0 +1,16 @@
+---
+layout: null
+---
+[
+  {% for post in site.properties %}
+  {
+    "title": {{ post.title | jsonify }},
+    "url": {{ post.url | relative_url | jsonify }},
+    "price": {{ post.price | jsonify }},
+    "location": {{ post.location | jsonify }},
+    "category": {{ post.category | jsonify }},
+    "area": {{ post.area | jsonify }},
+    "image": {{ site.baseurl | append: "/assets/img/properties/" | append: post.image_file | jsonify }}
+  }{% unless forloop.last %},{% endunless %}
+  {% endfor %}
+]
