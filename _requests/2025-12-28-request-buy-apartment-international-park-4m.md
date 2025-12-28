@@ -6,24 +6,34 @@ location: "محيط الحديقة الدولية - مدينة نصر"
 price: "4,000,000 ج.م (كاش فوري)"
 category: apartments
 id: "req-buy-int-park-4m-cash"
-# سطر الـ slug الاحترافي لاستهداف ملاك منطقة الحديقة الدولية
 slug: "مطلوب-شراء-شقة-كاش-الحديقة-الدولية-4-مليون"
+# اسم الصورة الموجودة في assets/img/properties/
 image_file: "social-requests.webp"
 area: "120 - 160 متر مربع"
 rooms: "3 غرف نوم"
 budget: "4,000,000 جنيه (كاش)"
 property_type: "شقة تمليك"
 meta_title: "مطلوب شراء شقة كاش في الحديقة الدولية مدينة نصر | 4 مليون"
-meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري بميزانية 4,000,000 ج.م في محيط الحديقة الدولية بمدينة نصر. تشطيب جيد، استلام فوري. فرصة للملاك لسرعة البيع."
+meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري بميزانية 4,000,000 ج.م في محيط الحديقة الدولية بمدينة نصر. تشطيب جيد، استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني (بيانات منظمة لطلب الشراء السريع) -->
+<!-- 1. وسوم المشاركة (WhatsApp & Social Media) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="{{ page.meta_description }}">
+<meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+
+<!-- 2. بيانات منظمة للطلب (Schema Markup) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Offer",
   "name": "{{ page.title }}",
   "description": "{{ page.meta_description }}",
+  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
   "url": "{{ page.url | absolute_url }}",
   "priceSpecification": {
     "@type": "PriceSpecification",
@@ -45,14 +55,14 @@ meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري �
 
 <div class="details-container request-theme">
     
-    <!-- 2. شريط التنقل العلوي (باللون الأزرق للطلبات) -->
+    <!-- شريط العودة -->
     <nav class="property-nav" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; margin-bottom: 30px;">
         <a href="{{ '/requests/' | relative_url }}" class="back-link" style="color: #0a84ff !important; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-arrow-right"></i> العودة لطلبات العملاء
         </a>
     </nav>
 
-    <!-- 3. رأس الصفحة والبيانات الأساسية -->
+    <!-- رأس الصفحة -->
     <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
             <span class="request-tag" style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff;">
@@ -70,7 +80,7 @@ meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري �
         </p>
     </div>
 
-    <!-- 4. الميزانية المرصودة (المبلغ المحدث) -->
+    <!-- بطاقة الميزانية -->
     <div class="budget-card" style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(10, 132, 255, 0.05)); padding: 30px; border-radius: 15px; border: 2px solid #0a84ff; text-align: center; margin-bottom: 30px;">
         <span style="color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px;">
             <i class="fas fa-money-bill-wave"></i> الميزانية المرصودة للتنفيذ الفوري
@@ -78,10 +88,14 @@ meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري �
         <div style="color: #fff; font-size: 2.5rem; font-weight: 900;">
             4,000,000 <small style="font-size: 1.2rem; font-weight: 400;">ج.م (كاش)</small>
         </div>
-        <p style="color: #25D366; margin-top: 10px; font-size: 1rem;"><i class="fas fa-check-double"></i> جاهزية تامة للتنفيذ فور المعاينة (تخليص كاش)</p>
     </div>
 
-    <!-- 5. تفاصيل طلب العميل -->
+    <!-- صورة الطلب (من نفس مسار الشقق) -->
+    <div class="request-main-image" style="margin-bottom: 30px; border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+        <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}" alt="مطلوب شراء شقة مدينة نصر" style="width: 100%; height: auto; display: block;">
+    </div>
+
+    <!-- تفاصيل طلب العميل -->
     <div class="content-body" style="background: rgba(255,255,255,0.02); padding: 30px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px; line-height: 1.8; color: #ddd;">
         <h3 style="color: #0a84ff; margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px;">
             <i class="fas fa-clipboard-list"></i> المواصفات المطلوبة بدقة
@@ -89,25 +103,18 @@ meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري �
         <p>مطلوب شراء شقة بشكل عاجل لعميل بجدية تامة في منطقة الحديقة الدولية. العميل يفضل الشقق ذات المساحات الواسعة والتقسيم الجيد، مع سرعة إنهاء الإجراءات القانونية ونقل الملكية.</p>
         
         <div class="requirements-section" style="margin-top: 2rem;">
-            <h4 style="color: #0a84ff; margin-bottom: 1rem;">المتطلبات الأساسية:</h4>
             <ul class="req-list" style="list-style: none; padding: 0;">
                 <li style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-check-circle" style="color: #0a84ff;"></i> <strong>الموقع:</strong> محيط الحديقة الدولية (منطقة راقية وهادئة).
-                </li>
-                <li style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-check-circle" style="color: #0a84ff;"></i> <strong>الحالة:</strong> متشطبة كويس (مش شرط سوبر لوكس، المهم الجودة والنظافة).
+                    <i class="fas fa-check-circle" style="color: #0a84ff;"></i> <strong>الحالة:</strong> متشطبة كويس (مش شرط سوبر لوكس).
                 </li>
                 <li style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-check-circle" style="color: #0a84ff;"></i> <strong>التقسيم:</strong> 3 غرف نوم بمساحة تصل إلى 160 متر.
-                </li>
-                <li style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-check-circle" style="color: #0a84ff;"></i> <strong>المصعد:</strong> وجود مصعد يعمل بكفاءة شرط أساسي للأدوار المرتفعة.
                 </li>
             </ul>
         </div>
     </div>
 
-    <!-- 6. قسم تواصل للملاك (CTA) -->
+    <!-- قسم تواصل للملاك (CTA) -->
     <div class="contact-seller-box" style="background: rgba(10, 132, 255, 0.05); padding: 30px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center;">
         <div class="box-text" style="margin-bottom: 25px;">
             <h3 style="color: #fff; margin-bottom: 10px; font-size: 1.5rem;">هل تملك شقة تناسب هذا الطلب؟</h3>
@@ -131,11 +138,6 @@ meta_description: "طلب شراء عاجل: مطلوب شقة كاش فوري �
 </div>
 
 <style>
-/* تصفير التضارب وإجبار الهوية الزرقاء للطلبات */
 .request-theme { font-family: 'Cairo', sans-serif; direction: rtl; }
 .wa-action-btn:hover, .tel-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-@media (max-width: 768px) {
-    .budget-value { font-size: 2rem; }
-    .details-header h1 { font-size: 1.6rem; }
-}
 </style>
