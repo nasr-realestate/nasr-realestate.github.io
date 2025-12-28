@@ -1,213 +1,173 @@
 ---
 layout: default
-title: "عقارات مدينة نصر للبيع والإيجار | سمسار طلبك"
-description: "تصفح وابحث في أحدث قائمة عقارات بمدينة نصر. شقق، مكاتب، ومحلات تجارية بأسعار السوق الحقيقية."
+title: "معرض العقارات | سمسار طلبك"
+description: "تصفح أحدث الشقق، المحلات، والمقرات الإدارية المتاحة للبيع والإيجار في مدينة نصر."
 permalink: /properties/
+image: "/assets/img/social-properties.webp"
 ---
 
-<!-- 1. رأس الصفحة (Page Header) -->
-<header class="page-header" style="padding: 4rem 1rem; text-align: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); border-bottom: 1px solid #222;">
-    <h1 class="gold-text" style="font-size: 2.5rem; font-weight: 900;">محرك البحث العقاري</h1>
-    <p style="color: #aaa; margin-top: 10px;">استخدم الفلاتر الذكية للوصول إلى هدفك بدقة</p>
+<!-- رأس الصفحة -->
+<header class="page-header">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">
+      <i class="fas fa-city" style="color: var(--color-primary);"></i> معرض العقارات
+    </h1>
+    <p style="opacity: 0.8; margin-top: 10px;">
+      اختر الفئة المناسبة لتصفح العروض المتاحة حالياً
+    </p>
+  </div>
 </header>
 
-<main class="container-1200" style="margin-top: -40px;">
-    
-    <!-- 🔍 2. بار الفلترة الذكي (Smart Filter Bar) -->
-    <div class="filter-dashboard">
-        <div class="filter-row">
-            <div class="filter-item">
-                <label>نوع العقار</label>
-                <select id="typeSelect" onchange="runFilter()">
-                    <option value="all">كل الأنواع</option>
-                    <option value="apartments">شقق للبيع</option>
-                    <option value="apartments-rent">إيجار (مفروش/جديد)</option>
-                    <option value="commercial">تجاري</option>
-                    <option value="offices">مكاتب إدارية</option>
-                </select>
-            </div>
-            <div class="filter-item border-sides">
-                <label>المنطقة</label>
-                <select id="locationSelect" onchange="runFilter()">
-                    <option value="all">كل المناطق</option>
-                    <option value="العاشرة">المنطقة العاشرة</option>
-                    <option value="السادسة">المنطقة السادسة</option>
-                    <option value="التاسعة">المنطقة التاسعة</option>
-                    <option value="الأولى">المنطقة الأولى</option>
-                    <option value="السفارات">حي السفارات</option>
-                    <option value="الأندلس">حي الأندلس</option>
-                </select>
-            </div>
-            <div class="filter-item search-box">
-                <label>بحث سريع</label>
-                <input type="text" id="keywordInput" placeholder="مثلاً: 180م، ناصية، بحري..." onkeyup="runFilter()">
-            </div>
-        </div>
-        <div class="results-count" id="resultsCount">جاري تحميل العقارات...</div>
-    </div>
+<main>
 
-    <!-- 🏗️ 3. حاوية النتائج (Results Container) -->
-    <div id="propertiesGrid" class="properties-grid" style="min-height: 400px; padding: 2rem 0;">
-        <!-- سيتم توليد البطاقات هنا بواسطة الجافاسكريبت -->
-        <div class="loader-box" id="mainLoader">
-            <i class="fas fa-circle-notch fa-spin"></i>
+  <!-- =========================================================
+       1. أزرار الفلترة (The Filters)
+       ========================================================= -->
+  <div class="filter-container" style="margin-bottom: 2rem;">
+      <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
+      <button class="filter-btn" onclick="filterSelection('apartment')"><i class="fas fa-home"></i> شقق تمليك</button>
+      <button class="filter-btn" onclick="filterSelection('rent')"><i class="fas fa-key"></i> شقق إيجار</button>
+      <button class="filter-btn" onclick="filterSelection('shop')"><i class="fas fa-store"></i> محلات</button>
+      <button class="filter-btn" onclick="filterSelection('office')"><i class="fas fa-building"></i> مكاتب ومقرات</button>
+  </div>
+
+  <!-- =========================================================
+       2. شبكة العرض (Properties Grid)
+       ========================================================= -->
+  <section class="properties-grid" style="min-height: 60vh;">
+    
+    {% assign all_properties = site.properties | sort: 'date' | reverse %}
+    
+    {% for prop in all_properties %}
+        
+        <!-- 
+           ذكاء التصنيف التلقائي (Auto-Categorization Logic):
+           نحدد نوع العقار بناءً على الكلمات الموجودة في العنوان
+           ونعطيه (Category Class) ليتم فلترته
+        -->
+        {% assign category_class = "apartment" %} <!-- الافتراضي -->
+        {% assign type = "sale" %}
+
+        {% if prop.title contains "إيجار" or prop.title contains "ايجار" %}
+            {% assign category_class = "rent" %}
+            {% assign type = "rent" %}
+        {% elsif prop.title contains "محل" or prop.title contains "تجارى" or prop.title contains "تجاري" %}
+            {% assign category_class = "shop" %}
+        {% elsif prop.title contains "مكتب" or prop.title contains "مقر" or prop.title contains "إداري" %}
+            {% assign category_class = "office" %}
+        {% endif %}
+
+        <!-- غلاف البطاقة (يحتوي على اسم الفئة للفلترة) -->
+        <div class="filter-item {{ category_class }}">
+            {% include property_card.html item=prop type=type %}
         </div>
-    </div>
+
+    {% else %}
+        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
+            <h3>لا توجد عقارات حالياً</h3>
+        </div>
+    {% endfor %}
+
+  </section>
+
+  <!-- زر الانتقال للطلبات -->
+  <div style="text-align: center; margin: 3rem 0;">
+      <a href="{{ '/requests/' | relative_url }}" class="nav-btn" style="background: transparent; border: 1px solid var(--color-blue); color: var(--color-blue);">
+          شاهد طلبات الشراء <i class="fas fa-arrow-left"></i>
+      </a>
+  </div>
 
 </main>
 
-<style>
-    /* --- 🎨 تصميم لوحة الفلترة (Luxury UI) --- */
-    .filter-dashboard {
-        background: #111;
-        border: 1px solid rgba(212, 175, 55, 0.3);
-        border-radius: 20px;
-        padding: 25px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-        z-index: 100;
-        position: relative;
-    }
-    .filter-row {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-    }
-    .filter-item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    .filter-item label {
-        color: var(--color-primary);
-        font-size: 0.8rem;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-    .filter-item select, .filter-item input {
-        background: #050505;
-        border: 1px solid #333;
-        color: #fff;
-        padding: 12px;
-        border-radius: 10px;
-        font-family: 'Cairo';
-        font-size: 0.95rem;
-        transition: 0.3s;
-    }
-    .filter-item select:focus, .filter-item input:focus {
-        border-color: var(--color-primary);
-        outline: none;
-        box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-    }
-    .border-sides {
-        border-left: 1px solid #222;
-        border-right: 1px solid #222;
-        padding: 0 20px;
-    }
-    .results-count {
-        margin-top: 15px;
-        font-size: 0.85rem;
-        color: #666;
-        text-align: center;
-    }
-    .loader-box {
-        text-align: center;
-        padding: 100px;
-        font-size: 3rem;
-        color: var(--color-primary);
-    }
-    .no-results {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 50px;
-        color: #888;
-    }
-
-    @media (max-width: 768px) {
-        .filter-row { flex-direction: column; }
-        .border-sides { border: none; padding: 0; }
-        .filter-item { width: 100%; }
-    }
-</style>
-
+<!-- =========================================================
+     3. سكربت الفلترة (سريع جداً لأنه لا يحمل صفحات جديدة)
+     ========================================================= -->
 <script>
-let allProperties = [];
+function filterSelection(c) {
+  var x, i;
+  x = document.getElementsByClassName("filter-item");
+  
+  // تحديث شكل الأزرار
+  var btns = document.getElementsByClassName("filter-btn");
+  for (i = 0; i < btns.length; i++) {
+    btns[i].classList.remove("active");
+    // إعادة الستايل الافتراضي للأزرار غير النشطة
+    btns[i].style.backgroundColor = "transparent";
+    btns[i].style.color = "#b0b0b0";
+    btns[i].style.borderColor = "#333";
+  }
+  // تفعيل الزر المضغوط (نبحث عن الزر الذي تم ضغطه عبر الـ event)
+  event.currentTarget.classList.add("active");
+  event.currentTarget.style.backgroundColor = "var(--color-primary)";
+  event.currentTarget.style.color = "#000";
+  event.currentTarget.style.borderColor = "var(--color-primary)";
 
-// 1. جلب البيانات من ملف الـ JSON
-async function loadSearchData() {
-    try {
-        const response = await fetch("{{ '/search-data.json' | relative_url }}");
-        allProperties = await response.json();
-        
-        // 2. التحقق من وجود بارامترات بحث قادمة من الرئيسية
-        const urlParams = new URLSearchParams(window.location.search);
-        const typeParam = urlParams.get('type');
-        const areaParam = urlParams.get('area');
+  // إخفاء/إظهار العناصر
+  if (c == "all") c = "";
+  for (i = 0; i < x.length; i++) {
+    w3RemoveClass(x[i], "show");
+    if (x[i].className.indexOf(c) > -1) w3AddClass(x[i], "show");
+  }
+}
 
-        if (typeParam) document.getElementById('typeSelect').value = typeParam;
-        if (areaParam) document.getElementById('locationSelect').value = areaParam;
+// دالة مساعدة للإظهار
+function w3AddClass(element, name) {
+  var i, arr1, arr2;
+  arr1 = element.className.split(" ");
+  arr2 = name.split(" ");
+  for (i = 0; i < arr2.length; i++) {
+    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
+  }
+}
 
-        runFilter();
-    } catch (error) {
-        console.error("Error loading search data:", error);
+// دالة مساعدة للإخفاء
+function w3RemoveClass(element, name) {
+  var i, arr1, arr2;
+  arr1 = element.className.split(" ");
+  arr2 = name.split(" ");
+  for (i = 0; i < arr2.length; i++) {
+    while (arr1.indexOf(arr2[i]) > -1) {
+      arr1.splice(arr1.indexOf(arr2[i]), 1);     
     }
+  }
+  element.className = arr1.join(" ");
 }
 
-// 2. محرك الفلترة اللحظي
-function runFilter() {
-    const type = document.getElementById('typeSelect').value;
-    const location = document.getElementById('locationSelect').value;
-    const keyword = document.getElementById('keywordInput').value.toLowerCase();
-
-    const filtered = allProperties.filter(item => {
-        const matchType = (type === 'all' || item.category === type);
-        const matchLocation = (location === 'all' || item.location.includes(location));
-        const matchKeyword = (item.title.toLowerCase().includes(keyword) || 
-                            item.location.toLowerCase().includes(keyword) ||
-                            item.area.toLowerCase().includes(keyword));
-        
-        return matchType && matchLocation && matchKeyword;
-    });
-
-    renderResults(filtered);
-}
-
-// 3. عرض النتائج في الشبكة
-function renderResults(data) {
-    const grid = document.getElementById('propertiesGrid');
-    const countDisplay = document.getElementById('resultsCount');
-    grid.innerHTML = '';
-
-    if (data.length === 0) {
-        grid.innerHTML = '<div class="no-results"><i class="fas fa-search" style="font-size: 3rem; margin-bottom: 20px;"></i><br>عذراً، لم نجد نتائج تطابق بحثك حالياً.</div>';
-        countDisplay.innerText = "لا توجد نتائج";
-        return;
-    }
-
-    data.forEach(item => {
-        const card = `
-            <div class="property-card" onclick="window.location.href='${item.url}'">
-                <div class="card-image-box" style="height:200px; overflow:hidden; border-radius:15px; position:relative;">
-                    <img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">
-                    <span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); color:#d4af37; padding:4px 12px; border-radius:5px; font-size:0.8rem; border:1px solid #d4af37;">
-                        ${item.category}
-                    </span>
-                </div>
-                <div style="padding:15px;">
-                    <h3 style="color:#fff; font-size:1.1rem; margin-bottom:10px;">${item.title}</h3>
-                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:#d4af37;"></i> ${item.location}</p>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#d4af37; font-weight:bold; font-size:1.2rem;">${item.price}</span>
-                        <span style="color:#888; font-size:0.8rem;"><i class="fas fa-ruler-combined"></i> ${item.area}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        grid.innerHTML += card;
-    });
-
-    countDisplay.innerText = `تم العثور على ${data.length} عقار`;
-}
-
-// البدء عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', loadSearchData);
+// تشغيل الفلتر "الكل" عند التحميل
+document.addEventListener("DOMContentLoaded", function() {
+    filterSelection("all");
+});
 </script>
+
+<!-- ستايل خاص للفلترة -->
+<style>
+/* العنصر المخفي */
+.filter-item { display: none; }
+/* العنصر الظاهر */
+.show { display: block; animation: fadeIn 0.5s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* تنسيق أزرار الفلتر */
+.filter-btn {
+    border: 1px solid #333;
+    background: transparent;
+    color: #b0b0b0;
+    padding: 8px 20px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 50px;
+    font-family: 'Cairo';
+    font-weight: bold;
+    transition: 0.3s;
+}
+.filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.filter-btn.active {
+    background-color: var(--color-primary);
+    color: #000;
+    border-color: var(--color-primary);
+}
+</style>
