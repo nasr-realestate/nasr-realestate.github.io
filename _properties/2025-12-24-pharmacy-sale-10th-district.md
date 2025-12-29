@@ -8,7 +8,7 @@ category: "commercial"
 id: "pharmacy-sale-10th-district-32m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن صيدليات للبيع في مدينة نصر
 slug: "صيدلية-للبيع-مدينة-نصر-الحي-العاشر-صقر-قريش"
-image_file: "social-details-default.webp"
+image_file: "Pharmacy-for-sale.webp"
 area: "32 متر مربع"
 rooms: "مساحة مفتوحة (جاهزة للتقسيم)"
 bathrooms: "1 حمام"
