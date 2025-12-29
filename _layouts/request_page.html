@@ -108,28 +108,6 @@ layout: default
         </div>
         {% endif %}
     </div>
-
-    <!-- 5. قسم تواصل للملاك (CTA) -->
-    <div class="contact-seller-box">
-        <div class="box-text">
-            <h3>هل لديك عقار يناسب هذا الطلب؟</h3>
-            <p>يمكنك التواصل معنا لعرض عقارك على العميل صاحب هذا الطلب مباشرة.</p>
-        </div>
-        
-        <div class="actions-grid">
-            <a href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message }}" 
-               class="wa-action-btn"
-               onclick="trackPhoneCall('{{ whatsapp_number }}', 'WhatsApp Request - {{ page.title }}')">
-                <i class="fab fa-whatsapp"></i> عرض العقار عبر واتساب
-            </a>
-            
-            <a href="tel:{{ phone_number }}" 
-               class="tel-action-btn"
-               onclick="trackPhoneCall('{{ phone_number }}', 'Phone Call Request - {{ page.title }}')">
-                <i class="fas fa-phone-alt"></i> اتصل بنا فوراً
-            </a>
-        </div>
-    </div>
 </div>
 
 <style>
@@ -168,19 +146,8 @@ layout: default
 .req-list li { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
 .req-list li i { color: #0a84ff; }
 
-/* صندوق التواصل */
-.contact-seller-box { background: rgba(10, 132, 255, 0.05); padding: 30px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; }
-.box-text h3 { color: #fff; margin-bottom: 10px; }
-.box-text p { color: #88c7ff; margin-bottom: 25px; }
-
-.actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.wa-action-btn { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; padding: 15px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
-.tel-action-btn { border: 2px solid #0a84ff; color: #0a84ff; padding: 15px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
-
-.wa-action-btn:hover, .tel-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-
 @media (max-width: 768px) {
-    .actions-grid { grid-template-columns: 1fr; }
+    .budget-value { font-size: 1.8rem; }
     .details-header h1 { font-size: 1.6rem; }
 }
 </style>
