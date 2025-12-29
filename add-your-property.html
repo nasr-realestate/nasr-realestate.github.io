@@ -3,128 +3,143 @@ layout: default
 title: "أضف عقارك مجاناً | سمسار طلبك"
 description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
 permalink: /add-your-property.html
-image: "/assets/img/social-add.webp"
+# توحيد البيانات للسيو والمشاركة
+slug: "اضافة-عقار-جديد-مجانا"
+image_file: "social-requests.webp"
+meta_title: "أضف عقارك الآن - خدمة التسويق المجاني في مدينة نصر"
+meta_description: "اعرض شقتك، مكتبك، أو محلك التجاري للبيع أو الإيجار من خلال سمسار طلبك. خطوات بسيطة تضمن لك أسرع وصول للمشتري الجاد."
 ---
 
 <style>
-  /* --- التنسيقات الأصلية مع تحسينات طفيفة للانتقالات --- */
+  /* --- 🎨 تحسينات السهولة والهوية البصرية --- */
   .smart-form-container {
     background: var(--color-surface-2);
-    border-radius: 25px;
-    padding: 3rem;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    border: 1px solid var(--color-border-light);
-    max-width: 900px;
+    border-radius: 30px;
+    padding: 3.5rem 2.5rem;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    max-width: 850px;
     margin: 3rem auto;
     position: relative;
     overflow: hidden;
   }
 
+  /* شريط التقدم الفخم */
   .progress-bar {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 3rem;
+    margin-bottom: 3.5rem;
     position: relative;
-    max-width: 600px;
+    max-width: 500px;
     margin-left: auto;
     margin-right: auto;
   }
   .progress-bar::before {
-    content: '';
-    position: absolute; top: 50%; left: 0; right: 0;
-    height: 2px; background-color: #333; z-index: 1; transform: translateY(-50%);
+    content: ''; position: absolute; top: 50%; left: 0; right: 0;
+    height: 2px; background-color: #222; z-index: 1; transform: translateY(-50%);
   }
   .progress-line {
-    position: absolute; top: 50%; left: 0; height: 2px;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
-    z-index: 2; width: 0%; transition: width 0.5s ease;
+    position: absolute; top: 50%; left: 0; height: 3px;
+    background: linear-gradient(90deg, #d4af37, #fce205);
+    z-index: 2; width: 0%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
   }
   .progress-step {
     position: relative; z-index: 3; width: 45px; height: 45px;
-    border-radius: 50%; background-color: #111;
-    border: 2px solid #444; color: #888;
+    border-radius: 50%; background-color: #0a0a0a;
+    border: 2px solid #333; color: #666;
     display: flex; align-items: center; justify-content: center;
-    font-weight: bold; transition: all 0.4s ease; font-size: 1.1rem;
-    cursor: pointer; /* جعل الأرقام قابلة للضغط للعودة */
+    font-weight: 900; transition: all 0.4s ease; font-size: 1.2rem;
+    cursor: pointer;
   }
   .progress-step.active {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
-    color: #000; box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    color: #000; box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
   }
 
+  /* تحسينات الخطوات */
   .form-step { 
     display: none; 
     opacity: 0;
-    transition: opacity 0.4s ease;
+    transform: translateY(10px);
   }
   .form-step.active { 
     display: block; 
-    opacity: 1;
-    animation: fadeInUp 0.5s ease;
+    animation: fadeInUp 0.6s forwards;
   }
   
   .form-step h2 {
     color: var(--color-primary); text-align: center;
-    margin-bottom: 2rem; font-size: 1.8rem; font-weight: 800;
+    margin-bottom: 2.5rem; font-size: 2rem; font-weight: 900;
   }
   
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
   .form-group { display: flex; flex-direction: column; }
   .form-group.full-width { grid-column: 1 / -1; }
   
   .form-group label {
-    margin-bottom: 0.8rem; color: #ccc; font-size: 0.95rem; font-weight: 600;
+    margin-bottom: 0.8rem; color: #fff; font-size: 0.95rem; font-weight: 700;
   }
   
   .property-form input, .property-form select, .property-form textarea {
-    background-color: #0a0a0a;
+    background-color: #050505;
     border: 1px solid #333;
-    border-radius: 12px;
-    padding: 15px;
+    border-radius: 15px;
+    padding: 16px;
     color: #fff;
     font-size: 1rem;
     font-family: 'Cairo', sans-serif;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
   }
   
   .property-form input:focus, .property-form select:focus, .property-form textarea:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-    background-color: #111;
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
   }
 
-  .form-navigation { display: flex; justify-content: space-between; margin-top: 3rem; border-top: 1px solid #222; padding-top: 2rem; }
+  /* أزرار التنقل الفاخرة */
+  .form-navigation { 
+    display: flex; justify-content: space-between; 
+    margin-top: 3.5rem; border-top: 1px solid #222; padding-top: 2rem; 
+  }
   
   .nav-btn {
-    background: transparent; color: #ccc;
-    border: 1px solid #444; padding: 12px 30px;
-    border-radius: 50px; cursor: pointer;
-    font-weight: bold; font-family: 'Cairo'; transition: all 0.3s;
+    padding: 15px 35px; border-radius: 50px; cursor: pointer;
+    font-weight: 800; font-family: 'Cairo'; transition: 0.3s;
   }
-  .nav-btn.next-btn, .nav-btn.submit-btn {
-    background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
+  
+  .next-btn, .submit-btn {
+    background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
     color: #000; border: none;
   }
-  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
+  .prev-btn {
+    background: transparent; border: 1px solid #444; color: #888;
+  }
+  .nav-btn:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); }
+  .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 
-  @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .smart-form-container { padding: 1.5rem; } }
+  @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+  
+  @media (max-width: 768px) { 
+    .form-grid { grid-template-columns: 1fr; gap: 1.5rem; } 
+    .smart-form-container { padding: 2rem 1.5rem; }
+    .form-step h2 { font-size: 1.5rem; }
+  }
 </style>
 
-<header class="page-header">
-  <div style="max-width: 700px; margin: 0 auto; text-align: center;">
-    <h1 class="page-title">أضف عقارك للبيع أو الإيجار</h1>
-    <p style="opacity: 0.8; margin-top: 10px;">أكمل البيانات التالية ليصل عرضك للمشترين فوراً</p>
-  </div>
+<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 5rem 1rem; text-align: center;">
+    <h1 class="gold-text" style="font-size: 3rem; font-weight: 900;">أضف عقارك للبيع أو الإيجار</h1>
+    <p style="color: #aaa; font-size: 1.2rem; margin-top: 15px;">انضم إلى مئات الملاك الناجحين.. اعرض عقارك مجاناً اليوم</p>
 </header>
 
 <main>
 <div class="smart-form-container">
   
+  <!-- مؤشر التقدم -->
   <div class="progress-bar">
-    <div class="progress-line"></div>
+    <div class="progress-line" id="progressLine"></div>
     <div class="progress-step active" data-step="1">1</div>
     <div class="progress-step" data-step="2">2</div>
     <div class="progress-step" data-step="3">3</div>
@@ -134,13 +149,13 @@ image: "/assets/img/social-add.webp"
     <input type="hidden" name="_subject" value="عرض عقاري جديد من الموقع!">
     <input type="hidden" name="_next" value="https://nasr-realestate.github.io/form-success.html">
 
-    <!-- الخطوة 1 -->
+    <!-- الخطوة 1: المعلومات الأساسية -->
     <div class="form-step active" data-step="1">
       <h2><i class="fas fa-info-circle"></i> البيانات الأساسية</h2>
       <div class="form-grid">
         <div class="form-group full-width">
           <label for="title">عنوان الإعلان</label>
-          <input type="text" id="title" name="title" placeholder="عنوان يصف عقارك بدقة" required autofocus>
+          <input type="text" id="title" name="title" placeholder="مثال: شقة لقطة 180م الترا سوبر لوكس بالمنطقة العاشرة" required>
         </div>
         <div class="form-group">
           <label for="property-type">نوع العقار</label>
@@ -153,17 +168,17 @@ image: "/assets/img/social-add.webp"
           </select>
         </div>
         <div class="form-group">
-          <label for="price_display">السعر المطلوب</label>
-          <input type="text" id="price_display" name="price_display" placeholder="السعر بالجنيه المصري" required>
+          <label for="price_display">السعر المطلوب (ج.م)</label>
+          <input type="text" id="price_display" name="price_display" placeholder="مثال: 3,500,000" required>
         </div>
         <div class="form-group full-width">
-            <label for="area_display">المساحة (م²)</label>
-            <input type="number" id="area_display" name="area_display" placeholder="مثال: 150" required>
+            <label for="area_display">المساحة (متر مربع)</label>
+            <input type="number" id="area_display" name="area_display" placeholder="مثال: 180" required>
         </div>
       </div>
     </div>
 
-    <!-- الخطوة 2 -->
+    <!-- الخطوة 2: المواصفات الفنية -->
     <div class="form-step" data-step="2">
       <h2><i class="fas fa-layer-group"></i> تفاصيل المواصفات</h2>
       <div class="form-grid">
@@ -203,29 +218,30 @@ image: "/assets/img/social-add.webp"
       </div>
     </div>
 
-    <!-- الخطوة 3 -->
+    <!-- الخطوة 3: الموقع والتواصل -->
     <div class="form-step" data-step="3">
       <h2><i class="fas fa-map-marked-alt"></i> الموقع والتواصل</h2>
       <div class="form-grid">
         <div class="form-group full-width">
-            <label for="location">العنوان بالتفصيل</label>
+            <label for="location">العنوان التفصيلي</label>
             <input type="text" id="location" name="location" placeholder="المنطقة واسم الشارع" required>
         </div>
         <div class="form-group full-width">
-            <label for="description">وصف إضافي</label>
-            <textarea id="description" name="description" rows="4" placeholder="اكتب هنا أي تفاصيل أخرى تهم المشتري..." required></textarea>
+            <label for="description">وصف إضافي للعقار</label>
+            <textarea id="description" name="description" rows="4" placeholder="اكتب تفاصيل تهم المشتري: الفيو، الأسانسير، حصة الأرض..." required></textarea>
         </div>
         <div class="form-group full-width">
-            <label for="phone">رقم الهاتف (واتساب)</label>
+            <label for="phone">رقم الهاتف (واتساب للتواصل)</label>
             <input type="tel" id="phone" name="phone" placeholder="01xxxxxxxxx" required>
         </div>
       </div>
     </div>
 
+    <!-- الملاحة -->
     <div class="form-navigation">
       <button type="button" class="nav-btn prev-btn" style="visibility: hidden;">السابق</button>
       <button type="button" class="nav-btn next-btn" disabled>التالي <i class="fas fa-arrow-left"></i></button>
-      <button type="submit" class="nav-btn submit-btn" style="display: none;" disabled>إرسال العقار الآن <i class="fas fa-paper-plane"></i></button>
+      <button type="submit" class="nav-btn submit-btn" style="display: none;" disabled>إرسال العرض الآن <i class="fas fa-paper-plane"></i></button>
     </div>
   </form>
 </div>
@@ -239,79 +255,78 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.querySelector('.submit-btn');
     const formSteps = document.querySelectorAll('.form-step');
     const progressSteps = document.querySelectorAll('.progress-step');
-    const progressLine = document.querySelector('.progress-line');
+    const progressLine = document.getElementById('progressLine');
     
     let currentStep = 1;
 
+    // تحديث الواجهة عند كل انتقال
     const updateUI = () => {
-        // تحديث شريط التقدم
         progressSteps.forEach((step, index) => {
             if (index < currentStep) step.classList.add('active');
             else step.classList.remove('active');
         });
         progressLine.style.width = `${((currentStep - 1) / (formSteps.length - 1)) * 100}%`;
 
-        // إظهار وإخفاء الأزرار
         prevBtn.style.visibility = currentStep > 1 ? 'visible' : 'hidden';
         nextBtn.style.display = currentStep < formSteps.length ? 'inline-block' : 'none';
         submitBtn.style.display = currentStep === formSteps.length ? 'inline-block' : 'none';
 
-        // فوكس تلقائي على أول حقل
+        // توجيه التركيز لأول حقل لسهولة الكتابة
         const activeStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
         const firstInput = activeStep.querySelector('input, select, textarea');
         if (firstInput) firstInput.focus();
 
-        validateStep();
+        validateCurrentStep();
     };
 
-    const validateStep = () => {
-        const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-        const inputs = currentFormStep.querySelectorAll('input[required], select[required], textarea[required]');
-        let isValid = true;
+    // التحقق من صحة الحقول في الخطوة الحالية
+    const validateCurrentStep = () => {
+        const activeStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+        const inputs = activeStep.querySelectorAll('[required]');
+        let stepValid = true;
         inputs.forEach(input => {
-            if (!input.value.trim()) isValid = false;
+            if (!input.value.trim()) stepValid = false;
         });
-        
-        if (currentStep < formSteps.length) nextBtn.disabled = !isValid;
-        else submitBtn.disabled = !isValid;
+
+        if (currentStep < formSteps.length) nextBtn.disabled = !stepValid;
+        else submitBtn.disabled = !stepValid;
     };
 
     const goToStep = (step) => {
         if (step < 1 || step > formSteps.length) return;
         
-        // التحقق من أن المستخدم لا يقفز للأمام دون تعبئة البيانات
+        // منع التقدم للأمام إذا كانت الحقول فارغة
         if (step > currentStep) {
             const activeStepInputs = document.querySelector(`.form-step[data-step="${currentStep}"]`).querySelectorAll('[required]');
-            let canMove = true;
-            activeStepInputs.forEach(i => { if(!i.value.trim()) canMove = false; });
-            if(!canMove) return;
+            let canAdvance = true;
+            activeStepInputs.forEach(i => { if(!i.value.trim()) canAdvance = false; });
+            if(!canAdvance) return;
         }
 
         formSteps.forEach(s => s.classList.remove('active'));
         document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
         currentStep = step;
         updateUI();
+        window.scrollTo({ top: 150, behavior: 'smooth' });
     };
 
-    // جعل خطوات التقدم قابلة للضغط للعودة
+    // التنقل بالضغط على الأرقام
     progressSteps.forEach(step => {
-        step.addEventListener('click', () => {
-            const targetStep = parseInt(step.dataset.step);
-            goToStep(targetStep);
-        });
+        step.addEventListener('click', () => goToStep(parseInt(step.dataset.step)));
     });
 
     nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
     prevBtn.addEventListener('click', () => goToStep(currentStep - 1));
     
+    // مراقبة المدخلات لتفعيل الأزرار لحظياً
     form.querySelectorAll('input, select, textarea').forEach(input => {
-        input.addEventListener('input', validateStep);
-        input.addEventListener('change', validateStep);
+        input.addEventListener('input', validateCurrentStep);
+        input.addEventListener('change', validateCurrentStep);
     });
 
-    // إرسال الفورم (AJAX) لضمان عدم الخروج من الصفحة
-    form.addEventListener("submit", function(event) {
-        event.preventDefault();
+    // إرسال ذكي عبر AJAX
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
 
@@ -321,14 +336,17 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Accept': 'application/json' }
         }).then(response => {
             if (response.ok) window.location.href = "/form-success.html";
-            else alert("حدث خطأ، يرجى المحاولة لاحقاً.");
+            else {
+                alert("حدث خطأ، يرجى المحاولة مرة أخرى.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'إرسال العقار الآن <i class="fas fa-paper-plane"></i>';
+            }
         }).catch(() => {
             alert("فشل الاتصال بالإنترنت.");
             submitBtn.disabled = false;
-            submitBtn.innerHTML = 'إرسال العقار الآن <i class="fas fa-paper-plane"></i>';
         });
     });
 
     updateUI();
 });
-</script>
+              </script>
