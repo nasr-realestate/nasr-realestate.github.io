@@ -2,15 +2,16 @@
 layout: default
 ---
 
-<!-- 🌐 إعدادات SEO ووسوم المشاركة الذكية -->
+<!-- 🌐 وسوم السوشيال ميديا لصفحة التفاصيل (صورة social-home.webp) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ page.url | absolute_url }}">
 <meta property="og:title" content="{{ page.meta_title | default: page.title }}">
 <meta property="og:description" content="{{ page.meta_description }}">
 <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
 
-<!-- بيانات Schema لتعريف جوجل أن هذا "طلب شراء/إيجار" -->
+<!-- بيانات Schema للجوجل -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -28,18 +29,18 @@ layout: default
 
 <div class="details-container request-theme" style="max-width: 850px; margin: 2rem auto; padding: 20px; direction: rtl; font-family: 'Cairo', sans-serif;">
     
-    <!-- 🧭 الهيكل الهرمي: شريط العودة (Nav) -->
+    <!-- شريط العودة (H4 كدلالة ملاحة) -->
     <nav style="margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 10px;">
         <a href="{{ '/requests/' | relative_url }}" style="color: #0a84ff; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-arrow-right"></i> العودة لطلبات العملاء
         </a>
     </nav>
 
-    <!-- 🏷️ العنوان الرئيسي (H1) - الأهم للسيو -->
+    <!-- العنوان الرئيسي (H1) -->
     <header style="margin-bottom: 30px;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
             <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; border: 1px solid #0a84ff;">
-                <i class="fas fa-bullhorn"></i> مطلوب شراء
+                <i class="fas fa-bullhorn"></i> طلب شراء
             </span>
             <time datetime="{{ page.date | date: '%Y-%m-%d' }}" style="color: #666; font-size: 0.85rem;">
                 {{ page.date | date: "%Y-%m-%d" }}
@@ -49,15 +50,16 @@ layout: default
         <p style="color: #ccc; font-size: 1.1rem;"><i class="fas fa-map-marker-alt" style="color: #0a84ff;"></i> {{ page.location }}</p>
     </header>
 
-    <!-- 💰 قسم الميزانية (H3) -->
-    <section aria-label="الميزانية" style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(0,0,0,0.5)); padding: 25px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; margin-bottom: 35px;">
+    <!-- الميزانية (H3) -->
+    <section style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(0,0,0,0.5)); padding: 25px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; margin-bottom: 35px;">
         <h3 style="color: #88c7ff; font-size: 1rem; margin-bottom: 8px; font-weight: 400;">الميزانية المرصودة للتنفيذ</h3>
         <div style="color: #fff; font-size: 2rem; font-weight: 900;">{{ page.budget }}</div>
     </section>
 
-    <!-- 📝 وصف الطلب (يُسحب من ملف الـ md) -->
-    <article class="content-body" style="color: #ccc; line-height: 1.9; font-size: 1.1rem;">
+    <!-- وصف الطلب (يُسحب من ملف الـ md) -->
+    <article class="content-body" style="color: #ccc; line-height: 1.9; font-size: 1.1rem; margin-bottom: 40px;">
         {{ content }}
     </article>
 
+    <!-- ملاحظة: الأزرار وصندوق التواصل يتم كتابتها داخل ملف الـ .md لضمان المرونة وعدم التكرار -->
 </div>
