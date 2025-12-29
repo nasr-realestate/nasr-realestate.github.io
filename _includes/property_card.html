@@ -1,140 +1,85 @@
-<!-- ملف البطاقة (النسخة المحسنة للـSEO) -->
+<!-- ملف البطاقة الذكي (النسخة الموحدة والنهائية) -->
 
 {% assign main_color = "#d4af37" %}
 {% assign label_text = "عرض" %}
 {% assign icon_type = "fa-certificate" %}
 {% assign item_url = include.item.url | relative_url %}
 
-{% if include.item.collection == 'requests' %}
+<!-- 1. ذكاء التصنيف: هل هذا طلب شراء أم عرض عقار؟ -->
+{% if include.item.collection == 'requests' or include.type == 'request' %}
     {% assign main_color = "#0a84ff" %}
     {% assign label_text = "مطلوب" %}
     {% assign icon_type = "fa-bullhorn" %}
-{% elsif include.item.title contains "إيجار" %}
-    {% assign main_color = "#fce205" %}
-    {% assign label_text = "إيجار" %}
-    {% assign icon_type = "fa-key" %}
+    <!-- صورة ثابتة لجميع الطلبات لضمان مظهر احترافي -->
+    {% assign card_img = "/assets/img/social-requests.webp" | relative_url %}
+{% else %}
+    <!-- منطق اختيار صورة العقار (يدعم التحديثات الجديدة) -->
+    {% if include.item.image_file %}
+        {% assign card_img = "/assets/img/properties/" | append: include.item.image_file | relative_url %}
+    {% else %}
+        {% assign card_img = "/assets/img/social-home.webp" | relative_url %}
+    {% endif %}
+
+    {% if include.item.title contains "إيجار" %}
+        {% assign main_color = "#fce205" %}
+        {% assign label_text = "إيجار" %}
+        {% assign icon_type = "fa-key" %}
+    {% endif %}
 {% endif %}
 
 <div class="property-card" 
      onclick="window.location.href='{{ item_url }}'" 
-     style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
+     style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%; background: #111; border-radius: 0 0 15px 15px;"
      itemscope itemtype="https://schema.org/RealEstateListing">
     
-    <!-- 🖼️ حالة وجود صورة (دعم image_file أو image) -->
-    {% if include.item.image_file or include.item.image %}
-    <div class="card-image" style="height: 200px; overflow: hidden; position: relative;">
-        
-        {% if include.item.image_file %}
-            {% assign img_src = "/assets/img/properties/" | append: include.item.image_file | relative_url %}
-        {% else %}
-            {% assign img_src = include.item.image | relative_url %}
-        {% endif %}
-
-        <img src="{{ img_src }}" 
-             alt="{{ include.item.title }} - شقة للبيع في مدينة نصر" 
+    <!-- 🖼️ عرض الصورة التلقائي -->
+    <div class="card-image" style="height: 200px; overflow: hidden; position: relative; background: #000;">
+        <img src="{{ card_img }}" 
+             alt="{{ include.item.title }} - سمسار طلبك" 
              loading="lazy"
              itemprop="image"
              style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
         
         <!-- الشارة فوق الصورة -->
-        <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: {{ main_color }}; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; border: 1px solid {{ main_color }};">
+        <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: {{ main_color }}; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; border: 1px solid {{ main_color }}; z-index: 2;">
             <i class="fas {{ icon_type }}"></i> {{ label_text }}
         </span>
     </div>
-    
-    <!-- 📄 حالة النص فقط (بدون صورة) -->
-    {% else %}
-    <div style="padding: 15px 15px 0 15px; display:flex; justify-content:space-between; align-items: center;">
-        <span style="color: {{ main_color }}; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid {{ main_color }};">
-            <i class="fas {{ icon_type }}"></i> {{ label_text }}
-        </span>
-        <span style="color:#666; font-size: 0.8rem;">جديد</span>
-    </div>
-    {% endif %}
 
     <!-- محتوى البطاقة -->
     <div class="card-content" style="padding: 15px; flex-grow: 1; display: flex; flex-direction: column;">
         
-        <!-- العنوان -->
         <h3 class="property-title" 
             style="color:#fff; font-size:1.1rem; margin: 0 0 10px 0; line-height: 1.4;"
             itemprop="name">
-            {{ include.item.title }}
+            {{ include.item.title | truncate: 50 }}
         </h3>
         
-        <!-- الموقع -->
         <p style="color:#b0b0b0; font-size:0.9rem; margin-bottom: 15px;" itemprop="address">
             <i class="fas fa-map-marker-alt" style="color: {{ main_color }};"></i> 
-            <span itemprop="addressLocality">{{ include.item.location }}</span>
+            <span itemprop="addressLocality">{{ include.item.location | truncate: 40 }}</span>
         </p>
 
-        <!-- السعر -->
-        <div style="color: {{ main_color }}; font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+        <!-- السعر أو الميزانية -->
+        <div style="color: {{ main_color }}; font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">
             {% if include.item.budget %} 
-                <span itemprop="priceSpecification">ميزانية: {{ include.item.budget }}</span>
+                <span style="font-size: 0.8rem; color: #888; font-weight: 400;">الميزانية:</span> {{ include.item.budget }}
             {% else %} 
-                <span itemprop="priceSpecification">{{ include.item.price }}</span>
-            {% endif %}
-            <meta itemprop="priceCurrency" content="EGP">
-        </div>
-
-        <!-- المواصفات -->
-        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">
-            {% if include.item.area %}
-            <span itemprop="floorSize">
-                <i class="fas fa-ruler-combined"></i> {{ include.item.area }}
-            </span>
-            {% endif %}
-            
-            {% if include.item.rooms %}
-            <span itemprop="numberOfRooms">
-                <i class="fas fa-bed"></i> {{ include.item.rooms }}
-            </span>
+                {{ include.item.price }}
             {% endif %}
         </div>
 
         <!-- زر التفاصيل -->
-        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #333; text-align: left;">
-            <a href="{{ item_url }}" 
-               style="color: #aaa; font-size: 0.9rem; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none;"
-               aria-label="عرض تفاصيل {{ include.item.title }}">
+        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #222; text-align: left;">
+            <span style="color: #aaa; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;">
                 عرض التفاصيل <i class="fas fa-arrow-left" style="color: {{ main_color }};"></i>
-            </a>
+            </span>
         </div>
-
     </div>
 </div>
 
 <style>
-    .property-card:hover img { 
-        transform: scale(1.1); 
-    }
-    
-    .property-card:hover { 
-        transform: translateY(-5px); 
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    }
-    
-    .property-card {
-        transition: all 0.3s ease;
-    }
+    .property-card:hover img { transform: scale(1.1); }
+    .property-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .property-card { transition: all 0.3s ease; }
 </style>
-
-<script>
-// تتبع النقر على البطاقة
-document.addEventListener('DOMContentLoaded', function() {
-    var cards = document.querySelectorAll('.property-card');
-    cards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            var title = this.querySelector('.property-title').textContent;
-            if (typeof gtag === 'function') {
-                gtag('event', 'property_card_click', {
-                    'event_category': 'Property Cards',
-                    'event_label': title
-                });
-            }
-        });
-    });
-});
-</script>
