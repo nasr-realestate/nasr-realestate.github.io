@@ -1,21 +1,29 @@
 ---
 layout: default
 title: "طلبات العملاء | سمسار طلبك"
-description: "قائمة محدثة بطلبات الشراء والإيجار الحالية من عملاء جادين ومستعدين للتعاقد. هل لديك عقار يناسبهم؟"
+description: "قائمة محدثة بطلبات الشراء والإيجار الحالية من عملاء جادين ومستعدين للتعاقد في مدينة نصر."
 permalink: /requests/
-image: "/assets/img/social-requests.webp"
 ---
+
+<!-- 🌐 إعدادات السوشيال ميديا (حل مشكلة ظهور الصورة في واتساب) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="طلبات العملاء الجادة | سمسار طلبك">
+<meta property="og:description" content="تصفح أحدث طلبات الشراء والإيجار. هل تملك عقاراً يطابق هذه المواصفات؟">
+<meta property="og:image" content="{{ '/assets/img/social-requests.webp' | absolute_url }}">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ '/assets/img/social-requests.webp' | absolute_url }}">
 
 <!-- =========================================================
      1. رأس الصفحة (Header)
      ========================================================= -->
-<header class="page-header">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <h1 class="page-title">
+<header class="page-header" style="background: linear-gradient(to bottom, #001a33, #050505); border-bottom: 2px solid #0a84ff;">
+  <div style="max-width: 800px; margin: 0 auto; text-align: center; padding: 2rem 1rem;">
+    <h1 class="page-title" style="color: #fff; font-weight: 900;">
       <i class="fas fa-bullhorn" style="color: #0a84ff;"></i> طلبات العملاء الجادة
     </h1>
-    <p style="opacity: 0.8; margin-top: 10px;">
-      هؤلاء عملاء جاهزون للتعاقد فوراً. هل تملك عقاراً يطابق مواصفاتهم؟
+    <p style="color: #aaa; margin-top: 10px; font-size: 1.1rem;">
+      قائمة بالوحدات المطلوبة حالياً للشراء أو الإيجار من عملاء جادين.
     </p>
   </div>
 </header>
@@ -23,11 +31,11 @@ image: "/assets/img/social-requests.webp"
 <main>
 
   <!-- =========================================================
-       2. أزرار الفلترة (Filters)
+       2. أزرار الفلترة الذكية (Blue Theme)
        ========================================================= -->
-  <div class="filter-container" style="margin-bottom: 2rem;">
-      <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
-      <button class="filter-btn" onclick="filterSelection('residential')"><i class="fas fa-home"></i> طلبات سكنية</button>
+  <div class="filter-container" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 2rem 0;">
+      <button class="filter-btn active" onclick="filterSelection('all')">كل الطلبات</button>
+      <button class="filter-btn" onclick="filterSelection('residential')"><i class="fas fa-home"></i> سكني</button>
       <button class="filter-btn" onclick="filterSelection('commercial')"><i class="fas fa-briefcase"></i> تجاري وإداري</button>
       <button class="filter-btn" onclick="filterSelection('cash')"><i class="fas fa-money-bill-wave"></i> كاش فوري</button>
   </div>
@@ -35,84 +43,107 @@ image: "/assets/img/social-requests.webp"
   <!-- =========================================================
        3. شبكة الطلبات (Requests Grid)
        ========================================================= -->
-  <section class="properties-grid" style="min-height: 60vh;">
+  <section class="properties-grid" style="min-height: 50vh; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
     
-    {% comment %} 
-      جلب الطلبات وترتيبها بالتاريخ (الأحدث أولاً) 
-    {% endcomment %}
     {% assign all_requests = site.requests | sort: 'date' | reverse %}
     
     {% for req in all_requests %}
-        
-        <!-- 
-           ذكاء التصنيف التلقائي للطلبات
-        -->
-        {% assign category_class = "residential" %} <!-- الافتراضي: سكني -->
-        
-        <!-- تصنيف تجاري -->
+        {% assign category_class = "residential" %}
         {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
             {% assign category_class = "commercial" %}
         {% endif %}
-
-        <!-- تصنيف كاش (يضاف ككلاس إضافي) -->
         {% if req.title contains "كاش" or req.budget contains "كاش" %}
             {% assign category_class = category_class | append: " cash" %}
         {% endif %}
 
-        <!-- غلاف البطاقة (يحتوي على اسم الفئة للفلترة) -->
         <div class="filter-item {{ category_class }}">
-            <!-- 
-                هام: type="request"
-                هذا يخبر البطاقة أن تظهر باللون الأزرق وتغير كلمة "السعر" إلى "الميزانية"
-            -->
             {% include property_card.html item=req type="request" %}
         </div>
 
     {% else %}
-        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
-            <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-            <h3>لا توجد طلبات نشطة حالياً</h3>
-            <p>تم إغلاق جميع الطلبات السابقة بنجاح.</p>
+        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
+            <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+            <h3>لا توجد طلبات جديدة حالياً</h3>
         </div>
     {% endfor %}
 
   </section>
 
-  <!-- زر الانتقال لإضافة عقار -->
-  <div style="text-align: center; margin: 3rem 0;">
-      <p style="color: #888; margin-bottom: 1rem;">لديك عقار ولكن لا يوجد طلب مطابق؟</p>
-      <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">
-          اعرض عقارك وسنجد لك المشتري <i class="fas fa-plus-circle"></i>
+  <!-- =========================================================
+       4. زر التواصل الموحد (Simplified Contact)
+       ========================================================= -->
+  <div style="text-align: center; margin: 4rem 0 2rem;">
+      <a href="https://wa.me/201147758857?text=السلام عليكم، لدي عقار وأريد عرضه للبيع أو الإيجار" 
+         class="unified-contact-btn">
+          <i class="fab fa-whatsapp"></i> تواصل معنا لعرض عقارك
       </a>
+      <p style="color: #555; font-size: 0.9rem; margin-top: 15px;">سيقوم فريقنا بالرد عليك وتوجيه عقارك للعميل المناسب</p>
   </div>
 
 </main>
 
 <!-- =========================================================
-     4. سكربت الفلترة (نفس المنطق السريع)
+     5. التنسيقات (Styles) - الهوية الزرقاء
      ========================================================= -->
+<style>
+.filter-item { display: none; }
+.show { display: block; animation: fadeInUp 0.5s ease forwards; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* أزرار الفلترة */
+.filter-btn {
+    border: 1px solid #333;
+    background: transparent;
+    color: #b0b0b0;
+    padding: 10px 25px;
+    cursor: pointer;
+    border-radius: 50px;
+    font-family: 'Cairo';
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+.filter-btn:hover { border-color: #0a84ff; color: #0a84ff; }
+.filter-btn.active {
+    background-color: #0a84ff;
+    color: #fff;
+    border-color: #0a84ff;
+    box-shadow: 0 5px 15px rgba(10, 132, 255, 0.3);
+}
+
+/* زر التواصل الموحد */
+.unified-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #0a84ff, #0056b3);
+    color: white !important;
+    padding: 15px 40px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1.1rem;
+    transition: 0.3s;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+.unified-contact-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(10, 132, 255, 0.4);
+    filter: brightness(1.1);
+}
+
+@media (max-width: 768px) {
+    .unified-contact-btn { width: 90%; justify-content: center; }
+}
+</style>
+
 <script>
 function filterSelection(c) {
   var x, i;
   x = document.getElementsByClassName("filter-item");
-  
-  // تحديث شكل الأزرار
-  var btns = document.getElementsByClassName("filter-btn");
-  for (i = 0; i < btns.length; i++) {
-    btns[i].classList.remove("active");
-    btns[i].style.backgroundColor = "transparent";
-    btns[i].style.color = "#b0b0b0";
-    btns[i].style.borderColor = "#333";
-  }
-  
-  // تفعيل الزر المختار (باللون الأزرق هذه المرة ليتناسب مع الطلبات)
-  event.currentTarget.classList.add("active");
-  // هنا نستخدم اللون الأزرق للطلبات
-  event.currentTarget.style.backgroundColor = "#0a84ff"; 
-  event.currentTarget.style.color = "#fff";
-  event.currentTarget.style.borderColor = "#0a84ff";
-
-  // إخفاء/إظهار العناصر
   if (c == "all") c = "";
   for (i = 0; i < x.length; i++) {
     w3RemoveClass(x[i], "show");
@@ -127,6 +158,7 @@ function w3AddClass(element, name) {
   for (i = 0; i < arr2.length; i++) {
     if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
   }
+  element.classList.add("show");
 }
 
 function w3RemoveClass(element, name) {
@@ -138,41 +170,21 @@ function w3RemoveClass(element, name) {
       arr1.splice(arr1.indexOf(arr2[i]), 1);     
     }
   }
-  element.className = arr1.join(" ");
+  element.classList.remove("show");
 }
 
-// تشغيل الفلتر الافتراضي
+// تحديث الزر النشط بصرياً
+var btnContainer = document.querySelector(".filter-container");
+var btns = btnContainer.getElementsByClassName("filter-btn");
+for (var i = 0; i < btns.length; i++) {
+  btns[i].addEventListener("click", function(){
+    var current = btnContainer.getElementsByClassName("active");
+    current[0].className = current[0].className.replace(" active", "");
+    this.className += " active";
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     filterSelection("all");
 });
 </script>
-
-<!-- ستايل خاص للفلترة (مكرر لضمان العمل المستقل) -->
-<style>
-.filter-item { display: none; }
-.show { display: block; animation: fadeIn 0.5s; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.filter-btn {
-    border: 1px solid #333;
-    background: transparent;
-    color: #b0b0b0;
-    padding: 8px 20px;
-    margin: 5px;
-    cursor: pointer;
-    border-radius: 50px;
-    font-family: 'Cairo';
-    font-weight: bold;
-    transition: 0.3s;
-}
-.filter-btn:hover { border-color: #0a84ff; color: #0a84ff; }
-.filter-btn.active {
-    background-color: #0a84ff;
-    color: #fff;
-    border-color: #0a84ff;
-}
-</style>
