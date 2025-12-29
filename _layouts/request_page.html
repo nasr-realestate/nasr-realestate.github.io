@@ -2,24 +2,25 @@
 layout: default
 ---
 
-<!-- وسوم المشاركة (Open Graph) -->
-{% assign default_request_image = "/assets/img/social-request-default.webp" %}
+<!-- 🌐 حل مشكلة الصورة في واتساب (استخدام مسار social-home.webp) -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="{{ site.url }}{{ page.url }}">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
 <meta property="og:title" content="{{ page.title }}">
 <meta property="og:description" content="مطلوب في {{ page.location }} - ميزانية {{ page.budget }}">
-<meta property="og:image" content="{{ site.url }}{{ site.baseurl }}{{ default_request_image }}">
+<meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
 
 <div class="details-container request-theme" style="max-width: 850px; margin: 2rem auto; padding: 20px; direction: rtl; font-family: 'Cairo', sans-serif;">
     
     <!-- شريط العودة -->
     <nav style="margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 10px;">
         <a href="{{ '/requests/' | relative_url }}" style="color: #0a84ff; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-            <i class="fas fa-arrow-right"></i> العودة لقائمة الطلبات
+            <i class="fas fa-arrow-right"></i> العودة لطلبات العملاء
         </a>
     </nav>
 
-    <!-- رأس الطلب الأساسي -->
+    <!-- رأس الطلب -->
     <div style="margin-bottom: 30px;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
             <span style="background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; border: 1px solid #0a84ff;">
@@ -31,13 +32,13 @@ layout: default
         <p style="color: #aaa; font-size: 1rem;"><i class="fas fa-map-marker-alt" style="color: #0a84ff;"></i> {{ page.location }}</p>
     </div>
 
-    <!-- بطاقة الميزانية الثابتة -->
+    <!-- بطاقة الميزانية -->
     <div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(0,0,0,0.5)); padding: 25px; border-radius: 15px; border: 1px solid #0a84ff; text-align: center; margin-bottom: 30px;">
         <span style="color: #88c7ff; font-size: 0.9rem; display: block; margin-bottom: 5px;">الميزانية المرصودة</span>
         <div style="color: #fff; font-size: 1.8rem; font-weight: 800;">{{ page.budget }}</div>
     </div>
 
-    <!-- المحتوى المتغير (هنا يظهر كل ما تكتبه في ملف الـ md) -->
+    <!-- المحتوى (الوصف + الأزرار التي ستكتبها أنت) -->
     <div class="content-body" style="color: #ccc; line-height: 1.8;">
         {{ content }}
     </div>
