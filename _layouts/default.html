@@ -121,6 +121,186 @@
     <i class="fas fa-phone-alt"></i>
     <span>اتصل الآن: 01147758857</span>
   </a>
+  <!-- 1. الأيقونة المنادية (The Glowing Trigger) -->
+<div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
+    <div class="pulse-ring"></div>
+    <i class="fas fa-hand-sparkles"></i>
+    <span class="trigger-text">صمم طلبك</span>
+</div>
+
+<!-- 2. مسرح البحث (The Magic Overlay) -->
+<div id="smartSearchOverlay" class="smart-search-overlay">
+    <div class="overlay-blur" onclick="closeSmartSearch()"></div>
+    
+    <div class="search-card-container" id="searchCardContainer">
+        <!-- البطاقة الأولى: تحديد الغرض -->
+        <div class="smart-card active" id="step1">
+            <div class="card-glow"></div>
+            <div class="card-header">
+                <i class="fas fa-crown gold-icon"></i>
+                <h2>مرحباً بك في بوابة النخبة</h2>
+                <p>نحن لا نعرض جدراناً، نحن نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+            </div>
+            
+            <div class="choice-grid">
+                <button class="choice-btn" onclick="nextStep('apartments', 'شراء تمليك')">
+                    <i class="fas fa-home"></i>
+                    <span>تمليك العمر</span>
+                </button>
+                <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار فندقي')">
+                    <i class="fas fa-key"></i>
+                    <span>إيجار فندقي</span>
+                </button>
+                <button class="choice-btn" onclick="nextStep('commercial', 'استثمار تجاري')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>تجاري وإداري</span>
+                </button>
+            </div>
+            
+            <div class="card-footer">
+                <button class="close-text-btn" onclick="closeSmartSearch()">سأقوم بالتصفح بنفسي لاحقاً</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* --- تصميم الأيقونة المتوهجة --- */
+.smart-search-trigger {
+    position: fixed;
+    bottom: 90px; /* فوق زر الهاتف */
+    left: 25px;
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9998;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.smart-search-trigger i { color: #000; font-size: 1.5rem; margin-bottom: 2px; }
+.trigger-text { color: #000; font-size: 0.65rem; font-weight: 900; }
+
+/* تأثير النبض (Breathing Effect) */
+.pulse-ring {
+    position: absolute;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--color-primary);
+    animation: smart-pulse 2.5s infinite;
+    z-index: -1;
+}
+
+@keyframes smart-pulse {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* --- تصميم مسرح البحث (Overlay) --- */
+.smart-search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none; /* مخفي افتراضياً */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay-blur {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(15px);
+}
+
+/* --- تصميم البطاقة (The Card) --- */
+.smart-card {
+    position: relative;
+    width: 100%;
+    max-width: 450px;
+    background: #111;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 30px;
+    padding: 40px 30px;
+    text-align: center;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    transform: translateY(30px);
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.smart-card.active { transform: translateY(0); opacity: 1; }
+
+.gold-icon { font-size: 3.5rem; color: #d4af37; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
+
+.smart-card h2 { color: #fff; font-size: 1.8rem; font-weight: 900; margin-bottom: 10px; }
+.smart-card p { color: #aaa; font-size: 1rem; line-height: 1.6; margin-bottom: 30px; }
+
+/* أزرار الاختيار */
+.choice-grid { display: flex; flex-direction: column; gap: 15px; }
+
+.choice-btn {
+    background: #050505;
+    border: 1px solid #222;
+    padding: 20px;
+    border-radius: 15px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-align: right;
+}
+
+.choice-btn i { font-size: 1.5rem; color: #d4af37; transition: 0.3s; }
+.choice-btn span { font-size: 1.1rem; font-weight: 700; }
+
+.choice-btn:hover {
+    border-color: #d4af37;
+    background: rgba(212, 175, 55, 0.05);
+    transform: translateX(-5px);
+}
+
+.close-text-btn {
+    margin-top: 30px;
+    background: none; border: none;
+    color: #555; cursor: pointer;
+    font-family: 'Cairo';
+    text-decoration: underline;
+}
+</style>
+
+<script>
+function openSmartSearch() {
+    const overlay = document.getElementById('smartSearchOverlay');
+    overlay.style.display = 'flex';
+    setTimeout(() => {
+        document.getElementById('step1').classList.add('active');
+    }, 10);
+}
+
+function closeSmartSearch() {
+    const overlay = document.getElementById('smartSearchOverlay');
+    document.getElementById('step1').classList.remove('active');
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 500);
+}
+
+// سنكمل هذه الدالة في الخطوة التالية لسؤال الميزانية
+function nextStep(category, label) {
+    console.log("Selected Category:", category);
+    // سيتم هنا إخفاء البطاقة الحالية وإظهار بطاقة الميزانية
+}
+</script>
 
 </body>
 </html>
