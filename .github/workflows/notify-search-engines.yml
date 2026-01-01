@@ -9,29 +9,29 @@ on:
       - '_requests/**'
       - 'sitemap.xml'
       - 'luxury-gallery.html'
-      - 'search-data.json' # تم إضافة هذا السطر لمراقبة بيانات البحث
+      - 'search-data.json' # مراقبة أي تغيير في بيانات البحث
 
 jobs:
   indexnow:
     runs-on: ubuntu-latest
     steps:
-      - name: Send IndexNow Ping
+
+      - name: Notify Bing via IndexNow (Homepage)
         run: |
-          # تنبيه Bing و Yandex بتحديث الموقع بالكامل
-          curl -X GET "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/sitemap.xml&key=48316278893d467499696316278893d4"
-          
-      - name: Force Index Gallery
+          # Ping فعال لمحرك Bing على الصفحة الرئيسية
+          curl -X GET "https://nasr-realestate.github.io/?key=48316278893d467499696316278893d4"
+
+      - name: Force Index Luxury Gallery
         run: |
-          # تنبيه المحركات بوجود صفحة المعرض بشكل مستقل
+          # تنبيه Bing/Yandex بوجود صفحة المعرض
           curl -I https://nasr-realestate.github.io/luxury-gallery.html
 
       - name: Verify Search Data Accessibility
         run: |
-          # التأكد من أن ملف بيانات البحث يعمل ولا يعطي خطأ 404
-          # هذا السطر يضمن أن محرك البحث الذكي سيجد البيانات دائماً
+          # التأكد من أن ملف search-data.json متاح ولا يعطي 404
           curl -I https://nasr-realestate.github.io/search-data.json
 
       - name: Verify Sitemap Accessibility
         run: |
-          # التأكد من أن خريطة الموقع تعمل (بعد إصلاح مشكلة السطر الفارغ)
+          # التأكد من أن خريطة الموقع متاحة بدون أي أخطاء XML
           curl -I https://nasr-realestate.github.io/sitemap.xml
