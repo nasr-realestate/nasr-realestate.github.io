@@ -1,7 +1,6 @@
 # =========================================================
 # === ⚙️ إعدادات الموقع النهائية (GitHub Pages) ===
 # =========================================================
-
 # 1. المعلومات الأساسية
 title: "سمسار طلبك | شقق للبيع في مدينة نصر"
 email: "elraikonly@outlook.sa"
@@ -10,25 +9,20 @@ url: "https://nasr-realestate.github.io"
 baseurl: ""
 lang: "ar"
 timezone: Africa/Cairo
-
 # 2. بيانات المالك
 author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
   email: "elraikonly@outlook.sa"
 logo: "/assets/img/logo.webp"
-
 # 3. إعدادات البناء والروابط
 markdown: kramdown
 permalink: pretty
-
 # 4. الإضافات (تم حذف sitemap لمنع التضارب مع الملف اليدوي)
 plugins:
   - jekyll-seo-tag
-
 # 5. تحليلات جوجل
 google_analytics: "G-8NBQRQ6N10"
-
 # 6. الروابط العربية الاحترافية (Properties & Requests)
 collections:
   properties:
@@ -38,9 +32,12 @@ collections:
     output: true
     # رابط عربي قوي لطلبات الشراء
     permalink: /طلبات-عقارات-مدينة-نصر/:slug/
-
 # 7. الإعدادات الافتراضية
 defaults:
+  - scope:
+      path: "sitemap.xml"
+    values:
+      layout: nil
   - scope:
       path: ""
     values:
@@ -56,7 +53,6 @@ defaults:
       type: "requests"
     values:
       layout: "request_page"
-
 # 8. الملفات المستبعدة
 exclude:
   - Gemfile
@@ -64,9 +60,3 @@ exclude:
   - node_modules
   - README.md
   - vendor
-  defaults:
-  - scope:
-      path: "sitemap.xml"
-    values:
-      layout: nil
-
