@@ -3,35 +3,65 @@ layout: null
 ---
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- الصفحة الرئيسية -->
   <url>
     <loc>{{ site.url }}{{ site.baseurl }}/</loc>
+    <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+
+  <!-- الصفحات الأساسية -->
+  <url>
+    <loc>{{ site.url }}{{ site.baseurl }}/properties.html</loc>
+    <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>{{ site.url }}{{ site.baseurl }}/requests.html</loc>
+    <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <url>
     <loc>{{ site.url }}{{ site.baseurl }}/luxury-gallery.html</loc>
     <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
-    <priority>1.0</priority>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
-  {% for post in site.properties %}
+
+  <!-- روابط العقارات (Properties) -->
+  {% for prop in site.properties %}
   <url>
-    <loc>{{ site.url }}{{ site.baseurl }}{{ post.url }}</loc>
-    <lastmod>{{ post.date | date_to_xmlschema }}</lastmod>
-    <priority>0.9</priority>
+    <loc>{{ site.url }}{{ site.baseurl }}{{ prop.url }}</loc>
+    <lastmod>{{ prop.date | date_to_xmlschema | default: site.time | date_to_xmlschema }}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   {% endfor %}
+
+  <!-- روابط طلبات الشراء (Requests) -->
   {% for req in site.requests %}
   <url>
     <loc>{{ site.url }}{{ site.baseurl }}{{ req.url }}</loc>
     <lastmod>{{ req.date | date_to_xmlschema | default: site.time | date_to_xmlschema }}</lastmod>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   {% endfor %}
+
+  <!-- الصفحات الأخرى -->
   {% for page in site.pages %}
-  {% if page.url contains '.html' and page.url != '/404.html' and page.url != '/luxury-gallery.html' %}
+  {% if page.url contains '.html' and page.url != '/404.html' and page.url != '/index.html' and page.url != '/properties.html' and page.url != '/requests.html' and page.url != '/luxury-gallery.html' %}
   <url>
     <loc>{{ site.url }}{{ site.baseurl }}{{ page.url }}</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   {% endif %}
   {% endfor %}
 </urlset>
+
