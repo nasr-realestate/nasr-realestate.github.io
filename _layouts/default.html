@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+  
+  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA" />
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="طارق طنطاوي">
+  <meta name="geo.region" content="EG-C">
+  <meta name="geo.placename" content="Nasr City, Cairo">
+  
+  {% seo %}
+
+  <!-- إعدادات المشاركة -->
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:site_name" content="سمسار طلبك">
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} | سمسار طلبك{% else %}سمسار طلبك - عقارات مدينة نصر{% endif %}">
+
+  {% if page.image_file %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+  {% elsif page.collection == 'requests' or page.layout == 'request_page' %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+  {% else %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/logo.webp">
+  {% endif %}
+
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <link rel="shortcut icon" type="image/x-icon" href="{{ '/assets/img/logo.webp' | relative_url }}">
+
+  <!-- =========================================================
+       🎨 ستايل محرك البحث الذكي (النسخة النهائية الشاملة)
+       ========================================================= -->
+  <style>
+    .smart-search-trigger {
+        position: fixed; bottom: 95px; left: 25px; width: 65px; height: 65px;
+        background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+        border-radius: 50%; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 9991; cursor: pointer;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .smart-search-trigger i { color: #000; font-size: 1.5rem; }
+    .trigger-text { color: #000; font-size: 0.6rem; font-weight: 900; margin-top: 2px; }
+    .pulse-ring {
+        position: absolute; width: 100%; height: 100%; border-radius: 50%;
+        background: #d4af37; animation: smart-pulse 2.5s infinite; z-index: -1;
+    }
+    @keyframes smart-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.8); opacity: 0; } }
+
+    .smart-search-overlay {
+        position: fixed; inset: 0; z-index: 10000; display: none;
+        justify-content: center; align-items: center; padding: 20px;
+    }
+    .overlay-blur { position: absolute; inset: 0; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+
+    .smart-card {
+        position: relative; width: 100%; max-width: 480px; background: #111;
+        border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 30px;
+        padding: 35px 25px; text-align: center; display: none;
+        box-shadow: 0 40px 100px rgba(0,0,0,0.8); transform: translateY(30px); opacity: 0;
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        max-height: 85vh; overflow-y: auto;
+    }
+    .smart-card.active { display: block; transform: translateY(0); opacity: 1; }
+    .gold-icon { font-size: 3rem; color: #d4af37; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)); }
+    .smart-card h2 { color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+    .smart-card p { color: #aaa; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.6; }
+
+    .choice-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .choice-btn {
+        background: #050505; border: 1px solid #222; padding: 16px 20px;
+        border-radius: 12px; color: #fff; display: flex; align-items: center;
+        gap: 15px; cursor: pointer; transition: 0.3s; text-align: right; font-family: 'Cairo';
+    }
+    .choice-btn:hover { border-color: #d4af37; transform: translateX(-5px); background: rgba(212,175,55,0.05); }
+    .choice-btn i { color: #d4af37; font-size: 1.2rem; min-width: 25px; }
+
+    /* ستايل عرض النتائج */
+    .results-list { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right; }
+    .result-item {
+        background: #050505; border: 1px solid #222; border-radius: 15px;
+        padding: 12px; display: flex; align-items: center; gap: 15px;
+        text-decoration: none; transition: 0.3s;
+    }
+    .result-item:hover { border-color: #d4af37; background: #0a0a0a; }
+    .result-img { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid #333; }
+    .result-info h4 { color: #fff; font-size: 0.95rem; margin-bottom: 5px; }
+    .result-info span { color: #d4af37; font-weight: bold; font-size: 0.9rem; }
+
+    .back-text-btn {
+        margin-top: 25px; background: none; border: none; color: #d4af37;
+        cursor: pointer; font-family: 'Cairo'; font-size: 0.85rem; font-weight: 700;
+        display: flex; align-items: center; gap: 8px; margin: 25px auto 0;
+    }
+    .close-text-btn { margin-top: 25px; background: none; border: none; color: #555; cursor: pointer; font-family: 'Cairo'; text-decoration: underline; font-size: 0.85rem; }
+    
+    .loading-spinner { font-size: 2rem; color: #d4af37; margin: 20px 0; }
+
+    /* تخصيص السكرول بار للبطاقة */
+    .smart-card::-webkit-scrollbar { width: 5px; }
+    .smart-card::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+  </style>
+</head>
+
+<body class="{{ page.body_class | default: 'default-page' }}">
+
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  
+  <div class="cinematic-bg"></div>
+  <div class="animated-overlay"></div>
+
+  {% include navbar.html %}
+
+  <main>
+    {{ content }}
+  </main>
+
+  {% include footer.html %}
+
+  <!-- =========================================================
+       🔍 محرك البحث الذكي (UI Structure)
+       ========================================================= -->
+  
+  <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
+      <div class="pulse-ring"></div>
+      <i class="fas fa-hand-sparkles"></i>
+      <span class="trigger-text">صمم طلبك</span>
+  </div>
+
+  <div id="smartSearchOverlay" class="smart-search-overlay">
+      <div class="overlay-blur" onclick="closeSmartSearch()"></div>
+      
+      <div class="search-card-container">
+          <!-- البطاقة 1: النوع الرئيسي -->
+          <div class="smart-card" id="step1">
+              <i class="fas fa-crown gold-icon"></i>
+              <h2>مرحباً بك في بوابة النخبة</h2>
+              <p>نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+              <div class="choice-grid">
+                  <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i> <span>تمليك العمر</span></button>
+                  <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')"><i class="fas fa-couch"></i> <span>إيجار مفروش (فندقي)</span></button>
+                  <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i> <span>إيجار جديد (فاضي)</span></button>
+                  <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i> <span>تجاري وإداري</span></button>
+              </div>
+              <button class="close-text-btn" onclick="closeSmartSearch()">سأقوم بالتصفح بنفسي لاحقاً</button>
+          </div>
+
+          <!-- البطاقة 1.5: تفرع التجاري -->
+          <div class="smart-card" id="stepCommercialBranch">
+              <i class="fas fa-briefcase gold-icon"></i>
+              <h2>النشاط التجاري والإداري</h2>
+              <p>هل تبحث عن تملك مقر دائم لشركتك أم استئجار مكتب/محل؟</p>
+              <div class="choice-grid">
+                  <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i> <span>تمليك / شراء</span></button>
+                  <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i> <span>إيجار شهري</span></button>
+              </div>
+              <button class="back-text-btn" onclick="goToCard('step1')"><i class="fas fa-arrow-right"></i> العودة</button>
+          </div>
+
+          <!-- البطاقة 2: الميزانية -->
+          <div class="smart-card" id="step2">
+              <i class="fas fa-money-bill-wave gold-icon"></i>
+              <h2 id="budgetTitle">الميزانية المرصودة؟</h2>
+              <p>لنتمكن من عرض الخيارات التي تناسب قدراتك المالية بدقة.</p>
+              <div id="budgetOptions" class="choice-grid"></div>
+              <button class="back-text-btn" onclick="backToPrevious()"><i class="fas fa-arrow-right"></i> العودة</button>
+          </div>
+
+          <!-- البطاقة 3: عرض النتائج (لحظة الإبهار) -->
+          <div class="smart-card" id="stepResults">
+              <i class="fas fa-magic gold-icon"></i>
+              <h2>نتائج البحث المخصصة</h2>
+              <p id="resultsStatus">جاري البحث في خزائن النخبة...</p>
+              <div id="resultsContent" class="results-list">
+                  <!-- النتائج تظهر هنا -->
+              </div>
+              <button class="back-text-btn" onclick="goToCard('step1')">بدء بحث جديد</button>
+          </div>
+      </div>
+  </div>
+
+  <a href="tel:+201147758857" class="fixed-call-button" onclick="trackPhoneCall('+201147758857', 'Fixed Button');">
+    <i class="fas fa-phone-alt"></i>
+    <span>اتصل الآن: 01147758857</span>
+  </a>
+
+  <!-- =========================================================
+       ⚙️ جافاسكريبت المحرك الذكي (The Intelligence Logic)
+       ========================================================= -->
+  <script>
+    let allProperties = [];
+    let userSelection = { category: '', type: '', budgetRange: [] };
+    let lastStepId = 'step1';
+
+    // 1. تحميل البيانات مسبقاً لضمان السرعة
+    async function preloadData() {
+        try {
+            const res = await fetch("{{ '/search-data.json' | relative_url }}");
+            allProperties = await res.json();
+        } catch (e) { console.error("Data Load Error", e); }
+    }
+    preloadData();
+
+    function openSmartSearch() {
+        document.getElementById('smartSearchOverlay').style.display = 'flex';
+        setTimeout(() => { goToCard('step1'); }, 10);
+    }
+
+    function closeSmartSearch() {
+        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+        setTimeout(() => { document.getElementById('smartSearchOverlay').style.display = 'none'; }, 500);
+    }
+
+    function goToCard(cardId) {
+        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+        setTimeout(() => {
+            const target = document.getElementById(cardId);
+            if(target) target.classList.add('active');
+        }, 50);
+    }
+
+    function handleCommercialSelection() {
+        lastStepId = 'step1';
+        goToCard('stepCommercialBranch');
+    }
+
+    function nextStep(category, typeLabel) {
+        userSelection.category = category;
+        userSelection.type = typeLabel;
+        lastStepId = (typeLabel.includes('تجاري')) ? 'stepCommercialBranch' : 'step1';
+        setupBudgetOptions(typeLabel);
+        goToCard('step2');
+    }
+
+    function backToPrevious() {
+        goToCard(lastStepId);
+    }
+
+    function setupBudgetOptions(type) {
+        const container = document.getElementById('budgetOptions');
+        const title = document.getElementById('budgetTitle');
+        container.innerHTML = ''; 
+        let options = [];
+
+        if (type === 'تمليك' || type === 'تمليك تجاري') {
+            title.innerText = "ميزانية التملك؟";
+            options = [
+                { label: "أقل من 3 مليون ج.م", range: [0, 3000000] },
+                { label: "من 3 إلى 6 مليون ج.م", range: [3000000, 6000000] },
+                { label: "أكثر من 6 مليون ج.م", range: [6000000, 99999999] }
+            ];
+        } else {
+            title.innerText = "الميزانية الشهرية؟";
+            const limit = type.includes('تجاري') ? 40000 : 20000;
+            options = [
+                { label: `أقل من ${limit.toLocaleString()} ج.م`, range: [0, limit] },
+                { label: `أكثر من ${limit.toLocaleString()} ج.م`, range: [limit, 9999999] }
+            ];
+        }
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `<i class="fas fa-coins"></i> <span>${opt.label}</span>`;
+            btn.onclick = () => finishSearch(opt.range);
+            container.appendChild(btn);
+        });
+    }
+
+    // --- دالة البحث والفلترة النهائية ---
+    function finishSearch(range) {
+        userSelection.budgetRange = range;
+        goToCard('stepResults');
+        const content = document.getElementById('resultsContent');
+        const status = document.getElementById('resultsStatus');
+        content.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        
+        setTimeout(() => {
+            // منطق الفلترة
+            const matches = allProperties.filter(prop => {
+                // 1. فحص الفئة (Category)
+                if (prop.category !== userSelection.category) return false;
+
+                // 2. فحص النوع (تمليك / إيجار) من العنوان أو الوصف
+                const isRentSearch = userSelection.type.includes('إيجار');
+                const isPropRent = prop.title.includes('إيجار') || prop.category.includes('rent');
+                if (isRentSearch !== isPropRent) return false;
+
+                // 3. فحص الميزانية (تحويل النص لرقم)
+                const priceNum = parseInt(prop.price.replace(/[^0-9]/g, '')) || 0;
+                return priceNum >= range[0] && priceNum <= range[1];
+            });
+
+            // عرض النتائج
+            if (matches.length > 0) {
+                status.innerText = `وجدنا لك ${matches.length} عروض تطابق ذوقك وميزانيتك:`;
+                content.innerHTML = matches.map(m => `
+                    <a href="${m.url}" class="result-item">
+                        <img src="${m.image}" class="result-img" onerror="this.src='/assets/img/logo.webp'">
+                        <div class="result-info">
+                            <h4>${m.title}</h4>
+                            <span>${m.price}</span>
+                        </div>
+                    </a>
+                `).join('');
+            } else {
+                status.innerText = "عذراً، لم نجد طلباً يطابق هذه الميزانية حالياً..";
+                content.innerHTML = `
+                    <div style="padding:20px; color:#888;">
+                        يمكنك إضافة طلبك وسنقوم بالبحث لك فوراً.
+                        <br><br>
+                        <a href="tel:+201147758857" class="choice-btn" style="justify-content:center;">اتصل بالخبير طارق</a>
+                    </div>
+                `;
+            }
+        }, 1200); // تأخير بسيط للإبهار
+    }
+  </script>
+
+</body>
+  </html>
