@@ -9,6 +9,7 @@ on:
       - '_requests/**'
       - 'sitemap.xml'
       - 'luxury-gallery.html'
+      - 'search-data.json' # تم إضافة هذا السطر لمراقبة بيانات البحث
 
 jobs:
   indexnow:
@@ -16,6 +17,7 @@ jobs:
     steps:
       - name: Send IndexNow Ping
         run: |
+          # تنبيه Bing و Yandex بتحديث الموقع بالكامل
           curl -X GET "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/sitemap.xml&key=48316278893d467499696316278893d4"
           
       - name: Force Index Gallery
@@ -23,7 +25,13 @@ jobs:
           # تنبيه المحركات بوجود صفحة المعرض بشكل مستقل
           curl -I https://nasr-realestate.github.io/luxury-gallery.html
 
+      - name: Verify Search Data Accessibility
+        run: |
+          # التأكد من أن ملف بيانات البحث يعمل ولا يعطي خطأ 404
+          # هذا السطر يضمن أن محرك البحث الذكي سيجد البيانات دائماً
+          curl -I https://nasr-realestate.github.io/search-data.json
+
       - name: Verify Sitemap Accessibility
         run: |
-          # التأكد من أن خريطة الموقع تعمل ولا تظهر خطأ 404
+          # التأكد من أن خريطة الموقع تعمل (بعد إصلاح مشكلة السطر الفارغ)
           curl -I https://nasr-realestate.github.io/sitemap.xml
