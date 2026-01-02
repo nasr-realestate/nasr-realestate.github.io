@@ -10,76 +10,42 @@ seo: false
     <div class="col-lg-8 mx-auto">
       <h1 class="mb-4 text-center">خريطة الموقع</h1>
       
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h3 class="h5 text-primary mb-3">
-            <i class="fas fa-home me-2"></i>الصفحات الأساسية
-          </h3>
-          <ul class="list-unstyled">
-            <li class="mb-2">
-              <a href="/" class="text-decoration-none">الصفحة الرئيسية</a>
-            </li>
-            <li class="mb-2">
-              <a href="/properties.html" class="text-decoration-none">جميع العقارات</a>
-            </li>
-            <li class="mb-2">
-              <a href="/requests.html" class="text-decoration-none">طلبات الشراء</a>
-            </li>
-          </ul>
-        </div>
+      <!-- تضمين نفس محتوى sitemap.xml لكن بصيغة HTML -->
+      <div class="alert alert-info">
+        <i class="fas fa-sitemap me-2"></i>
+        <strong>ملاحظة:</strong> هذه الصفحة للزوار. لمحركات البحث، استخدم 
+        <a href="/sitemap.xml" class="alert-link">ملف XML</a>
       </div>
-
-      {% if site.properties.size > 0 %}
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h3 class="h5 text-primary mb-3">
-            <i class="fas fa-building me-2"></i>العقارات المتاحة
-          </h3>
-          <div class="row">
-            {% for prop in site.properties %}
-            <div class="col-md-6 mb-3">
-              <a href="{{ prop.url }}" class="text-decoration-none">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-arrow-left text-secondary me-2 fa-sm"></i>
-                  <span>{{ prop.title }}</span>
-                </div>
-              </a>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if site.requests.size > 0 %}
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h3 class="h5 text-primary mb-3">
-            <i class="fas fa-search me-2"></i>طلبات الشراء
-          </h3>
-          <div class="row">
-            {% for req in site.requests %}
-            <div class="col-md-6 mb-3">
-              <a href="{{ req.url }}" class="text-decoration-none">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-arrow-left text-secondary me-2 fa-sm"></i>
-                  <span>{{ req.title }}</span>
-                </div>
-              </a>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
+      
+      <h3 class="mt-4 mb-3">الصفحات الرئيسية</h3>
+      <ul class="list-group">
+        <li class="list-group-item">
+          <a href="/">الصفحة الرئيسية</a>
+        </li>
+        <li class="list-group-item">
+          <a href="/properties.html">العقارات المتاحة</a>
+        </li>
+        <li class="list-group-item">
+          <a href="/requests.html">طلبات الشراء</a>
+        </li>
+        <li class="list-group-item">
+          <a href="/about-us.html">من نحن</a>
+        </li>
+        <li class="list-group-item">
+          <a href="/contact-us.html">اتصل بنا</a>
+        </li>
+        <li class="list-group-item">
+          <a href="/add-your-property.html">أضف عقارك</a>
+        </li>
+      </ul>
+      
+      <!-- يمكنك إضافة المزيد من الأقسام هنا -->
+      
       <div class="mt-4 text-center">
-        <p class="text-muted">
-          <i class="fas fa-download me-1"></i>
-          يمكنك تحميل 
-          <a href="/sitemap.xml" class="text-decoration-none">نسخة XML من خريطة الموقع</a>
-          لمحركات البحث
-        </p>
+        <a href="/sitemap.xml" class="btn btn-outline-primary">
+          <i class="fas fa-download me-2"></i>
+          تحميل نسخة XML لمحركات البحث
+        </a>
       </div>
     </div>
   </div>
