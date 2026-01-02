@@ -37,13 +37,26 @@ collections:
     output: true
     permalink: /طلبات-عقارات-مدينة-نصر/:slug/
 
-# 7. الإعدادات الافتراضية (تم الإصلاح لمنع حقن الأكواد في XML)
+# 7. إعدادات Sitemap
+sitemap:
+  url: "https://nasr-realestate.github.io"
+  exclude:
+    - "*.js"
+    - "*.css"
+    - "*.pdf"
+    - "/404.html"
+  include:
+    - "properties"
+    - "requests"
+
+# 8. الإعدادات الافتراضية
 defaults:
   - scope:
       path: "sitemap.xml"
     values:
       layout: null
       seo: false
+      sitemap: false
   - scope:
       path: ""
     values:
@@ -60,10 +73,11 @@ defaults:
     values:
       layout: "request_page"
 
-# 8. الملفات المستبعدة
+# 9. الملفات المستبعدة
 exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules
   - README.md
   - vendor
+  - sitemap.xml # تم نقله لمجلد منفصل
