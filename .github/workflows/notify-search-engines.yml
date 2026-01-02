@@ -1,4 +1,4 @@
-name: Notify Search Engines
+name: Site Update Notifications
 
 on:
   push:
@@ -8,47 +8,49 @@ on:
       - '_properties/**'
       - '_requests/**'
       - 'sitemap.xml'
-      - 'robots.txt'
-      - '_config.yml'
-      - 'key.txt'                    # أضف هذا
-      - 'google*.html'               # أضف هذا لمراقبة ملفات Google التحقق
+      - 'luxury-gallery.html'
+      - 'search-data.json'
 
 jobs:
-  notify:
+  site-checks:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Verify Google verification file
+      - name: Verify Gallery Page
         run: |
-          echo "Checking Google verification file..."
-          if [ -f "google1201055475d84276.html" ]; then
-            echo "✅ Google verification file exists"
+          # التحقق من صفحة المعرض
+          echo "🔍 Checking luxury-gallery.html..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/luxury-gallery.html)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ luxury-gallery.html is accessible (Status: $STATUS)"
           else
-            echo "⚠️ Google verification file not found"
+            echo "⚠️ luxury-gallery.html returned status: $STATUS"
           fi
 
-      - name: Verify IndexNow key file
+      - name: Verify Search Data
         run: |
-          echo "Checking IndexNow key file..."
-          if [ -f "key.txt" ]; then
-            echo "✅ Key.txt exists"
-            KEY=$(cat key.txt)
-            echo "Key length: ${#KEY} characters"
+          # التحقق من ملف بيانات البحث
+          echo "🔍 Checking search-data.json..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/search-data.json)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ search-data.json is accessible (Status: $STATUS)"
           else
-            echo "❌ Key.txt not found - creating one..."
-            echo "48316278893d467499696316278893d4" > key.txt
+            echo "⚠️ search-data.json returned status: $STATUS"
           fi
 
-      - name: Ping Google about sitemap update
+      - name: Verify Sitemap
         run: |
-          echo "Notifying Google about sitemap update..."
+          # التحقق من خريطة الموقع
+          echo "🔍 Checking sitemap.xml..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/sitemap.xml)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ sitemap.xml is accessible (Status: $STATUS)"
+          else
+            echo "⚠️ sitemap.xml returned status: $STATUS"
+          fi
+
+      - name: Notify Google
+        run: |
+          # إعلام جوجل فقط (بدون بينغ)
+          echo "🔄 Notifying Google about sitemap update..."
           curl -s "https://www.google.com/ping?sitemap=https://nasr-realestate.github.io/sitemap.xml"
-          
-      - name: Notify Bing via IndexNow
-        run: |
-          echo "Notifying Bing via IndexNow..."
-          # استخدام المفتاح من key.txt
-          KEY=$(cat key.txt)
-          curl -s "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/&key=${KEY}"
+          echo "✅ Google has been notified!"
