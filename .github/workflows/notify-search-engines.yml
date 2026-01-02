@@ -1,37 +1,54 @@
-name: Notify Search Engines (IndexNow)
+name: Notify Search Engines
 
 on:
   push:
     branches:
-      - main  # تأكد إذا كان اسم الفرع عندك main أو master
+      - main
     paths:
       - '_properties/**'
       - '_requests/**'
       - 'sitemap.xml'
-      - 'luxury-gallery.html'
-      - 'search-data.json' # تم إضافة هذا السطر لمراقبة بيانات البحث
+      - 'robots.txt'
+      - '_config.yml'
+      - 'key.txt'                    # أضف هذا
+      - 'google*.html'               # أضف هذا لمراقبة ملفات Google التحقق
 
 jobs:
-  indexnow:
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send IndexNow Ping
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Verify Google verification file
         run: |
-          # تنبيه Bing و Yandex بتحديث الموقع بالكامل
-          curl -X GET "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/sitemap.xml&key=48316278893d467499696316278893d4"
+          echo "Checking Google verification file..."
+          if [ -f "google1201055475d84276.html" ]; then
+            echo "✅ Google verification file exists"
+          else
+            echo "⚠️ Google verification file not found"
+          fi
+
+      - name: Verify IndexNow key file
+        run: |
+          echo "Checking IndexNow key file..."
+          if [ -f "key.txt" ]; then
+            echo "✅ Key.txt exists"
+            KEY=$(cat key.txt)
+            echo "Key length: ${#KEY} characters"
+          else
+            echo "❌ Key.txt not found - creating one..."
+            echo "48316278893d467499696316278893d4" > key.txt
+          fi
+
+      - name: Ping Google about sitemap update
+        run: |
+          echo "Notifying Google about sitemap update..."
+          curl -s "https://www.google.com/ping?sitemap=https://nasr-realestate.github.io/sitemap.xml"
           
-      - name: Force Index Gallery
+      - name: Notify Bing via IndexNow
         run: |
-          # تنبيه المحركات بوجود صفحة المعرض بشكل مستقل
-          curl -I https://nasr-realestate.github.io/luxury-gallery.html
-
-      - name: Verify Search Data Accessibility
-        run: |
-          # التأكد من أن ملف بيانات البحث يعمل ولا يعطي خطأ 404
-          # هذا السطر يضمن أن محرك البحث الذكي سيجد البيانات دائماً
-          curl -I https://nasr-realestate.github.io/search-data.json
-
-      - name: Verify Sitemap Accessibility
-        run: |
-          # التأكد من أن خريطة الموقع تعمل (بعد إصلاح مشكلة السطر الفارغ)
-          curl -I https://nasr-realestate.github.io/sitemap.xml
+          echo "Notifying Bing via IndexNow..."
+          # استخدام المفتاح من key.txt
+          KEY=$(cat key.txt)
+          curl -s "https://www.bing.com/indexnow?url=https://nasr-realestate.github.io/&key=${KEY}"
