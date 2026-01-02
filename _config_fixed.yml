@@ -1,0 +1,69 @@
+# =========================================================
+# === ⚙️ إعدادات الموقع النهائية (GitHub Pages) ===
+# =========================================================
+# 1. المعلومات الأساسية
+title: "سمسار طلبك | شقق للبيع في مدينة نصر"
+email: "elraikonly@outlook.sa"
+description: "بوابتك العقارية الأولى في مدينة نصر. تصفح أحدث الشقق والمحلات والمكاتب التجارية للبيع والإيجار."
+url: "https://nasr-realestate.github.io"
+baseurl: ""
+lang: "ar"
+timezone: Africa/Cairo
+
+# 2. بيانات المالك
+author:
+  name: "طارق طنطاوي"
+  phone: "+201147758857"
+  email: "elraikonly@outlook.sa"
+logo: "/assets/img/logo.webp"
+
+# 3. إعدادات البناء والروابط
+markdown: kramdown
+permalink: pretty
+
+# 4. الإضافات
+plugins:
+  - jekyll-seo-tag
+
+# 5. تحليلات جوجل
+google_analytics: "G-8NBQRQ6N10"
+
+# 6. الروابط العربية الاحترافية (Properties & Requests)
+collections:
+  properties:
+    output: true
+    permalink: /شقق-للبيع-في-مدينة-نصر/:slug/
+  requests:
+    output: true
+    permalink: /طلبات-عقارات-مدينة-نصر/:slug/
+
+# 7. الإعدادات الافتراضية (تم الإصلاح لمنع حقن الأكواد في XML)
+defaults:
+  - scope:
+      path: "sitemap.xml"
+    values:
+      layout: null
+      seo: false
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+      image: "/assets/img/social-home.webp"
+  - scope:
+      path: ""
+      type: "properties"
+    values:
+      layout: "property_page"
+  - scope:
+      path: ""
+      type: "requests"
+    values:
+      layout: "request_page"
+
+# 8. الملفات المستبعدة
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - README.md
+  - vendor
