@@ -12,45 +12,31 @@ on:
       - 'search-data.json'
 
 jobs:
-  site-checks:
+  notify-search-engines: # تم دمج الخطوات لضمان الترتيب
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Gallery Page
+      - name: Wait for GitHub Pages to deploy
         run: |
-          # التحقق من صفحة المعرض
-          echo "🔍 Checking luxury-gallery.html..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/luxury-gallery.html)
-          if [ "$STATUS" -eq 200 ]; then
-            echo "✅ luxury-gallery.html is accessible (Status: $STATUS)"
-          else
-            echo "⚠️ luxury-gallery.html returned status: $STATUS"
-          fi
+          echo "⏳ Waiting for 60 seconds to allow GitHub Pages to deploy..."
+          sleep 60
+          echo "✅ Deployment wait finished."
 
-      - name: Verify Search Data
+      - name: Verify Sitemap and Notify Google
         run: |
-          # التحقق من ملف بيانات البحث
-          echo "🔍 Checking search-data.json..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/search-data.json)
+          SITEMAP_URL="https://nasr-realestate.github.io/sitemap.xml"
+          echo "🔍 Checking sitemap at $SITEMAP_URL..."
+          
+          # التحقق من أن خريطة الموقع متاحة
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" $SITEMAP_URL)
+          
           if [ "$STATUS" -eq 200 ]; then
-            echo "✅ search-data.json is accessible (Status: $STATUS)"
+            echo "✅ Sitemap is accessible (Status: $STATUS)."
+            echo "🔄 Notifying Google about the update..."
+            curl -s "https://www.google.com/ping?sitemap=$SITEMAP_URL"
+            echo "✅ Google has been notified!"
           else
-            echo "⚠️ search-data.json returned status: $STATUS"
+            # في حالة فشل الوصول لخريطة الموقع، يتم إيقاف العملية مع رسالة خطأ
+            echo "❌ ERROR: Sitemap not accessible (Status: $STATUS). Aborting notification."
+            exit 1
           fi
-
-      - name: Verify Sitemap
-        run: |
-          # التحقق من خريطة الموقع
-          echo "🔍 Checking sitemap.xml..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nasr-realestate.github.io/sitemap.xml)
-          if [ "$STATUS" -eq 200 ]; then
-            echo "✅ sitemap.xml is accessible (Status: $STATUS)"
-          else
-            echo "⚠️ sitemap.xml returned status: $STATUS"
-          fi
-
-      - name: Notify Google
-        run: |
-          # إعلام جوجل فقط (بدون بينغ)
-          echo "🔄 Notifying Google about sitemap update..."
-          curl -s "https://www.google.com/ping?sitemap=https://nasr-realestate.github.io/sitemap.xml"
-          echo "✅ Google has been notified!"
+          
