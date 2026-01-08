@@ -1,4 +1,4 @@
-<!-- ملف البطاقة (النسخة المحسنة للـSEO) -->
+<!-- ملف البطاقة (النسخة النهائية والمثالية للـSEO) -->
 
 {% assign main_color = "#d4af37" %}
 {% assign label_text = "عرض" %}
@@ -15,10 +15,11 @@
     {% assign icon_type = "fa-key" %}
 {% endif %}
 
-<div class="property-card" 
-     onclick="window.location.href='{{ item_url }}'" 
-     style="cursor: pointer; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
-     itemscope itemtype="https://schema.org/RealEstateListing">
+<!-- ✅ تم التعديل هنا: من div إلى a، مع إضافة href وحذف onclick -->
+<a class="property-card" 
+   href="{{ item_url }}"
+   style="text-decoration: none; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
+   itemscope itemtype="https://schema.org/RealEstateListing">
     
     <!-- 🖼️ حالة وجود صورة (دعم image_file أو image) -->
     {% if include.item.image_file or include.item.image %}
@@ -95,15 +96,14 @@
 
         <!-- زر التفاصيل -->
         <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #333; text-align: left;">
-            <a href="{{ item_url }}" 
-               style="color: #aaa; font-size: 0.9rem; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none;"
-               aria-label="عرض تفاصيل {{ include.item.title }}">
+            <!-- ⚠️ ملاحظة: هذا الزر أصبح غير ضروري وظيفياً لكن يمكن إبقاؤه للشكل الجمالي -->
+            <span style="color: #aaa; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;">
                 عرض التفاصيل <i class="fas fa-arrow-left" style="color: {{ main_color }};"></i>
-            </a>
+            </span>
         </div>
 
     </div>
-</div>
+</a> <!-- ✅ لا تنسَ إغلاق وسم a بدلاً من div -->
 
 <style>
     .property-card:hover img { 
@@ -121,20 +121,8 @@
     }
 </style>
 
-<script>
-// تتبع النقر على البطاقة
-document.addEventListener('DOMContentLoaded', function() {
-    var cards = document.querySelectorAll('.property-card');
-    cards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            var title = this.querySelector('.property-title').textContent;
-            if (typeof gtag === 'function') {
-                gtag('event', 'property_card_click', {
-                    'event_category': 'Property Cards',
-                    'event_label': title
-                });
-            }
-        });
-    });
-});
-</script>
+<!-- 
+    ✅ تم حذف سكربت تتبع النقر لأنه لم يعد ضرورياً.
+    التحويل إلى <a> يجعل تتبع النقرات أسهل عبر Google Analytics 
+    بشكل تلقائي دون الحاجة لكود مخصص.
+-->
