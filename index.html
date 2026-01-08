@@ -114,7 +114,8 @@ body_class: "homepage"
             {% if item.collection == "requests" %}{% assign border_color = "#0a84ff" %}{% assign label_text = "مطلوب" %}{% assign label_icon = "fa-bullhorn" %}
             {% elsif item.title contains "إيجار" %}{% assign border_color = "#fce205" %}{% assign label_text = "إيجار" %}{% assign label_icon = "fa-key" %}{% endif %}
 
-            <div class="property-card text-mode" onclick="window.location.href='{{ item.url | relative_url }}'" style="cursor: pointer; border-top: 4px solid {{ border_color }};">
+            <!-- ✅ تم التعديل هنا: من div إلى a، مع إضافة href وحذف onclick -->
+            <a href="{{ item.url | relative_url }}" class="property-card text-mode" style="text-decoration: none; display: block; border-top: 4px solid {{ border_color }};">
                 <div class="property-header" style="border-bottom: 1px dashed #333; padding-bottom: 10px; margin-bottom: 15px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                         <span style="color: {{ border_color }}; background: rgba(255,255,255,0.05); padding: 2px 10px; border-radius: 10px; border: 1px solid {{ border_color }}; font-size: 0.8rem;">
@@ -137,7 +138,7 @@ body_class: "homepage"
                 <div style="margin-top:auto; padding-top:10px; border-top: 1px solid #222;">
                     <span style="color:#ccc; font-size:0.9rem;">التفاصيل <i class="fas fa-arrow-left" style="color: {{ border_color }};"></i></span>
                 </div>
-            </div>
+            </a>
         {% endfor %}
     </div>
 
@@ -249,4 +250,5 @@ body_class: "homepage"
     .fixed-call-button { left: 10px; bottom: 10px; right: 10px; justify-content: center; }
     .properties-grid { grid-template-columns: 1fr !important; }
   }
-     </style>
+           </style>
+           
