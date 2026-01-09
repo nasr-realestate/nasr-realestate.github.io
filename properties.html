@@ -40,12 +40,7 @@ image: "/assets/img/social-properties.webp"
     
     {% for prop in all_properties %}
         
-        <!-- 
-           ذكاء التصنيف التلقائي (Auto-Categorization Logic):
-           نحدد نوع العقار بناءً على الكلمات الموجودة في العنوان
-           ونعطيه (Category Class) ليتم فلترته
-        -->
-        {% assign category_class = "apartment" %} <!-- الافتراضي -->
+        {% assign category_class = "apartment" %}
         {% assign type = "sale" %}
 
         {% if prop.title contains "إيجار" or prop.title contains "ايجار" %}
@@ -80,7 +75,7 @@ image: "/assets/img/social-properties.webp"
 </main>
 
 <!-- =========================================================
-     3. سكربت الفلترة (سريع جداً لأنه لا يحمل صفحات جديدة)
+     3. سكربت الفلترة المُحسَّن
      ========================================================= -->
 <script>
 function filterSelection(c) {
@@ -91,67 +86,67 @@ function filterSelection(c) {
   var btns = document.getElementsByClassName("filter-btn");
   for (i = 0; i < btns.length; i++) {
     btns[i].classList.remove("active");
-    // إعادة الستايل الافتراضي للأزرار غير النشطة
-    btns[i].style.backgroundColor = "transparent";
-    btns[i].style.color = "#b0b0b0";
-    btns[i].style.borderColor = "#333";
   }
-  // تفعيل الزر المضغوط (نبحث عن الزر الذي تم ضغطه عبر الـ event)
   event.currentTarget.classList.add("active");
-  event.currentTarget.style.backgroundColor = "var(--color-primary)";
-  event.currentTarget.style.color = "#000";
-  event.currentTarget.style.borderColor = "var(--color-primary)";
 
-  // إخفاء/إظهار العناصر
-  if (c == "all") c = "";
+  // عكس منطق الإخفاء والإظهار
   for (i = 0; i < x.length; i++) {
-    w3RemoveClass(x[i], "show");
-    if (x[i].className.indexOf(c) > -1) w3AddClass(x[i], "show");
+    // 1. أزل كلاس "hide" من جميع العناصر (لإظهارها)
+    w3RemoveClass(x[i], "hide");
+    // 2. إذا لم تكن الفئة المطلوبة "all" والعنصر لا ينتمي لهذه الفئة، قم بإخفائه
+    if (c !== "all" && x[i].className.indexOf(c) === -1) {
+      w3AddClass(x[i], "hide");
+    }
   }
 }
 
-// دالة مساعدة للإظهار
+// دالة مساعدة لإضافة كلاس
 function w3AddClass(element, name) {
   var i, arr1, arr2;
   arr1 = element.className.split(" ");
   arr2 = name.split(" ");
   for (i = 0; i < arr2.length; i++) {
-    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
+    if (arr1.indexOf(arr2[i]) == -1) {
+      element.className += " " + arr2[i];
+    }
   }
 }
 
-// دالة مساعدة للإخفاء
+// دالة مساعدة لحذف كلاس
 function w3RemoveClass(element, name) {
   var i, arr1, arr2;
   arr1 = element.className.split(" ");
   arr2 = name.split(" ");
   for (i = 0; i < arr2.length; i++) {
     while (arr1.indexOf(arr2[i]) > -1) {
-      arr1.splice(arr1.indexOf(arr2[i]), 1);     
+      arr1.splice(arr1.indexOf(arr2[i]), 1);
     }
   }
   element.className = arr1.join(" ");
 }
-
-// تشغيل الفلتر "الكل" عند التحميل
-document.addEventListener("DOMContentLoaded", function() {
-    filterSelection("all");
-});
 </script>
 
-<!-- ستايل خاص للفلترة -->
+<!-- =========================================================
+     4. ستايل الفلترة المُحسَّن
+     ========================================================= -->
 <style>
-/* العنصر المخفي */
-.filter-item { display: none; }
-/* العنصر الظاهر */
-.show { display: block; animation: fadeIn 0.5s; }
+/* ✅ تعديل: العنصر ظاهر بشكل افتراضي */
+.filter-item {
+    display: block;
+    animation: fadeIn 0.5s;
+}
+
+/* ✅ تعديل: كلاس جديد للإخفاء عبر جافاسكربت */
+.hide {
+    display: none;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* تنسيق أزرار الفلتر */
+/* تنسيق أزرار الفلتر (يبقى كما هو) */
 .filter-btn {
     border: 1px solid #333;
     background: transparent;
