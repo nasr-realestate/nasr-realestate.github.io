@@ -37,34 +37,19 @@ image: "/assets/img/social-requests.webp"
        ========================================================= -->
   <section class="properties-grid" style="min-height: 60vh;">
     
-    {% comment %} 
-      جلب الطلبات وترتيبها بالتاريخ (الأحدث أولاً) 
-    {% endcomment %}
     {% assign all_requests = site.requests | sort: 'date' | reverse %}
     
     {% for req in all_requests %}
         
-        <!-- 
-           ذكاء التصنيف التلقائي للطلبات
-        -->
-        {% assign category_class = "residential" %} <!-- الافتراضي: سكني -->
-        
-        <!-- تصنيف تجاري -->
+        {% assign category_class = "residential" %}
         {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
             {% assign category_class = "commercial" %}
         {% endif %}
-
-        <!-- تصنيف كاش (يضاف ككلاس إضافي) -->
         {% if req.title contains "كاش" or req.budget contains "كاش" %}
             {% assign category_class = category_class | append: " cash" %}
         {% endif %}
 
-        <!-- غلاف البطاقة (يحتوي على اسم الفئة للفلترة) -->
         <div class="filter-item {{ category_class }}">
-            <!-- 
-                هام: type="request"
-                هذا يخبر البطاقة أن تظهر باللون الأزرق وتغير كلمة "السعر" إلى "الميزانية"
-            -->
             {% include property_card.html item=req type="request" %}
         </div>
 
@@ -89,7 +74,7 @@ image: "/assets/img/social-requests.webp"
 </main>
 
 <!-- =========================================================
-     4. سكربت الفلترة (نفس المنطق السريع)
+     4. سكربت الفلترة المُحسَّن
      ========================================================= -->
 <script>
 function filterSelection(c) {
@@ -100,23 +85,15 @@ function filterSelection(c) {
   var btns = document.getElementsByClassName("filter-btn");
   for (i = 0; i < btns.length; i++) {
     btns[i].classList.remove("active");
-    btns[i].style.backgroundColor = "transparent";
-    btns[i].style.color = "#b0b0b0";
-    btns[i].style.borderColor = "#333";
   }
-  
-  // تفعيل الزر المختار (باللون الأزرق هذه المرة ليتناسب مع الطلبات)
   event.currentTarget.classList.add("active");
-  // هنا نستخدم اللون الأزرق للطلبات
-  event.currentTarget.style.backgroundColor = "#0a84ff"; 
-  event.currentTarget.style.color = "#fff";
-  event.currentTarget.style.borderColor = "#0a84ff";
 
-  // إخفاء/إظهار العناصر
-  if (c == "all") c = "";
+  // عكس منطق الإخفاء والإظهار
   for (i = 0; i < x.length; i++) {
-    w3RemoveClass(x[i], "show");
-    if (x[i].className.indexOf(c) > -1) w3AddClass(x[i], "show");
+    w3RemoveClass(x[i], "hide");
+    if (c !== "all" && x[i].className.indexOf(c) === -1) {
+      w3AddClass(x[i], "hide");
+    }
   }
 }
 
@@ -125,7 +102,9 @@ function w3AddClass(element, name) {
   arr1 = element.className.split(" ");
   arr2 = name.split(" ");
   for (i = 0; i < arr2.length; i++) {
-    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
+    if (arr1.indexOf(arr2[i]) == -1) {
+      element.className += " " + arr2[i];
+    }
   }
 }
 
@@ -135,28 +114,34 @@ function w3RemoveClass(element, name) {
   arr2 = name.split(" ");
   for (i = 0; i < arr2.length; i++) {
     while (arr1.indexOf(arr2[i]) > -1) {
-      arr1.splice(arr1.indexOf(arr2[i]), 1);     
+      arr1.splice(arr1.indexOf(arr2[i]), 1);
     }
   }
   element.className = arr1.join(" ");
 }
-
-// تشغيل الفلتر الافتراضي
-document.addEventListener("DOMContentLoaded", function() {
-    filterSelection("all");
-});
 </script>
 
-<!-- ستايل خاص للفلترة (مكرر لضمان العمل المستقل) -->
+<!-- =========================================================
+     5. ستايل الفلترة المُحسَّن
+     ========================================================= -->
 <style>
-.filter-item { display: none; }
-.show { display: block; animation: fadeIn 0.5s; }
+/* ✅ تعديل: العنصر ظاهر بشكل افتراضي */
+.filter-item {
+    display: block;
+    animation: fadeIn 0.5s;
+}
+
+/* ✅ تعديل: كلاس جديد للإخفاء عبر جافاسكربت */
+.hide {
+    display: none;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* تنسيق أزرار الفلتر (مع الحفاظ على اللون الأزرق) */
 .filter-btn {
     border: 1px solid #333;
     background: transparent;
@@ -175,4 +160,5 @@ document.addEventListener("DOMContentLoaded", function() {
     color: #fff;
     border-color: #0a84ff;
 }
-</style>
+                   </style>
+                   
