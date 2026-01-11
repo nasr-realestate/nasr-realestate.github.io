@@ -1,60 +1,114 @@
-{%- comment -%}
-  =============================================================================
-   ملف تصميم بطاقة العقار (Property Card)
-   - يتم استدعاء هذا الملف لعرض كل عقار في الشبكة.
-   - يستقبل متغيرين:
-     1. item: يحتوي على بيانات العقار (العنوان، الصورة، السعر، إلخ).
-     2. type: يحدد نوع العقار ('sale' للبيع أو 'rent' للإيجار).
-  =============================================================================
-{%- endcomment -%}
+<!-- ملف البطاقة (النسخة النهائية والمثالية للـSEO) -->
 
-<article class="property-card">
-  <a href="{{ item.url | relative_url }}" class="card-link">
+{% assign main_color = "#d4af37" %}
+{% assign label_text = "عرض" %}
+{% assign icon_type = "fa-certificate" %}
+{% assign item_url = include.item.url | relative_url %}
+
+{% if include.item.collection == 'requests' %}
+    {% assign main_color = "#0a84ff" %}
+    {% assign label_text = "مطلوب" %}
+    {% assign icon_type = "fa-bullhorn" %}
+{% elsif include.item.title contains "إيجار" %}
+    {% assign main_color = "#fce205" %}
+    {% assign label_text = "إيجار" %}
+    {% assign icon_type = "fa-key" %}
+{% endif %}
+
+<a class="property-card" 
+   href="{{ item_url }}"
+   style="text-decoration: none; border-top: 4px solid {{ main_color }}; overflow: hidden; display: flex; flex-direction: column; height: 100%;"
+   itemscope itemtype="https://schema.org/RealEstateListing">
     
-    <!-- 1. الصورة والبيانات العلوية -->
-    <div class="card-image-container">
-      <img src="{{ item.image | relative_url }}" alt="{{ item.title }}" class="card-image" loading="lazy">
-      
-      <!-- شريط السعر -->
-      <div class="price-tag">
-        {% if item.price %}
-          {{ item.price | append: " جنيه" }}
+    <!-- 🖼️ حالة وجود صورة -->
+    {% if include.item.image_file or include.item.image %}
+    <div class="card-image" style="height: 200px; overflow: hidden; position: relative;">
+        
+        {% if include.item.image_file %}
+            {% assign img_src = "/assets/img/properties/" | append: include.item.image_file | relative_url %}
         {% else %}
-          السعر عند الطلب
+            {% assign img_src = include.item.image | relative_url %}
         {% endif %}
-      </div>
 
-      <!-- شريط نوع العقار (بيع/إيجار) -->
-      <div class="type-tag {{ type }}">
-        {% if type == 'rent' %}
-          <i class="fas fa-key"></i> إيجار
-        {% else %}
-          <i class="fas fa-tag"></i> تمليك
-        {% endif %}
-      </div>
+        <img src="{{ img_src }}" 
+             alt="{{ include.item.title }} - عقار في مدينة نصر" 
+             loading="lazy"
+             itemprop="image"
+             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+        
+        <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: {{ main_color }}; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; border: 1px solid {{ main_color }};">
+            <i class="fas {{ icon_type }}"></i> {{ label_text }}
+        </span>
     </div>
+    
+    <!-- 📄 حالة النص فقط -->
+    {% else %}
+    <div style="padding: 15px 15px 0 15px; display:flex; justify-content:space-between; align-items: center;">
+        <span style="color: {{ main_color }}; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid {{ main_color }};">
+            <i class="fas {{ icon_type }}"></i> {{ label_text }}
+        </span>
+        <span style="color:#666; font-size: 0.8rem;">جديد</span>
+    </div>
+    {% endif %}
 
-    <!-- 2. محتوى البطاقة النصي -->
-    <div class="card-content">
-      
-      <!-- ✅ تم التعديل هنا: تغيير h3 إلى h2 لحل مشكلة تسلسل العناوين -->
-      <h2 class="property-title">{{ item.title }}</h2>
-      
-      <div class="property-details">
-        {% if item.area %}
-          <span><i class="fas fa-ruler-combined"></i> {{ item.area }} م²</span>
-        {% endif %}
-        {% if item.rooms %}
-          <span><i class="fas fa-bed"></i> {{ item.rooms }} غرف</span>
-        {% endif %}
-        {% if item.baths %}
-          <span><i class="fas fa-bath"></i> {{ item.baths }} حمام</span>
-        {% endif %}
-      </div>
-      
-      <p class="property-location">
-        <i class="fas fa-map-marker-alt"></i> {{ item.location | default: "مدينة نصر" }}
-      </p>
+    <!-- محتوى البطاقة -->
+    <div class="card-content" style="padding: 15px; flex-grow: 1; display: flex; flex-direction: column;">
+        
+        <!-- ✅ تم التعديل هنا: تغيير h3 إلى h2 -->
+        <h2 class="property-title" 
+            style="color:#fff; font-size:1.1rem; margin: 0 0 10px 0; line-height: 1.4;"
+            itemprop="name">
+            {{ include.item.title }}
+        </h2>
+        
+        <p style="color:#b0b0b0; font-size:0.9rem; margin-bottom: 15px;" itemprop="address">
+            <i class="fas fa-map-marker-alt" style="color: {{ main_color }};"></i> 
+            <span itemprop="addressLocality">{{ include.item.location }}</span>
+        </p>
+
+        <div style="color: {{ main_color }}; font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            {% if include.item.budget %} 
+                <span itemprop="priceSpecification">ميزانية: {{ include.item.budget }}</span>
+            {% else %} 
+                <span itemprop="priceSpecification">{{ include.item.price }}</span>
+            {% endif %}
+            <meta itemprop="priceCurrency" content="EGP">
+        </div>
+
+        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">
+            {% if include.item.area %}
+            <span itemprop="floorSize">
+                <i class="fas fa-ruler-combined"></i> {{ include.item.area }}
+            </span>
+            {% endif %}
+            
+            {% if include.item.rooms %}
+            <span itemprop="numberOfRooms">
+                <i class="fas fa-bed"></i> {{ include.item.rooms }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #333; text-align: left;">
+            <span style="color: #aaa; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;">
+                عرض التفاصيل <i class="fas fa-arrow-left" style="color: {{ main_color }};"></i>
+            </span>
+        </div>
     </div>
-  </a>
-</article>
+</a>
+
+<style>
+    .property-card:hover img { 
+        transform: scale(1.1); 
+    }
+    
+    .property-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .property-card {
+        transition: all 0.3s ease;
+    }
+</style>
