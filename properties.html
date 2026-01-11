@@ -20,9 +20,7 @@ image: "/assets/img/social-properties.webp"
 
 <main>
 
-  <!-- =========================================================
-       1. أزرار الفلترة (The Filters)
-       ========================================================= -->
+  <!-- أزرار الفلترة -->
   <div class="filter-container" style="margin-bottom: 2rem;">
       <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
       <button class="filter-btn" onclick="filterSelection('apartment')"><i class="fas fa-home"></i> شقق تمليك</button>
@@ -31,9 +29,7 @@ image: "/assets/img/social-properties.webp"
       <button class="filter-btn" onclick="filterSelection('office')"><i class="fas fa-building"></i> مكاتب ومقرات</button>
   </div>
 
-  <!-- =========================================================
-       2. شبكة العرض (Properties Grid)
-       ========================================================= -->
+  <!-- شبكة العرض -->
   <section class="properties-grid" style="min-height: 60vh;">
     
     {% assign all_properties = site.properties | sort: 'date' | reverse %}
@@ -52,14 +48,14 @@ image: "/assets/img/social-properties.webp"
             {% assign category_class = "office" %}
         {% endif %}
 
-        <!-- غلاف البطاقة (يحتوي على اسم الفئة للفلترة) -->
         <div class="filter-item {{ category_class }}">
             {% include property_card.html item=prop type=type %}
         </div>
 
     {% else %}
         <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
-            <h3>لا توجد عقارات حالياً</h3>
+            <!-- ✅ تم التعديل هنا: تغيير h3 إلى h2 -->
+            <h2>لا توجد عقارات حالياً</h2>
         </div>
     {% endfor %}
 
@@ -74,45 +70,31 @@ image: "/assets/img/social-properties.webp"
 
 </main>
 
-<!-- =========================================================
-     3. سكربت الفلترة المُحسَّن
-     ========================================================= -->
+<!-- سكربت وستايل الفلترة (يبقى كما هو) -->
 <script>
 function filterSelection(c) {
   var x, i;
   x = document.getElementsByClassName("filter-item");
-  
-  // تحديث شكل الأزرار
   var btns = document.getElementsByClassName("filter-btn");
   for (i = 0; i < btns.length; i++) {
     btns[i].classList.remove("active");
   }
   event.currentTarget.classList.add("active");
-
-  // عكس منطق الإخفاء والإظهار
   for (i = 0; i < x.length; i++) {
-    // 1. أزل كلاس "hide" من جميع العناصر (لإظهارها)
     w3RemoveClass(x[i], "hide");
-    // 2. إذا لم تكن الفئة المطلوبة "all" والعنصر لا ينتمي لهذه الفئة، قم بإخفائه
     if (c !== "all" && x[i].className.indexOf(c) === -1) {
       w3AddClass(x[i], "hide");
     }
   }
 }
-
-// دالة مساعدة لإضافة كلاس
 function w3AddClass(element, name) {
   var i, arr1, arr2;
   arr1 = element.className.split(" ");
   arr2 = name.split(" ");
   for (i = 0; i < arr2.length; i++) {
-    if (arr1.indexOf(arr2[i]) == -1) {
-      element.className += " " + arr2[i];
-    }
+    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
   }
 }
-
-// دالة مساعدة لحذف كلاس
 function w3RemoveClass(element, name) {
   var i, arr1, arr2;
   arr1 = element.className.split(" ");
@@ -125,44 +107,14 @@ function w3RemoveClass(element, name) {
   element.className = arr1.join(" ");
 }
 </script>
-
-<!-- =========================================================
-     4. ستايل الفلترة المُحسَّن
-     ========================================================= -->
 <style>
-/* ✅ تعديل: العنصر ظاهر بشكل افتراضي */
-.filter-item {
-    display: block;
-    animation: fadeIn 0.5s;
-}
-
-/* ✅ تعديل: كلاس جديد للإخفاء عبر جافاسكربت */
-.hide {
-    display: none;
-}
-
+.filter-item { display: block; animation: fadeIn 0.5s; }
+.hide { display: none; }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-/* تنسيق أزرار الفلتر (يبقى كما هو) */
-.filter-btn {
-    border: 1px solid #333;
-    background: transparent;
-    color: #b0b0b0;
-    padding: 8px 20px;
-    margin: 5px;
-    cursor: pointer;
-    border-radius: 50px;
-    font-family: 'Cairo';
-    font-weight: bold;
-    transition: 0.3s;
-}
+.filter-btn { border: 1px solid #333; background: transparent; color: #b0b0b0; padding: 8px 20px; margin: 5px; cursor: pointer; border-radius: 50px; font-family: 'Cairo'; font-weight: bold; transition: 0.3s; }
 .filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.filter-btn.active {
-    background-color: var(--color-primary);
-    color: #000;
-    border-color: var(--color-primary);
-}
+.filter-btn.active { background-color: var(--color-primary); color: #000; border-color: var(--color-primary); }
 </style>
