@@ -3,351 +3,219 @@ layout: default
 title: "أضف عقارك مجاناً | سمسار طلبك"
 description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
 permalink: /add-your-property.html
-# توحيد البيانات للسيو والمشاركة
 slug: "اضافة-عقار-جديد-مجانا"
-image_file: "social-add.webp
-"
+image_file: "social-add.webp"
 meta_title: "أضف عقارك الآن - خدمة التسويق المجاني في مدينة نصر"
-meta_description: "اعرض شقتك، مكتبك، أو محلك التجاري للبيع أو الإيجار من خلال سمسار طلبك. خطوات بسيطة تضمن لك أسرع وصول للمشتري الجاد."
 ---
 
 <style>
-  /* --- 🎨 تحسينات السهولة والهوية البصرية --- */
-  .smart-form-container {
-    background: var(--color-surface-2);
-    border-radius: 30px;
-    padding: 3.5rem 2.5rem;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
-    border: 1px solid rgba(212, 175, 55, 0.15);
-    max-width: 850px;
+  /* --- تصميم الورقة الواحدة الفخم --- */
+  .smart-form-wrapper {
+    max-width: 900px;
     margin: 3rem auto;
+    background: #0a0a0a; /* خلفية داكنة جداً */
+    border: 1px solid rgba(212, 175, 55, 0.2); /* إطار ذهبي خافت */
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
     position: relative;
     overflow: hidden;
   }
 
-  /* شريط التقدم الفخم */
-  .progress-bar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3.5rem;
-    position: relative;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .progress-bar::before {
-    content: ''; position: absolute; top: 50%; left: 0; right: 0;
-    height: 2px; background-color: #222; z-index: 1; transform: translateY(-50%);
-  }
-  .progress-line {
-    position: absolute; top: 50%; left: 0; height: 3px;
-    background: linear-gradient(90deg, #d4af37, #fce205);
-    z-index: 2; width: 0%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
-  }
-  .progress-step {
-    position: relative; z-index: 3; width: 45px; height: 45px;
-    border-radius: 50%; background-color: #0a0a0a;
-    border: 2px solid #333; color: #666;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 900; transition: all 0.4s ease; font-size: 1.2rem;
-    cursor: pointer;
-  }
-  .progress-step.active {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #000; box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  /* لمسة جمالية علوية */
+  .smart-form-wrapper::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px;
+    background: linear-gradient(90deg, #d4af37, #fce205, #d4af37);
   }
 
-  /* تحسينات الخطوات */
-  .form-step { 
-    display: none; 
-    opacity: 0;
-    transform: translateY(10px);
+  .form-header { text-align: center; margin-bottom: 40px; }
+  .form-header h1 { color: #d4af37; font-size: 2.2rem; margin-bottom: 10px; }
+  .form-header p { color: #888; font-size: 1.1rem; }
+
+  /* شبكة الحقول */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* عمودين */
+    gap: 25px;
   }
-  .form-step.active { 
-    display: block; 
-    animation: fadeInUp 0.6s forwards;
-  }
-  
-  .form-step h2 {
-    color: var(--color-primary); text-align: center;
-    margin-bottom: 2.5rem; font-size: 2rem; font-weight: 900;
-  }
-  
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
-  .form-group { display: flex; flex-direction: column; }
-  .form-group.full-width { grid-column: 1 / -1; }
-  
+
+  /* الحقول التي تأخذ العرض الكامل */
+  .full-width { grid-column: 1 / -1; }
+
   .form-group label {
-    margin-bottom: 0.8rem; color: #fff; font-size: 0.95rem; font-weight: 700;
+    display: block;
+    color: #ccc;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 0.95rem;
   }
-  
-  .property-form input, .property-form select, .property-form textarea {
-    background-color: #050505;
+
+  /* شكل الخانات */
+  .custom-input, .custom-select, .custom-textarea {
+    width: 100%;
+    background: #111;
     border: 1px solid #333;
-    border-radius: 15px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 15px;
     color: #fff;
-    font-size: 1rem;
     font-family: 'Cairo', sans-serif;
-    transition: all 0.3s;
+    font-size: 1rem;
+    transition: all 0.3s ease;
   }
-  
-  .property-form input:focus, .property-form select:focus, .property-form textarea:focus {
+
+  .custom-input:focus, .custom-select:focus, .custom-textarea:focus {
+    border-color: #d4af37;
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    background: #161616;
   }
 
-  /* أزرار التنقل الفاخرة */
-  .form-navigation { 
-    display: flex; justify-content: space-between; 
-    margin-top: 3.5rem; border-top: 1px solid #222; padding-top: 2rem; 
+  /* زر الإرسال */
+  .submit-btn {
+    background: linear-gradient(135deg, #d4af37, #b8860b);
+    color: #000;
+    font-weight: 900;
+    font-size: 1.2rem;
+    border: none;
+    padding: 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+    transition: transform 0.2s;
   }
-  
-  .nav-btn {
-    padding: 15px 35px; border-radius: 50px; cursor: pointer;
-    font-weight: 800; font-family: 'Cairo'; transition: 0.3s;
+  .submit-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
   }
-  
-  .next-btn, .submit-btn {
-    background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
-    color: #000; border: none;
-  }
-  .prev-btn {
-    background: transparent; border: 1px solid #444; color: #888;
-  }
-  .nav-btn:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); }
-  .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 
-  @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-  
-  @media (max-width: 768px) { 
-    .form-grid { grid-template-columns: 1fr; gap: 1.5rem; } 
-    .smart-form-container { padding: 2rem 1.5rem; }
-    .form-step h2 { font-size: 1.5rem; }
+  /* استجابة للموبايل */
+  @media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .smart-form-wrapper { padding: 20px; margin: 1rem; }
   }
 </style>
 
-<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 5rem 1rem; text-align: center;">
-    <h1 class="gold-text" style="font-size: 3rem; font-weight: 900;">أضف عقارك للبيع أو الإيجار</h1>
-    <p style="color: #aaa; font-size: 1.2rem; margin-top: 15px;">انضم إلى مئات الملاك الناجحين.. اعرض عقارك مجاناً اليوم</p>
+<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 3rem 1rem; text-align: center;">
+    <h1 class="gold-text">خدمة الملاك الحصرية</h1>
 </header>
 
 <main>
-<div class="smart-form-container">
-  
-  <!-- مؤشر التقدم -->
-  <div class="progress-bar">
-    <div class="progress-line" id="progressLine"></div>
-    <div class="progress-step active" data-step="1">1</div>
-    <div class="progress-step" data-step="2">2</div>
-    <div class="progress-step" data-step="3">3</div>
-  </div>
+  <div class="smart-form-wrapper">
+    
+    <div class="form-header">
+      <h1><i class="fas fa-edit"></i> أضف بيانات عقارك</h1>
+      <p>املأ الاستمارة التالية وسيتم التواصل معك فوراً لنشر إعلانك</p>
+    </div>
 
-  <form id="smart-form" action="https://formspree.io/f/xpwvedwp" method="POST" class="property-form">
-    <input type="hidden" name="_subject" value="عرض عقاري جديد من الموقع!">
-    <input type="hidden" name="_next" value="https://nasr-realestate.github.io/form-success.html">
+    <!-- 
+       🛑 هام جداً:
+       1. ضع رقم الفورم الخاص بك في الـ action (بدل YOUR_FORM_ID).
+       2. استبدل الكلام الإنجليزي الكبير (مثل NAME_ID) بالاسم الذي أحضرته من JotForm.
+    -->
+    <form action="https://submit.jotform.com/YOUR_FORM_ID" method="post" enctype="multipart/form-data">
 
-    <!-- الخطوة 1: المعلومات الأساسية -->
-    <div class="form-step active" data-step="1">
-      <h2><i class="fas fa-info-circle"></i> البيانات الأساسية</h2>
       <div class="form-grid">
-        <div class="form-group full-width">
-          <label for="title">عنوان الإعلان</label>
-          <input type="text" id="title" name="title" placeholder="مثال: شقة لقطة 180م الترا سوبر لوكس بالمنطقة العاشرة" required>
-        </div>
+
+        <!-- القسم 1: بيانات المالك -->
         <div class="form-group">
-          <label for="property-type">نوع العقار</label>
-          <select id="property-type" name="property-type" required>
-            <option value="" disabled selected>اختر النوع...</option>
+          <label>اسم المعلن (المالك)</label>
+          <input type="text" name="NAME_ID" class="custom-input" placeholder="اكتب اسمك الثلاثي" required>
+        </div>
+
+        <div class="form-group">
+          <label>رقم واتساب للتواصل</label>
+          <input type="text" name="PHONE_ID" class="custom-input" placeholder="01xxxxxxxxx" required>
+        </div>
+
+        <!-- القسم 2: تفاصيل العقار -->
+        <div class="form-group full-width">
+          <label>عنوان الإعلان</label>
+          <input type="text" name="TITLE_ID" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+        </div>
+
+        <div class="form-group">
+          <label>نوع العقار</label>
+          <select name="TYPE_ID" class="custom-select" required>
+            <option value="" disabled selected>اختر من القائمة...</option>
             <option value="شقة للبيع">شقة للبيع</option>
             <option value="شقة للإيجار">شقة للإيجار</option>
             <option value="محل تجاري">محل تجاري</option>
             <option value="مكتب إداري">مكتب إداري</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="price_display">السعر المطلوب (ج.م)</label>
-          <input type="text" id="price_display" name="price_display" placeholder="مثال: 3,500,000" required>
-        </div>
-        <div class="form-group full-width">
-            <label for="area_display">المساحة (متر مربع)</label>
-            <input type="number" id="area_display" name="area_display" placeholder="مثال: 180" required>
-        </div>
-      </div>
-    </div>
 
-    <!-- الخطوة 2: المواصفات الفنية -->
-    <div class="form-step" data-step="2">
-      <h2><i class="fas fa-layer-group"></i> تفاصيل المواصفات</h2>
-      <div class="form-grid">
         <div class="form-group">
-          <label for="rooms">عدد الغرف</label>
-          <select id="rooms" name="rooms" required>
-            <option value="2">2 غرفة</option>
-            <option value="3" selected>3 غرف</option>
-            <option value="4">4 غرف</option>
-            <option value="5">5 غرف أو أكثر</option>
-          </select>
+          <label>السعر المطلوب (ج.م)</label>
+          <input type="text" name="PRICE_ID" class="custom-input" placeholder="مثال: 3,500,000" required>
         </div>
+
         <div class="form-group">
-          <label for="bathrooms">عدد الحمامات</label>
-          <select id="bathrooms" name="bathrooms" required>
-            <option value="1">1 حمام</option>
-            <option value="2" selected>2 حمام</option>
-            <option value="3">3 حمامات</option>
-          </select>
+          <label>المساحة (متر مربع)</label>
+          <input type="number" name="AREA_ID" class="custom-input" placeholder="مثال: 180" required>
         </div>
+
         <div class="form-group">
-          <label for="floor">الدور</label>
-          <select id="floor" name="floor" required>
-              <option value="أرضي">أرضي</option>
-              <option value="متكرر" selected>أدوار متكررة</option>
-              <option value="أخير">أخير / روف</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="finish">نوع التشطيب</label>
-          <select id="finish" name="finish" required>
-            <option value="سوبر لوكس">سوبر لوكس (جاهز للسكن)</option>
+          <label>نوع التشطيب</label>
+          <select name="FINISH_ID" class="custom-select" required>
+            <option value="" disabled selected>اختر من القائمة...</option>
+            <option value="سوبر لوكس">سوبر لوكس</option>
             <option value="نصف تشطيب">نصف تشطيب</option>
             <option value="طوب أحمر">طوب أحمر</option>
           </select>
         </div>
+
+        <!-- القسم 3: المواصفات الرقمية -->
+        <div class="form-group">
+          <label>عدد الغرف</label>
+          <select name="ROOMS_ID" class="custom-select" required>
+            <option value="" disabled selected>اختر...</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>عدد الحمامات</label>
+          <select name="BATH_ID" class="custom-select" required>
+            <option value="" disabled selected>اختر...</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>الدور</label>
+          <select name="FLOOR_ID" class="custom-select" required>
+            <option value="" disabled selected>اختر...</option>
+            <option value="أرضي">أرضي</option>
+            <option value="متكرر">أدوار متكررة</option>
+            <option value="أخير">أخير / روف</option>
+          </select>
+        </div>
+
+        <!-- القسم 4: الموقع والتفاصيل -->
+        <div class="form-group full-width">
+          <label>العنوان التفصيلي</label>
+          <input type="text" name="ADDRESS_ID" class="custom-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
+        </div>
+
+        <div class="form-group full-width">
+          <label>وصف وتفاصيل إضافية</label>
+          <textarea name="DESC_ID" class="custom-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع (الفيو، سنة البناء، حصة الأرض، الأوراق القانونية...)" required></textarea>
+        </div>
+
+        <!-- زر الإرسال -->
+        <div class="full-width">
+          <button type="submit" class="submit-btn">
+            إرسال العرض لسمسار طلبك <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+
       </div>
-    </div>
-
-    <!-- الخطوة 3: الموقع والتواصل -->
-    <div class="form-step" data-step="3">
-      <h2><i class="fas fa-map-marked-alt"></i> الموقع والتواصل</h2>
-      <div class="form-grid">
-        <div class="form-group full-width">
-            <label for="location">العنوان التفصيلي</label>
-            <input type="text" id="location" name="location" placeholder="المنطقة واسم الشارع" required>
-        </div>
-        <div class="form-group full-width">
-            <label for="description">وصف إضافي للعقار</label>
-            <textarea id="description" name="description" rows="4" placeholder="اكتب تفاصيل تهم المشتري: الفيو، الأسانسير، حصة الأرض..." required></textarea>
-        </div>
-        <div class="form-group full-width">
-            <label for="phone">رقم الهاتف (واتساب للتواصل)</label>
-            <input type="tel" id="phone" name="phone" placeholder="01xxxxxxxxx" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- الملاحة -->
-    <div class="form-navigation">
-      <button type="button" class="nav-btn prev-btn" style="visibility: hidden;">السابق</button>
-      <button type="button" class="nav-btn next-btn" disabled>التالي <i class="fas fa-arrow-left"></i></button>
-      <button type="submit" class="nav-btn submit-btn" style="display: none;" disabled>إرسال العرض الآن <i class="fas fa-paper-plane"></i></button>
-    </div>
-  </form>
-</div>
-</main>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('smart-form');
-    const prevBtn = document.querySelector('.prev-btn');
-    const nextBtn = document.querySelector('.next-btn');
-    const submitBtn = document.querySelector('.submit-btn');
-    const formSteps = document.querySelectorAll('.form-step');
-    const progressSteps = document.querySelectorAll('.progress-step');
-    const progressLine = document.getElementById('progressLine');
-    
-    let currentStep = 1;
-
-    // تحديث الواجهة عند كل انتقال
-    const updateUI = () => {
-        progressSteps.forEach((step, index) => {
-            if (index < currentStep) step.classList.add('active');
-            else step.classList.remove('active');
-        });
-        progressLine.style.width = `${((currentStep - 1) / (formSteps.length - 1)) * 100}%`;
-
-        prevBtn.style.visibility = currentStep > 1 ? 'visible' : 'hidden';
-        nextBtn.style.display = currentStep < formSteps.length ? 'inline-block' : 'none';
-        submitBtn.style.display = currentStep === formSteps.length ? 'inline-block' : 'none';
-
-        // توجيه التركيز لأول حقل لسهولة الكتابة
-        const activeStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-        const firstInput = activeStep.querySelector('input, select, textarea');
-        if (firstInput) firstInput.focus();
-
-        validateCurrentStep();
-    };
-
-    // التحقق من صحة الحقول في الخطوة الحالية
-    const validateCurrentStep = () => {
-        const activeStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-        const inputs = activeStep.querySelectorAll('[required]');
-        let stepValid = true;
-        inputs.forEach(input => {
-            if (!input.value.trim()) stepValid = false;
-        });
-
-        if (currentStep < formSteps.length) nextBtn.disabled = !stepValid;
-        else submitBtn.disabled = !stepValid;
-    };
-
-    const goToStep = (step) => {
-        if (step < 1 || step > formSteps.length) return;
-        
-        // منع التقدم للأمام إذا كانت الحقول فارغة
-        if (step > currentStep) {
-            const activeStepInputs = document.querySelector(`.form-step[data-step="${currentStep}"]`).querySelectorAll('[required]');
-            let canAdvance = true;
-            activeStepInputs.forEach(i => { if(!i.value.trim()) canAdvance = false; });
-            if(!canAdvance) return;
-        }
-
-        formSteps.forEach(s => s.classList.remove('active'));
-        document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
-        currentStep = step;
-        updateUI();
-        window.scrollTo({ top: 150, behavior: 'smooth' });
-    };
-
-    // التنقل بالضغط على الأرقام
-    progressSteps.forEach(step => {
-        step.addEventListener('click', () => goToStep(parseInt(step.dataset.step)));
-    });
-
-    nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
-    prevBtn.addEventListener('click', () => goToStep(currentStep - 1));
-    
-    // مراقبة المدخلات لتفعيل الأزرار لحظياً
-    form.querySelectorAll('input, select, textarea').forEach(input => {
-        input.addEventListener('input', validateCurrentStep);
-        input.addEventListener('change', validateCurrentStep);
-    });
-
-    // إرسال ذكي عبر AJAX
-    form.addEventListener("submit", function(e) {
-        e.preventDefault();
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-
-        fetch(form.action, {
-            method: form.method,
-            body: new FormData(form),
-            headers: { 'Accept': 'application/json' }
-        }).then(response => {
-            if (response.ok) window.location.href = "/form-success.html";
-            else {
-                alert("حدث خطأ، يرجى المحاولة مرة أخرى.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'إرسال العقار الآن <i class="fas fa-paper-plane"></i>';
-            }
-        }).catch(() => {
-            alert("فشل الاتصال بالإنترنت.");
-            submitBtn.disabled = false;
-        });
-    });
-
-    updateUI();
-});
-              </script>
+    </form>
+  </div>
+          </main>
