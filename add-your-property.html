@@ -9,27 +9,28 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
 ---
 
 <style>
-  /* --- تصميم الورقة الواحدة الفخم --- */
+  /* --- تصميم الورقة الواحدة (Single Block) الفخم --- */
   .smart-form-wrapper {
     max-width: 900px;
     margin: 3rem auto;
-    background: #0a0a0a; /* خلفية داكنة جداً */
+    background: #0a0a0a; /* خلفية داكنة */
     border: 1px solid rgba(212, 175, 55, 0.2); /* إطار ذهبي خافت */
     border-radius: 20px;
     padding: 40px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.7);
     position: relative;
     overflow: hidden;
+    direction: rtl; /* لضمان اتجاه العربية */
   }
 
-  /* لمسة جمالية علوية */
+  /* الشريط الذهبي العلوي */
   .smart-form-wrapper::before {
     content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px;
     background: linear-gradient(90deg, #d4af37, #fce205, #d4af37);
   }
 
   .form-header { text-align: center; margin-bottom: 40px; }
-  .form-header h1 { color: #d4af37; font-size: 2.2rem; margin-bottom: 10px; }
+  .form-header h1 { color: #d4af37; font-size: 2.2rem; margin-bottom: 10px; font-weight: 900; }
   .form-header p { color: #888; font-size: 1.1rem; }
 
   /* شبكة الحقول */
@@ -39,7 +40,7 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
     gap: 25px;
   }
 
-  /* الحقول التي تأخذ العرض الكامل */
+  /* الحقول العريضة */
   .full-width { grid-column: 1 / -1; }
 
   .form-group label {
@@ -97,7 +98,7 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
 </style>
 
 <header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 3rem 1rem; text-align: center;">
-    <h1 class="gold-text">خدمة الملاك الحصرية</h1>
+    <h1 class="gold-text" style="font-size: 2.5rem; font-weight: 900;">خدمة الملاك الحصرية</h1>
 </header>
 
 <main>
@@ -108,104 +109,112 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
       <p>املأ الاستمارة التالية وسيتم التواصل معك فوراً لنشر إعلانك</p>
     </div>
 
-    <!-- 
-       🛑 هام جداً:
-       1. ضع رقم الفورم الخاص بك في الـ action (بدل YOUR_FORM_ID).
-       2. استبدل الكلام الإنجليزي الكبير (مثل NAME_ID) بالاسم الذي أحضرته من JotForm.
-    -->
-    <form action="https://submit.jotform.com/YOUR_FORM_ID" method="post" enctype="multipart/form-data">
+    <!-- 🟢 رابط الفورم الصحيح الذي أرسلته -->
+    <form action="https://submit.jotform.com/260115694723053" method="post" enctype="multipart/form-data">
 
       <div class="form-grid">
 
-        <!-- القسم 1: بيانات المالك -->
+        <!-- 1. اسم المعلن (input3) -->
         <div class="form-group">
           <label>اسم المعلن (المالك)</label>
-          <input type="text" name="NAME_ID" class="custom-input" placeholder="اكتب اسمك الثلاثي" required>
+          <input type="text" name="input3" class="custom-input" placeholder="اكتب اسمك الثلاثي" required>
         </div>
 
+        <!-- 2. رقم واتساب (input14) -->
         <div class="form-group">
           <label>رقم واتساب للتواصل</label>
-          <input type="text" name="PHONE_ID" class="custom-input" placeholder="01xxxxxxxxx" required>
+          <input type="text" name="input14" class="custom-input" placeholder="01xxxxxxxxx" required>
         </div>
 
-        <!-- القسم 2: تفاصيل العقار -->
+        <!-- 3. عنوان الإعلان (input4) -->
         <div class="form-group full-width">
           <label>عنوان الإعلان</label>
-          <input type="text" name="TITLE_ID" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+          <input type="text" name="input4" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
         </div>
 
+        <!-- 4. نوع العقار (input5) -->
         <div class="form-group">
           <label>نوع العقار</label>
-          <select name="TYPE_ID" class="custom-select" required>
+          <select name="input5" class="custom-select" required>
             <option value="" disabled selected>اختر من القائمة...</option>
-            <option value="شقة للبيع">شقة للبيع</option>
-            <option value="شقة للإيجار">شقة للإيجار</option>
-            <option value="محل تجاري">محل تجاري</option>
-            <option value="مكتب إداري">مكتب إداري</option>
+            <option value="بيع">بيع</option>
+            <option value="إيجار">إيجار</option>
+            <option value="محل">محل</option>
+            <option value="مكتب">مكتب</option>
           </select>
         </div>
 
+        <!-- 5. السعر المطلوب (input6) -->
         <div class="form-group">
           <label>السعر المطلوب (ج.م)</label>
-          <input type="text" name="PRICE_ID" class="custom-input" placeholder="مثال: 3,500,000" required>
+          <input type="text" name="input6" class="custom-input" placeholder="مثال: 3,500,000" required>
         </div>
 
+        <!-- 6. المساحة (input7) -->
         <div class="form-group">
-          <label>المساحة (متر مربع)</label>
-          <input type="number" name="AREA_ID" class="custom-input" placeholder="مثال: 180" required>
+          <label>المساحة الصافية (متر مربع)</label>
+          <input type="number" name="input7" class="custom-input" placeholder="مثال: 180" required>
         </div>
 
+        <!-- 7. التشطيب (input11) -->
         <div class="form-group">
           <label>نوع التشطيب</label>
-          <select name="FINISH_ID" class="custom-select" required>
+          <select name="input11" class="custom-select" required>
             <option value="" disabled selected>اختر من القائمة...</option>
             <option value="سوبر لوكس">سوبر لوكس</option>
+            <option value="تحتاج الي تجديدات">تحتاج الي تجديدات</option>
+            <option value="مجدده">مجدده</option>
             <option value="نصف تشطيب">نصف تشطيب</option>
             <option value="طوب أحمر">طوب أحمر</option>
           </select>
         </div>
 
-        <!-- القسم 3: المواصفات الرقمية -->
+        <!-- 8. الغرف (input8) -->
         <div class="form-group">
           <label>عدد الغرف</label>
-          <select name="ROOMS_ID" class="custom-select" required>
+          <select name="input8" class="custom-select" required>
             <option value="" disabled selected>اختر...</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
+            <option value="اثنان">اثنان</option>
+            <option value="ثلاثة">ثلاثة</option>
+            <option value="أربعة">أربعة</option>
+            <option value="خمسة">خمسة</option>
           </select>
         </div>
 
+        <!-- 9. الحمامات (input9) -->
         <div class="form-group">
           <label>عدد الحمامات</label>
-          <select name="BATH_ID" class="custom-select" required>
+          <select name="input9" class="custom-select" required>
             <option value="" disabled selected>اختر...</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
+            <option value="واحد">واحد</option>
+            <option value="اثنان">اثنان</option>
+            <option value="ثلاثة">ثلاثة</option>
           </select>
         </div>
 
+        <!-- 10. الطابق (input10) -->
         <div class="form-group">
-          <label>الدور</label>
-          <select name="FLOOR_ID" class="custom-select" required>
+          <label>الطابق / الدور</label>
+          <select name="input10" class="custom-select" required>
             <option value="" disabled selected>اختر...</option>
             <option value="أرضي">أرضي</option>
-            <option value="متكرر">أدوار متكررة</option>
-            <option value="أخير">أخير / روف</option>
+            <option value="أول">أول</option>
+            <option value="ثاني">ثاني</option>
+            <option value="متكرر">متكرر</option>
+            <option value="أخير">أخير</option>
           </select>
         </div>
 
-        <!-- القسم 4: الموقع والتفاصيل -->
+        <!-- 11. العنوان التفصيلي (input12) -->
         <div class="form-group full-width">
-          <label>العنوان التفصيلي</label>
-          <input type="text" name="ADDRESS_ID" class="custom-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
+          <label>موقع العقار بالتفصيل</label>
+          <input type="text" name="input12" class="custom-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
         </div>
 
+        <!-- 12. وصف إضافي (input13) -->
         <div class="form-group full-width">
-          <label>وصف وتفاصيل إضافية</label>
-          <textarea name="DESC_ID" class="custom-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع (الفيو، سنة البناء، حصة الأرض، الأوراق القانونية...)" required></textarea>
+          <label>تفاصيل ومميزات إضافية</label>
+          <textarea name="input13" class="custom-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع (الفيو، سنة البناء، حصة الأرض، الأوراق القانونية...)"></textarea>
         </div>
 
         <!-- زر الإرسال -->
@@ -218,4 +227,4 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
       </div>
     </form>
   </div>
-          </main>
+</main>
