@@ -121,10 +121,18 @@ meta_title: "أضف عقارك الآن - خدمة التسويق المجاني
         </div>
 
         <!-- 2. رقم واتساب (input14) -->
-        <div class="form-group">
-          <label>رقم واتساب للتواصل</label>
-          <input type="text" name="input14" class="custom-input" placeholder="01xxxxxxxxx" required>
-        </div>
+        <!-- حقل الهاتف (كود صارم 11 رقم فقط) -->
+<div class="form-group">
+  <label>رقم واتساب للتواصل</label>
+  <input 
+    type="tel" 
+    name="input14" 
+    class="custom-input" 
+    placeholder="01xxxxxxxxx" 
+    maxlength="11" 
+    oninput="this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11)"
+    required>
+</div>
 
         <!-- 3. عنوان الإعلان (input4) -->
         <div class="form-group full-width">
