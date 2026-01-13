@@ -1,0 +1,376 @@
+---
+layout: default
+title: "أضف عقارك مجاناً | سمسار طلبك"
+description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
+permalink: /add-your-property.html
+slug: "اضافة-عقار-جديد-مجانا"
+image_file: "social-add.webp"
+meta_title: "أضف عقارك الآن - خدمة التسويق المجاني في مدينة نصر"
+---
+
+<!-- 1. كود Schema لتعريف الصفحة كخدمة -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "خدمة تسويق العقارات - سمسار طلبك",
+  "provider": {
+    "@type": "RealEstateAgent",
+    "name": "سمسار طلبك"
+  },
+  "serviceType": "Real Estate Listing",
+  "areaServed": {
+    "@type": "Place",
+    "name": "مدينة نصر, القاهرة"
+  },
+  "description": "خدمة مجانية لملاك العقارات لعرض وحداتهم للبيع أو الإيجار والوصول لآلاف المشترين."
+}
+</script>
+
+<style>
+  /* --- 🎨 تنسيقات خاصة لصفحة الإضافة (Premium Form Styles) --- */
+  
+  /* الحاوية الرئيسية بتأثير الزجاج الفاخر */
+  .listing-wrapper {
+    max-width: 950px;
+    margin: -3rem auto 4rem; /* رفع التصميم للأعلى قليلاً ليتداخل مع الهيدر بجمال */
+    position: relative;
+    z-index: 10;
+  }
+
+  .premium-card {
+    background: rgba(15, 15, 15, 0.85); /* أسود شفاف */
+    backdrop-filter: blur(20px);         /* تمويه الخلفية */
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-top: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+
+  /* شريط علوي ذهبي */
+  .premium-card::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, transparent, #d4af37, #fce205, #d4af37, transparent);
+  }
+
+  /* --- قسم المميزات (Why Us?) --- */
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 30px;
+  }
+  
+  .benefit-item {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 15px;
+    border: 1px solid transparent;
+    transition: 0.3s;
+  }
+  .benefit-item:hover {
+    background: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.2);
+    transform: translateY(-5px);
+  }
+  .benefit-icon {
+    font-size: 2rem;
+    color: #d4af37;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 10px rgba(212,175,55,0.3));
+  }
+  .benefit-title { color: #fff; font-weight: bold; margin-bottom: 5px; font-size: 0.95rem; }
+  .benefit-desc { color: #888; font-size: 0.8rem; }
+
+  /* --- عناوين الأقسام داخل الفورم --- */
+  .section-divider {
+    display: flex; align-items: center; gap: 15px;
+    margin: 30px 0 20px;
+  }
+  .divider-line { flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1); }
+  .section-title {
+    color: #d4af37; font-weight: 700; font-size: 1.1rem;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 5px 15px; border-radius: 20px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+  }
+
+  /* --- حقول الإدخال المحسنة --- */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .full-width { grid-column: 1 / -1; }
+
+  .form-group { position: relative; }
+  .form-group label {
+    display: block; color: #ccc; margin-bottom: 8px;
+    font-size: 0.9rem; font-weight: 600;
+    transition: 0.3s;
+  }
+  
+  .custom-input, .custom-select, .custom-textarea {
+    width: 100%;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 16px;
+    color: #fff;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .custom-input:focus, .custom-select:focus, .custom-textarea:focus {
+    border-color: #d4af37;
+    background: #111;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+    outline: none;
+  }
+  
+  /* تلوين الـ Label عند التركيز */
+  .form-group:focus-within label { color: #d4af37; }
+
+  /* --- زر الإرسال العملاق --- */
+  .submit-area {
+    margin-top: 30px;
+    text-align: center;
+    position: relative;
+  }
+  
+  .submit-btn {
+    background: linear-gradient(135deg, #d4af37, #b8860b);
+    color: #000;
+    font-weight: 900;
+    font-size: 1.3rem;
+    border: none;
+    padding: 20px 60px;
+    border-radius: 50px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(212, 175, 55, 0.4);
+    background: linear-gradient(135deg, #fce205, #d4af37);
+  }
+
+  .security-note {
+    margin-top: 15px;
+    color: #666; font-size: 0.85rem;
+    display: flex; justify-content: center; align-items: center; gap: 5px;
+  }
+
+  @media (max-width: 768px) {
+    .benefits-grid { grid-template-columns: 1fr; gap: 10px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .premium-card { padding: 25px; }
+    .submit-btn { padding: 18px 20px; font-size: 1.1rem; width: 100%; }
+    .listing-wrapper { margin-top: 0; }
+  }
+</style>
+
+<!-- الهيدر الجذاب -->
+<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); padding-bottom: 5rem;">
+    <h1 class="gold-text" style="font-size: 2.8rem; font-weight: 900; margin-bottom: 15px;">خدمة الملاك الحصرية</h1>
+    <p style="color: #aaa; font-size: 1.1rem;">اعرض عقارك الآن أمام 50,000+ مشتري مهتم في مدينة نصر</p>
+</header>
+
+<main>
+  <div class="listing-wrapper">
+    <div class="premium-card">
+
+      <!-- 1. المحفزات (لماذا تضيف عقارك؟) -->
+      <div class="benefits-grid">
+        <div class="benefit-item">
+          <i class="fas fa-bolt benefit-icon"></i>
+          <div class="benefit-title">سرعة البيع</div>
+          <div class="benefit-desc">قاعدة بيانات ضخمة لمشترين جاهزين</div>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-shield-alt benefit-icon"></i>
+          <div class="benefit-title">خصوصية وأمان</div>
+          <div class="benefit-desc">نحافظ على سرية بياناتك الشخصية</div>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-gem benefit-icon"></i>
+          <div class="benefit-title">تسويق احترافي</div>
+          <div class="benefit-desc">تصوير وعرض العقار بأحدث الطرق</div>
+        </div>
+      </div>
+
+      <!-- 🟢 نموذج الإرسال (تم الحفاظ على الروابط والأسماء بدقة) -->
+      <form action="https://submit.jotform.com/submit/260115694723053" method="post" enctype="multipart/form-data">
+
+        <!-- القسم الأول: تفاصيل العرض -->
+        <div class="section-divider">
+           <span class="section-title"><i class="fas fa-home"></i> مواصفات الوحدة</span>
+           <div class="divider-line"></div>
+        </div>
+
+        <div class="form-grid">
+          <!-- 1. عنوان الإعلان -->
+          <div class="form-group full-width">
+            <label>عنوان الإعلان المقترح</label>
+            <input type="text" name="q4_input4" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+          </div>
+
+          <!-- 2. نوع العقار -->
+          <div class="form-group">
+            <label>نوع العقار</label>
+            <select name="q5_input5" class="custom-select" required>
+              <option value="" disabled selected>اختر من القائمة...</option>
+              <option value="بيع">بيع</option>
+              <option value="إيجار">إيجار</option>
+              <option value="محل">محل</option>
+              <option value="مكتب">مكتب</option>
+            </select>
+          </div>
+
+          <!-- 3. السعر المطلوب -->
+          <div class="form-group">
+            <label>السعر المطلوب (ج.م)</label>
+            <input type="text" name="q6_input6" class="custom-input" placeholder="مثال: 3,500,000" required>
+          </div>
+
+          <!-- 4. المساحة -->
+          <div class="form-group full-width">
+            <label>المساحة الصافية (متر مربع)</label>
+            <input type="number" name="q7_input7" class="custom-input" placeholder="مثال: 180" required>
+          </div>
+        </div>
+
+        <!-- القسم الثاني: التشطيب والتقسيم -->
+        <div class="section-divider">
+           <span class="section-title"><i class="fas fa-layer-group"></i> التشطيب والتقسيم</span>
+           <div class="divider-line"></div>
+        </div>
+
+        <div class="form-grid">
+          <!-- 8. التشطيب -->
+          <div class="form-group">
+            <label>حالة التشطيب</label>
+            <select name="q11_input11" class="custom-select" required>
+              <option value="" disabled selected>اختر الحالة...</option>
+              <option value="سوبر لوكس">سوبر لوكس</option>
+              <option value="تحتاج الي تجديدات">تحتاج الي تجديدات</option>
+              <option value="مجدده">مجدده</option>
+              <option value="نصف تشطيب">نصف تشطيب</option>
+              <option value="طوب أحمر">طوب أحمر</option>
+            </select>
+          </div>
+
+          <!-- 7. الطابق -->
+          <div class="form-group">
+            <label>الدور / الطابق</label>
+            <select name="q10_input10" class="custom-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="أرضي">أرضي</option>
+              <option value="أول">أول</option>
+              <option value="ثاني">ثاني</option>
+              <option value="متكرر">متكرر</option>
+              <option value="أخير">أخير</option>
+            </select>
+          </div>
+
+          <!-- 5. الغرف -->
+          <div class="form-group">
+            <label>عدد الغرف</label>
+            <select name="q8_input8" class="custom-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="اثنان">اثنان</option>
+              <option value="ثلاثة">ثلاثة</option>
+              <option value="أربعة">أربعة</option>
+              <option value="خمسة">خمسة</option>
+            </select>
+          </div>
+
+          <!-- 6. الحمامات -->
+          <div class="form-group">
+            <label>عدد الحمامات</label>
+            <select name="q9_input9" class="custom-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="واحد">واحد</option>
+              <option value="اثنان">اثنان</option>
+              <option value="ثلاثة">ثلاثة</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- القسم الثالث: الموقع والتفاصيل -->
+        <div class="section-divider">
+           <span class="section-title"><i class="fas fa-map-marked-alt"></i> الموقع والتفاصيل</span>
+           <div class="divider-line"></div>
+        </div>
+
+        <div class="form-grid">
+          <!-- 9. العنوان التفصيلي -->
+          <div class="form-group full-width">
+            <label>موقع العقار بالتفصيل</label>
+            <input type="text" name="q12_input12" class="custom-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
+          </div>
+
+          <!-- 10. الوصف -->
+          <div class="form-group full-width">
+            <label>تفاصيل ومميزات إضافية</label>
+            <textarea name="q13_input13" class="custom-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع (فيو، سنة البناء، حصة الأرض، غاز طبيعي...)"></textarea>
+          </div>
+        </div>
+
+        <!-- القسم الرابع: بيانات المالك -->
+        <div class="section-divider" style="border-color: #d4af37;">
+           <span class="section-title" style="background: rgba(212,175,55,0.2); color: #fff;"><i class="fas fa-user-shield"></i> بيانات التواصل الخاصة</span>
+           <div class="divider-line" style="background: #d4af37;"></div>
+        </div>
+
+        <div class="form-grid">
+           <!-- 11. رقم واتساب (الكود الصارم input16) -->
+          <div class="form-group">
+            <label>رقم واتساب للتواصل</label>
+            <input 
+              type="tel" 
+              name="q16_input16" 
+              class="custom-input" 
+              placeholder="01xxxxxxxxx" 
+              maxlength="11" 
+              style="font-size: 1.2rem; letter-spacing: 2px; font-weight: bold; color: #d4af37;"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11)"
+              required>
+          </div>
+
+          <!-- 12. اسم المعلن -->
+          <div class="form-group">
+            <label>اسم المالك (المعلن)</label>
+            <input type="text" name="q3_input3" class="custom-input" placeholder="اكتب اسمك الثلاثي" required>
+          </div>
+        </div>
+
+        <!-- زر الإرسال -->
+        <div class="submit-area">
+          <button type="submit" class="submit-btn">
+             نشر عقاري الآن مجاناً <i class="fas fa-rocket"></i>
+          </button>
+          <div class="security-note">
+             <i class="fas fa-lock"></i> بياناتك مشفرة ومحمية بنسبة 100%
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+  </main>
