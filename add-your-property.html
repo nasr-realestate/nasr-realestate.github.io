@@ -8,230 +8,256 @@ image_file: "social-add.webp"
 meta_title: "أضف عقارك الآن - خدمة التسويق المجاني في مدينة نصر"
 ---
 
-<style>
-  /* --- تصميم الورقة الواحدة الفخم --- */
-  .smart-form-wrapper {
-    max-width: 900px;
-    margin: 3rem auto;
-    background: #0a0a0a;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 20px;
-    padding: 40px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-    position: relative;
-    overflow: hidden;
-    direction: rtl;
-  }
-
-  .smart-form-wrapper::before {
-    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px;
-    background: linear-gradient(90deg, #d4af37, #fce205, #d4af37);
-  }
-
-  .form-header { text-align: center; margin-bottom: 40px; }
-  .form-header h1 { color: #d4af37; font-size: 2.2rem; margin-bottom: 10px; font-weight: 900; }
-  .form-header p { color: #888; font-size: 1.1rem; }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 25px;
-  }
-
-  .full-width { grid-column: 1 / -1; }
-
-  .form-group label {
-    display: block;
-    color: #ccc;
-    margin-bottom: 8px;
-    font-weight: bold;
-    font-size: 0.95rem;
-  }
-
-  .custom-input, .custom-select, .custom-textarea {
-    width: 100%;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 15px;
-    color: #fff;
-    font-family: 'Cairo', sans-serif;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-  }
-
-  .custom-input:focus, .custom-select:focus, .custom-textarea:focus {
-    border-color: #d4af37;
-    outline: none;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-    background: #161616;
-  }
-
-  .submit-btn {
-    background: linear-gradient(135deg, #d4af37, #b8860b);
-    color: #000;
-    font-weight: 900;
-    font-size: 1.2rem;
-    border: none;
-    padding: 18px;
-    border-radius: 50px;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 20px;
-    transition: transform 0.2s;
-  }
-  .submit-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
-  }
-
-  @media (max-width: 768px) {
-    .form-grid { grid-template-columns: 1fr; }
-    .smart-form-wrapper { padding: 20px; margin: 1rem; }
-  }
-</style>
+<!-- =========================================================
+ * 🏢 سمسار طلبك - صفحة إضافة عقار المبتكرة v2.1
+ * تصميم تفاعلي بنظام الخطوات لزيادة التحويل
+ * ========================================================= -->
 
 <header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 3rem 1rem; text-align: center;">
-    <h1 class="gold-text" style="font-size: 2.5rem; font-weight: 900;">أضف عقارك مجاناً</h1>
+    <h1 class="gold-text" style="font-size: 2.5rem; font-weight: 900;">أضف عقارك في 3 خطوات فقط</h1>
+    <p style="color: var(--color-text-secondary); font-size: 1.2rem; margin-top: 1rem;">تجربة سهلة وسريعة لعرض عقارك أمام آلاف المشترين</p>
 </header>
 
-<main>
-  <div class="smart-form-wrapper">
-    
-    <div class="form-header">
-      <h1><i class="fas fa-edit"></i> بيانات الوحدة</h1>
-      <p>املأ البيانات التالية لنقوم بعرض عقارك للمشترين</p>
+<main class="add-property-page">
+  <div class="form-container">
+    <!-- شريط التقدم -->
+    <div class="form-progress-bar">
+      <div class="progress-step active" data-step="1">
+        <i class="fas fa-building"></i> التفاصيل الأساسية
+      </div>
+      <div class="progress-step" data-step="2">
+        <i class="fas fa-ruler-combined"></i> مواصفات الوحدة
+      </div>
+      <div class="progress-step" data-step="3">
+        <i class="fas fa-user-check"></i> بيانات التواصل
+      </div>
     </div>
 
     <!-- ✅ الرابط الصحيح مع /submit/ -->
-    <form action="https://submit.jotform.com/submit/260115694723053" method="post" enctype="multipart/form-data">
+    <form id="multiStepForm" action="https://submit.jotform.com/submit/260115694723053" method="post" enctype="multipart/form-data">
 
-      <div class="form-grid">
-
-        <!-- 1. عنوان الإعلان -->
-        <div class="form-group full-width">
-          <label>عنوان الإعلان</label>
-          <input type="text" name="q4_input4" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+      <!-- ======================= -->
+      <!-- === الخطوة 1: التفاصيل الأساسية === -->
+      <!-- ======================= -->
+      <div id="step-1" class="form-step active">
+        <div class="form-step-header">
+          <h2><span class="icon">🏠</span>الخطوة الأولى: تفاصيل العقار</h2>
+          <p>ابدأ بالمعلومات الرئيسية التي تجذب انتباه المشتري.</p>
         </div>
-
-        <!-- 2. نوع العقار -->
-        <div class="form-group">
-          <label>نوع العقار</label>
-          <select name="q5_input5" class="custom-select" required>
-            <option value="" disabled selected>اختر من القائمة...</option>
-            <option value="بيع">بيع</option>
-            <option value="إيجار">إيجار</option>
-            <option value="محل">محل</option>
-            <option value="مكتب">مكتب</option>
-          </select>
+        <div class="form-grid">
+          <!-- عنوان الإعلان -->
+          <div class="form-group full-width">
+            <label for="q4_input4">عنوان الإعلان (أهم شيء!)</label>
+            <input type="text" id="q4_input4" name="q4_input4" class="form-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+          </div>
+          <!-- نوع العقار -->
+          <div class="form-group">
+            <label for="q5_input5">نوع العرض</label>
+            <select id="q5_input5" name="q5_input5" class="form-select" required>
+              <option value="" disabled selected>اختر من القائمة...</option>
+              <option value="بيع">بيع</option>
+              <option value="إيجار">إيجار</option>
+              <option value="محل">محل</option>
+              <option value="مكتب">مكتب</option>
+            </select>
+          </div>
+          <!-- السعر المطلوب -->
+          <div class="form-group">
+            <label for="q6_input6">السعر المطلوب (ج.م)</label>
+            <input type="text" id="q6_input6" name="q6_input6" class="form-input" placeholder="مثال: 3,500,000" required>
+          </div>
+          <!-- العنوان التفصيلي -->
+          <div class="form-group full-width">
+            <label for="q12_input12">موقع العقار بالتفصيل</label>
+            <input type="text" id="q12_input12" name="q12_input12" class="form-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
+          </div>
         </div>
-
-        <!-- 3. السعر المطلوب -->
-        <div class="form-group">
-          <label>السعر المطلوب (ج.م)</label>
-          <input type="text" name="q6_input6" class="custom-input" placeholder="مثال: 3,500,000" required>
-        </div>
-
-        <!-- 4. المساحة -->
-        <div class="form-group full-width">
-          <label>المساحة الصافية (متر مربع)</label>
-          <input type="number" name="q7_input7" class="custom-input" placeholder="مثال: 180" required>
-        </div>
-
-        <!-- 5. الغرف -->
-        <div class="form-group">
-          <label>عدد الغرف</label>
-          <select name="q8_input8" class="custom-select" required>
-            <option value="" disabled selected>اختر...</option>
-            <option value="اثنان">اثنان</option>
-            <option value="ثلاثة">ثلاثة</option>
-            <option value="أربعة">أربعة</option>
-            <option value="خمسة">خمسة</option>
-          </select>
-        </div>
-
-        <!-- 6. الحمامات -->
-        <div class="form-group">
-          <label>عدد الحمامات</label>
-          <select name="q9_input9" class="custom-select" required>
-            <option value="" disabled selected>اختر...</option>
-            <option value="واحد">واحد</option>
-            <option value="اثنان">اثنان</option>
-            <option value="ثلاثة">ثلاثة</option>
-          </select>
-        </div>
-
-        <!-- 7. الطابق -->
-        <div class="form-group">
-          <label>الطابق / الدور</label>
-          <select name="q10_input10" class="custom-select" required>
-            <option value="" disabled selected>اختر...</option>
-            <option value="أرضي">أرضي</option>
-            <option value="أول">أول</option>
-            <option value="ثاني">ثاني</option>
-            <option value="متكرر">متكرر</option>
-            <option value="أخير">أخير</option>
-          </select>
-        </div>
-
-        <!-- 8. التشطيب -->
-        <div class="form-group">
-          <label>نوع التشطيب</label>
-          <select name="q11_input11" class="custom-select" required>
-            <option value="" disabled selected>اختر من القائمة...</option>
-            <option value="سوبر لوكس">سوبر لوكس</option>
-            <option value="تحتاج الي تجديدات">تحتاج الي تجديدات</option>
-            <option value="مجدده">مجدده</option>
-            <option value="نصف تشطيب">نصف تشطيب</option>
-            <option value="طوب أحمر">طوب أحمر</option>
-          </select>
-        </div>
-
-        <!-- 9. العنوان التفصيلي -->
-        <div class="form-group full-width">
-          <label>موقع العقار بالتفصيل</label>
-          <input type="text" name="q12_input12" class="custom-input" placeholder="المنطقة - اسم الشارع - رقم العمارة" required>
-        </div>
-
-        <!-- 10. الوصف -->
-        <div class="form-group full-width">
-          <label>تفاصيل ومميزات إضافية</label>
-          <textarea name="q13_input13" class="custom-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع..."></textarea>
-        </div>
-
-        <!-- فاصل جمالي قبل بيانات الاتصال -->
-        <div class="full-width" style="margin: 20px 0; border-top: 1px dashed #333;"></div>
-        <div class="full-width" style="text-align: center; margin-bottom: 15px;">
-            <h3 style="color: #d4af37; font-size: 1.2rem;">بيانات التواصل</h3>
-        </div>
-
-        <!-- 11. رقم واتساب (الكود الصارم) -->
-        <div class="form-group">
-          <label>رقم واتساب للتواصل</label>
-          <input 
-            type="tel" 
-            name="q16_input16" 
-            class="custom-input" 
-            placeholder="01xxxxxxxxx" 
-            maxlength="11" 
-            oninput="this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11)"
-            required>
-        </div>
-
-        <!-- 12. اسم المعلن -->
-        <div class="form-group">
-          <label>اسم المعلن (المالك)</label>
-          <input type="text" name="q3_input3" class="custom-input" placeholder="اكتب اسمك الثلاثي" required>
-        </div>
-
-        <!-- زر الإرسال -->
-        <div class="full-width">
-          <button type="submit" class="submit-btn">
-            إرسال العرض الآن <i class="fas fa-paper-plane"></i>
+        <div class="form-navigation">
+          <button type="button" class="form-btn btn-next">
+            الخطوة التالية <i class="fas fa-arrow-left"></i>
           </button>
         </div>
-
       </div>
+
+      <!-- ======================= -->
+      <!-- === الخطوة 2: مواصفات الوحدة === -->
+      <!-- ======================= -->
+      <div id="step-2" class="form-step">
+        <div class="form-step-header">
+          <h2><span class="icon">📏</span>الخطوة الثانية: مواصفات الوحدة</h2>
+          <p>التفاصيل الدقيقة تزيد من فرص البيع بشكل كبير.</p>
+        </div>
+        <div class="form-grid">
+          <!-- المساحة -->
+          <div class="form-group">
+            <label for="q7_input7">المساحة الصافية (متر مربع)</label>
+            <input type="number" id="q7_input7" name="q7_input7" class="form-input" placeholder="مثال: 180" required>
+          </div>
+          <!-- التشطيب -->
+          <div class="form-group">
+            <label for="q11_input11">نوع التشطيب</label>
+            <select id="q11_input11" name="q11_input11" class="form-select" required>
+              <option value="" disabled selected>اختر من القائمة...</option>
+              <option value="سوبر لوكس">سوبر لوكس</option>
+              <option value="تحتاج الي تجديدات">تحتاج الي تجديدات</option>
+              <option value="مجدده">مجدده</option>
+              <option value="نصف تشطيب">نصف تشطيب</option>
+              <option value="طوب أحمر">طوب أحمر</option>
+            </select>
+          </div>
+          <!-- الغرف -->
+          <div class="form-group">
+            <label for="q8_input8">عدد الغرف</label>
+            <select id="q8_input8" name="q8_input8" class="form-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="اثنان">اثنان</option>
+              <option value="ثلاثة">ثلاثة</option>
+              <option value="أربعة">أربعة</option>
+              <option value="خمسة">خمسة</option>
+            </select>
+          </div>
+          <!-- الحمامات -->
+          <div class="form-group">
+            <label for="q9_input9">عدد الحمامات</label>
+            <select id="q9_input9" name="q9_input9" class="form-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="واحد">واحد</option>
+              <option value="اثنان">اثنان</option>
+              <option value="ثلاثة">ثلاثة</option>
+            </select>
+          </div>
+          <!-- الطابق -->
+          <div class="form-group">
+            <label for="q10_input10">الطابق / الدور</label>
+            <select id="q10_input10" name="q10_input10" class="form-select" required>
+              <option value="" disabled selected>اختر...</option>
+              <option value="أرضي">أرضي</option>
+              <option value="أول">أول</option>
+              <option value="ثاني">ثاني</option>
+              <option value="متكرر">متكرر</option>
+              <option value="أخير">أخير</option>
+            </select>
+          </div>
+          <!-- الوصف -->
+          <div class="form-group full-width">
+            <label for="q13_input13">تفاصيل ومميزات إضافية (اختياري)</label>
+            <textarea id="q13_input13" name="q13_input13" class="form-textarea" rows="4" placeholder="اكتب هنا أي تفاصيل تزيد من فرص البيع... مثل (قريبة من مواصلات، بحري، يوجد أسانسير، إلخ)"></textarea>
+          </div>
+        </div>
+        <div class="form-navigation">
+          <button type="button" class="form-btn btn-prev">
+            <i class="fas fa-arrow-right"></i> السابق
+          </button>
+          <button type="button" class="form-btn btn-next">
+            الخطوة الأخيرة <i class="fas fa-arrow-left"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ======================= -->
+      <!-- === الخطوة 3: بيانات التواصل === -->
+      <!-- ======================= -->
+      <div id="step-3" class="form-step">
+        <div class="form-step-header">
+          <h2><span class="icon">📞</span>الخطوة الأخيرة: بيانات التواصل</h2>
+          <p>لن يتم مشاركة بياناتك إلا مع المشترين الجادين فقط.</p>
+        </div>
+        <div class="form-grid">
+          <!-- اسم المعلن -->
+          <div class="form-group">
+            <label for="q3_input3">اسم المعلن (المالك)</label>
+            <input type="text" id="q3_input3" name="q3_input3" class="form-input" placeholder="اكتب اسمك الثلاثي" required>
+          </div>
+          <!-- رقم واتساب -->
+          <div class="form-group">
+            <label for="q16_input16">رقم واتساب للتواصل</label>
+            <input type="tel" id="q16_input16" name="q16_input16" class="form-input" placeholder="01xxxxxxxxx" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11)" required>
+          </div>
+        </div>
+        <div class="form-navigation">
+          <button type="button" class="form-btn btn-prev">
+            <i class="fas fa-arrow-right"></i> السابق
+          </button>
+          <button type="submit" class="form-btn btn-submit">
+            <i class="fas fa-paper-plane"></i> إرسال العرض الآن
+          </button>
+        </div>
+      </div>
+
+      <!-- ======================= -->
+      <!-- === الخطوة 4: رسالة التأكيد === -->
+      <!-- ======================= -->
+      <div id="step-4" class="form-step">
+        <div class="final-step-message">
+          <div class="icon"><i class="fas fa-check-circle"></i></div>
+          <h2>تم استلام طلبك بنجاح!</h2>
+          <p>سيقوم فريقنا بمراجعة العرض والتواصل معك في أقرب وقت. شكراً لثقتك في سمسار طلبك.</p>
+        </div>
+      </div>
+
     </form>
   </div>
-  </main>
+</main>
+
+<!-- كود JavaScript لتفعيل نظام الخطوات -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('multiStepForm');
+  const steps = Array.from(form.querySelectorAll('.form-step'));
+  const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
+  let currentStep = 1;
+
+  function showStep(stepNumber) {
+    steps.forEach(step => step.classList.remove('active'));
+    document.getElementById(`step-${stepNumber}`).classList.add('active');
+
+    progressSteps.forEach((pStep, index) => {
+      pStep.classList.remove('active', 'completed');
+      if (index < stepNumber - 1) {
+        pStep.classList.add('completed');
+      }
+      if (index === stepNumber - 1) {
+        pStep.classList.add('active');
+      }
+    });
+    currentStep = stepNumber;
+  }
+
+  function validateStep(stepNumber) {
+    const currentStepFields = steps[stepNumber - 1].querySelectorAll('[required]');
+    let isValid = true;
+    currentStepFields.forEach(field => {
+      if (!field.value.trim()) {
+        field.style.borderColor = 'var(--color-error)';
+        isValid = false;
+      } else {
+        field.style.borderColor = 'var(--color-border)';
+      }
+    });
+    return isValid;
+  }
+
+  form.addEventListener('click', function(e) {
+    if (e.target.matches('.btn-next')) {
+      if (validateStep(currentStep)) {
+        showStep(currentStep + 1);
+      }
+    } else if (e.target.matches('.btn-prev')) {
+      showStep(currentStep - 1);
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    if (!validateStep(3)) { // التحقق من الخطوة الأخيرة قبل الإرسال
+      e.preventDefault();
+    } else {
+      // إظهار رسالة النجاح بعد الإرسال
+      // نستخدم تأخير بسيط لإعطاء فرصة للنموذج للإرسال
+      setTimeout(() => {
+        showStep(4); // الانتقال إلى خطوة النجاح
+      }, 500);
+    }
+  });
+});
+  </script>
+  
