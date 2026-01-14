@@ -1,42 +1,25 @@
-name: Site Update Notifications
+name: Notify Search Engines on Deployment
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '_properties/**'
-      - '_requests/**'
-      - 'sitemap.xml'
-      - 'luxury-gallery.html'
-      - 'search-data.json'
+  # التشغيل فقط عند اكتمال النشر بنجاح على GitHub Pages
+  deployment_status:
 
 jobs:
-  notify-search-engines: # تم دمج الخطوات لضمان الترتيب
+  notify:
+    # العمل فقط إذا كان النشر ناجحًا (state == 'success')
+    if: github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for GitHub Pages to deploy
+      - name: 'Notify Google of the sitemap update'
         run: |
-          echo "⏳ Waiting for 60 seconds to allow GitHub Pages to deploy..."
-          sleep 60
-          echo "✅ Deployment wait finished."
+          # استخراج رابط بيئة النشر (e.g., https://nasr-realestate.github.io)
+          SITEMAP_URL="${{ github.event.deployment.payload.web_url }}/sitemap.xml"
+          
+          echo "✅ Deployment successful. Environment URL: ${{ github.event.deployment.payload.web_url }}"
+          echo " pinging Google with sitemap: ${SITEMAP_URL}"
+          
+          # إرسال إشعار (ping) إلى Google
+          curl -s "https://www.google.com/ping?sitemap=${SITEMAP_URL}"
+          
+          echo "✅ Google has been notified!"
 
-      - name: Verify Sitemap and Notify Google
-        run: |
-          SITEMAP_URL="https://nasr-realestate.github.io/sitemap.xml"
-          echo "🔍 Checking sitemap at $SITEMAP_URL..."
-          
-          # التحقق من أن خريطة الموقع متاحة
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" $SITEMAP_URL)
-          
-          if [ "$STATUS" -eq 200 ]; then
-            echo "✅ Sitemap is accessible (Status: $STATUS)."
-            echo "🔄 Notifying Google about the update..."
-            curl -s "https://www.google.com/ping?sitemap=$SITEMAP_URL"
-            echo "✅ Google has been notified!"
-          else
-            # في حالة فشل الوصول لخريطة الموقع، يتم إيقاف العملية مع رسالة خطأ
-            echo "❌ ERROR: Sitemap not accessible (Status: $STATUS). Aborting notification."
-            exit 1
-          fi
-          
