@@ -2,7 +2,7 @@
 layout: null
 sitemap: false
 ---
-<?xml version="1.0" encoding="UTF-8"?>
+{%- assign _ = "" -%}{% raw %}<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- الصفحة الرئيسية -->
   <url>
@@ -55,4 +55,4 @@ sitemap: false
       </url>
     {% endif %}
   {% endfor %}
-</urlset>
+</urlset>{% endraw %}
