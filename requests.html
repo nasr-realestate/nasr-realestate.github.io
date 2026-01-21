@@ -33,33 +33,49 @@ image: "/assets/img/social-requests.webp"
   </div>
 
   <!-- =========================================================
-       3. شبكة الطلبات (Requests Grid)
+       3. شبكة الطلبات (Requests Grid) - النظام الذكي (يخفي القديم)
        ========================================================= -->
   <section class="properties-grid" style="min-height: 60vh;">
     
+    <!-- إعدادات الوقت: 7 أيام = 604800 ثانية -->
+    {% assign expiry_seconds = 604800 %}
+    {% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
     {% assign all_requests = site.requests | sort: 'date' | reverse %}
+    {% assign active_count = 0 %}
     
     {% for req in all_requests %}
         
-        {% assign category_class = "residential" %}
-        {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
-            {% assign category_class = "commercial" %}
-        {% endif %}
-        {% if req.title contains "كاش" or req.budget contains "كاش" %}
-            {% assign category_class = category_class | append: " cash" %}
+        <!-- حساب عمر الطلب -->
+        {% assign req_timestamp = req.date | date: "%s" | plus: 0 %}
+        {% assign age_in_seconds = current_timestamp | minus: req_timestamp %}
+
+        <!-- شرط: اعرض فقط إذا كان الطلب جديداً (أقل من 7 أيام) -->
+        {% if age_in_seconds < expiry_seconds %}
+            {% assign active_count = active_count | plus: 1 %}
+            
+            {% assign category_class = "residential" %}
+            {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
+                {% assign category_class = "commercial" %}
+            {% endif %}
+            {% if req.title contains "كاش" or req.budget contains "كاش" %}
+                {% assign category_class = category_class | append: " cash" %}
+            {% endif %}
+
+            <div class="filter-item {{ category_class }}">
+                {% include property_card.html item=req type="request" %}
+            </div>
         {% endif %}
 
-        <div class="filter-item {{ category_class }}">
-            {% include property_card.html item=req type="request" %}
-        </div>
+    {% endfor %}
 
-    {% else %}
+    <!-- رسالة تظهر فقط إذا لم توجد طلبات نشطة -->
+    {% if active_count == 0 %}
         <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
             <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
             <h3>لا توجد طلبات نشطة حالياً</h3>
-            <p>تم إغلاق جميع الطلبات السابقة بنجاح.</p>
+            <p>جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها لضمان الجدية.</p>
         </div>
-    {% endfor %}
+    {% endif %}
 
   </section>
 
@@ -74,7 +90,7 @@ image: "/assets/img/social-requests.webp"
 </main>
 
 <!-- =========================================================
-     4. سكربت الفلترة المُحسَّن
+     4. سكربت الفلترة
      ========================================================= -->
 <script>
 function filterSelection(c) {
@@ -88,7 +104,7 @@ function filterSelection(c) {
   }
   event.currentTarget.classList.add("active");
 
-  // عكس منطق الإخفاء والإظهار
+  // منطق الإخفاء والإظهار
   for (i = 0; i < x.length; i++) {
     w3RemoveClass(x[i], "hide");
     if (c !== "all" && x[i].className.indexOf(c) === -1) {
@@ -122,26 +138,17 @@ function w3RemoveClass(element, name) {
 </script>
 
 <!-- =========================================================
-     5. ستايل الفلترة المُحسَّن
+     5. ستايل الفلترة
      ========================================================= -->
 <style>
-/* ✅ تعديل: العنصر ظاهر بشكل افتراضي */
-.filter-item {
-    display: block;
-    animation: fadeIn 0.5s;
-}
-
-/* ✅ تعديل: كلاس جديد للإخفاء عبر جافاسكربت */
-.hide {
-    display: none;
-}
+.filter-item { display: block; animation: fadeIn 0.5s; }
+.hide { display: none; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* تنسيق أزرار الفلتر (مع الحفاظ على اللون الأزرق) */
 .filter-btn {
     border: 1px solid #333;
     background: transparent;
@@ -160,5 +167,4 @@ function w3RemoveClass(element, name) {
     color: #fff;
     border-color: #0a84ff;
 }
-                   </style>
-                   
+     </style>
