@@ -2,12 +2,33 @@
 layout: default
 ---
 
+<!-- 1. منطق التحقق من التاريخ (لإظهار التنبيه) -->
+{% assign expiry_seconds = 604800 %} <!-- 7 أيام -->
+{% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
+{% assign req_timestamp = page.date | date: "%s" | plus: 0 %}
+{% assign age = current_timestamp | minus: req_timestamp %}
+
+{% assign is_expired = false %}
+{% if age > expiry_seconds %}
+  {% assign is_expired = true %}
+{% endif %}
+
+{% if is_expired %}
+  <!-- بانر التنبيه للطلبات القديمة -->
+  <div style="background: rgba(50, 0, 0, 0.95); color: #ffaaaa; padding: 25px; text-align: center; border-bottom: 2px solid #ff4444; position: relative; z-index: 999;">
+    <div style="max-width: 800px; margin: 0 auto;">
+        <i class="fas fa-history" style="font-size: 1.8rem; margin-bottom: 10px; color: #ff4444; display: block;"></i>
+        <h3 style="margin: 0 0 5px 0; font-size: 1.3rem; color: #fff;">عذراً، هذا الطلب مؤرشف (قديم)</h3>
+        <p style="margin: 0; font-size: 0.95rem;">مر على هذا الطلب أكثر من أسبوع، وغالباً لم يعد متاحاً. يرجى مراجعة <a href="{{ '/requests/' | relative_url }}" style="color: #fff; text-decoration: underline; font-weight: bold;">أحدث الطلبات النشطة هنا</a>.</p>
+    </div>
+  </div>
+{% endif %}
+
 {% assign phone_number = "+201147758857" %}
 {% assign whatsapp_number = "201147758857" %}
-{% assign whatsapp_message = "لدي عقار يناسب طلبك: " | append: page.title | url_encode %}
 {% assign default_request_image = "/assets/img/social-request-default.webp" %}
 
-<!-- 🌐 وسوم Open Graph للواتساب وفيسبوك (باستخدام الصورة الموحدة للطلبات) -->
+<!-- 🌐 وسوم Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ site.url }}{{ page.url }}">
 <meta property="og:title" content="{{ page.title }}">
@@ -18,7 +39,7 @@ layout: default
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}{{ default_request_image }}">
 
-<!-- بيانات منظمة للطلب (Schema Markup) -->
+<!-- بيانات منظمة (Schema) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -50,9 +71,9 @@ layout: default
 }
 </script>
 
-<div class="details-container request-theme" itemscope itemtype="https://schema.org/Offer">
+<div class="details-container request-theme {% if is_expired %}expired-content{% endif %}" itemscope itemtype="https://schema.org/Offer">
     
-    <!-- 1. شريط العودة (تصميم موحد) -->
+    <!-- 1. شريط العودة -->
     <nav class="property-nav" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; margin-bottom: 30px;">
         <a href="{{ '/requests/' | relative_url }}" class="back-link" style="color: #0a84ff !important; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-arrow-right"></i> العودة لطلبات العملاء
@@ -77,7 +98,7 @@ layout: default
         </p>
     </div>
 
-    <!-- 3. الميزانية (تصميم بارز) -->
+    <!-- 3. الميزانية -->
     <div itemprop="priceSpecification" itemscope itemtype="https://schema.org/PriceSpecification" class="budget-card">
         <span class="budget-label">
             <i class="fas fa-money-bill-wave"></i> الميزانية المرصودة
@@ -90,8 +111,6 @@ layout: default
 
     <!-- 4. تفاصيل الطلب -->
     <div class="content-body" itemprop="description">
-        
-        <!-- ✅ تم التعديل هنا: تغيير h3 إلى h2 -->
         <h2 class="section-subtitle">
             <i class="fas fa-clipboard-list"></i> تفاصيل ومتطلبات الطلب
         </h2>
@@ -114,7 +133,20 @@ layout: default
 </div>
 
 <style>
-/* التنسيقات الأساسية لصفحة الطلب */
+/* تأثير الصفحة المنتهية */
+.expired-content {
+    opacity: 0.5;
+    filter: grayscale(90%);
+    pointer-events: none; /* يمنع الضغط على الأزرار القديمة */
+}
+/* استثناء زر العودة من عدم التفعيل */
+.expired-content .property-nav {
+    pointer-events: auto;
+    opacity: 1;
+    filter: none;
+}
+
+/* التنسيقات الأساسية */
 .details-container.request-theme {
     max-width: 900px;
     margin: 2rem auto;
@@ -123,11 +155,9 @@ layout: default
     font-family: 'Cairo', sans-serif;
 }
 
-/* التاجات */
 .request-tag { background: rgba(10, 132, 255, 0.1); color: #0a84ff; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid #0a84ff; }
 .date-tag { background: rgba(255, 255, 255, 0.05); color: #aaa; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; }
 
-/* بطاقة الميزانية */
 .budget-card {
     background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(10, 132, 255, 0.05));
     padding: 30px;
@@ -139,7 +169,6 @@ layout: default
 .budget-label { color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px; }
 .budget-value { color: #fff; font-size: 2rem; font-weight: 800; }
 
-/* جسم المحتوى */
 .content-body { background: rgba(255,255,255,0.02); padding: 30px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px; line-height: 1.8; color: #ddd; }
 .section-subtitle { color: #0a84ff; margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px; }
 .main-content p { margin-bottom: 15px; }
@@ -162,4 +191,4 @@ function trackPhoneCall(number, label) {
     }
     console.log('Lead tracked: ' + label);
 }
-</script>
+      </script>
