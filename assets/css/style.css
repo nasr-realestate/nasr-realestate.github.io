@@ -497,3 +497,71 @@ img {
     padding-left: 0;
     padding-right: 0;
   }
+/* --- تنسيق حاوية التقييمات --- */
+.reviews-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    flex-wrap: wrap; /* لضمان التجاوب على الموبايل */
+}
+
+/* --- تنسيق زر جوجل ليطابق ترست بايلوت --- */
+.google-btn {
+    display: flex;
+    align-items: center;
+    background-color: #fff; /* خلفية بيضاء كلاسيكية */
+    height: 52px; /* نفس ارتفاع ترست بايلوت بالضبط */
+    padding: 0 15px;
+    border-radius: 4px; /* نفس انحناء الحواف */
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    min-width: 180px;
+}
+
+.google-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.g-logo {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px; /* مسافة بين اللوجو والنص */
+}
+
+.g-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.g-label {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    color: #555;
+    font-weight: bold;
+}
+
+.g-stars {
+    color: #fbbc05; /* أصفر جوجل */
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+/* --- تحسين للموبايل --- */
+@media (max-width: 768px) {
+    .reviews-wrapper {
+        flex-direction: column; /* العناصر تحت بعضها */
+        width: 100%;
+    }
+    .trustpilot-widget, .google-btn {
+        width: 100% !important; /* ملء الشاشة */
+        justify-content: center;
+    }
+}
