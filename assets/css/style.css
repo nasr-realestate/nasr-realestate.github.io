@@ -505,7 +505,11 @@ img {
     padding-left: 0;
     padding-right: 0;
   }
-/* --- تنسيق حاوية التقييمات --- */
+/* =========================================================
+   🌟 تنسيق قسم التقييمات (Google + Trustpilot)
+   ========================================================= */
+
+/* --- الحاوية الرئيسية --- */
 .reviews-wrapper {
     display: flex;
     align-items: center;
@@ -514,62 +518,72 @@ img {
     margin-top: 25px;
     padding-top: 20px;
     border-top: 1px solid rgba(255,255,255,0.1);
-    flex-wrap: wrap; /* لضمان التجاوب على الموبايل */
+    flex-wrap: wrap; /* لضمان التجاوب */
 }
 
-/* --- تنسيق زر جوجل ليطابق ترست بايلوت --- */
+/* --- زر جوجل (تصميم مطابق لـ Trustpilot) --- */
 .google-btn {
     display: flex;
     align-items: center;
-    background-color: #fff; /* خلفية بيضاء كلاسيكية */
-    height: 52px; /* نفس ارتفاع ترست بايلوت بالضبط */
+    background-color: #fff; /* خلفية بيضاء */
+    height: 52px; /* نفس ارتفاع ويدجت Trustpilot بالضبط */
     padding: 0 15px;
-    border-radius: 4px; /* نفس انحناء الحواف */
+    border-radius: 4px; /* انحناء الحواف */
     text-decoration: none;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     transition: transform 0.2s, box-shadow 0.2s;
     min-width: 180px;
+    border: 1px solid #e0e0e0; /* حدود خفيفة جداً للجمالية */
 }
 
 .google-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.g-logo {
+/* --- تنسيق شعار جوجل (SVG) --- */
+.g-logo-svg {
     width: 24px;
     height: 24px;
-    margin-right: 10px; /* مسافة بين اللوجو والنص */
+    margin-right: 12px; /* مسافة بين الشعار والنص */
+    flex-shrink: 0; /* منع الشعار من الانكماش */
+    display: block;
 }
 
+/* --- تنسيق النصوص داخل الزر --- */
 .g-text {
     display: flex;
     flex-direction: column;
     line-height: 1.2;
-    text-align: left;
+    text-align: left; /* المحاذاة لليسار مثل الإنجليزي */
 }
 
 .g-label {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     font-size: 11px;
     color: #555;
     font-weight: bold;
+    text-transform: uppercase; /* حروف كبيرة لتبدو رسمية */
 }
 
 .g-stars {
-    color: #fbbc05; /* أصفر جوجل */
-    font-size: 14px;
-    letter-spacing: 1px;
+    color: #fbbc05; /* لون نجوم جوجل الأصفر الرسمي */
+    font-size: 15px;
+    letter-spacing: 2px; /* تباعد بسيط بين النجوم */
 }
 
-/* --- تحسين للموبايل --- */
+/* --- تحسينات الموبايل (Stacking) --- */
 @media (max-width: 768px) {
     .reviews-wrapper {
         flex-direction: column; /* العناصر تحت بعضها */
+        gap: 10px;
         width: 100%;
     }
+    
+    /* جعل الأزرار بعرض كامل ومريحة لللمس */
     .trustpilot-widget, .google-btn {
-        width: 100% !important; /* ملء الشاشة */
-        justify-content: center;
+        width: 100% !important;
+        max-width: 320px; /* أقصى عرض ليكون الشكل متناسقاً */
+        justify-content: center; /* توسيط المحتوى داخل الزر */
     }
 }
