@@ -20,15 +20,15 @@ permalink: /measure/
 
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #000;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             color: white;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
-            position: fixed;
         }
 
-        #loading {
+        /* شاشة التحميل */
+        #loading-screen {
             position: fixed;
             top: 0;
             left: 0;
@@ -39,26 +39,27 @@ permalink: /measure/
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 9999;
+            z-index: 1000;
+            transition: opacity 0.5s;
         }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #d4af37;
-            border-top-color: transparent;
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(212, 175, 55, 0.3);
+            border-top: 4px solid #d4af37;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
 
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        #error-message {
+        /* شاشة الخطأ */
+        #error-screen {
             display: none;
             position: fixed;
             top: 0;
@@ -67,110 +68,166 @@ permalink: /measure/
             height: 100%;
             background: rgba(0,0,0,0.95);
             color: white;
-            z-index: 9998;
+            z-index: 999;
             text-align: center;
-            padding: 50px 20px;
+            padding: 20px;
             flex-direction: column;
             justify-content: center;
             align-items: center;
         }
 
-        #overlay-container {
-            position: absolute;
+        .error-icon {
+            font-size: 4rem;
+            color: #d4af37;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .retry-btn {
+            background: linear-gradient(45deg, #d4af37, #ffd700);
+            color: #000;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 35px;
+            font-family: 'Cairo';
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        /* الواجهة الرئيسية */
+        #ui-container {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: 100;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            z-index: 100;
         }
 
-        .interactive-ui {
+        .ui-element {
             pointer-events: auto;
         }
 
-        .header-bar {
+        /* الهيدر */
+        .header {
             background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-            padding: 20px;
+            padding: 15px 20px;
             text-align: center;
         }
 
-        .status-badge {
-            background: rgba(212, 175, 55, 0.9);
-            color: #000;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        #result-card {
-            background: rgba(10, 10, 10, 0.9);
-            border: 2px solid #d4af37;
-            padding: 20px 40px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 50px;
-            align-self: center;
-            display: none;
-        }
-
-        .dist-value {
-            font-size: 2.5rem;
+        .title {
             color: #d4af37;
-            font-weight: 900;
-            line-height: 1;
-        }
-
-        .dist-unit {
-            font-size: 1rem;
-            color: #ccc;
-        }
-
-        .reset-btn {
-            background: transparent;
-            border: 1px solid #fff;
-            color: #fff;
-            padding: 8px 25px;
-            border-radius: 50px;
-            margin-top: 10px;
-            font-family: 'Cairo';
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .reset-btn:hover {
-            background: #d4af37;
-            color: #000;
-        }
-
-        #start-button {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(45deg, #d4af37, #ffd700);
-            color: #000;
-            border: none;
-            border-radius: 50px;
-            padding: 15px 40px;
-            font-family: 'Cairo';
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
-            z-index: 101;
+            font-size: 1.3rem;
+            margin: 0;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
         }
 
-        canvas {
+        .status {
+            background: rgba(212, 175, 55, 0.9);
+            color: #000;
+            padding: 6px 18px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+
+        /* بطاقة النتيجة */
+        .result-card {
+            background: rgba(15, 15, 15, 0.95);
+            border: 2px solid #d4af37;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .distance-value {
+            font-size: 2.8rem;
+            color: #d4af37;
+            font-weight: 900;
+            line-height: 1;
+            margin: 10px 0;
+        }
+
+        .distance-unit {
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        /* أزرار التحكم */
+        .controls {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: rgba(30, 30, 30, 0.9);
+            border: 2px solid #d4af37;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-family: 'Cairo';
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .control-btn:hover {
+            background: #d4af37;
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+        }
+
+        /* تلميحات */
+        .hint {
+            color: #aaa;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 0 20px;
+            margin-bottom: 10px;
+        }
+
+        /* Canvas */
+        #ar-canvas {
             position: fixed;
             top: 0;
             left: 0;
@@ -178,141 +235,245 @@ permalink: /measure/
             height: 100%;
             z-index: 0;
         }
+
+        /* علامة AR */
+        .ar-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(212, 175, 55, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            display: none;
+        }
+
+        .ar-marker::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border: 2px solid rgba(212, 175, 55, 0.5);
+            border-radius: 50%;
+        }
+
+        /* متصفح غير مدعوم */
+        #unsupported {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: white;
+            z-index: 2000;
+            text-align: center;
+            padding: 40px 20px;
+        }
     </style>
 </head>
 <body>
     <!-- شاشة التحميل -->
-    <div id="loading">
-        <div class="spinner"></div>
-        <h3 style="color:#d4af37;">جاري تحميل أداة القياس...</h3>
-        <p>يرجى الانتظار</p>
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <h3 style="color:#d4af37; margin: 15px 0;">جاري إعداد المتر الذكي</h3>
+        <p id="loading-text">جاري التحقق من دعم الجهاز...</p>
     </div>
 
-    <!-- رسالة الخطأ -->
-    <div id="error-message">
-        <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #d4af37; margin-bottom: 20px;"></i>
-        <h2>عذراً، لا يمكن تشغيل الأداة</h2>
-        <p id="error-details">حدث خطأ غير متوقع</p>
-        <p style="margin-top: 20px;">المرجو:</p>
-        <ul style="text-align: right; list-style: none; padding: 20px;">
-            <li><i class="fas fa-check"></i> استخدام متصفح Chrome على هاتف أندرويد</li>
-            <li><i class="fas fa-check"></i> تفعيل الكاميرا</li>
-            <li><i class="fas fa-check"></i> التأكد من دعم الجهاز للواقع المعزز</li>
-        </ul>
-        <button onclick="location.reload()" style="background: #d4af37; color: #000; border: none; padding: 10px 30px; border-radius: 25px; margin-top: 20px; cursor: pointer;">
-            <i class="fas fa-redo"></i> إعادة المحاولة
-        </button>
-    </div>
-
-    <!-- واجهة المستخدم -->
-    <div id="overlay-container">
-        <div class="header-bar">
-            <h2 style="margin:0; color:#d4af37;"><i class="fas fa-ruler"></i> المتر الذكي</h2>
-            <div id="instruction" class="status-badge">جاهز للاستخدام</div>
-        </div>
-
-        <div id="result-card" class="interactive-ui">
-            <div class="dist-unit">المسافة</div>
-            <div id="distance-text" class="dist-value">0.00</div>
-            <div class="dist-unit">متر</div>
-            <button class="reset-btn" onclick="resetMeasurement()">قياس جديد ↺</button>
+    <!-- شاشة الخطأ -->
+    <div id="error-screen">
+        <i class="fas fa-exclamation-triangle error-icon"></i>
+        <h2>تعذر تشغيل الكاميرا</h2>
+        <p id="error-details">يرجى التحقق من الإعدادات</p>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 20px 0; text-align: right;">
+            <h4><i class="fas fa-lightbulb"></i> خطوات الحل:</h4>
+            <ul style="list-style: none; padding: 0; margin: 10px 0;">
+                <li><i class="fas fa-check-circle"></i> استخدم متصفح <strong>Chrome</strong> على أندرويد</li>
+                <li><i class="fas fa-check-circle"></i> قم بزيارة <strong>https://samisirk.com/measure/</strong></li>
+                <li><i class="fas fa-check-circle"></i> اسمح باستخدام الكاميرا عند المطالبة</li>
+                <li><i class="fas fa-check-circle"></i> تأكد من دعم جهازك للواقع المعزز</li>
+            </ul>
         </div>
         
-        <!-- زر البدء -->
-        <button id="start-button" onclick="startAR()">
-            <i class="fas fa-camera"></i> بدء القياس
+        <button class="retry-btn" onclick="checkCompatibility()">
+            <i class="fas fa-redo"></i> إعادة المحاولة
         </button>
+        
+        <p style="margin-top: 20px; font-size: 0.8rem; color: #888;">
+            إذا استمرت المشكلة، جرب <a href="/" style="color: #d4af37;">العودة للصفحة الرئيسية</a>
+        </p>
     </div>
 
-    <!-- Canvas للعرض -->
+    <!-- متصفح غير مدعوم -->
+    <div id="unsupported">
+        <i class="fas fa-times-circle" style="font-size: 4rem; color: #d4af37; margin-bottom: 20px;"></i>
+        <h2>المتصفح غير مدعوم</h2>
+        <p>للاستخدام الأمثل، يرجى تحميل:</p>
+        <div style="margin: 20px 0;">
+            <a href="https://play.google.com/store/apps/details?id=com.android.chrome" 
+               style="background: #d4af37; color: #000; padding: 10px 20px; border-radius: 25px; text-decoration: none; display: inline-block; margin: 5px;">
+                <i class="fab fa-chrome"></i> Chrome لأندرويد
+            </a>
+        </div>
+    </div>
+
+    <!-- علامة AR -->
+    <div class="ar-marker" id="ar-marker"></div>
+
+    <!-- واجهة المستخدم -->
+    <div id="ui-container">
+        <!-- الهيدر -->
+        <div class="header ui-element">
+            <h1 class="title"><i class="fas fa-ruler-combined"></i> المتر الذكي</h1>
+            <div class="status" id="status">جاهز للتشغيل</div>
+        </div>
+
+        <!-- بطاقة النتيجة -->
+        <div class="result-card ui-element" id="result-card">
+            <div style="font-size: 0.9rem; color: #aaa;">المسافة المقاسة</div>
+            <div class="distance-value" id="distance-value">0.00</div>
+            <div class="distance-unit" id="distance-unit">متر</div>
+            <button class="control-btn" onclick="resetMeasurement()" style="margin-top: 15px;">
+                <i class="fas fa-redo"></i> قياس جديد
+            </button>
+        </div>
+
+        <!-- أزرار التحكم -->
+        <div class="controls ui-element">
+            <div class="hint" id="hint">
+                اضغط على زر "بدء القياس" لفتح الكاميرا
+            </div>
+            
+            <button class="control-btn" id="start-btn" onclick="startAR()">
+                <i class="fas fa-camera"></i> بدء القياس
+            </button>
+            
+            <button class="control-btn" id="stop-btn" onclick="stopAR()" disabled>
+                <i class="fas fa-stop"></i> إيقاف القياس
+            </button>
+        </div>
+    </div>
+
+    <!-- Canvas لعرض AR -->
     <canvas id="ar-canvas"></canvas>
 
-    <!-- استخدام CDN مباشرة بدون import maps -->
+    <!-- مكتبات JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
     
     <script>
-        // عناصر DOM
-        const loadingElement = document.getElementById('loading');
-        const errorElement = document.getElementById('error-message');
+        // ============= عناصر DOM =============
+        const loadingScreen = document.getElementById('loading-screen');
+        const errorScreen = document.getElementById('error-screen');
+        const unsupportedScreen = document.getElementById('unsupported');
+        const loadingText = document.getElementById('loading-text');
         const errorDetails = document.getElementById('error-details');
-        const instructionDiv = document.getElementById('instruction');
+        const statusElement = document.getElementById('status');
+        const hintElement = document.getElementById('hint');
         const resultCard = document.getElementById('result-card');
-        const distanceText = document.getElementById('distance-text');
-        const startButton = document.getElementById('start-button');
+        const distanceValue = document.getElementById('distance-value');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const arMarker = document.getElementById('ar-marker');
         const canvas = document.getElementById('ar-canvas');
 
-        // متغيرات Three.js
+        // ============= متغيرات التطبيق =============
         let scene, camera, renderer;
+        let arSession = null;
+        let isARActive = false;
         let points = [];
-        let line = null;
-        let isARSessionActive = false;
-        let currentDistance = 0;
+        let measurementLine = null;
+        let reticle = null;
+        
+        // ============= تهيئة التطبيق =============
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // الخطوة 1: التحقق من HTTPS
+                if (window.location.protocol !== 'https:') {
+                    if (window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1') {
+                        showError('يجب فتح الصفحة عبر HTTPS (https://...)');
+                        return;
+                    }
+                }
 
-        // تهيئة التطبيق
-        async function init() {
+                // الخطوة 2: التحقق من دعم WebXR
+                await checkCompatibility();
+                
+                // الخطوة 3: إخفاء شاشة التحميل
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 500);
+                }, 1000);
+
+            } catch (error) {
+                console.error('خطأ في التهيئة:', error);
+                showError(error.message);
+            }
+        });
+
+        // ============= دالة التحقق من التوافق =============
+        async function checkCompatibility() {
+            loadingText.textContent = 'جاري التحقق من توافق الجهاز...';
+            
             try {
                 // التحقق من دعم WebGL
-                if (!checkWebGLSupport()) {
-                    throw new Error('المتصفح لا يدعم WebGL');
+                if (!isWebGLSupported()) {
+                    throw new Error('جهازك لا يدعم WebGL (الجرافيكس المتقدم)');
                 }
 
                 // التحقق من دعم WebXR
                 if (!('xr' in navigator)) {
-                    throw new Error('المتصفح لا يدعم WebXR. استخدم Chrome على Android');
+                    showUnsupportedBrowser();
+                    return;
                 }
 
-                // إنشاء المشهد
-                scene = new THREE.Scene();
+                // التحقق من دعم AR
+                const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (!isSupported) {
+                    throw new Error('جهازك لا يدعم الواقع المعزز (AR)');
+                }
 
-                // إنشاء الكاميرا
-                camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+                // التحقق من وجود كاميرا
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('الكاميرا غير متوفرة أو غير مدعومة');
+                }
 
-                // إنشاء الـ Renderer
-                renderer = new THREE.WebGLRenderer({
-                    canvas: canvas,
-                    antialias: true,
-                    alpha: true
-                });
-                renderer.setPixelRatio(window.devicePixelRatio);
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.xr.enabled = true;
+                // اختبار إذن الكاميرا
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (camError) {
+                    console.warn('تحذير الكاميرا:', camError);
+                    // نستمر رغم ذلك، قد يسمح المستخدم لاحقاً
+                }
 
-                // إضافة إضاءة
-                const light = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
-                light.position.set(0, 1, 0);
-                scene.add(light);
-
-                // إضافة مؤشر
-                const reticleGeometry = new THREE.RingGeometry(0.05, 0.1, 32);
-                const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-                reticle.rotation.x = -Math.PI / 2;
-                reticle.matrixAutoUpdate = false;
-                reticle.visible = false;
-                scene.add(reticle);
-
-                // إخفاء شاشة التحميل
-                setTimeout(() => {
-                    loadingElement.style.display = 'none';
-                    instructionDiv.textContent = 'اضغط "بدء القياس" للاستخدام';
-                }, 1000);
-
-                // إضافة مستمعات الأحداث
-                window.addEventListener('resize', onWindowResize);
-                window.addEventListener('click', handleTap);
-
-                // بدء التصيير
-                animate();
-
+                // إذا وصلنا هنا، الجهاز مدعوم
+                loadingText.textContent = 'الجهاز مدعوم ✓ جاري التهيئة النهائية...';
+                statusElement.textContent = 'جاهز للقياس';
+                hintElement.textContent = 'اضغط "بدء القياس" لفتح الكاميرا';
+                
+                // تهيئة Three.js
+                initThreeJS();
+                
             } catch (error) {
+                console.error('خطأ في التحقق:', error);
                 showError(error.message);
             }
         }
 
-        // التحقق من دعم WebGL
-        function checkWebGLSupport() {
+        // ============= دالة التحقق من WebGL =============
+        function isWebGLSupported() {
             try {
                 const canvas = document.createElement('canvas');
                 return !!(window.WebGLRenderingContext && 
@@ -322,162 +483,108 @@ permalink: /measure/
             }
         }
 
-        // بدء جلسة AR
+        // ============= تهيئة Three.js =============
+        function initThreeJS() {
+            try {
+                // 1. إنشاء المشهد
+                scene = new THREE.Scene();
+                scene.background = null;
+
+                // 2. إنشاء الكاميرا
+                camera = new THREE.PerspectiveCamera(
+                    70, 
+                    window.innerWidth / window.innerHeight, 
+                    0.01, 
+                    100
+                );
+
+                // 3. إنشاء الـ Renderer
+                renderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
+                    antialias: true,
+                    alpha: true,
+                    preserveDrawingBuffer: false
+                });
+                
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.xr.enabled = true;
+                renderer.xr.setReferenceSpaceType('local');
+
+                // 4. إضافة الإضاءة
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(0, 1, 0);
+                scene.add(directionalLight);
+
+                // 5. إنشاء المؤشر (Reticle)
+                const ringGeometry = new THREE.RingGeometry(0.05, 0.08, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ff00, 
+                    transparent: true, 
+                    opacity: 0.8 
+                });
+                
+                reticle = new THREE.Mesh(ringGeometry, ringMaterial);
+                reticle.rotation.x = -Math.PI / 2;
+                reticle.matrixAutoUpdate = false;
+                reticle.visible = false;
+                scene.add(reticle);
+
+                // 6. إعداد مستمع الأحداث
+                window.addEventListener('resize', onWindowResize);
+                window.addEventListener('click', handleScreenTap);
+
+                // 7. بدء التصيير
+                animate();
+
+                console.log('✅ Three.js تم التهيئة بنجاح');
+                
+            } catch (error) {
+                console.error('❌ خطأ في تهيئة Three.js:', error);
+                showError('خطأ في تهيئة المحرك الرسومي');
+            }
+        }
+
+        // ============= دالة بدء جلسة AR =============
         async function startAR() {
             try {
-                instructionDiv.textContent = 'جاري تهيئة الكاميرا...';
-                startButton.style.display = 'none';
-
+                console.log('🟡 محاولة بدء جلسة AR...');
+                
+                statusElement.textContent = 'جاري فتح الكاميرا...';
+                hintElement.textContent = 'يرجى الانتظار...';
+                startBtn.disabled = true;
+                
                 // طلب إذن الكاميرا أولاً
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: { ideal: 'environment' } } 
-                });
-                
-                // إيقاف الفيديو بعد التأكد من الإذن
-                stream.getTracks().forEach(track => track.stop());
+                try {
+                    console.log('طلب إذن الكاميرا...');
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: {
+                            facingMode: { ideal: 'environment' },
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        }
+                    });
+                    
+                    // إيقاف الفيديو مباشرة بعد الحصول على الإذن
+                    stream.getTracks().forEach(track => {
+                        track.stop();
+                        console.log('تم إيقاف track:', track.kind);
+                    });
+                    
+                    console.log('✅ تم الحصول على إذن الكاميرا');
+                } catch (camError) {
+                    console.warn('⚠️ تحذير الكاميرا:', camError);
+                    // نستمر رغم ذلك، قد يكون الإذن ممنوحاً مسبقاً
+                }
 
-                // بدء جلسة WebXR
-                const session = await navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'],
+                // طلب جلسة WebXR AR
+                console.log('طلب جلسة WebXR...');
+                
+                const sessionOptions = {
+                    requiredFeatures: ['local', 'hit-test'],
                     optionalFeatures: ['dom-overlay'],
-                    domOverlay: { root: document.getElementById('overlay-container') }
-                });
-
-                renderer.xr.setSession(session);
-                isARSessionActive = true;
-                
-                instructionDiv.textContent = 'حرك الكاميرا ثم اضغط لإضافة نقطة';
-                instructionDiv.style.backgroundColor = 'rgba(0, 150, 255, 0.9)';
-
-                // عند انتهاء الجلسة
-                session.addEventListener('end', () => {
-                    isARSessionActive = false;
-                    startButton.style.display = 'flex';
-                    instructionDiv.textContent = 'الجلسة انتهت. اضغط لبدء جلسة جديدة';
-                    resetMeasurement();
-                });
-
-            } catch (error) {
-                console.error('خطأ في بدء AR:', error);
-                showError('فشل في تشغيل الكاميرا. تأكد من منح الإذن.');
-                startButton.style.display = 'flex';
-            }
-        }
-
-        // التعامل مع النقر
-        function handleTap(event) {
-            if (!isARSessionActive) return;
-            
-            // إضافة نقطة جديدة
-            addPoint();
-        }
-
-        // إضافة نقطة قياس
-        function addPoint() {
-            // في تطبيق حقيقي، سنستخدم Hit Test للحصول على الموضع الدقيق
-            // لكن هنا سنستخدم موضع عشوائي لأغراض التجربة
-            
-            const pointGeometry = new THREE.SphereGeometry(0.02, 32, 32);
-            const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
-            const point = new THREE.Mesh(pointGeometry, pointMaterial);
-            
-            // موضع عشوائي للعرض (في التطبيق الحقيقي سيكون من Hit Test)
-            point.position.set(
-                (Math.random() - 0.5) * 0.5,
-                (Math.random() - 0.5) * 0.5,
-                -1
-            );
-            
-            scene.add(point);
-            points.push(point);
-            
-            if (points.length === 1) {
-                instructionDiv.textContent = 'اضغط لإضافة النقطة الثانية';
-                instructionDiv.style.backgroundColor = 'rgba(255, 150, 0, 0.9)';
-            } else if (points.length === 2) {
-                // حساب المسافة
-                currentDistance = points[0].position.distanceTo(points[1].position);
-                
-                // رسم الخط
-                if (line) scene.remove(line);
-                
-                const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-                    points[0].position,
-                    points[1].position
-                ]);
-                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 3 });
-                line = new THREE.Line(lineGeometry, lineMaterial);
-                scene.add(line);
-                
-                // عرض النتيجة
-                distanceText.textContent = currentDistance.toFixed(2);
-                resultCard.style.display = 'block';
-                
-                instructionDiv.textContent = `تم القياس: ${currentDistance.toFixed(2)} متر`;
-                instructionDiv.style.backgroundColor = 'rgba(0, 200, 0, 0.9)';
-                
-                // إعادة الضبط بعد 10 ثواني
-                setTimeout(() => {
-                    if (points.length === 2) {
-                        instructionDiv.textContent = 'اضغط لإضافة نقطة جديدة';
-                        instructionDiv.style.backgroundColor = 'rgba(212, 175, 55, 0.9)';
-                    }
-                }, 10000);
-            } else if (points.length > 2) {
-                // بدء قياس جديد
-                resetMeasurement();
-                addPoint();
-            }
-        }
-
-        // إعادة تعيين القياس
-        function resetMeasurement() {
-            // إزالة جميع النقاط
-            points.forEach(point => scene.remove(point));
-            points = [];
-            
-            // إزالة الخط
-            if (line) {
-                scene.remove(line);
-                line = null;
-            }
-            
-            // إخفاء النتيجة
-            resultCard.style.display = 'none';
-            
-            instructionDiv.textContent = 'اضغط لإضافة نقطة البداية';
-            instructionDiv.style.backgroundColor = 'rgba(212, 175, 55, 0.9)';
-        }
-
-        // تغيير حجم النافذة
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // التصيير
-        function animate() {
-            renderer.setAnimationLoop(render);
-        }
-
-        function render() {
-            renderer.render(scene, camera);
-        }
-
-        // عرض رسالة الخطأ
-        function showError(message) {
-            loadingElement.style.display = 'none';
-            errorDetails.textContent = message;
-            errorElement.style.display = 'flex';
-        }
-
-        // جعل الدوال متاحة عالمياً
-        window.startAR = startAR;
-        window.resetMeasurement = resetMeasurement;
-
-        // تهيئة التطبيق عند تحميل الصفحة
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-    </html>
+                    domOverlay: { 
+                        root: document.g
