@@ -6,74 +6,180 @@ permalink: /measure/
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فحص التوافق | سمسار طلبك</title>
+    <title>المتر الذكي | سمسار طلبك</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: monospace; padding: 20px; background: #fff; color: #000; direction: ltr; }
-        .log { margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-        .success { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        .info { color: blue; }
-        button { padding: 15px; font-size: 18px; width: 100%; margin-top: 20px; }
+        body { margin: 0; background-color: #000; color: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; }
+        
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10;
+        }
+        .msg-box {
+            background: rgba(0,0,0,0.6); padding: 15px; text-align: center; margin-top: 20px;
+        }
+        .status { font-size: 1.2rem; font-weight: bold; color: #d4af37; }
+        
+        #ar-btn {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            background: #d4af37; color: #000; border: 2px solid #fff;
+            padding: 15px 40px; font-size: 1.2rem; border-radius: 50px; 
+            font-weight: bold; pointer-events: auto; cursor: pointer;
+            box-shadow: 0 0 15px #d4af37; display: none;
+        }
     </style>
+    <!-- استيراد Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
 </head>
 <body>
-    <h2>AR Compatibility Diagnostic</h2>
-    <div id="console"></div>
-    <button id="btn" style="display:none;" onclick="startSession()">Start AR Session</button>
+
+    <div id="overlay">
+        <div class="msg-box">
+            <div id="status-text" class="status">جاري التحميل...</div>
+        </div>
+    </div>
+
+    <button id="ar-btn">📷 تشغيل الكاميرا</button>
 
     <script type="module">
-        function log(msg, type = 'info') {
-            const div = document.createElement('div');
-            div.className = `log ${type}`;
-            div.innerText = `[${type.toUpperCase()}] ${msg}`;
-            document.getElementById('console').appendChild(div);
-        }
+        import * as THREE from 'three';
 
-        log("Checking Navigator...", "info");
+        let camera, scene, renderer;
+        let reticle;
+        let hitTestSource = null;
+        let hitTestSourceRequested = false;
+        let points = [];
+        let currentLine = null;
 
-        if ('xr' in navigator) {
-            log("navigator.xr exists ✅", "success");
+        init();
+
+        function init() {
+            const container = document.createElement('div');
+            document.body.appendChild(container);
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
             
-            log("Checking 'immersive-ar' support...", "info");
-            
-            navigator.xr.isSessionSupported('immersive-ar')
-                .then((supported) => {
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
+            light.position.set(0.5, 1, 0.25);
+            scene.add(light);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // المؤشر
+            reticle = new THREE.Mesh(
+                new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            reticle.matrixAutoUpdate = false;
+            reticle.visible = false;
+            scene.add(reticle);
+
+            // التحقق من الدعم
+            if ('xr' in navigator) {
+                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
                     if (supported) {
-                        log("immersive-ar IS supported! 🎉", "success");
-                        log("Device is ready. Showing button.", "success");
-                        document.getElementById('btn').style.display = 'block';
+                        const btn = document.getElementById('ar-btn');
+                        btn.style.display = 'block';
+                        btn.addEventListener('click', startSession);
+                        document.getElementById('status-text').innerText = "اضغط الزر بالأسفل 👇";
                     } else {
-                        log("immersive-ar is NOT supported ❌", "error");
-                        log("Possible causes:", "error");
-                        log("1. 'Google Play Services for AR' not installed.", "info");
-                        log("2. Device hardware too old.", "info");
+                        document.getElementById('status-text').innerText = "جهازك لا يدعم AR ❌";
                     }
-                })
-                .catch((err) => {
-                    log("Error checking support: " + err, "error");
                 });
-
-        } else {
-            log("navigator.xr NOT found ❌", "error");
-            log("You are likely not using Google Chrome or connection is not HTTPS.", "error");
+            }
         }
 
-        window.startSession = async function() {
+        async function startSession() {
+            // === التغيير الجذري هنا ===
+            // نطلب 'local' كإجباري، ونطلب 'hit-test' كاختياري
+            // هذا يضمن فتح الكاميرا حتى لو القياس فيه مشكلة
+            const sessionInit = { 
+                requiredFeatures: ['local'], 
+                optionalFeatures: ['hit-test', 'dom-overlay'],
+                domOverlay: { root: document.getElementById('overlay') }
+            };
+
             try {
-                log("Requesting Session...", "info");
-                // طلب الجلسة الأساسية بدون مزايا معقدة
-                const session = await navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'] 
-                });
-                log("Session Started Successfully! ✅", "success");
-                log("The previous code should have worked.", "success");
-                // إنهاء الجلسة فوراً لأن هذا مجرد فحص
-                await session.end();
-            } catch (err) {
-                log("Failed to start session: " + err, "error");
-                log("If error is 'configuration not supported', try updating Chrome.", "info");
+                const session = await navigator.xr.requestSession('immersive-ar', sessionInit);
+                renderer.xr.setSession(session);
+                
+                document.getElementById('ar-btn').style.display = 'none';
+                document.getElementById('status-text').innerText = "ابحث عن الأرضية...";
+                
+                session.addEventListener('select', onSelect);
+                renderer.setAnimationLoop(render);
+            } catch (e) {
+                alert("فشل التشغيل: " + e.message);
             }
+        }
+
+        function onSelect() {
+            if (reticle.visible) {
+                // رسم نقطة
+                const geometry = new THREE.SphereGeometry(0.01, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.setFromMatrixPosition(reticle.matrix);
+                scene.add(mesh);
+                points.push(mesh.position);
+
+                if (points.length === 2) {
+                    // حساب المسافة
+                    const dist = points[0].distanceTo(points[1]);
+                    document.getElementById('status-text').innerText = `المسافة: ${dist.toFixed(2)} متر`;
+                    
+                    // رسم الخط
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 5 });
+                    const line = new THREE.Line(lineGeo, lineMat);
+                    scene.add(line);
+                    
+                    points = []; // إعادة تعيين
+                } else {
+                    document.getElementById('status-text').innerText = "حدد النقطة الثانية";
+                }
+            }
+        }
+
+        function render(timestamp, frame) {
+            if (frame) {
+                const referenceSpace = renderer.xr.getReferenceSpace();
+                const session = renderer.xr.getSession();
+
+                if (hitTestSourceRequested === false) {
+                    session.requestReferenceSpace('viewer').then((refSpace) => {
+                        session.requestHitTestSource({ space: refSpace }).then((source) => {
+                            hitTestSource = source;
+                        });
+                    });
+                    hitTestSourceRequested = true;
+                }
+
+                if (hitTestSource) {
+                    const hitTestResults = frame.getHitTestResults(hitTestSource);
+                    if (hitTestResults.length > 0) {
+                        const hit = hitTestResults[0];
+                        reticle.visible = true;
+                        reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                        reticle.material.color.set(0x00ff00); // أخضر
+                    } else {
+                        reticle.visible = false;
+                    }
+                }
+            }
+            renderer.render(scene, camera);
         }
     </script>
 </body>
