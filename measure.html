@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>المتر الذكي | WebXR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- استدعاء خط القاهرة والأيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            color: white;
+        }
+        /* طبقة المعلومات العلوية */
+        #info-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+            pointer-events: none;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        .instruction {
+            background: rgba(212, 175, 55, 0.9);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        /* زر بدء تشغيل الكاميرا */
+        #ar-button-container {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            text-align: center;
+            z-index: 20;
+        }
+        button#start-ar {
+            background: #d4af37;
+            border: 2px solid #fff;
+            color: #000;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            font-family: 'Cairo';
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            transition: opacity 0.5s;
+        }
+        /* صندوق عرض النتيجة */
+        #result-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            border: 2px solid #d4af37;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 30;
+            min-width: 250px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .distance-val {
+            font-size: 3rem;
+            color: #d4af37;
+            font-weight: 900;
+            display: block;
+        }
+        .reset-btn {
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        /* رسالة الخطأ */
+        #error-msg {
+            color: red;
+            display: none;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 0 auto;
+            max-width: 80%;
+        }
+    </style>
+
+    <!-- خريطة الاستيراد (Import Map) - ضرورية لعمل Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+</head>
+<body>
+
+    <div id="info-overlay">
+        <h2 style="margin:0; color:#d4af37;">📏 المتر الذكي</h2>
+        <div id="status-msg" class="instruction">جاري فحص التوافق...</div>
+    </div>
+
+    <div id="result-box">
+        <div style="font-size:0.9rem; color:#ccc;">المسافة المقاسة</div>
+        <span id="distance-display" class="distance-val">0.00</span>
+        <div style="color:#d4af37;">متر</div>
+        <button id="reset-button" class="reset-btn">↺ قياس جديد</button>
+    </div>
+
+    <div id="ar-button-container">
+        <button id="start-ar" style="display:none;">📷 تشغيل الكاميرا والقياس</button>
+        <p id="error-msg"></p>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- المتغيرات العامة ---
+        let camera, scene, renderer;
+        let controller;
+        let reticle; // مؤشر البحث عن الأسطح
+        let hitTestSource = null;
+        let currentSession = null;
+
+        // --- متغيرات حالة القياس ---
+        let measurementPoints = []; // نقاط القياس الحالية (بداية ونهاية)
+        let activeLine = null; // الخط الذي يتم رسمه
+        let sceneMeshes = []; // لتخزين كل العناصر المضافة (نقاط وخطوط) لتسهيل حذفها
+
+        // --- عناصر الواجهة الرسومية ---
+        const statusMsg = document.getElementById('status-msg');
+        const startButton = document.getElementById('start-ar');
+        const resultBox = document.getElementById('result-box');
+        const distanceDisplay = document.getElementById('distance-display');
+        const resetButton = document.getElementById('reset-button');
+        const errorMsg = document.getElementById('error-msg');
+
+        // --- التهيئة الأولية ---
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
+            light.position.set(0.5, 1, 0.25);
+            scene.add(light);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // --- فحص دعم WebXR ---
+            if ('xr' in navigator) {
+                navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+                    if (supported) {
+                        startButton.style.display = 'inline-block';
+                        statusMsg.innerText = "الجهاز مدعوم وجاهز ✅";
+                    } else {
+                        showError("عذراً، هاتفك لا يدعم تقنية القياس AR");
+                    }
+                }).catch(err => showError("خطأ في فحص التوافق: " + err.message));
+            } else {
+                showError("المتصفح لا يدعم WebXR (جرب جوجل كروم)");
+            }
+
+            // --- إعداد المؤشر (Reticle) ---
+            reticle = new THREE.Mesh(
+                new THREE.RingGeometry(0.05, 0.07, 32).rotateX(-Math.PI / 2),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            reticle.matrixAutoUpdate = false;
+            reticle.visible = false;
+            scene.add(reticle);
+
+            // --- إعداد وحدة التحكم (اللمس) ---
+            controller = renderer.xr.getController(0);
+            controller.addEventListener('select', onSelect);
+            scene.add(controller);
+
+            // --- ربط الأحداث ---
+            startButton.addEventListener('click', startARSession);
+            resetButton.addEventListener('click', resetMeasurement);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- بدء جلسة الواقع المعزز ---
+        async function startARSession() {
+            if (currentSession) return;
+            try {
+                const session = await navigator.xr.requestSession('immersive-ar', {
+                    requiredFeatures: ['hit-test']
+                });
+                onSessionStarted(session);
+            } catch (error) {
+                showError("فشل بدء جلسة AR: " + error.message);
+            }
+        }
+
+        // --- عند بدء الجلسة بنجاح ---
+        async function onSessionStarted(session) {
+            currentSession = session;
+            session.addEventListener('end', onSessionEnded);
+
+            await renderer.xr.setSession(session);
+
+            const referenceSpace = await session.requestReferenceSpace('viewer');
+            hitTestSource = await session.requestHitTestSource({ space: referenceSpace });
+
+            startButton.style.display = 'none';
+            errorMsg.style.display = 'none';
+            statusMsg.innerText = "ابحث عن سطح وحرك الهاتف ببطء";
+            renderer.setAnimationLoop(render);
+        }
+
+        // --- عند انتهاء الجلسة ---
+        function onSessionEnded() {
+            currentSession = null;
+            hitTestSource = null;
+            renderer.setAnimationLoop(null);
+
+            startButton.style.display = 'inline-block';
+            resultBox.style.opacity = '0';
+            resultBox.style.display = 'none';
+            statusMsg.innerText = "انتهت الجلسة. يمكنك البدء من جديد.";
+            
+            cleanScene();
+        }
+
+        // --- عند ضغط المستخدم على الشاشة ---
+        function onSelect() {
+            if (!reticle.visible) return;
+
+            // إذا كان هناك قياس مكتمل، نبدأ قياس جديد
+            if (measurementPoints.length >= 2) {
+                resetMeasurement();
+            }
+
+            const pointPosition = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+            measurementPoints.push(pointPosition);
+
+            // إضافة كرة صغيرة لتمثيل النقطة
+            const pointGeometry = new THREE.SphereGeometry(0.01, 16, 16);
+            const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
+            const pointMesh = new THREE.Mesh(pointGeometry, pointMaterial);
+            pointMesh.position.copy(pointPosition);
+            scene.add(pointMesh);
+            sceneMeshes.push(pointMesh);
+
+            if (measurementPoints.length === 1) {
+                // هذه النقطة الأولى
+                statusMsg.innerText = "تم تحديد البداية.. اضغط عند النهاية";
+                // إنشاء خط أولي يتبع المؤشر
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 5 });
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints([pointPosition, pointPosition]);
+                activeLine = new THREE.Line(lineGeometry, lineMaterial);
+                scene.add(activeLine);
+                sceneMeshes.push(activeLine);
+            } else if (measurementPoints.length === 2) {
+                // هذه النقطة الثانية، اكتمل القياس
+                const distance = measurementPoints[0].distanceTo(measurementPoints[1]);
+                
+                // تحديث الخط ليكون ثابتًا بين النقطتين
+                activeLine.geometry.setFromPoints(measurementPoints);
+
+                // عرض النتيجة
+                distanceDisplay.innerText = distance.toFixed(2);
+                resultBox.style.display = 'block';
+                setTimeout(() => resultBox.style.opacity = '1', 10);
+                statusMsg.innerText = "تم القياس بنجاح! اضغط لقياس جديد.";
+                
+                activeLine = null; // إيقاف تحديث الخط
+            }
+        }
+
+        // --- إعادة القياس بدون إعادة تحميل الصفحة ---
+        function resetMeasurement() {
+            cleanScene();
+            measurementPoints = [];
+            activeLine = null;
+            resultBox.style.opacity = '0';
+            setTimeout(() => resultBox.style.display = 'none', 500);
+            statusMsg.innerText = "اضغط على الشاشة لبدء قياس جديد";
+        }
+
+        // --- دالة لتنظيف المشهد من النقاط والخطوط ---
+        function cleanScene() {
+            sceneMeshes.forEach(mesh => scene.remove(mesh));
+            sceneMeshes = [];
+        }
+
+        // --- حلقة التحديث والرسم ---
+        function render(timestamp, frame) {
+            if (!frame) return;
+
+            const referenceSpace = renderer.xr.getReferenceSpace();
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+            if (hitTestResults.length > 0) {
+                const hit = hitTestResults[0];
+                const pose = hit.getPose(referenceSpace);
+                reticle.visible = true;
+                reticle.matrix.fromArray(pose.transform.matrix);
+                reticle.material.color.set(0x00ff00); // أخضر عند العثور على سطح
+
+                // **هذا هو الجزء الذي يرسم الخط بشكل ديناميكي**
+                if (activeLine) {
+                    const endPoint = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+                    activeLine.geometry.setFromPoints([measurementPoints[0], endPoint]);
+                    activeLine.geometry.attributes.position.needsUpdate = true;
+                }
+
+            } else {
+                reticle.visible = false;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- دوال مساعدة ---
+        function showError(msg) {
+            statusMsg.style.display = 'none';
+            errorMsg.innerText = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- بدء تشغيل التطبيق ---
+        init();
+    </script>
+</body>
+</html>
