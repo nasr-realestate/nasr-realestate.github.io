@@ -3,84 +3,67 @@ layout: null
 permalink: /measure/
 ---
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
+    <title>أداة القياس AR</title>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>المتر الذكي | سمسار طلبك</title>
-    <!-- خطوط وأيقونات -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background-color: #000; color: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; }
+        body { margin: 0; background-color: #000; font-family: 'Cairo', sans-serif; overflow: hidden; }
         
-        /* واجهة المستخدم العائمة */
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* يسمح باللمس في الـ AR */
-            display: flex; flex-direction: column; justify-content: space-between;
-            z-index: 100;
+        /* شريط النتيجة في الأعلى */
+        #info {
+            position: absolute; top: 20px; width: 100%; text-align: center; z-index: 100;
+            pointer-events: none; /* يسمح بالضغط من خلاله */
         }
-
-        .header {
-            background: rgba(0,0,0,0.7); padding: 15px; text-align: center;
-            border-bottom: 1px solid #d4af37;
+        .badge {
+            background: rgba(0, 0, 0, 0.8); color: #d4af37; 
+            padding: 10px 20px; border-radius: 30px; border: 2px solid #d4af37;
+            font-size: 1.5rem; font-weight: bold; display: inline-block;
         }
         
-        /* صندوق النتيجة */
-        #result-card {
-            background: rgba(10, 10, 10, 0.9); border: 2px solid #d4af37;
-            padding: 20px; border-radius: 20px; text-align: center;
-            align-self: center; margin-bottom: 20%; pointer-events: auto;
-            display: none; min-width: 200px;
-        }
-        .dist-val { font-size: 2.5rem; color: #d4af37; font-weight: bold; display: block; }
-        .reset-btn {
-            background: #fff; color: #000; border: none; padding: 8px 20px;
-            border-radius: 20px; margin-top: 10px; font-weight: bold; cursor: pointer;
-        }
-
-        /* تخصيص زر الـ AR الأصلي */
+        /* تنسيق زر البدء الافتراضي */
         button#ARButton {
-            position: absolute !important; bottom: 30px !important; left: 50% !important;
-            transform: translateX(-50%) !important;
-            background-color: #d4af37 !important; color: #000 !important;
-            border: 2px solid #fff !important; border-radius: 30px !important;
-            padding: 12px 30px !important; font-family: 'Cairo' !important;
-            font-weight: bold !important; font-size: 16px !important;
-            opacity: 1 !important; z-index: 200 !important; cursor: pointer !important;
+            background-color: #d4af37 !important; /* لون ذهبي */
+            color: #000 !important;
+            font-family: 'Cairo', sans-serif !important;
+            font-weight: bold !important;
+            border-radius: 20px !important;
+            border: 2px solid #fff !important;
+            bottom: 30px !important;
         }
     </style>
+    
+    <!-- استيراد المكتبات بشكل مباشر ومضمون -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
 
-    <!-- الواجهة -->
-    <div id="overlay">
-        <div class="header">
-            <h3 style="margin:0; color:#d4af37;">📏 أداة القياس</h3>
-            <small id="hint">ابحث عن زر "ابدأ AR" في الأسفل</small>
-        </div>
-
-        <div id="result-card">
-            <div style="color:#ccc; font-size:0.9rem;">المسافة</div>
-            <span id="distance" class="dist-val">0.00</span>
-            <div style="color:#d4af37;">متر</div>
-            <button class="reset-btn" onclick="resetApp()">قياس جديد ↺</button>
-        </div>
-        
-        <div style="height: 50px;"></div> <!-- مساحة فارغة -->
+    <div id="info">
+        <div class="badge" id="message">اضغط "ابدأ" بالأسفل</div>
     </div>
 
-    <!-- المحرك -->
     <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-        import { ARButton } from 'https://unpkg.com/three@0.160.0/examples/jsm/webxr/ARButton.js';
+        import * as THREE from 'three';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
 
         let camera, scene, renderer;
-        let controller, reticle;
+        let controller;
+        let reticle;
         let hitTestSource = null;
         let hitTestSourceRequested = false;
+
+        // لتخزين القياسات
         let points = [];
-        let activeLine;
+        let currentLine = null;
 
         init();
         animate();
@@ -103,16 +86,20 @@ permalink: /measure/
             renderer.xr.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // زر الواقع المعزز (يظهر تلقائياً إذا كان الجهاز مدعوماً)
-            const arBtn = ARButton.createButton(renderer, { 
-                requiredFeatures: ['hit-test'], 
-                optionalFeatures: ['dom-overlay'], 
-                domOverlay: { root: document.getElementById('overlay') } 
-            });
-            arBtn.innerText = "📷 ابدأ القياس (AR)";
-            document.body.appendChild(arBtn);
+            // === التعديل الجذري هنا ===
+            // حذفنا أي إعدادات معقدة (optionalFeatures) تسبب المشاكل
+            // نطلب فقط (hit-test) وهو أساس القياس
+            let options = { requiredFeatures: ['hit-test'] };
+            
+            const button = ARButton.createButton(renderer, options);
+            document.body.appendChild(button);
+            
+            // محاولة تغيير نص الزر بعد إنشائه
+            setTimeout(() => {
+                if(button) button.innerText = "ابدأ القياس AR";
+            }, 500);
 
-            // المؤشر (الحلقة)
+            // إضافة الحلقة (المؤشر)
             reticle = new THREE.Mesh(
                 new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
                 new THREE.MeshBasicMaterial()
@@ -127,42 +114,37 @@ permalink: /measure/
             scene.add(controller);
 
             window.addEventListener('resize', onWindowResize);
-            
-            // دالة إعادة الضبط
-            window.resetApp = function() {
-                points = [];
-                if(activeLine) scene.remove(activeLine);
-                activeLine = null;
-                document.getElementById('result-card').style.display = 'none';
-                document.getElementById('hint').innerText = "حدد نقطة البداية";
-            };
         }
 
         function onSelect() {
             if (reticle.visible) {
-                // إضافة نقطة
+                // نقطة جديدة
                 const geometry = new THREE.SphereGeometry(0.01, 32, 32);
-                const material = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
+                const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // نقطة حمراء
                 const point = new THREE.Mesh(geometry, material);
                 point.position.setFromMatrixPosition(reticle.matrix);
                 scene.add(point);
+                
                 points.push(point.position);
 
                 if (points.length === 1) {
-                    document.getElementById('hint').innerText = "تحرك للنهاية واضغط";
-                } else if (points.length === 2) {
+                    document.getElementById('message').innerText = "تم تحديد البداية.. اختر النهاية";
+                } 
+                else if (points.length === 2) {
+                    // حساب المسافة
                     const distance = points[0].distanceTo(points[1]);
                     
                     // رسم الخط
                     const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 5 });
-                    activeLine = new THREE.Line(lineGeometry, lineMaterial);
-                    scene.add(activeLine);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 5 });
+                    const line = new THREE.Line(lineGeometry, lineMaterial);
+                    scene.add(line);
 
-                    // النتيجة
-                    document.getElementById('distance').innerText = distance.toFixed(2);
-                    document.getElementById('result-card').style.display = 'block';
-                    document.getElementById('hint').innerText = "تم!";
+                    // عرض النتيجة
+                    document.getElementById('message').innerText = `المسافة: ${distance.toFixed(2)} متر`;
+                    
+                    // تنظيف لبدء قياس جديد
+                    points = []; 
                 }
             }
         }
@@ -183,26 +165,28 @@ permalink: /measure/
                 const session = renderer.xr.getSession();
 
                 if (hitTestSourceRequested === false) {
-                    session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                        session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                    session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                        session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
                             hitTestSource = source;
                         });
                     });
-                    session.addEventListener('end', () => {
+                    session.addEventListener('end', function () {
                         hitTestSourceRequested = false;
                         hitTestSource = null;
-                        document.getElementById('result-card').style.display = 'none';
+                        document.getElementById('message').innerText = "انتهت الجلسة";
                     });
                     hitTestSourceRequested = true;
                 }
 
                 if (hitTestSource) {
                     const hitTestResults = frame.getHitTestResults(hitTestSource);
+
                     if (hitTestResults.length > 0) {
                         const hit = hitTestResults[0];
                         reticle.visible = true;
                         reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                        reticle.material.color.set(0x00ff00); // أخضر = جاهز
+                        // تغيير اللون للأخضر عند العثور على سطح
+                        reticle.material.color.set(0x00ff00);
                     } else {
                         reticle.visible = false;
                     }
