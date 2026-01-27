@@ -643,4 +643,173 @@ function correctLensDistortion() {
 function integrateWithSensors() {
     // الجيروسكوب والأكسيلميتر
     // تحسين تقدير الحركة والمسافة
+        }    // ==================== حساب المسافة ====================
+        function calculateDistance(point1, point2) {
+            // حساب المسافة المباشرة
+            const directDistance = point1.position.distanceTo(point2.position);
+            
+            // تطبيق عامل المعايرة
+            const calibratedDistance = directDistance * calibrationFactor;
+            
+            // تحديث الواجهة
+            distanceValue.textContent = calibratedDistance.toFixed(2);
+            measurementPanel.classList.add('show');
+            
+            // تحديث إحداثيات النقاط
+            document.getElementById('point1-coords').textContent = 
+                `(${point1.position.x.toFixed(2)}, ${point1.position.y.toFixed(2)})`;
+            document.getElementById('point2-coords').textContent = 
+                `(${point2.position.x.toFixed(2)}, ${point2.position.y.toFixed(2)})`;
+            
+            // حساب الزاوية
+            const dx = point2.position.x - point1.position.x;
+            const dy = point2.position.y - point1.position.y;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            document.getElementById('angle').textContent = `${Math.abs(angle).toFixed(1)}°`;
+            
+            console.log(`📏 المسافة: ${calibratedDistance.toFixed(2)} متر`);
         }
+        
+        // ==================== المعايرة ====================
+        function calibrate() {
+            const knownDistance = prompt('أدخل طول معروف بالمتر (مثلاً: 1 متر):', '1');
+            
+            if (knownDistance && !isNaN(parseFloat(knownDistance))) {
+                const distance = parseFloat(knownDistance);
+                
+                if (measurementPoints.length >= 2) {
+                    const point1 = measurementPoints[measurementPoints.length - 2];
+                    const point2 = measurementPoints[measurementPoints.length - 1];
+                    const measuredDistance = point1.position.distanceTo(point2.position);
+                    
+                    calibrationFactor = distance / measuredDistance;
+                    isCalibrated = true;
+                    
+                    alert(`✅ تمت المعايرة بنجاح! عامل التصحيح: ${calibrationFactor.toFixed(4)}`);
+                    statusElement.textContent = `معاير (عامل: ${calibrationFactor.toFixed(2)})`;
+                    
+                    // إعادة حساب المسافة الحالية
+                    calculateDistance(point1, point2);
+                } else {
+                    alert('⚠️ تحتاج إلى نقطتين للمعايرة');
+                }
+            }
+        }
+        
+        // ==================== تبديل حالة القياس ====================
+        function toggleMeasurement() {
+            isMeasuring = !isMeasuring;
+            
+            if (isMeasuring) {
+                measureBtn.innerHTML = '<span>⏸️</span> إيقاف القياس';
+                statusElement.textContent = '📏 وضع القياس نشط - اضغط لإضافة نقاط';
+            } else {
+                measureBtn.innerHTML = '<span>📏</span> بدء القياس';
+                statusElement.textContent = '⏸️ القياس متوقف';
+            }
+        }
+        
+        // ==================== مسح الكل ====================
+        function clearAll() {
+            // إزالة جميع النقاط
+            measurementPoints.forEach(point => {
+                threeScene.remove(point.mesh);
+                point.mesh.geometry.dispose();
+            });
+            
+            // إزالة جميع الخطوط
+            measurementLines.forEach(line => {
+                threeScene.remove(line);
+                line.geometry.dispose();
+            });
+            
+            // إعادة تعيين المتغيرات
+            measurementPoints = [];
+            measurementLines = [];
+            activeLine = null;
+            
+            // تحديث الواجهة
+            measurementPanel.classList.remove('show');
+            clearBtn.disabled = true;
+            
+            console.log('🗑️ تم مسح جميع القياسات');
+        }
+        
+        // ==================== التصيير ====================
+        function startRendering() {
+            function render() {
+                // رسم الفيديو على canvas الكاميرا
+                if (videoElement && cameraCtx) {
+                    cameraCtx.drawImage(videoElement, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                }
+                
+                // تصيير المشهد ثلاثي الأبعاد
+                threeRenderer.render(threeScene, threeCamera);
+                
+                // تحديث الإحصائيات
+                updateStats();
+                
+                // الاستمرار في التصيير
+                requestAnimationFrame(render);
+            }
+            
+            render();
+        }
+        
+        // ==================== تحديث الإحصائيات ====================
+        function updateStats() {
+            frameCount++;
+            const currentTime = Date.now();
+            
+            if (currentTime - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = currentTime;
+                
+                // تحديث العرض
+                document.getElementById('fps').textContent = fps;
+                document.getElementById('active-points').textContent = measurementPoints.length;
+                document.getElementById('resolution').textContent = 
+                    `${cameraCanvas.width}x${cameraCanvas.height}`;
+            }
+        }
+        
+        // ==================== تغيير حجم النافذة ====================
+        function onWindowResize() {
+            if (threeCamera && threeRenderer) {
+                threeCamera.aspect = window.innerWidth / window.innerHeight;
+                threeCamera.updateProjectionMatrix();
+                threeRenderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            
+            if (cameraCanvas) {
+                cameraCanvas.width = window.innerWidth;
+                cameraCanvas.height = window.innerHeight;
+            }
+        }
+        
+        // ==================== تحديث عرض النقاط ====================
+        function updatePointDisplays() {
+            // يمكن إضافة مؤشرات نصية للنقاط
+            // أو تحديث لوحة المعلومات
+        }
+        
+        // ==================== بدء التطبيق ====================
+        // بدء التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', initApp);
+        
+        // جعل الدوال متاحة عالمياً
+        window.calibrate = calibrate;
+        window.toggleMeasurement = toggleMeasurement;
+        window.clearAll = clearAll;
+        
+        // تنظيف الموارد عند إغلاق الصفحة
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        });
+        
+    </script>
+</body>
+</html>
