@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Smart Meter</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Cairo, sans-serif;
+    background: #000;
+    color: #fff;
+}
+#camera {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.overlay {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: rgba(0,0,0,0.6);
+    padding: 20px;
+    text-align: center;
+}
+button {
+    padding: 14px 20px;
+    margin: 10px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #d4af37;
+    font-weight: bold;
+}
+.result {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    color: #d4af37;
+}
+.notice {
+    font-size: 0.75rem;
+    color: #aaa;
+}
+</style>
+</head>
+
+<body>
+
+<video id="camera" autoplay playsinline></video>
+
+<div class="overlay">
+    <button onclick="startMeasure()">📍 نقطة البداية</button>
+    <button onclick="endMeasure()">🏁 نقطة النهاية</button>
+    <div class="result" id="output">—</div>
+    <div class="notice">
+        القياس تقريبي باستخدام حركة الهاتف
+    </div>
+</div>
+
+<script>
+let startTime = null;
+let distance = 0;
+let velocity = 0;
+
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+.then(stream => {
+    document.getElementById("camera").srcObject = stream;
+});
+
+window.addEventListener("devicemotion", e => {
+    if (!startTime) return;
+
+    const acc = e.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const ax = acc.x || 0;
+    const ay = acc.y || 0;
+    const az = acc.z || 0;
+
+    const a = Math.sqrt(ax*ax + ay*ay + az*az) - 9.8;
+    const now = Date.now();
+    const dt = (now - startTime.last) / 1000;
+
+    velocity += a * dt;
+    distance += velocity * dt;
+
+    startTime.last = now;
+});
+
+function startMeasure() {
+    startTime = { last: Date.now() };
+    distance = 0;
+    velocity = 0;
+    document.getElementById("output").innerText = "ابدأ الحركة...";
+}
+
+function endMeasure() {
+    startTime = null;
+    document.getElementById("output").innerText =
+        "المسافة التقريبية: " + Math.abs(distance).toFixed(2) + " متر";
+}
+</script>
+
+</body>
+</html>
