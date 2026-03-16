@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- =========================================================
+       Google Tag Manager — أول شيء في الـ head
+       ========================================================= -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+
+  <!-- =========================================================
+       SEO — jekyll-seo-tag يتولى تلقائياً:
+       canonical, og:title, og:description, og:url,
+       og:image (من defaults), twitter:card, twitter:title
+       لا تكرر هذه الـ tags بعده — ستضر الـ crawl efficiency
+       ========================================================= -->
+  {% seo %}
+
+  <!-- =========================================================
+       OG Image — نتحكم فقط في الحالات الخاصة:
+       صفحة عقار بصورة خاصة / صفحة طلب / باقي الصفحات
+       ========================================================= -->
+  {% if page.image_file %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+    <meta property="og:image:width"  content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+  {% elsif page.collection == 'requests' or page.layout == 'request_page' %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+  {% else %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+    <meta property="og:image:width"  content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+  {% endif %}
+
+  <meta property="og:type"         content="website">
+  <meta name="twitter:card"        content="summary_large_image">
+
+  <!-- =========================================================
+       Meta إضافية — لا يغطيها jekyll-seo-tag
+       ========================================================= -->
+  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
+  <meta name="robots"      content="index, follow, max-image-preview:large">
+  <meta name="author"      content="طارق طنطاوي">
+  <meta name="geo.region"  content="EG-C">
+  <meta name="geo.placename" content="Nasr City, Cairo">
+  <meta name="theme-color" content="#050505">
+
+  <!-- =========================================================
+       الخطوط والأيقونات
+       ========================================================= -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- ملف الستايل الرئيسي — يحتوي على كل CSS بما فيه محرك البحث -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
+  <!-- =========================================================
+       Favicons و PWA Manifest
+       ========================================================= -->
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png'  | relative_url }}">
+  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png'  | relative_url }}">
+  <link rel="shortcut icon"                        href="{{ '/assets/img/favicons/favicon.ico'        | relative_url }}">
+  <link rel="manifest"                             href="{{ '/assets/img/favicons/site.webmanifest'   | relative_url }}">
+
+  <!-- Trustpilot Widget -->
+  <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
+
+</head>
+
+<body class="{{ page.body_class | default: 'default-page' }}">
+
+  <!-- GTM noscript — أول شيء بعد body -->
+  <noscript>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
+            height="0" width="0" style="display:none;visibility:hidden"></iframe>
+  </noscript>
+
+  <!-- الخلفية السينمائية -->
+  <div class="cinematic-bg"></div>
+  <div class="animated-overlay"></div>
+
+  {% include navbar.html %}
+
+  <main>
+    {{ content }}
+  </main>
+
+  {% include footer.html %}
+
+
+  <!-- =========================================================
+       🔍 زر محرك البحث الذكي — يسار الشاشة
+       يوازن زر الاتصال الثابت على اليمين
+       ========================================================= -->
+  <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
+    <div class="pulse-ring"></div>
+    <i class="fas fa-hand-sparkles"></i>
+    <span class="trigger-text">صمم طلبك</span>
+  </div>
+
+
+  <!-- =========================================================
+       🔍 محرك البحث الذكي — الـ Overlay الكامل
+       ========================================================= -->
+  <div id="smartSearchOverlay" class="smart-search-overlay">
+    <div class="overlay-blur" onclick="closeSmartSearch()"></div>
+
+    <div class="search-card-container">
+
+      <!-- البطاقة 1: النوع الرئيسي -->
+      <div class="smart-card" id="step1">
+        <i class="fas fa-crown gold-icon"></i>
+        <h2>مرحباً بك في بوابة النخبة</h2>
+        <p>نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+        <div class="choice-grid">
+          <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')">
+            <i class="fas fa-home"></i><span>تمليك العمر</span>
+          </button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')">
+            <i class="fas fa-couch"></i><span>إيجار مفروش (فندقي)</span>
+          </button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')">
+            <i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span>
+          </button>
+          <button class="choice-btn" onclick="handleCommercialSelection()">
+            <i class="fas fa-chart-line"></i><span>تجاري وإداري</span>
+          </button>
+        </div>
+        <button class="close-text-btn" onclick="closeSmartSearch()">سأقوم بالتصفح بنفسي لاحقاً</button>
+      </div>
+
+      <!-- البطاقة 1.5: تفرع التجاري -->
+      <div class="smart-card" id="stepCommercialBranch">
+        <i class="fas fa-briefcase gold-icon"></i>
+        <h2>النشاط التجاري والإداري</h2>
+        <p>هل تبحث عن تملك مقر دائم لشركتك أم استئجار مكتب/محل؟</p>
+        <div class="choice-grid">
+          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')">
+            <i class="fas fa-building"></i><span>تمليك / شراء</span>
+          </button>
+          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')">
+            <i class="fas fa-file-contract"></i><span>إيجار شهري</span>
+          </button>
+        </div>
+        <button class="back-text-btn" onclick="goToCard('step1')">
+          <i class="fas fa-arrow-right"></i> العودة
+        </button>
+      </div>
+
+      <!-- البطاقة 2: الميزانية -->
+      <div class="smart-card" id="step2">
+        <i class="fas fa-money-bill-wave gold-icon"></i>
+        <h2 id="budgetTitle">الميزانية المرصودة؟</h2>
+        <p>لنتمكن من عرض الخيارات التي تناسب قدراتك المالية بدقة.</p>
+        <div id="budgetOptions" class="choice-grid"></div>
+        <button class="back-text-btn" onclick="backToPrevious()">
+          <i class="fas fa-arrow-right"></i> العودة
+        </button>
+      </div>
+
+      <!-- البطاقة 3: النتائج -->
+      <div class="smart-card" id="stepResults">
+        <i class="fas fa-magic gold-icon"></i>
+        <h2>نتائج البحث المخصصة</h2>
+        <p id="resultsStatus">جاري البحث في خزائن النخبة...</p>
+        <div id="resultsContent" class="results-list"></div>
+        <button class="back-text-btn" onclick="goToCard('step1')">بدء بحث جديد</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =========================================================
+       📞 زر الاتصال الثابت — يمين الشاشة (RTL صحيح)
+       ========================================================= -->
+  <a href="tel:+201147758857"
+     class="fixed-call-button"
+     onclick="trackPhoneCall()">
+    <i class="fas fa-phone-alt"></i>
+    <span>اتصل الآن: 01147758857</span>
+  </a>
+
+
+  <!-- =========================================================
+       ⚙️ JavaScript — محرك البحث الذكي
+       ========================================================= -->
+  <script>
+    // --- المتغيرات العامة ---
+    let allProperties = [];
+    let dataLoaded    = false;
+    let userSelection = { category: '', type: '', budgetRange: [] };
+    let lastStepId    = 'step1';
+
+    // --- تحميل البيانات عند الحاجة فقط ---
+    // لا يُستدعى عند تحميل الصفحة — فقط عند فتح محرك البحث
+    async function loadDataIfNeeded() {
+      if (dataLoaded) return;
+      try {
+        const res     = await fetch("{{ '/search-data.json' | relative_url }}");
+        allProperties = await res.json();
+        dataLoaded    = true;
+      } catch (e) {
+        console.error("Search data load error:", e);
+      }
+    }
+
+    // --- فتح البحث ---
+    function openSmartSearch() {
+      loadDataIfNeeded();
+      document.getElementById('smartSearchOverlay').style.display = 'flex';
+      setTimeout(() => goToCard('step1'), 10);
+    }
+
+    // --- إغلاق البحث ---
+    function closeSmartSearch() {
+      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+      setTimeout(() => {
+        document.getElementById('smartSearchOverlay').style.display = 'none';
+      }, 400);
+    }
+
+    // --- التنقل بين البطاقات ---
+    function goToCard(cardId) {
+      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+      setTimeout(() => {
+        const target = document.getElementById(cardId);
+        if (target) target.classList.add('active');
+      }, 50);
+    }
+
+    function handleCommercialSelection() {
+      lastStepId = 'step1';
+      goToCard('stepCommercialBranch');
+    }
+
+    function nextStep(category, typeLabel) {
+      userSelection.category = category;
+      userSelection.type     = typeLabel;
+      lastStepId = typeLabel.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
+      setupBudgetOptions(typeLabel);
+      goToCard('step2');
+    }
+
+    function backToPrevious() {
+      goToCard(lastStepId);
+    }
+
+    // --- بناء خيارات الميزانية ديناميكياً ---
+    function setupBudgetOptions(type) {
+      const container = document.getElementById('budgetOptions');
+      const title     = document.getElementById('budgetTitle');
+      container.innerHTML = '';
+      let options = [];
+
+      if (type === 'تمليك' || type === 'تمليك تجاري') {
+        title.innerText = "ميزانية التملك؟";
+        options = [
+          { label: "أقل من 3 مليون ج.م",    range: [0, 3000000] },
+          { label: "من 3 إلى 6 مليون ج.م",  range: [3000000, 6000000] },
+          { label: "أكثر من 6 مليون ج.م",   range: [6000000, 99999999] }
+        ];
+      } else {
+        title.innerText = "الميزانية الشهرية؟";
+        const limit = type.includes('تجاري') ? 40000 : 20000;
+        options = [
+          { label: `أقل من ${limit.toLocaleString('ar-EG')} ج.م`,   range: [0, limit] },
+          { label: `أكثر من ${limit.toLocaleString('ar-EG')} ج.م`,  range: [limit, 9999999] }
+        ];
+      }
+
+      options.forEach(opt => {
+        const btn       = document.createElement('button');
+        btn.className   = 'choice-btn';
+        btn.innerHTML   = `<i class="fas fa-coins"></i><span>${opt.label}</span>`;
+        btn.onclick     = () => finishSearch(opt.range);
+        container.appendChild(btn);
+      });
+    }
+
+    // --- البحث والفلترة ---
+    function finishSearch(range) {
+      userSelection.budgetRange = range;
+      goToCard('stepResults');
+
+      const content = document.getElementById('resultsContent');
+      const status  = document.getElementById('resultsStatus');
+      content.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>';
+
+      // 300ms فقط للانتقال البصري
+      setTimeout(() => {
+        const matches = allProperties.filter(prop => {
+          if (prop.category !== userSelection.category) return false;
+          const isRentSearch = userSelection.type.includes('إيجار');
+          const isPropRent   = prop.title.includes('إيجار') || prop.category.includes('rent');
+          if (isRentSearch !== isPropRent) return false;
+          const priceNum = parseInt(prop.price.replace(/[^0-9]/g, '')) || 0;
+          return priceNum >= range[0] && priceNum <= range[1];
+        });
+
+        if (matches.length > 0) {
+          status.innerText  = `وجدنا لك ${matches.length} عروض تطابق ذوقك وميزانيتك:`;
+          content.innerHTML = matches.map(m => `
+            <a href="${m.url}" class="result-item">
+              <img src="${m.image}"
+                   class="result-img"
+                   alt="${m.title}"
+                   onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp'">
+              <div class="result-info">
+                <h4>${m.title}</h4>
+                <span>${m.price}</span>
+              </div>
+            </a>
+          `).join('');
+        } else {
+          status.innerText  = "عذراً، لم نجد طلباً يطابق هذه الميزانية حالياً..";
+          content.innerHTML = `
+            <div style="padding:20px; color:#888; text-align:center;">
+              يمكنك إضافة طلبك وسنبحث لك فوراً.
+              <br><br>
+              <a href="tel:+201147758857"
+                 class="choice-btn"
+                 style="justify-content:center; text-decoration:none; display:flex;">
+                <i class="fas fa-phone-alt"></i> اتصل بالخبير طارق
+              </a>
+            </div>
+          `;
+        }
+      }, 300);
+    }
+
+    // --- تتبع المكالمات في GTM dataLayer ---
+    function trackPhoneCall() {
+      if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({
+          event:        'phone_call_click',
+          call_source:  'fixed_button',
+          phone_number: '+201147758857'
+        });
+      }
+    }
+
+  </script>
+
+</body>
+</html>
