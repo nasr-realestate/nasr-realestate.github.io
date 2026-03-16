@@ -4,15 +4,14 @@ title: "طلبات العملاء | سمسار طلبك"
 description: "قائمة محدثة بطلبات الشراء والإيجار الحالية من عملاء جادين ومستعدين للتعاقد. هل لديك عقار يناسبهم؟"
 permalink: /requests/
 image: "/assets/img/social-requests.webp"
+body_class: "requests-page"
 ---
 
-<!-- =========================================================
-     1. رأس الصفحة (Header)
-     ========================================================= -->
+<!-- رأس الصفحة -->
 <header class="page-header">
   <div style="max-width: 800px; margin: 0 auto;">
     <h1 class="page-title">
-      <i class="fas fa-bullhorn" style="color: #0a84ff;"></i> طلبات العملاء الجادة
+      <i class="fas fa-bullhorn" style="color: var(--color-blue);"></i> طلبات العملاء الجادة
     </h1>
     <p style="opacity: 0.8; margin-top: 10px;">
       هؤلاء عملاء جاهزون للتعاقد فوراً. هل تملك عقاراً يطابق مواصفاتهم؟
@@ -22,149 +21,79 @@ image: "/assets/img/social-requests.webp"
 
 <main>
 
-  <!-- =========================================================
-       2. أزرار الفلترة (Filters)
-       ========================================================= -->
+  <!-- أزرار الفلترة -->
   <div class="filter-container" style="margin-bottom: 2rem;">
-      <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
-      <button class="filter-btn" onclick="filterSelection('residential')"><i class="fas fa-home"></i> طلبات سكنية</button>
-      <button class="filter-btn" onclick="filterSelection('commercial')"><i class="fas fa-briefcase"></i> تجاري وإداري</button>
-      <button class="filter-btn" onclick="filterSelection('cash')"><i class="fas fa-money-bill-wave"></i> كاش فوري</button>
+    <button class="filter-btn active" onclick="filterSelection('all', event)">الكل</button>
+    <button class="filter-btn" onclick="filterSelection('residential', event)"><i class="fas fa-home"></i> طلبات سكنية</button>
+    <button class="filter-btn" onclick="filterSelection('commercial', event)"><i class="fas fa-briefcase"></i> تجاري وإداري</button>
+    <button class="filter-btn" onclick="filterSelection('cash', event)"><i class="fas fa-money-bill-wave"></i> كاش فوري</button>
   </div>
 
-  <!-- =========================================================
-       3. شبكة الطلبات (Requests Grid) - النظام الذكي (يخفي القديم)
-       ========================================================= -->
+  <!-- شبكة الطلبات -->
   <section class="properties-grid" style="min-height: 60vh;">
-    
-    <!-- إعدادات الوقت: 7 أيام = 604800 ثانية -->
-    {% assign expiry_seconds = 604800 %}
+
+    {% assign expiry_seconds    = 604800 %}
     {% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
-    {% assign all_requests = site.requests | sort: 'date' | reverse %}
-    {% assign active_count = 0 %}
-    
+    {% assign all_requests      = site.requests | sort: 'date' | reverse %}
+    {% assign active_count      = 0 %}
+
     {% for req in all_requests %}
-        
-        <!-- حساب عمر الطلب -->
-        {% assign req_timestamp = req.date | date: "%s" | plus: 0 %}
-        {% assign age_in_seconds = current_timestamp | minus: req_timestamp %}
 
-        <!-- شرط: اعرض فقط إذا كان الطلب جديداً (أقل من 7 أيام) -->
-        {% if age_in_seconds < expiry_seconds %}
-            {% assign active_count = active_count | plus: 1 %}
-            
-            {% assign category_class = "residential" %}
-            {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
-                {% assign category_class = "commercial" %}
-            {% endif %}
-            {% if req.title contains "كاش" or req.budget contains "كاش" %}
-                {% assign category_class = category_class | append: " cash" %}
-            {% endif %}
+      {% assign req_timestamp  = req.date | date: "%s" | plus: 0 %}
+      {% assign age_in_seconds = current_timestamp | minus: req_timestamp %}
 
-            <div class="filter-item {{ category_class }}">
-                {% include property_card.html item=req type="request" %}
-            </div>
+      {% if age_in_seconds < expiry_seconds %}
+        {% assign active_count = active_count | plus: 1 %}
+
+        {% assign category_class = "residential" %}
+        {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
+          {% assign category_class = "commercial" %}
         {% endif %}
+        {% if req.title contains "كاش" or req.budget contains "كاش" %}
+          {% assign category_class = category_class | append: " cash" %}
+        {% endif %}
+
+        <div class="filter-item {{ category_class }}">
+          {% include property_card.html item=req type="request" %}
+        </div>
+      {% endif %}
 
     {% endfor %}
 
-    <!-- رسالة تظهر فقط إذا لم توجد طلبات نشطة -->
+    <!-- لا توجد طلبات نشطة -->
     {% if active_count == 0 %}
-        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
-            <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-            <h3>لا توجد طلبات نشطة حالياً</h3>
-            <p>جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها لضمان الجدية.</p>
-        </div>
+      <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
+        <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+        <h3>لا توجد طلبات نشطة حالياً</h3>
+        <p>جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها لضمان الجدية.</p>
+      </div>
     {% endif %}
 
   </section>
 
-  <!-- زر الانتقال لإضافة عقار -->
+  <!-- رابط إضافة عقار -->
   <div style="text-align: center; margin: 3rem 0;">
-      <p style="color: #888; margin-bottom: 1rem;">لديك عقار ولكن لا يوجد طلب مطابق؟</p>
-      <a href="{{ '/add-your-property.html' | relative_url }}" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">
-          اعرض عقارك وسنجد لك المشتري <i class="fas fa-plus-circle"></i>
-      </a>
+    <p style="color: #888; margin-bottom: 1rem;">لديك عقار ولكن لا يوجد طلب مطابق؟</p>
+    <a href="{{ '/add-your-property.html' | relative_url }}"
+       class="nav-btn"
+       style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">
+      اعرض عقارك وسنجد لك المشتري <i class="fas fa-plus-circle"></i>
+    </a>
   </div>
 
 </main>
 
-<!-- =========================================================
-     4. سكربت الفلترة
-     ========================================================= -->
 <script>
-function filterSelection(c) {
-  var x, i;
-  x = document.getElementsByClassName("filter-item");
-  
-  // تحديث شكل الأزرار
+function filterSelection(c, e) {
+  var x = document.getElementsByClassName("filter-item");
   var btns = document.getElementsByClassName("filter-btn");
-  for (i = 0; i < btns.length; i++) {
-    btns[i].classList.remove("active");
-  }
-  event.currentTarget.classList.add("active");
-
-  // منطق الإخفاء والإظهار
-  for (i = 0; i < x.length; i++) {
-    w3RemoveClass(x[i], "hide");
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+  e.currentTarget.classList.add("active");
+  for (var i = 0; i < x.length; i++) {
+    x[i].classList.remove("hide");
     if (c !== "all" && x[i].className.indexOf(c) === -1) {
-      w3AddClass(x[i], "hide");
+      x[i].classList.add("hide");
     }
   }
-}
-
-function w3AddClass(element, name) {
-  var i, arr1, arr2;
-  arr1 = element.className.split(" ");
-  arr2 = name.split(" ");
-  for (i = 0; i < arr2.length; i++) {
-    if (arr1.indexOf(arr2[i]) == -1) {
-      element.className += " " + arr2[i];
-    }
-  }
-}
-
-function w3RemoveClass(element, name) {
-  var i, arr1, arr2;
-  arr1 = element.className.split(" ");
-  arr2 = name.split(" ");
-  for (i = 0; i < arr2.length; i++) {
-    while (arr1.indexOf(arr2[i]) > -1) {
-      arr1.splice(arr1.indexOf(arr2[i]), 1);
-    }
-  }
-  element.className = arr1.join(" ");
 }
 </script>
-
-<!-- =========================================================
-     5. ستايل الفلترة
-     ========================================================= -->
-<style>
-.filter-item { display: block; animation: fadeIn 0.5s; }
-.hide { display: none; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.filter-btn {
-    border: 1px solid #333;
-    background: transparent;
-    color: #b0b0b0;
-    padding: 8px 20px;
-    margin: 5px;
-    cursor: pointer;
-    border-radius: 50px;
-    font-family: 'Cairo';
-    font-weight: bold;
-    transition: 0.3s;
-}
-.filter-btn:hover { border-color: #0a84ff; color: #0a84ff; }
-.filter-btn.active {
-    background-color: #0a84ff;
-    color: #fff;
-    border-color: #0a84ff;
-}
-     </style>

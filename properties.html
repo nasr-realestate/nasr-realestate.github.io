@@ -22,99 +22,66 @@ image: "/assets/img/social-properties.webp"
 
   <!-- أزرار الفلترة -->
   <div class="filter-container" style="margin-bottom: 2rem;">
-      <button class="filter-btn active" onclick="filterSelection('all')">الكل</button>
-      <button class="filter-btn" onclick="filterSelection('apartment')"><i class="fas fa-home"></i> شقق تمليك</button>
-      <button class="filter-btn" onclick="filterSelection('rent')"><i class="fas fa-key"></i> شقق إيجار</button>
-      <button class="filter-btn" onclick="filterSelection('shop')"><i class="fas fa-store"></i> محلات</button>
-      <button class="filter-btn" onclick="filterSelection('office')"><i class="fas fa-building"></i> مكاتب ومقرات</button>
+    <button class="filter-btn active" onclick="filterSelection('all', event)">الكل</button>
+    <button class="filter-btn" onclick="filterSelection('apartment', event)"><i class="fas fa-home"></i> شقق تمليك</button>
+    <button class="filter-btn" onclick="filterSelection('rent', event)"><i class="fas fa-key"></i> شقق إيجار</button>
+    <button class="filter-btn" onclick="filterSelection('shop', event)"><i class="fas fa-store"></i> محلات</button>
+    <button class="filter-btn" onclick="filterSelection('office', event)"><i class="fas fa-building"></i> مكاتب ومقرات</button>
   </div>
 
   <!-- شبكة العرض -->
   <section class="properties-grid" style="min-height: 60vh;">
-    
+
     {% assign all_properties = site.properties | sort: 'date' | reverse %}
-    
+
     {% for prop in all_properties %}
-        
-        {% assign category_class = "apartment" %}
-        {% assign type = "sale" %}
 
-        {% if prop.title contains "إيجار" or prop.title contains "ايجار" %}
-            {% assign category_class = "rent" %}
-            {% assign type = "rent" %}
-        {% elsif prop.title contains "محل" or prop.title contains "تجارى" or prop.title contains "تجاري" %}
-            {% assign category_class = "shop" %}
-        {% elsif prop.title contains "مكتب" or prop.title contains "مقر" or prop.title contains "إداري" %}
-            {% assign category_class = "office" %}
-        {% endif %}
+      {% assign category_class = "apartment" %}
+      {% assign type = "sale" %}
 
-        <div class="filter-item {{ category_class }}">
-            {% include property_card.html item=prop type=type %}
-        </div>
+      {% if prop.title contains "إيجار" or prop.title contains "ايجار" %}
+        {% assign category_class = "rent" %}
+        {% assign type = "rent" %}
+      {% elsif prop.title contains "محل" or prop.title contains "تجارى" or prop.title contains "تجاري" %}
+        {% assign category_class = "shop" %}
+      {% elsif prop.title contains "مكتب" or prop.title contains "مقر" or prop.title contains "إداري" %}
+        {% assign category_class = "office" %}
+      {% endif %}
+
+      <div class="filter-item {{ category_class }}">
+        {% include property_card.html item=prop type=type %}
+      </div>
 
     {% else %}
-        <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
-            <!-- ✅ تم التعديل هنا: تغيير h3 إلى h2 -->
-            <h2>لا توجد عقارات حالياً</h2>
-        </div>
+      <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
+        <h2>لا توجد عقارات حالياً</h2>
+      </div>
     {% endfor %}
 
   </section>
 
-  <!-- زر الانتقال للطلبات -->
+  <!-- رابط الطلبات -->
   <div style="text-align: center; margin: 3rem 0;">
-      <a href="{{ '/requests/' | relative_url }}" class="nav-btn" style="background: transparent; border: 1px solid var(--color-blue); color: var(--color-blue);">
-          شاهد طلبات الشراء <i class="fas fa-arrow-left"></i>
-      </a>
+    <a href="{{ '/requests/' | relative_url }}"
+       class="nav-btn"
+       style="background: transparent; border: 1px solid var(--color-blue); color: var(--color-blue);">
+      شاهد طلبات الشراء <i class="fas fa-arrow-right"></i>
+    </a>
   </div>
 
 </main>
 
-<!-- سكربت وستايل الفلترة (يبقى كما هو) -->
 <script>
-function filterSelection(c) {
-  var x, i;
-  x = document.getElementsByClassName("filter-item");
+function filterSelection(c, e) {
+  var x = document.getElementsByClassName("filter-item");
   var btns = document.getElementsByClassName("filter-btn");
-  for (i = 0; i < btns.length; i++) {
-    btns[i].classList.remove("active");
-  }
-  event.currentTarget.classList.add("active");
-  for (i = 0; i < x.length; i++) {
-    w3RemoveClass(x[i], "hide");
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+  e.currentTarget.classList.add("active");
+  for (var i = 0; i < x.length; i++) {
+    x[i].classList.remove("hide");
     if (c !== "all" && x[i].className.indexOf(c) === -1) {
-      w3AddClass(x[i], "hide");
+      x[i].classList.add("hide");
     }
   }
-}
-function w3AddClass(element, name) {
-  var i, arr1, arr2;
-  arr1 = element.className.split(" ");
-  arr2 = name.split(" ");
-  for (i = 0; i < arr2.length; i++) {
-    if (arr1.indexOf(arr2[i]) == -1) {element.className += " " + arr2[i];}
-  }
-}
-function w3RemoveClass(element, name) {
-  var i, arr1, arr2;
-  arr1 = element.className.split(" ");
-  arr2 = name.split(" ");
-  for (i = 0; i < arr2.length; i++) {
-    while (arr1.indexOf(arr2[i]) > -1) {
-      arr1.splice(arr1.indexOf(arr2[i]), 1);
-    }
-  }
-  element.className = arr1.join(" ");
 }
 </script>
-<style>
-.filter-item { display: block; animation: fadeIn 0.5s; }
-.hide { display: none; }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.filter-btn { border: 1px solid #333; background: transparent; color: #b0b0b0; padding: 8px 20px; margin: 5px; cursor: pointer; border-radius: 50px; font-family: 'Cairo'; font-weight: bold; transition: 0.3s; }
-.filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.filter-btn.active { background-color: var(--color-primary); color: #000; border-color: var(--color-primary); }
-</style>
