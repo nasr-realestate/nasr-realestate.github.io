@@ -1,0 +1,56 @@
+---
+layout: default
+title: "تم استلام عقارك بنجاح | سمسار طلبك"
+permalink: /form-success.html
+image: "/assets/img/social-home.webp"
+---
+
+<main class="content-wrapper success-page-wrapper">
+  <div class="success-card">
+
+    <div class="success-icon-container">
+      <i class="fas fa-check-circle success-icon"></i>
+    </div>
+
+    <h1 class="success-title">تم استلام طلبك بنجاح!</h1>
+    <p class="success-subtitle">عقارك الآن في أيدٍ أمينة.. شكراً لثقتك بنا</p>
+
+    <div class="status-roadmap">
+      <h3 class="roadmap-title">ماذا سيحدث الآن؟</h3>
+      <ul class="roadmap-list">
+        <li>
+          <div class="roadmap-icon"><i class="fas fa-search"></i></div>
+          <div class="roadmap-text"><strong>المراجعة:</strong> سيقوم فريقنا بمراجعة البيانات التي أرسلتها للتأكد من جودتها.</div>
+        </li>
+        <li>
+          <div class="roadmap-icon"><i class="fas fa-phone-alt"></i></div>
+          <div class="roadmap-text"><strong>التواصل:</strong> سنتصل بك خلال 24 ساعة لتأكيد التفاصيل النهائية.</div>
+        </li>
+        <li>
+          <div class="roadmap-icon"><i class="fas fa-rocket"></i></div>
+          <div class="roadmap-text"><strong>النشر:</strong> سيتم عرض عقارك فوراً على آلاف المشترين الجادين في شبكتنا.</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="success-actions">
+      <a href="{{ '/' | relative_url }}" class="gold-btn-main">
+        <i class="fas fa-home"></i> العودة للرئيسية
+      </a>
+      <a href="https://wa.me/201147758857?text=لقد قمت بإرسال عقار الآن عبر الموقع وأريد المتابعة"
+         target="_blank" rel="noopener"
+         class="gold-btn-outline">
+        <i class="fab fa-whatsapp"></i> متابعة عبر واتساب
+      </a>
+    </div>
+
+    <p class="auto-redirect-text">سيتم توجيهك تلقائياً للرئيسية خلال 10 ثوانٍ...</p>
+
+  </div>
+</main>
+
+<script>
+setTimeout(function() {
+  window.location.href = "{{ '/' | relative_url }}";
+}, 10000);
+</script>

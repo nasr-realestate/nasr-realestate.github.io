@@ -1,0 +1,135 @@
+---
+layout: default
+title: "معرض النخبة العقاري - طارق طنطاوي"
+description: "تصفح أفخم الوحدات السكنية والإدارية في مدينة نصر عبر معرضنا التفاعلي الذكي."
+permalink: /luxury-gallery.html
+image: "/assets/img/social-home.webp"
+---
+
+<div class="luxury-viewer-container">
+
+  <nav class="gallery-nav">
+    <a href="{{ '/' | relative_url }}" class="back-link">
+      <i class="fas fa-arrow-right"></i> العودة للرئيسية
+    </a>
+  </nav>
+
+  <div class="slider-progress-container">
+    <div class="slider-progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="slider-viewport">
+    <div class="slider-track" id="sliderTrack"></div>
+    <button class="nav-arrow prev" onclick="moveSlide(-1)" aria-label="السابق"><i class="fas fa-chevron-right"></i></button>
+    <button class="nav-arrow next" onclick="moveSlide(1)"  aria-label="التالي"><i class="fas fa-chevron-left"></i></button>
+  </div>
+
+  <div class="slider-controls-panel">
+    <button id="playPauseBtn" class="control-btn" onclick="toggleAutoPlay()">
+      <i class="fas fa-pause"></i> <span id="playPauseText">إيقاف مؤقت</span>
+    </button>
+    <a id="detailsLink" href="#" class="details-btn gold-glow">
+      <i class="fas fa-external-link-alt"></i> عرض التفاصيل الكاملة
+    </a>
+  </div>
+
+  <div class="owner-branding-card">
+    <div class="owner-info">
+      <div class="owner-text">
+        <span class="label">خبير العقارات المسؤول:</span>
+        <h3>أ/ طارق طنطاوي</h3>
+      </div>
+      <a href="tel:+201147758857" class="call-owner-btn">
+        <i class="fas fa-phone-alt"></i> 01147758857
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const properties = [
+    { title: "شقة 180م المنطقة العاشرة",     price: "3,700,000 ج.م",          img: "شقة-180م-المنطقة-العاشرة.webp", desc: "الترا سوبر لوكس - الدور الثالث - واجهة رئيسية - مسجلة شهر عقاري",          url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
+    { title: "شقة 135م ميدان رابعة",           price: "5,000,000 ج.م",          img: "raba-nasr.webp",                desc: "تشطيب مهندس - شامل التكييفات والمطبخ - عمارة كلاسيكية قوية",                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
+    { title: "فيلا دوبلكس حي الأندلس",         price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp",           desc: "285م - مدخل خاص - حديقة 65م - أمام ماونتن فيو بالتجمع الخامس",              url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
+    { title: "شقة 225م شارع الطيران",           price: "8,000,000 ج.م",          img: "al-Tayaranstreet.webp",         desc: "مباني حديثة 2014 - فيو مفتوح - الترا سوبر لوكس - حصة بالجراج",              url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
+    { title: "دوبلكس استثماري حي السفارات",     price: "4,850,000 ج.م",          img: "elsfarat-duplex.webp",          desc: "الحي السابع - فيو بانوراما - عائد استثماري فوري (مؤجر حالياً)",              url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
+    { title: "شقة 225م المنطقة الأولى",         price: "7,500,000 ج.م",          img: "zuhair-sabri.webp",             desc: "تشطيب قصور (أرو مسمار ورخام) - شارع زهير صبري - شامل الجراج",               url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
+    { title: "شقة 86م زهراء مدينة نصر",         price: "1,650,000 ج.م",          img: "zahraa-thirdfloor.webp",        desc: "دور ثالث مميز - فيو مفتوح غير مجروح - موقع حيوي وسعر لقطة",                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" },
+    { title: "شقة 250م شارع توفيق البكري",      price: "5,000,000 ج.م",          img: "tawfiqal-Bakri-st.webp",        desc: "ناصية بحري - ليفينج روم 30م - مسجلة شهر عقاري - خلف مستشفى حسبو",          url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" },
+    { title: "شقة لقطة حسن المأمون",            price: "1,650,000 ج.م",          img: "tawnit.webp",                   desc: "عمارات التعاونيات - آخر حسن المأمون - موقع استراتيجي للشباب",                url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" },
+    { title: "شقة 288م أبراج صن رايز",          price: "7,000,000 ج.م",          img: "sunrise.webp",                  desc: "حي السفارات - فيو مفتوح بحري 100% - تشطيب مودرن فاخر - أمن 24 ساعة",       url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
+  ];
+
+  let currentIdx   = 0;
+  let isAutoPlaying = true;
+  let progress     = 0;
+  let autoPlayTimer;
+  const baseUrl    = "{{ site.baseurl }}";
+
+  function initSlider() {
+    const track = document.getElementById('sliderTrack');
+    properties.forEach((prop, index) => {
+      const slide = document.createElement('div');
+      slide.className = `slide-item ${index === 0 ? 'active' : ''}`;
+      slide.innerHTML = `
+        <div class="slide-image">
+          <img src="${baseUrl}/assets/img/properties/${prop.img}"
+               alt="${prop.title}"
+               loading="${index === 0 ? 'eager' : 'lazy'}">
+        </div>
+        <div class="slide-overlay"></div>
+        <div class="slide-content">
+          <h2>${prop.title}</h2>
+          <p>${prop.desc}</p>
+          <div class="slide-price">${prop.price}</div>
+        </div>
+      `;
+      track.appendChild(slide);
+    });
+    updateControls();
+    startAutoPlay();
+  }
+
+  function moveSlide(direction) {
+    currentIdx = (currentIdx + direction + properties.length) % properties.length;
+    renderSlide();
+    resetProgress();
+  }
+
+  function renderSlide() {
+    const track  = document.getElementById('sliderTrack');
+    const slides = document.querySelectorAll('.slide-item');
+    track.style.transform = `translateX(${currentIdx * 100}%)`;
+    slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
+    updateControls();
+  }
+
+  function updateControls() {
+    document.getElementById('detailsLink').href = properties[currentIdx].url;
+  }
+
+  function startAutoPlay() {
+    if (autoPlayTimer) clearInterval(autoPlayTimer);
+    autoPlayTimer = setInterval(() => {
+      if (isAutoPlaying) {
+        progress += 1.67;
+        document.getElementById('progressBar').style.width = progress + '%';
+        if (progress >= 100) { moveSlide(1); }
+      }
+    }, 100);
+  }
+
+  function resetProgress() {
+    progress = 0;
+    document.getElementById('progressBar').style.width = '0%';
+  }
+
+  function toggleAutoPlay() {
+    isAutoPlaying = !isAutoPlaying;
+    document.getElementById('playPauseText').innerText = isAutoPlaying ? "إيقاف مؤقت" : "تشغيل العرض";
+    document.querySelector('#playPauseBtn i').className = isAutoPlaying ? "fas fa-pause" : "fas fa-play";
+  }
+
+  document.addEventListener('DOMContentLoaded', initSlider);
+</script>
