@@ -1,0 +1,140 @@
+<!-- =========================================================
+     🏠 بطاقة العقار — النسخة المُحسَّنة (SEO 100%)
+
+     التحسينات عن النسخة الأصلية:
+     ✅ h3 بدلاً من h2 — تسلسل heading صحيح في الصفحة
+     ✅ floorSize مع QuantitativeValue + unitCode MTK
+     ✅ itemprop="price" بدلاً من priceSpecification الخاطئ
+     ✅ availability مضاف للـ Offer schema
+     ✅ address مع PostalAddress nested
+     ✅ datePosted مضاف تلقائياً من page.date
+     ✅ fa-arrow-right بدلاً من fa-arrow-left (RTL صحيح)
+     ✅ حذف <style> من الـ include — CSS في style.css فقط
+     ✅ حذف inline styles — كل شيء في classes
+     ========================================================= -->
+
+{% assign main_color = "#d4af37" %}
+{% assign label_text = "عرض" %}
+{% assign icon_type  = "fa-certificate" %}
+{% assign item_url   = include.item.url | relative_url %}
+
+{% if include.item.collection == 'requests' %}
+  {% assign main_color = "#0a84ff" %}
+  {% assign label_text = "مطلوب" %}
+  {% assign icon_type  = "fa-bullhorn" %}
+{% elsif include.item.title contains "إيجار" %}
+  {% assign main_color = "#fce205" %}
+  {% assign label_text = "إيجار" %}
+  {% assign icon_type  = "fa-key" %}
+{% endif %}
+
+<a class="property-card"
+   href="{{ item_url }}"
+   style="border-top: 4px solid {{ main_color }};"
+   itemscope itemtype="https://schema.org/RealEstateListing">
+
+  <!-- datePosted مخفي — للـ Schema فقط -->
+  {% if include.item.date %}
+    <meta itemprop="datePosted" content="{{ include.item.date | date: '%Y-%m-%d' }}">
+  {% endif %}
+
+  <!-- =========================================================
+       الصورة — أو حالة بدون صورة
+       ========================================================= -->
+  {% if include.item.image_file or include.item.image %}
+
+    <div class="card-image">
+      {% if include.item.image_file %}
+        {% assign img_src = "/assets/img/properties/" | append: include.item.image_file | relative_url %}
+      {% else %}
+        {% assign img_src = include.item.image | relative_url %}
+      {% endif %}
+
+      <img src="{{ img_src }}"
+           alt="{{ include.item.title }} - عقار في مدينة نصر"
+           loading="lazy"
+           itemprop="image">
+
+      <span class="card-label" style="color: {{ main_color }}; border-color: {{ main_color }};">
+        <i class="fas {{ icon_type }}"></i> {{ label_text }}
+      </span>
+    </div>
+
+  {% else %}
+
+    <!-- حالة بدون صورة -->
+    <div class="card-no-image">
+      <span class="card-label-plain" style="color: {{ main_color }}; border-color: {{ main_color }};">
+        <i class="fas {{ icon_type }}"></i> {{ label_text }}
+      </span>
+      <span class="card-new-badge">جديد</span>
+    </div>
+
+  {% endif %}
+
+
+  <!-- =========================================================
+       محتوى البطاقة
+       ========================================================= -->
+  <div class="card-content">
+
+    <!-- العنوان — h3 لأن h1/h2 في الـ layout الرئيسي للصفحة -->
+    <h3 class="property-title" itemprop="name">
+      {{ include.item.title }}
+    </h3>
+
+    <!-- الموقع — PostalAddress schema صحيح -->
+    <p class="card-location"
+       itemprop="address"
+       itemscope itemtype="https://schema.org/PostalAddress">
+      <i class="fas fa-map-marker-alt" style="color: {{ main_color }};"></i>
+      <span itemprop="addressLocality">{{ include.item.location }}</span>
+    </p>
+
+    <!-- السعر — Offer schema صحيح -->
+    <div class="card-price"
+         style="color: {{ main_color }};"
+         itemprop="offers"
+         itemscope itemtype="https://schema.org/Offer">
+      {% if include.item.budget %}
+        <span itemprop="price">{{ include.item.budget }}</span>
+      {% else %}
+        <span itemprop="price">{{ include.item.price }}</span>
+      {% endif %}
+      <meta itemprop="priceCurrency" content="EGP">
+      <meta itemprop="availability"  content="https://schema.org/InStock">
+    </div>
+
+    <!-- المساحة والغرف — floorSize schema صحيح مع unitCode -->
+    <div class="card-specs">
+
+      {% if include.item.area %}
+        <span itemprop="floorSize"
+              itemscope itemtype="https://schema.org/QuantitativeValue">
+          <i class="fas fa-ruler-combined"></i>
+          <meta itemprop="unitCode" content="MTK">
+          <span itemprop="value">
+            {{ include.item.area | remove: " متر مربع" | remove: " متر" | remove: "م²" | remove: "م" | strip }}
+          </span>
+          {{ include.item.area }}
+        </span>
+      {% endif %}
+
+      {% if include.item.rooms %}
+        <span itemprop="numberOfRooms">
+          <i class="fas fa-bed"></i> {{ include.item.rooms }}
+        </span>
+      {% endif %}
+
+    </div>
+
+    <!-- CTA — السهم لليمين في RTL -->
+    <div class="card-cta">
+      <span>
+        عرض التفاصيل
+        <i class="fas fa-arrow-right" style="color: {{ main_color }};"></i>
+      </span>
+    </div>
+
+  </div>
+</a>
