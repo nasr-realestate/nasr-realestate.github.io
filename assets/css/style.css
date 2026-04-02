@@ -91,9 +91,6 @@ img  { max-width: 100%; height: auto; }
 .nav-link.requests:hover     { border-color: var(--color-primary); color: var(--color-primary); }
 .nav-link.add-property:hover { background: var(--color-primary); color: #000; }
 
-.nav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 0.9rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 1rem; transition: all 0.3s ease; border: 1px solid transparent; font-family: 'Cairo', sans-serif; cursor: pointer; }
-.nav-btn:hover { transform: translateY(-3px); }
-
 /* =========================================================
    === 🏠 Hero
    ========================================================= */
@@ -492,30 +489,36 @@ img  { max-width: 100%; height: auto; }
 .details-btn  { background: var(--color-primary); color: #000; border: none; padding: 18px 40px; border-radius: 50px; font-weight: 800; font-size: 1.1rem; text-decoration: none; font-family: 'Cairo', sans-serif; display: inline-flex; align-items: center; gap: 10px; transition: 0.3s; }
 .gold-glow:hover { box-shadow: 0 0 30px rgba(212, 175, 55, 0.4); transform: translateY(-3px); }
 
-.call-owner-btn {
-    position: fixed;
-    bottom: 30px;
-    left: 30px;
-    background: #000; /* أسود ملكي */
-    color: var(--color-primary) !important; /* ذهبي */
-    border: 1px solid var(--color-primary);
-    padding: 12px 25px;
-    border-radius: 12px; /* زوايا احترافية وليست دائرية طفولية */
-    text-decoration: none;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 9999;
-    transition: 0.3s;
+.owner-branding-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.15); border-radius: 20px; padding: 25px 40px; margin-top: 20px; }
+.owner-info          { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.owner-text h3       { color: #fff; font-size: 1.8rem; font-weight: 800; }
+.owner-text .label   { color: var(--color-primary); font-size: 0.9rem; font-weight: 700; }
+
+/* =========================================================
+   === 🤵 الزر العائم (اتصال بالمستشار) - التعديل الجديد
+   ========================================================= */
+.call-owner-btn { 
+    background: #000; /* خلفية سوداء ملكية */
+    color: var(--color-primary) !important; /* لون ذهبي */
+    text-decoration: none; 
+    padding: 12px 25px; 
+    border: 1px solid var(--color-primary); /* إطار ذهبي رفيع */
+    border-radius: 12px; /* زوايا مستطيلة منحنية تعطي طابعاً معمارياً */
+    font-weight: 800; 
+    font-size: 1.1rem; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 12px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+    transition: all 0.3s ease; 
 }
 
-.call-owner-btn:hover {
-    background: var(--color-primary);
-    color: #000 !important;
-    transform: translateY(-5px);
-   }
+.call-owner-btn:hover { 
+    transform: translateY(-5px); 
+    background: var(--color-primary); /* ينقلب للذهبي عند التمرير */
+    color: #000 !important; /* الخط يصبح أسود */
+    box-shadow: 0 15px 35px rgba(212, 175, 55, 0.3); 
+}
 
 @media (max-width: 768px) {
   .slider-viewport  { height: 500px; }
