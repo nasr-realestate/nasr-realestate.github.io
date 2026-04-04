@@ -202,26 +202,143 @@ img  { max-width: 100%; height: auto; }
 .related-card h3    { color: #fff; margin-bottom: 10px; font-size: 1.1rem; line-height: 1.4; }
 .related-location   { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
 .related-price      { color: var(--color-primary); font-weight: bold; font-size: 1.2rem; border-top: 1px solid #222; padding-top: 10px; }
-
-/* =========================================================
-   === 📋 صفحة تفاصيل الطلب
+   /* =========================================================
+   === 📋 صفحة تفاصيل الطلب (Request Details - Prestige Edition)
    ========================================================= */
-.details-container.request-theme { max-width: 900px; margin: 2rem auto; padding: 0 20px; direction: rtl; font-family: 'Cairo', sans-serif; }
-.request-tag { background: rgba(10, 132, 255, 0.1); color: var(--color-blue); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid var(--color-blue); }
-.date-tag    { background: rgba(255, 255, 255, 0.05); color: #aaa; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; }
-.budget-card { background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(10, 132, 255, 0.05)); padding: 30px; border-radius: 15px; border: 2px solid var(--color-blue); text-align: center; margin-bottom: 30px; }
-.budget-label { color: #88c7ff; font-size: 1rem; display: block; margin-bottom: 10px; }
-.budget-value { color: #fff; font-size: 2rem; font-weight: 800; }
-.content-body { background: rgba(255,255,255,0.02); padding: 30px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px; line-height: 1.8; color: #ddd; }
-.section-subtitle { color: var(--color-blue); margin-bottom: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 10px; }
-.main-content p { margin-bottom: 15px; }
-.req-title { color: var(--color-blue); margin: 2rem 0 1rem; font-size: 1.1rem; }
-.req-list   { list-style: none; padding: 0; }
-.req-list li { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-.req-list li i { color: var(--color-blue); }
-.expired-content { opacity: 0.5; filter: grayscale(90%); pointer-events: none; }
-.expired-content .property-nav { pointer-events: auto; opacity: 1; filter: none; }
+.details-container.request-theme { 
+  max-width: 900px; 
+  margin: 2rem auto; 
+  padding: 0 20px; 
+  direction: rtl; 
+  font-family: 'Cairo', sans-serif; 
+}
 
+.request-tag { 
+  background: rgba(10, 132, 255, 0.1); 
+  color: var(--color-blue); 
+  padding: 5px 15px; 
+  border-radius: 20px; 
+  font-size: 0.9rem; 
+  border: 1px solid var(--color-blue); 
+}
+
+.date-tag { 
+  background: rgba(255, 255, 255, 0.05); 
+  color: #aaa; 
+  padding: 5px 15px; 
+  border-radius: 20px; 
+  font-size: 0.9rem; 
+}
+
+/* بطاقة الميزانية - تم تحسين التباين */
+.budget-card { 
+  background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(10, 132, 255, 0.05)); 
+  padding: 30px; 
+  border-radius: 15px; 
+  border: 2px solid var(--color-blue); 
+  text-align: center; 
+  margin-bottom: 30px; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.budget-label { 
+  color: #88c7ff; 
+  font-size: 1rem; 
+  display: block; 
+  margin-bottom: 10px; 
+  font-weight: 600;
+}
+
+.budget-value { 
+  color: #fff; 
+  font-size: 2.2rem; 
+  font-weight: 900; 
+  text-shadow: 0 2px 10px rgba(10, 132, 255, 0.3);
+}
+
+.content-body { 
+  background: var(--color-surface-2); 
+  padding: 30px; 
+  border-radius: 15px; 
+  border: 1px solid var(--color-border); 
+  margin-bottom: 30px; 
+  line-height: 1.8; 
+  color: var(--color-text-secondary); 
+}
+
+.section-subtitle { 
+  color: var(--color-blue); 
+  margin-bottom: 1.5rem; 
+  border-bottom: 1px dashed #444; 
+  padding-bottom: 10px; 
+  font-weight: 700;
+}
+
+.main-content p { 
+  margin-bottom: 15px; 
+}
+
+.req-title { 
+  color: var(--color-blue); 
+  margin: 2rem 0 1rem; 
+  font-size: 1.1rem; 
+  font-weight: 700;
+}
+
+.req-list { 
+  list-style: none; 
+  padding: 0; 
+}
+
+.req-list li { 
+  background: rgba(255, 255, 255, 0.03); 
+  padding: 12px 18px; 
+  border-radius: 10px; 
+  margin-bottom: 10px; 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  border-right: 3px solid var(--color-blue);
+  transition: transform 0.3s ease;
+}
+
+.req-list li:hover {
+  transform: translateX(-5px);
+  background: rgba(10, 132, 255, 0.05);
+}
+
+.req-list li i { 
+  color: var(--color-blue); 
+  font-size: 1rem;
+}
+
+/* التحكم في الطلبات المنتهية الصلاحية */
+.expired-content { 
+  opacity: 0.5; 
+  filter: grayscale(100%); 
+  pointer-events: none; 
+  position: relative;
+}
+
+.expired-content::after {
+  content: "هذا الطلب غير متاح حالياً";
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff4d4d;
+  color: white;
+  padding: 5px 20px;
+  border-radius: 50px;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.expired-content .property-nav { 
+  pointer-events: auto; 
+  opacity: 1; 
+  filter: none; 
+}
 /* =========================================================
    === 📄 صفحة التفاصيل القديمة
    ========================================================= */
