@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سمسار طلبك | تقييم العقار الذكي</title>
+    <style>
+        body { background-color: #000; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; border: 1px solid #d4af37; padding: 30px; border-radius: 15px; background: #111; }
+        h1 { color: #d4af37; font-size: 24px; }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #333; background: #222; color: #fff; box-sizing: border-box; }
+        button { background-color: #d4af37; color: #000; font-weight: bold; cursor: pointer; font-size: 18px; border: none; transition: 0.3s; }
+        button:hover { background-color: #fff; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 10px; background: #1a1a1a; line-height: 1.6; border-right: 4px solid #d4af37; text-align: right; display: none; }
+        .loading { color: #d4af37; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>تحليل القيمة السوقية (Reality Check)</h1>
+    <p style="color: #aaa; font-size: 14px;">أدخل بيانات عقارك للحصول على تقييم لحظي من خبيرنا الذكي</p>
+    
+    <input type="text" id="area" placeholder="المنطقة (مثال: المنطقة السادسة، مدينة نصر)">
+    <input type="number" id="size" placeholder="المساحة بالمتر">
+    <select id="finishing">
+        <option value="بدون تشطيب">بدون تشطيب</option>
+        <option value="سوبر لوكس">سوبر لوكس</option>
+        <option value="الترا سوبر لوكس">الترا سوبر لوكس</option>
+    </select>
+    <input type="number" id="price" placeholder="السعر الذي تطمح إليه (بالجنيه)">
+    
+    <button onclick="evaluateProperty()">حلل القيمة الآن</button>
+    
+    <div id="loading" class="loading">جاري فحص بيانات السوق اللحظية...</div>
+    <div id="result"></div>
+</div>
+
+<script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+    // ضاع مفتاح الـ API الخاص بك هنا
+    const API_KEY = "AIzaSyARvu6kQux4Br6OdIN9HdUnzo5NwwMMJfE";
+    const genAI = new GoogleGenerativeAI(API_KEY);
+
+    window.evaluateProperty = async function() {
+        const area = document.getElementById('area').value;
+        const size = document.getElementById('size').value;
+        const finishing = document.getElementById('finishing').value;
+        const price = document.getElementById('price').value;
+        const resultDiv = document.getElementById('result');
+        const loading = document.getElementById('loading');
+
+        if(!area || !size || !price) { alert("من فضلك أكمل البيانات الأساسية"); return; }
+
+        loading.style.display = "block";
+        resultDiv.style.display = "none";
+
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            
+            const prompt = `أنت خبير عقاري استراتيجي في سوق مصر (مدينة نصر، التجمع، هليوبوليس). 
+            قام مالك بإدخال بيانات عقاره: منطقة ${area}، مساحة ${size}م، تشطيب ${finishing}، ويطلب سعر ${price} جنيه. 
+            حلل السعر بناءً على خبرتك في أبريل 2026. إذا كان السعر أعلى من السوق بـ 15%، استخدم نبرة "Reality Check" حازمة. 
+            اشرح له بذكاء لماذا السعر المرتفع يضر العقار (Property Reputation). 
+            اجعل الرد موجزاً، قوياً، وينتهي بدعوة للتواصل معك (طارق طنطاوي) لتنفيذ الاستراتيجية الصحيحة. 
+            استخدم لغة مصرية احترافية فخمة.`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            resultDiv.innerHTML = text.replace(/\n/g, '<br>');
+            resultDiv.style.display = "block";
+        } catch (error) {
+            resultDiv.innerHTML = "عذراً، حدث خطأ في الاتصال بالمحرك. حاول مجدداً.";
+            resultDiv.style.display = "block";
+        } finally {
+            loading.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>
