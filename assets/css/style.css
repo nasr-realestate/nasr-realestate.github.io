@@ -510,3 +510,97 @@ img  { max-width: 100%; height: auto; }
   .nav-arrow.prev   { right: 15px; }
   .nav-arrow.next   { left: 15px; }
 }
+/* =========================================================
+   === 📞 Prestige Call Button - الهوية العقارية الفاخرة
+   ========================================================= */
+.prestige-call-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px; /* التموضع في اليمين بما أن الموقع RTL */
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-decoration: none;
+  background: rgba(10, 10, 10, 0.85); /* أسود ملكي شفاف */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-primary); /* حد ذهبي رفيع */
+  padding: 10px 20px;
+  border-radius: 60px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(212, 175, 55, 0.2);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* الأيقونة الذهبية المتحركة */
+.button-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-size: 1.2rem;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  position: relative;
+}
+
+/* نبض ذهبي هادئ (ليس أخضر!) */
+.button-icon::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--color-primary);
+  animation: gold-pulse-soft 2s infinite;
+}
+
+/* نصوص الزر */
+.button-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.button-text .label {
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.button-text .phone-num {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 900;
+  margin-top: 2px;
+}
+
+/* تأثير عند تمرير الماوس */
+.prestige-call-button:hover {
+  transform: translateY(-5px) scale(1.05);
+  background: rgba(20, 20, 20, 0.95);
+  border-color: #ffffff;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.4);
+}
+
+/* أنيميشن النبض الذهبي */
+@keyframes gold-pulse-soft {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* استجابة الهواتف */
+@media (max-width: 480px) {
+  .prestige-call-button {
+    bottom: 20px;
+    right: 20px;
+    padding: 8px 15px;
+  }
+  .button-icon { width: 38px; height: 38px; font-size: 1rem; }
+  .button-text .phone-num { font-size: 1rem; }
+   }
+      
