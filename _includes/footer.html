@@ -1,19 +1,8 @@
-<!-- =========================================================
-     🦶 تذييل الموقع — النسخة المُحسَّنة
-     الإصلاحات:
-     ✅ fa-angle-right بدلاً من fa-angle-left (RTL صحيح)
-     ✅ رابط privacy-policy بدون سطر فارغ
-     ✅ حذف <style> — منقول لـ style.css
-     ✅ padding-bottom 6rem لتجنب تداخل زر الاتصال
-     ========================================================= -->
-
-<footer class="site-footer">
+<footer class="site-footer" style="padding-bottom: 6rem;">
   <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
 
-    <!-- شبكة الفوتر (3 أعمدة) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
 
-      <!-- العمود 1: عن الشركة -->
       <div>
         <div class="footer-logo" style="margin-bottom: 1.5rem;">
           <a href="{{ '/' | relative_url }}">
@@ -26,92 +15,69 @@
           </a>
         </div>
         <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;">
-          بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، إيجار) مبنية على الثقة، الشفافية، والخبرة الطويلة في السوق المصري.
+          بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، تقييم) مبنية على الثقة والذكاء الاصطناعي والخبرة الطويلة.
         </p>
       </div>
 
-      <!-- العمود 2: روابط سريعة -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          روابط سريعة
+          بوابة الملاك الذكية
         </h3>
         <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
           <li>
+            <a href="{{ '/evaluate.html' | relative_url }}"
+               style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem; font-weight: bold;">
+              <i class="fas fa-magic" style="color: var(--color-primary); margin-left: 8px;"></i>
+              تثمين العقار (AI Reality Check)
+            </a>
+          </li>
+          <li>
             <a href="{{ '/properties/' | relative_url }}"
                style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <!-- fa-angle-right صحيح في RTL -->
               <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;"></i>
-              تصفح العقارات
+              تصفح خريطة الأسعار
             </a>
           </li>
           <li>
             <a href="{{ '/requests/' | relative_url }}"
                style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
               <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;"></i>
-              طلبات العملاء
+              طلبات العملاء العاجلة
             </a>
           </li>
           <li>
             <a href="{{ '/add-your-property.html' | relative_url }}"
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;"></i>
-              أضف عقارك مجاناً
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/about-us.html' | relative_url }}"
-               style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;"></i>
-              من نحن (قصتنا)
+               style="text-decoration: none; color: #888; transition: 0.3s; font-size: 0.85rem;">
+              <i class="fas fa-plus-circle" style="margin-left: 8px;"></i>
+              إضافة عقار (الطريقة التقليدية)
             </a>
           </li>
           <li>
             <a href="{{ '/contact-us.html' | relative_url }}"
                style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
               <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;"></i>
-              تواصل معنا
+              استشارة خبير مباشر
             </a>
           </li>
         </ul>
       </div>
 
-      <!-- العمود 3: تواصل اجتماعي -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          تواصل اجتماعي
+          تواصل استراتيجي
         </h3>
 
         <div class="social-icons-grid" style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <a href="https://www.facebook.com/Tarekonly"
-             target="_blank" rel="noopener"
-             class="social-btn facebook"
-             aria-label="فيسبوك">
-            <i class="fab fa-facebook-f"></i>
-          </a>
-          <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
-             target="_blank" rel="noopener"
-             class="social-btn linkedin"
-             aria-label="لينكدإن">
-            <i class="fab fa-linkedin-in"></i>
-          </a>
-          <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac"
-             target="_blank" rel="noopener"
-             class="social-btn maps"
-             aria-label="موقعنا على الخريطة">
-            <i class="fas fa-map-marker-alt"></i>
-          </a>
-          <a href="https://pin.it/4tCl3jl6r"
-             target="_blank" rel="noopener"
-             class="social-btn pinterest"
-             aria-label="Pinterest">
-            <i class="fab fa-pinterest"></i>
-          </a>
+          <a href="https://www.facebook.com/Tarekonly" target="_blank" rel="noopener" class="social-btn facebook" aria-label="فيسبوك"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" target="_blank" rel="noopener" class="social-btn linkedin" aria-label="لينكدإن"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" target="_blank" rel="noopener" class="social-btn maps" aria-label="موقعنا على الخريطة"><i class="fas fa-map-marker-alt"></i></a>
+          <a href="https://pin.it/4tCl3jl6r" target="_blank" rel="noopener" class="social-btn pinterest" aria-label="Pinterest"><i class="fab fa-pinterest"></i></a>
         </div>
 
         <div style="margin-top: 25px; border: 1px solid #222; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
           <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);"></i>
           <div>
-            <div style="font-size: 0.8rem; color: #ccc;">هل تحتاج مساعدة؟</div>
+            <div style="font-size: 0.8rem; color: #ccc;">تحتاج قراراً فورياً؟</div>
             <div style="font-size: 1rem; color: #fff; direction: ltr;">+20 114 775 8857</div>
           </div>
         </div>
@@ -119,57 +85,14 @@
 
     </div>
 
-    <!-- قسم التقييمات -->
-    <div class="reviews-wrapper">
-
-      <!-- Trustpilot Widget -->
-      <div class="trustpilot-widget"
-           data-locale="en-US"
-           data-template-id="56278e9abfbbba0bdcd568bc"
-           data-businessunit-id="69750d3224608e9a087b3954"
-           data-style-height="52px"
-           data-style-width="100%"
-           data-token="028d09c7-97b8-42d1-ac61-7ae28f180fe4">
-        <a href="https://www.trustpilot.com/review/nasr-realestate.github.io"
-           target="_blank" rel="noopener">Trustpilot</a>
-      </div>
-
-      <!-- Google Review Button -->
-      <a href="https://g.page/r/CSMbiVESp1ziEBM/review"
-         target="_blank" rel="noopener"
-         class="google-btn">
-        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="g-logo-svg">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-        </svg>
-        <div class="g-text">
-          <span class="g-label">Review us on Google</span>
-          <span class="g-stars">★★★★★</span>
-        </div>
-      </a>
-
-    </div>
-
-    <!-- الشريط السفلي -->
     <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; margin-top: 2rem; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
-
       <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
-        جميع الحقوق محفوظة &copy; {{ 'now' | date: "%Y" }}
+        جميع الحقوق محفوظة © {{ 'now' | date: "%Y" }}
         <span style="color: var(--color-primary);">سمسار طلبك</span>
       </p>
-
       <div style="display: flex; gap: 20px;">
-        <!-- رابط سياسة الخصوصية — بدون سطر فارغ داخله -->
-        <a href="{{ '/privacy-policy.html' | relative_url }}"
-           style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem; transition: 0.3s;"
-           onmouseover="this.style.color='#fff'"
-           onmouseout="this.style.color='#b0b0b0'">
-          سياسة الخصوصية
-        </a>
+        <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">سياسة الخصوصية</a>
       </div>
-
     </div>
 
   </div>
