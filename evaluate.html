@@ -72,55 +72,64 @@
         </div>
         <a href="/" class="back-home"><i class="fas fa-long-arrow-alt-right"></i> العودة للبوابة الرئيسية</a>
     </div>
+<script>
+async function startEvaluation() {
+    const btn = document.getElementById('evaluateBtn');
+    const loader = document.getElementById('loading');
+    const resArea = document.getElementById('resultArea');
+    
+    const loc = document.getElementById('location').value;
+    const size = document.getElementById('size').value;
+    const price = document.getElementById('price').value;
+    const details = document.getElementById('details').value;
 
-    <script>
-    async function startEvaluation() {
-        const btn = document.getElementById('evaluateBtn');
-        const loader = document.getElementById('loading');
-        const resArea = document.getElementById('resultArea');
+    if(!loc || !size || !price) { alert("أكمل البيانات الأساسية للتحليل"); return; }
+
+    btn.style.display = 'none';
+    loader.style.display = 'block';
+    resArea.style.display = 'none';
+
+    // الرومبت الاحترافي للهوية العقارية لطارق طنطاوي
+    const fullPrompt = `أنت طارق طنطاوي، استشاري عقاري خبير. حلل عقار في "${loc}"، مساحة ${size}م، بسعر مطلوب ${price} ج.م. تفاصيل: ${details}. قدم Reality Check بلهجة مصرية واثقة وحازمة لعام 2026. ابدأ بـ "التحليل الاستراتيجي:" وانتهِ بـ "طارق طنطاوي".`;
+
+    try {
+        // تأكد أن هذا الرابط هو رابط الـ Worker الخاص بك
+        const workerUrl = 'https://gemini-evaluator.footcai-555.workers.dev'; 
         
-        const loc = document.getElementById('location').value;
-        const size = document.getElementById('size').value;
-        const price = document.getElementById('price').value;
-        const details = document.getElementById('details').value;
+        const response = await fetch(workerUrl, {
+            method: 'POST',
+            // حذفنا mode: 'cors' هنا لأن الـ Worker نفسه يعالج الـ Headers
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: fullPrompt })
+        });
 
-        if(!loc || !size || !price) { alert("أكمل البيانات الأساسية للتحليل"); return; }
+        const data = await response.json();
 
-        btn.style.display = 'none';
-        loader.style.display = 'block';
-        resArea.style.display = 'none';
-
-        const prompt = `أنت طارق طنطاوي، خبير عقاري منذ 2014. البائع يطلب تقييم عقار في "${loc}"، مساحة ${size}م، بسعر ${price} ج.م. تفاصيل: ${details}. حلل السعر بناءً على سوق مدينة نصر في 2026. هل السعر واقعي أم مبالغ فيه؟ كن حازماً بأسلوب استراتيجي. ابدأ بـ "التحليل الاستراتيجي لعقارات مدينة نصر:" وانته بـ "طارق طنطاوي - مستشار استراتيجي".`;
-
-        try {
-            // هذا هو رابط الوسيط الآمن الخاص بك على Cloudflare
-            const workerUrl = 'https://gemini-evaluator.footcai-555.workers.dev'; 
-            
-            const response = await fetch(workerUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt } )
-            });
-
-            if (!response.ok) throw new Error('API_CALL_FAILED');
-
-            const data = await response.json();
+        // فحص الرد للتأكد من وصول النص من Gemini عبر الـ Worker
+        if (data && data.candidates && data.candidates[0].content.parts[0].text) {
             const aiText = data.candidates[0].content.parts[0].text;
-            
             document.getElementById('aiResponse').innerText = aiText;
             
-            const waMsg = `مرحباً أستاذ طارق، قمت بتقييم عقاري في ${loc} (مساحة ${size}م - سعر ${price}) وأحتاج مناقشة التنفيذ.`;
-            document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg )}`;
+            const waMsg = `مرحباً أستاذ طارق، قمت بتقييم عقاري في ${loc} (مساحة ${size}م - سعر ${price}) وأحتاج مناقشة استراتيجية التنفيذ.`;
+            document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
             
             loader.style.display = 'none';
             resArea.style.display = 'block';
-        } catch (error) {
-            console.error("Error:", error);
-            loader.style.display = 'none';
-            btn.style.display = 'block';
-            alert("حدث خطأ أثناء الاتصال بخدمة التقييم. يرجى التأكد من أن Cloudflare Worker يعمل بشكل صحيح.");
+        } else {
+            // إذا وصل رد فارغ أو خطأ من الـ API نفسه
+            console.error("AI Data Error:", data);
+            throw new Error("بيانات غير مكتملة من المحرك");
         }
+
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        loader.style.display = 'none';
+        btn.style.display = 'block';
+        alert("تأكد من وضع GEMINI_API_KEY داخل Settings -> Variables في Cloudflare والضغط على Save & Deploy.");
     }
-    </script>
+}
+</script>
+    
+    
 </body>
 </html>
