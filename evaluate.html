@@ -15,36 +15,40 @@
             background-image: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
             color: #fff; font-family: 'Cairo', sans-serif;
             display: flex; align-items: center; justify-content: center;
-            min-height: 100vh; margin: 0; overflow-x: hidden;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
         }
 
         .container { 
-            max-width: 600px; width: 90%; margin: 40px auto;
+            max-width: 650px; width: 100%;
             padding: 40px; border-radius: 24px;
             background: var(--glass);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(214, 175, 55, 0.2);
             box-shadow: 0 40px 100px rgba(0,0,0,0.8);
-            text-align: center; position: relative;
+            text-align: center;
         }
 
-        h1 { color: var(--gold); font-weight: 900; font-size: 2rem; margin-bottom: 10px; }
+        h1 { color: var(--gold); font-weight: 900; font-size: 2rem; margin-bottom: 5px; }
         p.subtitle { color: #888; margin-bottom: 30px; font-size: 0.95rem; }
 
-        .input-group { text-align: right; margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; color: var(--gold); font-weight: bold; font-size: 0.9rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: right; }
+        .full-width { grid-column: span 2; }
 
-        input, select { 
-            width: 100%; padding: 15px; border-radius: 12px;
+        .input-group { margin-bottom: 15px; text-align: right; }
+        label { display: block; margin-bottom: 8px; color: var(--gold); font-weight: bold; font-size: 0.85rem; }
+
+        input, select, textarea { 
+            width: 100%; padding: 14px; border-radius: 10px;
             border: 1px solid #333; background: rgba(0,0,0,0.5);
             color: #fff; font-family: 'Cairo'; font-size: 1rem;
             transition: 0.3s; box-sizing: border-box;
         }
 
-        input:focus { border-color: var(--gold); outline: none; background: rgba(0,0,0,0.7); }
+        input:focus, textarea:focus { border-color: var(--gold); outline: none; background: rgba(0,0,0,0.7); }
+        textarea { resize: none; height: 80px; }
 
         button#evaluateBtn { 
-            width: 100%; padding: 20px; margin-top: 25px;
+            width: 100%; padding: 20px; margin-top: 20px;
             border-radius: 12px; border: none;
             background: linear-gradient(135deg, var(--gold), #b8860b);
             color: #000; font-weight: 900; font-size: 1.2rem;
@@ -68,7 +72,7 @@
             border-radius: 12px; font-weight: bold; gap: 10px; transition: 0.3s;
         }
 
-        .back-home { display: block; margin-top: 30px; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-home { display: block; margin-top: 25px; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
         .back-home:hover { color: var(--gold); }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -77,46 +81,57 @@
 <body>
 
     <div class="container">
-        <i class="fas fa-shield-halved" style="color: var(--gold); font-size: 3rem; margin-bottom: 20px;"></i>
-        <h1>نظام التقييم الاستراتيجي</h1>
-        <p class="subtitle">تحليل واقعي (Reality Check) لأسعار عقارات مدينة نصر والقاهرة الجديدة</p>
+        <i class="fas fa-microchip" style="color: var(--gold); font-size: 2.5rem; margin-bottom: 15px;"></i>
+        <h1>تثمين العقار الذكي</h1>
+        <p class="subtitle">حلل قيمة عقارك السوقية بناءً على خوارزميات مدينة نصر والقاهرة الجديدة (أبريل 2026)</p>
 
-        <div class="input-group">
-            <label>المنطقة (المربع السكني)</label>
-            <select id="location">
-                <option value="المنطقة الأولى - مدينة نصر">المنطقة الأولى (جولدن سكوير)</option>
-                <option value="المنطقة السادسة - مدينة نصر">المنطقة السادسة (جولدن سكوير)</option>
-                <option value="عباس العقاد / مكرم عبيد">عباس العقاد / مكرم عبيد</option>
-                <option value="التجمع الخامس / نرجس / لوتس">التجمع الخامس واللوتس</option>
-                <option value="مصر الجديدة - هليوبوليس">مصر الجديدة</option>
-            </select>
+        <div class="form-grid">
+            <div class="input-group full-width">
+                <label>المنطقة أو المربع السكني</label>
+                <input list="locations" id="location" placeholder="اكتب اسم الشارع أو المنطقة..">
+                <datalist id="locations">
+                    <option value="المنطقة الأولى - جولدن سكوير">
+                    <option value="المنطقة السادسة - جولدن سكوير">
+                    <option value="شارع عباس العقاد الرئيسي">
+                    <option value="شارع مكرم عبيد الرئيسي">
+                    <option value="حي الواحة - مدينة نصر">
+                    <option value="زهراء مدينة نصر">
+                    <option value="التجمع الخامس - النرجس">
+                    <option value="مصر الجديدة - الميرغني">
+                </datalist>
+            </div>
+
+            <div class="input-group">
+                <label>المساحة (م²)</label>
+                <input type="number" id="size" placeholder="مثلاً: 180">
+            </div>
+
+            <div class="input-group">
+                <label>السعر المطلوب (ج.م)</label>
+                <input type="number" id="price" placeholder="مثلاً: 4500000">
+            </div>
+
+            <div class="input-group full-width">
+                <label>تفاصيل إضافية (الدور، التشطيب، واجهة أم خلفي؟)</label>
+                <textarea id="details" placeholder="مثلاً: الدور الرابع، سوبر لوكس، واجهة أمامية، عمارة مرخصة.."></textarea>
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>المساحة (متر مربع)</label>
-            <input type="number" id="size" placeholder="مثلاً: 180">
-        </div>
-
-        <div class="input-group">
-            <label>السعر المطلوب (ج.م)</label>
-            <input type="number" id="price" placeholder="مثلاً: 4500000">
-        </div>
-
-        <button id="evaluateBtn" onclick="startEvaluation()">تحليل القيمة السوقية الآن</button>
+        <button id="evaluateBtn" onclick="startEvaluation()">إجراء الـ Reality Check الآن</button>
 
         <div id="loading" style="display:none; margin-top: 20px;">
-            <i class="fas fa-circle-notch fa-spin" style="color: var(--gold); font-size: 2rem;"></i>
-            <p>جاري استدعاء بيانات السوق والتحليل...</p>
+            <i class="fas fa-sync fa-spin" style="color: var(--gold); font-size: 2rem;"></i>
+            <p>جاري تحليل بيانات السوق وفحص المربع السكني...</p>
         </div>
 
         <div id="resultArea">
-            <div id="aiResponse"></div>
+            <div id="aiResponse" style="white-space: pre-line;"></div>
             <a id="waLink" href="#" class="whatsapp-btn">
-                <i class="fab fa-whatsapp"></i> تواصل مع طارق طنطاوي للتنفيذ
+                <i class="fab fa-whatsapp"></i> ناقش استراتيجية البيع مع طارق طنطاوي
             </a>
         </div>
 
-        <a href="/" class="back-home"><i class="fas fa-arrow-right"></i> العودة للبوابة الرئيسية</a>
+        <a href="/" class="back-home"><i class="fas fa-long-arrow-alt-right"></i> العودة للبوابة الرئيسية</a>
     </div>
 
     <script>
@@ -124,17 +139,30 @@
             const btn = document.getElementById('evaluateBtn');
             const loader = document.getElementById('loading');
             const resArea = document.getElementById('resultArea');
+            
             const loc = document.getElementById('location').value;
             const size = document.getElementById('size').value;
             const price = document.getElementById('price').value;
+            const details = document.getElementById('details').value;
 
-            if(!size || !price) { alert("من فضلك أدمل المساحة والسعر"); return; }
+            if(!loc || !size || !price) { alert("أكمل البيانات الأساسية للتحليل"); return; }
 
             btn.style.display = 'none';
             loader.style.display = 'block';
             resArea.style.display = 'none';
 
-            const prompt = `أنت طارق طنطاوي، مستشار عقاري خبير منذ 2014. قم بإجراء Reality Check لعقار في ${loc}، مساحته ${size}م، وسعره المطلوب ${price} ج.م. إذا كان السعر أعلى من متوسط السوق بـ 15% كن حازماً ووضح أن السعر سيطرد المستثمرين. استخدم لغة احترافية، قوية، ومختصرة. أنهِ الرد بـ "طارق طنطاوي - مستشار استراتيجي".`;
+            // برومبت احترافي يوجه Gemini للتفكير كخبير عقاري حقيقي
+            const prompt = `أنت طارق طنطاوي، استشاري عقاري خبير منذ 2014 في مدينة نصر ومصر الجديدة والتجمع. 
+            البائع يطلب تقييم عقار في "${loc}"، مساحته ${size}م، بسعر مطلوب ${price} ج.م.
+            تفاصيل إضافية: ${details}.
+
+            مطلوب منك:
+            1. ابحث في ذاكرتك عن أسعار المتر الحالية في أبريل 2026 لهذه المنطقة المحددة.
+            2. قدم تحليل "Reality Check" (واقعي): هل السعر عادل، لقطة، أم مبالغ فيه؟
+            3. إذا كان السعر مبالغاً فيه بأكثر من 15%، كن حازماً استراتيجياً: وضح أن العقار سيتعرض لـ "Property Damage" (سمعة العقار تتأثر بطول فترة العرض) وأن السعر يطرد المستثمرين الجادين.
+            4. استخدم مصطلحات مثل "Strategic Positioning" و "Sweet Spot".
+            5. الرد بلهجة مصرية احترافية، فخمة، ومختصرة.
+            6. ابدأ بـ "التحليل الاستراتيجي لعقارك:" وانتهِ بـ "طارق طنطاوي - مستشار استراتيجي".`;
 
             try {
                 const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyARvu6kQux4Br6OdIN9HdUnzo5NwwMMJfE', {
@@ -148,14 +176,20 @@
                 
                 document.getElementById('aiResponse').innerText = aiText;
                 
-                // تجهيز رابط واتساب برسالة جاهزة
-                const waMsg = `مرحباً أستاذ طارق، قمت بتقييم شقتي في ${loc} عبر الموقع (مساحة ${size}م - سعر ${price}) وأريد مناقشة استراتيجية البيع.`;
+                // رسالة واتساب مخصصة تحتوي على كامل التفاصيل
+                const waMsg = `مرحباً أستاذ طارق، قمت بإجراء تثمين آلي لعقاري في: ${loc}. 
+المساحة: ${size}م
+السعر: ${price} ج.م
+التفاصيل: ${details}
+أحتاج لمناقشة خطة التنفيذ معك.`;
+
                 document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
                 
                 loader.style.display = 'none';
                 resArea.style.display = 'block';
             } catch (error) {
-                alert("عذراً، حدث خطأ في الاتصال بالذكاء الاصطناعي.");
+                console.error(error);
+                alert("حدث خطأ في استدعاء محرك التثمين. حاول مجدداً.");
                 btn.style.display = 'block';
                 loader.style.display = 'none';
             }
