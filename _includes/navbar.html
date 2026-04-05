@@ -1,6 +1,5 @@
 <nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
 
-  <!-- الشعار -->
   <div class="navbar-logo">
     <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
       <img src="{{ '/assets/img/logo.webp' | relative_url }}"
@@ -10,10 +9,8 @@
     </a>
   </div>
 
-  <!-- الروابط -->
   <div class="navbar-links">
 
-    <!-- تصفح العقارات -->
     <a href="{{ '/properties/' | relative_url }}"
        class="nav-link properties"
        aria-label="تصفح جميع العقارات المتاحة">
@@ -21,7 +18,6 @@
       <span>عقارات</span>
     </a>
 
-    <!-- الطلبات -->
     <a href="{{ '/requests/' | relative_url }}"
        class="nav-link requests"
        aria-label="اطلع على طلبات العملاء">
@@ -29,12 +25,12 @@
       <span>طلبات</span>
     </a>
 
-    <!-- أضف عقارك — class بدلاً من inline style -->
-    <a href="{{ '/add-your-property.html' | relative_url }}"
+    <a href="{{ '/evaluate.html' | relative_url }}"
        class="nav-link add-property"
-       aria-label="أضف عقارك للبيع مجاناً">
-      <i class="fas fa-plus-circle"></i>
-      <span>أضف عقارك</span>
+       style="border: 1px solid var(--color-primary); background: rgba(212, 175, 55, 0.05);"
+       aria-label="قيم عقارك مجاناً بالذكاء الاصطناعي">
+      <i class="fas fa-magic" style="color: var(--color-primary);"></i>
+      <span style="font-weight: bold;">قيم عقارك (AI)</span>
     </a>
 
   </div>
