@@ -133,67 +133,65 @@
 
         <a href="/" class="back-home"><i class="fas fa-long-arrow-alt-right"></i> العودة للبوابة الرئيسية</a>
     </div>
+<script>
+    async function startEvaluation() {
+        const btn = document.getElementById('evaluateBtn');
+        const loader = document.getElementById('loading');
+        const resArea = document.getElementById('resultArea');
+        
+        const loc = document.getElementById('location').value;
+        const size = document.getElementById('size').value;
+        const price = document.getElementById('price').value;
+        const details = document.getElementById('details').value;
 
-    <script>
-        async function startEvaluation() {
-            const btn = document.getElementById('evaluateBtn');
-            const loader = document.getElementById('loading');
-            const resArea = document.getElementById('resultArea');
-            
-            const loc = document.getElementById('location').value;
-            const size = document.getElementById('size').value;
-            const price = document.getElementById('price').value;
-            const details = document.getElementById('details').value;
-
-            if(!loc || !size || !price) { alert("أكمل البيانات الأساسية للتحليل"); return; }
-
-            btn.style.display = 'none';
-            loader.style.display = 'block';
-            resArea.style.display = 'none';
-
-            // برومبت احترافي يوجه Gemini للتفكير كخبير عقاري حقيقي
-            const prompt = `أنت طارق طنطاوي، استشاري عقاري خبير منذ 2014 في مدينة نصر ومصر الجديدة والتجمع. 
-            البائع يطلب تقييم عقار في "${loc}"، مساحته ${size}م، بسعر مطلوب ${price} ج.م.
-            تفاصيل إضافية: ${details}.
-
-            مطلوب منك:
-            1. ابحث في ذاكرتك عن أسعار المتر الحالية في أبريل 2026 لهذه المنطقة المحددة.
-            2. قدم تحليل "Reality Check" (واقعي): هل السعر عادل، لقطة، أم مبالغ فيه؟
-            3. إذا كان السعر مبالغاً فيه بأكثر من 15%، كن حازماً استراتيجياً: وضح أن العقار سيتعرض لـ "Property Damage" (سمعة العقار تتأثر بطول فترة العرض) وأن السعر يطرد المستثمرين الجادين.
-            4. استخدم مصطلحات مثل "Strategic Positioning" و "Sweet Spot".
-            5. الرد بلهجة مصرية احترافية، فخمة، ومختصرة.
-            6. ابدأ بـ "التحليل الاستراتيجي لعقارك:" وانتهِ بـ "طارق طنطاوي - مستشار استراتيجي".`;
-
-            try {
-                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyARvu6kQux4Br6OdIN9HdUnzo5NwwMMJfE', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-
-                const data = await response.json();
-                const aiText = data.candidates[0].content.parts[0].text;
-                
-                document.getElementById('aiResponse').innerText = aiText;
-                
-                // رسالة واتساب مخصصة تحتوي على كامل التفاصيل
-                const waMsg = `مرحباً أستاذ طارق، قمت بإجراء تثمين آلي لعقاري في: ${loc}. 
-المساحة: ${size}م
-السعر: ${price} ج.م
-التفاصيل: ${details}
-أحتاج لمناقشة خطة التنفيذ معك.`;
-
-                document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
-                
-                loader.style.display = 'none';
-                resArea.style.display = 'block';
-            } catch (error) {
-                console.error(error);
-                alert("حدث خطأ في استدعاء محرك التثمين. حاول مجدداً.");
-                btn.style.display = 'block';
-                loader.style.display = 'none';
-            }
+        if(!loc || !size || !price) { 
+            alert("أكمل البيانات الأساسية (المنطقة، المساحة، السعر) لبدء التحليل"); 
+            return; 
         }
-    </script>
+
+        btn.style.display = 'none';
+        loader.style.display = 'block';
+        resArea.style.display = 'none';
+
+        // استخدام المفتاح الجديد الذي أرسلته
+        const myKey = "AIzaSyDjpvxvEZbecuiEBhCCHDVOwUxCBmQnvx4"; 
+
+        const prompt = `أنت طارق طنطاوي، استشاري عقاري خبير منذ 2014 في مدينة نصر. 
+        حلل عقار في "${loc}"، مساحة ${size}م، سعر مطلوب ${price} ج.م. 
+        تفاصيل إضافية: ${details}. 
+        تحدث بلهجة مصرية احترافية عن واقعية السعر في أبريل 2026. 
+        إذا كان السعر مبالغاً فيه، وضح بذكاء أن هذا "Property Damage". 
+        ابدأ بـ "التحليل الاستراتيجي لعقارك:" وانتهِ بـ "طارق طنطاوي".`;
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${myKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            if (!response.ok) throw new Error('خطأ في الاتصال بالمحرك');
+
+            const data = await response.json();
+            const aiText = data.candidates[0].content.parts[0].text;
+            
+            document.getElementById('aiResponse').innerText = aiText;
+            
+            const waMsg = `مرحباً أستاذ طارق، قمت بتقييم عقاري في ${loc} (مساحة ${size}م - سعر ${price}) وأريد مناقشة استراتيجية التنفيذ.`;
+            document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
+            
+            loader.style.display = 'none';
+            resArea.style.display = 'block';
+        } catch (error) {
+            console.error(error);
+            loader.style.display = 'none';
+            btn.style.display = 'block';
+            alert("المحرك يحتاج لتحديث المفتاح أو هناك ضغط حالي. جرب مرة أخرى بعد لحظات.");
+        }
+    }
+</script>
+    
 </body>
 </html>
