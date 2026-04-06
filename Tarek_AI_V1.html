@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد طارق طنطاوي | التحليل الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --gold: #d4af37; --black: #0a0a0a; }
+        body { background: var(--black); color: #fff; font-family: 'Cairo', sans-serif; padding: 20px; margin: 0; }
+        .container { max-width: 600px; margin: auto; }
+        .header { text-align: center; padding: 30px 0; border-bottom: 1px solid #333; }
+        .header h1 { color: var(--gold); font-size: 1.8rem; margin: 10px 0; }
+        
+        .input-card { background: #1a1a1a; padding: 20px; border-radius: 20px; border: 1px solid var(--gold); margin-top: 20px; }
+        label { display: block; margin-bottom: 15px; color: var(--gold); font-weight: bold; }
+        
+        /* خانة النسخ الذكي */
+        textarea { width: 100%; height: 250px; background: #000; color: #fff; border: 1px solid #444; border-radius: 15px; padding: 15px; font-family: 'Cairo'; font-size: 1rem; box-sizing: border-box; resize: none; }
+        
+        button { width: 100%; padding: 20px; margin-top: 20px; border-radius: 15px; border: none; background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; font-weight: 900; font-size: 1.2rem; cursor: pointer; }
+        
+        #resultArea { display: none; margin-top: 30px; animation: fadeIn 0.5s ease; }
+        .report-box { background: #fff; color: #333; padding: 25px; border-radius: 20px; line-height: 1.8; border-right: 8px solid var(--gold); white-space: pre-line; }
+        #loader { display: none; text-align: center; margin-top: 20px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <i class="fab fa-whatsapp" style="color: #25D366; font-size: 3rem;"></i>
+        <h1>محلل رسائل الواتساب</h1>
+        <p>انسخ رسالة العميل.. واترك الباقي لطارق الآلي</p>
+    </div>
+
+    <div class="input-card">
+        <label>ضع نص رسالة العميل هنا (Copy & Paste):</label>
+        <textarea id="clientMessage" placeholder="مثال: شقتي في مكرم عبيد 150 متر مسجلة شهر عقاري وعاوز ابيعها بالعفش والسعر المطلوب..."></textarea>
+        <button onclick="analyzeMessage()">إصدار التقرير الاستراتيجي فوراً</button>
+    </div>
+
+    <div id="loader">
+        <i class="fas fa-magic fa-spin" style="color: var(--gold); font-size: 2.5rem;"></i>
+        <p style="color: var(--gold);">جاري استخلاص البيانات وتشفير الخصوصية...</p>
+    </div>
+
+    <div id="resultArea">
+        <div class="report-box" id="reportContent"></div>
+        <button style="background: #25D366; color: #fff; margin-top: 15px;" onclick="copyResult()">
+            <i class="far fa-copy"></i> نسخ التقرير للرد على العميل
+        </button>
+    </div>
+</div>
+
+<script>
+    async function analyzeMessage() {
+        const apiKey = "ضع_مفتاحك_هنا"; // <--- ضع مفتاح الـ API الجديد هنا
+        const message = document.getElementById('clientMessage').value;
+
+        if (!message) { alert("من فضلك انسخ رسالة العميل أولاً"); return; }
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('resultArea').style.display = 'none';
+
+        // الأوامر الصارمة للمحرك لضمان الخصوصية والاحترافية
+        const prompt = `أنت طارق طنطاوي، الخبير العقاري الاستراتيجي (خبرة منذ 2014). 
+        وصلتني رسالة من عميل نصها: "${message}".
+        المهمة: 
+        1. تجاهل أي أسماء أشخاص أو أرقام هواتف وردت في الرسالة تماماً (خصوصية مطلقة).
+        2. استخرج مواصفات العقار (المنطقة، المساحة، الحالة، السعر، العفش).
+        3. قم بصياغة "تقرير Reality Check" استراتيجي لعام 2026 بلهجة مصرية احترافية قوية وحازمة.
+        4. قارن السعر المذكور بمتوسطات مدينة نصر/القاهرة الجديدة.
+        5. ابدأ التقرير بعبارة "التحليل الاستراتيجي لعقارك:" واختمه بـ "طارق طنطاوي".`;
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            const data = await response.json();
+            const resultText = data.candidates[0].content.parts[0].text;
+
+            document.getElementById('reportContent').innerText = resultText;
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+
+        } catch (error) {
+            alert("المحرك يحتاج لراحة دقيقة.. جرب مرة أخرى.");
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    function copyResult() {
+        const text = document.getElementById('reportContent').innerText;
+        navigator.clipboard.writeText(text);
+        alert("تم نسخ التقرير.. يمكنك إرساله للعميل الآن!");
+    }
+</script>
+
+</body>
+</html>
