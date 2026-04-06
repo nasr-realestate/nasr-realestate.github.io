@@ -83,49 +83,43 @@ async function startEvaluation() {
     const price = document.getElementById('price').value;
     const details = document.getElementById('details').value;
 
-    if(!loc || !size || !price) { alert("أكمل البيانات الأساسية للتحليل"); return; }
+    if(!loc || !size || !price) { alert("من فضلك أكمل البيانات الأساسية"); return; }
 
     btn.style.display = 'none';
     loader.style.display = 'block';
     resArea.style.display = 'none';
 
-    // الرومبت الاحترافي للهوية العقارية لطارق طنطاوي
-    const fullPrompt = `أنت طارق طنطاوي، استشاري عقاري خبير. حلل عقار في "${loc}"، مساحة ${size}م، بسعر مطلوب ${price} ج.م. تفاصيل: ${details}. قدم Reality Check بلهجة مصرية واثقة وحازمة لعام 2026. ابدأ بـ "التحليل الاستراتيجي:" وانتهِ بـ "طارق طنطاوي".`;
-
     try {
-        // تأكد أن هذا الرابط هو رابط الـ Worker الخاص بك
-        const workerUrl = 'https://gemini-evaluator.footcai-555.workers.dev'; 
+        // الرابط الخاص بك من Pipedream
+        const webhookUrl = 'https://eom0v2lymg6py5u.m.pipedream.net'; 
         
-        const response = await fetch(workerUrl, {
+        const response = await fetch(webhookUrl, {
             method: 'POST',
-            // حذفنا mode: 'cors' هنا لأن الـ Worker نفسه يعالج الـ Headers
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: fullPrompt })
+            body: JSON.stringify({
+                location: loc,
+                size: size,
+                price: price,
+                details: details
+            })
         });
 
         const data = await response.json();
-
-        // فحص الرد للتأكد من وصول النص من Gemini عبر الـ Worker
-        if (data && data.candidates && data.candidates[0].content.parts[0].text) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            document.getElementById('aiResponse').innerText = aiText;
-            
-            const waMsg = `مرحباً أستاذ طارق، قمت بتقييم عقاري في ${loc} (مساحة ${size}م - سعر ${price}) وأحتاج مناقشة استراتيجية التنفيذ.`;
-            document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
-            
-            loader.style.display = 'none';
-            resArea.style.display = 'block';
-        } else {
-            // إذا وصل رد فارغ أو خطأ من الـ API نفسه
-            console.error("AI Data Error:", data);
-            throw new Error("بيانات غير مكتملة من المحرك");
-        }
+        
+        // سنضبط Pipedream ليعيد لنا النتيجة في خانة اسمها analysis
+        document.getElementById('aiResponse').innerText = data.analysis || "جاري معالجة البيانات..";
+        
+        const waMsg = `مرحباً أستاذ طارق، حصلت على تقييم لبيانات عقاري في ${loc} وأريد مناقشة التفاصيل.`;
+        document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
+        
+        loader.style.display = 'none';
+        resArea.style.display = 'block';
 
     } catch (error) {
-        console.error("Fetch Error:", error);
+        console.error(error);
         loader.style.display = 'none';
         btn.style.display = 'block';
-        alert("تأكد من وضع GEMINI_API_KEY داخل Settings -> Variables في Cloudflare والضغط على Save & Deploy.");
+        alert("المحرك قيد التنشيط، برجاء المحاولة بعد دقيقة.");
     }
 }
 </script>
