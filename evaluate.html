@@ -23,6 +23,7 @@
         button#evaluateBtn { width: 100%; padding: 20px; margin-top: 20px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; font-weight: 900; font-size: 1.2rem; cursor: pointer; transition: 0.4s; }
         button#evaluateBtn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(212, 175, 55, 0.3); }
         #resultArea { margin-top: 30px; padding: 25px; border-radius: 15px; background: rgba(212, 175, 55, 0.07); border-right: 5px solid var(--gold); text-align: right; line-height: 1.8; display: none; animation: slideUp 0.5s ease; }
+        #aiResponse { font-size: 1.1rem; color: #f0f0f0; }
         .whatsapp-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 15px; margin-top: 20px; background: #25D366; color: #fff; text-decoration: none; border-radius: 12px; font-weight: bold; gap: 10px; transition: 0.3s; }
         .back-home { display: block; margin-top: 25px; color: #666; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
         .back-home:hover { color: var(--gold); }
@@ -72,11 +73,13 @@
         </div>
         <a href="/" class="back-home"><i class="fas fa-long-arrow-alt-right"></i> العودة للبوابة الرئيسية</a>
     </div>
+
 <script>
 async function startEvaluation() {
     const btn = document.getElementById('evaluateBtn');
     const loader = document.getElementById('loading');
     const resArea = document.getElementById('resultArea');
+    const responseText = document.getElementById('aiResponse');
     
     const loc = document.getElementById('location').value;
     const size = document.getElementById('size').value;
@@ -90,7 +93,6 @@ async function startEvaluation() {
     resArea.style.display = 'none';
 
     try {
-        // الرابط الخاص بك من Pipedream
         const webhookUrl = 'https://eom0v2lymg6py5u.m.pipedream.net'; 
         
         const response = await fetch(webhookUrl, {
@@ -106,8 +108,12 @@ async function startEvaluation() {
 
         const data = await response.json();
         
-        // سنضبط Pipedream ليعيد لنا النتيجة في خانة اسمها analysis
-        document.getElementById('aiResponse').innerText = data.analysis || "جاري معالجة البيانات..";
+        // التعديل الجوهري هنا لقراءة النص من هيكل Gemini الصحيح
+        if (data && data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+            responseText.innerText = data.candidates[0].content.parts[0].text;
+        } else {
+            responseText.innerText = "اكتمل التحليل، ولكن هناك عطل في عرض النص. يرجى مراجعة المستشار مباشرة.";
+        }
         
         const waMsg = `مرحباً أستاذ طارق، حصلت على تقييم لبيانات عقاري في ${loc} وأريد مناقشة التفاصيل.`;
         document.getElementById('waLink').href = `https://wa.me/201147758857?text=${encodeURIComponent(waMsg)}`;
@@ -116,14 +122,12 @@ async function startEvaluation() {
         resArea.style.display = 'block';
 
     } catch (error) {
-        console.error(error);
+        console.error("Error:", error);
         loader.style.display = 'none';
         btn.style.display = 'block';
         alert("المحرك قيد التنشيط، برجاء المحاولة بعد دقيقة.");
     }
 }
 </script>
-    
-    
 </body>
 </html>
