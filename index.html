@@ -99,7 +99,6 @@ body_class: "homepage"
   </div>
 </section>
 
-
 <!-- =========================================================
      3. أحدث العروض — يستخدم property_card.html مباشرة
      ========================================================= -->
@@ -131,9 +130,8 @@ body_class: "homepage"
   </div>
 </section>
 
-
 <!-- =========================================================
-     4. تصفح حسب المنطقة
+     4. تصفح حسب المنطقة (النسخة الديناميكية الموثوقة)
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
@@ -142,22 +140,30 @@ body_class: "homepage"
     </h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
 
-      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-محور-شينزو-ابي-مدينة-نصر-262م/' | relative_url }}" class="area-link">
+      <!-- المنطقة العاشرة -->
+      {% assign p_zone10 = site.properties | where: "slug", "شقة-للبيع-محور-شينزو-ابي-مدينة-نصر-262م" | first %}
+      <a href="{{ p_zone10.url | default: '/properties/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة العاشرة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 262م واجهة رئيسية تصلح سكني وإداري</p>
       </a>
 
-      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-بحديقة-خاصة-للبيع-مدينة-نصر-المنطقة-التاسعة/' | relative_url }}" class="area-link">
+      <!-- المنطقة التاسعة -->
+      {% assign p_zone9 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-وهبي-المنطقة-التاسعة-مدينة-نصر-160م" | first %}
+      <a href="{{ p_zone9.url | default: '/properties/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة التاسعة</h3>
-        <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة بحديقة خاصة ومدخل مستقل</p>
+        <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 160م إكسترا سوبر لوكس تطل على حديقتين</p>
       </a>
 
-      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-أرضي-بحديقة-للبيع-مدينة-نصر-المربع-الذهبي/' | relative_url }}" class="area-link">
+      <!-- المنطقة السادسة (قم بتغيير الـ slug إذا لم يكن صحيحاً) -->
+      {% assign p_zone6 = site.properties | where: "slug", "شقة-أرضي-بحديقة-للبيع-مدينة-نصر-المربع-الذهبي" | first %}
+      <a href="{{ p_zone6.url | default: '/properties/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة السادسة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة أرضي بحديقة خاصة في المربع الذهبي</p>
       </a>
 
-      <a href="{{ '/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-اسماعيل-القباني-مدينة-نصر-186م/' | relative_url }}" class="area-link">
+      <!-- المنطقة الأولى -->
+      {% assign p_zone1 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-القباني-مدينة-نصر-186م" | first %}
+      <a href="{{ p_zone1.url | default: '/properties/' | relative_url }}" class="area-link">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة الأولى</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 186م مسجلة شهر عقاري بشارع إسماعيل القباني</p>
       </a>
@@ -165,7 +171,6 @@ body_class: "homepage"
     </div>
   </div>
 </section>
-
 
 <!-- =========================================================
      5. أرقام الثقة
