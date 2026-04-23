@@ -357,6 +357,33 @@
     }
 
   </script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
+    authDomain: "simsar-talabak.firebaseapp.com",
+    projectId: "simsar-talabak",
+    storageBucket: "simsar-talabak.appspot.com",
+    messagingSenderId: "531743139625",
+    appId: "1:367123992147:web:86518a4d46c813d9943444"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  
+  const messaging = firebase.messaging();
+
+  messaging.getToken({ vapidKey: 'BGRTOOj74U_sVXtr9gYSNIyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' })
+    .then((token) => {
+      if (token) {
+        console.log("Success: Token generated");
+      }
+    }).catch((err) => {
+      console.log('Error: ', err);
+    });
+</script>
 </body>
 </html>
