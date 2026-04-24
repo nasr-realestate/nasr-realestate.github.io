@@ -355,11 +355,16 @@
         });
       }
     }
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+<!-- =========================================================
+     Firebase Cloud Messaging (FCM) Client SDK Initialization
+     (Modular SDK - v9+)
+     ========================================================= -->
+<script type="module">
+  // استيراد الدوال اللازمة من حزم Firebase الوحدوية
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
 
-<script>
-  // بيانات مشروعك (سمسار طلبك)
+  // بيانات تهيئة مشروعك
   const firebaseConfig = {
     apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
     authDomain: "simsar-talabak.firebaseapp.com",
@@ -369,34 +374,68 @@
     appId: "1:367123992147:web:86518a4d46c813d9943444"
   };
 
-  // تهيئة فايربيز
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-  
-  const messaging = firebase.messaging();
+  // تهيئة Firebase
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
 
-  // الحصول على التصريح والاشتراك التلقائي في قناة الإشعارات
-  messaging.getToken({ vapidKey: 'BGRTOOj74U_sVXtr9gYSNIyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' })
-    .then((token) => {
-      if (token) {
-        console.log("Token Generated Success");
-
-        // ربط هاتفك بقناة "all" لضمان استلام الإشعارات
-        // استخدمنا هنا مفتاح الخادم (Server Key) المظلل بالأزرق لفتح الباب
-        fetch('https://iid.googleapis.com/iid/v1/' + token + '/rel/topics/all', {
-          method: 'POST',
-          headers: new Headers({
-            'Authorization': 'key=AAAA_L4Yq_0:APA91bF8Fid4V8O_S87pLqV0v28FvT3L6N3t9uWjVvX6KzY7Z5E6W8Wj4M3V2L1K0P9O8N7M6L5K4J3I2H1G0F' 
-            // ملاحظة: تأكد أن المفتاح أعلاه هو نفسه المظلل بالأزرق كاملاً لديك
+  // طلب إذن الإشعارات والحصول على الرمز
+  function requestPermissionAndGetToken() {
+    console.log('Requesting notification permission...');
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        console.log('Notification permission granted.');
+        // الحصول على رمز تسجيل FCM
+        getToken(messaging, { vapidKey: 'BGRTOOj74U_sVXtr9gYSNIyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' })
+          .then((currentToken) => {
+            if (currentToken) {
+              console.log('FCM Registration Token:', currentToken);
+              // TODO: أرسل هذا الرمز إلى خادمك الخلفي ليتم تخزينه.
+              // هذا الرمز ضروري لإرسال الإشعارات إلى هذا الجهاز المحدد.
+              // يمكنك استخدام Firestore أو Realtime Database لتخزينه إذا لم يكن لديك خادم خاص.
+              // على سبيل المثال: sendTokenToServer(currentToken);
+            } else {
+              console.log('No registration token available. Request permission to generate one.');
+            }
           })
-        }).then(() => {
-          console.log('Subscribed to all topics successfully!');
-        });
+          .catch((err) => {
+            console.log('An error occurred while retrieving token. ', err);
+            // يمكنك فحص الخطأ هنا لمعرفة ما إذا كانت هناك مشاكل في الشهادة أو الخدمة
+          });
+      } else {
+        console.log('Unable to get permission to notify.');
       }
-    }).catch((err) => {
-      console.log('Error obtaining token: ', err);
     });
-</script> 
+  }
+
+  // معالجة الرسائل الواردة عندما يكون التطبيق في الواجهة الأمامية
+  onMessage(messaging, (payload) => {
+    console.log('Message received while app is in foreground:', payload);
+    // يمكنك عرض الإشعار يدويًا هنا إذا أردت، أو تحديث واجهة المستخدم
+    // على سبيل المثال:
+    // const notificationTitle = payload.notification.title || "إشعار جديد!";
+    // const notificationOptions = {
+    //   body: payload.notification.body || "رسالة جديدة.",
+    //   icon: payload.notification.icon || 'https://nasr-realestate.github.io/logo.png'
+    // };
+    // new Notification(notificationTitle, notificationOptions);
+  });
+
+  // استدعاء دالة طلب الإذن عند تحميل الصفحة
+  // يمكنك استدعاء هذه الدالة بناءً على إجراء المستخدم (مثل النقر على زر)
+  // للحصول على تجربة مستخدم أفضل وتجنب الطلبات المفاجئة.
+  requestPermissionAndGetToken();
+
+  // تسجيل الـ Service Worker
+  // تأكد من أن المسار صحيح لملف firebase-messaging-sw.js الخاص بك.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+  }
+</script>
 </body>
 </html>
