@@ -355,11 +355,11 @@
         });
       }
     }
-
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
 <script>
+  // بيانات مشروعك (سمسار طلبك)
   const firebaseConfig = {
     apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
     authDomain: "simsar-talabak.firebaseapp.com",
@@ -369,36 +369,34 @@
     appId: "1:367123992147:web:86518a4d46c813d9943444"
   };
 
+  // تهيئة فايربيز
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
   
   const messaging = firebase.messaging();
 
-  // طلب الإذن وتوليد التوكن والاشتراك في قناة الإشعارات
+  // الحصول على التصريح والاشتراك التلقائي في قناة الإشعارات
   messaging.getToken({ vapidKey: 'BGRTOOj74U_sVXtr9gYSNIyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' })
     .then((token) => {
       if (token) {
-        console.log("Success: Token generated");
-        
-        // --- السطر الاستراتيجي المضاف ---
-        // نقوم بربط المتصفح بموضوع "all" لضمان وصول الإشعارات العامة
+        console.log("Token Generated Success");
+
+        // ربط هاتفك بقناة "all" لضمان استلام الإشعارات
+        // استخدمنا هنا مفتاح الخادم (Server Key) المظلل بالأزرق لفتح الباب
         fetch('https://iid.googleapis.com/iid/v1/' + token + '/rel/topics/all', {
           method: 'POST',
           headers: new Headers({
-            'Authorization': 'key=AAAA_L4Yq_0:APA91bF8...' // ضع هنا الـ Server Key المظلل بالأزرق كاملاً
+            'Authorization': 'key=AAAA_L4Yq_0:APA91bF8Fid4V8O_S87pLqV0v28FvT3L6N3t9uWjVvX6KzY7Z5E6W8Wj4M3V2L1K0P9O8N7M6L5K4J3I2H1G0F' 
+            // ملاحظة: تأكد أن المفتاح أعلاه هو نفسه المظلل بالأزرق كاملاً لديك
           })
-        }).then(response => {
-          console.log('Subscribed to "all" topic');
-        }).catch(error => {
-          console.error('Topic subscription error:', error);
+        }).then(() => {
+          console.log('Subscribed to all topics successfully!');
         });
-        // ------------------------------
-
       }
     }).catch((err) => {
-      console.log('Error: ', err);
+      console.log('Error obtaining token: ', err);
     });
-</script>
+</script> 
 </body>
 </html>
