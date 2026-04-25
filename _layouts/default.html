@@ -228,86 +228,86 @@
     function trackPhoneCall() { if (typeof dataLayer !== 'undefined') { dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button', phone_number: '+201147758857' }); } }
   </script>
 
-  <!-- Firebase FCM v9+ (الإصدار الصحيح اللي يشتغل) -->
- 
+  <!-- Firebase FCM v9+ -->
   <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
-  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
-    authDomain: "simsar-talabak.firebaseapp.com",
-    projectId: "simsar-talabak",
-    storageBucket: "simsar-talabak.appspot.com",
-    messagingSenderId: "531743139625",
-    appId: "1:367123992147:web:86518a4d46c813d9943444"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
+      authDomain: "simsar-talabak.firebaseapp.com",
+      projectId: "simsar-talabak",
+      storageBucket: "simsar-talabak.appspot.com",
+      messagingSenderId: "531743139625",
+      appId: "1:367123992147:web:86518a4d46c813d9943444"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-  const notifBtn = document.getElementById('notificationToggle');
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-  // تحديث ظهور الزر بناءً على حالة الإذن
-  function updateButtonVisibility() {
-    if (!notifBtn) return;
-    if (Notification.permission === 'granted' || Notification.permission === 'denied') {
-      notifBtn.style.display = 'none';
-    } else {
-      notifBtn.style.display = 'block';
+    // تسجيل Service Worker أولاً
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.error('SW registration failed:', err));
     }
-  }
 
-  updateButtonVisibility();
+    // معالجة الإشعارات أثناء التصفح
+    onMessage(messaging, (payload) => {
+      console.log('Foreground message:', payload);
+      if (payload.notification && Notification.permission === 'granted') {
+        new Notification(payload.notification.title, {
+          body: payload.notification.body,
+          icon: 'https://nasr-realestate.github.io/logo.png'
+        });
+      }
+    });
 
-  // تسجيل Service Worker فوراً
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.error('SW registration failed:', err));
-  }
-
-  // معالجة الإشعارات أثناء التصفح
-  onMessage(messaging, (payload) => {
-    console.log('Foreground message:', payload);
-    if (payload.notification && Notification.permission === 'granted') {
-      new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: 'https://nasr-realestate.github.io/logo.png'
-      });
-    }
-  });
-
-  // منطق زر التفعيل (الطريقة الصحيحة التي تعمل على الكمبيوتر والهاتف)
-  if (notifBtn) {
-    notifBtn.onclick = async () => {
-      // طلب الإذن نتيجة ضغطة المستخدم (هذا مسموح به في جميع المتصفحات)
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        alert('⚠️ لم يتم تفعيل الإشعارات. يمكنك المحاولة لاحقاً من إعدادات المتصفح.');
-        notifBtn.style.display = 'none';
+    // انتظار تحميل الصفحة ثم البحث عن الزر
+    document.addEventListener('DOMContentLoaded', () => {
+      const notifBtn = document.getElementById('notificationToggle');
+      if (!notifBtn) {
+        console.log('Notification button not found in DOM');
         return;
       }
 
-      // إذا تم منح الإذن، نحاول الحصول على التوكن
-      notifBtn.style.display = 'none';
-      try {
-        // نعطي وقت قصير للتأكد من جاهزية Service Worker
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const currentToken = await getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' });
-        if (currentToken) {
-          console.log('✅ FCM Registration Token:', currentToken);
-          alert('👍 تم تفعيل الإشعارات بنجاح! ستصل إليك العروض الجديدة.');
-        } else {
-          throw new Error('No token received');
-        }
-      } catch (err) {
-        console.error('🔥 Token error:', err);
-        alert('حدث خطأ تقني: ' + err.message + '\nيرجى تحديث الصفحة والمحاولة مرة أخرى.');
-        notifBtn.style.display = 'block'; // نعطي المستخدم فرصة للمحاولة مجدداً
+      // إظهار/إخفاء الزر حسب حالة الإذن
+      if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+        notifBtn.style.display = 'none';
+      } else {
+        notifBtn.style.display = 'block';
       }
-    };
-  }
-</script>
- {% include notification-button.html %} 
+
+      // عند الضغط على الزر
+      notifBtn.onclick = async () => {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('⚠️ لم يتم تفعيل الإشعارات.');
+          notifBtn.style.display = 'none';
+          return;
+        }
+
+        notifBtn.style.display = 'none';
+        try {
+          // نعطي وقت لـ Service Worker
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const currentToken = await getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' });
+          if (currentToken) {
+            console.log('✅ FCM Token:', currentToken);
+            alert('👍 تم تفعيل الإشعارات بنجاح! ستصل إليك العروض الجديدة.');
+          } else {
+            throw new Error('No token received');
+          }
+        } catch (err) {
+          console.error('🔥 Token error:', err);
+          alert('حدث خطأ تقني: ' + err.message + '\nيرجى تحديث الصفحة والمحاولة مرة أخرى.');
+          notifBtn.style.display = 'block';
+        }
+      };
+    });
+  </script>
+
+  {% include notification-button.html %}
+
 </body>
 </html>
