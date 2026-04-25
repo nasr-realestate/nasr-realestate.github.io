@@ -271,70 +271,45 @@
   </script>
 
   <!-- Firebase FCM v9+ -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
-    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
-      authDomain: "simsar-talabak.firebaseapp.com",
-      projectId: "simsar-talabak",
-      storageBucket: "simsar-talabak.appspot.com",
-      messagingSenderId: "531743139625",
-      appId: "1:367123992147:web:86518a4d46c813d9943444"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
+    authDomain: "simsar-talabak.firebaseapp.com",
+    projectId: "simsar-talabak",
+    storageBucket: "simsar-talabak.appspot.com",
+    messagingSenderId: "531743139625",
+    appId: "1:367123992147:web:86518a4d46c813d9943444"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const notifBtn = document.getElementById('notificationToggle');
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
 
-    // فحص حالة الإذن عند تحميل الصفحة
-    if (Notification.permission === 'granted') {
-      notifBtn.style.display = 'none';
-      console.log('Notifications already granted');
-    } else if (Notification.permission === 'denied') {
-      notifBtn.style.display = 'none';
-      console.log('Notifications denied by user');
-    } else {
-      notifBtn.style.display = 'block';
-    }
-
-    // ربط الإذن بضغطة المستخدم
-    notifBtn.onclick = async () => {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        notifBtn.style.display = 'none';
-        try {
- const currentToken = await getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbaI ' });
-          if (currentToken) {
-            console.log('FCM Registration Token:', currentToken);
-            alert('👍 تم تفعيل الإشعارات بنجاح! ستصل إليك العروض الجديدة فوراً.');
+  // طلب الإذن عند تحميل الصفحة (كما كان يعمل سابقاً)
+  Notification.requestPermission().then((permission) => {
+    if (permission === 'granted') {
+      console.log('✅ Notification permission granted');
+      getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbaI' })
+        .then((token) => {
+          if (token) {
+            console.log('✅ FCM Token:', token);
           }
-        } catch (err) {
-          console.error('Error getting token:', err);
-          alert('حدث خطأ تقني، حاول مرة أخرى لاحقاً.');
-        }
-      } else {
-        alert('⚠️ لم يتم تفعيل الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.');
-        notifBtn.style.display = 'none';
-      }
-    };
-
-    // معالجة الإشعارات أثناء التصفح (في المقدمة)
-    onMessage(messaging, (payload) => {
-      console.log('Foreground message:', payload);
-      new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: 'https://nasr-realestate.github.io/logo.png'
-      });
-    });
-
-    // تسجيل Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((reg) => console.log('Service Worker registered:', reg.scope))
-        .catch((err) => console.error('SW registration failed:', err));
+        })
+        .catch((err) => console.error('Token error:', err));
     }
-  </script>
+  });
+
+  onMessage(messaging, (payload) => {
+    console.log('Message received:', payload);
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(reg => console.log('✅ SW registered:', reg.scope))
+      .catch(err => console.error('SW error:', err));
+  }
+</script>
 </body>
 </html>
