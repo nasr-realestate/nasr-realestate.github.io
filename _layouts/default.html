@@ -59,43 +59,6 @@
   <!-- Trustpilot Widget -->
   <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
 
-  <style>
-    /* زر تفعيل الإشعارات */
-    .notif-btn {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, #1a1a1a, #000);
-      color: #D4AF37;
-      padding: 14px 28px;
-      border-radius: 60px;
-      z-index: 10000;
-      font-family: 'Cairo', sans-serif;
-      font-weight: 600;
-      border: 1px solid #D4AF37;
-      backdrop-filter: blur(10px);
-      cursor: pointer;
-      text-align: center;
-      box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
-      transition: all 0.3s ease;
-      animation: pulse 1.5s infinite;
-    }
-    .notif-btn:hover {
-      background: #D4AF37;
-      color: #000;
-      box-shadow: 0 0 35px rgba(212, 175, 55, 0.6);
-      transform: translateX(-50%) scale(1.02);
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-      70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-    }
-    @media (max-width: 768px) {
-      .notif-btn { padding: 10px 18px; font-size: 0.85rem; bottom: 80px; white-space: nowrap; }
-    }
-  </style>
 </head>
 
 <body class="{{ page.body_class | default: 'default-page' }}">
@@ -182,11 +145,6 @@
     </div>
   </a>
 
-  <!-- زر تفعيل الإشعارات -->
-  <div id="notificationToggle" class="notif-btn">
-    🔔 فعّل الإشعارات ليصلك جديد العقارات أولاً بأول
-  </div>
-
   <!-- JavaScript -->
   <script>
     // Smart Search Engine (المحافظة على وظيفتك الحالية)
@@ -270,46 +228,57 @@
     function trackPhoneCall() { if (typeof dataLayer !== 'undefined') { dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button', phone_number: '+201147758857' }); } }
   </script>
 
-  <!-- Firebase FCM v9+ -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
-  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
+  <!-- Firebase FCM v9+ (الإصدار الصحيح اللي يشتغل) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging.js';
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
-    authDomain: "simsar-talabak.firebaseapp.com",
-    projectId: "simsar-talabak",
-    storageBucket: "simsar-talabak.appspot.com",
-    messagingSenderId: "531743139625",
-    appId: "1:367123992147:web:86518a4d46c813d9943444"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDi8uX4d6jruwmoqmjKp44iEAF4aWsrvpI",
+      authDomain: "simsar-talabak.firebaseapp.com",
+      projectId: "simsar-talabak",
+      storageBucket: "simsar-talabak.appspot.com",
+      messagingSenderId: "531743139625",
+      appId: "1:367123992147:web:86518a4d46c813d9943444"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-  // طلب الإذن عند تحميل الصفحة (كما كان يعمل سابقاً)
-  Notification.requestPermission().then((permission) => {
-    if (permission === 'granted') {
-      console.log('✅ Notification permission granted');
-      getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbaI' })
-        .then((token) => {
-          if (token) {
-            console.log('✅ FCM Token:', token);
-          }
-        })
-        .catch((err) => console.error('Token error:', err));
+    function requestPermissionAndGetToken() {
+      console.log('Requesting notification permission...');
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          console.log('Notification permission granted.');
+          getToken(messaging, { vapidKey: 'BGRT0Oj74U_sVXtr9gYSNlyVa49p98HhhiEhx7OKGS8xGhEEdyD__kKiZAj2g8IFe13pGm-_zubNYceMN9npbal' })
+            .then((currentToken) => {
+              if (currentToken) {
+                console.log('FCM Registration Token:', currentToken);
+              } else {
+                console.log('No registration token available.');
+              }
+            })
+            .catch((err) => { console.log('An error occurred while retrieving token.', err); });
+        } else {
+          console.log('Unable to get permission to notify.');
+        }
+      });
     }
-  });
 
-  onMessage(messaging, (payload) => {
-    console.log('Message received:', payload);
-  });
+    onMessage(messaging, (payload) => {
+      console.log('Message received while app is in foreground:', payload);
+    });
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(reg => console.log('✅ SW registered:', reg.scope))
-      .catch(err => console.error('SW error:', err));
-  }
-</script>
+    // تأخير طلب الإذن 3 ثواني عشان ما يزعجش الزائر
+    setTimeout(() => {
+      requestPermissionAndGetToken();
+    }, 3000);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => { console.log('Service Worker registered with scope:', registration.scope); })
+        .catch((error) => { console.error('Service Worker registration failed:', error); });
+    }
+  </script>
 </body>
 </html>
