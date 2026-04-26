@@ -359,7 +359,7 @@
   </script>
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 // Firebase configuration
@@ -377,20 +377,22 @@ const app = initializeApp(firebaseConfig);
 
 console.log("Firebase loaded successfully");
 
-// Messaging
-const messaging = getMessaging(app);
+// Messaging (no app parameter in modular v10 setup)
+const messaging = getMessaging();
 
-// Service Worker registration (ضروري)
+// Service Worker (must exist in root)
 navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-// Request permission + get token
+// Request permission + get FCM token
 Notification.requestPermission().then((permission) => {
   if (permission === "granted") {
     getToken(messaging, {
       vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
-    }).then((currentToken) => {
+    })
+    .then((currentToken) => {
       console.log("FCM Token:", currentToken);
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log("Token error:", err);
     });
   }
