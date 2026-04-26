@@ -376,6 +376,19 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
     console.log("Firebase loaded successfully");
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+const messaging = getMessaging();
+
+Notification.requestPermission().then((permission) => {
+  if (permission === "granted") {
+    getToken(messaging, {
+      vapidKey: "ضع_VAPID_KEY_هنا"
+    }).then((currentToken) => {
+      console.log("FCM Token:", currentToken);
+    });
+  }
+});
 </script>
 </body>
 </html>
