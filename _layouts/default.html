@@ -377,14 +377,21 @@ const app = initializeApp(firebaseConfig);
 
 console.log("Firebase loaded successfully");
 
+// Messaging
 const messaging = getMessaging(app);
 
+// Service Worker registration (ضروري)
+navigator.serviceWorker.register("/firebase-messaging-sw.js");
+
+// Request permission + get token
 Notification.requestPermission().then((permission) => {
   if (permission === "granted") {
     getToken(messaging, {
-      vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM "
+      vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
     }).then((currentToken) => {
       console.log("FCM Token:", currentToken);
+    }).catch((err) => {
+      console.log("Token error:", err);
     });
   }
 });
