@@ -382,7 +382,7 @@ const messaging = getMessaging(app);
 Notification.requestPermission().then((permission) => {
   if (permission === "granted") {
     getToken(messaging, {
-      vapidKey: "ضع_VAPID_KEY_هنا"
+      vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM "
     }).then((currentToken) => {
       console.log("FCM Token:", currentToken);
     });
