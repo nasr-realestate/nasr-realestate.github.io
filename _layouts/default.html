@@ -384,26 +384,46 @@ const messaging = getMessaging();
 // Service Worker
 navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-// Debug مهم
+// التحكم في الزر + الإذن + التوكن
 document.addEventListener("DOMContentLoaded", () => {
 
   const btn = document.getElementById("enableNotifications");
 
-  console.log("Button element:", btn); // ← مهم
+  console.log("Button element:", btn);
 
-  if (!btn) {
-    console.log("Button NOT FOUND"); // ← مهم
+  if (!btn) return;
+
+  // إذا المستخدم وافق مسبقًا
+  if (Notification.permission === "granted") {
+    btn.style.display = "none";
+    console.log("Permission already granted");
+
+    // نحاول جلب التوكن مباشرة
+    getToken(messaging, {
+      vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
+    })
+    .then((token) => {
+      console.log("FCM Token:", token);
+    })
+    .catch((err) => {
+      console.log("Token error:", err);
+    });
+
     return;
   }
 
+  // عند الضغط على الزر
   btn.addEventListener("click", async () => {
 
-    console.log("Button clicked"); // ← مهم
+    console.log("Button clicked");
 
     const permission = await Notification.requestPermission();
     console.log("Permission:", permission);
 
     if (permission === "granted") {
+
+      btn.style.display = "none";
+
       try {
         const token = await getToken(messaging, {
           vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
@@ -414,6 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.log("Token error:", err);
       }
+
     }
 
   });
