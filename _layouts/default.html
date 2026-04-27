@@ -78,6 +78,7 @@
 </head>
 
 <body class="{{ page.body_class | default: 'default-page' }}">
+  <button id="enableNotifications">تفعيل الإشعارات</button>
 
   <!-- GTM noscript — أول شيء بعد body -->
   <noscript>
@@ -383,38 +384,39 @@ const messaging = getMessaging();
 // Service Worker
 navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-// زر تفعيل الإشعارات (حل مشكلة القيود)
+// Debug مهم
 document.addEventListener("DOMContentLoaded", () => {
 
   const btn = document.getElementById("enableNotifications");
 
-  if (btn) {
-    btn.addEventListener("click", () => {
+  console.log("Button element:", btn); // ← مهم
 
-      console.log("Trying to get FCM token...");
-
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-
-          getToken(messaging, {
-            vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
-          })
-          .then((currentToken) => {
-            if (currentToken) {
-              console.log("FCM Token:", currentToken);
-            } else {
-              console.log("No registration token available");
-            }
-          })
-          .catch((err) => {
-            console.log("Token error:", err);
-          });
-
-        }
-      });
-
-    });
+  if (!btn) {
+    console.log("Button NOT FOUND"); // ← مهم
+    return;
   }
+
+  btn.addEventListener("click", async () => {
+
+    console.log("Button clicked"); // ← مهم
+
+    const permission = await Notification.requestPermission();
+    console.log("Permission:", permission);
+
+    if (permission === "granted") {
+      try {
+        const token = await getToken(messaging, {
+          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
+        });
+
+        console.log("FCM Token:", token);
+
+      } catch (err) {
+        console.log("Token error:", err);
+      }
+    }
+
+  });
 
 });
 
