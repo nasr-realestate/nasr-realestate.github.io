@@ -1,0 +1,69 @@
+name: Send Notification on New Property
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '_properties/**'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install firebase-admin
+
+    - name: Send notification
+      env:
+        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+      run: |
+        node -e '
+        const admin = require("firebase-admin");
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        
+        const db = admin.firestore();
+        
+        async function sendNotification() {
+          const files = process.env.FILES || "";
+          const latestFile = files.split("\n").pop();
+          if (!latestFile || !latestFile.includes("_properties/")) {
+            console.log("No property file changed, skipping.");
+            return;
+          }
+          
+          const tokensSnapshot = await db.collection("fcmTokens").get();
+          const tokens = tokensSnapshot.docs.map(doc => doc.id);
+          
+          if (tokens.length === 0) {
+            console.log("No tokens found.");
+            return;
+          }
+          
+          const message = {
+            notification: {
+              title: "🏠 عقار جديد في سمسار طلبك!",
+              body: "تم إضافة عرض جديد، اضغط للمعاينة"
+            },
+            tokens: tokens
+          };
+          
+          const response = await admin.messaging().sendEachForMulticast(message);
+          console.log(`Sent to ${response.successCount} devices, failed: ${response.failureCount}`);
+        }
+        
+        sendNotification().catch(console.error);
+        '
