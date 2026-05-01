@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: استنساخ المستودع
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       
       - name: إعداد Node.js
         uses: actions/setup-node@v4
@@ -22,14 +24,17 @@ jobs:
           node-version: '18'
       
       - name: تثبيت المكتبات
-        run: npm install firebase-admin
-      
+        run: npm install firebase-admin frontmatter
+        
       - name: إرسال الإشعارات
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           node -e '
           const admin = require("firebase-admin");
+          const fs = require("fs");
+          const path = require("path");
+          const frontmatter = require("frontmatter");
           
           const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
           admin.initializeApp({
@@ -37,6 +42,36 @@ jobs:
           });
           
           const db = admin.firestore();
+          
+          // دالة لقراءة بيانات العقار من ملف .md
+          function readPropertyData(filePath) {
+            try {
+              const content = fs.readFileSync(filePath, "utf8");
+              const { data, content: body } = frontmatter(content);
+              return {
+                title: data.title || "عقار جديد",
+                price: data.price || "",
+                location: data.location || "",
+                slug: data.slug || "",
+                image: data.image || ""
+              };
+            } catch (error) {
+              console.error(`خطأ في قراءة الملف ${filePath}:`, error);
+              return null;
+            }
+          }
+          
+          // دالة للحصول على الملفات المضافة حديثاً
+          function getNewlyAddedFiles() {
+            const { execSync } = require("child_process");
+            try {
+              const output = execSync("git diff --name-only --diff-filter=A HEAD~1 HEAD", { encoding: "utf8" });
+              return output.split("\n").filter(f => f.startsWith("_properties/") && f.endsWith(".md"));
+            } catch (error) {
+              console.error("خطأ في جلب الملفات المضافة:", error);
+              return [];
+            }
+          }
           
           async function sendNotification() {
             try {
@@ -53,13 +88,41 @@ jobs:
                 return;
               }
               
-              console.log(`📢 جاري إرسال الإشعار إلى ${tokens.length} جهاز`);
+              // جلب الملفات العقارية المضافة حديثاً
+              const newFiles = getNewlyAddedFiles();
+              if (newFiles.length === 0) {
+                console.log("❌ لا توجد عقارات جديدة");
+                return;
+              }
               
-              // إنشاء رسالة الإشعار
+              // قراءة بيانات أول عقار جديد (للتجربة)
+              const propertyData = readPropertyData(newFiles[0]);
+              if (!propertyData) {
+                console.log("❌ فشل في قراءة بيانات العقار");
+                return;
+              }
+              
+              // بناء نص الإشعار من بيانات العقار
+              const notificationTitle = `🏠 ${propertyData.title}`;
+              let notificationBody = "";
+              if (propertyData.price) notificationBody += `💰 ${propertyData.price}`;
+              if (propertyData.location) notificationBody += ` 📍 ${propertyData.location}`;
+              if (!notificationBody) notificationBody = "تم إضافة عرض جديد، اضغط للمعاينة";
+              
+              console.log(`📢 جاري إرسال الإشعار إلى ${tokens.length} جهاز`);
+              console.log(`📄 بيانات الإشعار: ${notificationTitle} - ${notificationBody}`);
+              
+              // إنشاء رسالة الإشعار مع الشعار
               const message = {
                 notification: {
-                  title: "🏠 عقار جديد في سمسار طلبك!",
-                  body: "تم إضافة عرض جديد في مدينة نصر، اضغط للمعاينة"
+                  title: notificationTitle,
+                  body: notificationBody
+                },
+                webpush: {
+                  notification: {
+                    icon: "https://nasr-realestate.github.io/assets/img/logo.webp",
+                    badge: "https://nasr-realestate.github.io/assets/img/logo.webp"
+                  }
                 },
                 tokens: tokens
               };
@@ -76,11 +139,9 @@ jobs:
                 response.responses.forEach((resp, idx) => {
                   if (!resp.success) {
                     failedTokens.push(tokens[idx]);
-                    console.log(`⚠️ توكن فاشل: ${tokens[idx]}`);
                   }
                 });
                 
-                // حذف التوكنات الفاشلة من Firestore
                 for (const failedToken of failedTokens) {
                   await db.collection("fcmTokens").doc(failedToken).delete();
                   console.log(`🗑️ تم حذف التوكن الفاشل: ${failedToken}`);
