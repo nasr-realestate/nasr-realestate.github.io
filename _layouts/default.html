@@ -348,6 +348,62 @@
     }
 
   </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
+    authDomain: "simsartalabak.firebaseapp.com",
+    projectId: "simsartalabak",
+    storageBucket: "simsartalabak.firebasestorage.app",
+    messagingSenderId: "733807203688",
+    appId: "1:733807203688:web:a0582925001409994e32dd"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+  const db = getFirestore(app);
+
+  async function saveTokenToFirestore(token) {
+    try {
+      await setDoc(doc(db, "fcmTokens", token), {
+        token: token,
+        createdAt: new Date(),
+        userAgent: navigator.userAgent
+      });
+      console.log("✅ Token saved to Firestore");
+    } catch (e) {
+      console.error("Error saving token:", e);
+    }
+  }
+
+  async function requestPermissionAndSaveToken() {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        const token = await getToken(messaging, {
+          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
+        });
+        if (token) {
+          console.log("FCM Token:", token);
+          await saveTokenToFirestore(token);
+        }
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    }
+  }
+
+  // طلب الإذن عند تحميل الصفحة (بدون زر)
+  requestPermissionAndSaveToken();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("/firebase-messaging-sw.js")
+      .then(reg => console.log("SW registered:", reg.scope))
+      .catch(err => console.error("SW error:", err));
+  }
+</script>
 </body>
 </html>
