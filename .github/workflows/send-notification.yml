@@ -1,0 +1,95 @@
+name: إرسال إشعار عند إضافة عقار جديد
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '_properties/**'
+  workflow_dispatch:
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: استنساخ المستودع
+        uses: actions/checkout@v4
+      
+      - name: إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: تثبيت المكتبات
+        run: npm install firebase-admin
+      
+      - name: إرسال الإشعارات
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node -e '
+          const admin = require("firebase-admin");
+          
+          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          });
+          
+          const db = admin.firestore();
+          
+          async function sendNotification() {
+            try {
+              // جلب جميع التوكنات من Firestore
+              const tokensSnapshot = await db.collection("fcmTokens").get();
+              const tokens = [];
+              tokensSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.token) tokens.push(data.token);
+              });
+              
+              if (tokens.length === 0) {
+                console.log("❌ لا توجد توكنات مسجلة");
+                return;
+              }
+              
+              console.log(`📢 جاري إرسال الإشعار إلى ${tokens.length} جهاز`);
+              
+              // إنشاء رسالة الإشعار
+              const message = {
+                notification: {
+                  title: "🏠 عقار جديد في سمسار طلبك!",
+                  body: "تم إضافة عرض جديد في مدينة نصر، اضغط للمعاينة"
+                },
+                tokens: tokens
+              };
+              
+              // إرسال الإشعار إلى جميع الأجهزة
+              const response = await admin.messaging().sendEachForMulticast(message);
+              
+              console.log(`✅ تم الإرسال بنجاح إلى ${response.successCount} جهاز`);
+              console.log(`❌ فشل الإرسال إلى ${response.failureCount} جهاز`);
+              
+              // حذف التوكنات الفاشلة (اختياري)
+              if (response.failureCount > 0) {
+                const failedTokens = [];
+                response.responses.forEach((resp, idx) => {
+                  if (!resp.success) {
+                    failedTokens.push(tokens[idx]);
+                    console.log(`⚠️ توكن فاشل: ${tokens[idx]}`);
+                  }
+                });
+                
+                // حذف التوكنات الفاشلة من Firestore
+                for (const failedToken of failedTokens) {
+                  await db.collection("fcmTokens").doc(failedToken).delete();
+                  console.log(`🗑️ تم حذف التوكن الفاشل: ${failedToken}`);
+                }
+              }
+            } catch (error) {
+              console.error("❌ خطأ:", error);
+            }
+          }
+          
+          sendNotification();
+          '
