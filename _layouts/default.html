@@ -348,10 +348,11 @@
     }
 
   </script>
+  
 <button id="enableNotif" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #D4AF37; color: #000; border: none; padding: 12px 24px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-weight: bold; z-index: 9999; cursor: pointer;">
   🔔 فعّل الإشعارات
 </button>
-
+  
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -380,6 +381,15 @@
   }
 
   const btn = document.getElementById("enableNotif");
+
+  // التحقق من حالة الإذن عند تحميل الصفحة
+  if (Notification.permission === "granted") {
+    if (btn) btn.style.display = "none";
+    console.log("Permission already granted, button hidden");
+  } else {
+    if (btn) btn.style.display = "block";
+  }
+
   if (btn) {
     btn.addEventListener("click", async () => {
       const permission = await Notification.requestPermission();
@@ -403,5 +413,6 @@
     });
   }
 </script>
+  
 </body>
 </html>
