@@ -348,6 +348,10 @@
     }
 
   </script>
+<button id="enableNotif" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #D4AF37; color: #000; border: none; padding: 12px 24px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-weight: bold; z-index: 9999; cursor: pointer;">
+  🔔 فعّل الإشعارات
+</button>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -367,42 +371,36 @@
   const db = getFirestore(app);
 
   async function saveTokenToFirestore(token) {
-    try {
-      await setDoc(doc(db, "fcmTokens", token), {
-        token: token,
-        createdAt: new Date(),
-        userAgent: navigator.userAgent
-      });
-      console.log("✅ Token saved to Firestore");
-    } catch (e) {
-      console.error("Error saving token:", e);
-    }
+    await setDoc(doc(db, "fcmTokens", token), {
+      token: token,
+      createdAt: new Date(),
+      userAgent: navigator.userAgent
+    });
+    console.log("✅ Token saved to Firestore");
   }
 
-  async function requestPermissionAndSaveToken() {
-    try {
+  const btn = document.getElementById("enableNotif");
+  if (btn) {
+    btn.addEventListener("click", async () => {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
-        const token = await getToken(messaging, {
-          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
-        });
-        if (token) {
-          console.log("FCM Token:", token);
-          await saveTokenToFirestore(token);
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
+          });
+          if (token) {
+            await saveTokenToFirestore(token);
+            btn.style.display = "none";
+            alert("✅ تم تفعيل الإشعارات بنجاح!");
+          }
+        } catch (err) {
+          console.error("Token error:", err);
+          alert("خطأ: " + err.message);
         }
+      } else {
+        alert("⚠️ لم يتم تفعيل الإشعارات");
       }
-    } catch (err) {
-      console.error("Error:", err);
-    }
-  }
-
-  // طلب الإذن عند تحميل الصفحة (بدون زر)
-  requestPermissionAndSaveToken();
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("/firebase-messaging-sw.js")
-      .then(reg => console.log("SW registered:", reg.scope))
-      .catch(err => console.error("SW error:", err));
+    });
   }
 </script>
 </body>
