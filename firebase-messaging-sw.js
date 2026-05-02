@@ -12,13 +12,12 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// ✅ يقرأ من data فقط — الـ SW يتحكم في كل شيء
 messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification(payload.notification.title, {
-    body: payload.notification.body,
+  self.registration.showNotification(payload.data.title, {
+    body: payload.data.body,
     icon: 'https://nasr-realestate.github.io/assets/img/logo.webp',
-    data: {
-      url: payload.data?.url || 'https://nasr-realestate.github.io/'
-    }
+    data: { url: payload.data.url }
   });
 });
 
@@ -31,7 +30,6 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          // ✅ decodeURIComponent للتعامل مع الروابط العربية
           if (decodeURIComponent(client.url) === decodeURIComponent(targetUrl) && 'focus' in client)
             return client.focus();
         }
