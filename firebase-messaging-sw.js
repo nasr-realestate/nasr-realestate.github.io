@@ -1,7 +1,6 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// تهيئة Firebase داخل Service Worker
 firebase.initializeApp({
   apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
   authDomain: "simsartalabak.firebaseapp.com",
@@ -17,7 +16,13 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: 'https://nasr-realestate.github.io/logo.png',
+    icon: 'https://nasr-realestate.github.io/assets/img/logo.webp',
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.FCM_MSG?.notification?.click_action || 'https://nasr-realestate.github.io/';
+  event.waitUntil(clients.openWindow(urlToOpen));
 });
