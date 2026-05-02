@@ -82,20 +82,6 @@ jobs:
             return base + "/";
           }
           
-          function buildNotificationBody(property, isRequest) {
-            let body = "";
-            if (isRequest) {
-              if (property.price)    body += `💰 ${property.price}`;
-              if (property.location) body += ` 📍 ${property.location}`;
-              if (!body) body = "طلب جديد — اضغط للمعاينة";
-            } else {
-              if (property.price)    body += `💰 ${property.price}`;
-              if (property.location) body += ` 📍 ${property.location}`;
-              if (!body) body = "عرض جديد — اضغط للمعاينة";
-            }
-            return body;
-          }
-          
           async function sendNotification() {
             try {
               const tokensSnapshot = await db.collection("fcmTokens").get();
@@ -126,7 +112,11 @@ jobs:
               const notificationTitle = isRequest
                 ? `🔔 طلب جديد: ${property.title}`
                 : `🏠 عرض جديد: ${property.title}`;
-              const notificationBody = buildNotificationBody(property, isRequest);
+              
+              let notificationBody = "";
+              if (property.price)    notificationBody += `💰 ${property.price}`;
+              if (property.location) notificationBody += ` 📍 ${property.location}`;
+              if (!notificationBody) notificationBody = isRequest ? "طلب جديد — اضغط للمعاينة" : "عرض جديد — اضغط للمعاينة";
               
               console.log(`📢 إرسال إلى ${tokens.length} جهاز`);
               console.log(`🔗 الرابط: ${propertyUrl}`);
@@ -138,10 +128,6 @@ jobs:
                   url: propertyUrl
                 },
                 webpush: {
-                  notification: {
-                    icon: "https://nasr-realestate.github.io/assets/img/logo.webp",
-                    badge: "https://nasr-realestate.github.io/assets/img/logo.webp"
-                  },
                   fcm_options: { link: propertyUrl }
                 },
                 tokens: tokens
