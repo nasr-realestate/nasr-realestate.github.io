@@ -225,91 +225,77 @@
     🔔 فعّل الإشعارات
   </button>
 
-  <!-- Firebase: التسجيل والحفظ والإشعارات -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<!-- Firebase: التسجيل والحفظ والإشعارات -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
-      authDomain: "simsartalabak.firebaseapp.com",
-      projectId: "simsartalabak",
-      storageBucket: "simsartalabak.firebasestorage.app",
-      messagingSenderId: "733807203688",
-      appId: "1:733807203688:web:a0582925001409994e32dd"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
+    authDomain: "simsartalabak.firebaseapp.com",
+    projectId: "simsartalabak",
+    storageBucket: "simsartalabak.firebasestorage.app",
+    messagingSenderId: "733807203688",
+    appId: "1:733807203688:web:a0582925001409994e32dd"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+  const db = getFirestore(app);
 
-    // حفظ التوكن في Firestore
-    async function saveTokenToFirestore(token) {
-      try {
-        await setDoc(doc(db, "fcmTokens", token), {
-          token: token,
-          createdAt: new Date(),
-          userAgent: navigator.userAgent
-        });
-        console.log("✅ Token saved to Firestore");
-      } catch (err) {
-        console.error("❌ Firestore save error:", err);
-      }
+  async function saveTokenToFirestore(token) {
+    try {
+      await setDoc(doc(db, "fcmTokens", token), {
+        token: token,
+        createdAt: new Date(),
+        userAgent: navigator.userAgent
+      });
+      console.log("✅ Token saved to Firestore");
+    } catch (err) {
+      console.error("❌ Firestore save error:", err);
     }
+  }
 
-    // تسجيل Service Worker (للإشعارات في الخلفية)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(reg => console.log("✅ Service Worker registered:", reg.scope))
-        .catch(err => console.error("❌ Service Worker registration failed:", err));
-    }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(reg => console.log("✅ Service Worker registered:", reg.scope))
+      .catch(err => console.error("❌ Service Worker registration failed:", err));
+  }
 
-    // معالجة الإشعارات أثناء فتح الموقع (في المقدمة)
-    onMessage(messaging, (payload) => {
-      console.log("📨 Foreground message received:", payload);
-      if (payload.notification) {
-        new Notification(payload.notification.title, {
-          body: payload.notification.body,
-          icon: payload.notification.icon || 'https://nasr-realestate.github.io/assets/img/logo.webp'
-        });
+  // ✅ onMessage محذوف بالكامل — الـ SW يتولى الإشعارات وحده
+
+  const btn = document.getElementById("enableNotif");
+  if (Notification.permission === "granted") {
+    if (btn) btn.style.display = "none";
+  } else {
+    if (btn) btn.style.display = "block";
+  }
+
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
+          });
+          if (token) {
+            await saveTokenToFirestore(token);
+            btn.style.display = "none";
+            alert("✅ تم تفعيل الإشعارات بنجاح!");
+          } else {
+            throw new Error("No token received");
+          }
+        } catch (err) {
+          console.error("❌ Token error:", err);
+          alert("⚠️ حدث خطأ: " + err.message);
+        }
+      } else {
+        alert("⚠️ لم يتم تفعيل الإشعارات");
       }
     });
-
-    // التحكم في زر الإشعارات وحفظ التوكن
-    const btn = document.getElementById("enableNotif");
-    if (Notification.permission === "granted") {
-      if (btn) btn.style.display = "none";
-      console.log("🔔 Permission already granted.");
-    } else {
-      if (btn) btn.style.display = "block";
-    }
-
-    if (btn) {
-      btn.addEventListener("click", async () => {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-          try {
-            const token = await getToken(messaging, {
-              vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
-            });
-            if (token) {
-              await saveTokenToFirestore(token);
-              btn.style.display = "none";
-              alert("✅ تم تفعيل الإشعارات بنجاح!");
-            } else {
-              throw new Error("No token received");
-            }
-          } catch (err) {
-            console.error("❌ Token error:", err);
-            alert("⚠️ حدث خطأ: " + err.message);
-          }
-        } else {
-          alert("⚠️ لم يتم تفعيل الإشعارات");
-        }
-      });
-    }
-  </script>
-
+  }
+</script>
 </body>
 </html>
