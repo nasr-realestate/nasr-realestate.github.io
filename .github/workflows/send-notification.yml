@@ -72,17 +72,15 @@ jobs:
           }
           
           function buildPropertyUrl(property) {
-            // الأولوية للـ slug
+            const base = "https://nasr-realestate.github.io";
+            // ✅ بدون encodeURIComponent — يتطابق مع permalink في _config.yml
             if (property.slug) {
-              return `https://nasr-realestate.github.io/properties/${encodeURIComponent(property.slug)}/`;
+              return `${base}/عقارات-مدينة-نصر/${property.slug}/`;
             }
-            // ثم للـ id
             if (property.id) {
-              return `https://nasr-realestate.github.io/properties/${encodeURIComponent(property.id)}/`;
+              return `${base}/عقارات-مدينة-نصر/${property.id}/`;
             }
-            // بديل: استخدام العنوان
-            const titleSlug = property.title.replace(/ /g, "-");
-            return `https://nasr-realestate.github.io/properties/${encodeURIComponent(titleSlug)}/`;
+            return base + "/";
           }
           
           async function sendNotification() {
@@ -121,6 +119,10 @@ jobs:
               
               const message = {
                 notification: { title: notificationTitle, body: notificationBody },
+                // ✅ data.url — يقرأه الـ SW عند الضغط على الإشعار
+                data: {
+                  url: propertyUrl
+                },
                 webpush: {
                   notification: {
                     icon: "https://nasr-realestate.github.io/assets/img/logo.webp",
