@@ -1,4 +1,4 @@
-name: إرسال إشعار عند إضافة عقار جديد
+name: إرسال إشعار عند إضافة عقار أو طلب جديد
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - '_properties/**'
+      - '_requests/**'
   workflow_dispatch:
 
 jobs:
@@ -47,7 +48,7 @@ jobs:
               const content = fs.readFileSync(filePath, "utf8");
               const { data } = frontmatter(content);
               return {
-                title: data.title || "عقار جديد",
+                title: data.title || "جديد",
                 price: data.price || "",
                 location: data.location || "",
                 slug: data.slug || "",
@@ -63,22 +64,36 @@ jobs:
             const { execSync } = require("child_process");
             try {
               const output = execSync("git diff --name-only --diff-filter=A HEAD~1 HEAD", { encoding: "utf8" });
-              return output.split("\n").filter(f => f.startsWith("_properties/") && f.endsWith(".md"));
+              return output.split("\n").filter(f =>
+                (f.startsWith("_properties/") || f.startsWith("_requests/")) && f.endsWith(".md")
+              );
             } catch (error) {
               console.error("خطأ في جلب الملفات:", error);
               return [];
             }
           }
           
-          function buildPropertyUrl(property) {
+          function buildUrl(property, filePath) {
             const base = "https://nasr-realestate.github.io";
-            if (property.slug) {
-              return `${base}/عقارات-مدينة-نصر/${property.slug}/`;
-            }
-            if (property.id) {
-              return `${base}/عقارات-مدينة-نصر/${property.id}/`;
-            }
+            const isRequest = filePath.startsWith("_requests/");
+            const section = isRequest ? "طلبات-عقارية-مستعجلة" : "عقارات-مدينة-نصر";
+            if (property.slug) return `${base}/${section}/${property.slug}/`;
+            if (property.id)   return `${base}/${section}/${property.id}/`;
             return base + "/";
+          }
+          
+          function buildNotificationBody(property, isRequest) {
+            let body = "";
+            if (isRequest) {
+              if (property.price)    body += `💰 ${property.price}`;
+              if (property.location) body += ` 📍 ${property.location}`;
+              if (!body) body = "طلب جديد — اضغط للمعاينة";
+            } else {
+              if (property.price)    body += `💰 ${property.price}`;
+              if (property.location) body += ` 📍 ${property.location}`;
+              if (!body) body = "عرض جديد — اضغط للمعاينة";
+            }
+            return body;
           }
           
           async function sendNotification() {
@@ -94,29 +109,29 @@ jobs:
               
               const newFiles = getNewlyAddedFiles();
               if (newFiles.length === 0) {
-                console.log("❌ لا توجد عقارات جديدة");
+                console.log("❌ لا توجد ملفات جديدة");
                 return;
               }
               
-              const property = readPropertyData(newFiles[0]);
+              const filePath = newFiles[0];
+              const isRequest = filePath.startsWith("_requests/");
+              const property = readPropertyData(filePath);
+              
               if (!property) {
-                console.log("❌ فشل في قراءة بيانات العقار");
+                console.log("❌ فشل في قراءة البيانات");
                 return;
               }
               
-              const propertyUrl = buildPropertyUrl(property);
-              
-              const notificationTitle = `🏠 ${property.title}`;
-              let notificationBody = "";
-              if (property.price) notificationBody += `💰 ${property.price}`;
-              if (property.location) notificationBody += ` 📍 ${property.location}`;
-              if (!notificationBody) notificationBody = "تم إضافة عرض جديد، اضغط للمعاينة";
+              const propertyUrl = buildUrl(property, filePath);
+              const notificationTitle = isRequest
+                ? `🔔 طلب جديد: ${property.title}`
+                : `🏠 عرض جديد: ${property.title}`;
+              const notificationBody = buildNotificationBody(property, isRequest);
               
               console.log(`📢 إرسال إلى ${tokens.length} جهاز`);
-              console.log(`🔗 رابط العقار: ${propertyUrl}`);
+              console.log(`🔗 الرابط: ${propertyUrl}`);
               
               const message = {
-                // ✅ data فقط — بدون notification field
                 data: {
                   title: notificationTitle,
                   body: notificationBody,
