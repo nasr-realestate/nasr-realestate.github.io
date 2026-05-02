@@ -13,16 +13,29 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
+  self.registration.showNotification(payload.notification.title, {
     body: payload.notification.body,
     icon: 'https://nasr-realestate.github.io/assets/img/logo.webp',
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+    data: {
+      url: payload.data?.url || 'https://nasr-realestate.github.io/'
+    }
+  });
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.FCM_MSG?.notification?.click_action || 'https://nasr-realestate.github.io/';
-  event.waitUntil(clients.openWindow(urlToOpen));
+  const targetUrl = event.notification.data?.url
+    || 'https://nasr-realestate.github.io/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          // ✅ decodeURIComponent للتعامل مع الروابط العربية
+          if (decodeURIComponent(client.url) === decodeURIComponent(targetUrl) && 'focus' in client)
+            return client.focus();
+        }
+        return clients.openWindow(targetUrl);
+      })
+  );
 });
