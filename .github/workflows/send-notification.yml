@@ -43,108 +43,105 @@ jobs:
           
           const db = admin.firestore();
           
-          // دالة لقراءة بيانات العقار من ملف .md
           function readPropertyData(filePath) {
             try {
               const content = fs.readFileSync(filePath, "utf8");
-              const { data, content: body } = frontmatter(content);
+              const { data } = frontmatter(content);
               return {
                 title: data.title || "عقار جديد",
                 price: data.price || "",
                 location: data.location || "",
                 slug: data.slug || "",
-                image: data.image || ""
+                id: data.id || ""
               };
             } catch (error) {
-              console.error(`خطأ في قراءة الملف ${filePath}:`, error);
+              console.error("خطأ في قراءة الملف:", error);
               return null;
             }
           }
           
-          // دالة للحصول على الملفات المضافة حديثاً
           function getNewlyAddedFiles() {
             const { execSync } = require("child_process");
             try {
               const output = execSync("git diff --name-only --diff-filter=A HEAD~1 HEAD", { encoding: "utf8" });
               return output.split("\n").filter(f => f.startsWith("_properties/") && f.endsWith(".md"));
             } catch (error) {
-              console.error("خطأ في جلب الملفات المضافة:", error);
+              console.error("خطأ في جلب الملفات:", error);
               return [];
             }
           }
           
+          function buildPropertyUrl(property) {
+            // الأولوية للـ slug
+            if (property.slug) {
+              return `https://nasr-realestate.github.io/properties/${encodeURIComponent(property.slug)}/`;
+            }
+            // ثم للـ id
+            if (property.id) {
+              return `https://nasr-realestate.github.io/properties/${encodeURIComponent(property.id)}/`;
+            }
+            // بديل: استخدام العنوان
+            const titleSlug = property.title.replace(/ /g, "-");
+            return `https://nasr-realestate.github.io/properties/${encodeURIComponent(titleSlug)}/`;
+          }
+          
           async function sendNotification() {
             try {
-              // جلب جميع التوكنات من Firestore
               const tokensSnapshot = await db.collection("fcmTokens").get();
               const tokens = [];
-              tokensSnapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.token) tokens.push(data.token);
-              });
+              tokensSnapshot.forEach(doc => tokens.push(doc.id));
               
               if (tokens.length === 0) {
                 console.log("❌ لا توجد توكنات مسجلة");
                 return;
               }
               
-              // جلب الملفات العقارية المضافة حديثاً
               const newFiles = getNewlyAddedFiles();
               if (newFiles.length === 0) {
                 console.log("❌ لا توجد عقارات جديدة");
                 return;
               }
               
-              // قراءة بيانات أول عقار جديد (للتجربة)
-              const propertyData = readPropertyData(newFiles[0]);
-              if (!propertyData) {
+              const property = readPropertyData(newFiles[0]);
+              if (!property) {
                 console.log("❌ فشل في قراءة بيانات العقار");
                 return;
               }
               
-              // بناء نص الإشعار من بيانات العقار
-              const notificationTitle = `🏠 ${propertyData.title}`;
+              const propertyUrl = buildPropertyUrl(property);
+              
+              const notificationTitle = `🏠 ${property.title}`;
               let notificationBody = "";
-              if (propertyData.price) notificationBody += `💰 ${propertyData.price}`;
-              if (propertyData.location) notificationBody += ` 📍 ${propertyData.location}`;
+              if (property.price) notificationBody += `💰 ${property.price}`;
+              if (property.location) notificationBody += ` 📍 ${property.location}`;
               if (!notificationBody) notificationBody = "تم إضافة عرض جديد، اضغط للمعاينة";
               
-              console.log(`📢 جاري إرسال الإشعار إلى ${tokens.length} جهاز`);
-              console.log(`📄 بيانات الإشعار: ${notificationTitle} - ${notificationBody}`);
+              console.log(`📢 إرسال إلى ${tokens.length} جهاز`);
+              console.log(`🔗 رابط العقار: ${propertyUrl}`);
               
-              // إنشاء رسالة الإشعار مع الشعار
               const message = {
-                notification: {
-                  title: notificationTitle,
-                  body: notificationBody
-                },
+                notification: { title: notificationTitle, body: notificationBody },
                 webpush: {
                   notification: {
                     icon: "https://nasr-realestate.github.io/assets/img/logo.webp",
                     badge: "https://nasr-realestate.github.io/assets/img/logo.webp"
-                  }
+                  },
+                  fcm_options: { link: propertyUrl }
                 },
                 tokens: tokens
               };
               
-              // إرسال الإشعار إلى جميع الأجهزة
               const response = await admin.messaging().sendEachForMulticast(message);
+              console.log(`✅ نجاح: ${response.successCount} | ❌ فشل: ${response.failureCount}`);
               
-              console.log(`✅ تم الإرسال بنجاح إلى ${response.successCount} جهاز`);
-              console.log(`❌ فشل الإرسال إلى ${response.failureCount} جهاز`);
-              
-              // حذف التوكنات الفاشلة (اختياري)
               if (response.failureCount > 0) {
-                const failedTokens = [];
+                const failed = [];
                 response.responses.forEach((resp, idx) => {
-                  if (!resp.success) {
-                    failedTokens.push(tokens[idx]);
-                  }
+                  if (!resp.success) failed.push(tokens[idx]);
                 });
-                
-                for (const failedToken of failedTokens) {
-                  await db.collection("fcmTokens").doc(failedToken).delete();
-                  console.log(`🗑️ تم حذف التوكن الفاشل: ${failedToken}`);
+                for (const token of failed) {
+                  await db.collection("fcmTokens").doc(token).delete();
+                  console.log(`🗑️ تم حذف التوكن الفاشل: ${token}`);
                 }
               }
             } catch (error) {
