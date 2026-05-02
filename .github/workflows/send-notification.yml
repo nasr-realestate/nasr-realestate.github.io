@@ -33,7 +33,6 @@ jobs:
           node -e '
           const admin = require("firebase-admin");
           const fs = require("fs");
-          const path = require("path");
           const frontmatter = require("frontmatter");
           
           const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -73,7 +72,6 @@ jobs:
           
           function buildPropertyUrl(property) {
             const base = "https://nasr-realestate.github.io";
-            // ✅ بدون encodeURIComponent — يتطابق مع permalink في _config.yml
             if (property.slug) {
               return `${base}/عقارات-مدينة-نصر/${property.slug}/`;
             }
@@ -118,9 +116,10 @@ jobs:
               console.log(`🔗 رابط العقار: ${propertyUrl}`);
               
               const message = {
-                notification: { title: notificationTitle, body: notificationBody },
-                // ✅ data.url — يقرأه الـ SW عند الضغط على الإشعار
+                // ✅ data فقط — بدون notification field
                 data: {
+                  title: notificationTitle,
+                  body: notificationBody,
                   url: propertyUrl
                 },
                 webpush: {
