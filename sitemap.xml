@@ -4,19 +4,20 @@ layout: null
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   {% for page in site.pages %}
-    {% if page.url != "/sitemap.xml" and page.url != "/robots.txt" %}
+    {% unless page.url contains '404.html' or page.url contains '.css' or page.url contains '.json' or page.url contains '.xml' or page.url contains '/assets/' %}
     <url>
       <loc>{{ site.url }}{{ page.url }}</loc>
-      <lastmod>{{ site.time | date: "%Y-%m-%d" }}</lastmod>
+      <lastmod>{{ page.last_modified_at | default: site.time | date: "%Y-%m-%d" }}</lastmod>
     </url>
-    {% endif %}
+    {% endunless %}
   {% endfor %}
-  {% for post in site.collections %}
-    {% for item in post.docs %}
+  
+  {% for collection in site.collections %}
+    {% for doc in collection.docs %}
     <url>
-      <loc>{{ site.url }}{{ item.url }}</loc>
-      <lastmod>{{ item.date | date: "%Y-%m-%d" }}</lastmod>
+      <loc>{{ site.url }}{{ doc.url }}</loc>
+      <lastmod>{{ doc.last_modified_at | default: doc.date | date: "%Y-%m-%d" }}</lastmod>
     </url>
     {% endfor %}
   {% endfor %}
-</urlset> 
+</urlset>
