@@ -1,4 +1,4 @@
-name: "تحديث الموقع وخريطة السايت ماب"
+name: "توليد الخريطة ونشر الموقع آلياً"
 
 on:
   push:
@@ -9,10 +9,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -27,13 +23,17 @@ jobs:
           ruby-version: '3.1'
           bundler-cache: true
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Build with Jekyll
+      - name: Build Jekyll Site
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
+
+      - name: Generate Sitemap Automatically
+        uses: cicirello/generate-sitemap@v1
+        with:
+          base-url-path: https://nasr-realestate.github.io/
+          path-to-root: _site
+          additional-extensions: html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
