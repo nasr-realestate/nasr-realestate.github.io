@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
-# استخدام نسخة ثابتة ومتوافقة مع GitHub Pages
+# المحرك الأساسي المتوافق مع خوادم GitHub
 gem "github-pages", group: :jekyll_plugins
 
-# إضافات إضافية لضمان استقرار البناء
+# ضروري جداً لتجنب أخطاء البناء في النسخ الجديدة من روبي
 gem "webrick"
