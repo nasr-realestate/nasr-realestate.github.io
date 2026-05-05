@@ -2,7 +2,6 @@
 # === ⚙️ سمسار طلبك — الإصدار الاحترافي النهائي 2026 ===
 # =========================================================
 
-# ----- 1. المعلومات الأساسية للموقع -----
 title: "سمسار طلبك | طارق طنطاوي"
 title_separator: "|"
 description: "خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية."
@@ -13,7 +12,6 @@ timezone: Africa/Cairo
 locale: "ar_EG"
 encoding: "UTF-8"
 
-# ----- 2. بيانات المالك والتواصل -----
 author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
@@ -26,28 +24,22 @@ contact:
 logo: "/assets/img/logo.webp"
 copyright: "© 2026 سمسار طلبك - طارق طنطاوي. جميع الحقوق محفوظة."
 
-# ----- 3. إعدادات البناء والروابط -----
 markdown: kramdown
 permalink: pretty
 kramdown:
   input: GFM
   hard_wrap: false
 
-# ----- 4. الإضافات (Plugins) -----
 plugins:
   - jekyll-seo-tag
   - jekyll-feed
-  # تم حذف jekyll-sitemap لمنع التعارض وتوليد ملف نقي
 
-# ----- 5. تحليلات جوجل -----
 google_analytics: "G-CDT8Q9YSJ0"
 
-# ----- 6. SEO — صورة المشاركة المحدثة -----
 social:
   image: "/assets/img/social-home.webp"
   type: "website"
 
-# ----- 7. Collections — الروابط العربية -----
 collections:
   properties:
     output: true
@@ -56,7 +48,6 @@ collections:
     output: true
     permalink: /طلبات-عقارية-مستعجلة/:slug/
 
-# ----- 8. الإعدادات الافتراضية (Defaults) -----
 defaults:
   - scope:
       path: ""
@@ -74,16 +65,9 @@ defaults:
       lang: "ar"
       category: "عقارات مدينة نصر"
 
-  # تحديث المسار هنا للاسم الجديد لضمان عدم وجود قالب
-  - scope:
-      path: "sitemap_nasr.xml"
-    values:
-      layout: null
-# ----- 9. إعدادات الأداء والضغط -----
 sass:
   style: compressed
 
-# ----- 10. الملفات المستبعدة -----
 exclude:
   - Gemfile
   - Gemfile.lock
