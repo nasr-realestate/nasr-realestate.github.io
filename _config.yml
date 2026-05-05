@@ -1,3 +1,7 @@
+# =========================================================
+# === ⚙️ سمسار طلبك — الإصدار الاحترافي النهائي 2026 ===
+# =========================================================
+
 title: "سمسار طلبك | طارق طنطاوي"
 title_separator: "|"
 description: "خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية."
@@ -53,7 +57,17 @@ defaults:
 sass:
   style: compressed
 
+# --- منع الأخطاء البرمجية (تعديل هام جداً) ---
 exclude:
+  - vendor
+  - vendor/bundle
+  - vendor/cache
+  - vendor/gems
+  - vendor/ruby
   - Gemfile
   - Gemfile.lock
+  - node_modules
   - .github
+  - .bundle
+  - .jekyll-cache
+  - .jekyll-metadata
