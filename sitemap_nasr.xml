@@ -1,19 +1,14 @@
----
-layout: null
-permalink: /sitemap_nasr.xml
----
-{%- capture xml_output -%}
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>{{ site.url }}{{ site.baseurl }}/</loc>
+    <loc>https://nasr-realestate.github.io/</loc>
     <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   {% for property in site.properties %}
   <url>
-    <loc>{{ site.url }}{{ site.baseurl }}{{ property.url }}</loc>
+    <loc>https://nasr-realestate.github.io{{ property.url }}</loc>
     <lastmod>{% if property.date %}{{ property.date | date_to_xmlschema }}{% else %}{{ site.time | date_to_xmlschema }}{% endif %}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -21,12 +16,10 @@ permalink: /sitemap_nasr.xml
   {% endfor %}
   {% for request in site.requests %}
   <url>
-    <loc>{{ site.url }}{{ site.baseurl }}{{ request.url }}</loc>
+    <loc>https://nasr-realestate.github.io{{ request.url }}</loc>
     <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   {% endfor %}
 </urlset>
-{%- endcapture -%}
-{{- xml_output | lstrip -}}
