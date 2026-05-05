@@ -66,7 +66,6 @@ defaults:
       image: "/assets/img/social-home-real.webp"
       author: "طارق طنطاوي"
 
-  # تخصيص العقارات
   - scope:
       path: ""
       type: "properties"
@@ -75,12 +74,11 @@ defaults:
       lang: "ar"
       category: "عقارات مدينة نصر"
 
-  # هام جداً: استثناء ملفات XML من أي قالب افتراضي
+  # تحديث المسار هنا للاسم الجديد لضمان عدم وجود قالب
   - scope:
-      path: "sitemap.xml"
+      path: "sitemap_nasr.xml"
     values:
       layout: null
-
 # ----- 9. إعدادات الأداء والضغط -----
 sass:
   style: compressed
