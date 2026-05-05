@@ -37,7 +37,7 @@ kramdown:
 plugins:
   - jekyll-seo-tag
   - jekyll-feed
-  - jekyll-sitemap   # <--- الإضافة المسؤولة عن خريطة الموقع التلقائية
+  # تم حذف jekyll-sitemap لمنع التعارض وتوليد ملف نقي
 
 # ----- 5. تحليلات جوجل -----
 google_analytics: "G-CDT8Q9YSJ0"
@@ -66,6 +66,7 @@ defaults:
       image: "/assets/img/social-home-real.webp"
       author: "طارق طنطاوي"
 
+  # تخصيص العقارات
   - scope:
       path: ""
       type: "properties"
@@ -73,6 +74,12 @@ defaults:
       layout: "property_page"
       lang: "ar"
       category: "عقارات مدينة نصر"
+
+  # هام جداً: استثناء ملفات XML من أي قالب افتراضي
+  - scope:
+      path: "sitemap.xml"
+    values:
+      layout: null
 
 # ----- 9. إعدادات الأداء والضغط -----
 sass:
@@ -87,3 +94,4 @@ exclude:
   - vendor
   - .env*
   - .git
+  - .github
