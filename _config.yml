@@ -57,17 +57,12 @@ defaults:
 sass:
   style: compressed
 
-# --- منع الأخطاء البرمجية (تعديل هام جداً) ---
+# تجاهل الملفات التقنية تماماً
 exclude:
   - vendor
-  - vendor/bundle
-  - vendor/cache
-  - vendor/gems
-  - vendor/ruby
   - Gemfile
   - Gemfile.lock
-  - node_modules
   - .github
-  - .bundle
   - .jekyll-cache
   - .jekyll-metadata
+  - README.md
