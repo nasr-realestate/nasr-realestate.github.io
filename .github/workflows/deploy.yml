@@ -35,53 +35,48 @@ jobs:
         env:
           JEKYLL_ENV: production
 
-      # حذف أي sitemap قد يكون Jekyll أنشأه
       - name: Remove old sitemap
         run: rm -f _site/sitemap.xml
 
-      # توليد خريطة نظيفة فقط من الصفحات المفيدة
       - name: Generate clean sitemap
         shell: bash
         run: |
           SITE_URL="https://nasr-realestate.github.io"
 
-          {
-            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>'
-            printf '%s\n' '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > _site/sitemap.xml
+          echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> _site/sitemap.xml
 
-            find _site -type f -name "*.html" \
-              ! -path "_site/assets/*" \
-              ! -name "404.html" \
-              ! -name "form-success.html" \
-              ! -name "google*.html" \
-              ! -name "feed.xml" \
-              | sed 's#_site##' \
-              | sed 's#/index.html$#/##' \
-              | sort \
-              | while read -r file; do
-                  if [ -z "$file" ]; then
-                    file="/"
-                  fi
+          find _site -type f -name "*.html" \
+            ! -path "_site/assets/*" \
+            ! -name "404.html" \
+            ! -name "form-success.html" \
+            ! -name "google*.html" \
+            | sed 's#_site##' \
+            | sed 's#/index.html$#/##' \
+            | sort \
+            | while read -r file; do
 
-                  printf '%s\n' '  <url>'
-                  printf '    <loc>%s%s</loc>\n' "$SITE_URL" "$file"
-                  printf '%s\n' '  </url>'
-                done
+              if [ -z "$file" ]; then
+                file="/"
+              fi
 
-            printf '%s\n' '</urlset>'
-          > _site/sitemap.xml
+              echo "  <url>" >> _site/sitemap.xml
+              echo "    <loc>${SITE_URL}${file}</loc>" >> _site/sitemap.xml
+              echo "  </url>" >> _site/sitemap.xml
 
-      # تحقق صارم: أول بايت لازم يكون <
+            done
+
+          echo '</urlset>' >> _site/sitemap.xml
+
       - name: Validate sitemap
         shell: bash
         run: |
           first_char=$(head -c 1 _site/sitemap.xml)
           if [ "$first_char" != "<" ]; then
-            echo "Invalid sitemap: XML declaration is not at byte 1"
+            echo "Invalid sitemap"
             exit 1
           fi
 
-      # ملف robots واضح وصريح
       - name: Write robots.txt
         shell: bash
         run: |
