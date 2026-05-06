@@ -63,8 +63,10 @@ jobs:
                 file="/"
               fi
 
+              encoded_path=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe='/:-_~'))" "$file")
+
               echo "  <url>" >> _site/sitemap.xml
-              echo "    <loc>${SITE_URL}${file}</loc>" >> _site/sitemap.xml
+              echo "    <loc>${SITE_URL}${encoded_path}</loc>" >> _site/sitemap.xml
               echo "  </url>" >> _site/sitemap.xml
 
             done
