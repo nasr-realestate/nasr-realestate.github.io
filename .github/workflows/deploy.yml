@@ -1,4 +1,4 @@
-name: "توليد الخريطة ونشر الموقع"
+name: Build, Clean Sitemap, Deploy
 
 on:
   push:
@@ -10,9 +10,14 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,36 +27,84 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
-          bundler-cache: false 
+          ruby-version: "3.1"
+          bundler-cache: true
 
-      - name: Install Dependencies
-        run: bundle install
-
-      - name: Build Jekyll Site
+      - name: Build Jekyll
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
 
-      - name: Generate Sitemap
-        uses: cicirello/generate-sitemap@v1
-        with:
-          base-url-path: https://nasr-realestate.github.io/
-          path-to-root: _site
-          additional-extensions: html
-          # --- التعديل الجوهري هنا (تقسيم الملفات والمجلدات) ---
-          exclude-files: 404.html google1201055475d84276.html dacda97e-3fc5-4353-9a50-aaa212837011.html form-success.html feed.xml
-          exclude-dirs: assets
+      # حذف أي sitemap قد يكون Jekyll أنشأه
+      - name: Remove old sitemap
+        run: rm -f _site/sitemap.xml
 
-      - name: Upload artifact
+      # توليد خريطة نظيفة فقط من الصفحات المفيدة
+      - name: Generate clean sitemap
+        shell: bash
+        run: |
+          SITE_URL="https://nasr-realestate.github.io"
+
+          {
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>'
+            printf '%s\n' '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+
+            find _site -type f -name "*.html" \
+              ! -path "_site/assets/*" \
+              ! -name "404.html" \
+              ! -name "form-success.html" \
+              ! -name "google*.html" \
+              ! -name "feed.xml" \
+              | sed 's#_site##' \
+              | sed 's#/index.html$#/##' \
+              | sort \
+              | while read -r file; do
+                  if [ -z "$file" ]; then
+                    file="/"
+                  fi
+
+                  printf '%s\n' '  <url>'
+                  printf '    <loc>%s%s</loc>\n' "$SITE_URL" "$file"
+                  printf '%s\n' '  </url>'
+                done
+
+            printf '%s\n' '</urlset>'
+          > _site/sitemap.xml
+
+      # تحقق صارم: أول بايت لازم يكون <
+      - name: Validate sitemap
+        shell: bash
+        run: |
+          first_char=$(head -c 1 _site/sitemap.xml)
+          if [ "$first_char" != "<" ]; then
+            echo "Invalid sitemap: XML declaration is not at byte 1"
+            exit 1
+          fi
+
+      # ملف robots واضح وصريح
+      - name: Write robots.txt
+        shell: bash
+        run: |
+          cat > _site/robots.txt <<EOF
+          User-agent: *
+          Allow: /
+
+          Sitemap: https://nasr-realestate.github.io/sitemap.xml
+          EOF
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
 
   deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
