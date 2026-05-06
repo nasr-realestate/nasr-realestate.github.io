@@ -51,6 +51,9 @@ jobs:
             ! -name "404.html" \
             ! -name "form-success.html" \
             ! -name "google*.html" \
+            ! -name "*.txt.html" \
+            ! -name "*verification*.html" \
+            ! -name "dacda97e-3fc5-4353-9a50-aaa212837011.html" \
             | sed 's#_site##' \
             | sed 's#/index.html$#/##' \
             | sort \
