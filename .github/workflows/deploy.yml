@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # ضروري لجعل جوجل يقرأ تواريخ تحديث العقارات بشكل صحيح
+          fetch-depth: 0
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -37,8 +40,8 @@ jobs:
           base-url-path: https://nasr-realestate.github.io/
           path-to-root: _site
           additional-extensions: html
-          # --- تنظيف شامل لكل الملفات غير الضرورية في البحث ---
-          exclude-files: "404.html, google*.html, dacda*.html, form-success.html, feed.xml, assets/*"
+          # تنظيف الخريطة من الملفات التقنية وصفحات الخطأ التي تضايق جوجل
+          exclude-paths: "404.html google*.html dacda*.html form-success.html feed.xml assets/"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
