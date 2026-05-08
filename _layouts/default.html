@@ -2,72 +2,49 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-  <!-- SEO -->
   {% seo %}
 
-  <!-- OG Image -->
   {% if page.image_file %}
     <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
-    <meta property="og:image:width"  content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
   {% elsif page.collection == 'requests' or page.layout == 'request_page' %}
     <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
-    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
   {% else %}
     <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
-    <meta property="og:image:width"  content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:image"       content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
   {% endif %}
 
-  <meta property="og:type"         content="website">
-  <meta name="twitter:card"        content="summary_large_image">
-
-  <!-- Meta إضافية -->
-  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
-  <meta name="robots"      content="index, follow, max-image-preview:large">
-  <meta name="author"      content="طارق طنطاوي">
-  <meta name="geo.region"  content="EG-C">
-  <meta name="geo.placename" content="Nasr City, Cairo">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#050505">
+  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
 
-  <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Main CSS -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
 
-  <!-- Favicons -->
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png'  | relative_url }}">
-  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png'  | relative_url }}">
-  <link rel="shortcut icon"                        href="{{ '/assets/img/favicons/favicon.ico'        | relative_url }}">
-  <link rel="manifest"                             href="{{ '/assets/img/favicons/site.webmanifest'   | relative_url }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
+  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
+  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
+  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
 
-  <!-- Trustpilot Widget -->
-  <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
-  <!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
-<!-- End Google Tag Manager -->
-
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 </head>
 
 <body class="{{ page.body_class | default: 'default-page' }}">
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
-  <!-- GTM noscript -->
-  <noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP"
-            height="0" width="0" style="display:none;visibility:hidden"></iframe>
-  </noscript>
+  <div id="prestigeSplash" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#050505; display:flex; align-items:center; justify-content:center; z-index:100000; transition:opacity 0.6s ease;">
+    <div style="width:280px; text-align:center; padding:20px;">
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="سمسار طلبك" style="max-width:100%; height:auto; filter:drop-shadow(0 0 20px rgba(212,175,55,0.3));">
+    </div>
+  </div>
 
   <div class="cinematic-bg"></div>
   <div class="animated-overlay"></div>
@@ -80,14 +57,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
   {% include footer.html %}
 
-  <!-- Smart Search Trigger -->
   <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
     <div class="pulse-ring"></div>
     <i class="fas fa-hand-sparkles"></i>
     <span class="trigger-text">صمم طلبك</span>
   </div>
 
-  <!-- Smart Search Overlay -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
@@ -107,7 +82,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <div class="smart-card" id="stepCommercialBranch">
         <i class="fas fa-briefcase gold-icon"></i>
         <h2>النشاط التجاري والإداري</h2>
-        <p>هل تبحث عن تملك مقر دائم لشركتك أم استئجار مكتب/محل؟</p>
         <div class="choice-grid">
           <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i><span>تمليك / شراء</span></button>
           <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i><span>إيجار شهري</span></button>
@@ -118,7 +92,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <div class="smart-card" id="step2">
         <i class="fas fa-money-bill-wave gold-icon"></i>
         <h2 id="budgetTitle">الميزانية المرصودة؟</h2>
-        <p>لنتمكن من عرض الخيارات التي تناسب قدراتك المالية بدقة.</p>
         <div id="budgetOptions" class="choice-grid"></div>
         <button class="back-text-btn" onclick="backToPrevious()"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
@@ -133,11 +106,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     </div>
   </div>
 
-  <!-- Call Button -->
-  <a href="tel:+201147758857" 
-     class="prestige-call-button" 
-     onclick="trackPhoneCall()"
-     aria-label="اتصال هاتفي بالخبير العقاري">
+  <a href="tel:+201147758857" class="prestige-call-button" onclick="trackPhoneCall()">
     <div class="button-icon"><i class="fas fa-phone-alt"></i></div>
     <div class="button-text">
       <span class="label">استشارة فورية</span>
@@ -145,8 +114,19 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     </div>
   </a>
 
-  <!-- JavaScript (Smart Search Engine) -->
+  <button id="enableNotif" style="position: fixed; bottom: 85px; left: 20px; background: rgba(212,175,55,0.1); color: #D4AF37; border: 1px solid #D4AF37; padding: 8px 15px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-size: 0.8rem; z-index: 999; cursor: pointer; backdrop-filter: blur(5px);">
+    🔔 إشعارات النخبة
+  </button>
+
   <script>
+    // Splash Screen Handler
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const s = document.getElementById('prestigeSplash');
+        if(s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 600); }
+      }, 1500);
+    });
+
     let allProperties = [];
     let dataLoaded = false;
     let userSelection = { category: '', type: '', budgetRange: [] };
@@ -158,151 +138,87 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         const res = await fetch("{{ '/search-data.json' | relative_url }}");
         allProperties = await res.json();
         dataLoaded = true;
-      } catch (e) {
-        console.error("Search data load error:", e);
-      }
+      } catch (e) { console.error("Data error:", e); }
     }
 
-    function openSmartSearch() {
-      loadDataIfNeeded();
-      document.getElementById('smartSearchOverlay').style.display = 'flex';
-      setTimeout(() => goToCard('step1'), 10);
-    }
-
-    function closeSmartSearch() {
-      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-      setTimeout(() => { document.getElementById('smartSearchOverlay').style.display = 'none'; }, 400);
-    }
-
-    function goToCard(cardId) {
-      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-      setTimeout(() => { const target = document.getElementById(cardId); if (target) target.classList.add('active'); }, 50);
-    }
-
+    function openSmartSearch() { loadDataIfNeeded(); document.getElementById('smartSearchOverlay').style.display = 'flex'; setTimeout(() => goToCard('step1'), 50); }
+    function closeSmartSearch() { document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active')); setTimeout(() => { document.getElementById('smartSearchOverlay').style.display = 'none'; }, 400); }
+    function goToCard(id) { document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active')); const t = document.getElementById(id); if(t) t.classList.add('active'); }
     function handleCommercialSelection() { lastStepId = 'step1'; goToCard('stepCommercialBranch'); }
-    function nextStep(category, typeLabel) { userSelection.category = category; userSelection.type = typeLabel; lastStepId = typeLabel.includes('تجاري') ? 'stepCommercialBranch' : 'step1'; setupBudgetOptions(typeLabel); goToCard('step2'); }
+    function nextStep(cat, type) { userSelection.category = cat; userSelection.type = type; lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1'; setupBudgetOptions(type); goToCard('step2'); }
     function backToPrevious() { goToCard(lastStepId); }
 
     function setupBudgetOptions(type) {
       const container = document.getElementById('budgetOptions');
       const title = document.getElementById('budgetTitle');
       container.innerHTML = '';
-      let options = [];
-      if (type === 'تمليك' || type === 'تمليك تجاري') {
+      let opts = [];
+      if (type.includes('تمليك')) {
         title.innerText = "ميزانية التملك؟";
-        options = [{ label: "أقل من 3 مليون ج.م", range: [0, 3000000] }, { label: "من 3 إلى 6 مليون ج.م", range: [3000000, 6000000] }, { label: "أكثر من 6 مليون ج.م", range: [6000000, 99999999] }];
+        opts = [{ label: "أقل من 3 مليون", range: [0, 3000000] }, { label: "3 - 6 مليون", range: [3000000, 6000000] }, { label: "أكثر من 6 مليون", range: [6000000, 99999999] }];
       } else {
         title.innerText = "الميزانية الشهرية؟";
         const limit = type.includes('تجاري') ? 40000 : 20000;
-        options = [{ label: `أقل من ${limit.toLocaleString('ar-EG')} ج.م`, range: [0, limit] }, { label: `أكثر من ${limit.toLocaleString('ar-EG')} ج.م`, range: [limit, 9999999] }];
+        opts = [{ label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] }, { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }];
       }
-      options.forEach(opt => { const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.innerHTML = `<i class="fas fa-coins"></i><span>${opt.label}</span>`; btn.onclick = () => finishSearch(opt.range); container.appendChild(btn); });
+      opts.forEach(o => { const b = document.createElement('button'); b.className='choice-btn'; b.innerHTML=`<i class="fas fa-coins"></i><span>${o.label}</span>`; b.onclick=()=>finishSearch(o.range); container.appendChild(b); });
     }
 
     function finishSearch(range) {
-      userSelection.budgetRange = range;
-      goToCard('stepResults');
+      userSelection.budgetRange = range; goToCard('stepResults');
       const content = document.getElementById('resultsContent');
-      const status = document.getElementById('resultsStatus');
       content.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>';
       setTimeout(() => {
-        const matches = allProperties.filter(prop => {
-          if (prop.category !== userSelection.category) return false;
-          const isRentSearch = userSelection.type.includes('إيجار');
-          const isPropRent = prop.title.includes('إيجار') || prop.category.includes('rent');
-          if (isRentSearch !== isPropRent) return false;
-          const priceNum = parseInt(prop.price.replace(/[^0-9]/g, '')) || 0;
-          return priceNum >= range[0] && priceNum <= range[1];
+        const matches = allProperties.filter(p => {
+          if (p.category !== userSelection.category) return false;
+          const isRent = userSelection.type.includes('إيجار');
+          const isPropRent = p.title.includes('إيجار') || p.category.includes('rent');
+          if (isRent !== isPropRent) return false;
+          const pNum = parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+          return pNum >= range[0] && pNum <= range[1];
         });
-        if (matches.length > 0) {
-          status.innerText = `وجدنا لك ${matches.length} عروض تطابق ذوقك وميزانيتك:`;
-          content.innerHTML = matches.map(m => `<a href="${m.url}" class="result-item"><img src="${m.image}" class="result-img" alt="${m.title}" onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp'"><div class="result-info"><h4>${m.title}</h4><span>${m.price}</span></div></a>`).join('');
-        } else {
-          status.innerText = "عذراً، لم نجد طلباً يطابق هذه الميزانية حالياً..";
-          content.innerHTML = `<div style="padding:20px; color:#888; text-align:center;">يمكنك إضافة طلبك وسنبحث لك فوراً.<br><br><a href="tel:+201147758857" class="choice-btn" style="justify-content:center; text-decoration:none; display:flex;"><i class="fas fa-phone-alt"></i> اتصل بالخبير طارق</a></div>`;
-        }
-      }, 300);
+        document.getElementById('resultsStatus').innerText = matches.length > 0 ? `وجدنا لك ${matches.length} عروض تناسبك:` : "عذراً، لا توجد نتائج مطابقة حالياً..";
+        content.innerHTML = matches.map(m => `<a href="${m.url}" class="result-item"><img src="${m.image}" class="result-img" onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp'"><div class="result-info"><h4>${m.title}</h4><span>${m.price}</span></div></a>`).join('');
+      }, 400);
     }
 
-    function trackPhoneCall() { if (typeof dataLayer !== 'undefined') { dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button', phone_number: '+201147758857' }); } }
+    function trackPhoneCall() { if (typeof dataLayer !== 'undefined') { dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button' }); } }
   </script>
 
-  <!-- زر تفعيل الإشعارات -->
-  <button id="enableNotif" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #D4AF37; color: #000; border: none; padding: 12px 24px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-weight: bold; z-index: 9999; cursor: pointer;">
-    🔔 فعّل الإشعارات
-  </button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<!-- Firebase: التسجيل والحفظ والإشعارات -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
+      authDomain: "simsartalabak.firebaseapp.com",
+      projectId: "simsartalabak",
+      storageBucket: "simsartalabak.firebasestorage.app",
+      messagingSenderId: "733807203688",
+      appId: "1:733807203688:web:a0582925001409994e32dd"
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
-    authDomain: "simsartalabak.firebaseapp.com",
-    projectId: "simsartalabak",
-    storageBucket: "simsartalabak.firebasestorage.app",
-    messagingSenderId: "733807203688",
-    appId: "1:733807203688:web:a0582925001409994e32dd"
-  };
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+    const db = getFirestore(app);
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-  const db = getFirestore(app);
+    const btn = document.getElementById("enableNotif");
+    if (Notification.permission === "granted" && btn) btn.style.display = "none";
 
-  async function saveTokenToFirestore(token) {
-    try {
-      await setDoc(doc(db, "fcmTokens", token), {
-        token: token,
-        createdAt: new Date(),
-        userAgent: navigator.userAgent
-      });
-      console.log("✅ Token saved to Firestore");
-    } catch (err) {
-      console.error("❌ Firestore save error:", err);
-    }
-  }
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(reg => console.log("✅ Service Worker registered:", reg.scope))
-      .catch(err => console.error("❌ Service Worker registration failed:", err));
-  }
-
-  // ✅ onMessage محذوف بالكامل — الـ SW يتولى الإشعارات وحده
-
-  const btn = document.getElementById("enableNotif");
-  if (Notification.permission === "granted") {
-    if (btn) btn.style.display = "none";
-  } else {
-    if (btn) btn.style.display = "block";
-  }
-
-  if (btn) {
-    btn.addEventListener("click", async () => {
+    btn?.addEventListener("click", async () => {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         try {
-          const token = await getToken(messaging, {
-            vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM"
-          });
+          const token = await getToken(messaging, { vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" });
           if (token) {
-            await saveTokenToFirestore(token);
+            await setDoc(doc(db, "fcmTokens", token), { token, createdAt: new Date(), userAgent: navigator.userAgent });
             btn.style.display = "none";
-            alert("✅ تم تفعيل الإشعارات بنجاح!");
-          } else {
-            throw new Error("No token received");
+            alert("✅ تم تفعيل إشعارات النخبة!");
           }
-        } catch (err) {
-          console.error("❌ Token error:", err);
-          alert("⚠️ حدث خطأ: " + err.message);
-        }
-      } else {
-        alert("⚠️ لم يتم تفعيل الإشعارات");
+        } catch (err) { console.error("FCM Error:", err); }
       }
     });
-  }
-</script>
+  </script>
 </body>
 </html>
