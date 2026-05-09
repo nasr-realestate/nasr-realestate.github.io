@@ -136,7 +136,7 @@
 
     <div class="ui-overlay">
         <div class="ui-brand"><i class="fas fa-crown"></i> سمسار طلبك | ELITE</div>
-        <a href="/" class="ui-exit"><i class="fas fa-times"></i> إغلاق</a>
+        <a href="index.html" class="ui-exit"><i class="fas fa-times"></i> إغلاق</a>
     </div>
 
     <div id="introLayer">
@@ -152,7 +152,7 @@
     </main>
 
     <script>
-                const properties = [
+        const properties = [
             { title: "أيقونة المنطقة العاشرة | 180م", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "فخامة الترا سوبر لوكس، دور ثالث واجهة رئيسية، مسجلة شهر عقاري بقلب مدينة نصر.", url: "شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
             { title: "جوهرة ميدان رابعة | 135م", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس شامل التكييفات والمطبخ، سكن جاهز في أرقى عمارات طريق النصر.", url: "شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
             { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص وحديقة 65م، موقع استراتيجي أمام ماونتن فيو مباشرة بالتجمع الخامس.", url: "شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
@@ -214,6 +214,7 @@
         }
 
         function updateSlide() {
+            // استخدام القيمة السالبة في التحريك ليتوافق مع نظام RTL
             document.getElementById('mainTrack').style.transform = `translateX(-${currentIdx * 100}%)`;
             const slides = document.querySelectorAll('.slide');
             slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
@@ -227,7 +228,6 @@
             });
         }
         window.onload = build;
-             
     </script>
 </body>
 </html>
