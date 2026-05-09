@@ -151,90 +151,79 @@
         <div class="progress-bar" id="progressBar"></div>
     </main>
 
-    <script>
-        // تم تصحيح المسارات لتناسب GitHub وتعديل اتجاه الحركة
-const properties = [
-    { title: "أيقونة المنطقة العاشرة | 180م", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "فخامة الترا سوبر لوكس، دور ثالث واجهة رئيسية، مسجلة شهر عقاري بقلب مدينة نصر.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
-    { title: "جوهرة ميدان رابعة | 135م", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس شامل التكييفات والمطبخ، سكن جاهز في أرقى عمارات طريق النصر.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
-    { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص وحديقة 65م، موقع استراتيجي أمام ماونتن فيو مباشرة بالتجمع الخامس.", url: "/شقق-للبيع-في-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
-    { title: "إطلالة شارع الطيران | 225م", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014، فيو مفتوح للأبد، تشطيب الترا سوبر لوكس شامل باكية الجراج.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
-    { title: "دوبلكس استثماري | حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "فرصة بعائد فوري، مؤجر حالياً لطلاب أجانب بزيادة سنوية، فيو بانوراما لا يحجب.", url: "/شقق-للبيع-في-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
-    { title: "تحفة المنطقة الأولى | 225م", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور (أرو مسمار ورخام)، بناء مضاد للزلازل بموقع راقٍ خلف المحلاوي.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
-    { title: "فرصة زهراء مدينة نصر | 86م", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "سكن اقتصادي في موقع حيوي، دور ثالث مميز، فيو مفتوح غير مجروح نهائياً.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" },
-    { title: "ناصية توفيق البكري | 250م", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "شقة صحية (شمس وهواء) بليفينج 30م، مسجلة شهر عقاري خلف مستشفى حسبو.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" },
-    { title: "لقطة حسن المأمون | للشباب", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات، موقع استراتيجي قرب الخدمات والمواصلات، مثالية للسكن أو الاستثمار.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" },
-    { title: "أبراج صن رايز | 288م", price: "7,000,000 ج.م", img: "sunrise.webp", desc: "حي السفارات، فيو بحري 100%، تشطيب مودرن فاخر، خصوصية وأمن على مدار الساعة.", url: "/شقق-للبيع-في-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
-];
-
-let currentIdx = 0, isPaused = false, progress = 0;
-const SLIDE_DURATION = 6000; 
-
-function build() {
-    const track = document.getElementById('mainTrack');
-    properties.forEach((p, i) => {
-        const slide = document.createElement('article');
-        slide.className = `slide ${i === 0 ? 'active' : ''}`;
-        
-        // تم تعديل المسار هنا بإزالة العلامة المائلة الأولى ليعمل بشكل صحيح على GitHub
-        const imgPath = `assets/img/properties/${p.img}`;
-        
-        slide.innerHTML = `
-            <img src="${imgPath}" alt="${p.title}" loading="${i === 0 ? 'eager' : 'lazy'}" onerror="this.src='assets/img/logo.webp';">
-            <div class="slide-overlay"></div>
-            <div class="prop-data">
-                <h2>${p.title}</h2>
-                <p>${p.desc}</p>
-                <strong class="prop-price">${p.price}</strong>
-                <div class="control-btns">
-                    <a href="${p.url}" class="btn-link">اكتشف التحفة العقارية</a>
-                    <button class="btn-pause" onclick="togglePlay()"><i class="fas fa-pause"></i></button>
-                </div>
-            </div>
-        `;
-        track.appendChild(slide);
-    });
-    
-    setTimeout(() => {
-        const intro = document.getElementById('introLayer');
-        if(intro) {
-            intro.style.opacity = '0';
-            setTimeout(() => {
-                intro.style.display = 'none';
-                startEngine();
-            }, 800);
-        }
-    }, 4500);
-}
-
-function startEngine() {
-    setInterval(() => {
-        if (!isPaused) {
-            progress += (100 / (SLIDE_DURATION / 100)); 
-            document.getElementById('progressBar').style.width = progress + '%';
-            if (progress >= 100) {
-                progress = 0;
-                currentIdx = (currentIdx + 1) % properties.length;
-                updateSlide();
+    <script>        const properties = [
+            { 
+                title: "أيقونة المنطقة العاشرة | 180م", 
+                price: "3,700,000 ج.م", 
+                img: "apartment-180m-nasr-city.webp", 
+                desc: "فخامة الترا سوبر لوكس، دور ثالث واجهة رئيسية، مسجلة شهر عقاري بقلب مدينة نصر.", 
+                url: "/عقارات-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" 
+            },
+            { 
+                title: "جوهرة ميدان رابعة | 135م", 
+                price: "5,000,000 ج.م", 
+                img: "raba-nasr.webp", 
+                desc: "تشطيب مهندس شامل التكييفات والمطبخ، سكن جاهز في أرقى عمارات طريق النصر.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" 
+            },
+            { 
+                title: "فيلا دوبلكس حي الأندلس", 
+                price: "إيجار إداري 55,000 ج.م", 
+                img: "duplex-andalus.webp", 
+                desc: "مدخل خاص وحديقة 65م، موقع استراتيجي أمام ماونتن فيو مباشرة بالتجمع الخامس.", 
+                url: "/عقارات-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" 
+            },
+            { 
+                title: "إطلالة شارع الطيران | 225م", 
+                price: "8,000,000 ج.م", 
+                img: "al-Tayaranstreet.webp", 
+                desc: "مباني حديثة 2014، فيو مفتوح للأبد، تشطيب الترا سوبر لوكس شامل باكية الجراج.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" 
+            },
+            { 
+                title: "دوبلكس استثماري | حي السفارات", 
+                price: "4,850,000 ج.م", 
+                img: "elsfarat-duplex.webp", 
+                desc: "فرصة بعائد فوري، مؤجر حالياً لطلاب أجانب بزيادة سنوية، فيو بانوراما لا يحجب.", 
+                url: "/عقارات-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" 
+            },
+            { 
+                title: "تحفة المنطقة الأولى | 225م", 
+                price: "7,500,000 ج.م", 
+                img: "zuhair-sabri.webp", 
+                desc: "تشطيب قصور (أرو مسمار ورخام)، بناء مضاد للزلازل بموقع راقٍ خلف المحلاوي.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" 
+            },
+            { 
+                title: "فرصة زهراء مدينة نصر | 86م", 
+                price: "1,650,000 ج.م", 
+                img: "zahraa-thirdfloor.webp", 
+                desc: "سكن اقتصادي في موقع حيوي، دور ثالث مميز، فيو مفتوح غير مجروح نهائياً.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" 
+            },
+            { 
+                title: "ناصية توفيق البكري | 250م", 
+                price: "5,000,000 ج.م", 
+                img: "tawfiqal-Bakri-st.webp", 
+                desc: "شقة صحية (شمس وهواء) بليفينج 30م، مسجلة شهر عقاري خلف مستشفى حسبو.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" 
+            },
+            { 
+                title: "لقطة حسن المأمون | للشباب", 
+                price: "1,650,000 ج.م", 
+                img: "tawnit.webp", 
+                desc: "عمارات التعاونيات، موقع استراتيجي قرب الخدمات والمواصلات، مثالية للسكن أو الاستثمار.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" 
+            },
+            { 
+                title: "أبراج صن رايز | 288م", 
+                price: "7,000,000 ج.م", 
+                img: "sunrise.webp", 
+                desc: "حي السفارات، فيو بحري 100%، تشطيب مودرن فاخر، خصوصية وأمن على مدار الساعة.", 
+                url: "/عقارات-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" 
             }
-        }
-    }, 100);
-}
-
-function updateSlide() {
-    // تم تعديل الحركة لتناسب نظام RTL (نستخدم القيمة الموجبة هنا)
-    document.getElementById('mainTrack').style.transform = `translateX(${currentIdx * 100}%)`;
-    const slides = document.querySelectorAll('.slide');
-    slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
-}
-
-function togglePlay() {
-    isPaused = !isPaused;
-    const allIcons = document.querySelectorAll('.btn-pause i');
-    allIcons.forEach(icon => {
-        icon.className = isPaused ? "fas fa-play" : "fas fa-pause";
-    });
-}
-window.onload = build;
+        ];
+                    
      </script>
 </body>
 </html>
