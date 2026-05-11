@@ -73,6 +73,9 @@ jobs:
 
           echo '</urlset>' >> _site/sitemap.xml
 
+      - name: Create secondary sitemap
+        run: cp _site/sitemap.xml _site/properties-sitemap.xml
+
       - name: Validate sitemap
         shell: bash
         run: |
