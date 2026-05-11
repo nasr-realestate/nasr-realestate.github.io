@@ -92,7 +92,7 @@ jobs:
           User-agent: *
           Allow: /
 
-          Sitemap: https://nasr-realestate.github.io/sitemap.xml
+          Sitemap: https://nasr-realestate.github.io/properties-sitemap.xml
           EOF
 
       - name: Upload Pages artifact
@@ -112,3 +112,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        
