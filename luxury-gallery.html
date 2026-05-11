@@ -1,626 +1,115 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>بوابة النخبة | سمسار طلبك</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <title>معرض النخبة العقاري - أرقى شقق مدينة نصر | سمسار طلبك</title>
-  <meta name="description" content="تجربة بصرية فريدة لأفخم وأرقى الشقق والوحدات الإدارية المختارة بعناية في مدينة نصر. استكشف عقارات النخبة من سمسار طلبك.">
-
-  {# Open Graph / Twitter Cards - Custom for this page #}
-  <meta property="og:title" content="معرض النخبة العقاري - أرقى شقق مدينة نصر">
-  <meta property="og:description" content="تجربة بصرية فريدة لأفخم وأرقى الشقق والوحدات الإدارية المختارة بعناية في مدينة نصر.">
-  <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-luxury-gallery.webp">
-  <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}/luxury-gallery.html">
-  <meta property="og:type" content="website"> {# Or "image.gallery" if more specific #}
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-luxury-gallery.webp">
-  <meta name="twitter:site" content="@tarekproptech"> {# Assuming you have a Twitter handle #}
-
-  <meta name="theme-color" content="#050505">
-  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
-
-  {# Fonts and Icons #}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-  {# Main Stylesheet #}
-  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-
-  {# Favicons #}
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
-  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
-  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
-  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
-
-  {# Google Tag Manager (GTM) - Sync with default layout #}
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
-
-  {# Schema.org for Image Gallery #}
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "ImageGallery",
-    "name": "معرض النخبة العقاري - شقق فاخرة في مدينة نصر",
-    "description": "استكشف مجموعة من أرقى الشقق والوحدات الإدارية المتميزة في قلب مدينة نصر، القاهرة. صور عالية الجودة وتفاصيل دقيقة.",
-    "url": "{{ site.url }}{{ site.baseurl }}/luxury-gallery.html",
-    "publisher": {
-      "@type": "RealEstateAgent",
-      "name": "سمسار طلبك",
-      "url": "{{ site.url }}"
-    },
-    "associatedMedia": [
-      {
-        "@type": "ImageObject",
-        "contentUrl": "{{ site.url }}{{ site.baseurl }}/assets/img/luxury-1.webp",
-        "name": "شقة فاخرة بإطلالة بانورامية في مدينة نصر"
-      },
-      {
-        "@type": "ImageObject",
-        "contentUrl": "{{ site.url }}{{ site.baseurl }}/assets/img/luxury-2.webp",
-        "name": "صالة استقبال واسعة بتصميم مودرن"
-      },
-      {
-        "@type": "ImageObject",
-        "contentUrl": "{{ site.url }}{{ site.baseurl }}/assets/img/luxury-3.webp",
-        "name": "غرفة نوم ماستر بتشطيبات عالية الجودة"
-      }
-      {# Add more ImageObject entries for each major image in your gallery #}
-    ]
-  }
-  </script>
-
+    <style>
+        /* تنسيقات البرستيج - Prestige Protector */
+        header, footer, nav, .navbar, .site-footer, #back-to-top, .fixed-call-button { 
+            display: none !important; opacity: 0 !important; visibility: hidden !important; 
+        }
+        :root { --gold: #d4af37; --bg: #0a0a0a; --white: #ffffff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { height: 100vh; width: 100vw; background-color: var(--bg); color: var(--white); font-family: 'Cairo', sans-serif; overflow: hidden !important; position: fixed; }
+        .ui-overlay { position: fixed; top: 25px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; }
+        .ui-brand { color: var(--gold); font-weight: 900; font-size: 1.1rem; text-shadow: 0 2px 8px #000; }
+        .ui-exit { color: var(--gold) !important; text-decoration: none !important; background: rgba(0,0,0,0.7); padding: 8px 18px; border-radius: 50px; border: 1px solid rgba(212,175,55,0.4); font-weight: 700; font-size: 0.8rem; backdrop-filter: blur(10px); }
+        #introLayer { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; transition: opacity 0.8s ease; }
+        .intro-h { color: var(--gold); font-size: 2.8rem; font-weight: 900; }
+        .load-indicator { width: 120px; height: 1px; background: #222; margin-top: 35px; position: relative; overflow: hidden; }
+        .load-indicator::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%; background: var(--gold); animation: animLoad 1.5s infinite; }
+        @keyframes animLoad { 0% { left: -100%; } 100% { left: 100%; } }
+        .stage { width: 100vw; height: 100vh; position: relative; }
+        .track { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
+        .slide { min-width: 100%; height: 100%; position: relative; overflow: hidden; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; transition: transform 12s linear; }
+        .slide.active img { transform: scale(1.15); }
+        .slide-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,1) 15%, rgba(0,0,0,0.3) 50%, transparent 90%); z-index: 2; }
+        .prop-data { position: absolute; bottom: 50px; right: 25px; left: 25px; z-index: 5; }
+        .prop-data h2 { color: var(--gold); font-size: 2rem; font-weight: 900; margin-bottom: 8px; }
+        .prop-price { font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 25px; display: block; border-right: 4px solid var(--gold); padding-right: 15px; }
+        .btn-link { flex: 1; background: var(--gold); color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 800; }
+        .progress-bar { position: fixed; bottom: 0; left: 0; width: 0%; height: 5px; background: var(--gold); z-index: 100; transition: width 0.1s linear; }
+    </style>
 </head>
+<body>
 
-<body class="luxury-gallery-page">
-  {# Google Tag Manager (noscript) #}
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-
-  {# Cinematic Background & Overlay #}
-  <div class="cinematic-bg"></div>
-  <div class="animated-overlay"></div>
-
-  {# Navbar #}
-  {% include navbar.html %}
-
-  <main style="flex-grow: 1; position: relative; z-index: 2;">
-    <section class="luxury-viewer-container" style="max-width: 1200px; margin: 1rem auto 4rem; padding: 0 20px;">
-      <nav class="gallery-nav" style="padding: 10px 0 20px;">
-        <a href="{{ '/' | relative_url }}" class="back-link" aria-label="العودة للصفحة الرئيسية">
-          <i class="fas fa-arrow-right" aria-hidden="true"></i> العودة للصفحة الرئيسية
-        </a>
-      </nav>
-
-      <h1 style="text-align: center; color: var(--color-primary); font-size: 2.5rem; margin-bottom: 2rem; font-weight: 800;">
-        <i class="fas fa-gem" aria-hidden="true"></i> معرض النخبة العقاري
-      </h1>
-      <p style="text-align: center; color: var(--color-text-secondary); margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.8;">
-        تجربة بصرية فريدة لأفخم وأرقى الشقق والوحدات الإدارية المختارة بعناية لتناسب ذوقك الرفيع.
-      </p>
-
-      {# Slider Progress Bar #}
-      <div class="slider-progress-container">
-        <div class="slider-progress-bar" id="sliderProgressBar"></div>
-      </div>
-
-      {# Slider Viewport #}
-      <div class="slider-viewport">
-        <div class="slider-track" id="luxurySliderTrack">
-          {# Slide 1 #}
-          <div class="slide-item" data-title="شقة فاخرة بإطلالة بانورامية" data-description="تصميم فريد وموقع استراتيجي يطل على أبرز معالم مدينة نصر. مساحات واسعة وتشطيبات راقية." data-price="7,500,000 ج.م">
-            <div class="slide-image">
-              <img src="{{ site.baseurl }}/assets/img/luxury-1.webp" alt="شقة فاخرة بإطلالة بانورامية" loading="lazy">
-            </div>
-            <div class="slide-overlay"></div>
-            <div class="slide-content">
-              <h2>شقة فاخرة بإطلالة بانورامية</h2>
-              <p>تصميم فريد وموقع استراتيجي يطل على أبرز معالم مدينة نصر. مساحات واسعة وتشطيبات راقية.</p>
-              <span class="slide-price">7,500,000 ج.م</span>
-            </div>
-          </div>
-          {# Slide 2 #}
-          <div class="slide-item" data-title="فيلا دوبلكس بتصميم عصري" data-description="فخامة المساحة وراحة التصميم المزدوج. حديقة خاصة ومسبح صغير، مثالية للعائلات الكبيرة." data-price="12,000,000 ج.م">
-            <div class="slide-image">
-              <img src="{{ site.baseurl }}/assets/img/luxury-2.webp" alt="فيلا دوبلكس بتصميم عصري" loading="lazy">
-            </div>
-            <div class="slide-overlay"></div>
-            <div class="slide-content">
-              <h2>فيلا دوبلكس بتصميم عصري</h2>
-              <p>فخامة المساحة وراحة التصميم المزدوج. حديقة خاصة ومسبح صغير، مثالية للعائلات الكبيرة.</p>
-              <span class="slide-price">12,000,000 ج.م</span>
-            </div>
-          </div>
-          {# Slide 3 #}
-          <div class="slide-item" data-title="مكتب إداري راقي بقلب الأعمال" data-description="موقع متميز لشركتك. تصميم داخلي حديث ومجهز بالكامل، مع إطلالة على شوارع رئيسية." data-price="إيجار: 50,000 ج.م/شهر">
-            <div class="slide-image">
-              <img src="{{ site.baseurl }}/assets/img/luxury-3.webp" alt="مكتب إداري راقي بقلب الأعمال" loading="lazy">
-            </div>
-            <div class="slide-overlay"></div>
-            <div class="slide-content">
-              <h2>مكتب إداري راقي بقلب الأعمال</h2>
-              <p>موقع متميز لشركتك. تصميم داخلي حديث ومجهز بالكامل، مع إطلالة على شوارع رئيسية.</p>
-              <span class="slide-price">إيجار: 50,000 ج.م/شهر</span>
-            </div>
-          </div>
-          {# Add more slide-item divs as needed #}
-        </div>
-
-        {# Navigation Arrows #}
-        <button class="nav-arrow prev" aria-label="الشريحة السابقة">
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
-        <button class="nav-arrow next" aria-label="الشريحة التالية">
-          <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        </button>
-      </div>
-
-      {# Slider Controls Panel #}
-      <div class="slider-controls-panel">
-        <button class="control-btn" id="toggleAutoplay" aria-label="تشغيل أو إيقاف التشغيل التلقائي">
-          <i class="fas fa-pause" aria-hidden="true"></i>
-          <span>إيقاف تلقائي</span>
-        </button>
-        <a href="#" class="details-btn gold-glow" id="currentPropertyDetails" aria-label="عرض تفاصيل العقار الحالي">
-          <i class="fas fa-info-circle" aria-hidden="true"></i>
-          <span>عرض التفاصيل</span>
-        </a>
-        <a href="https://wa.me/201147758857?text={{ 'مرحباً، أرغب بالاستفسار عن عقار في معرض النخبة' | url_encode }}"
-           class="control-btn" target="_blank" rel="noopener noreferrer" aria-label="تواصل واتساب للاستفسار عن عقارات النخبة">
-          <i class="fab fa-whatsapp" aria-hidden="true"></i>
-          <span>تواصل واتساب</span>
-        </a>
-      </div>
-
-      {# Owner Branding Card #}
-      <div class="owner-branding-card">
-        <div class="owner-info">
-          <div class="owner-text">
-            <span class="label">خبير عقارات النخبة</span>
-            <h3>طارق طنطاوي</h3>
-          </div>
-          <a href="tel:+201147758857" class="call-owner-btn" aria-label="اتصل بخبير العقارات طارق طنطاوي">
-            <i class="fas fa-phone-alt" aria-hidden="true"></i>
-            <span>اتصل الآن</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  {# Footer #}
-  {% include footer.html %}
-
-  {# =========================================================
-       Smart Search Trigger & Overlay (من ملف index.html)
-       ========================================================= #}
-  <div id="smartSearchTrigger" class="smart-search-trigger" aria-label="تشغيل البحث الذكي">
-    <div class="pulse-ring"></div>
-    <i class="fas fa-hand-sparkles" aria-hidden="true"></i>
-    <span class="trigger-text">صمم طلبك</span>
-  </div>
-
-  <div id="smartSearchOverlay" class="smart-search-overlay" style="display: none;">
-    <div class="overlay-blur" aria-label="إغلاق البحث الذكي"></div>
-    <div class="search-card-container">
-      <div class="smart-card" id="step1" style="display: none;">
-        <i class="fas fa-crown gold-icon" aria-hidden="true"></i>
-        <h2>مرحباً بك في بوابة النخبة</h2>
-        <p>نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
-        <div class="choice-grid">
-          <button class="choice-btn" aria-label="بحث عن عقارات تمليك"><i class="fas fa-home" aria-hidden="true"></i><span>تمليك العمر</span></button>
-          <button class="choice-btn" aria-label="بحث عن عقارات إيجار مفروش"><i class="fas fa-couch" aria-hidden="true"></i><span>إيجار مفروش (فندقي)</span></button>
-          <button class="choice-btn" aria-label="بحث عن عقارات إيجار جديد"><i class="fas fa-key" aria-hidden="true"></i><span>إيجار جديد (فاضي)</span></button>
-          <button class="choice-btn" aria-label="بحث عن عقارات تجارية وإدارية"><i class="fas fa-chart-line" aria-hidden="true"></i><span>تجاري وإداري</span></button>
-        </div>
-        <button class="close-text-btn" aria-label="سأقوم بالتصفح بنفسي لاحقاً">سأقوم بالتصفح بنفسي لاحقاً</button>
-      </div>
-
-      <div class="smart-card" id="stepCommercialBranch" style="display: none;">
-        <i class="fas fa-briefcase gold-icon" aria-hidden="true"></i>
-        <h2>النشاط التجاري والإداري</h2>
-        <div class="choice-grid">
-          <button class="choice-btn" aria-label="تمليك أو شراء عقار تجاري"><i class="fas fa-building" aria-hidden="true"></i><span>تمليك / شراء</span></button>
-          <button class="choice-btn" aria-label="إيجار شهري لعقار تجاري"><i class="fas fa-file-contract" aria-hidden="true"></i><span>إيجار شهري</span></button>
-        </div>
-        <button class="back-text-btn" aria-label="العودة إلى الخطوة السابقة"><i class="fas fa-arrow-right" aria-hidden="true"></i> العودة</button>
-      </div>
-
-      <div class="smart-card" id="step2" style="display: none;">
-        <i class="fas fa-money-bill-wave gold-icon" aria-hidden="true"></i>
-        <h2 id="budgetTitle">الميزانية المرصودة؟</h2>
-        <div id="budgetOptions" class="choice-grid"></div>
-        <button class="back-text-btn" aria-label="العودة إلى الخطوة السابقة"><i class="fas fa-arrow-right" aria-hidden="true"></i> العودة</button>
-      </div>
-
-      <div class="smart-card" id="stepResults" style="display: none;">
-        <i class="fas fa-magic gold-icon" aria-hidden="true"></i>
-        <h2>نتائج البحث المخصصة</h2>
-        <p id="resultsStatus">جاري البحث في خزائن النخبة...</p>
-        <div id="resultsContent" class="results-list"></div>
-        <button class="back-text-btn" aria-label="بدء بحث جديد">بدء بحث جديد</button>
-      </div>
+    <div class="ui-overlay">
+        <div class="ui-brand"><i class="fas fa-crown"></i> سمسار طلبك | ELITE</div>
+        <a href="/" class="ui-exit"><i class="fas fa-times"></i> إغلاق</a>
     </div>
-  </div>
 
-  {# =========================================================
-       Prestige Call Button (من ملف index.html)
-       ========================================================= #}
-  <a href="tel:+201147758857" class="prestige-call-button" aria-label="اتصال مباشر بخبير العقارات طارق طنطاوي">
-    <div class="button-icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></div>
-    <div class="button-text">
-      <span class="label">استشارة فورية</span>
-      <span class="phone-num">01147758857</span>
+    <div id="introLayer">
+        <i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); margin-bottom: 25px;"></i>
+        <h1 class="intro-h">بوابة النخبة العقارية</h1>
+        <div class="load-indicator"></div>
     </div>
-  </a>
 
-  {# =========================================================
-       Notification Button (من ملف index.html)
-       ========================================================= #}
-  <button id="enableNotif" style="position: fixed; bottom: 85px; left: 20px; background: rgba(212,175,55,0.1); color: #D4AF37; border: 1px solid #D4AF37; padding: 8px 15px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-size: 0.8rem; z-index: 999; cursor: pointer; backdrop-filter: blur(5px);" aria-label="تفعيل إشعارات النخبة">
-    🔔 إشعارات النخبة
-  </button>
+    <main class="stage">
+        <div class="track" id="mainTrack"></div>
+        <div class="progress-bar" id="progressBar"></div>
+    </main>
 
-  {# =========================================================
-       Slider JavaScript (خاص بهذه الصفحة)
-       ========================================================= #}
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const sliderTrack = document.getElementById('luxurySliderTrack');
-      const slides = Array.from(sliderTrack.children);
-      const progressBar = document.getElementById('sliderProgressBar');
-      const prevBtn = document.querySelector('.nav-arrow.prev');
-      const nextBtn = document.querySelector('.nav-arrow.next');
-      const toggleAutoplayBtn = document.getElementById('toggleAutoplay');
-      const currentPropertyDetailsBtn = document.getElementById('currentPropertyDetails');
-      let currentIndex = 0;
-      let autoplayInterval;
-      const autoplayDuration = 8000; // 8 seconds per slide
+    <script>
+        const properties = [
+            { title: "أيقونة المنطقة العاشرة | 180م", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "فخامة الترا سوبر لوكس، دور ثالث واجهة رئيسية بقلب مدينة نصر.", url: "/عقارات-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
+            { title: "جوهرة ميدان رابعة | 135م", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس شامل التكييفات والمطبخ في أرقى عمارات طريق النصر.", url: "/عقارات-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
+            { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص وحديقة 65م أمام ماونتن فيو مباشرة بالتجمع الخامس.", url: "/عقارات-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
+            { title: "إطلالة شارع الطيران | 225م", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014، فيو مفتوح للأبد، تشطيب الترا سوبر لوكس.", url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
+            { title: "دوبلكس استثماري | حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "فرصة بعائد فوري، مؤجر حالياً لطلاب أجانب بزيادة سنوية.", url: "/عقارات-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
+            { title: "تحفة المنطقة الأولى | 225م", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور بموقع راقٍ خلف المحلاوي.", url: "/عقارات-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
+            { title: "فرصة زهراء مدينة نصر | 86م", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "سكن اقتصادي في موقع حيوي، دور ثالث مميز، فيو مفتوح.", url: "/عقارات-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" },
+            { title: "ناصية توفيق البكري | 250م", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "شقة صحية بليفينج 30م، مسجلة شهر عقاري خلف مستشفى حسبو.", url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" },
+            { title: "لقطة حسن المأمون | للشباب", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات، موقع استراتيجي قرب الخدمات والمواصلات.", url: "/عقارات-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" },
+            { title: "أبراج صن رايز | 288م", price: "7,000,000 ج.م", img: "sunrise.webp", desc: "حي السفارات، فيو بحري 100%، تشطيب مودرن فاخر.", url: "/عقارات-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
+        ];
 
-      // Update slide content, progress bar, and active state
-      function updateSlider() {
-        const slideWidth = slides[0].clientWidth;
-        sliderTrack.style.transform = `translateX(-${currentIndex * slideWidth}px)`;
+        let currentIdx = 0, progress = 0;
+        const SLIDE_DURATION = 6000;
 
-        // Update active class for image zoom effect
-        slides.forEach((slide, i) => {
-          if (i === currentIndex) {
-            slide.classList.add('active');
-          } else {
-            slide.classList.remove('active');
-          }
-        });
-
-        // Update progress bar
-        progressBar.style.width = `${((currentIndex + 1) / slides.length) * 100}%`;
-
-        // Update current property details link
-        const currentSlide = slides[currentIndex];
-        const propertyTitle = currentSlide.dataset.title;
-        const propertyDescription = currentSlide.dataset.description; // assuming description is also stored
-        // You'll need to link each slide to an actual property page or a dynamic modal for details
-        // For now, it will link to a placeholder, or you can dynamically generate a link from data.
-        currentPropertyDetailsBtn.href = `#details-for-${propertyTitle.replace(/\s+/g, '-')}`;
-        currentPropertyDetailsBtn.setAttribute('aria-label', `عرض تفاصيل ${propertyTitle}`);
-      }
-
-      // Go to next slide
-      function goToNextSlide() {
-        currentIndex = (currentIndex + 1) % slides.length;
-        updateSlider();
-      }
-
-      // Go to previous slide
-      function goToPrevSlide() {
-        currentIndex = (currentIndex - 1 + slides.length) % slides.length;
-        updateSlider();
-      }
-
-      // Start autoplay
-      function startAutoplay() {
-        if (autoplayInterval) clearInterval(autoplayInterval); // Clear any existing interval
-        autoplayInterval = setInterval(goToNextSlide, autoplayDuration);
-        toggleAutoplayBtn.innerHTML = '<i class="fas fa-pause" aria-hidden="true"></i><span>إيقاف تلقائي</span>';
-        toggleAutoplayBtn.setAttribute('aria-label', 'إيقاف التشغيل التلقائي');
-      }
-
-      // Stop autoplay
-      function stopAutoplay() {
-        clearInterval(autoplayInterval);
-        toggleAutoplayBtn.innerHTML = '<i class="fas fa-play" aria-hidden="true"></i><span>تشغيل تلقائي</span>';
-        toggleAutoplayBtn.setAttribute('aria-label', 'تشغيل التشغيل التلقائي');
-      }
-
-      // Event Listeners
-      prevBtn.addEventListener('click', () => {
-        stopAutoplay();
-        goToPrevSlide();
-      });
-
-      nextBtn.addEventListener('click', () => {
-        stopAutoplay();
-        goToNextSlide();
-      });
-
-      toggleAutoplayBtn.addEventListener('click', () => {
-        if (autoplayInterval) {
-          stopAutoplay();
-        } else {
-          startAutoplay();
+        function build() {
+            const track = document.getElementById('mainTrack');
+            properties.forEach((p, i) => {
+                const slide = document.createElement('article');
+                slide.className = `slide ${i === 0 ? 'active' : ''}`;
+                slide.innerHTML = `
+                    <img src="assets/img/properties/${p.img}" alt="${p.title}">
+                    <div class="slide-overlay"></div>
+                    <div class="prop-data">
+                        <h2>${p.title}</h2>
+                        <p>${p.desc}</p>
+                        <strong class="prop-price">${p.price}</strong>
+                        <div style="display:flex; gap:10px;">
+                            <a href="${p.url}" class="btn-link">اكتشف التحفة العقارية</a>
+                        </div>
+                    </div>
+                `;
+                track.appendChild(slide);
+            });
+            setTimeout(() => {
+                document.getElementById('introLayer').style.opacity = '0';
+                setTimeout(() => { document.getElementById('introLayer').style.display = 'none'; startEngine(); }, 800);
+            }, 3000);
         }
-      });
 
-      // Initial setup
-      updateSlider();
-      startAutoplay(); // Autoplay on load
-
-      // Adjust slider on window resize
-      window.addEventListener('resize', () => {
-        stopAutoplay(); // Stop autoplay to avoid visual glitches during resize
-        updateSlider();
-        startAutoplay(); // Restart autoplay after resize
-      });
-    });
-  </script>
-
-  {# =========================================================
-       Scripts for Smart Search and Notification (من ملف index.html)
-       ========================================================= #}
-  <script>
-    // === Smart Search Logic ===
-    (function () {
-      let allProperties = [];
-      let dataLoaded = false;
-      let userSelection = { category: '', type: '', budgetRange: [] };
-      let lastStepId = 'step1';
-
-      async function loadDataIfNeeded() {
-        if (dataLoaded) return;
-        try {
-          const res = await fetch("{{ '/search-data.json' | relative_url }}");
-          if (!res.ok) throw new Error('Failed to load search data');
-          allProperties = await res.json();
-          dataLoaded = true;
-        } catch (e) {
-          console.error("Data error:", e);
-          allProperties = [];
-          dataLoaded = true;
+        function startEngine() {
+            setInterval(() => {
+                progress += (100 / (SLIDE_DURATION / 100));
+                document.getElementById('progressBar').style.width = progress + '%';
+                if (progress >= 100) {
+                    progress = 0;
+                    currentIdx = (currentIdx + 1) % properties.length;
+                    document.getElementById('mainTrack').style.transform = `translateX(${currentIdx * 100}%)`;
+                    const slides = document.querySelectorAll('.slide');
+                    slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
+                }
+            }, 100);
         }
-      }
-
-      function openSmartSearch() {
-        loadDataIfNeeded();
-        const overlay = document.getElementById('smartSearchOverlay');
-        if (!overlay) return;
-        overlay.style.display = 'flex';
-        setTimeout(() => goToCard('step1'), 50);
-      }
-
-      function closeSmartSearch() {
-        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        setTimeout(() => {
-          const overlay = document.getElementById('smartSearchOverlay');
-          if (overlay) overlay.style.display = 'none';
-        }, 400);
-      }
-
-      function goToCard(id) {
-        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        const t = document.getElementById(id);
-        if (t) t.classList.add('active');
-      }
-
-      function handleCommercialSelection() {
-        lastStepId = 'step1';
-        goToCard('stepCommercialBranch');
-      }
-
-      function nextStep(cat, type) {
-        userSelection.category = cat;
-        userSelection.type = type;
-        lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
-        setupBudgetOptions(type);
-        goToCard('step2');
-      }
-
-      function backToPrevious() {
-        goToCard(lastStepId);
-      }
-
-      function setupBudgetOptions(type) {
-        const container = document.getElementById('budgetOptions');
-        const title = document.getElementById('budgetTitle');
-        if (!container || !title) return;
-        container.innerHTML = '';
-        let opts = [];
-        if (type.includes('تمليك')) {
-          title.innerText = "ميزانية التملك؟";
-          opts = [
-            { label: "أقل من 3 مليون", range: [0, 3000000] },
-            { label: "3 - 6 مليون", range: [3000000, 6000000] },
-            { label: "أكثر من 6 مليون", range: [6000000, 99999999] }
-          ];
-        } else {
-          title.innerText = "الميزانية الشهرية؟";
-          const limit = type.includes('تجاري') ? 40000 : 20000;
-          opts = [
-            { label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] },
-            { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }
-          ];
-        }
-        opts.forEach(o => {
-          const b = document.createElement('button');
-          b.className = 'choice-btn';
-          b.setAttribute('aria-label', o.label);
-          b.innerHTML = `<i class="fas fa-coins" aria-hidden="true"></i><span>${o.label}</span>`;
-          b.onclick = () => finishSearch(o.range); // Use onclick directly for these dynamic buttons
-          container.appendChild(b);
-        });
-      }
-
-      function finishSearch(range) {
-        userSelection.budgetRange = range;
-        goToCard('stepResults');
-        const content = document.getElementById('resultsContent');
-        const status = document.getElementById('resultsStatus');
-        if (!content || !status) return;
-
-        content.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></div>';
-
-        setTimeout(() => {
-          const matches = allProperties.filter(p => {
-            if (!p) return false;
-            if (p.category !== userSelection.category) return false;
-
-            const isRent = userSelection.type.includes('إيجار');
-            const title = (p.title || '').toString();
-            const isPropRent = title.includes('إيجار') || (p.category || '').includes('rent');
-            if (isRent !== isPropRent) return false;
-
-            let pNum = 0;
-            if (typeof p.price_num === 'number') {
-              pNum = p.price_num;
-            } else {
-              const raw = (p.price || '').toString();
-              const digits = raw.replace(/[^0-9]/g, '');
-              pNum = digits ? parseInt(digits, 10) : 0;
-            }
-            return pNum >= range[0] && pNum <= range[1];
-          });
-
-          status.textContent = matches.length > 0
-            ? `وجدنا لك ${matches.length} عروض تناسبك:`
-            : "عذراً، لا توجد نتائج مطابقة حالياً..";
-
-          content.innerHTML = '';
-
-          if (matches.length === 0) return;
-
-          matches.forEach(m => {
-            const a = document.createElement('a');
-            a.className = 'result-item';
-            a.href = m.url || '{{ site.baseurl }}/properties/';
-
-            const img = document.createElement('img');
-            img.className = 'result-img';
-            img.alt = m.title || 'عقار';
-            img.src = m.image || '{{ site.baseurl }}/assets/img/logo.webp';
-            img.onerror = () => { img.src = '{{ site.baseurl }}/assets/img/logo.webp'; };
-            img.loading = 'lazy'; // Add lazy loading
-
-            const info = document.createElement('div');
-            info.className = 'result-info';
-
-            const h4 = document.createElement('h4');
-            h4.textContent = m.title || 'عقار';
-
-            const span = document.createElement('span');
-            span.textContent = m.price || '';
-
-            info.appendChild(h4);
-            info.appendChild(span);
-            a.appendChild(img);
-            a.appendChild(info);
-            content.appendChild(a);
-          });
-        }, 400);
-      }
-
-      // Manual event listeners for static elements (to avoid inline onclick)
-      document.addEventListener('DOMContentLoaded', () => {
-        const trigger = document.getElementById('smartSearchTrigger');
-        if (trigger) trigger.addEventListener('click', openSmartSearch);
-
-        const overlayBlur = document.querySelector('#smartSearchOverlay .overlay-blur');
-        if (overlayBlur) overlayBlur.addEventListener('click', closeSmartSearch);
-
-        // First step buttons
-        document.querySelectorAll('#step1 .choice-btn').forEach(btn => {
-          const textContent = btn.textContent || '';
-          if (textContent.includes('تمليك')) btn.addEventListener('click', () => nextStep('apartments', 'تمليك'));
-          else if (textContent.includes('إيجار مفروش')) btn.addEventListener('click', () => nextStep('apartments-rent', 'إيجار مفروش'));
-          else if (textContent.includes('إيجار جديد')) btn.addEventListener('click', () => nextStep('apartments-rent', 'إيجار جديد'));
-          else if (textContent.includes('تجاري')) btn.addEventListener('click', handleCommercialSelection);
-        });
-
-        // Commercial branch buttons
-        document.querySelectorAll('#stepCommercialBranch .choice-btn').forEach(btn => {
-          const textContent = btn.textContent || '';
-          if (textContent.includes('تمليك')) btn.addEventListener('click', () => nextStep('commercial', 'تمليك تجاري'));
-          else if (textContent.includes('إيجار')) btn.addEventListener('click', () => nextStep('commercial', 'إيجار تجاري'));
-        });
-
-        // Back/Close buttons
-        const back1 = document.querySelector('#stepCommercialBranch .back-text-btn');
-        if (back1) back1.addEventListener('click', () => goToCard('step1'));
-
-        const back2 = document.querySelector('#step2 .back-text-btn');
-        if (back2) back2.addEventListener('click', backToPrevious);
-
-        const back3 = document.querySelector('#stepResults .back-text-btn');
-        if (back3) back3.addEventListener('click', () => goToCard('step1'));
-
-        const closeBtn = document.querySelector('#step1 .close-text-btn');
-        if (closeBtn) closeBtn.addEventListener('click', closeSmartSearch);
-      });
-
-      // === Phone Call Tracking (for Prestige button) ===
-      // This function is still global because the button is not directly in this script's scope
-      window.trackPhoneCall = function () {
-        if (typeof dataLayer !== 'undefined') {
-          dataLayer.push({ event: 'phone_call_click', call_source: 'prestige_button' });
-        }
-      };
-
-    })();
-  </script>
-
-  {# =========================================================
-       Firebase Notifications (Lazy-loaded)
-       ========================================================= #}
-  <script type="module">
-    const btn = document.getElementById("enableNotif");
-    if (btn && Notification.permission === "granted") {
-      btn.style.display = "none";
-    }
-
-    btn?.addEventListener("click", async () => {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return;
-
-        // Load Firebase only when requested (dynamic import)
-        const [{ initializeApp }, { getMessaging, getToken }, { getFirestore, doc, setDoc }] = await Promise.all([
-          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
-          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js"),
-          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js")
-        ]);
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
-          authDomain: "simsartalabak.firebaseapp.com",
-          projectId: "simsartalabak",
-          storageBucket: "simsartalabak.firebasestorage.app",
-          messagingSenderId: "733807203688",
-          appId: "1:733807203688:web:a0582925001409994e32dd"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
-        const db = getFirestore(app);
-
-        const token = await getToken(messaging, { vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxwA" });
-        if (token) {
-          await setDoc(doc(db, "fcmTokens", token), { token, createdAt: new Date(), userAgent: navigator.userAgent });
-          btn.style.display = "none";
-          alert("✅ تم تفعيل إشعارات النخبة!");
-        }
-      } catch (err) {
-        console.error("FCM Error:", err);
-      }
-    });
-  </script>
-
+        window.onload = build;
+    </script>
 </body>
 </html>
