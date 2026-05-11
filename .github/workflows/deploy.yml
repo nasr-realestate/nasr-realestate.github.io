@@ -1,4 +1,4 @@
-name: Build, Clean Sitemap, Deploy
+name: Deploy Jekyll with Plugins
 
 on:
   push:
@@ -17,95 +17,35 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.1"
+          ruby-version: '3.1'
           bundler-cache: true
 
-      - name: Build Jekyll
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build with Jekyll
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
 
-      - name: Remove old sitemap
-        run: rm -f _site/sitemap.xml
-
-      - name: Generate clean sitemap
-        shell: bash
-        run: |
-          SITE_URL="https://nasr-realestate.github.io"
-
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > _site/sitemap.xml
-          echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> _site/sitemap.xml
-
-          find _site -type f -name "*.html" \
-            ! -path "_site/assets/*" \
-            ! -name "404.html" \
-            ! -name "form-success.html" \
-            ! -name "google*.html" \
-            ! -name "*.txt.html" \
-            ! -name "*verification*.html" \
-            ! -name "dacda97e-3fc5-4353-9a50-aaa212837011.html" \
-            | sed 's#_site##' \
-            | sed 's#/index.html$#/##' \
-            | sort \
-            | while read -r file; do
-
-              if [ -z "$file" ]; then
-                file="/"
-              fi
-
-              encoded_path=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe='/:-_~'))" "$file")
-
-              echo "  <url>" >> _site/sitemap.xml
-              echo "    <loc>${SITE_URL}${encoded_path}</loc>" >> _site/sitemap.xml
-              echo "  </url>" >> _site/sitemap.xml
-
-            done
-
-          echo '</urlset>' >> _site/sitemap.xml
-
-      - name: Validate sitemap
-        shell: bash
-        run: |
-          first_char=$(head -c 1 _site/sitemap.xml)
-          if [ "$first_char" != "<" ]; then
-            echo "Invalid sitemap"
-            exit 1
-          fi
-
-      - name: Write robots.txt
-        shell: bash
-        run: |
-          cat > _site/robots.txt <<EOF
-          User-agent: *
-          Allow: /
-
-          Sitemap: https://nasr-realestate.github.io/sitemap.xml
-          EOF
-
-      - name: Upload Pages artifact
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
 
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
+    runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        
