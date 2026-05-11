@@ -75,7 +75,6 @@ jobs:
 
           echo '</urlset>' >> _site/sitemap.xml
 
-      # ✅ تحقق صارم من صحة XML (أفضل بكثير من فحص أول حرف فقط)
       - name: Validate sitemap XML (strict)
         shell: bash
         run: |
@@ -84,7 +83,6 @@ jobs:
           sudo apt-get install -y libxml2-utils
           xmllint --noout _site/sitemap.xml
 
-      # ✅ robots.txt نظيف بدون مسافات بادئة + يشير إلى sitemap.xml القياسية
       - name: Write robots.txt
         shell: bash
         run: |
@@ -107,7 +105,7 @@ EOF
 
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: "${{ steps.deployment.outputs.page_url }}"
 
     steps:
       - name: Deploy to GitHub Pages
