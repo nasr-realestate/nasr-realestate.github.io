@@ -41,6 +41,8 @@ jobs:
       - name: Generate clean sitemap
         shell: bash
         run: |
+          set -euo pipefail
+
           SITE_URL="https://nasr-realestate.github.io"
 
           echo '<?xml version="1.0" encoding="UTF-8"?>' > _site/sitemap.xml
@@ -73,27 +75,26 @@ jobs:
 
           echo '</urlset>' >> _site/sitemap.xml
 
-      - name: Create secondary sitemap
-        run: cp _site/sitemap.xml _site/properties-sitemap.xml
-
-      - name: Validate sitemap
+      # ✅ تحقق صارم من صحة XML (أفضل بكثير من فحص أول حرف فقط)
+      - name: Validate sitemap XML (strict)
         shell: bash
         run: |
-          first_char=$(head -c 1 _site/sitemap.xml)
-          if [ "$first_char" != "<" ]; then
-            echo "Invalid sitemap"
-            exit 1
-          fi
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+          xmllint --noout _site/sitemap.xml
 
+      # ✅ robots.txt نظيف بدون مسافات بادئة + يشير إلى sitemap.xml القياسية
       - name: Write robots.txt
         shell: bash
         run: |
-          cat > _site/robots.txt <<EOF
-          User-agent: *
-          Allow: /
+          set -euo pipefail
+          cat > _site/robots.txt <<'EOF'
+User-agent: *
+Allow: /
 
-          Sitemap: https://nasr-realestate.github.io/properties-sitemap.xml
-          EOF
+Sitemap: https://nasr-realestate.github.io/sitemap.xml
+EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -112,4 +113,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        
