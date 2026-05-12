@@ -1,0 +1,152 @@
+name: إرسال إشعار عند إضافة عقار أو طلب جديد
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '_properties/**'
+      - '_requests/**'
+  workflow_dispatch:
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: استنساخ المستودع
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: تثبيت المكتبات
+        run: npm install firebase-admin frontmatter
+        
+      - name: إرسال الإشعارات
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node -e '
+          const admin = require("firebase-admin");
+          const fs = require("fs");
+          const frontmatter = require("frontmatter");
+          
+          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          });
+          
+          const db = admin.firestore();
+          
+          function readPropertyData(filePath) {
+            try {
+              const content = fs.readFileSync(filePath, "utf8");
+              const { data } = frontmatter(content);
+              return {
+                title: data.title || "جديد",
+                price: data.price || "",
+                location: data.location || "",
+                slug: data.slug || "",
+                id: data.id || ""
+              };
+            } catch (error) {
+              console.error("خطأ في قراءة الملف:", error);
+              return null;
+            }
+          }
+          
+          function getNewlyAddedFiles() {
+            const { execSync } = require("child_process");
+            try {
+              const output = execSync("git diff --name-only --diff-filter=A HEAD~1 HEAD", { encoding: "utf8" });
+              return output.split("\n").filter(f =>
+                (f.startsWith("_properties/") || f.startsWith("_requests/")) && f.endsWith(".md")
+              );
+            } catch (error) {
+              console.error("خطأ في جلب الملفات:", error);
+              return [];
+            }
+          }
+          
+          function buildUrl(property, filePath) {
+            const base = "https://nasr-realestate.github.io";
+            const isRequest = filePath.startsWith("_requests/");
+            const section = isRequest ? "طلبات-عقارية-مستعجلة" : "عقارات-مدينة-نصر";
+            if (property.slug) return `${base}/${section}/${property.slug}/`;
+            if (property.id)   return `${base}/${section}/${property.id}/`;
+            return base + "/";
+          }
+          
+          async function sendNotification() {
+            try {
+              const tokensSnapshot = await db.collection("fcmTokens").get();
+              const tokens = [];
+              tokensSnapshot.forEach(doc => tokens.push(doc.id));
+              
+              if (tokens.length === 0) {
+                console.log("❌ لا توجد توكنات مسجلة");
+                return;
+              }
+              
+              const newFiles = getNewlyAddedFiles();
+              if (newFiles.length === 0) {
+                console.log("❌ لا توجد ملفات جديدة");
+                return;
+              }
+              
+              const filePath = newFiles[0];
+              const isRequest = filePath.startsWith("_requests/");
+              const property = readPropertyData(filePath);
+              
+              if (!property) {
+                console.log("❌ فشل في قراءة البيانات");
+                return;
+              }
+              
+              const propertyUrl = buildUrl(property, filePath);
+              const notificationTitle = isRequest
+                ? `🔔 طلب جديد: ${property.title}`
+                : `🏠 عرض جديد: ${property.title}`;
+              
+              let notificationBody = "";
+              if (property.price)    notificationBody += `💰 ${property.price}`;
+              if (property.location) notificationBody += ` 📍 ${property.location}`;
+              if (!notificationBody) notificationBody = isRequest ? "طلب جديد — اضغط للمعاينة" : "عرض جديد — اضغط للمعاينة";
+              
+              console.log(`📢 إرسال إلى ${tokens.length} جهاز`);
+              console.log(`🔗 الرابط: ${propertyUrl}`);
+              
+              const message = {
+                data: {
+                  title: notificationTitle,
+                  body: notificationBody,
+                  url: propertyUrl
+                },
+                tokens: tokens
+              };
+              
+              const response = await admin.messaging().sendEachForMulticast(message);
+              console.log(`✅ نجاح: ${response.successCount} | ❌ فشل: ${response.failureCount}`);
+              
+              if (response.failureCount > 0) {
+                const failed = [];
+                response.responses.forEach((resp, idx) => {
+                  if (!resp.success) failed.push(tokens[idx]);
+                });
+                for (const token of failed) {
+                  await db.collection("fcmTokens").doc(token).delete();
+                  console.log(`🗑️ تم حذف التوكن الفاشل: ${token}`);
+                }
+              }
+            } catch (error) {
+              console.error("❌ خطأ:", error);
+            }
+          }
+          
+          sendNotification();
+          '

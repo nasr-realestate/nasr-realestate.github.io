@@ -1,0 +1,99 @@
+---
+layout: default
+title: "طلبات العملاء | سمسار طلبك"
+description: "قائمة محدثة بطلبات الشراء والإيجار الحالية من عملاء جادين ومستعدين للتعاقد. هل لديك عقار يناسبهم؟"
+permalink: /requests/
+image: "/assets/img/social-requests.webp"
+body_class: "requests-page"
+---
+
+<!-- رأس الصفحة -->
+<header class="page-header">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">
+      <i class="fas fa-bullhorn" style="color: var(--color-blue);"></i> طلبات العملاء الجادة
+    </h1>
+    <p style="opacity: 0.8; margin-top: 10px;">
+      هؤلاء عملاء جاهزون للتعاقد فوراً. هل تملك عقاراً يطابق مواصفاتهم؟
+    </p>
+  </div>
+</header>
+
+<main>
+
+  <!-- أزرار الفلترة -->
+  <div class="filter-container" style="margin-bottom: 2rem;">
+    <button class="filter-btn active" onclick="filterSelection('all', event)">الكل</button>
+    <button class="filter-btn" onclick="filterSelection('residential', event)"><i class="fas fa-home"></i> طلبات سكنية</button>
+    <button class="filter-btn" onclick="filterSelection('commercial', event)"><i class="fas fa-briefcase"></i> تجاري وإداري</button>
+    <button class="filter-btn" onclick="filterSelection('cash', event)"><i class="fas fa-money-bill-wave"></i> كاش فوري</button>
+  </div>
+
+  <!-- شبكة الطلبات -->
+  <section class="properties-grid" style="min-height: 60vh;">
+
+    {% assign expiry_seconds    = 604800 %}
+    {% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
+    {% assign all_requests      = site.requests | sort: 'date' | reverse %}
+    {% assign active_count      = 0 %}
+
+    {% for req in all_requests %}
+
+      {% assign req_timestamp  = req.date | date: "%s" | plus: 0 %}
+      {% assign age_in_seconds = current_timestamp | minus: req_timestamp %}
+
+      {% if age_in_seconds < expiry_seconds %}
+        {% assign active_count = active_count | plus: 1 %}
+
+        {% assign category_class = "residential" %}
+        {% if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" %}
+          {% assign category_class = "commercial" %}
+        {% endif %}
+        {% if req.title contains "كاش" or req.budget contains "كاش" %}
+          {% assign category_class = category_class | append: " cash" %}
+        {% endif %}
+
+        <div class="filter-item {{ category_class }}">
+          {% include property_card.html item=req type="request" %}
+        </div>
+      {% endif %}
+
+    {% endfor %}
+
+    <!-- لا توجد طلبات نشطة -->
+    {% if active_count == 0 %}
+      <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666; border: 1px dashed #333; border-radius: 20px;">
+        <i class="fas fa-clipboard-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+        <h3>لا توجد طلبات نشطة حالياً</h3>
+        <p>جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها لضمان الجدية.</p>
+      </div>
+    {% endif %}
+
+  </section>
+
+  <!-- رابط إضافة عقار -->
+  <div style="text-align: center; margin: 3rem 0;">
+    <p style="color: #888; margin-bottom: 1rem;">لديك عقار ولكن لا يوجد طلب مطابق؟</p>
+    <a href="{{ '/add-your-property.html' | relative_url }}"
+       class="nav-btn"
+       style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">
+      اعرض عقارك وسنجد لك المشتري <i class="fas fa-plus-circle"></i>
+    </a>
+  </div>
+
+</main>
+
+<script>
+function filterSelection(c, e) {
+  var x = document.getElementsByClassName("filter-item");
+  var btns = document.getElementsByClassName("filter-btn");
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+  e.currentTarget.classList.add("active");
+  for (var i = 0; i < x.length; i++) {
+    x[i].classList.remove("hide");
+    if (c !== "all" && x[i].className.indexOf(c) === -1) {
+      x[i].classList.add("hide");
+    }
+  }
+}
+</script>

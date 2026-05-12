@@ -1,0 +1,151 @@
+---
+layout: default
+---
+
+<!-- أسبوع واحد بالثواني 7 * 24 * 60 * 60 = 604800 -->
+{% assign expiry_seconds    = 604800 %}
+{% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
+{% assign req_timestamp     = page.date | date: "%s" | plus: 0 %}
+{% assign age               = current_timestamp | minus: req_timestamp %}
+{% assign is_expired        = false %}
+{% if age > expiry_seconds %}{% assign is_expired = true %}{% endif %}
+
+{% assign phone_number    = "+201147758857" %}
+{% assign whatsapp_number = "201147758857" %}
+
+<!-- =========================================================
+     1. تنبيه انتهاء صلاحية الطلب (إشعار فقط)
+     ========================================================= -->
+{% if is_expired %}
+<div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.08), rgba(10, 132, 255, 0.02)); border: 1px solid rgba(10, 132, 255, 0.3); border-radius: 16px; padding: 25px 30px; margin: 0 auto 40px; max-width: 800px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.2); backdrop-filter: blur(10px);">
+  <i class="fas fa-history" style="font-size: 2.2rem; color: var(--color-primary); margin-bottom: 12px; display: block; opacity: 0.9;" aria-hidden="true"></i>
+  <h3 style="color: var(--color-primary); font-size: 1.3rem; margin-bottom: 10px; font-weight: 800;">مر على هذا الطلب أكثر من 7 أيام</h3>
+  <p style="color: #ccc; font-size: 1rem; margin-bottom: 0; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
+    لا تقلق، الطلب قد لا يزال قائماً! قاعدة بياناتنا تتغير يومياً وبعض الطلبات تظل مجمدة.<br>
+    <strong style="color: #fff;">يمكنك التواصل معنا مباشرة من خلال أزرار التواصل أدناه.</strong>
+  </p>
+</div>
+{% endif %}
+
+<!-- =========================================================
+     2. كود الـ Schema التقني
+     ========================================================= -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Demand",
+  "name": "{{ page.title }}",
+  "description": "{{ page.meta_description | default: 'طلب شراء عقار في ' | append: page.location | append: ' بميزانية ' | append: page.budget }}",
+  "url": "{{ page.url | absolute_url }}",
+  "datePosted": "{{ page.date | date: "%Y-%m-%d" }}",
+  "validThrough": "{{ page.date | date: "%Y-%m-%d" | date: "%s" | plus: expiry_seconds | date: "%Y-%m-%d" }}",
+  "seller": {
+    "@type": "RealEstateAgent",
+    "name": "سمسار طلبك",
+    "url": "{{ site.url }}",
+    "telephone": "{{ site.author.phone }}"
+  },
+  "itemOffered": {
+    "@type": "RealEstateListing",
+    "name": "النوع المطلوب: {% if page.property_type %}{% if page.property_type == 'apartment' %}شقة سكنية{% elsif page.property_type == 'office' %}مكتب/إداري{% elsif page.property_type == 'commercial' %}تجاري{% else %}{{ page.property_type }}{% endif %}{% else %}عقار{% endif %}",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "{{ page.location | split: ',' | first | default: 'مدينة نصر' | strip }}",
+      "addressRegion": "القاهرة",
+      "addressCountry": "EG"
+    },
+    "amenityFeature": [
+      {% for req in page.requirements limit: 5 %}
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "{{ req | jsonify }}"
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ],
+    "floorSize": {
+      "@type": "QuantitativeValue",
+      "value": "{{ page.area_min | default: '0' }}",
+      "unitCode": "SQM"
+    },
+    "numberOfRooms": {
+      "@type": "QuantitativeValue",
+      "value": "{{ page.rooms_min | default: '0' }}",
+      "unitCode": "ROM"
+    },
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "EGP",
+      "price": "{{ page.budget | replace: 'جنيه', '' | replace: ',', '' | strip }}",
+      "availability": "{% if is_expired %}https://schema.org/OutOfStock{% else %}https://schema.org/InStock{% endif %}"
+    }
+  }
+}
+</script>
+
+<div class="details-container request-theme"
+     itemscope itemtype="https://schema.org/Demand">
+
+  <!-- شريط العودة -->
+  <nav class="property-nav">
+    <a href="{{ '/requests/' | relative_url }}"
+       class="back-link"
+       style="color: var(--color-blue) !important;"
+       aria-label="العودة إلى طلبات العملاء">
+      <i class="fas fa-arrow-right" aria-hidden="true"></i> العودة لطلبات العملاء
+    </a>
+  </nav>
+
+  <!-- رأس الصفحة -->
+  <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+      <span class="request-tag"><i class="fas fa-bullhorn" aria-hidden="true"></i> طلب شراء</span>
+      <span class="date-tag"><i class="fas fa-clock" aria-hidden="true"></i> {{ page.date | date: "%Y-%m-%d" | default: "جديد" }}</span>
+    </div>
+    <h1 itemprop="name" style="color: #fff; font-size: 2rem; margin-bottom: 10px; line-height: 1.4;">{{ page.title }}</h1>
+    <p itemprop="address" style="color: #ccc; font-size: 1.1rem; margin: 0;">
+      <i class="fas fa-map-marker-alt" style="color: var(--color-blue);" aria-hidden="true"></i> {{ page.location }}
+    </p>
+  </div>
+
+  <!-- الميزانية -->
+  <div itemprop="mainEntityOfPage"
+       itemscope itemtype="https://schema.org/Offer"
+       class="budget-card">
+    <span class="budget-label"><i class="fas fa-money-bill-wave" aria-hidden="true"></i> الميزانية المرصودة</span>
+    <div class="budget-value">
+      <span itemprop="price">{{ page.budget }}</span>
+      <meta itemprop="priceCurrency" content="EGP">
+      {% if page.budget_num %}<meta itemprop="value" content="{{ page.budget_num }}">{% endif %}
+    </div>
+  </div>
+
+  <!-- تفاصيل الطلب -->
+  <div class="content-body" itemprop="description">
+    <h2 class="section-subtitle">
+      <i class="fas fa-clipboard-list" aria-hidden="true"></i> تفاصيل ومتطلبات الطلب
+    </h2>
+    <div class="main-content">
+      {{ content }}
+    </div>
+    {% if page.requirements %}
+    <div class="requirements-section">
+      <h4 class="req-title">المتطلبات الأساسية للعميل:</h4>
+      <ul class="req-list">
+        {% for req in page.requirements %}
+          <li><i class="fas fa-check-circle" aria-hidden="true"></i> {{ req }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- إخفاء الأزرار العائمة في صفحة الطلب فقط -->
+<style>
+  .prestige-call-button,
+  .smart-search-trigger,
+  #enableNotif {
+    display: none !important;
+  }
+</style>

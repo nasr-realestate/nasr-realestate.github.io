@@ -1,0 +1,87 @@
+---
+layout: default
+title: "معرض العقارات | سمسار طلبك"
+description: "تصفح أحدث الشقق، المحلات، والمقرات الإدارية المتاحة للبيع والإيجار في مدينة نصر."
+permalink: /properties/
+image: "/assets/img/social-properties.webp"
+---
+
+<!-- رأس الصفحة -->
+<header class="page-header">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="page-title">
+      <i class="fas fa-city" style="color: var(--color-primary);"></i> معرض العقارات
+    </h1>
+    <p style="opacity: 0.8; margin-top: 10px;">
+      اختر الفئة المناسبة لتصفح العروض المتاحة حالياً
+    </p>
+  </div>
+</header>
+
+<main>
+
+  <!-- أزرار الفلترة -->
+  <div class="filter-container" style="margin-bottom: 2rem;">
+    <button class="filter-btn active" onclick="filterSelection('all', event)">الكل</button>
+    <button class="filter-btn" onclick="filterSelection('apartment', event)"><i class="fas fa-home"></i> شقق تمليك</button>
+    <button class="filter-btn" onclick="filterSelection('rent', event)"><i class="fas fa-key"></i> شقق إيجار</button>
+    <button class="filter-btn" onclick="filterSelection('shop', event)"><i class="fas fa-store"></i> محلات</button>
+    <button class="filter-btn" onclick="filterSelection('office', event)"><i class="fas fa-building"></i> مكاتب ومقرات</button>
+  </div>
+
+  <!-- شبكة العرض -->
+  <section class="properties-grid" style="min-height: 60vh;">
+
+    {% assign all_properties = site.properties | sort: 'date' | reverse %}
+
+    {% for prop in all_properties %}
+
+      {% assign category_class = "apartment" %}
+      {% assign type = "sale" %}
+
+      {% if prop.title contains "إيجار" or prop.title contains "ايجار" %}
+        {% assign category_class = "rent" %}
+        {% assign type = "rent" %}
+      {% elsif prop.title contains "محل" or prop.title contains "تجارى" or prop.title contains "تجاري" %}
+        {% assign category_class = "shop" %}
+      {% elsif prop.title contains "مكتب" or prop.title contains "مقر" or prop.title contains "إداري" %}
+        {% assign category_class = "office" %}
+      {% endif %}
+
+      <div class="filter-item {{ category_class }}">
+        {% include property_card.html item=prop type=type %}
+      </div>
+
+    {% else %}
+      <div style="grid-column: 1/-1; text-align: center; padding: 5rem 2rem; color: #666;">
+        <h2>لا توجد عقارات حالياً</h2>
+      </div>
+    {% endfor %}
+
+  </section>
+
+  <!-- رابط الطلبات -->
+  <div style="text-align: center; margin: 3rem 0;">
+    <a href="{{ '/requests/' | relative_url }}"
+       class="nav-btn"
+       style="background: transparent; border: 1px solid var(--color-blue); color: var(--color-blue);">
+      شاهد طلبات الشراء <i class="fas fa-arrow-right"></i>
+    </a>
+  </div>
+
+</main>
+
+<script>
+function filterSelection(c, e) {
+  var x = document.getElementsByClassName("filter-item");
+  var btns = document.getElementsByClassName("filter-btn");
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+  e.currentTarget.classList.add("active");
+  for (var i = 0; i < x.length; i++) {
+    x[i].classList.remove("hide");
+    if (c !== "all" && x[i].className.indexOf(c) === -1) {
+      x[i].classList.add("hide");
+    }
+  }
+}
+</script>

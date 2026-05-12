@@ -1,0 +1,98 @@
+# =========================================================
+# === ⚙️ سمسار طلبك — الإصدار الاحترافي النهائي 2026 ===
+# =========================================================
+
+title: "سمسار طلبك | طارق طنطاوي"
+title_separator: "|"
+description: "خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية."
+url: "https://nasr-realestate.github.io"
+baseurl: ""
+lang: "ar"
+timezone: Africa/Cairo
+locale: "ar_EG"
+encoding: "UTF-8"
+
+default_image: "/assets/img/social-home.webp"
+
+author:
+  name: "طارق طنطاوي"
+  phone: "+201147758857"
+  twitter: "tarekproptech"
+  url: "https://nasr-realestate.github.io/about/"
+  avatar: "/assets/img/tarek-tantawy.webp"
+
+contact:
+  whatsapp: "+201147758857"
+  whatsapp_url: "https://wa.me/201147758857"
+  email: "tarek@nasr-realestate.com"
+
+logo: "/assets/img/logo.webp"
+copyright: "© 2026 سمسار طلبك - طارق طنطاوي. جميع الحقوق محفوظة."
+
+twitter:
+  username: "tarekproptech"
+  card: "summary_large_image"
+
+social:
+  name: "سمسار طلبك - طارق طنطاوي"
+  links:
+    - "https://www.facebook.com/Tarekonly"
+    - "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
+
+webmaster_verifications:
+  google: "ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA"
+
+markdown: kramdown
+permalink: pretty
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jekyll-sitemap
+
+google_analytics: "G-CDT8Q9YSJ0"
+
+collections:
+  properties:
+    output: true
+    permalink: /عقارات-مدينة-نصر/:slug/
+  requests:
+    output: true
+    permalink: /طلبات-عقارية-مستعجلة/:slug/
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+      lang: "ar"
+      image: "/assets/img/social-home.webp"
+  - scope:
+      path: ""
+      type: "properties"
+    values:
+      layout: "property_page"
+  - scope:
+      path: ""
+      type: "requests"
+    values:
+      layout: "request_page"
+
+sass:
+  style: compressed
+
+keep_files:
+  - search-data.json
+  - assets/js/firebase-messaging-sw.js
+
+exclude:
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - .github
+  - .jekyll-cache
+  - .jekyll-metadata
+  - README.md
+  - node_modules
+  - package.json
+  - package-lock.json

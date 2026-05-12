@@ -1,0 +1,39 @@
+<nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
+
+  <div class="navbar-logo">
+    <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}"
+           alt="{{ site.title }} - شقق للبيع في مدينة نصر"
+           width="120"
+           height="120"
+           loading="eager"
+           fetchpriority="high">
+    </a>
+  </div>
+
+  <div class="navbar-links">
+
+    <a href="{{ '/properties/' | relative_url }}"
+       class="nav-link properties"
+       aria-label="تصفح جميع العقارات المتاحة">
+      <i class="fas fa-home" aria-hidden="true"></i>
+      <span>عقارات</span>
+    </a>
+
+    <a href="{{ '/requests/' | relative_url }}"
+       class="nav-link requests"
+       aria-label="اطلع على طلبات العملاء">
+      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+      <span>طلبات</span>
+    </a>
+
+    <a href="{{ '/assets/tools/valuation.html' | relative_url }}"
+       class="nav-link add-property"
+       style="border: 1px solid var(--color-primary); background: rgba(212, 175, 55, 0.05);"
+       aria-label="قيم عقارك مجاناً بالذكاء الاصطناعي">
+      <i class="fas fa-magic" style="color: var(--color-primary);" aria-hidden="true"></i>
+      <span style="font-weight: bold;">قيم عقارك (AI)</span>
+    </a>
+
+  </div>
+</nav>

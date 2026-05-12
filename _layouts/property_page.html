@@ -1,0 +1,177 @@
+---
+layout: default
+---
+<div class="property-container">
+
+  <!-- =========================================================
+       1. شريط العودة والمسار (محسّن)
+       ========================================================= -->
+  <nav class="property-nav">
+    <a href="{{ '/properties/' | relative_url }}" class="back-link">
+      <i class="fas fa-arrow-right" aria-hidden="true"></i> العودة لقائمة العقارات
+    </a>
+    <div class="property-breadcrumb">
+      <a href="{{ '/' | relative_url }}">الرئيسية</a> ›
+      <a href="{{ '/properties/' | relative_url }}">عقارات للبيع</a> ›
+      <span>{{ page.title | truncate: 30 }}</span>
+    </div>
+  </nav>
+
+  <!-- =========================================================
+       2. العنوان الرئيسي وتفاصيل سريعة (محسّن)
+       ========================================================= -->
+  <header class="property-header">
+    <h1>{{ page.title }}</h1>
+    <div class="property-meta">
+      <span class="location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ page.location }}</span>
+      {% if page.price_num %}
+        <span class="price"><i class="fas fa-tag" aria-hidden="true"></i> {{ page.price_num | number_with_delimiter }} ج.م</span>
+      {% else %}
+        <span class="price"><i class="fas fa-tag" aria-hidden="true"></i> {{ page.price }}</span>
+      {% endif %}
+      <span class="date"><i class="far fa-calendar" aria-hidden="true"></i> {{ page.date | date: "%Y/%m/%d" }}</span>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       3. المحتوى الرئيسي
+       ========================================================= -->
+  <main class="property-content">
+
+    <!-- المواصفات الرئيسية (محسّن، لا يعرض قسمًا فارغًا) -->
+    <section class="property-specs">
+      <h2><i class="fas fa-list-alt" aria-hidden="true"></i> مواصفات العقار</h2>
+      <div class="specs-grid">
+        {% if page.area %}
+          <div class="spec-item">
+            <span class="spec-label">المساحة</span>
+            <span class="spec-value">{{ page.area }}</span>
+          </div>
+        {% endif %}
+        {% if page.rooms %}
+          <div class="spec-item">
+            <span class="spec-label">الغرف</span>
+            <span class="spec-value">{{ page.rooms }}</span>
+          </div>
+        {% endif %}
+        {% if page.bathrooms %}
+          <div class="spec-item">
+            <span class="spec-label">الحمامات</span>
+            <span class="spec-value">{{ page.bathrooms }}</span>
+          </div>
+        {% endif %}
+        {% if page.floor %}
+          <div class="spec-item">
+            <span class="spec-label">الدور</span>
+            <span class="spec-value">{{ page.floor }}</span>
+          </div>
+        {% endif %}
+        {% if page.finish %}
+          <div class="spec-item">
+            <span class="spec-label">التشطيب</span>
+            <span class="spec-value">{{ page.finish }}</span>
+          </div>
+        {% endif %}
+        {% if page.property_type %}
+          <div class="spec-item">
+            <span class="spec-label">النوع</span>
+            <span class="spec-value">
+              {% if page.property_type == 'apartment' %}شقة سكنية
+              {% elsif page.property_type == 'office' %}مكتب/إداري
+              {% elsif page.property_type == 'commercial' %}تجاري
+              {% else %}{{ page.property_type }}{% endif %}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- التفاصيل الإضافية (محسّن) -->
+    {% if page.extra_details %}
+    <section style="background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; margin-bottom: 30px;">
+      <h2 style="color: var(--color-primary); margin-bottom: 15px;">
+        <i class="fas fa-info-circle" aria-hidden="true"></i> تفاصيل إضافية
+      </h2>
+      <div style="color: #ddd; line-height: 1.8;">{{ page.extra_details }}</div>
+    </section>
+    {% endif %}
+
+    <!-- الوصف الكامل للعقار (لا تغيير) -->
+    <section style="margin-bottom: 30px; color: #ddd; line-height: 1.8;">
+      {{ content }}
+    </section>
+
+    <!-- =========================================================
+         4. زر الواتساب المحسّن (هذا هو التغيير الرئيسي)
+         ========================================================= -->
+    <div class="property-call-action">
+      <a id="whatsapp-inquiry-btn"
+         href="https://wa.me/201147758857?text={{ 'أرغب في الاستفسار عن: ' | append: page.title | append: ' — رابط العقار: ' | append: site.url | append: page.url | url_encode }}"
+         class="call-button"
+         target="_blank"
+         rel="noopener noreferrer"
+         aria-label="استفسر عن هذا العقار عبر واتساب">
+        <i class="fab fa-whatsapp"></i>
+        <span>استفسر الآن عبر واتساب</span>
+        <small>سيتم إرسال رابط الشقة تلقائياً</small>
+      </a>
+    </div>
+
+    <!-- =========================================================
+         5. عقارات مشابهة (محسّن، لا يعرض العقار الحالي)
+         ========================================================= -->
+    <section class="related-properties">
+      <h2><i class="fas fa-home" aria-hidden="true"></i> شقق مشابهة للبيع في مدينة نصر</h2>
+      <div class="related-grid">
+        {% assign similar_properties = site.properties | where_exp: "item", "item.id != page.id" | sample: 3 %}
+        {% for prop in similar_properties %}
+          <a href="{{ prop.url | relative_url }}" class="related-card">
+            <div class="related-card-img">
+              {% if prop.image_file %}
+                <img src="{{ site.baseurl }}/assets/img/properties/{{ prop.image_file }}"
+                     alt="{{ prop.title }}"
+                     loading="lazy">
+              {% else %}
+                <div class="img-placeholder"><i class="fas fa-building" aria-hidden="true"></i></div>
+              {% endif %}
+            </div>
+            <div class="related-card-content">
+              <h3>{{ prop.title | truncate: 45 }}</h3>
+              <p class="related-location">
+                <i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ prop.location | truncate: 35 }}
+              </p>
+              {% if prop.price_num %}
+                <p class="related-price">{{ prop.price_num | number_with_delimiter }} ج.م</p>
+              {% else %}
+                <p class="related-price">{{ prop.price }}</p>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- =========================================================
+     6. سكربت تتبع الواتساب (بديل لـ trackPhoneCall)
+     ========================================================= -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const whatsappBtn = document.getElementById('whatsapp-inquiry-btn');
+    if (whatsappBtn) {
+      whatsappBtn.addEventListener('click', function() {
+        if (typeof dataLayer !== 'undefined') {
+          dataLayer.push({
+            event: 'whatsapp_inquiry',
+            event_category: 'Property Engagement',
+            event_label: {{ page.title | jsonify }},
+            property_url: {{ page.url | relative_url | jsonify }},
+            call_source: 'property_page_whatsapp'
+          });
+        }
+      });
+    }
+  });
+</script>

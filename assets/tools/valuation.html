@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>قيّم عقارك | سمسار طلبك</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --gold-1: #F5E7A3;
+      --gold-2: #D4AF37;
+      --gold-3: #B8860B;
+      --black-1: #030303;
+      --black-2: #0a0a0a;
+      --black-3: #111111;
+      --black-4: #1a1a1a;
+      --black-5: #222222;
+      --text-dim: #888;
+      --text-mid: #bbb;
+      --text-bright: #ece8e0;
+      --border: rgba(212,175,55,0.2);
+      --border-bright: rgba(212,175,55,0.5);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--black-1);
+      color: var(--text-bright);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ── نجوم الخلفية ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 15% 25%, rgba(212,175,55,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 75% 10%, rgba(212,175,55,0.2) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 40% 60%, rgba(212,175,55,0.15) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 70%, rgba(212,175,55,0.2) 0%, transparent 100%),
+        radial-gradient(2px 2px at 5% 80%, rgba(212,175,55,0.1) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 780px;
+    }
+
+    /* ── الهيدر ── */
+    .hdr {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .hdr .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(212,175,55,0.08);
+      border: 1px solid var(--border-bright);
+      border-radius: 2rem;
+      padding: .35rem 1rem;
+      font-size: .75rem;
+      color: var(--gold-2);
+      letter-spacing: .5px;
+      margin-bottom: 1rem;
+    }
+
+    .hdr h1 {
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--gold-1), var(--gold-2), var(--gold-3));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      line-height: 1.3;
+      margin-bottom: .5rem;
+    }
+
+    .hdr p {
+      font-size: .9rem;
+      color: var(--text-dim);
+    }
+
+    /* ── البطاقة الرئيسية ── */
+    .card {
+      background: var(--black-2);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      transition: border-color .3s;
+    }
+
+    .card:hover { border-color: var(--border-bright); }
+
+    /* ── المدخلات ── */
+    .field-label {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--gold-2);
+      margin-bottom: .6rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--black-4);
+      border: 1px solid #333;
+      border-radius: .9rem;
+      padding: 1rem 1.2rem;
+      font-family: 'Cairo', sans-serif;
+      font-size: .95rem;
+      color: var(--text-bright);
+      resize: vertical;
+      transition: border-color .2s, box-shadow .2s;
+      line-height: 1.7;
+    }
+
+    textarea:focus, input:focus {
+      outline: none;
+      border-color: var(--gold-2);
+      box-shadow: 0 0 0 3px rgba(212,175,55,.12);
+      background: var(--black-3);
+    }
+
+    textarea::placeholder, input::placeholder { color: #444; }
+
+    /* ── الزر ── */
+    .btn-analyze {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border: none;
+      border-radius: 3rem;
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--black-1);
+      background: linear-gradient(100deg, var(--gold-3), var(--gold-2), var(--gold-1));
+      cursor: pointer;
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(212,175,55,.25);
+    }
+
+    .btn-analyze:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(212,175,55,.4);
+    }
+
+    .btn-analyze:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-analyze:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    /* ── التقرير ── */
+    #report-section { display: none; }
+
+    .report-card {
+      background: var(--black-2);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+
+    .report-top {
+      background: linear-gradient(135deg, var(--black-3), #1f1b10);
+      border-bottom: 1px solid var(--border-bright);
+      padding: 1.2rem 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .8rem;
+    }
+
+    .report-top h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold-2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: .6rem;
+    }
+
+    .icon-btn {
+      background: var(--black-5);
+      border: 1px solid #333;
+      padding: .45rem .9rem;
+      border-radius: 2rem;
+      color: var(--gold-2);
+      font-family: 'Cairo', sans-serif;
+      font-size: .75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: .2s;
+    }
+
+    .icon-btn:hover { border-color: var(--gold-2); background: #1f1b10; }
+
+    .report-body {
+      padding: 1.8rem;
+      min-height: 200px;
+    }
+
+    .report-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.9;
+      font-size: .95rem;
+      color: var(--text-bright);
+      font-family: 'Cairo', sans-serif;
+    }
+
+    /* ── Loading ── */
+    .loading-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2.5rem;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #222;
+      border-top-color: var(--gold-2);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-wrap p {
+      color: var(--gold-2);
+      font-weight: 600;
+      font-size: .9rem;
+      text-align: center;
+    }
+
+    /* ── خطأ ── */
+    .error-box {
+      background: rgba(220,50,50,.08);
+      border: 1px solid rgba(220,50,50,.3);
+      border-radius: .9rem;
+      padding: 1rem 1.3rem;
+      color: #ff9090;
+      font-size: .9rem;
+      display: none;
+      margin-top: 1rem;
+    }
+
+    /* ── التذييل ── */
+    .footer-note {
+      text-align: center;
+      font-size: .7rem;
+      color: #444;
+      margin-top: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .footer-note strong { color: #666; }
+
+    /* ── الشريط الجانبي للتقرير ── */
+    .verdict-bar {
+      display: none;
+      align-items: center;
+      gap: .8rem;
+      padding: .8rem 1.2rem;
+      border-radius: .8rem;
+      margin-bottom: 1.2rem;
+      font-weight: 700;
+      font-size: .95rem;
+    }
+
+    .verdict-bar.good {
+      background: rgba(40,200,100,.08);
+      border: 1px solid rgba(40,200,100,.3);
+      color: #6effa0;
+    }
+
+    .verdict-bar.bad {
+      background: rgba(220,150,50,.08);
+      border: 1px solid rgba(220,150,50,.3);
+      color: #ffc06e;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .card { padding: 1.3rem; }
+      .report-body { padding: 1.2rem; }
+    }
+
+    /* ── انيميشن ظهور التقرير ── */
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .fade-in { animation: fadeUp .4s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- هيدر -->
+  <div class="hdr">
+    <div class="badge">
+      <i class="fas fa-crown"></i>
+      سمسار طلبك | مدينة نصر
+    </div>
+    <h1>قيّم عقارك بالذكاء الاصطناعي</h1>
+    <p>الصق رسالة الواتساب كما هي — والنظام يستخرج التفاصيل ويحللها فوراً</p>
+  </div>
+
+  <!-- بطاقة الإدخال -->
+  <div class="card">
+    <div class="field-label">
+      <i class="fab fa-whatsapp" style="color:#25D366"></i>
+      رسالة العميل (واتساب أو نص غير منظم)
+    </div>
+    <textarea id="msg" rows="6"
+      placeholder="مثال:&#10;صباح الخير يا باشا، عندي شقة في مدينة نصر شارع عباس العقاد 170 متر تشطيب سوبر لوكس، البائع طالب 6,200,000 جنيه. ارى رأيك&#10;&#10;— أرقام الهواتف والأسماء تُحذف تلقائياً"></textarea>
+
+    <div id="error-box" class="error-box"></div>
+
+    <button id="analyzeBtn" class="btn-analyze" onclick="runAnalysis()">
+      <i class="fas fa-gem"></i>
+      تقييم استراتيجي فوري
+      <i class="fas fa-arrow-left"></i>
+    </button>
+  </div>
+
+  <!-- التحميل -->
+  <div id="loading" class="loading-wrap">
+    <div class="spinner"></div>
+    <p>جارٍ التحليل الذكي<br>استخراج البيانات ومقارنة أسعار السوق 2026…</p>
+  </div>
+
+  <!-- التقرير -->
+  <div id="report-section">
+    <div class="report-card fade-in">
+      <div class="report-top">
+        <h3><i class="fas fa-file-chart-column"></i> التقرير الاستراتيجي العقاري</h3>
+        <div class="action-row">
+          <button class="icon-btn" onclick="copyReport()">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
+          <button class="icon-btn" onclick="downloadReport()">
+            <i class="fas fa-download"></i> تحميل
+          </button>
+          <button class="icon-btn" onclick="resetTool()">
+            <i class="fas fa-rotate-right"></i> جديد
+          </button>
+        </div>
+      </div>
+      <div class="report-body">
+        <div id="verdict" class="verdict-bar"></div>
+        <div id="report-text" class="report-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- تذييل -->
+  <div class="footer-note">
+    <strong>سمسار طلبك</strong> — طارق طنطاوي | مدينة نصر منذ 2009<br>
+    التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي
+  </div>
+
+</div>
+
+<script>
+  let lastReport = '';
+
+  const SYSTEM_PROMPT = `أنت خبير عقاري استراتيجي مصري محترف تعمل لدى "سمسار طلبك" في مدينة نصر. مهمتك تحليل رسائل العملاء غير المنظمة (واتساب) واستخراج:
+- الموقع والشارع
+- المساحة
+- نوع التشطيب
+- السعر المطلوب
+- نوع العملية (بيع/إيجار)
+
+**قواعد صارمة:**
+1. احذف فوراً أي أسماء أشخاص وأرقام هواتف من التقرير.
+2. استخدم متوسطات أسعار 2026 للمقارنة:
+   - مدينة نصر (زهراء، المنطقة 6، 9، 10): 45,000–68,000 ج/م²
+   - هليوبوليس / مصر الجديدة: 48,000–72,000 ج/م²
+   - التجمع الخامس: 55,000–90,000 ج/م²
+3. احسب سعر المتر الفعلي من الرسالة وقارنه بالمتوسط.
+4. أصدر حكماً واضحاً: **فرصة ذهبية** أو **يحتاج تفاوض** أو **سعر مبالغ فيه**.
+5. اكتب التقرير باللهجة المصرية الاحترافية الحازمة.
+6. في أول سطر من ردك اكتب فقط كلمة واحدة: GOOD أو BAD أو NEUTRAL (للحكم على السعر) — ثم سطر فارغ — ثم التقرير الكامل.
+
+**هيكل التقرير:**
+📊 ملخص البيانات المستخرجة
+📍 تحليل الموقع والسعر
+⚖️ مقارنة السوق
+🏆 الحكم الاستراتيجي والتوصية`;
+
+  async function runAnalysis() {
+    const msg = document.getElementById('msg').value.trim();
+    const errorBox = document.getElementById('error-box');
+
+    errorBox.style.display = 'none';
+
+    if (!msg) {
+      errorBox.textContent = '⚠️ الرجاء لصق رسالة العميل أولاً.';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    // UI state
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('report-section').style.display = 'none';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{
+            role: 'user',
+            content: `رسالة العميل الخام:\n"""\n${msg}\n"""\n\nقم بالتحليل والتقييم.`
+          }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const fullText = data.content?.[0]?.text?.trim() || '';
+
+      // استخراج الحكم والتقرير
+      const lines = fullText.split('\n');
+      const firstLine = lines[0].trim().toUpperCase();
+      let verdict = '';
+      let reportText = fullText;
+
+      if (['GOOD','BAD','NEUTRAL'].includes(firstLine)) {
+        verdict = firstLine;
+        reportText = lines.slice(2).join('\n').trim(); // تخطي السطر الأول والفارغ
+      }
+
+      // عرض الحكم
+      const verdictEl = document.getElementById('verdict');
+      if (verdict === 'GOOD') {
+        verdictEl.className = 'verdict-bar good';
+        verdictEl.innerHTML = '<i class="fas fa-circle-check"></i> فرصة ذهبية — السعر مناسب أو أقل من السوق';
+        verdictEl.style.display = 'flex';
+      } else if (verdict === 'BAD') {
+        verdictEl.className = 'verdict-bar bad';
+        verdictEl.innerHTML = '<i class="fas fa-triangle-exclamation"></i> السعر مبالغ فيه — مطلوب تفاوض أو إعادة تموضع';
+        verdictEl.style.display = 'flex';
+      } else {
+        verdictEl.style.display = 'none';
+      }
+
+      document.getElementById('report-text').textContent = reportText;
+      lastReport = reportText;
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('report-section').style.display = 'block';
+
+    } catch (e) {
+      document.getElementById('loading').style.display = 'none';
+      errorBox.textContent = `⚠️ خطأ في التقييم: ${e.message}`;
+      errorBox.style.display = 'block';
+    } finally {
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+  }
+
+  async function copyReport() {
+    if (!lastReport) return;
+    try {
+      await navigator.clipboard.writeText(lastReport);
+      showToast('تم النسخ ✓');
+    } catch { alert('نسخ يدوي: حدد النص وانسخه'); }
+  }
+
+  function downloadReport() {
+    if (!lastReport) return;
+    const blob = new Blob([lastReport], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `تقرير_عقاري_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+  }
+
+  function resetTool() {
+    document.getElementById('report-section').style.display = 'none';
+    document.getElementById('msg').value = '';
+    document.getElementById('error-box').style.display = 'none';
+    lastReport = '';
+    document.getElementById('msg').focus();
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:'fixed', bottom:'2rem', left:'50%', transform:'translateX(-50%)',
+      background:'#1f1b10', border:'1px solid #d4af37', color:'#d4af37',
+      padding:'.6rem 1.5rem', borderRadius:'2rem', fontFamily:'Cairo,sans-serif',
+      fontSize:'.85rem', fontWeight:'700', zIndex:'9999',
+      animation:'fadeUp .3s ease'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+  }
+
+  // Enter في التكست اريا (Ctrl+Enter للتحليل)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('msg').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.ctrlKey) runAnalysis();
+    });
+  });
+</script>
+
+</body>
+</html>
