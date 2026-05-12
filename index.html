@@ -42,65 +42,38 @@ body_class: "homepage"
 
 
 <!-- =========================================================
-     1. الهيرو الرئيسي — بتصميم بصري حصري وجاذبية فاخرة
+     1. الهيرو الرئيسي
      ========================================================= -->
-<section class="home-hero" style="position: relative; padding: 6rem 1rem; overflow: hidden; min-height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #0f0f0f 0%, #000000 100%);">
+<section class="home-hero" style="position: relative; padding: 6rem 1rem; overflow: hidden; min-height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #0f0f0f 0%, #000000 100%);">
 
-  <!-- تأثير ضوئي خافت للجاذبية البصرية -->
-  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; height: 400px; background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%); opacity: 0.05; z-index: 1; pointer-events: none;"></div>
+  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; background: var(--color-primary); filter: blur(150px); opacity: 0.1; z-index: 1;"></div>
 
-  <!-- شعار مصغر أعلى الهيرو لتعزيز الهوية -->
-  <div style="z-index: 2; margin-bottom: 2rem;">
-    <img src="{{ '/assets/img/logo.webp' | relative_url }}"
-         alt="سمسار طلبك | طارق طنطاوي"
-         width="90"
-         height="90"
-         style="filter: drop-shadow(0 0 15px rgba(212,175,55,0.4)); opacity: 0.9;"
-         loading="eager"
-         fetchpriority="high">
-  </div>
-
-  <!-- العنوان الرئيسي — كلمات مفتاحية متدرجة -->
-  <h1 style="z-index: 2; text-align: center; font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 900; line-height: 1.3; max-width: 800px; margin-bottom: 1.5rem;">
-    <span style="color: #ffffff;">شقق للبيع في</span>
-    <span style="background: linear-gradient(45deg, var(--color-primary), #fff0a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"> مدينة نصر</span>
+  <h1 style="z-index: 2; text-align: center;">
+    <span style="color: var(--color-primary); font-size: 2.8rem; font-weight: 900; line-height: 1.2;">شقق للبيع في مدينة نصر</span>
   </h1>
 
-  <!-- الوصف — واضح وجذاب -->
-  <p style="text-align: center; max-width: 700px; z-index: 2; margin-bottom: 2.5rem; font-size: 1.25rem; line-height: 1.9; color: #d0d0d0;">
-    <strong style="color: #fff;">أفضل عروض العقارات في مدينة نصر</strong> - المنطقة العاشرة • السادسة • التاسعة<br>
-    <span style="font-size: 1rem; opacity: 0.85; display: inline-block; margin-top: 12px; color: #c0b070;">تمليك • إيجار • مكاتب • محلات تجارية • استشارات مجانية</span>
+  <p style="text-align: center; max-width: 700px; z-index: 2; margin-top: 1.5rem; font-size: 1.2rem; line-height: 1.8;">
+    <strong>أفضل عروض العقارات في مدينة نصر</strong> - المنطقة العاشرة • السادسة • التاسعة<br>
+    <span style="font-size: 0.95em; opacity: 0.9; margin-top: 10px; display: inline-block; color: #ddd;">تمليك • إيجار • مكاتب • محلات تجارية • استشارات مجانية</span>
   </p>
 
-  <!-- أزرار الإجراء الرئيسية — CTA -->
-  <div class="hero-buttons" style="z-index: 2; display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem;">
+  <div class="hero-buttons" style="z-index: 2; margin-top: 2.5rem;">
     <a href="{{ '/properties/' | relative_url }}"
-       class="gold-btn-main"
-       style="padding: 1.1rem 2.8rem; font-size: 1.2rem;"
+       class="nav-btn"
+       style="background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); color: #000;"
        aria-label="تصفح العروض العقارية">
-      <i class="fas fa-building"></i> تصفح العروض
+      تصفح العروض
     </a>
     <a href="{{ '/requests/' | relative_url }}"
-       class="gold-btn-outline"
-       style="padding: 1rem 2.5rem; font-size: 1.1rem;"
+       class="nav-btn"
+       style="background: rgba(0,0,0,0.5); color: var(--color-primary); border-color: var(--color-primary);"
        aria-label="تصفح الطلبات العقارية المستعجلة">
-      <i class="fas fa-clipboard-list"></i> الطلبات العاجلة
+      الطلبات
     </a>
   </div>
 
-  <!-- زر الاتصال الفوري البارز -->
-  <a href="tel:+201147758857"
-     style="z-index: 2; display: inline-flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); padding: 0.9rem 2.2rem; border-radius: 50px; color: var(--color-primary); text-decoration: none; font-weight: 700; font-size: 1.1rem; transition: all 0.3s ease; backdrop-filter: blur(5px);"
-     onmouseover="this.style.background='rgba(212,175,55,0.1)'; this.style.borderColor='var(--color-primary)';"
-     onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(212,175,55,0.3)';">
-    <i class="fas fa-phone-alt" style="color: #25D366;"></i>
-    <span>استشارة فورية</span>
-    <span style="font-weight: 900; direction: ltr; margin-right: 5px;">01147758857</span>
-  </a>
-
-  <!-- صندوق "لماذا نحن" — دافعية -->
-  <div style="z-index: 2; margin-top: 3.5rem; max-width: 620px; padding: 22px 30px; border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    <h2 style="color: var(--color-primary); font-size: 1.2rem; margin-bottom: 10px;">
+  <div class="pain-point-box" style="z-index: 2; margin-top: 4rem; max-width: 600px; padding: 25px 30px; border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <h2 style="color: var(--color-primary); font-size: 1.3rem; margin-bottom: 12px;">
       <i class="far fa-question-circle"></i> لماذا نحن؟
     </h2>
     <p style="color: #bbb; font-size: 1rem; margin: 0; line-height: 1.7;">
@@ -111,7 +84,7 @@ body_class: "homepage"
 
 
 <!-- =========================================================
-     2. قسم التشويق السينمائي (خلفية عقار)
+     2. قسم التشويق السينمائي
      ========================================================= -->
 <section class="luxury-teaser-section"
          style="background-image: url('{{ site.baseurl }}/assets/img/properties/apartment-180m-nasr-city.webp');">
@@ -129,7 +102,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     3. أحدث العروض — بطاقات ديناميكية
+     3. أحدث العروض — يستخدم property_card.html مباشرة
      ========================================================= -->
 <section id="latest-opportunities" style="padding: 4rem 2rem; background: var(--color-surface-1); border-top: 1px solid #222; position: relative; z-index: 2;">
   <div style="max-width: 1200px; margin: 0 auto;">
@@ -161,7 +134,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     4. تصفح حسب المنطقة
+     4. تصفح حسب المنطقة (النسخة الديناميكية الموثوقة)
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
