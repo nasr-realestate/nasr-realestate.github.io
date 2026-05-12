@@ -2,7 +2,7 @@
 layout: default
 ---
 
-<!-- تعليق: أسبوع واحد بالثواني 7 * 24 * 60 * 60 = 604800 -->
+<!-- أسبوع واحد بالثواني 7 * 24 * 60 * 60 = 604800 -->
 {% assign expiry_seconds    = 604800 %}
 {% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
 {% assign req_timestamp     = page.date | date: "%s" | plus: 0 %}
@@ -139,7 +139,7 @@ layout: default
     {% endif %}
   </div>
 
-  <!-- زر الواتساب الوحيد (يظهر للجميع) -->
+  <!-- زر الواتساب الوحيد -->
   <div class="property-call-action">
     <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، أنا مهتم بالطلب: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
        class="call-button"
@@ -153,3 +153,12 @@ layout: default
   </div>
 
 </div>
+
+<!-- إخفاء العناصر العائمة (تطبق فقط على صفحة الطلب) -->
+<style>
+  .prestige-call-button,
+  .smart-search-trigger,
+  #enableNotif {
+    display: none !important;
+  }
+</style>
