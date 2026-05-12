@@ -1,7 +1,9 @@
 ---
 layout: default
 ---
-{% assign expiry_seconds    = 604800 %} {# أسبوع واحد بالثواني: 7 * 24 * 60 * 60 #}
+
+<!-- تعليق: أسبوع واحد بالثواني 7 * 24 * 60 * 60 = 604800 -->
+{% assign expiry_seconds    = 604800 %}
 {% assign current_timestamp = site.time | date: "%s" | plus: 0 %}
 {% assign req_timestamp     = page.date | date: "%s" | plus: 0 %}
 {% assign age               = current_timestamp | minus: req_timestamp %}
@@ -12,31 +14,21 @@ layout: default
 {% assign whatsapp_number = "201147758857" %}
 
 <!-- =========================================================
-     1. تنبيه انتهاء صلاحية الطلب (النسخة الذكية)
+     1. تنبيه انتهاء صلاحية الطلب (إشعار فقط بدون زر)
      ========================================================= -->
 {% if is_expired %}
-<div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(10, 132, 255, 0.02)); border: 1px solid rgba(10, 132, 255, 0.4); border-radius: 20px; padding: 35px 30px; margin: 0 auto 40px; max-width: 800px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); backdrop-filter: blur(10px);">
-  <i class="fas fa-history" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px; display: block; opacity: 0.9;" aria-hidden="true"></i>
-  <h3 style="color: var(--color-primary); font-size: 1.4rem; margin-bottom: 12px; font-weight: 800;">مر على هذا الطلب أكثر من 7 أيام</h3>
-  <p style="color: #ccc; font-size: 1rem; margin-bottom: 25px; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
+<div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.08), rgba(10, 132, 255, 0.02)); border: 1px solid rgba(10, 132, 255, 0.3); border-radius: 16px; padding: 25px 30px; margin: 0 auto 40px; max-width: 800px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.2); backdrop-filter: blur(10px);">
+  <i class="fas fa-history" style="font-size: 2.2rem; color: var(--color-primary); margin-bottom: 12px; display: block; opacity: 0.9;" aria-hidden="true"></i>
+  <h3 style="color: var(--color-primary); font-size: 1.3rem; margin-bottom: 10px; font-weight: 800;">مر على هذا الطلب أكثر من 7 أيام</h3>
+  <p style="color: #ccc; font-size: 1rem; margin-bottom: 0; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
     لا تقلق، الطلب قد لا يزال قائماً! قاعدة بياناتنا تتغير يومياً وبعض الطلبات تظل مجمدة.<br>
-    <strong style="color: #fff;">اسأل الخبير مباشرة لتعرف إن كان هذا الطلب لا يزال متاحاً أم لا، خلال ثوانٍ.</strong>
+    <strong style="color: #fff;">للاستفسار عن حالة الطلب، يُرجى الضغط على زر الواتساب أدناه.</strong>
   </p>
-  <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، هل الطلب لا يزال قائماً: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
-     target="_blank"
-     rel="noopener noreferrer"
-     style="display: inline-flex; align-items: center; gap: 12px; background: linear-gradient(45deg, #25D366, #128C7E); color: #fff; padding: 16px 35px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.4); transition: all 0.3s ease;"
-     onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 15px 35px rgba(37, 211, 102, 0.5)';"
-     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(37, 211, 102, 0.4)';"
-     aria-label="اسأل عن حالة الطلب عبر واتساب">
-    <i class="fab fa-whatsapp" style="font-size: 1.5rem;" aria-hidden="true"></i>
-    <span>اسأل إن كان الطلب لا يزال متاحاً</span>
-  </a>
 </div>
 {% endif %}
 
 <!-- =========================================================
-     2. كود الـ Schema التقني (محسّن - بيانات أكثر دقة)
+     2. كود الـ Schema التقني
      ========================================================= -->
 <script type="application/ld+json">
 {
@@ -93,7 +85,7 @@ layout: default
 <div class="details-container request-theme"
      itemscope itemtype="https://schema.org/Demand">
 
-  <!-- شريط العودة (محسّن) -->
+  <!-- شريط العودة -->
   <nav class="property-nav">
     <a href="{{ '/requests/' | relative_url }}"
        class="back-link"
@@ -103,7 +95,7 @@ layout: default
     </a>
   </nav>
 
-  <!-- رأس الصفحة (محسّن) -->
+  <!-- رأس الصفحة -->
   <div class="details-header" style="border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
     <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
       <span class="request-tag"><i class="fas fa-bullhorn" aria-hidden="true"></i> طلب شراء</span>
@@ -115,7 +107,7 @@ layout: default
     </p>
   </div>
 
-  <!-- الميزانية (محسّن - استخدام حقل price_num) -->
+  <!-- الميزانية -->
   <div itemprop="mainEntityOfPage"
        itemscope itemtype="https://schema.org/Offer"
        class="budget-card">
@@ -147,7 +139,7 @@ layout: default
     {% endif %}
   </div>
 
-  <!-- زر الاستجابة للطلب عبر واتساب (محسّن) -->
+  <!-- زر الواتساب الوحيد (يظهر للجميع) -->
   <div class="property-call-action">
     <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، أنا مهتم بالطلب: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
        class="call-button"
