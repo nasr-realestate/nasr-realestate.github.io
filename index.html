@@ -145,28 +145,28 @@ body_class: "homepage"
 
       <!-- المنطقة العاشرة -->
       {% assign p_zone10 = site.properties | where: "slug", "شقة-للبيع-محور-شينزو-ابي-مدينة-نصر-262م" | first %}
-      <a href="{{ p_zone10.url | default: '/properties/' | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة العاشرة">
+      <a href="{{ p_zone10.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة العاشرة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة العاشرة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 262م واجهة رئيسية تصلح سكني وإداري</p>
       </a>
 
       <!-- المنطقة التاسعة -->
       {% assign p_zone9 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-وهبي-المنطقة-التاسعة-مدينة-نصر-160م" | first %}
-      <a href="{{ p_zone9.url | default: '/properties/' | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة التاسعة">
+      <a href="{{ p_zone9.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة التاسعة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة التاسعة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 160م إكسترا سوبر لوكس تطل على حديقتين</p>
       </a>
 
       <!-- المنطقة السادسة -->
       {% assign p_zone6 = site.properties | where: "slug", "شقة-أرضي-بحديقة-للبيع-مدينة-نصر-المربع-الذهبي" | first %}
-      <a href="{{ p_zone6.url | default: '/properties/' | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة السادسة">
+      <a href="{{ p_zone6.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة السادسة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة السادسة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة أرضي بحديقة خاصة في المربع الذهبي</p>
       </a>
 
       <!-- المنطقة الأولى -->
       {% assign p_zone1 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-القباني-مدينة-نصر-186م" | first %}
-      <a href="{{ p_zone1.url | default: '/properties/' | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة الأولى">
+      <a href="{{ p_zone1.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة الأولى">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة الأولى</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 186م مسجلة شهر عقاري بشارع إسماعيل القباني</p>
       </a>
@@ -210,265 +210,3 @@ body_class: "homepage"
     </div>
   </div>
 </section>
-
-
-<!-- =========================================================
-     🔧 سكربت محرك البحث الذكي (محسّن: DOM-safe + lazy load data)
-     ========================================================= -->
-<script>
-  (function () {
-    let allProperties = [];
-    let dataLoaded = false;
-    let userSelection = { category: '', type: '', budgetRange: [] };
-    let lastStepId = 'step1';
-
-    async function loadDataIfNeeded() {
-      if (dataLoaded) return;
-      try {
-        const res = await fetch("{{ '/search-data.json' | relative_url }}");
-        if (!res.ok) throw new Error('Failed to load search data');
-        allProperties = await res.json();
-        dataLoaded = true;
-      } catch (e) {
-        console.error("Data error:", e);
-        allProperties = [];
-        dataLoaded = true; // لا نعيد المحاولة لانهائية
-      }
-    }
-
-    function openSmartSearch() {
-      loadDataIfNeeded();
-      const overlay = document.getElementById('smartSearchOverlay');
-      if (!overlay) return;
-      overlay.style.display = 'flex';
-      setTimeout(() => goToCard('step1'), 50);
-    }
-
-    function closeSmartSearch() {
-      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-      setTimeout(() => {
-        const overlay = document.getElementById('smartSearchOverlay');
-        if (overlay) overlay.style.display = 'none';
-      }, 400);
-    }
-
-    function goToCard(id) {
-      document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-      const t = document.getElementById(id);
-      if (t) t.classList.add('active');
-    }
-
-    function handleCommercialSelection() {
-      lastStepId = 'step1';
-      goToCard('stepCommercialBranch');
-    }
-
-    function nextStep(cat, type) {
-      userSelection.category = cat;
-      userSelection.type = type;
-      lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
-      setupBudgetOptions(type);
-      goToCard('step2');
-    }
-
-    function backToPrevious() {
-      goToCard(lastStepId);
-    }
-
-    function setupBudgetOptions(type) {
-      const container = document.getElementById('budgetOptions');
-      const title = document.getElementById('budgetTitle');
-      if (!container || !title) return;
-      container.innerHTML = '';
-      let opts = [];
-      if (type.includes('تمليك')) {
-        title.innerText = "ميزانية التملك؟";
-        opts = [
-          { label: "أقل من 3 مليون", range: [0, 3000000] },
-          { label: "3 - 6 مليون", range: [3000000, 6000000] },
-          { label: "أكثر من 6 مليون", range: [6000000, 99999999] }
-        ];
-      } else {
-        title.innerText = "الميزانية الشهرية؟";
-        const limit = type.includes('تجاري') ? 40000 : 20000;
-        opts = [
-          { label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] },
-          { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }
-        ];
-      }
-      opts.forEach(o => {
-        const b = document.createElement('button');
-        b.className = 'choice-btn';
-        b.setAttribute('aria-label', o.label);
-        b.innerHTML = `<i class="fas fa-coins"></i><span>${o.label}</span>`;
-        b.onclick = () => finishSearch(o.range);
-        container.appendChild(b);
-      });
-    }
-
-    // ✅ DOM-safe rendering (بديل آمن لـ innerHTML)
-    function finishSearch(range) {
-      userSelection.budgetRange = range;
-      goToCard('stepResults');
-      const content = document.getElementById('resultsContent');
-      const status  = document.getElementById('resultsStatus');
-      if (!content || !status) return;
-
-      // loading
-      content.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>';
-
-      setTimeout(() => {
-        // فلترة آمنة
-        const matches = allProperties.filter(p => {
-          if (!p) return false;
-          if (p.category !== userSelection.category) return false;
-
-          const isRent = userSelection.type.includes('إيجار');
-          const title = (p.title || '').toString();
-          const isPropRent = title.includes('إيجار') || (p.category || '').includes('rent');
-          if (isRent !== isPropRent) return false;
-
-          // استخراج السعر بأمان (يدعم price_num مستقبلاً)
-          let pNum = 0;
-          if (typeof p.price_num === 'number') {
-            pNum = p.price_num;
-          } else {
-            const raw = (p.price || '').toString();
-            const digits = raw.replace(/[^0-9]/g, '');
-            pNum = digits ? parseInt(digits, 10) : 0;
-          }
-          return pNum >= range[0] && pNum <= range[1];
-        });
-
-        // تحديث الحالة
-        status.textContent = matches.length > 0
-          ? `وجدنا لك ${matches.length} عروض تناسبك:`
-          : "عذراً، لا توجد نتائج مطابقة حالياً..";
-
-        // تنظيف النتائج السابقة
-        content.innerHTML = '';
-
-        if (matches.length === 0) return;
-
-        // بناء DOM آمن
-        matches.forEach(m => {
-          const a = document.createElement('a');
-          a.className = 'result-item';
-          a.href = m.url || '{{ site.baseurl }}/properties/';
-
-          const img = document.createElement('img');
-          img.className = 'result-img';
-          img.alt = m.title || 'عقار';
-          img.src = m.image || '{{ site.baseurl }}/assets/img/logo.webp';
-          img.onerror = () => { img.src = '{{ site.baseurl }}/assets/img/logo.webp'; };
-
-          const info = document.createElement('div');
-          info.className = 'result-info';
-
-          const h4 = document.createElement('h4');
-          h4.textContent = m.title || 'عقار';
-
-          const span = document.createElement('span');
-          span.textContent = m.price || '';
-
-          info.appendChild(h4);
-          info.appendChild(span);
-          a.appendChild(img);
-          a.appendChild(info);
-          content.appendChild(a);
-        });
-      }, 400);
-    }
-
-    // ربط الأزرار العامة (بدون onclick inline في كل مكان)
-    document.addEventListener('DOMContentLoaded', () => {
-      const trigger = document.getElementById('smartSearchTrigger');
-      if (trigger) trigger.addEventListener('click', openSmartSearch);
-
-      const overlayBlur = document.querySelector('#smartSearchOverlay .overlay-blur');
-      if (overlayBlur) overlayBlur.addEventListener('click', closeSmartSearch);
-
-      // أزرار الخطوة الأولى
-      document.querySelectorAll('#step1 .choice-btn').forEach(btn => {
-        const txt = btn.textContent || '';
-        if (txt.includes('تمليك')) btn.addEventListener('click', () => nextStep('apartments', 'تمليك'));
-        if (txt.includes('إيجار مفروش')) btn.addEventListener('click', () => nextStep('apartments-rent', 'إيجار مفروش'));
-        if (txt.includes('إيجار جديد')) btn.addEventListener('click', () => nextStep('apartments-rent', 'إيجار جديد'));
-        if (txt.includes('تجاري')) btn.addEventListener('click', handleCommercialSelection);
-      });
-
-      // أزرار الفرع التجاري
-      document.querySelectorAll('#stepCommercialBranch .choice-btn').forEach(btn => {
-        const txt = btn.textContent || '';
-        if (txt.includes('تمليك')) btn.addEventListener('click', () => nextStep('commercial', 'تمليك تجاري'));
-        if (txt.includes('إيجار')) btn.addEventListener('click', () => nextStep('commercial', 'إيجار تجاري'));
-      });
-
-      // أزرار الرجوع/الإغلاق
-      const back1 = document.querySelector('#stepCommercialBranch .back-text-btn');
-      if (back1) back1.addEventListener('click', () => goToCard('step1'));
-
-      const back2 = document.querySelector('#step2 .back-text-btn');
-      if (back2) back2.addEventListener('click', backToPrevious);
-
-      const back3 = document.querySelector('#stepResults .back-text-btn');
-      if (back3) back3.addEventListener('click', () => goToCard('step1'));
-
-      const closeBtn = document.querySelector('#step1 .close-text-btn');
-      if (closeBtn) closeBtn.addEventListener('click', closeSmartSearch);
-    });
-
-    // تتبع الاتصال الهاتفي (بدون تكرار زر)
-    window.trackPhoneCall = function () {
-      if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({ event: 'phone_call_click', call_source: 'prestige_button' });
-      }
-    };
-  })();
-</script>
-
-<!-- =========================================================
-     🔔 إشعارات Firebase (تحميل شرطي عند الحاجة فقط)
-     ========================================================= -->
-<script type="module">
-  const btn = document.getElementById("enableNotif");
-  if (btn && Notification.permission === "granted") {
-    btn.style.display = "none";
-  }
-
-  btn?.addEventListener("click", async () => {
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
-
-      // تحميل Firebase فقط عند الطلب
-      const [{ initializeApp }, { getMessaging, getToken }, { getFirestore, doc, setDoc }] = await Promise.all([
-        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
-        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js"),
-        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js")
-      ]);
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
-        authDomain: "simsartalabak.firebaseapp.com",
-        projectId: "simsartalabak",
-        storageBucket: "simsartalabak.firebasestorage.app",
-        messagingSenderId: "733807203688",
-        appId: "1:733807203688:web:a0582925001409994e32dd"
-      };
-
-      const app = initializeApp(firebaseConfig);
-      const messaging = getMessaging(app);
-      const db = getFirestore(app);
-
-      const token = await getToken(messaging, { vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" });
-      if (token) {
-        await setDoc(doc(db, "fcmTokens", token), { token, createdAt: new Date(), userAgent: navigator.userAgent });
-        btn.style.display = "none";
-        alert("✅ تم تفعيل إشعارات النخبة!");
-      }
-    } catch (err) {
-      console.error("FCM Error:", err);
-    }
-  });
-</script>
