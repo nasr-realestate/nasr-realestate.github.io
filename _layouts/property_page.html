@@ -1,39 +1,6 @@
 ---
 layout: default
 ---
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title | escape }}",
-  "description": "{{ page.title | escape }} في {{ page.location | escape }} - مدينة نصر",
-  "url": "{{ site.url }}{{ page.url }}",
-  "datePosted": "{{ page.date | date: '%Y-%m-%d' }}",
-  "offers": {
-    "@type": "Offer",
-    "price": "{{ page.price_num | default: page.price | remove: ',' | remove: 'ج.م' | strip }}",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "addressLocality": "{{ page.location | escape }}",
-    "addressRegion": "Nasr City",
-    "addressCountry": "EG"
-  }
-  {% if page.area %},
-  "floorSize": {
-    "@type": "QuantitativeValue",
-    "value": "{{ page.area | remove: ' متر مربع' | remove: ' متر' | strip }}",
-    "unitCode": "MTK"
-  }
-  {% endif %}
-  {% if page.rooms %},
-  "numberOfRooms": "{{ page.rooms }}"
-  {% endif %}
-}
-</script>
-
 <div class="property-container">
 
   <!-- =========================================================
@@ -163,9 +130,7 @@ layout: default
               {% if prop.image_file %}
                 <img src="{{ site.baseurl }}/assets/img/properties/{{ prop.image_file }}"
                      alt="{{ prop.title }}"
-                     loading="lazy"
-                     width="400"
-                     height="180">
+                     loading="lazy">
               {% else %}
                 <div class="img-placeholder"><i class="fas fa-building" aria-hidden="true"></i></div>
               {% endif %}
@@ -209,4 +174,4 @@ layout: default
       });
     }
   });
-            </script>
+</script>
