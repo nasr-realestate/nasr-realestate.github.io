@@ -12,20 +12,26 @@ layout: default
 {% assign whatsapp_number = "201147758857" %}
 
 <!-- =========================================================
-     1. تنبيه انتهاء صلاحية الطلب (محسّن)
+     1. تنبيه انتهاء صلاحية الطلب (النسخة الذكية)
      ========================================================= -->
 {% if is_expired %}
-<div class="expired-alert-bar">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <i class="fas fa-history" aria-hidden="true"></i>
-    <h3>عذراً، هذا الطلب مؤرشف (قديم)</h3>
-    <p>
-      مر على هذا الطلب أكثر من أسبوع، وغالباً لم يعد متاحاً. يرجى مراجعة
-      <a href="{{ '/requests/' | relative_url }}"
-         style="color: #fff; text-decoration: underline; font-weight: bold;"
-         aria-label="تصفح أحدث طلبات العملاء النشطة">أحدث الطلبات النشطة هنا</a>.
-    </p>
-  </div>
+<div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(10, 132, 255, 0.02)); border: 1px solid rgba(10, 132, 255, 0.4); border-radius: 20px; padding: 35px 30px; margin: 0 auto 40px; max-width: 800px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); backdrop-filter: blur(10px);">
+  <i class="fas fa-history" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px; display: block; opacity: 0.9;" aria-hidden="true"></i>
+  <h3 style="color: var(--color-primary); font-size: 1.4rem; margin-bottom: 12px; font-weight: 800;">مر على هذا الطلب أكثر من 7 أيام</h3>
+  <p style="color: #ccc; font-size: 1rem; margin-bottom: 25px; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
+    لا تقلق، الطلب قد لا يزال قائماً! قاعدة بياناتنا تتغير يومياً وبعض الطلبات تظل مجمدة.<br>
+    <strong style="color: #fff;">اسأل الخبير مباشرة لتعرف إن كان هذا الطلب لا يزال متاحاً أم لا، خلال ثوانٍ.</strong>
+  </p>
+  <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، هل الطلب لا يزال قائماً: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
+     target="_blank"
+     rel="noopener noreferrer"
+     style="display: inline-flex; align-items: center; gap: 12px; background: linear-gradient(45deg, #25D366, #128C7E); color: #fff; padding: 16px 35px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.4); transition: all 0.3s ease;"
+     onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 15px 35px rgba(37, 211, 102, 0.5)';"
+     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(37, 211, 102, 0.4)';"
+     aria-label="اسأل عن حالة الطلب عبر واتساب">
+    <i class="fab fa-whatsapp" style="font-size: 1.5rem;" aria-hidden="true"></i>
+    <span>اسأل إن كان الطلب لا يزال متاحاً</span>
+  </a>
 </div>
 {% endif %}
 
@@ -35,12 +41,12 @@ layout: default
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Demand", {# Demand هو الأنسب لـ "طلب" في Schema.org #}
+  "@type": "Demand",
   "name": "{{ page.title }}",
   "description": "{{ page.meta_description | default: 'طلب شراء عقار في ' | append: page.location | append: ' بميزانية ' | append: page.budget }}",
   "url": "{{ page.url | absolute_url }}",
   "datePosted": "{{ page.date | date: "%Y-%m-%d" }}",
-  "validThrough": "{{ page.date | date: "%Y-%m-%d" | date: "%s" | plus: expiry_seconds | date: "%Y-%m-%d" }}", {# تاريخ انتهاء صلاحية الطلب #}
+  "validThrough": "{{ page.date | date: "%Y-%m-%d" | date: "%s" | plus: expiry_seconds | date: "%Y-%m-%d" }}",
   "seller": {
     "@type": "RealEstateAgent",
     "name": "سمسار طلبك",
@@ -74,7 +80,7 @@ layout: default
       "value": "{{ page.rooms_min | default: '0' }}",
       "unitCode": "ROM"
     },
-    "offers": { {# هذا يصف الميزانية المعروضة للشراء #}
+    "offers": {
       "@type": "Offer",
       "priceCurrency": "EGP",
       "price": "{{ page.budget | replace: 'جنيه', '' | replace: ',', '' | strip }}",
@@ -84,8 +90,8 @@ layout: default
 }
 </script>
 
-<div class="details-container request-theme {% if is_expired %}expired-content{% endif %}"
-     itemscope itemtype="https://schema.org/Demand"> {# استخدام Demand هنا أيضاً #}
+<div class="details-container request-theme"
+     itemscope itemtype="https://schema.org/Demand">
 
   <!-- شريط العودة (محسّن) -->
   <nav class="property-nav">
@@ -117,7 +123,6 @@ layout: default
     <div class="budget-value">
       <span itemprop="price">{{ page.budget }}</span>
       <meta itemprop="priceCurrency" content="EGP">
-      {# If you have page.budget_num in front matter, use it here #}
       {% if page.budget_num %}<meta itemprop="value" content="{{ page.budget_num }}">{% endif %}
     </div>
   </div>
@@ -143,4 +148,16 @@ layout: default
   </div>
 
   <!-- زر الاستجابة للطلب عبر واتساب (محسّن) -->
-  <div class="property-call-action" 
+  <div class="property-call-action">
+    <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، أنا مهتم بالطلب: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
+       class="call-button"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="تواصل معنا بخصوص هذا الطلب عبر واتساب">
+      <i class="fab fa-whatsapp"></i>
+      <span>تواصل بخصوص هذا الطلب</span>
+      <small>سيتم إرسال تفاصيل الطلب تلقائياً</small>
+    </a>
+  </div>
+
+</div>
