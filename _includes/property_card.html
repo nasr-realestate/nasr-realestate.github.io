@@ -9,8 +9,8 @@
      ✅ address مع PostalAddress nested
      ✅ datePosted مضاف تلقائياً من page.date
      ✅ fa-arrow-right بدلاً من fa-arrow-left (RTL صحيح)
-     ✅ حذف <style> من الـ include — CSS في style.css فقط
      ✅ حذف inline styles — كل شيء في classes
+     ✅ width/height على الصور لمنع CLS
      ========================================================= -->
 
 {% assign main_color = "#d4af37" %}
@@ -53,6 +53,8 @@
       <img src="{{ img_src }}"
            alt="{{ include.item.title }} - عقار في مدينة نصر"
            loading="lazy"
+           width="400"
+           height="200"
            itemprop="image">
 
       <span class="card-label" style="color: {{ main_color }}; border-color: {{ main_color }};">
