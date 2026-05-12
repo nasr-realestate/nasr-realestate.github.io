@@ -14,7 +14,7 @@ layout: default
 {% assign whatsapp_number = "201147758857" %}
 
 <!-- =========================================================
-     1. تنبيه انتهاء صلاحية الطلب (إشعار فقط بدون زر)
+     1. تنبيه انتهاء صلاحية الطلب (إشعار فقط)
      ========================================================= -->
 {% if is_expired %}
 <div style="background: linear-gradient(135deg, rgba(10, 132, 255, 0.08), rgba(10, 132, 255, 0.02)); border: 1px solid rgba(10, 132, 255, 0.3); border-radius: 16px; padding: 25px 30px; margin: 0 auto 40px; max-width: 800px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.2); backdrop-filter: blur(10px);">
@@ -22,7 +22,7 @@ layout: default
   <h3 style="color: var(--color-primary); font-size: 1.3rem; margin-bottom: 10px; font-weight: 800;">مر على هذا الطلب أكثر من 7 أيام</h3>
   <p style="color: #ccc; font-size: 1rem; margin-bottom: 0; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
     لا تقلق، الطلب قد لا يزال قائماً! قاعدة بياناتنا تتغير يومياً وبعض الطلبات تظل مجمدة.<br>
-    <strong style="color: #fff;">للاستفسار عن حالة الطلب، يُرجى الضغط على زر الواتساب أدناه.</strong>
+    <strong style="color: #fff;">يمكنك التواصل معنا مباشرة من خلال أزرار التواصل أدناه.</strong>
   </p>
 </div>
 {% endif %}
@@ -139,26 +139,4 @@ layout: default
     {% endif %}
   </div>
 
-  <!-- زر الواتساب الوحيد -->
-  <div class="property-call-action">
-    <a href="https://wa.me/{{ whatsapp_number }}?text={{ 'مرحباً، أنا مهتم بالطلب: ' | append: page.title | append: ' — ' | append: site.url | append: page.url | url_encode }}"
-       class="call-button"
-       target="_blank"
-       rel="noopener noreferrer"
-       aria-label="تواصل معنا بخصوص هذا الطلب عبر واتساب">
-      <i class="fab fa-whatsapp"></i>
-      <span>تواصل بخصوص هذا الطلب</span>
-      <small>سيتم إرسال تفاصيل الطلب تلقائياً</small>
-    </a>
-  </div>
-
 </div>
-
-<!-- إخفاء العناصر العائمة (تطبق فقط على صفحة الطلب) -->
-<style>
-  .prestige-call-button,
-  .smart-search-trigger,
-  #enableNotif {
-    display: none !important;
-  }
-</style>
