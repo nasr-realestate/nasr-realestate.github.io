@@ -271,6 +271,29 @@ img  { max-width: 100%; height: auto; }
 .pulse-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: #d4af37; animation: smart-pulse 2.5s infinite; z-index: -1; }
 @keyframes smart-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.8); opacity: 0; } }
 
+/* === 🔔 زر الإشعارات (مضاف) === */
+#enableNotif {
+  position: fixed;
+  bottom: 105px;
+  left: 20px;
+  background: rgba(212,175,55,0.1);
+  color: #D4AF37;
+  border: 1px solid #D4AF37;
+  padding: 8px 15px;
+  border-radius: 50px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.8rem;
+  z-index: 999;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  transition: opacity 0.8s ease, transform 0.8s ease, background 0.3s, color 0.3s, border-color 0.3s;
+}
+#enableNotif.granted {
+  background: rgba(37, 211, 102, 0.15);
+  color: #25D366;
+  border-color: #25D366;
+}
+
 /* =========================================================
    === 🔍 محرك البحث الذكي
    ========================================================= */
@@ -421,6 +444,7 @@ img  { max-width: 100%; height: auto; }
   .teaser-content h2 { font-size: 1.8rem; }
   .fixed-call-button { bottom: 15px; right: 15px; font-size: 1rem; padding: 12px 18px; }
   .smart-search-trigger { bottom: 15px; left: 15px; }
+  #enableNotif { bottom: 85px; left: 15px; }
   .reviews-wrapper { flex-direction: column; gap: 10px; width: 100%; }
   .trustpilot-widget, .google-btn { width: 100% !important; max-width: 320px; justify-content: center; }
   .copyright-bar { flex-direction: column; text-align: center; }
@@ -602,5 +626,4 @@ img  { max-width: 100%; height: auto; }
   }
   .button-icon { width: 38px; height: 38px; font-size: 1rem; }
   .button-text .phone-num { font-size: 1rem; }
-   }
-      
+}
