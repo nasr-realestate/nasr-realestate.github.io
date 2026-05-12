@@ -291,8 +291,40 @@
     })();
   </script>
 
-  <script>
-    document.getElementById('enableNotif')?.addEventListener('click', async () => {
+   <script>
+    const notifBtn = document.getElementById('enableNotif');
+
+    // دالة إخفاء الزر بتلاشي
+    function hideNotifBtn(delay = 4000) {
+      setTimeout(() => {
+        if (notifBtn) {
+          notifBtn.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+          notifBtn.style.opacity = '0';
+          notifBtn.style.transform = 'translateY(10px)';
+          setTimeout(() => {
+            if (notifBtn) notifBtn.style.display = 'none';
+          }, 800);
+        }
+      }, delay);
+    }
+
+    // دالة إظهار حالة "مفعّلة" ثم الإخفاء
+    function showGrantedState() {
+      if (!notifBtn) return;
+      notifBtn.innerHTML = '✅ الإشعارات مفعّلة';
+      notifBtn.style.background = 'rgba(37, 211, 102, 0.15)';
+      notifBtn.style.color = '#25D366';
+      notifBtn.style.borderColor = '#25D366';
+      hideNotifBtn(4000);
+    }
+
+    // إذا كان الإذن ممنوحًا مسبقًا
+    if (Notification.permission === "granted") {
+      showGrantedState();
+    }
+
+    // عند الضغط على الزر
+    notifBtn?.addEventListener('click', async () => {
       const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
       const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
       const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
@@ -322,26 +354,12 @@
             createdAt: new Date(), 
             userAgent: navigator.userAgent 
           });
-          const btn = document.getElementById('enableNotif');
-          if (btn) {
-            btn.innerHTML = '✅ الإشعارات مفعّلة';
-            btn.style.background = 'rgba(37, 211, 102, 0.15)';
-            btn.style.color = '#25D366';
-            btn.style.borderColor = '#25D366';
-          }
+          showGrantedState();
         }
       } catch (err) {
         console.error("FCM Error:", err);
       }
     });
-
-    const notifBtn = document.getElementById('enableNotif');
-    if (Notification.permission === "granted" && notifBtn) {
-      notifBtn.innerHTML = '✅ الإشعارات مفعّلة';
-      notifBtn.style.background = 'rgba(37, 211, 102, 0.15)';
-      notifBtn.style.color = '#25D366';
-      notifBtn.style.borderColor = '#25D366';
-    }
   </script>
 </body>
 </html>
