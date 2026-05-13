@@ -53,13 +53,14 @@ plugins:
 google_analytics: "G-CDT8Q9YSJ0"
 
 # --- الهيكلة الجديدة للروابط (Strategic Permalinks) ---
+# تم التعديل للاعتماد على الـ ID لضمان روابط إنجليزية نظيفة
 collections:
   properties:
     output: true
-    permalink: /p/:slug/
+    permalink: /p/:id/
   requests:
     output: true
-    permalink: /r/:slug/
+    permalink: /r/:id/
 
 defaults:
   - scope:
