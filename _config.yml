@@ -1,5 +1,5 @@
 # =========================================================
-# === ⚙️ سمسار طلبك — الإصدار الاحترافي النهائي 2026 ===
+# === ⚙️ سمسار طلبك — الإصدار الاحترافي المطور 2026 ===
 # =========================================================
 
 title: "سمسار طلبك | طارق طنطاوي"
@@ -52,13 +52,14 @@ plugins:
 
 google_analytics: "G-CDT8Q9YSJ0"
 
+# --- الهيكلة الجديدة للروابط (Strategic Permalinks) ---
 collections:
   properties:
     output: true
-    permalink: /عقارات-مدينة-نصر/:slug/
+    permalink: /p/:slug/
   requests:
     output: true
-    permalink: /طلبات-عقارية-مستعجلة/:slug/
+    permalink: /r/:slug/
 
 defaults:
   - scope:
@@ -96,3 +97,4 @@ exclude:
   - node_modules
   - package.json
   - package-lock.json
+  
