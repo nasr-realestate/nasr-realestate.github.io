@@ -1,7 +1,8 @@
 # =========================================================
 # === ⚙️ سمسار طلبك — الإصدار الاحترافي النهائي 2026 ===
-# =======================================================
+# =========================================================
 
+# --- معلومات الموقع الأساسية ---
 title: "سمسار طلبك | طارق طنطاوي"
 title_separator: "|"
 description: "خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية."
@@ -12,8 +13,11 @@ timezone: Africa/Cairo
 locale: "ar_EG"
 encoding: "UTF-8"
 
+# --- الهوية البصرية والوسائط ---
 default_image: "/assets/img/social-home.webp"
+logo: "/assets/img/logo.webp"
 
+# --- بيانات الاستشاري (طارق طنطاوي) ---
 author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
@@ -26,21 +30,11 @@ contact:
   whatsapp_url: "https://wa.me/201147758857"
   email: "tarek@nasr-realestate.com"
 
-logo: "/assets/img/logo.webp"
-copyright: "© 2026 سمسار طلبك - طارق طنطاوي. جميع الحقوق محفوظة."
-
-twitter:
-  username: "tarekproptech"
-  card: "summary_large_image"
-
-social:
-  name: "سمسار طلبك - طارق طنطاوي"
-  links:
-    - "https://www.facebook.com/Tarekonly"
-    - "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
-
+# --- الربط التقني والأرشفة ---
 webmaster_verifications:
   google: "ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA"
+
+google_analytics: "G-CDT8Q9YSJ0"
 
 markdown: kramdown
 permalink: pretty
@@ -50,16 +44,16 @@ plugins:
   - jekyll-feed
   - jekyll-sitemap
 
-google_analytics: "G-CDT8Q9YSJ0"
-
+# --- إدارة الروابط (هنا تم إنهاء العربي في الـ URL) ---
 collections:
   properties:
     output: true
-    permalink: /عقارات-مدينة-نصر/:slug/
+    permalink: /properties/:slug/
   requests:
     output: true
-    permalink: /طلبات-عقارية-مستعجلة/:slug/
+    permalink: /requests/:slug/
 
+# --- الإعدادات الافتراضية ---
 defaults:
   - scope:
       path: ""
@@ -78,6 +72,7 @@ defaults:
     values:
       layout: "request_page"
 
+# --- تحسين الأداء والاستثناءات ---
 sass:
   style: compressed
 
@@ -96,3 +91,4 @@ exclude:
   - node_modules
   - package.json
   - package-lock.json
+  
