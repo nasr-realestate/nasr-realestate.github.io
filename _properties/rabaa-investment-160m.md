@@ -7,7 +7,7 @@ price: "4,500,000 ج.م"
 category: "apartments"
 id: "rabaa-investment-160m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن 4 غرف في رابعة الاستثماري
-slug: "شقة-للبيع-رابعة-الاستثماري-عباس-العقاد-4-غرف"
+slug: "rabaa-investment-160m"
 image_file: "rabia-Investment.webp"
 area: "160 متر مربع"
 rooms: "4 غرف نوم (تقسيم نادر)"

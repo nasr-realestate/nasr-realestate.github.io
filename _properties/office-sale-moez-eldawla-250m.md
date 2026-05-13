@@ -7,7 +7,7 @@ price: "6,000,000 ج.م"
 category: "offices"
 id: "office-sale-moez-eldawla-250m"
 # سطر الـ slug الاحترافي لاستهداف الشركات والباحثين عن مكاتب في مكرم عبيد
-slug: "مكتب-إداري-للبيع-شارع-معز-الدولة-مكرم-عبيد"
+slug: "office-sale-moez-eldawla-250m"
 image_file: "moez-al-Dawla-administrator.webp"
 area: "250 متر مربع"
 rooms: "3 غرف (منهم غرفة مدير) + ريسبشن 4 قطع"

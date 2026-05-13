@@ -6,7 +6,7 @@ location: "شارع حلمي حسن علي - خلف مصطفى النحاس - م
 price: "3,500,000 ج.م (متاح خيار العفش)"
 category: apartments
 id: "helmy-hassan-ali-160m"
-slug: "شقة-للبيع-شارع-حلمي-حسن-علي-مدينة-نصر-160م"
+slug: "helmy-hassan-ali-160m"
 image_file: "helmy-hassan-160m.webp"
 area: "160 متر مربع (صافي)"
 rooms: "3 غرف نوم + ريسبشن واسع"

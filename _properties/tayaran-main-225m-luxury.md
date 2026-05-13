@@ -7,7 +7,7 @@ price: "8,000,000 ج.م (قابل للتفاوض)"
 category: "apartments"
 id: "tayaran-main-225m-luxury"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز في شارع الطيران
-slug: "شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة"
+slug: "tayaran-main-225m-luxury"
 image_file: "al-Tayaranstreet.webp"
 area: "225 متر مربع"
 rooms: "3 غرف (منهم ماستر)"

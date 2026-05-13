@@ -7,7 +7,7 @@ price: "8,000,000 ج.م"
 category: "apartments"
 id: "makram-ebid-main-250m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز في مكرم عبيد
-slug: "شقة-للبيع-شارع-مكرم-عبيد-الرئيسي-مدينة-نصر-مسجلة"
+slug: "makram-ebid-main-250m"
 image_file: "mkram-ebid.webp"
 area: "250 متر مربع"
 rooms: "3 غرف نوم"

@@ -7,7 +7,7 @@ price: "4,500,000 ج.م"
 category: apartments
 id: "sherif-samy-ground-admin"
 # سطر الـ slug الاحترافي لاستهداف راغبي المقرات والعيادات
-slug: "شقة-ارضي-مرخصة-اداري-للبيع-الحي-الثامن-مدينة-نصر"
+slug: "sherif-samy-ground-admin"
 image_file: "Ground-Floor-Admin-Seraj-Mall.webp"
 area: "مساحة واسعة (يرجى الاستعلام)"
 rooms: "مقسمة وتصلح لكافة الأنشطة"

@@ -7,7 +7,7 @@ price: "4,750,000 ج.م"
 category: apartments
 id: "heliopolis-badia-180m-lux"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن الرقي في مصر الجديدة والميرغني
-slug: "شقة-للبيع-مصر-الجديدة-الميرغني-شارع-البادية"
+slug: "heliopolis-badia-180m-lux"
 image_file: "heliopolis-merghany-classic-180m.webp"
 area: "180 متر مربع (178م صافي)"
 rooms: "3 غرف نوم كبار"

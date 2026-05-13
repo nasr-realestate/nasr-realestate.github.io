@@ -7,7 +7,7 @@ price: "4,200,000 ج.م (سعر لقطة لسرعة البيع)"
 category: apartments
 id: "seraj-mall-apartment-170m"
 # سطر الـ slug الاحترافي للأرشفة في منطقة السراج ومكرم عبيد
-slug: "شقة-للبيع-بجوار-السراج-مول-مدينة-نصر-170م"
+slug: "seraj-mall-apartment-170m"
 image_file: "Next-to-al-siraj-mall.webp"
 area: "170 متر مربع"
 rooms: "3 غرف نوم + ريسبشن 3 قطع"

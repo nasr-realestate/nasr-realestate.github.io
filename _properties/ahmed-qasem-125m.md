@@ -7,7 +7,7 @@ price: "4,500,000 ج.م"
 category: apartments
 id: "ahmed-qasem-125m-lux"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز في عباس العقاد ومصطفى النحاس
-slug: "شقة-للبيع-شارع-أحمد-قاسم-جودة-مدينة-نصر-125م"
+slug: "ahmed-qasem-125m-lux"
 image_file: "ahmed-kasem-gooda.webp"
 area: "125 متر مربع"
 rooms: "2 غرفة نوم كبار"

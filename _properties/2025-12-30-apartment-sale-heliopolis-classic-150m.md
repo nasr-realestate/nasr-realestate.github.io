@@ -7,7 +7,7 @@ price: "4,500,000 ج.م (قابل للتفاوض)"
 category: apartments
 id: "masr-al-gdida-150m-classic"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن عراقة مصر الجديدة
-slug: "شقة-كلاسيك-للبيع-مصر-الجديدة-150م"
+slug: "masr-al-gdida-150m-classic"
 image_file: "classic-heliopolis-apartment-150m.webp"
 area: "150 متر مربع"
 rooms: "2 غرفة نوم كبار + ريسبشن 3 قطع"

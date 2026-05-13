@@ -7,7 +7,7 @@ price: "8,500,000 ج.م (أو إيجار 100 ألف)"
 category: "apartments"
 id: "duplex-villa-badawy"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز التجاري والسكني
-slug: "فيلا-دوبلكس-للبيع-شارع-عبد-الحميد-بدوي-نادي-الشمس"
+slug: "duplex-villa-badawy"
 image_file: "vila-nsftshtib.webp"
 area: "170م مباني + 180م حديقة"
 rooms: "3 غرف (قابلة للتعديل)"

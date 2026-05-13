@@ -6,7 +6,7 @@ location: "شارع عباس العقاد الرئيسي - المنطقة الأ
 price: "8,200,000 ج.م (مسجلة شهر عقاري)"
 category: apartments
 id: "abbas-elakkad-220m-2026"
-slug: "شقة-للبيع-عباس-العقاد-مدينة-نصر-220م-تشطيب-فاخر"
+slug: "abbas-elakkad-220m-2026"
 image_file: "Abbas-Elakkad-Main-View.webp"
 area: "220 متر مربع"
 rooms: "3 غرف نوم + ريسبشن 3 قطع"

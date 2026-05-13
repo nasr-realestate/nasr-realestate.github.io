@@ -6,7 +6,7 @@ location: "شارع محمد حسن الجمل - متفرع من أول عباس
 price: "12,000 ج.م شهرياً"
 category: commercial
 id: "shop-abbas-elakkad-60m-jan26"
-slug: "محل-للايجار-عباس-العقاد-مدينة-نصر-60م"
+slug: "shop-abbas-elakkad-60m-jan26"
 image_file: "Abbas-Elakkad-Shop-60m.webp"
 area: "60 متر مربع"
 rooms: "مساحة مفتوحة + حمام"

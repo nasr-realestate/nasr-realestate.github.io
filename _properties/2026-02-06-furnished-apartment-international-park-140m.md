@@ -6,7 +6,7 @@ location: "بجوار الحديقة الدولية - مدينة نصر"
 price: "3,400,000 ج.م (شامل العفش والأجهزة)"
 category: apartments
 id: "int-park-140m-furnished"
-slug: "شقة-للبيع-بجوار-الحديقة-الدولية-مدينة-نصر-140م-مفروشة"
+slug: "int-park-140m-furnished"
 image_file: "International-Park-Furnished-140m.webp"
 area: "140 متر مربع"
 rooms: "2 غرفة نوم كبيرة + ريسبشن 4 قطع"

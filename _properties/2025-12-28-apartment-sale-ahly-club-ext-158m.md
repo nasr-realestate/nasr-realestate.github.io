@@ -7,7 +7,7 @@ price: "4,800,000 ج.م"
 category: apartments
 id: "ahly-club-ext-158m"
 # سطر الـ slug الاحترافي للأرشفة في منطقة النادي الأهلي والجامعة الصينية
-slug: "شقة-للبيع-امتداد-النادي-الأهلي-مدينة-نصر-158م"
+slug: "ahly-club-ext-158m"
 image_file: "ahly-club-extension-apartment.webp"
 area: "158 متر مربع"
 rooms: "3 غرف (واحدة ماستر)"

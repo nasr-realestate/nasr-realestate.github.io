@@ -7,7 +7,7 @@ price: "5,000,000 ج.م (قابل للتفاوض)"
 category: "apartments"
 id: "tawfik-al-bakry-250m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن المساحات الكبيرة في مدينة نصر
-slug: "شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري"
+slug: "tawfik-al-bakry-250m"
 image_file: "tawfiqal-Bakri-st.webp"
 area: "250 متر مربع"
 rooms: "3 غرف + ليفينج روم ضخم"

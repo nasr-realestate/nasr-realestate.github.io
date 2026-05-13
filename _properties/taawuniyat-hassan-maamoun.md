@@ -7,7 +7,7 @@ price: "1,650,000 ج.م (كاش)"
 category: "apartments"
 id: "taawuniyat-hassan-maamoun"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق رخيصة في حسن المأمون
-slug: "شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر"
+slug: "taawuniyat-hassan-maamoun"
 image_file: "tawnit.webp"
 area: "86 متر مربع (مساحة قياسية)"
 rooms: "2 غرفة نوم"

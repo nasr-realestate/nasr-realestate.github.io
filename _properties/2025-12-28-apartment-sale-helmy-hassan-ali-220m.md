@@ -7,7 +7,7 @@ price: "5,500,000 ج.م"
 category: apartments
 id: "helmy-hassan-ali-220m-lux"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق بحري ومساحات واسعة
-slug: "شقة-للبيع-شارع-حلمي-حسن-علي-مدينة-نصر-220م"
+slug: "helmy-hassan-ali-220m-lux"
 image_file: "helmy-hassan-ali-street-220m-nasr-city.webp"
 area: "220 متر مربع"
 rooms: "3 غرف نوم كبار"

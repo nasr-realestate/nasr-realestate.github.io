@@ -7,7 +7,7 @@ price: "4,850,000 ج.م (عائد استثماري فوري)"
 category: "apartments"
 id: "duplex-safarat-invest-220m"
 # سطر الـ slug الاحترافي لاستهداف المستثمرين في حي السفارات
-slug: "دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار"
+slug: "duplex-safarat-invest-220m"
 image_file: "elsfarat-duplex.webp"
 area: "220 متر مربع (دوبلكس)"
 rooms: "3 غرف + ريسبشن واسع"

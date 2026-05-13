@@ -6,7 +6,7 @@ location: "شارع التسعين الجنوبي - الحي الثاني - أم
 price: "120,000,000 ج.م (قابل للتفاوض)"
 category: villas
 id: "villa-south-90th-120m"
-slug: "فيلا-للبيع-التجمع-الخامس-شارع-التسعين-الجنوبي-فندقي"
+slug: "villa-south-90th-120m"
 image_file: "South-90th-St-Villa-Dusit-View.webp"
 area: "661 متر مربع (أرض)"
 rooms: "مبنى كامل (بدروم + 4 أدوار)"

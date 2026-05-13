@@ -7,7 +7,7 @@ price: "3,000,000 ج.م"
 category: "apartments"
 id: "rabaa-eladawya-120m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن رابعة والزهور وشارع النصر
-slug: "شقة-للبيع-رابعة-العدوية-شارع-النصر-نادي-الزهور"
+slug: "rabaa-eladawya-120m"
 image_file: "nasr-st.webp"
 area: "120 متر مربع"
 rooms: "3 غرف نوم"

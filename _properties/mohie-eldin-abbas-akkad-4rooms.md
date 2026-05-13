@@ -7,7 +7,7 @@ price: "5,500,000 ج.م (بدون فرش) / 6,000,000 ج.م (بالفرش)"
 category: "apartments"
 id: "mohie-eldin-abbas-akkad-4rooms"
 # سطر الـ slug الاحترافي للكلمات البحثية في عباس العقاد
-slug: "شقة-4-غرف-للبيع-عباس-العقاد-مدينة-نصر"
+slug: "mohie-eldin-abbas-akkad-4rooms"
 image_file: "mohiedin.webp"
 area: "4 غرف + 4 ريسبشن"
 rooms: "4 غرف نوم"

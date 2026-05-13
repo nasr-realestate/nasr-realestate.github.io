@@ -7,7 +7,7 @@ price: "4,500,000 ج.م"
 category: apartments
 id: "hassan-maamoun-175m-lux"
 # سطر الـ slug الاحترافي للأرشفة في الحي الثامن وحسن المأمون
-slug: "شقة-للبيع-الحي-الثامن-مدينة-نصر-175م"
+slug: "hassan-maamoun-175m-lux"
 image_file: "hassan-maamoun-nahas-apartment-175m.webp"
 area: "175 متر مربع (صافي ممتاز)"
 rooms: "3 غرف + ليفينج منفصل"

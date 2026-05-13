@@ -7,7 +7,7 @@ price: "12,000,000 ج.م"
 category: "apartments"
 id: "sanhoori-luxury-250m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن الفخامة في السنهوري والمنطقة الأولى
-slug: "شقة-للبيع-عبد-الرزاق-السنهوري-مدينة-نصر-نخبة"
+slug: "sanhoori-luxury-250m"
 image_file: "abdul-razzaq-al-sanhuri.webp"
 area: "250 متر مربع"
 rooms: "3 غرف نوم (كلها ماستر)"

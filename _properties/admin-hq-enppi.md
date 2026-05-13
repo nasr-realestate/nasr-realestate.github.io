@@ -7,7 +7,7 @@ price: "20,000,000 ج.م"
 category: "admin-hq"
 id: "admin-hq-enppi"
 # سطر الـ slug الاحترافي لاستهداف قطاع البترول والمقاولات
-slug: "مقر-إداري-500م-بجوار-إنبي-مدينة-نصر"
+slug: "admin-hq-enppi"
 image_file: "administrative-headquarters-next-enppi.webp"
 area: "500 متر تقريباً (دوبلكس)"
 rooms: "8 غرف مغلقة + قاعة اجتماعات"

@@ -7,7 +7,7 @@ price: "3,250,000 ج.م"
 category: "apartments"
 id: "hay-sabe-115m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز في الحي السابع
-slug: "شقة-للبيع-الحي-السابع-مدينة-نصر-تشطيب-حديث"
+slug: "hay-sabe-115m"
 image_file: "elhai-elsabe.webp"
 area: "115 متر مربع"
 rooms: "2 غرف نوم"

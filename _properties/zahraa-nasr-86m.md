@@ -7,7 +7,7 @@ price: "1,650,000 ج.م"
 category: "apartments"
 id: "zahraa-nasr-86m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق رخيصة في الزهراء
-slug: "شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص"
+slug: "zahraa-nasr-86m"
 image_file: "zahraa-thirdfloor.webp"
 area: "86 متر مربع"
 rooms: "2 غرف نوم"

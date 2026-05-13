@@ -7,7 +7,7 @@ price: "5,000,000 ج.م"
 category: "apartments"
 id: "republican-guard-197m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن عمارات الحرس الجمهوري وعباس العقاد
-slug: "شقة-للبيع-عمارات-الحرس-الجمهوري-مدينة-نصر-عباس-العقاد"
+slug: "republican-guard-197m"
 image_file: "republican-guard.webp"
 area: "197 متر مربع"
 rooms: "3 غرف نوم"

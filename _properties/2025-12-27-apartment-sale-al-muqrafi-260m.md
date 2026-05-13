@@ -7,7 +7,7 @@ price: "6,000,000 ج.م (قابل للتفاوض)"
 category: apartments
 id: "makaryafi-260m"
 # سطر الـ slug الاحترافي للأرشفة في شارع المقريفي والمنطقة السادسة
-slug: "شقة-للبيع-شارع-المقريفي-مدينة-نصر-260م"
+slug: "makaryafi-260m"
 image_file: "al-muqrafi-street.webp"
 area: "260 متر مربع"
 rooms: "3 غرف نوم + ليفينج روم"

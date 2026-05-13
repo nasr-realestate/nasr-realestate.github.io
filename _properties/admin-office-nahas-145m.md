@@ -7,7 +7,7 @@ price: "5,500,000 ج.م"
 category: "admin-hq"
 id: "admin-office-nahas-145m"
 # سطر الـ slug الاحترافي لاستهداف النشاط الطبي والإداري في مصطفى النحاس
-slug: "مقر-إداري-للبيع-مصطفى-النحاس-عمارات-عثمان"
+slug: "admin-office-nahas-145m"
 image_file: "othman-buildings.webp"
 area: "145 متر مربع"
 rooms: "3 غرف + ريسبشن 3 قطع"

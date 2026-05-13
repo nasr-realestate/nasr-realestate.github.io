@@ -7,7 +7,7 @@ price: "3,500,000 ج.م (سعر لقطة)"
 category: apartments
 id: "hassan-al-sharif-150m"
 # سطر الـ slug الاحترافي للأرشفة في شارع حسن الشريف وحسن المأمون
-slug: "شقة-للبيع-شارع-حسن-الشريف-مدينة-نصر-150م"
+slug: "hassan-al-sharif-150m"
 image_file: "hassan-al-sharif-apartment-150m.webp"
 area: "150 متر مربع"
 rooms: "3 غرف نوم"

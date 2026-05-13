@@ -6,7 +6,7 @@ location: "13 شارع عبد العظيم الغلمي – مدينة نصر"
 price: "7,000,000 ج.م (بما يعادله بالدولار - تحويل خارجي)"
 category: apartments
 id: "abdel-azim-ghalmi-200m-expat"
-slug: "شقة-للبيع-شارع-عبد-العظيم-الغلمي-مدينة-نصر-200م-للمغتربين"
+slug: "abdel-azim-ghalmi-200m-expat"
 image_file: "Abdel-Azim-Ghalmi-200m-Expats.webp"
 area: "200 متر مربع"
 rooms: "تقسيم واسع + ريسبشن كبير"

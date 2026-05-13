@@ -7,7 +7,7 @@ price: "1,100,000 ج.م (سعر لقطة)"
 category: "apartments"
 id: "salam-city-218m-roof"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن لقطات مدينة السلام
-slug: "شقة-للبيع-مدينة-السلام-بنتهاوس-سعر-لقطة"
+slug: "salam-city-218m-roof"
 image_file: "nour-mahmoud-st.webp"
 area: "218 متر مربع + حق انتفاع بالروف"
 rooms: "3 غرف (مساحات واسعة)"

@@ -7,7 +7,7 @@ price: "4,200,000 ج.م (شامل الفرش)"
 category: "apartments"
 id: "nasr-street-furnished"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق مفروشة في قلب مدينة نصر
-slug: "شقة-مفروشة-للبيع-شارع-النصر-مدينة-نصر-فرش-فندقي"
+slug: "nasr-street-furnished"
 image_file: "nasr-street.webp"
 area: "غرفتين وصالة (مساحة ممتازة)"
 rooms: "2 غرف نوم"

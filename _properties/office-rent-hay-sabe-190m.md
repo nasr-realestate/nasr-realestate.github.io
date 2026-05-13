@@ -7,7 +7,7 @@ price: "26,000 ج.م / شهرياً"
 category: "offices"
 id: "office-rent-hay-sabe-190m"
 # سطر الـ slug الاحترافي لاستهداف الشركات والباحثين عن مكاتب للإيجار في الحي السابع
-slug: "مقر-إداري-للإيجار-شارع-عبد-الله-العربي-مدينة-نصر"
+slug: "office-rent-hay-sabe-190m"
 image_file: "administrator-abdullah-al-arabi.webp"
 area: "190 متر مربع"
 rooms: "3 غرف مغلقة + 2 صالة عمل"

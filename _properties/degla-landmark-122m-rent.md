@@ -7,7 +7,7 @@ price: "30,000 ج.م / شهرياً"
 category: "apartments-rent"
 id: "degla-landmark-122m-rent"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن كمبوندات مدينة نصر
-slug: "شقة-للإيجار-مفروشة-دجلة-لاند-مارك-مدينة-نصر"
+slug: "degla-landmark-122m-rent"
 image_file: "maamar-al-murshidi.webp"
 area: "122 متر مربع"
 rooms: "3 غرف نوم (Pool View)"

@@ -6,7 +6,7 @@ location: "شارع إسماعيل القباني - المنطقة الأولى 
 price: "6,000,000 ج.م (مسجلة شهر عقاري)"
 category: apartments
 id: "genena-mall-186m-office-residence"
-slug: "شقة-للبيع-شارع-اسماعيل-القباني-مدينة-نصر-186م"
+slug: "genena-mall-186m-office-residence"
 image_file: "Ismail-Qabbani-Street-Genena-Mall.webp"
 area: "186 متر مربع (صافي)"
 rooms: "مساحات مفتوحة (تقسيم شركات)"

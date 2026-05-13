@@ -7,7 +7,7 @@ price: "7,000,000 ج.م"
 category: "apartments"
 id: "sunrise-towers-288m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن الفخامة في أبراج صن رايز
-slug: "شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر"
+slug: "sunrise-towers-288m"
 image_file: "sunrise.webp"
 area: "288 متر مربع"
 rooms: "3 غرف نوم"

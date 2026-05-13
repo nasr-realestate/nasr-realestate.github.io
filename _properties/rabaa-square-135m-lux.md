@@ -6,7 +6,7 @@ location: "ميدان رابعة العدوية - طريق النصر - مدين
 price: "5,000,000 ج.م (شامل الأجهزة والمطبخ)"
 category: "apartments"
 id: "rabaa-square-135m-lux"
-slug: "شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر"
+slug: "rabaa-square-135m-lux"
 image_file: "raba-nasr.webp"
 area: "135 متر مربع"
 rooms: "2 غرفة (قابلة للتعديل لـ 3) + صالون وسفرة"

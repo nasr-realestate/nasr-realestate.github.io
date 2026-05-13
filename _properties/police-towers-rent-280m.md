@@ -7,7 +7,7 @@ price: "25,000 ج.م / شهرياً"
 category: "apartments-rent"
 id: "police-towers-rent-280m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن إيجار في حي السفارات
-slug: "شقة-للإيجار-حي-السفارات-مدينة-نصر-مساحة-كبيرة"
+slug: "police-towers-rent-280m"
 image_file: "rent-diplomatic-quarter.webp"
 area: "280 متر مربع (مساحة قصر)"
 rooms: "3 غرف نوم كبار"

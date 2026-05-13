@@ -7,7 +7,7 @@ price: "5,000,000 ج.م"
 category: "apartments"
 id: "nasr-city-9th-garden"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق بحديقة ومدخل خاص
-slug: "شقة-بحديقة-خاصة-للبيع-مدينة-نصر-المنطقة-التاسعة"
+slug: "nasr-city-9th-garden"
 image_file: "the-ninth-district-toukhi.webp"
 area: "155م شقة + 40م حديقة"
 rooms: "3 غرف نوم"

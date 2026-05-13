@@ -6,7 +6,7 @@ location: "شارع النزهة الرئيسي - مدينة نصر"
 price: "70,000 ج.م / شهرياً"
 category: offices
 id: "admin-rent-nozha-main-260m"
-slug: "مقر-إداري-للإيجار-شارع-النزهة-مدينة-نصر-260م"
+slug: "admin-rent-nozha-main-260m"
 image_file: "nozha-main-street-administrative-hq.webp"
 area: "260 متر مربع"
 rooms: "4 غرف مغلقة + ريسبشن 3 قطع"

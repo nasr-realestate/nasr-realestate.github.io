@@ -7,7 +7,7 @@ price: "4,000,000 ج.م"
 category: "apartments"
 id: "new-polis-130m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن كمبوند نيوبوليس ومستقبل سيتي
-slug: "شقة-للبيع-كمبوند-نيوبوليس-وادي-دجلة-مدينتي"
+slug: "new-polis-130m"
 image_file: "new-plus-compound.webp"
 area: "130 متر مربع"
 rooms: "2 غرفة (واحدة ماستر)"

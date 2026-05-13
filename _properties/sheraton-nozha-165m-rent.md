@@ -7,7 +7,7 @@ price: "25,000 ج.م / شهرياً"
 category: "apartments-rent"
 id: "sheraton-nozha-165m-rent"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن إيجار في شيراتون والنزهة
-slug: "شقة-للإيجار-شيراتون-النزهة-سكني-إداري"
+slug: "sheraton-nozha-165m-rent"
 image_file: "sheraton-nozha.webp"
 area: "165 متر مربع (صافي)"
 rooms: "3 غرف كبار (5×5 متر)"

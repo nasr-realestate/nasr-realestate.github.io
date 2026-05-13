@@ -7,7 +7,7 @@ price: "4,000,000 ج.م (قابل للتفاوض)"
 category: apartments
 id: "fouad-nasseem-150m"
 # سطر الـ slug الاحترافي للأرشفة في منطقة سونستا وطريق النصر
-slug: "شقة-للبيع-خلف-فندق-سونستا-مدينة-نصر-150م"
+slug: "fouad-nasseem-150m"
 image_file: "fouad-nassim-sonesta-nasr-city.webp"
 area: "150 متر مربع"
 rooms: "2 نوم (قابلة للتعديل لـ 3) + ريسبشن واسع"

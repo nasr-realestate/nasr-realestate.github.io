@@ -7,7 +7,7 @@ price: "45,000,000 ج.م (قابل للتفاوض)"
 category: "admin-hq"
 id: "shop-tayaran-togari-400m"
 # سطر الـ slug الاحترافي لاستهداف البراندات والبنوك
-slug: "محل-تجاري-للبيع-شارع-الطيران-مدينة-نصر-400م"
+slug: "shop-tayaran-togari-400m"
 image_file: "togari-400m.webp"
 area: "400 متر مربع (200 أرضي + 200 أول)"
 rooms: "مساحة مفتوحة (Open Space)"

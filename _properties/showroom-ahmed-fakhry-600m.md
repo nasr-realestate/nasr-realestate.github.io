@@ -7,7 +7,7 @@ price: "السعر العادل للسوق (عند الاتصال)"
 category: "admin-hq"
 id: "showroom-ahmed-fakhry-600m"
 # سطر الـ slug الاحترافي لاستهداف الشركات والتوكيلات التجارية
-slug: "معرض-تجاري-للبيع-مدينة-نصر-المنطقة-السادسة"
+slug: "showroom-ahmed-fakhry-600m"
 image_file: "trade-fair.webp"
 area: "600 متر مربع (400م سفلي + 200م علوي)"
 rooms: "مساحة مفتوحة (Showroom)"

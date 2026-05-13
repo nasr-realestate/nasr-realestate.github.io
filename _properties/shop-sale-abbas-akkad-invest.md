@@ -7,7 +7,7 @@ price: "30,000,000 ج.م (تسهيلات متاحة)"
 category: "shops"
 id: "shop-sale-abbas-akkad-invest"
 # سطر الـ slug الاحترافي لاستهداف المستثمرين والباحثين عن عائد مادي مرتفع
-slug: "محل-تجاري-للبيع-عباس-العقاد-عائد-استثماري"
+slug: "shop-sale-abbas-akkad-invest"
 image_file: "shopp212m.webp"
 area: "212 متر مربع"
 rooms: "مساحة مفتوحة (Showroom)"

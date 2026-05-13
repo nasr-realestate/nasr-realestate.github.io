@@ -6,7 +6,7 @@ location: "المربع الذهبي - موازي لشارع مكرم عبيد -
 price: "16,000 ج.م شهرياً"
 category: commercial
 id: "shop-rent-makram-ebeid-67m"
-slug: "محل-للايجار-مكرم-عبيد-مدينة-نصر-67م-الترا-سوبر-لوكس"
+slug: "shop-rent-makram-ebeid-67m"
 image_file: "Luxury-Shop-Makram-Ebeid-67m.webp"
 area: "67 متر مربع"
 rooms: "مساحة مفتوحة"

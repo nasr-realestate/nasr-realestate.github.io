@@ -7,7 +7,7 @@ price: "8,500,000 ج.م (تمليك)"
 category: "offices"
 id: "admin-hq-sale-9th-district"
 # سطر الـ slug الاحترافي لاستهداف الشركات والباحثين عن مقرات تمليك
-slug: "مقر-إداري-للبيع-مدينة-نصر-المنطقة-التاسعة"
+slug: "admin-hq-sale-9th-district"
 image_file: "region-nine.webp"
 area: "356 متر (300م داخلي + 56م حديقة)"
 rooms: "مساحة مفتوحة قابلة للتقسيم"

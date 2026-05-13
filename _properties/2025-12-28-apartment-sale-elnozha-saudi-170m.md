@@ -7,7 +7,7 @@ price: "4,500,000 ج.م (خيارات البيع والفرش متاحة)"
 category: apartments
 id: "elnozha-saudi-170m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن الرقي في شارع النزهة والشركة السعودية
-slug: "شقة-للبيع-شارع-النزهة-الشركة-السعودية-مدينة-نصر"
+slug: "elnozha-saudi-170m"
 image_file: "el-nozha-saudi-apartment-170m.webp"
 area: "170 متر مربع"
 rooms: "3 غرف نوم كبار"

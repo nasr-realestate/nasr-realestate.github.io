@@ -7,7 +7,7 @@ price: "6,750,000 ج.م"
 category: "apartments"
 id: "banafseg2-showroom-340m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن فرص تجارية في التجمع
-slug: "بيزمنت-تجاري-للبيع-التجمع-الاول-البنفسج-2"
+slug: "banafseg2-showroom-340m"
 image_file: "bethment-banfseg.webp"
 area: "340 متر (200م داخلي + 140م حديقة)"
 rooms: "4 غرف + مساحات مفتوحة"

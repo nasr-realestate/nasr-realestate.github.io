@@ -7,7 +7,7 @@ price: "3,800,000 ج.م"
 category: apartments
 id: "duplex-7th-district-150m"
 # سطر الـ slug الاحترافي للارشفة في الحي السابع
-slug: "دوبلكس-للبيع-الحي-السابع-مدينة-نصر-ابن-قتيبة"
+slug: "duplex-7th-district-150m"
 image_file: "Duplex-the-Seventh-district-150m².webp"
 area: "150 متر مربع (صافي)"
 rooms: "2 غرفة نوم + 2 معيشة"

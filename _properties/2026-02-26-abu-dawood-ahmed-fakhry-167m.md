@@ -6,7 +6,7 @@ location: "المنطقة السادسة - بين أبو داود الظاهري
 price: "5,000,000 ج.م (قابل للتفاوض)"
 category: apartments
 id: "abu-dawood-fakhry-167m"
-slug: "شقة-للبيع-مدينة-نصر-بين-ابو-داود-واحمد-فخري-167م"
+slug: "abu-dawood-fakhry-167m"
 image_file: "Abu-Dawood-Ahmed-Fakhry-View.webp"
 area: "167 متر مربع"
 rooms: "3 غرف نوم + صالة كبيرة"

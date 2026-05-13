@@ -7,7 +7,7 @@ price: "4,100,000 ج.م"
 category: "apartments"
 id: "green-hills-190m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق طريق الأوتوستراد والمقاولين
-slug: "شقة-للبيع-أبراج-جرين-هيلز-طريق-الأوتوستراد"
+slug: "green-hills-190m"
 image_file: "greenhilz.webp"
 area: "190 متر مربع"
 rooms: "3 غرف نوم"

@@ -7,7 +7,7 @@ price: "4,500,000 ج.م"
 category: "apartments"
 id: "safarat-safwa-170m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن الرقي في حي السفارات
-slug: "شقة-للبيع-حي-السفارات-مدينة-نصر-برج-الصفوة"
+slug: "safarat-safwa-170m"
 image_file: "hai-elswfarat.webp"
 area: "170 متر مربع"
 rooms: "3 غرف نوم"

@@ -7,7 +7,7 @@ price: "6,000,000 ج.م"
 category: "apartments"
 id: "sunview-mall-207m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن التميز في مول صن فيو ومصطفى النحاس
-slug: "شقة-للبيع-مول-صن-فيو-مصطفى-النحاس-مدينة-نصر"
+slug: "sunview-mall-207m"
 image_file: "sun-view.webp"
 area: "207 متر مربع"
 rooms: "3 غرف نوم"

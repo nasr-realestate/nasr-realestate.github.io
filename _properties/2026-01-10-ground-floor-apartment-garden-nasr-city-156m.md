@@ -7,7 +7,7 @@ price: "5,500,000 ج.م"
 category: apartments
 id: "golden-square-garden-156m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن شقق بحديقة في المربع الذهبي
-slug: "شقة-أرضي-بحديقة-للبيع-مدينة-نصر-المربع-الذهبي"
+slug: "golden-square-garden-156m"
 image_file: "apartment-garden-golden-square-nasr-city.webp"
 area: "156 متر (صافي) + 120 متر حديقة"
 rooms: "3 غرف نوم + ريسبشن 3 قطع"

@@ -7,7 +7,7 @@ price: "1,900,000 ج.م (شامل الفرش)"
 category: "apartments"
 id: "zahraa-nasr-city-130m"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن استثمار في زهراء مدينة نصر
-slug: "شقة-للبيع-زهراء-مدينة-نصر-مفروشة-استثمار"
+slug: "zahraa-nasr-city-130m"
 image_file: "zhraa-nasr.webp"
 area: "130 متر مربع"
 rooms: "3 غرف نوم"

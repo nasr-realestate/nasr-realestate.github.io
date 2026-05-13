@@ -7,7 +7,7 @@ price: "30,000 ج.م / شهرياً"
 category: apartments-rent
 id: "rent-furnished-batrawy-30k"
 # سطر الـ slug الاحترافي للأرشفة في منطقة جنينة مول وعباس العقاد
-slug: "شقة-مفروشة-للإيجار-عباس-العقاد-البطراوي"
+slug: "rent-furnished-batrawy-30k"
 image_file: "rent-furnished-batrawy-nasr-city.webp"
 area: "مساحة كبيرة واسعة"
 rooms: "3 غرف نوم + ريسبشن كبير"

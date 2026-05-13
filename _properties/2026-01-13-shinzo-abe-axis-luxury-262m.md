@@ -6,7 +6,7 @@ location: "محور شينزو آبي الرئيسي - مدينة نصر"
 price: "سعر مميز للمتر (تسهيلات في السداد)"
 category: apartments
 id: "shinzo-abe-262m-4th-floor"
-slug: "شقة-للبيع-محور-شينزو-ابي-مدينة-نصر-262م"
+slug: "shinzo-abe-262m-4th-floor"
 image_file: "Shinzo-Abe-Main-View-262m.webp"
 area: "262 متر مربع"
 rooms: "4 غرف (منهم ماستر) + ليفينج"

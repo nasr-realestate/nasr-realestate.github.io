@@ -7,7 +7,7 @@ price: "35,000 ج.م / شهرياً"
 category: "apartments-rent"
 id: "obour-buildings-rent-47"
 # سطر الـ slug الاحترافي لاستهداف الباحثين عن إيجار في عمارات العبور وصلاح سالم
-slug: "شقة-للإيجار-عمارات-العبور-صلاح-سالم-مدينة-نصر"
+slug: "obour-buildings-rent-47"
 image_file: "salah-salemal-abour.webp"
 area: "مساحة واسعة (النموذج الكبير)"
 rooms: "3 غرف نوم + ريسبشن واسع"

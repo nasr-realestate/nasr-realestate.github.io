@@ -7,7 +7,7 @@ price: "2,600,000 ج.م (فرصة استثمارية)"
 category: apartments
 id: "mustafa-elnahas-160m"
 # سطر الـ slug الاحترافي للأرشفة في منطقة امتداد النحاس والسوق التجاري
-slug: "شقة-للبيع-امتداد-مصطفى-النحاس-مدينة-نصر-160م"
+slug: "mustafa-elnahas-160m"
 image_file: "mustafa-nahas-extension-160m.webp"
 area: "160 متر مربع"
 rooms: "3 غرف + ريسبشن 3 قطع"
