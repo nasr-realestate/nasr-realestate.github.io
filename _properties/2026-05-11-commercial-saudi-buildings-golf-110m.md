@@ -6,7 +6,7 @@ location: "عمارات السعودية - متفرع من شارع النزهة
 price: "يحدد بعد المعاينة (للجادين)"
 category: commercial
 id: "saudi-buildings-golf-110m"
-slug: "مقر-تجاري-للبيع-عمارات-السعودية-ارض-الجولف-110م"
+slug: "commercial-saudi-buildings-golf-110m"
 image_file: "Commercial-Saudi-Buildings-Golf-110m.webp"
 area: "110 متر مربع (صافي)"
 rooms: "مساحة مفتوحة (17×6 متر) + مطبخ كبير"
