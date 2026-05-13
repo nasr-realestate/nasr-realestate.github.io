@@ -1,0 +1,27 @@
+name: "Auto-Cleanup Expired Requests"
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # يعمل تلقائياً كل يوم الساعة 12 منتصف الليل
+  workflow_dispatch: # يتيح لك تشغيله يدوياً إذا أردت
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Remove Old Requests (Older than 7 Days)
+        run: |
+          find _requests -name "*.md" ! -name ".gitkeep" -mtime +7 -exec git rm {} \;
+        # هذا الأمر يبحث عن الملفات التي مر عليها 7 أيام ويحذفها مع استثناء ملف الحماية .gitkeep
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "Simsar Talabak Bot"
+          git config --global user.email "bot@nasr-realestate.com"
+          git add .
+          git diff-index --quiet HEAD || git commit -m "System: Auto-cleanup of expired requests (7-day rule)"
+          git push
+          
