@@ -52,7 +52,7 @@ jobs:
               );
 
               if (files.length === 0) {
-                console.log("⚠️ لم يتم العثور على ملفات جديدة.");
+                console.log("⚠️ لم يتم العثور على ملفات مستهدفة.");
                 return;
               }
 
@@ -76,8 +76,10 @@ jobs:
                 const slug = data.slug || "";
                 
                 const baseUrl = "https://nasr-realestate.github.io";
-                // إصلاح الرابط الفاخر ليتطابق مع الـ Permalinks في GitHub Pages
-                const propertyUrl = slug ? `${baseUrl}/properties/${slug}/` : baseUrl;
+                
+                // هندسة الرابط الديناميكي الذكي لمنع الـ 404 نهائياً بناءً على نوع المجلد الفعلي
+                const folderFolder = isRequest ? "requests" : "properties";
+                const propertyUrl = slug ? `${baseUrl}/${folderFolder}/${slug}/` : baseUrl;
 
                 const message = {
                   data: {
@@ -89,10 +91,10 @@ jobs:
                 };
                 
                 const response = await admin.messaging().sendEachForMulticast(message);
-                console.log(`✅ تم إرسال الإشعار بنجاح. الرابط الموجه: ${propertyUrl}`);
+                console.log(`✅ تم الإرسال بنجاح للرابط الديناميكي: ${propertyUrl}`);
               }
             } catch (error) {
-              console.error("❌ حدث خطأ:", error);
+              console.error("❌ خطأ:", error);
             }
           }
           
