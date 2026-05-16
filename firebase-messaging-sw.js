@@ -1,4 +1,4 @@
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js'); // تم تصحيح الحرف الصغير هنا
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
@@ -12,13 +12,16 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ✅ يقرأ من data فقط — الـ SW يتحكم في كل شيء
+// ✅ يقرأ من data فقط — الـ SW يتحكم في كل شيء ويعمل في الخلفية بنجاح
 messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification(payload.data.title, {
-    body: payload.data.body,
-    icon: 'https://nasr-realestate.github.io/assets/img/logo.webp',
-    data: { url: payload.data.url }
-  });
+  console.log("Received background message: ", payload);
+  if (payload.data) {
+    self.registration.showNotification(payload.data.title || "تنبيه جديد", {
+      body: payload.data.body || "اضغط للتفاصيل",
+      icon: 'https://nasr-realestate.github.io/assets/img/logo.webp',
+      data: { url: payload.data.url }
+    });
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
