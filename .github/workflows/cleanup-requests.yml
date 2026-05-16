@@ -22,6 +22,12 @@ jobs:
           git config --global user.name "Simsar Talabak Bot"
           git config --global user.email "bot@nasr-realestate.com"
           git add .
-          git diff-index --quiet HEAD || git commit -m "System: Auto-cleanup of expired requests (7-day rule)"
-          git push
+          # التحقق من وجود تغييرات قبل عمل Commit لتجنب الأخطاء البرمجية
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "System: Auto-cleanup of expired requests (7-day rule)"
+            git pull origin master --rebase # السطر السحري لجلب التحديثات ومنع التعارض والرفض
+            git push origin master # الدفع مباشرة لفرع master الخاص بموقعك
+          else
+            echo "No expired requests found to cleanup today."
+          fi
           
