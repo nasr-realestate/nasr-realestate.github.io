@@ -3,7 +3,7 @@ name: إرسال إشعار عند إضافة عقار أو طلب جديد
 on:
   push:
     branches:
-      - master # مراقبة الفرع النشط حالياً لموقعك
+      - master
     paths:
       - '_properties/**'
       - '_requests/**'
@@ -17,7 +17,7 @@ jobs:
       - name: استنساخ المستودع
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # قراءة آخر حركات الرفع بدقة
+          fetch-depth: 2
 
       - name: إعداد Node.js
         uses: actions/setup-node@v4
@@ -46,14 +46,13 @@ jobs:
           
           async function sendNotification() {
             try {
-              // استراتيجية الاقتناص المباشر لأحدث ملف تم التعامل معه وتفادي خداع الـ Diff
               const output = execSync("git log -1 --name-only --pretty=", { encoding: "utf8" });
               const files = output.split("\n").filter(f =>
                 (f.startsWith("_properties/") || f.startsWith("_requests/")) && f.endsWith(".md") && fs.existsSync(f)
               );
 
               if (files.length === 0) {
-                console.log("⚠️ لم يتم العثور على ملفات جديدة في مجلدات العقارات والطلبات.");
+                console.log("⚠️ لم يتم العثور على ملفات جديدة.");
                 return;
               }
 
@@ -62,7 +61,7 @@ jobs:
               tokensSnapshot.forEach(doc => tokens.push(doc.id));
               
               if (tokens.length === 0) {
-                console.log("❌ لا يوجد مستخدمين مسجلين (Tokens) في سحابة Firestore.");
+                console.log("❌ لا يوجد مستخدمين مسجلين.");
                 return;
               }
 
@@ -77,8 +76,8 @@ jobs:
                 const slug = data.slug || "";
                 
                 const baseUrl = "https://nasr-realestate.github.io";
-                const section = isRequest ? "طلبات-عقارية-مستعجلة" : "عقارات-مدينة-نصر";
-                const propertyUrl = slug ? `${baseUrl}/${section}/${slug}/` : baseUrl;
+                // إصلاح الرابط الفاخر ليتطابق مع الـ Permalinks في GitHub Pages
+                const propertyUrl = slug ? `${baseUrl}/properties/${slug}/` : baseUrl;
 
                 const message = {
                   data: {
@@ -90,10 +89,10 @@ jobs:
                 };
                 
                 const response = await admin.messaging().sendEachForMulticast(message);
-                console.log(`✅ تم اقتناص الملف بنجاح وإرسال الإشعار لهاتف طارق. نجاح: ${response.successCount}`);
+                console.log(`✅ تم إرسال الإشعار بنجاح. الرابط الموجه: ${propertyUrl}`);
               }
             } catch (error) {
-              console.error("❌ حدث خطأ في خادم الإرسال:", error);
+              console.error("❌ حدث خطأ:", error);
             }
           }
           
