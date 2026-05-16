@@ -3,7 +3,7 @@ name: إرسال إشعار عند إضافة عقار أو طلب جديد
 on:
   push:
     branches:
-      - main
+      - master # مراقبة الفرع النشط حالياً لموقعك
     paths:
       - '_properties/**'
       - '_requests/**'
@@ -17,7 +17,7 @@ jobs:
       - name: استنساخ المستودع
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # جلب التاريخ بالكامل لضمان المقارنة
+          fetch-depth: 2 # قراءة آخر حركات الرفع بدقة
 
       - name: إعداد Node.js
         uses: actions/setup-node@v4
@@ -46,14 +46,14 @@ jobs:
           
           async function sendNotification() {
             try {
-              // 1. جلب الملفات التي تغيرت في هذا الـ Push فقط
-              const output = execSync("git diff --name-only ${{ github.event.before }} ${{ github.event.after }}", { encoding: "utf8" });
+              // استراتيجية الاقتناص المباشر لأحدث ملف تم التعامل معه وتفادي خداع الـ Diff
+              const output = execSync("git log -1 --name-only --pretty=", { encoding: "utf8" });
               const files = output.split("\n").filter(f =>
                 (f.startsWith("_properties/") || f.startsWith("_requests/")) && f.endsWith(".md") && fs.existsSync(f)
               );
 
               if (files.length === 0) {
-                console.log("⚠️ لا توجد ملفات عقارات جديدة في هذا الرفع.");
+                console.log("⚠️ لم يتم العثور على ملفات جديدة في مجلدات العقارات والطلبات.");
                 return;
               }
 
@@ -62,7 +62,7 @@ jobs:
               tokensSnapshot.forEach(doc => tokens.push(doc.id));
               
               if (tokens.length === 0) {
-                console.log("❌ لا يوجد مستخدمين مسجلين (Tokens) في Firestore.");
+                console.log("❌ لا يوجد مستخدمين مسجلين (Tokens) في سحابة Firestore.");
                 return;
               }
 
@@ -90,10 +90,10 @@ jobs:
                 };
                 
                 const response = await admin.messaging().sendEachForMulticast(message);
-                console.log(`✅ تم إرسال إشعار للملف: ${filePath}. نجاح: ${response.successCount}`);
+                console.log(`✅ تم اقتناص الملف بنجاح وإرسال الإشعار لهاتف طارق. نجاح: ${response.successCount}`);
               }
             } catch (error) {
-              console.error("❌ حدث خطأ أثناء التنفيذ:", error);
+              console.error("❌ حدث خطأ في خادم الإرسال:", error);
             }
           }
           
