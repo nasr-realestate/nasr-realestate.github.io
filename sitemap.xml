@@ -4,7 +4,6 @@ layout: null
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
-  {% comment %} 1. المقالات والمستجدات {% endcomment %}
   {% for post in site.posts %}
     <url>
       <loc>{{ post.url | absolute_url }}</loc>
@@ -18,7 +17,6 @@ layout: null
     </url>
   {% endfor %}
 
-  {% comment %} 2. الصفحات الأساسية (مع حماية بنية الروابط الفاخرة) {% endcomment %}
   {% for page in site.pages %}
     {% unless page.url contains '404' or page.url contains 'google' or page.url contains 'dacda97e' or page.url contains '.css' or page.url contains '.js' %}
       <url>
@@ -30,7 +28,6 @@ layout: null
     {% endunless %}
   {% endfor %}
 
-  {% comment %} 3. العقارات الفردية بالروابط الإنجليزية المستقرة {% endcomment %}
   {% for property in site.properties %}
     <url>
       <loc>{{ property.url | absolute_url }}</loc>
@@ -40,7 +37,6 @@ layout: null
     </url>
   {% endfor %}
 
-  {% comment %} 4. الطلبات الفردية بالروابط الإنجليزية المستقرة {% endcomment %}
   {% for request in site.requests %}
     <url>
       <loc>{{ request.url | absolute_url }}</loc>
