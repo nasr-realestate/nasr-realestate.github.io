@@ -2,13 +2,37 @@
 layout: null
 ---
 [
+  {% comment %} ===== العقارات ===== {% endcomment %}
   {% for post in site.properties %}
   {
     "title": {{ post.title | jsonify }},
     "url": {{ post.url | relative_url | jsonify }},
-    "price": {{ post.price | jsonify }},
+    "price": {{ post.price | default: "0" | jsonify }},
+    "price_num": {% if post.price_num %}{{ post.price_num }}{% else %}{{ post.price | remove: ',' | remove: 'جنيه' | remove: 'ج.م' | remove: 'EGP' | strip | plus: 0 | default: 0 }}{% endif %},
     "category": {{ post.category | default: "apartments" | jsonify }},
-    "image": "{{ site.baseurl }}/assets/img/properties/{{ post.image_file }}"
+    "location": {{ post.location | jsonify }},
+    "area": {{ post.area | jsonify }},
+    "rooms": {{ post.rooms | jsonify }},
+    "image": "{{ site.baseurl }}/assets/img/properties/{{ post.image_file | default: 'logo.webp' }}",
+    "type": "property"
+  }{% unless forloop.last %},{% endunless %}
+  {% endfor %}
+
+  {% comment %} ===== الطلبات (إذا كانت موجودة) ===== {% endcomment %}
+  {% if site.requests.size > 0 %},{% endif %}
+
+  {% for req in site.requests %}
+  {
+    "title": {{ req.title | jsonify }},
+    "url": {{ req.url | relative_url | jsonify }},
+    "price": {{ req.budget | default: "0" | jsonify }},
+    "price_num": {% if req.budget_num %}{{ req.budget_num }}{% else %}{{ req.budget | remove: ',' | remove: 'جنيه' | remove: 'ج.م' | remove: 'EGP' | strip | plus: 0 | default: 0 }}{% endif %},
+    "category": "requests",
+    "location": {{ req.location | jsonify }},
+    "area": {{ req.area_min | default: "غير محدد" | jsonify }},
+    "rooms": {{ req.rooms_min | default: "غير محدد" | jsonify }},
+    "image": "{{ site.baseurl }}/assets/img/properties/{{ req.image_file | default: 'social-requests.webp' }}",
+    "type": "request"
   }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ]
