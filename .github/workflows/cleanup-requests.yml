@@ -2,8 +2,11 @@ name: "Auto-Cleanup Expired Requests"
 
 on:
   schedule:
-    - cron: '0 0 * * *' # يعمل تلقائياً كل يوم الساعة 12 منتصف الليل
-  workflow_dispatch: # يتيح لك تشغيله يدوياً إذا أردت
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   cleanup:
@@ -11,23 +14,43 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Remove Old Requests (Older than 7 Days)
+      - name: Remove Old Requests (Using date in front matter)
         run: |
-          find _requests -name "*.md" ! -name ".gitkeep" -mtime +7 -exec git rm {} \;
-        # هذا الأمر يبحث عن الملفات التي مر عليها 7 أيام ويحذفها مع استثناء ملف الحماية .gitkeep
+          echo "🔍 Searching for expired requests..."
+          CUTOFF_DATE=$(date -d "7 days ago" +%s)
+          FILES_DELETED=false
+
+          for file in _requests/*.md; do
+            [ -f "$file" ] || continue
+            # استخراج التاريخ من الـ front matter داخل الملف
+            FILE_DATE=$(grep "^date:" "$file" | head -1 | sed 's/date: *//; s/ .*//')
+            if [ -n "$FILE_DATE" ]; then
+              FILE_TIMESTAMP=$(date -d "$FILE_DATE" +%s 2>/dev/null)
+              if [ -n "$FILE_TIMESTAMP" ] && [ "$FILE_TIMESTAMP" -lt "$CUTOFF_DATE" ]; then
+                echo "🗑️ Deleting: $file (date: $FILE_DATE)"
+                git rm "$file"
+                FILES_DELETED=true
+              fi
+            fi
+          done
+
+          if [ "$FILES_DELETED" = true ]; then
+            echo "✅ Expired requests deleted."
+          else
+            echo "ℹ️ No expired requests found today."
+          fi
 
       - name: Commit and Push Changes
         run: |
           git config --global user.name "Simsar Talabak Bot"
           git config --global user.email "bot@nasr-realestate.com"
-          git add .
-          # التحقق من وجود تغييرات قبل عمل Commit لتجنب الأخطاء البرمجية
           if ! git diff-index --quiet HEAD; then
-            git commit -m "System: Auto-cleanup of expired requests (7-day rule)"
-            git pull origin master --rebase # السطر السحري لجلب التحديثات ومنع التعارض والرفض
-            git push origin master # الدفع مباشرة لفرع master الخاص بموقعك
+            git commit -m "System: Auto-cleanup of expired requests (7-day rule from front matter)"
+            git push origin master
           else
-            echo "No expired requests found to cleanup today."
+            echo "ℹ️ No changes to commit."
           fi
-          
