@@ -31,9 +31,63 @@ image: "/assets/img/social-home.webp"
     </div>
 
     <div class="error-footer">
-      هل تواجه مشكلة؟
+      هل تواجه مشكلة？
       <a href="https://wa.me/201147758857" target="_blank" rel="noopener">راسلنا عبر واتساب للمساعدة</a>
     </div>
 
   </div>
 </main>
+
+<script>
+  (function() {
+    // 1. التقاط الرابط الحالي الذي دخله الزائر أو الروبوت
+    var currentPath = window.location.pathname;
+    
+    try {
+      // 2. فك تشفير الرموز القبيحة وتحويلها لنصوص عربية مقروءة داخل الكود
+      var decodedPath = decodeURIComponent(currentPath);
+      
+      // إذا كان الرابط القديم يحتوي على حروف عربية أو علامات تضارب
+      if (/[\u0600-\u06FF]/.test(decodedPath) || currentPath.includes('%')) {
+        
+        // خريطة تحويل ذكية مبدئية لأشهر الكلمات والمناطق التي قمت بتغييرها
+        // يمكنك إضافة الكلمة العربية القديمة وما يقابلها بالإنجليزية هنا
+        var urlMap = {
+          'المنطقة-العاشرة': 'area-10',
+          'المنطقة_العاشرة': 'area-10',
+          'فيلا-بدوي': 'villa-badawy',
+          'المربع-الذهبي': 'golden-square',
+          'رابعة': 'rabaa',
+          'مدينة-نصر': 'nasr-city',
+          'مصر-الجديدة': 'heliopolis',
+          'القاهرة-الجديدة': 'new-cairo',
+          'شقة': 'apartment',
+          'عقار': 'property'
+        };
+
+        var newPath = decodedPath;
+
+        // 3. استبدال الكلمات العربية بالإنجليزية النظيفة تلقائياً
+        Object.keys(urlMap).forEach(function(key) {
+          var regex = new RegExp(key, 'g');
+          newPath = newPath.replace(regex, urlMap[key]);
+        });
+
+        // 4. تنظيف الرابط الجديد وتحويله بالكامل إلى حروف إنجليزية صغيرة متناسقة تليق بـ 2026
+        newPath = newPath.toLowerCase()
+                         .replace(/[^a-z0-9\/\.\-_]/g, '-') // إزالة أي رموز غريبة متبقية
+                         .replace(/-+/g, '-')              // تنظيف الشرطات المتكررة
+                         .replace(/-\./g, '.');            // ضبط الامتداد النهائي (.html)
+
+        // تأمين عدم حدوث حلقة تكرار لا نهائية والتأكد أن الرابط اختلف فعلياً
+        if (newPath !== currentPath && newPath !== '/404.html') {
+          // التوجيه الفوري الصامت الذكي
+          window.location.replace(window.location.origin + newPath);
+        }
+      }
+    } catch (e) {
+      console.error("SEO Redirect Engine Error:", e);
+    }
+  })();
+                                  </script>
+                                  
