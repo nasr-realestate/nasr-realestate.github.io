@@ -53,19 +53,26 @@ collections:
     output: true
     permalink: /requests/:slug/
 
-# --- الإعدادات الافتراضية ---
+# --- الإعدادات الافتراضية المعدلة ---
 defaults:
   - scope:
-      path: ""
+      path: "sitemap.xml" # استثناء ملف الخريطة التلقائي من القوالب
+    values:
+      layout: null
+
+  - scope:
+      path: "" # بقية صفحات الموقع العادية
     values:
       layout: "default"
       lang: "ar"
       image: "/assets/img/social-home.webp"
+
   - scope:
       path: ""
       type: "properties"
     values:
       layout: "property_page"
+
   - scope:
       path: ""
       type: "requests"
