@@ -3,7 +3,7 @@
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
 
-      <!-- العمود الأول -->
+      <!-- العمود الأول: الشعار والوصف -->
       <div>
         <div class="footer-logo" style="margin-bottom: 1.5rem;">
           <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
@@ -20,12 +20,19 @@
         </p>
       </div>
 
-      <!-- العمود الثاني -->
+      <!-- العمود الثاني: روابط التنقل -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
           بوابة الملاك الذكية
         </h3>
         <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
+          <li>
+            <a href="{{ '/about-us.html' | relative_url }}"
+               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
+              <i class="fas fa-info-circle" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+              من نحن (قصتنا ورؤيتنا)
+            </a>
+          </li>
           <li>
             <a href="{{ '/assets/tools/valuation.html' | relative_url }}"
                style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem; font-weight: bold;">
@@ -64,7 +71,7 @@
         </ul>
       </div>
 
-      <!-- العمود الثالث -->
+      <!-- العمود الثالث: التواصل والشبكات -->
       <div>
         <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
           تواصل استراتيجي
@@ -98,12 +105,14 @@
 
     </div>
 
+    <!-- شريط الحقوق السفلي -->
     <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; margin-top: 2rem; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
       <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
         جميع الحقوق محفوظة © {{ 'now' | date: "%Y" }}
         <span style="color: var(--color-primary);">سمسار طلبك</span>
       </p>
       <div style="display: flex; gap: 20px;">
+        <a href="{{ '/about-us.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">من نحن</a>
         <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">سياسة الخصوصية</a>
       </div>
     </div>
