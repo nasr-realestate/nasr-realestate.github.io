@@ -1,3 +1,7 @@
+---
+layout: null
+permalink: /luxury-gallery.html
+---
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -77,7 +81,7 @@
                 const slide = document.createElement('article');
                 slide.className = `slide ${i === 0 ? 'active' : ''}`;
                 slide.innerHTML = `
-                    <img src="assets/img/properties/${p.img}" alt="${p.title}">
+                    <img src="/assets/img/properties/${p.img}" alt="${p.title}">
                     <div class="slide-overlay"></div>
                     <div class="prop-data">
                         <h2>${p.title}</h2>
