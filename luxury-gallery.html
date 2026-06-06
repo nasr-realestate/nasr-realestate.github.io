@@ -2,7 +2,6 @@
 layout: null
 permalink: /luxury-gallery.html
 ---
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -23,7 +22,7 @@ permalink: /luxury-gallery.html
         .ui-overlay { position: fixed; top: 25px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; }
         .ui-brand { color: var(--gold); font-weight: 900; font-size: 1.1rem; text-shadow: 0 2px 8px #000; }
         .ui-exit { color: var(--gold) !important; text-decoration: none !important; background: rgba(0,0,0,0.7); padding: 8px 18px; border-radius: 50px; border: 1px solid rgba(212,175,55,0.4); font-weight: 700; font-size: 0.8rem; backdrop-filter: blur(10px); }
-        #introLayer { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; transition: opacity 0.8s ease; }
+        #introLayer { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; transition: opacity 0.5s ease; }
         .intro-h { color: var(--gold); font-size: 2.8rem; font-weight: 900; }
         .load-indicator { width: 120px; height: 1px; background: #222; margin-top: 35px; position: relative; overflow: hidden; }
         .load-indicator::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%; background: var(--gold); animation: animLoad 1.5s infinite; }
@@ -95,126 +94,18 @@ permalink: /luxury-gallery.html
                 `;
                 track.appendChild(slide);
             });
+            
+            // تسريع إخفاء شاشة الانتظار وضمان تلاشيها بشكل قاطع
             setTimeout(() => {
-                document.getElementById('introLayer').style.opacity = '0';
-                setTimeout(() => { document.getElementById('introLayer').style.display = 'none'; startEngine(); }, 800);
-            }, 3000);
-        }
-
-        function startEngine() {
-            setInterval(() => {
-                progress += (100 / (SLIDE_DURATION / 100));
-                document.getElementById('progressBar').style.width = progress + '%';
-                if (progress >= 100) {
-                    progress = 0;
-                    currentIdx = (currentIdx + 1) % properties.length;
-                    document.getElementById('mainTrack').style.transform = `translateX(${currentIdx * 100}%)`;
-                    const slides = document.querySelectorAll('.slide');
-                    slides.forEach((s, i) => s.classList.toggle('active', i === currentIdx));
+                const intro = document.getElementById('introLayer');
+                if (intro) {
+                    intro.style.opacity = '0';
+                    setTimeout(() => { 
+                        intro.style.display = 'none'; 
+                        startEngine(); 
+                    }, 500);
                 }
-            }, 100);
-        }
-        window.onload = build;
-    </script>
-</body>
-</html>
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>بوابة النخبة | سمسار طلبك</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        /* تنسيقات البرستيج - Prestige Protector */
-        header, footer, nav, .navbar, .site-footer, #back-to-top, .fixed-call-button { 
-            display: none !important; opacity: 0 !important; visibility: hidden !important; 
-        }
-        :root { --gold: #d4af37; --bg: #0a0a0a; --white: #ffffff; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { height: 100vh; width: 100vw; background-color: var(--bg); color: var(--white); font-family: 'Cairo', sans-serif; overflow: hidden !important; position: fixed; }
-        .ui-overlay { position: fixed; top: 25px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; }
-        .ui-brand { color: var(--gold); font-weight: 900; font-size: 1.1rem; text-shadow: 0 2px 8px #000; }
-        .ui-exit { color: var(--gold) !important; text-decoration: none !important; background: rgba(0,0,0,0.7); padding: 8px 18px; border-radius: 50px; border: 1px solid rgba(212,175,55,0.4); font-weight: 700; font-size: 0.8rem; backdrop-filter: blur(10px); }
-        #introLayer { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; transition: opacity 0.8s ease; }
-        .intro-h { color: var(--gold); font-size: 2.8rem; font-weight: 900; }
-        .load-indicator { width: 120px; height: 1px; background: #222; margin-top: 35px; position: relative; overflow: hidden; }
-        .load-indicator::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%; background: var(--gold); animation: animLoad 1.5s infinite; }
-        @keyframes animLoad { 0% { left: -100%; } 100% { left: 100%; } }
-        .stage { width: 100vw; height: 100vh; position: relative; }
-        .track { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
-        .slide { min-width: 100%; height: 100%; position: relative; overflow: hidden; }
-        .slide img { width: 100%; height: 100%; object-fit: cover; transition: transform 12s linear; }
-        .slide.active img { transform: scale(1.15); }
-        .slide-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,1) 15%, rgba(0,0,0,0.3) 50%, transparent 90%); z-index: 2; }
-        .prop-data { position: absolute; bottom: 50px; right: 25px; left: 25px; z-index: 5; }
-        .prop-data h2 { color: var(--gold); font-size: 2rem; font-weight: 900; margin-bottom: 8px; }
-        .prop-price { font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 25px; display: block; border-right: 4px solid var(--gold); padding-right: 15px; }
-        .btn-link { flex: 1; background: var(--gold); color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 800; }
-        .progress-bar { position: fixed; bottom: 0; left: 0; width: 0%; height: 5px; background: var(--gold); z-index: 100; transition: width 0.1s linear; }
-    </style>
-</head>
-<body>
-
-    <div class="ui-overlay">
-        <div class="ui-brand"><i class="fas fa-crown"></i> سمسار طلبك | ELITE</div>
-        <a href="/" class="ui-exit"><i class="fas fa-times"></i> إغلاق</a>
-    </div>
-
-    <div id="introLayer">
-        <i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); margin-bottom: 25px;"></i>
-        <h1 class="intro-h">بوابة النخبة العقارية</h1>
-        <div class="load-indicator"></div>
-    </div>
-
-    <main class="stage">
-        <div class="track" id="mainTrack"></div>
-        <div class="progress-bar" id="progressBar"></div>
-    </main>
-
-    <script>
-        const properties = [
-            { title: "أيقونة المنطقة العاشرة | 180م", price: "3,700,000 ج.م", img: "apartment-180m-nasr-city.webp", desc: "فخامة الترا سوبر لوكس، دور ثالث واجهة رئيسية بقلب مدينة نصر.", url: "/عقارات-مدينة-نصر/شقة-180م-للبيع-المنطقة-العاشرة-مدينة-نصر/" },
-            { title: "جوهرة ميدان رابعة | 135م", price: "5,000,000 ج.م", img: "raba-nasr.webp", desc: "تشطيب مهندس شامل التكييفات والمطبخ في أرقى عمارات طريق النصر.", url: "/عقارات-مدينة-نصر/شقة-للبيع-ميدان-رابعة-العدوية-طريق-النصر/" },
-            { title: "فيلا دوبلكس حي الأندلس", price: "إيجار إداري 55,000 ج.م", img: "duplex-andalus.webp", desc: "مدخل خاص وحديقة 65م أمام ماونتن فيو مباشرة بالتجمع الخامس.", url: "/عقارات-مدينة-نصر/فيلا-دوبلكس-للبيع-التجمع-الخامس-حي-الأندلس/" },
-            { title: "إطلالة شارع الطيران | 225م", price: "8,000,000 ج.م", img: "al-Tayaranstreet.webp", desc: "مباني حديثة 2014، فيو مفتوح للأبد، تشطيب الترا سوبر لوكس.", url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-الطيران-الرئيسي-مدينة-نصر-حديثة/" },
-            { title: "دوبلكس استثماري | حي السفارات", price: "4,850,000 ج.م", img: "elsfarat-duplex.webp", desc: "فرصة بعائد فوري، مؤجر حالياً لطلاب أجانب بزيادة سنوية.", url: "/عقارات-مدينة-نصر/دوبلكس-للبيع-حي-السفارات-مدينة-نصر-استثمار/" },
-            { title: "تحفة المنطقة الأولى | 225م", price: "7,500,000 ج.م", img: "zuhair-sabri.webp", desc: "تشطيب قصور بموقع راقٍ خلف المحلاوي.", url: "/عقارات-مدينة-نصر/شقة-للبيع-المنطقة-الأولى-مدينة-نصر-تشطيب-فاخر/" },
-            { title: "فرصة زهراء مدينة نصر | 86م", price: "1,650,000 ج.م", img: "zahraa-thirdfloor.webp", desc: "سكن اقتصادي في موقع حيوي، دور ثالث مميز، فيو مفتوح.", url: "/عقارات-مدينة-نصر/شقة-للبيع-زهراء-مدينة-نصر-سعر-رخيص/" },
-            { title: "ناصية توفيق البكري | 250م", price: "5,000,000 ج.م", img: "tawfiqal-Bakri-st.webp", desc: "شقة صحية بليفينج 30م، مسجلة شهر عقاري خلف مستشفى حسبو.", url: "/عقارات-مدينة-نصر/شقة-للبيع-شارع-توفيق-البكري-مدينة-نصر-ناصية-بحري/" },
-            { title: "لقطة حسن المأمون | للشباب", price: "1,650,000 ج.م", img: "tawnit.webp", desc: "عمارات التعاونيات، موقع استراتيجي قرب الخدمات والمواصلات.", url: "/عقارات-مدينة-نصر/شقة-للبيع-عمارات-التعاونيات-حسن-المأمون-مدينة-نصر/" },
-            { title: "أبراج صن رايز | 288م", price: "7,000,000 ج.م", img: "sunrise.webp", desc: "حي السفارات، فيو بحري 100%، تشطيب مودرن فاخر.", url: "/عقارات-مدينة-نصر/شقة-للبيع-أبراج-صن-رايز-حي-السفارات-مدينة-نصر/" }
-        ];
-
-        let currentIdx = 0, progress = 0;
-        const SLIDE_DURATION = 6000;
-
-        function build() {
-            const track = document.getElementById('mainTrack');
-            properties.forEach((p, i) => {
-                const slide = document.createElement('article');
-                slide.className = `slide ${i === 0 ? 'active' : ''}`;
-                slide.innerHTML = `
-                    <img src="/assets/img/properties/${p.img}" alt="${p.title}">
-                    <div class="slide-overlay"></div>
-                    <div class="prop-data">
-                        <h2>${p.title}</h2>
-                        <p>${p.desc}</p>
-                        <strong class="prop-price">${p.price}</strong>
-                        <div style="display:flex; gap:10px;">
-                            <a href="${p.url}" class="btn-link">اكتشف التحفة العقارية</a>
-                        </div>
-                    </div>
-                `;
-                track.appendChild(slide);
-            });
-            setTimeout(() => {
-                document.getElementById('introLayer').style.opacity = '0';
-                setTimeout(() => { document.getElementById('introLayer').style.display = 'none'; startEngine(); }, 800);
-            }, 3000);
+            }, 1000);
         }
 
         function startEngine() {
