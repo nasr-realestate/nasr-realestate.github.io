@@ -59,6 +59,46 @@
       background: #d4af37; color: #050505; box-shadow: 0 4px 20px rgba(212,175,55,0.4);
     }
     @media (max-width: 768px) { .prestige-notif-btn { bottom: 100px; left: 16px; padding: 10px 16px; font-size: 0.8rem; } }
+
+    /* ==================== تموضع وكيل Jotform AI ==================== */
+    /* يستهدف العناصر التي ينشئها سكربت Jotform، يمكن تعديل المحددات إذا لزم */
+    [class*="jotform-agent"], [id*="jotform-agent"], 
+    [class*="jotform-embed"], [id*="jotform-embed"],
+    .jotform-agent-container, #jotform-agent-container {
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      left: auto !important;
+      top: auto !important;
+      z-index: 999 !important;
+      width: auto;
+      height: auto;
+      max-width: 90vw;
+      max-height: 90vh;
+      transition: all 0.3s ease;
+    }
+
+    /* إذا فُتحت نافذة المحادثة الكبيرة، نعطيها أبعادًا مناسبة */
+    [class*="jotform-agent"].open, [id*="jotform-agent"].open,
+    .jotform-agent-container.open, #jotform-agent-container.open {
+      width: 380px !important;
+      height: 600px !important;
+      max-width: 95vw;
+      max-height: 85vh;
+    }
+
+    /* للشاشات الصغيرة */
+    @media (max-width: 768px) {
+      [class*="jotform-agent"], [id*="jotform-agent"],
+      [class*="jotform-embed"], [id*="jotform-embed"],
+      .jotform-agent-container, #jotform-agent-container {
+        bottom: 15px !important;
+        right: 15px !important;
+        max-width: 80vw;
+        max-height: 70vh;
+      }
+    }
+    /* ============================================================= */
   </style>
 </head>
 
@@ -371,5 +411,8 @@
       }
     });
   </script>
+
+  <!-- وكيل Jotform AI -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 </body>
 </html>
