@@ -46,59 +46,139 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* تنسيق زر الإشعارات الفاخر العائم المتناسق */
-    .prestige-notif-btn {
-      position: fixed; bottom: 110px; left: 24px; z-index: 999;
-      background: rgba(5, 5, 5, 0.85); border: 1px solid #d4af37; color: #d4af37;
-      padding: 12px 20px; border-radius: 50px; font-family: 'Cairo', sans-serif;
-      font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex;
-      align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(212,175,55,0.15);
-      backdrop-filter: blur(10px); transition: 0.3s ease;
+    /* ========== زر القائمة العائمة الموحدة (FAB) ========== */
+    .fab-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
-    .prestige-notif-btn:hover {
-      background: #d4af37; color: #050505; box-shadow: 0 4px 20px rgba(212,175,55,0.4);
-    }
-    @media (max-width: 768px) { .prestige-notif-btn { bottom: 100px; left: 16px; padding: 10px 16px; font-size: 0.8rem; } }
 
-    /* ==================== تموضع وكيل Jotform AI ==================== */
-    /* يستهدف العناصر التي ينشئها سكربت Jotform، يمكن تعديل المحددات إذا لزم */
-    [class*="jotform-agent"], [id*="jotform-agent"], 
-    [class*="jotform-embed"], [id*="jotform-embed"],
-    .jotform-agent-container, #jotform-agent-container {
-      position: fixed !important;
-      bottom: 20px !important;
-      right: 20px !important;
-      left: auto !important;
-      top: auto !important;
-      z-index: 999 !important;
-      width: auto;
-      height: auto;
-      max-width: 90vw;
-      max-height: 90vh;
+    .fab-main {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #050505;
+      border: 2px solid #d4af37;
+      color: #d4af37;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+      transition: all 0.3s ease;
+      position: relative;
+      animation: fabPulse 2s infinite;
+    }
+
+    .fab-main:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      animation: none;
+    }
+
+    @keyframes fabPulse {
+      0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(212,175,55,0); }
+      100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+    }
+
+    .fab-main i {
+      transition: transform 0.3s ease;
+    }
+
+    .fab-container.open .fab-main i {
+      transform: rotate(45deg);
+    }
+
+    .fab-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .fab-container.open .fab-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .fab-item {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(5,5,5,0.9);
+      border: 1px solid #d4af37;
+      color: #d4af37;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.3rem;
+      transition: all 0.3s ease;
+      position: relative;
+      text-decoration: none;
+    }
+
+    .fab-item:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(212,175,55,0.4);
+    }
+
+    .fab-item .tooltip {
+      position: absolute;
+      right: 60px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #050505;
+      border: 1px solid #d4af37;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
       transition: all 0.3s ease;
     }
 
-    /* إذا فُتحت نافذة المحادثة الكبيرة، نعطيها أبعادًا مناسبة */
-    [class*="jotform-agent"].open, [id*="jotform-agent"].open,
-    .jotform-agent-container.open, #jotform-agent-container.open {
-      width: 380px !important;
-      height: 600px !important;
-      max-width: 95vw;
-      max-height: 85vh;
+    .fab-item:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+      right: 70px;
     }
 
-    /* للشاشات الصغيرة */
     @media (max-width: 768px) {
-      [class*="jotform-agent"], [id*="jotform-agent"],
-      [class*="jotform-embed"], [id*="jotform-embed"],
-      .jotform-agent-container, #jotform-agent-container {
-        bottom: 15px !important;
-        right: 15px !important;
-        max-width: 80vw;
-        max-height: 70vh;
+      .fab-container {
+        bottom: 16px;
+        right: 16px;
+      }
+      .fab-main {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+      }
+      .fab-item {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
       }
     }
-    /* ============================================================= */
   </style>
 </head>
 
@@ -122,12 +202,14 @@
 
   {% include footer.html %}
 
+  <!-- زر صمم طلبك (البحث الذكي) - يبقى كما هو في اليسار -->
   <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
     <div class="pulse-ring"></div>
     <i class="fas fa-hand-sparkles"></i>
     <span class="trigger-text">صمم طلبك</span>
   </div>
 
+  <!-- نافذة البحث الذكي -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
@@ -171,19 +253,51 @@
     </div>
   </div>
 
-  <a href="tel:+201147758857" class="prestige-call-button" onclick="trackPhoneCall()">
-    <div class="button-icon"><i class="fas fa-phone-alt"></i></div>
-    <div class="button-text">
-      <span class="label">استشارة فورية</span>
-      <span class="phone-num">01147758857</span>
+  <!-- ========== القائمة العائمة الموحدة (FAB) ========== -->
+  <div class="fab-container" id="fabContainer">
+    <div class="fab-menu" id="fabMenu">
+      <a href="https://wa.me/201147758857" class="fab-item" target="_blank" rel="noopener" aria-label="واتساب">
+        <i class="fab fa-whatsapp"></i>
+        <span class="tooltip">واتساب</span>
+      </a>
+      <button class="fab-item" id="fabChatbot" aria-label="شات بوت">
+        <i class="fas fa-robot"></i>
+        <span class="tooltip">شات بوت</span>
+      </button>
+      <a href="tel:+201147758857" class="fab-item" onclick="trackPhoneCall()" aria-label="اتصال هاتفي">
+        <i class="fas fa-phone-alt"></i>
+        <span class="tooltip">اتصال هاتفي</span>
+      </a>
+      <button class="fab-item" id="fabNotifications" aria-label="إشعارات">
+        <i class="fas fa-bell"></i>
+        <span class="tooltip">إشعارات</span>
+      </button>
     </div>
-  </a>
+    <button class="fab-main" id="fabMain" aria-label="فتح القائمة">
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
 
-  <button id="enableNotif" class="prestige-notif-btn">
-    <i class="fas fa-bell"></i> <span>إشعارات النخبة</span>
-  </button>
+  <!-- سكربت JotForm Agent -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 
   <script>
+    // ========== منطق القائمة العائمة ==========
+    const fabMain = document.getElementById('fabMain');
+    const fabContainer = document.getElementById('fabContainer');
+
+    fabMain.addEventListener('click', () => {
+      fabContainer.classList.toggle('open');
+    });
+
+    // إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', (e) => {
+      if (!fabContainer.contains(e.target)) {
+        fabContainer.classList.remove('open');
+      }
+    });
+
+    // ========== منطق البحث الذكي (كما هو) ==========
     (function() {
       let allProperties = [];
       let dataLoaded = false;
@@ -339,42 +453,32 @@
 
       window.trackPhoneCall = function() {
         if (typeof dataLayer !== 'undefined') {
-          dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button' });
+          dataLayer.push({ event: 'phone_call_click', call_source: 'fab_menu' });
         }
       };
     })();
-  </script>
 
-  <script>
-    const notifBtn = document.getElementById('enableNotif');
+    // ========== منطق الإشعارات (منقول من الزر القديم) ==========
+    const fabNotifications = document.getElementById('fabNotifications');
 
-    function hideNotifBtn(delay = 4000) {
-      setTimeout(() => {
-        if (notifBtn) {
-          notifBtn.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-          notifBtn.style.opacity = '0';
-          notifBtn.style.transform = 'translateY(10px)';
-          setTimeout(() => {
-            if (notifBtn) notifBtn.style.display = 'none';
-          }, 800);
-        }
-      }, delay);
+    function hideNotifSuccess() {
+      // يمكن إضافة تأثير نجاح هنا
     }
 
     function showGrantedState() {
-      if (!notifBtn) return;
-      notifBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span>الإشعارات مفعّلة</span>';
-      notifBtn.style.background = 'rgba(37, 211, 102, 0.15)';
-      notifBtn.style.color = '#25D366';
-      notifBtn.style.borderColor = '#25D366';
-      hideNotifBtn(4000);
+      if (!fabNotifications) return;
+      // تغيير مظهر زر الإشعارات في القائمة
+      fabNotifications.innerHTML = '<i class="fas fa-check-circle"></i><span class="tooltip">مفعّلة</span>';
+      fabNotifications.style.background = 'rgba(37, 211, 102, 0.15)';
+      fabNotifications.style.color = '#25D366';
+      fabNotifications.style.borderColor = '#25D366';
     }
 
-    if (Notification.permission === "granted") {
+    if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
       showGrantedState();
     }
 
-    notifBtn?.addEventListener('click', async () => {
+    fabNotifications?.addEventListener('click', async () => {
       const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
       const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
       const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
@@ -410,9 +514,19 @@
         console.error("FCM Error:", err);
       }
     });
-  </script>
 
-  <!-- وكيل Jotform AI -->
-  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
+    // ========== ربط زر الشات بوت بـ JotForm Agent ==========
+    // يعتمد على الواجهة التي يوفرها JotForm Agent؛ يمكن استدعاء open() إذا كانت متاحة
+    document.getElementById('fabChatbot')?.addEventListener('click', () => {
+      if (window.JotFormAgent && typeof window.JotFormAgent.open === 'function') {
+        window.JotFormAgent.open();
+      } else {
+        // Fallback: محاولة النقر على أي زر أنشأه JotForm تلقائيًا
+        const jotFormButton = document.querySelector('[data-jotform-agent]');
+        if (jotFormButton) jotFormButton.click();
+        else console.warn('JotForm Agent not initialized yet.');
+      }
+    });
+  </script>
 </body>
 </html>
