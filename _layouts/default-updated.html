@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% seo %}
+
+  {% if page.image_file %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
+  {% elsif page.collection == 'requests' or page.layout == 'request_page' %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-request-default.webp">
+  {% else %}
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.webp">
+  {% endif %}
+
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#050505">
+  <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"></noscript>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
+  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
+  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
+  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
+
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+
+  <style>
+    #prestigeSplash {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #050505; display: flex; align-items: center; justify-content: center;
+      z-index: 100000; animation: splashFadeOut 0.5s ease 1.2s forwards;
+      pointer-events: none;
+    }
+    @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
+
+    /* ========== زر القائمة العائمة الموحدة (FAB) ========== */
+    .fab-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .fab-main {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #050505;
+      border: 2px solid #d4af37;
+      color: #d4af37;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+      transition: all 0.3s ease;
+      position: relative;
+      animation: fabPulse 2s infinite;
+    }
+
+    .fab-main:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      animation: none;
+    }
+
+    @keyframes fabPulse {
+      0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(212,175,55,0); }
+      100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+    }
+
+    .fab-main i {
+      transition: transform 0.3s ease;
+    }
+
+    .fab-container.open .fab-main i {
+      transform: rotate(45deg);
+    }
+
+    .fab-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .fab-container.open .fab-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .fab-item {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(5,5,5,0.9);
+      border: 1px solid #d4af37;
+      color: #d4af37;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.3rem;
+      transition: all 0.3s ease;
+      position: relative;
+      text-decoration: none;
+    }
+
+    .fab-item:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(212,175,55,0.4);
+    }
+
+    .fab-item .tooltip {
+      position: absolute;
+      right: 60px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #050505;
+      border: 1px solid #d4af37;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .fab-item:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+      right: 70px;
+    }
+
+    .fab-main {
+      width: auto;
+      min-width: 60px;
+      height: 60px;
+      padding: 0 16px;
+      gap: 8px;
+      border-radius: 999px;
+    }
+
+    .fab-main-label {
+      font-family: 'Cairo', sans-serif;
+      font-size: .78rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .fab-item.fab-whatsapp:hover { border-color: #25d366; background: #25d366; color: #fff; }
+    .fab-item.fab-design:hover { border-color: #fce205; background: #fce205; color: #050505; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fab-main, .fab-item, .fab-menu { animation: none; transition: none; }
+    }
+
+    @media (max-width: 768px) {
+      .fab-container {
+        bottom: max(16px, env(safe-area-inset-bottom));
+        right: 16px;
+      }
+      .fab-main {
+        min-width: 50px;
+        height: 50px;
+        padding: 0 13px;
+        font-size: 1.35rem;
+      }
+      .fab-main-label { font-size: .7rem; }
+      .fab-item {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+      }
+      .fab-item .tooltip { display: none; }
+    }
+
+    /* ========== تجربة الانبثاق الفاخرة ========== */
+    .fab-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      background: radial-gradient(circle at 84% 82%, rgba(212,175,55,.12), rgba(0,0,0,.82) 42%, rgba(0,0,0,.94));
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .35s ease, visibility .35s ease;
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+    }
+
+    .fab-backdrop.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+    .fab-container { z-index: 9999; }
+    .fab-menu { width: min(390px, calc(100vw - 32px)); align-items: stretch; }
+    .fab-menu-heading {
+      color: #fff;
+      padding: 2px 10px 5px;
+      text-align: right;
+      direction: rtl;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .25s ease .05s, transform .25s ease .05s;
+    }
+    .fab-container.open .fab-menu-heading { opacity: 1; transform: translateY(0); }
+    .fab-menu-kicker { display: block; color: #d4af37; font-size: .72rem; font-weight: 900; letter-spacing: .4px; }
+    .fab-menu-heading strong { display: block; margin: 3px 0; font-size: 1.08rem; }
+    .fab-menu-heading small { display: block; color: #aaa; font-size: .72rem; line-height: 1.7; }
+    .fab-item {
+      width: 100%;
+      min-height: 70px;
+      height: auto;
+      padding: 10px 13px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-align: right;
+      direction: rtl;
+      background: rgba(8,8,8,.96);
+      border: 1px solid rgba(212,175,55,.45);
+      box-shadow: 0 12px 30px rgba(0,0,0,.38);
+    }
+    .fab-item-icon {
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: #050505;
+      background: #d4af37;
+      font-size: 1.25rem;
+    }
+    .fab-whatsapp .fab-item-icon { color: #fff; background: #25d366; }
+    .fab-notifications .fab-item-icon { color: #050505; background: #f2d45a; }
+    .fab-item-copy { min-width: 0; flex: 1; }
+    .fab-item-copy strong, .fab-item-copy small { display: block; }
+    .fab-item-copy strong { color: #fff; font-size: .84rem; }
+    .fab-item-copy small { color: #999; font-size: .68rem; line-height: 1.55; margin-top: 2px; }
+    .fab-item-arrow { margin-right: auto; color: #d4af37; font-size: .78rem; }
+    .fab-item:hover { transform: translateX(-6px) scale(1.015); }
+    .fab-whatsapp:hover { border-color: #25d366; box-shadow: 0 10px 30px rgba(37,211,102,.2); }
+    .fab-design:hover { border-color: #fce205; box-shadow: 0 10px 30px rgba(212,175,55,.25); }
+    .fab-notifications:hover { border-color: #fff0a8; }
+    .fab-main { width: auto; min-width: 150px; height: 58px; padding: 0 18px; border-radius: 999px; gap: 9px; }
+    .fab-main-label { font-family: 'Cairo', sans-serif; font-size: .82rem; font-weight: 900; white-space: nowrap; }
+    .fab-container.open .fab-main { background: linear-gradient(135deg, #fce205, #d4af37); color: #050505; }
+    .fab-container.open .fab-main i { transform: rotate(45deg); }
+
+    @media (max-width: 768px) {
+      .fab-container { right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); }
+      .fab-menu { width: min(390px, calc(100vw - 28px)); }
+      .fab-main { min-width: 142px; height: 54px; }
+      .fab-item { min-height: 66px; }
+      .fab-item .tooltip { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fab-backdrop, .fab-menu-heading, .fab-item, .fab-main, .fab-menu { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+
+<body class="{{ page.body_class | default: 'default-page' }}">
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <div id="prestigeSplash">
+    <div style="width:280px; text-align:center; padding:20px;">
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="سمسار طلبك" width="280" height="80" style="max-width:100%; height:auto; filter:drop-shadow(0 0 20px rgba(212,175,55,0.3));">
+    </div>
+  </div>
+
+  <div class="cinematic-bg"></div>
+  <div class="animated-overlay"></div>
+
+  {% include navbar.html %}
+
+  <main>
+    {{ content }}
+  </main>
+
+  {% include footer.html %}
+
+  <!-- نافذة البحث الذكي -->
+  <div id="smartSearchOverlay" class="smart-search-overlay">
+    <div class="overlay-blur" onclick="closeSmartSearch()"></div>
+    <div class="search-card-container">
+      <div class="smart-card" id="step1">
+        <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">مرحباً بك في بوابة النخبة</h2>
+        <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+          <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i><span>تمليك العمر</span></button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')"><i class="fas fa-couch"></i><span>إيجار مفروش (فندقي)</span></button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span></button>
+          <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i><span>تجاري وإداري</span></button>
+        </div>
+        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline; font-size: 0.85rem;">سأقوم بالتصفح بنفسي لاحقاً</button>
+      </div>
+
+      <div class="smart-card" id="stepCommercialBranch">
+        <i class="fas fa-briefcase gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">النشاط التجاري والإداري</h2>
+        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i><span>تمليك / شراء</span></button>
+          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i><span>إيجار شهري</span></button>
+        </div>
+        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+      </div>
+
+      <div class="smart-card" id="step2">
+        <i class="fas fa-money-bill-wave gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 id="budgetTitle" style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">الميزانية المرصودة؟</h2>
+        <div id="budgetOptions" class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;"></div>
+        <button class="back-text-btn" onclick="backToPrevious()" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+      </div>
+
+      <div class="smart-card" id="stepResults">
+        <i class="fas fa-magic gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">نتائج البحث المخصصة</h2>
+        <p id="resultsStatus" style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">جاري البحث في خزائن النخبة...</p>
+        <div id="resultsContent" class="results-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right;"></div>
+        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;">بدء بحث جديد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== القائمة العائمة الموحدة (FAB) ========== -->
+  <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
+  <div class="fab-container" id="fabContainer">
+    <div class="fab-menu" id="fabMenu">
+      <div class="fab-menu-heading">
+        <span class="fab-menu-kicker">سمسار طلبك</span>
+        <strong>اختر طريقك إلى العقار المناسب</strong>
+        <small>كل خيار هنا صُمم ليختصر عليك وقتًا أو يرفع جودة قرارك.</small>
+      </div>
+      <a href="https://wa.me/201147758857?text=مرحباً، أريد مساعدة في طلب عقاري"
+         class="fab-item fab-whatsapp"
+         target="_blank"
+         rel="noopener noreferrer"
+         aria-label="التواصل مع فريق سمسار طلبك عبر واتساب">
+        <span class="fab-item-icon" aria-hidden="true"><i class="fab fa-whatsapp"></i></span>
+        <span class="fab-item-copy"><strong>تحدث معنا على واتساب</strong><small>رد بشري سريع لمساعدتك في القرار</small></span>
+        <i class="fas fa-arrow-left fab-item-arrow" aria-hidden="true"></i>
+      </a>
+      <button class="fab-item fab-design" id="fabDesign" type="button" aria-label="فتح أداة صمم طلبك">
+        <span class="fab-item-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></span>
+        <span class="fab-item-copy"><strong>صمم طلبك بذكاء</strong><small>حوّل احتياجك وميزانيتك إلى نتائج مناسبة</small></span>
+        <i class="fas fa-arrow-left fab-item-arrow" aria-hidden="true"></i>
+      </button>
+      <button class="fab-item fab-notifications" id="fabNotifications" type="button" aria-label="تفعيل إشعارات الفرص العقارية">
+        <span class="fab-item-icon" aria-hidden="true"><i class="fas fa-bell"></i></span>
+        <span class="fab-item-copy"><strong>كن أول من يعلم</strong><small>تنبيهات للفرص الجديدة عند تفعيلها</small></span>
+        <i class="fas fa-arrow-left fab-item-arrow" aria-hidden="true"></i>
+      </button>
+    </div>
+    <button class="fab-main" id="fabMain" type="button" aria-label="فتح مركز طلبك" aria-expanded="false" aria-controls="fabMenu">
+      <i class="fas fa-plus" aria-hidden="true"></i>
+      <span class="fab-main-label">مركز طلبك</span>
+    </button>
+  </div>
+
+  <!-- سكربت JotForm Agent -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
+
+  <script>
+    // ========== مركز طلبك: واتساب، صمم طلبك والإشعارات ==========
+    const fabMain = document.getElementById('fabMain');
+    const fabContainer = document.getElementById('fabContainer');
+    const fabBackdrop = document.getElementById('fabBackdrop');
+    const fabDesign = document.getElementById('fabDesign');
+
+    function setFabState(isOpen) {
+      fabContainer.classList.toggle('open', isOpen);
+      fabBackdrop.classList.toggle('visible', isOpen);
+      fabMain.setAttribute('aria-expanded', String(isOpen));
+      fabBackdrop.setAttribute('aria-hidden', String(!isOpen));
+    }
+
+    fabMain.addEventListener('click', () => {
+      setFabState(!fabContainer.classList.contains('open'));
+    });
+
+    fabBackdrop.addEventListener('click', () => setFabState(false));
+
+    fabDesign?.addEventListener('click', () => {
+      setFabState(false);
+      openSmartSearch();
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!fabContainer.contains(event.target)) setFabState(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setFabState(false);
+        closeSmartSearch();
+      }
+    });
+
+    // ========== منطق البحث الذكي (كما هو) ==========
+    (function() {
+      let allProperties = [];
+      let dataLoaded = false;
+      let userSelection = { category: '', type: '', budgetRange: [] };
+      let lastStepId = 'step1';
+
+      async function loadDataIfNeeded() {
+        if (dataLoaded) return;
+        try {
+          const res = await fetch("{{ '/search-data.json' | relative_url }}");
+          if (!res.ok) throw new Error('Network error');
+          allProperties = await res.json();
+          dataLoaded = true;
+        } catch (e) {
+          console.error("Data error:", e);
+          allProperties = [];
+          dataLoaded = true;
+        }
+      }
+
+      window.openSmartSearch = function() {
+        loadDataIfNeeded();
+        const overlay = document.getElementById('smartSearchOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        setTimeout(() => goToCard('step1'), 50);
+      };
+
+      window.closeSmartSearch = function() {
+        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+        setTimeout(() => {
+          const overlay = document.getElementById('smartSearchOverlay');
+          if (overlay) overlay.style.display = 'none';
+        }, 400);
+      };
+
+      window.goToCard = function(id) {
+        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+        const t = document.getElementById(id);
+        if (t) t.classList.add('active');
+      };
+
+      window.handleCommercialSelection = function() {
+        lastStepId = 'step1';
+        goToCard('stepCommercialBranch');
+      };
+
+      window.nextStep = function(cat, type) {
+        userSelection.category = cat;
+        userSelection.type = type;
+        lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
+        setupBudgetOptions(type);
+        goToCard('step2');
+      };
+
+      window.backToPrevious = function() {
+        goToCard(lastStepId);
+      };
+
+      function setupBudgetOptions(type) {
+        const container = document.getElementById('budgetOptions');
+        const title = document.getElementById('budgetTitle');
+        if (!container || !title) return;
+        container.innerHTML = '';
+        let opts = [];
+        if (type.includes('تمليك')) {
+          title.textContent = "ميزانية التملك؟";
+          opts = [
+            { label: "أقل من 3 مليون", range: [0, 3000000] },
+            { label: "3 - 6 مليون", range: [3000000, 6000000] },
+            { label: "أكثر من 6 مليون", range: [6000000, 99999999] }
+          ];
+        } else {
+          title.textContent = "الميزانية الشهرية؟";
+          const limit = type.includes('تجاري') ? 40000 : 20000;
+          opts = [
+            { label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] },
+            { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }
+          ];
+        }
+        opts.forEach(o => {
+          const b = document.createElement('button');
+          b.className = 'choice-btn';
+          b.setAttribute('aria-label', o.label);
+          b.innerHTML = `<i class="fas fa-coins"></i><span>${o.label}</span>`;
+          b.onclick = () => finishSearch(o.range);
+          container.appendChild(b);
+        });
+      }
+
+      window.finishSearch = function(range) {
+        userSelection.budgetRange = range;
+        goToCard('stepResults');
+        const content = document.getElementById('resultsContent');
+        const status = document.getElementById('resultsStatus');
+        if (!content || !status) return;
+
+        content.innerHTML = '<div style="font-size: 2rem; color: var(--color-primary); margin: 20px 0;"><i class="fas fa-circle-notch fa-spin"></i></div>';
+
+        setTimeout(() => {
+          const matches = allProperties.filter(p => {
+            if (!p || p.category !== userSelection.category) return false;
+            const isRent = userSelection.type.includes('إيجار');
+            const title = (p.title || '').toString();
+            const isPropRent = title.includes('إيجار') || (p.category || '').includes('rent');
+            if (isRent !== isPropRent) return false;
+            let pNum = 0;
+            if (typeof p.price_num === 'number') {
+              pNum = p.price_num;
+            } else {
+              const digits = (p.price || '').toString().replace(/[^0-9]/g, '');
+              pNum = digits ? parseInt(digits, 10) : 0;
+            }
+            return pNum >= range[0] && pNum <= range[1];
+          });
+
+          status.textContent = matches.length > 0
+            ? `وجدنا لك ${matches.length} عروض تناسبك:`
+            : "عذراً، لا توجد نتائج مطابقة حالياً..";
+
+          content.innerHTML = '';
+          if (!matches.length) return;
+
+          matches.forEach(m => {
+            const a = document.createElement('a');
+            a.className = 'result-item';
+            a.href = m.url || '{{ site.baseurl }}/properties/';
+            a.style.cssText = 'background:#050505; border:1px solid #222; border-radius:15px; padding:12px; display:flex; align-items:center; gap:15px; text-decoration:none; transition:0.3s;';
+
+            const img = document.createElement('img');
+            img.className = 'result-img';
+            img.alt = m.title || 'عقار';
+            img.src = m.image || '{{ site.baseurl }}/assets/img/logo.webp';
+            img.style.cssText = 'width:80px; height:80px; border-radius:10px; object-fit:cover; border:1px solid #333;';
+            img.onerror = () => { img.src = '{{ site.baseurl }}/assets/img/logo.webp'; };
+
+            const info = document.createElement('div');
+            info.className = 'result-info';
+            const h4 = document.createElement('h4');
+            h4.textContent = m.title || 'عقار';
+            h4.style.cssText = 'color:#fff; font-size:0.95rem; margin-bottom:5px;';
+            const span = document.createElement('span');
+            span.textContent = m.price || '';
+            span.style.cssText = 'color:var(--color-primary); font-weight:bold; font-size:0.9rem;';
+            info.appendChild(h4);
+            info.appendChild(span);
+            a.appendChild(img);
+            a.appendChild(info);
+            content.appendChild(a);
+          });
+        }, 400);
+      };
+
+    })();
+
+    // ========== منطق الإشعارات (منقول من الزر القديم) ==========
+    const fabNotifications = document.getElementById('fabNotifications');
+
+    function hideNotifSuccess() {
+      // يمكن إضافة تأثير نجاح هنا
+    }
+
+    function showGrantedState() {
+      if (!fabNotifications) return;
+      // تغيير مظهر زر الإشعارات في القائمة
+      fabNotifications.innerHTML = '<i class="fas fa-check-circle"></i><span class="tooltip">مفعّلة</span>';
+      fabNotifications.style.background = 'rgba(37, 211, 102, 0.15)';
+      fabNotifications.style.color = '#25D366';
+      fabNotifications.style.borderColor = '#25D366';
+    }
+
+    if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+      showGrantedState();
+    }
+
+    fabNotifications?.addEventListener('click', async () => {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+      const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+      const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
+        authDomain: "simsartalabak.firebaseapp.com",
+        projectId: "simsartalabak",
+        storageBucket: "simsartalabak.firebasestorage.app",
+        messagingSenderId: "733807203688",
+        appId: "1:733807203688:web:a0582925001409994e32dd"
+      };
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+        const db = getFirestore(app);
+        const token = await getToken(messaging, { 
+          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" 
+        });
+        if (token) {
+          await setDoc(doc(db, "fcmTokens", token), { 
+            token, 
+            createdAt: new Date(), 
+            userAgent: navigator.userAgent 
+          });
+          showGrantedState();
+        }
+      } catch (err) {
+        console.error("FCM Error:", err);
+      }
+    });
+
+
+  </script>
+</body>
+</html>
