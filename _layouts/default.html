@@ -96,7 +96,6 @@
       flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center;
       border-radius: 12px; font-size: 1.2rem; background: #d4af37; color: #000;
     }
-    .fab-bot .fab-item-icon { background: #000; color: #d4af37; border: 1px solid #d4af37; }
     .fab-whatsapp .fab-item-icon { background: #25d366; color: #fff; }
     
     .fab-item-copy { flex: 1; min-width: 0; }
@@ -161,7 +160,7 @@
     </div>
   </div>
 
-  <!-- ========== القائمة العائمة الموحدة (FAB) - الابتكار الجديد ========== -->
+  <!-- ========== القائمة العائمة الموحدة (FAB) - بدون بوت الوكيل ========== -->
   <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
@@ -170,13 +169,6 @@
         <strong>بوابة العبور للنخبة</strong>
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
-
-      <!-- المنسق الرقمي (بوابة النخبة) -->
-      <a href="chat.html" class="fab-item fab-bot" aria-label="التحدث مع المنسق الرقمي">
-        <span class="fab-item-icon"><i class="fas fa-robot"></i></span>
-        <span class="fab-item-copy"><strong>المساعد الرقمي لـ طارق طنطاوي</strong><small>فلترة فورية وعرض أحدث الوحدات الحصرية</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
-      </a>
 
       <!-- واتساب الحسم المباشر -->
       <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
@@ -208,7 +200,8 @@
     </button>
   </div>
 
-  <!-- تم حذف كود Jotform التلقائي نهائياً لضمان السيادة البصرية -->
+  <!-- سكربت JotForm Agent - يتحكم بوضع أيقونته تلقائياً -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 
   <script>
     // التحكم في القائمة العائمة (FAB)
