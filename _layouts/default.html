@@ -96,7 +96,6 @@
       flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center;
       border-radius: 12px; font-size: 1.2rem; background: #d4af37; color: #000;
     }
-    .fab-bot .fab-item-icon { background: #000; color: #d4af37; border: 1px solid #d4af37; }
     .fab-whatsapp .fab-item-icon { background: #25d366; color: #fff; }
     
     .fab-item-copy { flex: 1; min-width: 0; }
@@ -104,10 +103,46 @@
     .fab-item-copy small { display: block; color: #999; font-size: .68rem; margin-top: 2px; }
     .fab-item-arrow { margin-right: auto; color: #d4af37; font-size: .75rem; }
 
+    /* ========== فقاعة البوت المنفصلة (BOT FAB) ========== */
+    .bot-fab {
+      position: fixed; bottom: 24px; left: 24px; z-index: 9998;
+      width: 65px; height: 65px; border-radius: 50%;
+      background: linear-gradient(135deg, #050505, #1a1a1a);
+      border: 2px solid #d4af37; color: #d4af37;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+      transition: all 0.3s ease; text-decoration: none;
+      animation: botPulse 2s infinite;
+    }
+    .bot-fab:hover {
+      background: #d4af37; color: #050505;
+      transform: scale(1.1); animation: none;
+      box-shadow: 0 8px 30px rgba(212,175,55,0.7);
+    }
+    .bot-fab i { font-size: 1.5rem; }
+    
+    /* تلميح صغير بجانب الفقاعة */
+    .bot-fab-tooltip {
+      position: absolute; left: 75px; top: 50%; transform: translateY(-50%);
+      background: #050505; border: 1px solid #d4af37; color: #d4af37;
+      padding: 6px 14px; border-radius: 20px; font-size: 0.7rem; font-weight: 900;
+      white-space: nowrap; opacity: 0; visibility: hidden;
+      transition: all 0.3s ease; pointer-events: none;
+    }
+    .bot-fab:hover .bot-fab-tooltip { opacity: 1; visibility: visible; left: 80px; }
+
+    @keyframes botPulse {
+      0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(212,175,55,0); }
+      100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+    }
+
     @media (max-width: 768px) {
       .fab-container { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
       .fab-main { min-width: 140px; height: 54px; }
       .fab-item { min-height: 65px; }
+      .bot-fab { left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: 55px; height: 55px; }
+      .bot-fab-tooltip { display: none; }
     }
   </style>
 </head>
@@ -161,7 +196,7 @@
     </div>
   </div>
 
-  <!-- ========== القائمة العائمة الموحدة (FAB) - الابتكار الجديد ========== -->
+  <!-- ========== القائمة العائمة الموحدة (FAB) - بدون زر البوت ========== -->
   <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
@@ -170,13 +205,6 @@
         <strong>بوابة العبور للنخبة</strong>
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
-
-      <!-- المنسق الرقمي (بوابة النخبة) -->
-      <a href="chat.html" class="fab-item fab-bot" aria-label="التحدث مع المنسق الرقمي">
-        <span class="fab-item-icon"><i class="fas fa-robot"></i></span>
-        <span class="fab-item-copy"><strong>المساعد الرقمي لـ طارق طنطاوي</strong><small>فلترة فورية وعرض أحدث الوحدات الحصرية</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
-      </a>
 
       <!-- واتساب الحسم المباشر -->
       <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
@@ -207,6 +235,12 @@
       <span class="fab-main-label">مركز طلبك</span>
     </button>
   </div>
+
+  <!-- ========== فقاعة البوت المنفصلة (BOT FAB) ========== -->
+  <a href="bot.html" class="bot-fab" aria-label="التحدث مع المساعد الذكي">
+    <i class="fas fa-robot"></i>
+    <span class="bot-fab-tooltip">المساعد الذكي</span>
+  </a>
 
   <!-- تم حذف كود Jotform التلقائي نهائياً لضمان السيادة البصرية -->
 
