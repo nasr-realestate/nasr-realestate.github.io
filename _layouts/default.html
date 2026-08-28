@@ -46,185 +46,138 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* ========== القائمة العائمة السيادية الموحدة (FAB) ========== */
-    .fab-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-    .fab-main {
-      width: auto; min-width: 150px; height: 60px; padding: 0 18px; border-radius: 999px;
-      background: #050505; border: 2px solid #d4af37; color: #d4af37;
-      display: flex; align-items: center; justify-content: center; gap: 9px;
-      cursor: pointer; box-shadow: 0 4px 20px rgba(212,175,55,0.5);
-      transition: all 0.3s ease; animation: fabPulse 2s infinite;
+    /* ========== زر القائمة العائمة الموحدة (FAB) ========== */
+    .fab-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
-    .fab-main:hover { background: #d4af37; color: #050505; transform: scale(1.05); animation: none; }
-    .fab-main-label { font-family: 'Cairo', sans-serif; font-size: .82rem; font-weight: 900; white-space: nowrap; }
-    
+
+    .fab-main {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #050505;
+      border: 2px solid #d4af37;
+      color: #d4af37;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+      transition: all 0.3s ease;
+      position: relative;
+      animation: fabPulse 2s infinite;
+    }
+
+    .fab-main:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      animation: none;
+    }
+
     @keyframes fabPulse {
       0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
       70% { box-shadow: 0 0 0 20px rgba(212,175,55,0); }
       100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
     }
 
+    .fab-main i {
+      transition: transform 0.3s ease;
+    }
+
+    .fab-container.open .fab-main i {
+      transform: rotate(45deg);
+    }
+
     .fab-menu {
-      display: flex; flex-direction: column; gap: 10px; opacity: 0; visibility: hidden;
-      transform: translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      pointer-events: none; width: min(390px, calc(100vw - 32px));
-    }
-    .fab-container.open .fab-menu { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
-    .fab-container.open .fab-main { background: linear-gradient(135deg, #fce205, #d4af37); color: #050505; }
-    .fab-container.open .fab-main i { transform: rotate(45deg); }
-
-    .fab-backdrop {
-      position: fixed; inset: 0; z-index: 9997; opacity: 0; visibility: hidden;
-      background: radial-gradient(circle at 84% 82%, rgba(212,175,55,.12), rgba(0,0,0,.82) 42%, rgba(0,0,0,.94));
-      backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); transition: all 0.35s ease;
-    }
-    .fab-backdrop.visible { opacity: 1; visibility: visible; pointer-events: auto; }
-
-    .fab-menu-heading { color: #fff; padding: 5px 10px; text-align: right; direction: rtl; }
-    .fab-menu-kicker { color: #d4af37; font-size: .72rem; font-weight: 900; }
-    .fab-menu-heading strong { display: block; margin: 3px 0; font-size: 1.05rem; }
-    .fab-menu-heading small { color: #aaa; font-size: .7rem; line-height: 1.6; }
-
-    .fab-item {
-      width: 100%; min-height: 70px; padding: 12px 15px; border-radius: 18px;
-      display: flex; align-items: center; gap: 12px; text-align: right; direction: rtl;
-      background: rgba(12,12,12,.98); border: 1px solid rgba(212,175,55,.4);
-      text-decoration: none; transition: all 0.25s ease;
-    }
-    .fab-item:hover { transform: translateX(-6px); border-color: #d4af37; background: #111; }
-    .fab-item-icon {
-      flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center;
-      border-radius: 12px; font-size: 1.2rem; background: #d4af37; color: #000;
-    }
-    .fab-whatsapp .fab-item-icon { background: #25d366; color: #fff; }
-    
-    .fab-item-copy { flex: 1; min-width: 0; }
-    .fab-item-copy strong { display: block; color: #fff; font-size: .85rem; }
-    .fab-item-copy small { display: block; color: #999; font-size: .68rem; margin-top: 2px; }
-    .fab-item-arrow { margin-right: auto; color: #d4af37; font-size: .75rem; }
-
-    /* ========== فقاعة الوكيل المنفصلة (BOT FAB) ========== */
-    .bot-fab {
-      position: fixed; bottom: 24px; left: 24px; z-index: 9998;
-      width: 70px; height: 70px; border-radius: 50%;
-      background: linear-gradient(135deg, #050505, #1a1a1a);
-      border: 3px solid #d4af37; color: #d4af37;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; box-shadow: 0 4px 25px rgba(212,175,55,0.6);
-      transition: all 0.3s ease; text-decoration: none;
-      animation: botPulse 2s infinite;
-    }
-    .bot-fab:hover {
-      background: #d4af37; color: #050505;
-      transform: scale(1.1); animation: none;
-      box-shadow: 0 8px 35px rgba(212,175,55,0.8);
-    }
-    .bot-fab i { font-size: 1.6rem; }
-    
-    .bot-fab-tooltip {
-      position: absolute; left: 80px; top: 50%; transform: translateY(-50%);
-      background: #050505; border: 1px solid #d4af37; color: #d4af37;
-      padding: 8px 16px; border-radius: 25px; font-size: 0.75rem; font-weight: 900;
-      white-space: nowrap; opacity: 0; visibility: hidden;
-      transition: all 0.3s ease; pointer-events: none;
-    }
-    .bot-fab:hover .bot-fab-tooltip { opacity: 1; visibility: visible; left: 85px; }
-
-    @keyframes botPulse {
-      0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
-      70% { box-shadow: 0 0 0 25px rgba(212,175,55,0); }
-      100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
-    }
-
-    /* ========== نافذة الوكيل المنبثقة (Modal) ========== */
-    .bot-modal-overlay {
-      position: fixed; inset: 0; z-index: 10001;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(10px);
-      display: none; align-items: center; justify-content: center;
-    }
-    .bot-modal-overlay.active { display: flex; }
-
-    .bot-modal {
-      width: min(95vw, 450px);
-      height: min(85vh, 750px);
-      background: #050505;
-      border: 2px solid #d4af37;
-      border-radius: 25px;
-      overflow: hidden;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 20px 60px rgba(212,175,55,0.3);
-      animation: modalIn 0.3s ease;
-    }
-
-    @keyframes modalIn {
-      from { opacity: 0; transform: translateY(40px) scale(0.95); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .bot-modal-header {
-      background: linear-gradient(135deg, #050505, #1a1a1a);
-      border-bottom: 2px solid #d4af37;
-      padding: 15px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .bot-modal-header .bot-title {
-      display: flex;
-      align-items: center;
       gap: 10px;
-      color: #d4af37;
-      font-weight: 900;
-      font-size: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
     }
 
-    .bot-modal-header .bot-title i {
-      font-size: 1.3rem;
+    .fab-container.open .fab-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
     }
 
-    .bot-modal-close {
-      background: #d4af37;
-      color: #050505;
-      border: none;
-      width: 35px;
-      height: 35px;
+    .fab-item {
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      cursor: pointer;
-      font-size: 1rem;
+      background: rgba(5,5,5,0.9);
+      border: 1px solid #d4af37;
+      color: #d4af37;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s;
-    }
-
-    .bot-modal-close:hover {
-      background: #f0c94a;
-      transform: rotate(90deg);
-    }
-
-    .bot-modal-body {
-      flex: 1;
-      overflow: hidden;
+      cursor: pointer;
+      font-size: 1.3rem;
+      transition: all 0.3s ease;
       position: relative;
+      text-decoration: none;
     }
 
-    .bot-modal-body iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
+    .fab-item:hover {
+      background: #d4af37;
+      color: #050505;
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(212,175,55,0.4);
+    }
+
+    .fab-item .tooltip {
+      position: absolute;
+      right: 60px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #050505;
+      border: 1px solid #d4af37;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .fab-item:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+      right: 70px;
     }
 
     @media (max-width: 768px) {
-      .fab-container { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
-      .fab-main { min-width: 140px; height: 54px; }
-      .fab-item { min-height: 65px; }
-      .bot-fab { left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: 60px; height: 60px; }
-      .bot-fab-tooltip { display: none; }
-      .bot-fab i { font-size: 1.3rem; }
-      .bot-modal { width: 100vw; height: 100vh; border-radius: 0; border: none; }
+      .fab-container {
+        bottom: 16px;
+        right: 16px;
+      }
+      .fab-main {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+      }
+      .fab-item {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+      }
     }
   </style>
 </head>
@@ -234,7 +187,7 @@
 
   <div id="prestigeSplash">
     <div style="width:280px; text-align:center; padding:20px;">
-      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="خزانة العقارات" width="280" height="80" style="max-width:100%; height:auto; filter:drop-shadow(0 0 20px rgba(212,175,55,0.3));">
+      <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="سمسار طلبك" width="280" height="80" style="max-width:100%; height:auto; filter:drop-shadow(0 0 20px rgba(212,175,55,0.3));">
     </div>
   </div>
 
@@ -249,13 +202,20 @@
 
   {% include footer.html %}
 
-  <!-- نافذة البحث الذكي (صمم طلبك) -->
+  <!-- زر صمم طلبك (البحث الذكي) - يبقى كما هو في اليسار -->
+  <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
+    <div class="pulse-ring"></div>
+    <i class="fas fa-hand-sparkles"></i>
+    <span class="trigger-text">صمم طلبك</span>
+  </div>
+
+  <!-- نافذة البحث الذكي -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
       <div class="smart-card" id="step1">
-        <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: #d4af37; margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">خزانة العقارات المتجددة</h2>
+        <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">مرحباً بك في بوابة النخبة</h2>
         <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
         <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
           <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i><span>تمليك العمر</span></button>
@@ -263,194 +223,310 @@
           <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span></button>
           <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i><span>تجاري وإداري</span></button>
         </div>
-        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline;">سأقوم بالتصفح بنفسي لاحقاً</button>
+        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline; font-size: 0.85rem;">سأقوم بالتصفح بنفسي لاحقاً</button>
       </div>
+
       <div class="smart-card" id="stepCommercialBranch">
-        <h2 style="color: #fff;">النشاط التجاري والإداري</h2>
-        <div class="choice-grid">
-          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')">تمليك / شراء</button>
-          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')">إيجار شهري</button>
+        <i class="fas fa-briefcase gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">النشاط التجاري والإداري</h2>
+        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i><span>تمليك / شراء</span></button>
+          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i><span>إيجار شهري</span></button>
         </div>
+        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
-      <div class="smart-card" id="step2"><h2 id="budgetTitle" style="color: #fff;">الميزانية؟</h2><div id="budgetOptions" class="choice-grid"></div></div>
-      <div class="smart-card" id="stepResults"><h2 style="color: #fff;">نتائج النخبة</h2><div id="resultsContent"></div></div>
+
+      <div class="smart-card" id="step2">
+        <i class="fas fa-money-bill-wave gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 id="budgetTitle" style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">الميزانية المرصودة؟</h2>
+        <div id="budgetOptions" class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;"></div>
+        <button class="back-text-btn" onclick="backToPrevious()" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+      </div>
+
+      <div class="smart-card" id="stepResults">
+        <i class="fas fa-magic gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">نتائج البحث المخصصة</h2>
+        <p id="resultsStatus" style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">جاري البحث في خزائن النخبة...</p>
+        <div id="resultsContent" class="results-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right;"></div>
+        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;">بدء بحث جديد</button>
+      </div>
     </div>
   </div>
 
-  <!-- ========== القائمة العائمة الموحدة (FAB) - بدون أيقونة الوكيل ========== -->
-  <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
+  <!-- ========== القائمة العائمة الموحدة (FAB) ========== -->
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
-      <div class="fab-menu-heading">
-        <span class="fab-menu-kicker">خزانة العقارات | مدينة نصر</span>
-        <strong>بوابة العبور للنخبة</strong>
-        <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
-      </div>
-
-      <!-- واتساب الحسم المباشر -->
-      <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
-         class="fab-item fab-whatsapp" target="_blank" rel="noopener">
-        <span class="fab-item-icon"><i class="fab fa-whatsapp"></i></span>
-        <span class="fab-item-copy"><strong>حسم الصفقة (تنفيذ فوري)</strong><small>للتواصل المباشر في حالات الكاش والجدية</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
+      <a href="https://wa.me/201147758857" class="fab-item" target="_blank" rel="noopener" aria-label="واتساب">
+        <i class="fab fa-whatsapp"></i>
+        <span class="tooltip">واتساب</span>
       </a>
-
-      <!-- أداة صمم طلبك -->
-      <button class="fab-item fab-design" id="fabDesign" type="button">
-        <span class="fab-item-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
-        <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
+      <button class="fab-item" id="fabChatbot" aria-label="شات بوت">
+        <i class="fas fa-robot"></i>
+        <span class="tooltip">شات بوت</span>
       </button>
-
-      <!-- الإشعارات -->
-      <button class="fab-item fab-notifications" id="fabNotifications" type="button">
-        <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
-        <span class="fab-item-copy"><strong>كن أول من يعلم</strong><small>تنبيهات فورية بالوحدات اللقطة فور توفرها</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
+      <a href="tel:+201147758857" class="fab-item" onclick="trackPhoneCall()" aria-label="اتصال هاتفي">
+        <i class="fas fa-phone-alt"></i>
+        <span class="tooltip">اتصال هاتفي</span>
+      </a>
+      <button class="fab-item" id="fabNotifications" aria-label="إشعارات">
+        <i class="fas fa-bell"></i>
+        <span class="tooltip">إشعارات</span>
       </button>
     </div>
-
-    <button class="fab-main" id="fabMain" type="button">
+    <button class="fab-main" id="fabMain" aria-label="فتح القائمة">
       <i class="fas fa-plus"></i>
-      <span class="fab-main-label">مركز طلبك</span>
     </button>
   </div>
 
-  <!-- ========== فقاعة الوكيل المنفصلة ========== -->
-  <button class="bot-fab" id="botFab" type="button" aria-label="التحدث مع المساعد الذكي">
-    <i class="fas fa-robot"></i>
-    <span class="bot-fab-tooltip">المساعد الذكي لسمسار طلبك</span>
-  </button>
-
-  <!-- ========== نافذة الوكيل المنبثقة ========== -->
-  <div class="bot-modal-overlay" id="botModalOverlay">
-    <div class="bot-modal">
-      <div class="bot-modal-header">
-        <div class="bot-title">
-          <i class="fas fa-robot"></i>
-          <span>سمسار طلبك - المساعد الذكي</span>
-        </div>
-        <button class="bot-modal-close" id="botModalClose" type="button">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="bot-modal-body" id="botModalBody">
-        <!-- كود تضمين الوكيل يوضع هنا عند الفتح -->
-      </div>
-    </div>
-  </div>
+  <!-- سكربت JotForm Agent -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 
   <script>
-    // التحكم في القائمة العائمة (FAB)
+    // ========== منطق القائمة العائمة ==========
     const fabMain = document.getElementById('fabMain');
     const fabContainer = document.getElementById('fabContainer');
-    const fabBackdrop = document.getElementById('fabBackdrop');
-    const fabDesign = document.getElementById('fabDesign');
 
-    function toggleFab(isOpen) {
-      fabContainer.classList.toggle('open', isOpen);
-      fabBackdrop.classList.toggle('visible', isOpen);
-    }
-
-    fabMain.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFab(!fabContainer.classList.contains('open'));
+    fabMain.addEventListener('click', () => {
+      fabContainer.classList.toggle('open');
     });
 
-    fabBackdrop.addEventListener('click', () => toggleFab(false));
-    fabDesign?.addEventListener('click', () => { toggleFab(false); openSmartSearch(); });
-
-    // ========== التحكم في نافذة الوكيل المنبثقة ==========
-    const botFab = document.getElementById('botFab');
-    const botModalOverlay = document.getElementById('botModalOverlay');
-    const botModalClose = document.getElementById('botModalClose');
-    const botModalBody = document.getElementById('botModalBody');
-    let botLoaded = false;
-
-    botFab.addEventListener('click', () => {
-      botModalOverlay.classList.add('active');
-      
-      // تحميل كود الوكيل مرة واحدة فقط
-      if (!botLoaded) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js';
-        script.async = true;
-        botModalBody.appendChild(script);
-        botLoaded = true;
+    // إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', (e) => {
+      if (!fabContainer.contains(e.target)) {
+        fabContainer.classList.remove('open');
       }
     });
 
-    botModalClose.addEventListener('click', () => {
-      botModalOverlay.classList.remove('active');
-    });
-
-    // إغلاق النافذة عند الضغط خارجها
-    botModalOverlay.addEventListener('click', (e) => {
-      if (e.target === botModalOverlay) {
-        botModalOverlay.classList.remove('active');
-      }
-    });
-
-    // إغلاق بزر Escape
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && botModalOverlay.classList.contains('active')) {
-        botModalOverlay.classList.remove('active');
-      }
-    });
-
-    // منطق البحث الذكي (Smart Search)
+    // ========== منطق البحث الذكي (كما هو) ==========
     (function() {
       let allProperties = [];
       let dataLoaded = false;
       let userSelection = { category: '', type: '', budgetRange: [] };
+      let lastStepId = 'step1';
+
+      async function loadDataIfNeeded() {
+        if (dataLoaded) return;
+        try {
+          const res = await fetch("{{ '/search-data.json' | relative_url }}");
+          if (!res.ok) throw new Error('Network error');
+          allProperties = await res.json();
+          dataLoaded = true;
+        } catch (e) {
+          console.error("Data error:", e);
+          allProperties = [];
+          dataLoaded = true;
+        }
+      }
 
       window.openSmartSearch = function() {
+        loadDataIfNeeded();
         const overlay = document.getElementById('smartSearchOverlay');
-        if (overlay) overlay.style.display = 'flex';
-        goToCard('step1');
-        if (!dataLoaded) {
-          fetch("{{ '/search-data.json' | relative_url }}").then(r => r.json()).then(d => { allProperties = d; dataLoaded = true; });
-        }
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        setTimeout(() => goToCard('step1'), 50);
       };
 
-      window.closeSmartSearch = function() { document.getElementById('smartSearchOverlay').style.display = 'none'; };
+      window.closeSmartSearch = function() {
+        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
+        setTimeout(() => {
+          const overlay = document.getElementById('smartSearchOverlay');
+          if (overlay) overlay.style.display = 'none';
+        }, 400);
+      };
+
       window.goToCard = function(id) {
         document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        const t = document.getElementById(id);
+        if (t) t.classList.add('active');
       };
-      window.handleCommercialSelection = () => goToCard('stepCommercialBranch');
-      window.nextStep = (cat, type) => { userSelection.category = cat; userSelection.type = type; setupBudgetOptions(type); goToCard('step2'); };
-      
+
+      window.handleCommercialSelection = function() {
+        lastStepId = 'step1';
+        goToCard('stepCommercialBranch');
+      };
+
+      window.nextStep = function(cat, type) {
+        userSelection.category = cat;
+        userSelection.type = type;
+        lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
+        setupBudgetOptions(type);
+        goToCard('step2');
+      };
+
+      window.backToPrevious = function() {
+        goToCard(lastStepId);
+      };
+
       function setupBudgetOptions(type) {
         const container = document.getElementById('budgetOptions');
+        const title = document.getElementById('budgetTitle');
+        if (!container || !title) return;
         container.innerHTML = '';
-        let opts = type.includes('تمليك') ? 
-          [{l:"أقل من 3 مليون", r:[0,3e6]}, {l:"3-6 مليون", r:[3e6,6e6]}, {l:"أكثر من 6 مليون", r:[6e6,9e7]}] :
-          [{l:"أقل من 20 ألف", r:[0,2e4]}, {l:"أكثر من 20 ألف", r:[2e4,9e6]}];
-        
+        let opts = [];
+        if (type.includes('تمليك')) {
+          title.textContent = "ميزانية التملك؟";
+          opts = [
+            { label: "أقل من 3 مليون", range: [0, 3000000] },
+            { label: "3 - 6 مليون", range: [3000000, 6000000] },
+            { label: "أكثر من 6 مليون", range: [6000000, 99999999] }
+          ];
+        } else {
+          title.textContent = "الميزانية الشهرية؟";
+          const limit = type.includes('تجاري') ? 40000 : 20000;
+          opts = [
+            { label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] },
+            { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }
+          ];
+        }
         opts.forEach(o => {
-          const btn = document.createElement('button');
-          btn.className = 'choice-btn'; btn.innerHTML = `<span>${o.l}</span>`;
-          btn.onclick = () => { userSelection.budgetRange = o.r; finishSearch(); };
-          container.appendChild(btn);
+          const b = document.createElement('button');
+          b.className = 'choice-btn';
+          b.setAttribute('aria-label', o.label);
+          b.innerHTML = `<i class="fas fa-coins"></i><span>${o.label}</span>`;
+          b.onclick = () => finishSearch(o.range);
+          container.appendChild(b);
         });
       }
 
-      function finishSearch() {
+      window.finishSearch = function(range) {
+        userSelection.budgetRange = range;
         goToCard('stepResults');
         const content = document.getElementById('resultsContent');
-        content.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const status = document.getElementById('resultsStatus');
+        if (!content || !status) return;
+
+        content.innerHTML = '<div style="font-size: 2rem; color: var(--color-primary); margin: 20px 0;"><i class="fas fa-circle-notch fa-spin"></i></div>';
+
         setTimeout(() => {
-          const matches = allProperties.filter(p => p.category === userSelection.category);
-          content.innerHTML = matches.length ? '' : 'لا توجد نتائج مطابقة.';
-          matches.forEach(m => {
-            const div = document.createElement('div');
-            div.innerHTML = `<a href="${m.url}" style="color:#fff; display:block; padding:10px; border-bottom:1px solid #333;">${m.title} - ${m.price}</a>`;
-            content.appendChild(div);
+          const matches = allProperties.filter(p => {
+            if (!p || p.category !== userSelection.category) return false;
+            const isRent = userSelection.type.includes('إيجار');
+            const title = (p.title || '').toString();
+            const isPropRent = title.includes('إيجار') || (p.category || '').includes('rent');
+            if (isRent !== isPropRent) return false;
+            let pNum = 0;
+            if (typeof p.price_num === 'number') {
+              pNum = p.price_num;
+            } else {
+              const digits = (p.price || '').toString().replace(/[^0-9]/g, '');
+              pNum = digits ? parseInt(digits, 10) : 0;
+            }
+            return pNum >= range[0] && pNum <= range[1];
           });
-        }, 500);
-      }
+
+          status.textContent = matches.length > 0
+            ? `وجدنا لك ${matches.length} عروض تناسبك:`
+            : "عذراً، لا توجد نتائج مطابقة حالياً..";
+
+          content.innerHTML = '';
+          if (!matches.length) return;
+
+          matches.forEach(m => {
+            const a = document.createElement('a');
+            a.className = 'result-item';
+            a.href = m.url || '{{ site.baseurl }}/properties/';
+            a.style.cssText = 'background:#050505; border:1px solid #222; border-radius:15px; padding:12px; display:flex; align-items:center; gap:15px; text-decoration:none; transition:0.3s;';
+
+            const img = document.createElement('img');
+            img.className = 'result-img';
+            img.alt = m.title || 'عقار';
+            img.src = m.image || '{{ site.baseurl }}/assets/img/logo.webp';
+            img.style.cssText = 'width:80px; height:80px; border-radius:10px; object-fit:cover; border:1px solid #333;';
+            img.onerror = () => { img.src = '{{ site.baseurl }}/assets/img/logo.webp'; };
+
+            const info = document.createElement('div');
+            info.className = 'result-info';
+            const h4 = document.createElement('h4');
+            h4.textContent = m.title || 'عقار';
+            h4.style.cssText = 'color:#fff; font-size:0.95rem; margin-bottom:5px;';
+            const span = document.createElement('span');
+            span.textContent = m.price || '';
+            span.style.cssText = 'color:var(--color-primary); font-weight:bold; font-size:0.9rem;';
+            info.appendChild(h4);
+            info.appendChild(span);
+            a.appendChild(img);
+            a.appendChild(info);
+            content.appendChild(a);
+          });
+        }, 400);
+      };
+
+      window.trackPhoneCall = function() {
+        if (typeof dataLayer !== 'undefined') {
+          dataLayer.push({ event: 'phone_call_click', call_source: 'fab_menu' });
+        }
+      };
     })();
+
+    // ========== منطق الإشعارات (منقول من الزر القديم) ==========
+    const fabNotifications = document.getElementById('fabNotifications');
+
+    function hideNotifSuccess() {
+      // يمكن إضافة تأثير نجاح هنا
+    }
+
+    function showGrantedState() {
+      if (!fabNotifications) return;
+      // تغيير مظهر زر الإشعارات في القائمة
+      fabNotifications.innerHTML = '<i class="fas fa-check-circle"></i><span class="tooltip">مفعّلة</span>';
+      fabNotifications.style.background = 'rgba(37, 211, 102, 0.15)';
+      fabNotifications.style.color = '#25D366';
+      fabNotifications.style.borderColor = '#25D366';
+    }
+
+    if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+      showGrantedState();
+    }
+
+    fabNotifications?.addEventListener('click', async () => {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+      const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+      const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
+        authDomain: "simsartalabak.firebaseapp.com",
+        projectId: "simsartalabak",
+        storageBucket: "simsartalabak.firebasestorage.app",
+        messagingSenderId: "733807203688",
+        appId: "1:733807203688:web:a0582925001409994e32dd"
+      };
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+        const db = getFirestore(app);
+        const token = await getToken(messaging, { 
+          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" 
+        });
+        if (token) {
+          await setDoc(doc(db, "fcmTokens", token), { 
+            token, 
+            createdAt: new Date(), 
+            userAgent: navigator.userAgent 
+          });
+          showGrantedState();
+        }
+      } catch (err) {
+        console.error("FCM Error:", err);
+      }
+    });
+
+    // ========== ربط زر الشات بوت بـ JotForm Agent ==========
+    // يعتمد على الواجهة التي يوفرها JotForm Agent؛ يمكن استدعاء open() إذا كانت متاحة
+    document.getElementById('fabChatbot')?.addEventListener('click', () => {
+      if (window.JotFormAgent && typeof window.JotFormAgent.open === 'function') {
+        window.JotFormAgent.open();
+      } else {
+        // Fallback: محاولة النقر على أي زر أنشأه JotForm تلقائيًا
+        const jotFormButton = document.querySelector('[data-jotform-agent]');
+        if (jotFormButton) jotFormButton.click();
+        else console.warn('JotForm Agent not initialized yet.');
+      }
+    });
   </script>
 </body>
 </html>
