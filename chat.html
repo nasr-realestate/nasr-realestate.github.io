@@ -2,63 +2,71 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>بوابة النخبة | طارق طنطاوي</title>
     <style>
-        body, html {
-            margin: 0; padding: 0; height: 100%; width: 100%;
-            background-color: #0B0B0B; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-        }
-        /* الشريط العلوي السيادي */
-        .header-bar {
-            height: 60px; background: #1A1A1B; display: flex;
-            align-items: center; justify-content: space-between;
-            padding: 0 20px; border-bottom: 2px solid #C5A059;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; z-index: 10;
-        }
-        .logo-section { display: flex; align-items: center; gap: 10px; }
-        .logo-section img { width: 40px; border-radius: 50%; border: 1px solid #C5A059; }
-        .logo-section span { color: #C5A059; font-weight: bold; font-size: 1.1rem; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #050505; overflow: hidden; font-family: 'Cairo', sans-serif; }
         
-        .close-btn {
-            background: #C5A059; color: #000; border: none;
-            padding: 8px 15px; border-radius: 5px; cursor: pointer;
-            font-weight: bold; text-decoration: none; font-size: 0.9rem;
+        /* الهيدر السيادي */
+        .header-elite {
+            height: 65px; background: #050505; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; border-bottom: 2px solid #d4af37; position: relative; z-index: 1000;
         }
-        /* حاوية البوت لملء الشاشة */
-        .bot-container {
-            width: 100%; height: calc(100% - 60px); position: relative;
+        .header-elite .brand { display: flex; align-items: center; gap: 10px; }
+        .header-elite img { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #d4af37; object-fit: cover; }
+        .header-elite span { color: #d4af37; font-weight: 900; font-size: 1rem; }
+        
+        .back-btn { 
+            background: #d4af37; color: #050505; padding: 8px 16px; border-radius: 8px; 
+            text-decoration: none; font-weight: 900; font-size: 0.85rem; transition: 0.3s;
         }
-        /* إخفاء تذييل Jotform بقدر الإمكان عبر التغطية البصرية */
-        .overlay-mask {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: 40px; background: #0B0B0B; z-index: 5;
-            display: flex; align-items: center; justify-content: center;
-            color: #555; font-size: 10px;
+
+        /* حاوية البوت لضمان الظهور */
+        #bot-frame-container {
+            width: 100%; height: calc(100% - 110px); /* ترك مساحة للهيدر والماسك السفلي */
+            background: #050505; position: relative;
+        }
+
+        /* القناع السفلي لتغطية Powered by */
+        .shield-mask {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+            background: #050505; z-index: 9999; display: flex; align-items: center; 
+            justify-content: center; color: #d4af37; font-size: 0.75rem; font-weight: 700;
+            border-top: 1px solid #1a1a1a;
         }
     </style>
 </head>
 <body>
-
-    <div class="header-bar">
-        <div class="logo-section">
-            <img src="https://nasr-realestate.github.io/logo.png" alt="سمسار طلبك">
-            <span>خزانة العقارات | طارق طنطاوي</span>
+    <div class="header-elite">
+        <div class="brand">
+            <!-- تأكد أن اسم الصورة logo.webp كما في موقعك الرئيسي -->
+            <img src="assets/img/logo.webp" onerror="this.src='https://nasr-realestate.github.io/assets/img/logo.webp'" alt="طارق طنطاوي">
+            <span>بوابة النخبة | خزانة العقارات</span>
         </div>
-        <a href="index.html" class="close-btn">إغلاق العودة للموقع</a>
+        <a href="index.html" class="back-btn">إغلاق العودة للموقع</a>
     </div>
 
-    <div class="bot-container">
-        <!-- ضع كود التضمين (Embed Code) الخاص بـ Jotform هنا بالأسفل -->
-        
-        <script src="https://agent.jotform.com/019d95efcafa75be955b3a9f5775be53337b/embed.js"></script>
-
-        <!-- هذه الطبقة تحل محل التذييل وتظهر هويتك أنت -->
-        <div class="overlay-mask">
-            جميع الحقوق محفوظة © سمسار طلبك ٢٠٢٦
-        </div>
+    <div id="bot-frame-container">
+        <!-- استخدام السكريبت الرسمي داخل الصفحة لضمان التحميل 100% -->
+        <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
     </div>
 
+    <div class="shield-mask">
+        © جاري معالجة طلبك في خزانة النخبة - ٢٠٢٦
+    </div>
+
+    <script>
+        // كود إضافي لإجبار البوت على ملء الشاشة وتغيير الألوان
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const iframe = document.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.height = '100%';
+                    iframe.style.width = '100%';
+                    iframe.style.border = 'none';
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
