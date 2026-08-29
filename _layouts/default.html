@@ -52,8 +52,8 @@
     .fab-backdrop {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(5, 5, 5, 0.8);
-      backdrop-filter: blur(5px);
+      background: rgba(5, 5, 5, 0.85);
+      backdrop-filter: blur(6px);
       z-index: 9998;
       display: none;
       opacity: 0;
@@ -67,25 +67,19 @@
     .fab-container {
       position: fixed;
       bottom: 24px;
-      right: 24px;
+      right: 20px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       font-family: 'Cairo', sans-serif;
     }
-    @media (max-width: 768px) {
-      .fab-container {
-        bottom: 20px;
-        right: 16px;
-      }
-    }
 
     .fab-main {
       background: linear-gradient(135deg, #151515 0%, #050505 100%);
       border: 1px solid #d4af37;
       color: #d4af37;
-      padding: 12px 24px;
+      padding: 12px 22px;
       border-radius: 50px;
       font-size: 0.95rem;
       font-weight: 700;
@@ -93,7 +87,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      box-shadow: 0 4px 25px rgba(212, 175, 55, 0.25);
+      box-shadow: 0 4px 25px rgba(212, 175, 55, 0.3);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .fab-main i {
@@ -103,7 +97,7 @@
     .fab-main:hover {
       background: #d4af37;
       color: #050505;
-      box-shadow: 0 6px 30px rgba(212, 175, 55, 0.45);
+      box-shadow: 0 6px 30px rgba(212, 175, 55, 0.5);
     }
     .fab-container.active .fab-main {
       background: #d4af37;
@@ -117,9 +111,12 @@
       display: none;
       flex-direction: column;
       gap: 10px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       width: 320px;
-      max-width: calc(100vw - 32px);
+      max-width: calc(100vw - 40px);
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      padding: 4px;
       opacity: 0;
       transform: translateY(15px) scale(0.95);
       transition: opacity 0.3s ease, transform 0.3s ease;
@@ -161,7 +158,7 @@
     }
 
     .fab-item {
-      background: rgba(10, 10, 10, 0.92);
+      background: rgba(10, 10, 10, 0.95);
       border: 1px solid #222;
       border-radius: 12px;
       padding: 10px 14px;
@@ -232,6 +229,22 @@
       color: #d4af37;
       transform: translateX(-3px);
     }
+
+    /* الضبط الخاص بالشاشات الصغيرة (الموبايل) لمنع التعارض مع بوت Jotform */
+    @media (max-width: 768px) {
+      .fab-container {
+        bottom: 16px;
+        right: 12px;
+      }
+      .fab-main {
+        padding: 10px 18px;
+        font-size: 0.88rem;
+      }
+      /* إبعاد زر Jotform وتعديل مكانه في اليسار دون حجب العناصر */
+      #JotformAgent-019d95efcafa75be955b3a9f5775be53337b {
+        z-index: 9990 !important;
+      }
+    }
   </style>
 </head>
 
@@ -255,6 +268,7 @@
 
   {% include footer.html %}
 
+  <!-- نافذة المعالج الذكي (صمم طلبك) -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
@@ -298,6 +312,7 @@
     </div>
   </div>
 
+  <!-- ========== القائمة العائمة الموحدة (FAB) - مركز طلبك ========== -->
   <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
@@ -307,18 +322,21 @@
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
 
-      <a href="{{ '/add-your-property.html/' | relative_url }}" class="fab-item fab-add">
+      <!-- 1. أضف عقارك (مربوط برابط add-your-property.html الصحيح) -->
+      <a href="{{ '/add-your-property.html' | relative_url }}" class="fab-item fab-add">
         <span class="fab-item-icon"><i class="fas fa-plus-circle"></i></span>
         <span class="fab-item-copy"><strong>أضف عقارك للعرض</strong><small>انضم لخزائن النخبة وابعث عقارك للتنفيذ</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </a>
 
+      <!-- 2. أداة صمم طلبك الاستثماري -->
       <button class="fab-item fab-design" id="fabDesign" type="button" onclick="triggerSmartSearchFromFab()">
         <span class="fab-item-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
         <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </button>
 
+      <!-- 3. واتساب الحسم المباشر -->
       <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
          class="fab-item fab-whatsapp" target="_blank" rel="noopener">
         <span class="fab-item-icon"><i class="fab fa-whatsapp"></i></span>
@@ -326,6 +344,7 @@
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </a>
 
+      <!-- 4. إشعارات النخبة -->
       <button class="fab-item fab-notif" id="enableNotif" type="button">
         <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
         <span class="fab-item-copy"><strong id="notifTitle">إشعارات النخبة</strong><small id="notifSub">تفعيل التنبيهات للعروض الحصرية</small></span>
@@ -333,12 +352,14 @@
       </button>
     </div>
 
+    <!-- الزر الرئيسي الموحد -->
     <button class="fab-main" id="fabMain" type="button" onclick="toggleFabMenu()">
       <i class="fas fa-plus"></i>
       <span class="fab-main-label">مركز طلبك</span>
     </button>
   </div>
 
+  <!-- ========== تضمين بوت وكيل Jotform الفخم (في اليسار بالأسفل) ========== -->
   <div id="JotformAgent-019d95efcafa75be955b3a9f5775be53337b"></div>
   <script>
     (function() {
