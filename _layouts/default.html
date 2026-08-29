@@ -89,7 +89,7 @@
       width: 100%; min-height: 70px; padding: 12px 15px; border-radius: 18px;
       display: flex; align-items: center; gap: 12px; text-align: right; direction: rtl;
       background: rgba(12,12,12,.98); border: 1px solid rgba(212,175,55,.4);
-      text-decoration: none; transition: all 0.25s ease;
+      text-decoration: none; transition: all 0.25s ease; cursor: pointer;
     }
     .fab-item:hover { transform: translateX(-6px); border-color: #d4af37; background: #111; }
     .fab-item-icon {
@@ -132,36 +132,44 @@
   {% include footer.html %}
 
   <!-- نافذة البحث الذكي (صمم طلبك) -->
-  <div id="smartSearchOverlay" class="smart-search-overlay">
-    <div class="overlay-blur" onclick="closeSmartSearch()"></div>
-    <div class="search-card-container">
-      <div class="smart-card" id="step1">
+  <div id="smartSearchOverlay" class="smart-search-overlay" style="display:none; position:fixed; inset:0; z-index:9998; align-items:center; justify-content:center;">
+    <div class="overlay-blur" onclick="closeSmartSearch()" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px);"></div>
+    <div class="search-card-container" style="position:relative; z-index:1; width:min(95vw, 450px); max-height:85vh; overflow-y:auto;">
+      <div class="smart-card active" id="step1" style="display:block; background:#0a0a0a; border:2px solid #d4af37; border-radius:20px; padding:25px; text-align:center;">
         <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: #d4af37; margin-bottom: 15px;"></i>
         <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">خزانة العقارات المتجددة</h2>
         <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
         <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
-          <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i><span>تمليك العمر</span></button>
-          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')"><i class="fas fa-couch"></i><span>إيجار مفروش (فندقي)</span></button>
-          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span></button>
-          <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i><span>تجاري وإداري</span></button>
+          <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-home"></i><span> تمليك العمر</span></button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-couch"></i><span> إيجار مفروش (فندقي)</span></button>
+          <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-key"></i><span> إيجار جديد (فاضي)</span></button>
+          <button class="choice-btn" onclick="handleCommercialSelection()" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer; font-size:1rem; transition:0.3s;"><i class="fas fa-chart-line"></i><span> تجاري وإداري</span></button>
         </div>
         <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline;">سأقوم بالتصفح بنفسي لاحقاً</button>
       </div>
-      <!-- بقية خطوات البحث الذكي تبقى كما هي لضمان الوظيفة -->
-      <div class="smart-card" id="stepCommercialBranch">
+
+      <div class="smart-card" id="stepCommercialBranch" style="display:none; background:#0a0a0a; border:2px solid #d4af37; border-radius:20px; padding:25px; text-align:center;">
         <h2 style="color: #fff;">النشاط التجاري والإداري</h2>
-        <div class="choice-grid">
-          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')">تمليك / شراء</button>
-          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')">إيجار شهري</button>
+        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top:20px;">
+          <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer;">تمليك / شراء</button>
+          <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')" style="background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer;">إيجار شهري</button>
         </div>
       </div>
-      <div class="smart-card" id="step2"><h2 id="budgetTitle" style="color: #fff;">الميزانية؟</h2><div id="budgetOptions" class="choice-grid"></div></div>
-      <div class="smart-card" id="stepResults"><h2 style="color: #fff;">نتائج النخبة</h2><div id="resultsContent"></div></div>
+
+      <div class="smart-card" id="step2" style="display:none; background:#0a0a0a; border:2px solid #d4af37; border-radius:20px; padding:25px; text-align:center;">
+        <h2 id="budgetTitle" style="color: #fff;">الميزانية؟</h2>
+        <div id="budgetOptions" class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top:20px;"></div>
+      </div>
+
+      <div class="smart-card" id="stepResults" style="display:none; background:#0a0a0a; border:2px solid #d4af37; border-radius:20px; padding:25px; text-align:center;">
+        <h2 style="color: #fff;">نتائج النخبة</h2>
+        <div id="resultsContent"></div>
+      </div>
     </div>
   </div>
 
   <!-- ========== القائمة العائمة الموحدة (FAB) - بدون بوت الوكيل ========== -->
-  <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
+  <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true" style="display:none;"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
       <div class="fab-menu-heading">
@@ -184,13 +192,6 @@
         <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </button>
-
-      <!-- الإشعارات -->
-      <button class="fab-item fab-notifications" id="fabNotifications" type="button">
-        <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
-        <span class="fab-item-copy"><strong>كن أول من يعلم</strong><small>تنبيهات فورية بالوحدات اللقطة فور توفرها</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
-      </button>
     </div>
 
     <!-- الزر الرئيسي الموحد -->
@@ -200,81 +201,115 @@
     </button>
   </div>
 
-  <!-- سكربت JotForm Agent - يتحكم بوضع أيقونته تلقائياً -->
+  <!-- سكربت JotForm Agent -->
   <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 
   <script>
-    // التحكم في القائمة العائمة (FAB)
-    const fabMain = document.getElementById('fabMain');
-    const fabContainer = document.getElementById('fabContainer');
-    const fabBackdrop = document.getElementById('fabBackdrop');
-    const fabDesign = document.getElementById('fabDesign');
-
-    function toggleFab(isOpen) {
-      fabContainer.classList.toggle('open', isOpen);
-      fabBackdrop.classList.toggle('visible', isOpen);
-    }
-
-    fabMain.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFab(!fabContainer.classList.contains('open'));
-    });
-
-    fabBackdrop.addEventListener('click', () => toggleFab(false));
-    fabDesign?.addEventListener('click', () => { toggleFab(false); openSmartSearch(); });
-
-    // منطق البحث الذكي (Smart Search)
     (function() {
-      let allProperties = [];
-      let dataLoaded = false;
-      let userSelection = { category: '', type: '', budgetRange: [] };
+      // ========== التحكم في القائمة العائمة ==========
+      const fabMain = document.getElementById('fabMain');
+      const fabContainer = document.getElementById('fabContainer');
+      const fabBackdrop = document.getElementById('fabBackdrop');
+      const fabDesign = document.getElementById('fabDesign');
 
+      fabMain.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = fabContainer.classList.contains('open');
+        fabContainer.classList.toggle('open', !isOpen);
+        if (fabBackdrop) {
+          fabBackdrop.style.display = isOpen ? 'none' : 'block';
+          fabBackdrop.classList.toggle('visible', !isOpen);
+        }
+      });
+
+      if (fabBackdrop) {
+        fabBackdrop.addEventListener('click', function() {
+          fabContainer.classList.remove('open');
+          fabBackdrop.style.display = 'none';
+          fabBackdrop.classList.remove('visible');
+        });
+      }
+
+      // ========== البحث الذكي ==========
       window.openSmartSearch = function() {
         const overlay = document.getElementById('smartSearchOverlay');
-        if (overlay) overlay.style.display = 'flex';
-        goToCard('step1');
-        if (!dataLoaded) {
-          fetch("{{ '/search-data.json' | relative_url }}").then(r => r.json()).then(d => { allProperties = d; dataLoaded = true; });
+        if (overlay) {
+          overlay.style.display = 'flex';
+          goToCard('step1');
         }
       };
 
-      window.closeSmartSearch = function() { document.getElementById('smartSearchOverlay').style.display = 'none'; };
-      window.goToCard = function(id) {
-        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+      window.closeSmartSearch = function() {
+        const overlay = document.getElementById('smartSearchOverlay');
+        if (overlay) overlay.style.display = 'none';
       };
-      window.handleCommercialSelection = () => goToCard('stepCommercialBranch');
-      window.nextStep = (cat, type) => { userSelection.category = cat; userSelection.type = type; setupBudgetOptions(type); goToCard('step2'); };
-      
+
+      window.goToCard = function(id) {
+        document.querySelectorAll('.smart-card').forEach(function(c) {
+          c.style.display = 'none';
+          c.classList.remove('active');
+        });
+        const target = document.getElementById(id);
+        if (target) {
+          target.style.display = 'block';
+          target.classList.add('active');
+        }
+      };
+
+      window.handleCommercialSelection = function() {
+        goToCard('stepCommercialBranch');
+      };
+
+      window.nextStep = function(cat, type) {
+        setupBudgetOptions(type);
+        goToCard('step2');
+      };
+
       function setupBudgetOptions(type) {
         const container = document.getElementById('budgetOptions');
+        if (!container) return;
         container.innerHTML = '';
-        let opts = type.includes('تمليك') ? 
-          [{l:"أقل من 3 مليون", r:[0,3e6]}, {l:"3-6 مليون", r:[3e6,6e6]}, {l:"أكثر من 6 مليون", r:[6e6,9e7]}] :
-          [{l:"أقل من 20 ألف", r:[0,2e4]}, {l:"أكثر من 20 ألف", r:[2e4,9e6]}];
-        
-        opts.forEach(o => {
+        let opts = [];
+        if (type.includes('تمليك')) {
+          opts = [
+            { l: "أقل من 3 مليون", r: [0, 3000000] },
+            { l: "3-6 مليون", r: [3000000, 6000000] },
+            { l: "أكثر من 6 مليون", r: [6000000, 99999999] }
+          ];
+        } else {
+          opts = [
+            { l: "أقل من 20 ألف", r: [0, 20000] },
+            { l: "أكثر من 20 ألف", r: [20000, 9999999] }
+          ];
+        }
+        opts.forEach(function(o) {
           const btn = document.createElement('button');
-          btn.className = 'choice-btn'; btn.innerHTML = `<span>${o.l}</span>`;
-          btn.onclick = () => { userSelection.budgetRange = o.r; finishSearch(); };
+          btn.style.cssText = 'background:#111; border:1px solid #d4af37; color:#fff; padding:15px; border-radius:12px; cursor:pointer; font-size:1rem; width:100%; margin-bottom:10px;';
+          btn.innerHTML = '<span>' + o.l + '</span>';
+          btn.onclick = function() { finishSearch(o.r); };
           container.appendChild(btn);
         });
       }
 
-      function finishSearch() {
+      function finishSearch(range) {
         goToCard('stepResults');
         const content = document.getElementById('resultsContent');
-        content.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        setTimeout(() => {
-          const matches = allProperties.filter(p => p.category === userSelection.category);
-          content.innerHTML = matches.length ? '' : 'لا توجد نتائج مطابقة.';
-          matches.forEach(m => {
-            const div = document.createElement('div');
-            div.innerHTML = `<a href="${m.url}" style="color:#fff; display:block; padding:10px; border-bottom:1px solid #333;">${m.title} - ${m.price}</a>`;
-            content.appendChild(div);
-          });
-        }, 500);
+        if (!content) return;
+        content.innerHTML = '<p style="color:#d4af37; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</p>';
+        setTimeout(function() {
+          content.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">لا توجد نتائج مطابقة حالياً. (سيتم ربط البيانات لاحقاً)</p>';
+        }, 800);
       }
+
+      fabDesign?.addEventListener('click', function() {
+        fabContainer.classList.remove('open');
+        if (fabBackdrop) {
+          fabBackdrop.style.display = 'none';
+          fabBackdrop.classList.remove('visible');
+        }
+        openSmartSearch();
+      });
+
     })();
   </script>
 </body>
