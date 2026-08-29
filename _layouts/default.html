@@ -46,29 +46,14 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* تعديل موضع زر الاستشارة الفورية ليكون في الجهة المقابلة بالأسفل (اليسار) */
-    .prestige-call-button {
-      position: fixed;
-      bottom: 24px;
-      left: 24px;
-      right: auto;
-      z-index: 998;
-    }
-    @media (max-width: 768px) {
-      .prestige-call-button {
-        bottom: 20px;
-        left: 16px;
-      }
-    }
-
     /* =========================================================
        تنسيقات القائمة العائمة الموحدة (FAB) - مركز طلبك
        ========================================================= */
     .fab-backdrop {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(5, 5, 5, 0.75);
-      backdrop-filter: blur(4px);
+      background: rgba(5, 5, 5, 0.8);
+      backdrop-filter: blur(5px);
       z-index: 9998;
       display: none;
       opacity: 0;
@@ -97,10 +82,10 @@
     }
 
     .fab-main {
-      background: linear-gradient(135deg, #111 0%, #050505 100%);
+      background: linear-gradient(135deg, #151515 0%, #050505 100%);
       border: 1px solid #d4af37;
       color: #d4af37;
-      padding: 12px 22px;
+      padding: 12px 24px;
       border-radius: 50px;
       font-size: 0.95rem;
       font-weight: 700;
@@ -133,7 +118,7 @@
       flex-direction: column;
       gap: 10px;
       margin-bottom: 14px;
-      width: 310px;
+      width: 320px;
       max-width: calc(100vw - 32px);
       opacity: 0;
       transform: translateY(15px) scale(0.95);
@@ -213,6 +198,10 @@
       background: rgba(37, 211, 102, 0.15);
       color: #25D366;
     }
+    .fab-add .fab-item-icon {
+      background: rgba(212, 175, 55, 0.2);
+      color: #d4af37;
+    }
     .fab-item:hover .fab-item-icon {
       background: #d4af37;
       color: #050505;
@@ -266,7 +255,6 @@
 
   {% include footer.html %}
 
-  <!-- نافذة المعالج الذكي (صمم طلبك) -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
@@ -310,16 +298,6 @@
     </div>
   </div>
 
-  <!-- زر الاستشارة الفورية (موجود بالجهة المقابلة - اليسار) -->
-  <a href="tel:+201147758857" class="prestige-call-button" onclick="trackPhoneCall()">
-    <div class="button-icon"><i class="fas fa-phone-alt"></i></div>
-    <div class="button-text">
-      <span class="label">استشارة فورية</span>
-      <span class="phone-num">01147758857</span>
-    </div>
-  </a>
-
-  <!-- ========== القائمة العائمة الموحدة (FAB) - مركز طلبك ========== -->
   <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
@@ -329,7 +307,18 @@
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
 
-      <!-- واتساب الحسم المباشر -->
+      <a href="{{ '/add-property/' | relative_url }}" class="fab-item fab-add">
+        <span class="fab-item-icon"><i class="fas fa-plus-circle"></i></span>
+        <span class="fab-item-copy"><strong>أضف عقارك للعرض</strong><small>انضم لخزائن النخبة وابعث عقارك للتنفيذ</small></span>
+        <i class="fas fa-arrow-left fab-item-arrow"></i>
+      </a>
+
+      <button class="fab-item fab-design" id="fabDesign" type="button" onclick="triggerSmartSearchFromFab()">
+        <span class="fab-item-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
+        <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
+        <i class="fas fa-arrow-left fab-item-arrow"></i>
+      </button>
+
       <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
          class="fab-item fab-whatsapp" target="_blank" rel="noopener">
         <span class="fab-item-icon"><i class="fab fa-whatsapp"></i></span>
@@ -337,14 +326,6 @@
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </a>
 
-      <!-- أداة صمم طلبك -->
-      <button class="fab-item fab-design" id="fabDesign" type="button" onclick="triggerSmartSearchFromFab()">
-        <span class="fab-item-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
-        <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
-        <i class="fas fa-arrow-left fab-item-arrow"></i>
-      </button>
-
-      <!-- إشعارات النخبة -->
       <button class="fab-item fab-notif" id="enableNotif" type="button">
         <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
         <span class="fab-item-copy"><strong id="notifTitle">إشعارات النخبة</strong><small id="notifSub">تفعيل التنبيهات للعروض الحصرية</small></span>
@@ -352,12 +333,58 @@
       </button>
     </div>
 
-    <!-- الزر الرئيسي الموحد -->
     <button class="fab-main" id="fabMain" type="button" onclick="toggleFabMenu()">
       <i class="fas fa-plus"></i>
       <span class="fab-main-label">مركز طلبك</span>
     </button>
   </div>
+
+  <div id="JotformAgent-019d95efcafa75be955b3a9f5775be53337b"></div>
+  <script>
+    (function() {
+      const src = "https://www.jotform.com/s/umd/385a474a8e1/for-embedded-agent.js";
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = function() {
+        if (window.AgentInitializer) {
+          window.AgentInitializer.init({
+            agentRenderURL: "https://www.jotform.com/agent/019d95efcafa75be955b3a9f5775be53337b",
+            rootId: "JotformAgent-019d95efcafa75be955b3a9f5775be53337b",
+            formID: "019d95efcafa75be955b3a9f5775be53337b",
+            contextID: "01a04f2f779070009ffdfec87477610c159a",
+            initialContext: "",
+            queryParams: ["skipWelcome=1", "maximizable=1"],
+            domain: "https://www.jotform.com",
+            isDraggable: false,
+            background: "linear-gradient(180deg, #050505 0%, #111111 100%)",
+            chatBackgroundColor: "#0b0b0b",
+            buttonBackgroundColor: "#d4af37",
+            buttonIconColor: "#050505",
+            inputTextColor: "#d4af37",
+            variant: false,
+            customizations: {
+              "greeting": "Yes",
+              "greetingMessage": "مرحباً بك في سمسار طلبك! كيف يمكنني مساعدتك اليوم؟",
+              "openByDefault": "No",
+              "pulse": "Yes",
+              "position": "left",
+              "autoOpenChatIn": "0",
+              "layout": "minimal",
+              "size": "md",
+              "placeholder": "اسأل مستشار سمسار طلبك...",
+              "chatbotLayoutControls": "Yes",
+              "chatbotLayoutType": "overlay",
+              "selectedPosition": "left-bottom"
+            },
+            isVoice: false,
+            isVoiceWebCallEnabled: true
+          });
+        }
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
 
   <script>
     /* =========================================================
@@ -546,12 +573,6 @@
             content.appendChild(a);
           });
         }, 400);
-      };
-
-      window.trackPhoneCall = function() {
-        if (typeof dataLayer !== 'undefined') {
-          dataLayer.push({ event: 'phone_call_click', call_source: 'fixed_button' });
-        }
       };
     })();
 
