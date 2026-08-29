@@ -46,16 +46,31 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* زر مركز طلبك العائم - أسفل اليمين مزاح قليلاً */
+    /* ==========================================
+       زر "مركز طلبك" الفخم الضخم - أسفل اليمين
+    ========================================== */
     .smart-search-trigger {
-      position: fixed; bottom: 25px; right: 25px; left: auto; z-index: 997;
-      background: #d4af37; color: #000; font-family: 'Cairo', sans-serif;
-      font-weight: 900; font-size: 1rem; padding: 12px 24px; border-radius: 50px;
-      cursor: pointer; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.4); border: 2px solid #fff;
-      transition: all 0.3s ease;
+      position: fixed; bottom: 30px; right: 30px; left: auto; z-index: 997;
+      background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
+      color: #000; font-family: 'Cairo', sans-serif; font-weight: 900;
+      font-size: 1.15rem; padding: 16px 32px; border-radius: 50px;
+      cursor: pointer; display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4), 0 0 15px rgba(255, 255, 255, 0.2) inset;
+      border: 2px solid #fff; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: triggerPulse 3s infinite;
     }
-    .smart-search-trigger:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(212, 175, 55, 0.7); }
+    .smart-search-trigger i { font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+    .smart-search-trigger:hover {
+      transform: scale(1.08) translateY(-3px);
+      box-shadow: 0 15px 40px rgba(212, 175, 55, 0.7), 0 0 20px rgba(255, 255, 255, 0.4) inset;
+      background: linear-gradient(135deg, #f3cf55 0%, #d4af37 100%);
+    }
+
+    @keyframes triggerPulse {
+      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7), 0 10px 30px rgba(0,0,0,0.5); }
+      70% { box-shadow: 0 0 0 18px rgba(212, 175, 55, 0), 0 10px 30px rgba(0,0,0,0.5); }
+      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0), 0 10px 30px rgba(0,0,0,0.5); }
+    }
 
     /* خيارات شاشة مركز طلبك (الأسلحة الثلاثة) */
     .hub-card-options { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; width: 100%; }
@@ -84,11 +99,11 @@
     }
     .hub-close-pill-btn:hover { transform: scale(1.05); }
 
-    /* إبعاد بوت Jotform ليكون في أسفل اليسار تماماً */
-    iframe[src*="jotform"], div[id*="jotform"], .jf-agent-embed {
-      bottom: 25px !important;
-      left: 20px !important;
+    /* تثبيت البوت أقصى اليسار لمنع أي تداخل على الشاشات الكبيرة والصغيرة */
+    iframe[src*="jotform"], div[id*="JotformAgent"], .jf-agent-embed {
+      left: 25px !important;
       right: auto !important;
+      bottom: 25px !important;
       z-index: 996 !important;
     }
   </style>
@@ -114,9 +129,9 @@
 
   {% include footer.html %}
 
-  <!-- 1. زر مركز طلبك العائم الوحيد (أسفل اليمين مزاح) -->
+  <!-- 1. زر مركز طلبك العائم الفخم (أسفل اليمين) -->
   <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
-    <i class="fas fa-hand-sparkles"></i>
+    <i class="fas fa-shield-halved"></i>
     <span class="trigger-text">مركز طلبك</span>
   </div>
 
@@ -206,10 +221,90 @@
     </div>
   </div>
 
-  <!-- 3. تضمين بوت Jotform (عائم في جهة اليسار تلقائياً) -->
-  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
+  <!-- 3. السكربت المخصص لبوت سمسار طلبك (محمي في اليسار بدون تداخل) -->
+  <script>
+  (function() {
+    const sanitizeVariables = (url, width, height) => {
+      try {
+        const sanitizedUrl = new URL(url);
+        return { url: sanitizedUrl.toString(), width: parseInt(width), height: parseInt(height) };
+      } catch (e) {
+        return { url: '', width: 0, height: 0 };
+      }
+    };
 
-  <!-- 4. محرك البرمجة والاستعلامات -->
+    window.addEventListener('message', async (event) => {
+      if (event.data?.type !== 'jf-request-pip-window') return;
+      const { _url, _width, _height } = event.data;
+      const { url, width, height } = sanitizeVariables(_url, _width, _height);
+      if (!url || !width || !height) return;
+
+      if ('documentPictureInPicture' in window && !window.documentPictureInPicture.window) {
+        const pipWindow = await window.documentPictureInPicture.requestWindow({ width, height, disallowReturnToOpener: true });
+        [...document.styleSheets].forEach(styleSheet => {
+          try {
+            const cssRules = [...styleSheet.cssRules].map(r => r.cssText).join('');
+            const style = document.createElement('style');
+            style.textContent = cssRules;
+            pipWindow.document.head.appendChild(style);
+          } catch (e) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = styleSheet.type;
+            link.media = styleSheet.media;
+            link.href = styleSheet.href;
+            pipWindow.document.head.appendChild(link);
+          }
+        });
+        pipWindow.document.body.innerHTML = `<iframe src="${url}" style="width:${width}px; height:${height}px; border:none;" allow="microphone *; display-capture *;"></iframe>`;
+      }
+    });
+
+    const src = "https://www.jotform.com/s/umd/385a474a8e1/for-embedded-agent.js";
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = function() {
+      if (window.AgentInitializer) {
+        window.AgentInitializer.init({
+          agentRenderURL: "https://www.jotform.com/agent/019d95efcafa75be955b3a9f5775be53337b",
+          rootId: "JotformAgent-019d95efcafa75be955b3a9f5775be53337b",
+          formID: "019d95efcafa75be955b3a9f5775be53337b",
+          contextID: "01a04f2f779070009ffdfec87477610c159a",
+          initialContext: "",
+          queryParams: ["skipWelcome=1", "maximizable=1"],
+          domain: "https://www.jotform.com",
+          isDraggable: false,
+          background: "linear-gradient(180deg, #050505 0%, #111111 100%)",
+          chatBackgroundColor: "#0b0b0b",
+          buttonBackgroundColor: "#d4af37",
+          buttonIconColor: "#050505",
+          inputTextColor: "#d4af37",
+          variant: false,
+          customizations: {
+            "greeting": "Yes",
+            "greetingMessage": "مرحباً بك في سمسار طلبك! كيف يمكنني مساعدتك اليوم؟",
+            "openByDefault": "No",
+            "pulse": "Yes",
+            "position": "left",
+            "autoOpenChatIn": "0",
+            "layout": "minimal",
+            "size": "md",
+            "placeholder": "اسأل مستشار سمسار طلبك...",
+            "chatbotLayoutControls": "Yes",
+            "chatbotLayoutType": "overlay",
+            "selectedPosition": "left-bottom"
+          },
+          isVoice: false,
+          isVoiceWebCallEnabled: true
+        });
+      }
+    };
+    document.head.appendChild(script);
+  })();
+  </script>
+
+  <!-- 4. محرك البرمجة الاستعلامي -->
   <script>
     (function() {
       let allProperties = [];
@@ -365,7 +460,6 @@
       };
     })();
 
-    // تفعيل إشعارات FCM من داخل خيار مركز طلبك
     async function triggerNotificationPermission() {
       const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
       const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
