@@ -27,8 +27,11 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"></noscript>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- تضمين ملف CSS الخارجي (style.css) -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
+  <!-- أيقونات فونت أوصوم -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
   <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
@@ -38,6 +41,9 @@
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 
   <style>
+    /* =========================================================
+       تنسيقات Splash Screen (كما في السابق)
+       ========================================================= */
     #prestigeSplash {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #050505; display: flex; align-items: center; justify-content: center;
@@ -47,7 +53,7 @@
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
     /* =========================================================
-       تنسيقات القائمة العائمة الموحدة (FAB) - مركز طلبك
+       تنسيقات القائمة العائمة (FAB) - مركز طلبك
        ========================================================= */
     .fab-backdrop {
       position: fixed;
@@ -230,21 +236,105 @@
       transform: translateX(-3px);
     }
 
-    /* الضبط الخاص بالشاشات الصغيرة (الموبايل) لمنع التعارض مع بوت Jotform */
+    /* =========================================================
+       ⚠️ تعديلات معالجة تداخل العناصر الثابتة
+       ========================================================= */
+
+    /* إخفاء زر الاتصال الأخضر القديم نهائيًا (لأن لدينا زر فاخر) */
+    .fixed-call-button {
+      display: none !important;
+    }
+
+    /* ضبط موضع زر الاتصال الفاخر ليكون فوق FAB ولا يتداخل معه */
+    .prestige-call-button {
+      bottom: 90px !important;  /* نرفعه فوق FAB */
+      right: 25px !important;
+      z-index: 9998 !important;
+    }
+
+    /* إخفاء زر البحث الذكي الدائري المنفصل (سيتم الوصول إليه من FAB) */
+    .smart-search-trigger {
+      display: none !important;
+    }
+
+    /* ضبط موضع زر الإشعارات في الزاوية اليسرى أسفل البوت */
+    #enableNotif {
+      bottom: 100px !important;
+      left: 20px !important;
+      z-index: 9980 !important;
+    }
+
+    /* ضبط بوت Jotform في أقصى اليسار وأسفل */
+    #JotformAgent-019d95efcafa75be955b3a9f5775be53337b {
+      bottom: 20px !important;
+      left: 20px !important;
+      right: auto !important;
+      z-index: 9990 !important;
+      max-width: 90px; /* عرض الزر المغلق */
+      transition: all 0.3s ease;
+    }
+    /* عندما يتوسع البوت */
+    #JotformAgent-019d95efcafa75be955b3a9f5775be53337b.jotform-agent-expanded {
+      max-width: 380px;
+      left: 20px;
+      right: auto;
+    }
+
+    /* عند فتح قائمة FAB، تأكد من عدم تغطيتها للبوت */
+    .fab-menu {
+      max-height: calc(100vh - 200px);
+    }
+
+    /* =========================================================
+       📱 استجابة الموبايل
+       ========================================================= */
     @media (max-width: 768px) {
       .fab-container {
-        bottom: 16px;
-        right: 12px;
+        bottom: 15px;
+        right: 15px;
       }
       .fab-main {
         padding: 10px 18px;
         font-size: 0.88rem;
       }
-      /* إبعاد زر Jotform وتعديل مكانه في اليسار دون حجب العناصر */
+      .prestige-call-button {
+        display: none !important; /* نخفيه في الموبايل لتجنب الازدحام */
+      }
       #JotformAgent-019d95efcafa75be955b3a9f5775be53337b {
-        z-index: 9990 !important;
+        bottom: 15px !important;
+        left: 15px !important;
+      }
+      #enableNotif {
+        bottom: 80px;
+        left: 15px;
       }
     }
+
+    /* =========================================================
+       تنسيقات المعالج الذكي (كما في السابق)
+       ========================================================= */
+    .smart-search-overlay { position: fixed; inset: 0; z-index: 10000; display: none; justify-content: center; align-items: center; padding: 20px; }
+    .overlay-blur { position: absolute; inset: 0; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .smart-card { position: relative; width: 100%; max-width: 480px; background: #111; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 30px; padding: 35px 25px; text-align: center; display: none; box-shadow: 0 40px 100px rgba(0,0,0,0.8); transform: translateY(30px); opacity: 0; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); max-height: 85vh; overflow-y: auto; }
+    .smart-card.active { display: block; transform: translateY(0); opacity: 1; }
+    .smart-card::-webkit-scrollbar { width: 5px; }
+    .smart-card::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    .gold-icon    { font-size: 3rem; color: var(--color-primary); margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)); }
+    .smart-card h2 { color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+    .smart-card p  { color: #aaa; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.6; }
+    .choice-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .choice-btn { background: #050505; border: 1px solid #222; padding: 16px 20px; border-radius: 12px; color: #fff; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.3s; text-align: right; font-family: 'Cairo', sans-serif; font-size: 0.95rem; }
+    .choice-btn:hover { border-color: var(--color-primary); transform: translateX(-5px); background: rgba(212,175,55,0.05); }
+    .choice-btn i { color: var(--color-primary); font-size: 1.2rem; min-width: 25px; }
+    .results-list  { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right; }
+    .result-item   { background: #050505; border: 1px solid #222; border-radius: 15px; padding: 12px; display: flex; align-items: center; gap: 15px; text-decoration: none; transition: 0.3s; }
+    .result-item:hover  { border-color: var(--color-primary); background: #0a0a0a; }
+    .result-img         { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid #333; }
+    .result-info h4     { color: #fff; font-size: 0.95rem; margin-bottom: 5px; }
+    .result-info span   { color: var(--color-primary); font-weight: bold; font-size: 0.9rem; }
+    .loading-spinner    { font-size: 2rem; color: var(--color-primary); margin: 20px 0; }
+    .back-text-btn  { margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto; }
+    .close-text-btn { margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; font-family: 'Cairo', sans-serif; text-decoration: underline; font-size: 0.85rem; }
   </style>
 </head>
 
@@ -322,7 +412,7 @@
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
 
-      <!-- 1. أضف عقارك (مربوط برابط add-your-property.html الصحيح) -->
+      <!-- 1. أضف عقارك -->
       <a href="{{ '/add-your-property.html' | relative_url }}" class="fab-item fab-add">
         <span class="fab-item-icon"><i class="fas fa-plus-circle"></i></span>
         <span class="fab-item-copy"><strong>أضف عقارك للعرض</strong><small>انضم لخزائن النخبة وابعث عقارك للتنفيذ</small></span>
@@ -345,9 +435,9 @@
       </a>
 
       <!-- 4. إشعارات النخبة -->
-      <button class="fab-item fab-notif" id="enableNotif" type="button">
+      <button class="fab-item fab-notif" id="enableNotifInFab" type="button">
         <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
-        <span class="fab-item-copy"><strong id="notifTitle">إشعارات النخبة</strong><small id="notifSub">تفعيل التنبيهات للعروض الحصرية</small></span>
+        <span class="fab-item-copy"><strong id="notifTitleFab">إشعارات النخبة</strong><small id="notifSubFab">تفعيل التنبيهات للعروض الحصرية</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </button>
     </div>
@@ -598,11 +688,11 @@
     })();
 
     /* =========================================================
-       نظام الإشعارات المدمج داخل قائمة مركز طلبك
+       نظام الإشعارات المدمج داخل FAB
        ========================================================= */
-    const notifBtn = document.getElementById('enableNotif');
-    const notifTitle = document.getElementById('notifTitle');
-    const notifSub = document.getElementById('notifSub');
+    const notifBtn = document.getElementById('enableNotifInFab');
+    const notifTitle = document.getElementById('notifTitleFab');
+    const notifSub = document.getElementById('notifSubFab');
 
     function showGrantedState() {
       if (!notifBtn) return;
