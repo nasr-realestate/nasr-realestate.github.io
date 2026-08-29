@@ -38,9 +38,6 @@
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 
   <style>
-    /* =========================================================
-       تنسيقات Splash Screen
-       ========================================================= */
     #prestigeSplash {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #050505; display: flex; align-items: center; justify-content: center;
@@ -49,15 +46,13 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* =========================================================
-       تنسيقات القائمة العائمة (FAB) - مركز طلبك
-       ========================================================= */
+    /* خلفية الضباب عند فتح مركز طلبك */
     .fab-backdrop {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(5, 5, 5, 0.85);
       backdrop-filter: blur(6px);
-      z-index: 9998;
+      z-index: 9997;
       display: none;
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -67,10 +62,11 @@
       opacity: 1;
     }
 
+    /* حاوية زر مركز طلبك (يمين الشاشة) */
     .fab-container {
       position: fixed;
-      bottom: 24px;
-      right: 20px;
+      bottom: 20px;
+      right: 15px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
@@ -82,25 +78,20 @@
       background: linear-gradient(135deg, #151515 0%, #050505 100%);
       border: 1px solid #d4af37;
       color: #d4af37;
-      padding: 12px 22px;
+      padding: 10px 20px;
       border-radius: 50px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       box-shadow: 0 4px 25px rgba(212, 175, 55, 0.3);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .fab-main i {
-      font-size: 1.1rem;
+      font-size: 1rem;
       transition: transform 0.3s ease;
-    }
-    .fab-main:hover {
-      background: #d4af37;
-      color: #050505;
-      box-shadow: 0 6px 30px rgba(212, 175, 55, 0.5);
     }
     .fab-container.active .fab-main {
       background: #d4af37;
@@ -115,8 +106,8 @@
       flex-direction: column;
       gap: 10px;
       margin-bottom: 12px;
-      width: 320px;
-      max-width: calc(100vw - 40px);
+      width: 310px;
+      max-width: calc(100vw - 30px);
       max-height: calc(100vh - 120px);
       overflow-y: auto;
       padding: 4px;
@@ -137,26 +128,24 @@
       border-radius: 14px;
       padding: 12px 15px;
       color: #fff;
-      backdrop-filter: blur(10px);
     }
     .fab-menu-kicker {
       display: block;
       color: #d4af37;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
       margin-bottom: 2px;
     }
     .fab-menu-heading strong {
       display: block;
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: #fff;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .fab-menu-heading small {
       display: block;
       color: #aaa;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       line-height: 1.3;
     }
 
@@ -182,156 +171,42 @@
       transform: translateX(-4px);
     }
     .fab-item-icon {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 8px;
       background: rgba(212, 175, 55, 0.1);
       color: #d4af37;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
+      font-size: 0.95rem;
       flex-shrink: 0;
-      transition: all 0.25s ease;
     }
-    .fab-whatsapp .fab-item-icon {
-      background: rgba(37, 211, 102, 0.15);
-      color: #25D366;
-    }
-    .fab-add .fab-item-icon {
-      background: rgba(212, 175, 55, 0.2);
-      color: #d4af37;
-    }
-    .fab-item:hover .fab-item-icon {
-      background: #d4af37;
-      color: #050505;
-    }
-    .fab-whatsapp:hover .fab-item-icon {
-      background: #25D366;
-      color: #fff;
-    }
-    .fab-item-copy {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    .fab-item-copy strong {
-      font-size: 0.85rem;
-      color: #eee;
-    }
-    .fab-item-copy small {
-      font-size: 0.72rem;
-      color: #888;
-    }
-    .fab-item-arrow {
-      font-size: 0.75rem;
-      color: #555;
-      transition: transform 0.25s ease, color 0.25s ease;
-    }
-    .fab-item:hover .fab-item-arrow {
-      color: #d4af37;
-      transform: translateX(-3px);
-    }
+    .fab-whatsapp .fab-item-icon { background: rgba(37, 211, 102, 0.15); color: #25D366; }
+    .fab-add .fab-item-icon { background: rgba(212, 175, 55, 0.2); color: #d4af37; }
+    .fab-item-copy { flex: 1; display: flex; flex-direction: column; }
+    .fab-item-copy strong { font-size: 0.82rem; color: #eee; }
+    .fab-item-copy small { font-size: 0.7rem; color: #888; }
+    .fab-item-arrow { font-size: 0.75rem; color: #555; }
 
-    /* =========================================================
-       ⚠️ تعديلات معالجة تداخل العناصر الثابتة
-       ========================================================= */
-
-    /* إخفاء زر الاتصال الأخضر القديم نهائيًا (لأن لدينا زر فاخر) */
-    .fixed-call-button {
-      display: none !important;
-    }
-
-    /* ضبط موضع زر الاتصال الفاخر ليكون فوق FAB ولا يتداخل معه */
-    .prestige-call-button {
-      bottom: 90px !important;  /* نرفعه فوق FAB */
-      right: 25px !important;
-      z-index: 9998 !important;
-    }
-
-    /* إخفاء زر البحث الذكي الدائري المنفصل (سيتم الوصول إليه من FAB) */
-    .smart-search-trigger {
-      display: none !important;
-    }
-
-    /* ضبط موضع زر الإشعارات في الزاوية اليسرى أسفل البوت */
-    #enableNotif {
-      bottom: 100px !important;
-      left: 20px !important;
-      z-index: 9980 !important;
-    }
-
-    /* ضبط بوت Jotform في أقصى اليسار وأسفل */
-    #JotformAgent-019d95efcafa75be955b3a9f5775be53337b {
-      bottom: 20px !important;
-      left: 20px !important;
+    /* إجبار بوت Jotform على البقاء في يسار الشاشة تماماً لعدم التداخل مع زر مركز طلبك */
+    div[id*="JotformAgent"] {
+      left: 15px !important;
       right: auto !important;
+      bottom: 15px !important;
       z-index: 9990 !important;
-      max-width: 90px; /* عرض الزر المغلق */
-      transition: all 0.3s ease;
-    }
-    /* عندما يتوسع البوت */
-    #JotformAgent-019d95efcafa75be955b3a9f5775be53337b.jotform-agent-expanded {
-      max-width: 380px;
-      left: 20px;
-      right: auto;
     }
 
-    /* عند فتح قائمة FAB، تأكد من عدم تغطيتها للبوت */
-    .fab-menu {
-      max-height: calc(100vh - 200px);
-    }
-
-    /* =========================================================
-       📱 استجابة الموبايل
-       ========================================================= */
-    @media (max-width: 768px) {
-      .fab-container {
-        bottom: 15px;
-        right: 15px;
-      }
-      .fab-main {
-        padding: 10px 18px;
-        font-size: 0.88rem;
-      }
-      .prestige-call-button {
-        display: none !important; /* نخفيه في الموبايل لتجنب الازدحام */
-      }
-      #JotformAgent-019d95efcafa75be955b3a9f5775be53337b {
-        bottom: 15px !important;
-        left: 15px !important;
-      }
-      #enableNotif {
-        bottom: 80px;
-        left: 15px;
-      }
-    }
-
-    /* =========================================================
-       تنسيقات المعالج الذكي (كما في السابق)
-       ========================================================= */
+    /* تنسيقات المعالج الذكي (صمم طلبك) */
     .smart-search-overlay { position: fixed; inset: 0; z-index: 10000; display: none; justify-content: center; align-items: center; padding: 20px; }
     .overlay-blur { position: absolute; inset: 0; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     .smart-card { position: relative; width: 100%; max-width: 480px; background: #111; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 30px; padding: 35px 25px; text-align: center; display: none; box-shadow: 0 40px 100px rgba(0,0,0,0.8); transform: translateY(30px); opacity: 0; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); max-height: 85vh; overflow-y: auto; }
     .smart-card.active { display: block; transform: translateY(0); opacity: 1; }
-    .smart-card::-webkit-scrollbar { width: 5px; }
-    .smart-card::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-    .gold-icon    { font-size: 3rem; color: var(--color-primary); margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)); }
-    .smart-card h2 { color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
-    .smart-card p  { color: #aaa; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.6; }
+    .gold-icon { font-size: 3rem; color: var(--color-primary); margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)); }
     .choice-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .choice-btn { background: #050505; border: 1px solid #222; padding: 16px 20px; border-radius: 12px; color: #fff; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.3s; text-align: right; font-family: 'Cairo', sans-serif; font-size: 0.95rem; }
     .choice-btn:hover { border-color: var(--color-primary); transform: translateX(-5px); background: rgba(212,175,55,0.05); }
     .choice-btn i { color: var(--color-primary); font-size: 1.2rem; min-width: 25px; }
-    .results-list  { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right; }
-    .result-item   { background: #050505; border: 1px solid #222; border-radius: 15px; padding: 12px; display: flex; align-items: center; gap: 15px; text-decoration: none; transition: 0.3s; }
-    .result-item:hover  { border-color: var(--color-primary); background: #0a0a0a; }
-    .result-img         { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid #333; }
-    .result-info h4     { color: #fff; font-size: 0.95rem; margin-bottom: 5px; }
-    .result-info span   { color: var(--color-primary); font-weight: bold; font-size: 0.9rem; }
-    .loading-spinner    { font-size: 2rem; color: var(--color-primary); margin: 20px 0; }
-    .back-text-btn  { margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto; }
-    .close-text-btn { margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; font-family: 'Cairo', sans-serif; text-decoration: underline; font-size: 0.85rem; }
   </style>
 </head>
 
@@ -355,51 +230,49 @@
 
   {% include footer.html %}
 
-  <!-- نافذة المعالج الذكي (صمم طلبك) -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
       <div class="smart-card" id="step1">
-        <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">مرحباً بك في بوابة النخبة</h2>
-        <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
-        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+        <i class="fas fa-crown gold-icon"></i>
+        <h2>مرحباً بك في بوابة النخبة</h2>
+        <p>نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+        <div class="choice-grid">
           <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i><span>تمليك العمر</span></button>
           <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')"><i class="fas fa-couch"></i><span>إيجار مفروش (فندقي)</span></button>
           <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span></button>
           <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i><span>تجاري وإداري</span></button>
         </div>
-        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline; font-size: 0.85rem;">سأقوم بالتصفح بنفسي لاحقاً</button>
+        <button class="close-text-btn" onclick="closeSmartSearch()">سأقوم بالتصفح بنفسي لاحقاً</button>
       </div>
 
       <div class="smart-card" id="stepCommercialBranch">
-        <i class="fas fa-briefcase gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">النشاط التجاري والإداري</h2>
-        <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+        <i class="fas fa-briefcase gold-icon"></i>
+        <h2>النشاط التجاري والإداري</h2>
+        <div class="choice-grid">
           <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i><span>تمليك / شراء</span></button>
           <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i><span>إيجار شهري</span></button>
         </div>
-        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+        <button class="back-text-btn" onclick="goToCard('step1')"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
 
       <div class="smart-card" id="step2">
-        <i class="fas fa-money-bill-wave gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 id="budgetTitle" style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">الميزانية المرصودة؟</h2>
-        <div id="budgetOptions" class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;"></div>
-        <button class="back-text-btn" onclick="backToPrevious()" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+        <i class="fas fa-money-bill-wave gold-icon"></i>
+        <h2 id="budgetTitle">الميزانية المرصودة؟</h2>
+        <div id="budgetOptions" class="choice-grid"></div>
+        <button class="back-text-btn" onclick="backToPrevious()"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
 
       <div class="smart-card" id="stepResults">
-        <i class="fas fa-magic gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">نتائج البحث المخصصة</h2>
-        <p id="resultsStatus" style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">جاري البحث في خزائن النخبة...</p>
-        <div id="resultsContent" class="results-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right;"></div>
-        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;">بدء بحث جديد</button>
+        <i class="fas fa-magic gold-icon"></i>
+        <h2>نتائج البحث المخصصة</h2>
+        <p id="resultsStatus">جاري البحث في خزائن النخبة...</p>
+        <div id="resultsContent" class="results-list"></div>
+        <button class="back-text-btn" onclick="goToCard('step1')">بدء بحث جديد</button>
       </div>
     </div>
   </div>
 
-  <!-- ========== القائمة العائمة الموحدة (FAB) - مركز طلبك ========== -->
   <div class="fab-backdrop" id="fabBackdrop" aria-hidden="true"></div>
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu" id="fabMenu">
@@ -409,44 +282,37 @@
         <small>كل مسار هنا صُمم ليختصر عليك الوقت ويضمن لك السيادة العقارية.</small>
       </div>
 
-      <!-- 1. أضف عقارك -->
       <a href="{{ '/add-your-property.html' | relative_url }}" class="fab-item fab-add">
         <span class="fab-item-icon"><i class="fas fa-plus-circle"></i></span>
         <span class="fab-item-copy"><strong>أضف عقارك للعرض</strong><small>انضم لخزائن النخبة وابعث عقارك للتنفيذ</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </a>
 
-      <!-- 2. أداة صمم طلبك الاستثماري -->
       <button class="fab-item fab-design" id="fabDesign" type="button" onclick="triggerSmartSearchFromFab()">
         <span class="fab-item-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
         <span class="fab-item-copy"><strong>صمم طلبك الاستثماري</strong><small>حوّل ميزانيتك إلى فرص عقارية محققة</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </button>
 
-      <!-- 3. واتساب الحسم المباشر -->
-      <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق"
-         class="fab-item fab-whatsapp" target="_blank" rel="noopener">
+      <a href="https://wa.me/201147758857?text=مرحباً، أريد حسم صفقة عقارية مع المستشار طارق" class="fab-item fab-whatsapp" target="_blank" rel="noopener">
         <span class="fab-item-icon"><i class="fab fa-whatsapp"></i></span>
         <span class="fab-item-copy"><strong>حسم الصفقة (تنفيذ فوري)</strong><small>للتواصل المباشر في حالات الكاش والجدية</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </a>
 
-      <!-- 4. إشعارات النخبة -->
       <button class="fab-item fab-notif" id="enableNotifInFab" type="button">
         <span class="fab-item-icon"><i class="fas fa-bell"></i></span>
-        <span class="fab-item-copy"><strong id="notifTitleFab">إشعارات النخبة</strong><small id="notifSubFab">تفعيل التنبيهات للعروض الحصرية</small></span>
+        <span class="fab-item-copy"><strong id="notifTitle">إشعارات النخبة</strong><small id="notifSub">تفعيل التنبيهات للعروض الحصرية</small></span>
         <i class="fas fa-arrow-left fab-item-arrow"></i>
       </button>
     </div>
 
-    <!-- الزر الرئيسي الموحد -->
     <button class="fab-main" id="fabMain" type="button" onclick="toggleFabMenu()">
       <i class="fas fa-plus"></i>
       <span class="fab-main-label">مركز طلبك</span>
     </button>
   </div>
 
-  <!-- ========== تضمين بوت وكيل Jotform الفخم (في اليسار بالأسفل) ========== -->
   <div id="JotformAgent-019d95efcafa75be955b3a9f5775be53337b"></div>
   <script>
     (function() {
@@ -461,32 +327,17 @@
             rootId: "JotformAgent-019d95efcafa75be955b3a9f5775be53337b",
             formID: "019d95efcafa75be955b3a9f5775be53337b",
             contextID: "01a04f2f779070009ffdfec87477610c159a",
-            initialContext: "",
             queryParams: ["skipWelcome=1", "maximizable=1"],
             domain: "https://www.jotform.com",
             isDraggable: false,
-            background: "linear-gradient(180deg, #050505 0%, #111111 100%)",
-            chatBackgroundColor: "#0b0b0b",
-            buttonBackgroundColor: "#d4af37",
-            buttonIconColor: "#050505",
-            inputTextColor: "#d4af37",
-            variant: false,
             customizations: {
               "greeting": "Yes",
               "greetingMessage": "مرحباً بك في سمسار طلبك! كيف يمكنني مساعدتك اليوم؟",
               "openByDefault": "No",
               "pulse": "Yes",
               "position": "left",
-              "autoOpenChatIn": "0",
-              "layout": "minimal",
-              "size": "md",
-              "placeholder": "اسأل مستشار سمسار طلبك...",
-              "chatbotLayoutControls": "Yes",
-              "chatbotLayoutType": "overlay",
               "selectedPosition": "left-bottom"
-            },
-            isVoice: false,
-            isVoiceWebCallEnabled: true
+            }
           });
         }
       };
@@ -495,255 +346,30 @@
   </script>
 
   <script>
-    /* =========================================================
-       التحكم في فتح وإغلاق قائمة FAB (مركز طلبك)
-       ========================================================= */
     function toggleFabMenu() {
       const container = document.getElementById('fabContainer');
       const backdrop = document.getElementById('fabBackdrop');
-      const isActive = container.classList.contains('active');
-
-      if (isActive) {
-        closeFabMenu();
+      if (container.classList.contains('active')) {
+        container.classList.remove('active');
+        backdrop.classList.remove('active');
       } else {
         container.classList.add('active');
         backdrop.classList.add('active');
       }
     }
 
-    function closeFabMenu() {
-      const container = document.getElementById('fabContainer');
-      const backdrop = document.getElementById('fabBackdrop');
-      if (container) container.classList.remove('active');
-      if (backdrop) backdrop.classList.remove('active');
-    }
-
-    document.getElementById('fabBackdrop')?.addEventListener('click', closeFabMenu);
+    document.getElementById('fabBackdrop')?.addEventListener('click', () => {
+      document.getElementById('fabContainer')?.classList.remove('active');
+      document.getElementById('fabBackdrop')?.classList.remove('active');
+    });
 
     function triggerSmartSearchFromFab() {
-      closeFabMenu();
+      document.getElementById('fabContainer')?.classList.remove('active');
+      document.getElementById('fabBackdrop')?.classList.remove('active');
       if (typeof window.openSmartSearch === 'function') {
         window.openSmartSearch();
       }
     }
-
-    /* =========================================================
-       محرك المعالج الذكي (صمم طلبك)
-       ========================================================= */
-    (function() {
-      let allProperties = [];
-      let dataLoaded = false;
-      let userSelection = { category: '', type: '', budgetRange: [] };
-      let lastStepId = 'step1';
-
-      async function loadDataIfNeeded() {
-        if (dataLoaded) return;
-        try {
-          const res = await fetch("{{ '/search-data.json' | relative_url }}");
-          if (!res.ok) throw new Error('Network error');
-          allProperties = await res.json();
-          dataLoaded = true;
-        } catch (e) {
-          console.error("Data error:", e);
-          allProperties = [];
-          dataLoaded = true;
-        }
-      }
-
-      window.openSmartSearch = function() {
-        loadDataIfNeeded();
-        const overlay = document.getElementById('smartSearchOverlay');
-        if (!overlay) return;
-        overlay.style.display = 'flex';
-        setTimeout(() => goToCard('step1'), 50);
-      };
-
-      window.closeSmartSearch = function() {
-        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        setTimeout(() => {
-          const overlay = document.getElementById('smartSearchOverlay');
-          if (overlay) overlay.style.display = 'none';
-        }, 400);
-      };
-
-      window.goToCard = function(id) {
-        document.querySelectorAll('.smart-card').forEach(c => c.classList.remove('active'));
-        const t = document.getElementById(id);
-        if (t) t.classList.add('active');
-      };
-
-      window.handleCommercialSelection = function() {
-        lastStepId = 'step1';
-        goToCard('stepCommercialBranch');
-      };
-
-      window.nextStep = function(cat, type) {
-        userSelection.category = cat;
-        userSelection.type = type;
-        lastStepId = type.includes('تجاري') ? 'stepCommercialBranch' : 'step1';
-        setupBudgetOptions(type);
-        goToCard('step2');
-      };
-
-      window.backToPrevious = function() {
-        goToCard(lastStepId);
-      };
-
-      function setupBudgetOptions(type) {
-        const container = document.getElementById('budgetOptions');
-        const title = document.getElementById('budgetTitle');
-        if (!container || !title) return;
-        container.innerHTML = '';
-        let opts = [];
-        if (type.includes('تمليك')) {
-          title.textContent = "ميزانية التملك؟";
-          opts = [
-            { label: "أقل من 3 مليون", range: [0, 3000000] },
-            { label: "3 - 6 مليون", range: [3000000, 6000000] },
-            { label: "أكثر من 6 مليون", range: [6000000, 99999999] }
-          ];
-        } else {
-          title.textContent = "الميزانية الشهرية؟";
-          const limit = type.includes('تجاري') ? 40000 : 20000;
-          opts = [
-            { label: `أقل من ${limit.toLocaleString()}`, range: [0, limit] },
-            { label: `أكثر من ${limit.toLocaleString()}`, range: [limit, 9999999] }
-          ];
-        }
-        opts.forEach(o => {
-          const b = document.createElement('button');
-          b.className = 'choice-btn';
-          b.setAttribute('aria-label', o.label);
-          b.innerHTML = `<i class="fas fa-coins"></i><span>${o.label}</span>`;
-          b.onclick = () => finishSearch(o.range);
-          container.appendChild(b);
-        });
-      }
-
-      window.finishSearch = function(range) {
-        userSelection.budgetRange = range;
-        goToCard('stepResults');
-        const content = document.getElementById('resultsContent');
-        const status = document.getElementById('resultsStatus');
-        if (!content || !status) return;
-
-        content.innerHTML = '<div style="font-size: 2rem; color: var(--color-primary); margin: 20px 0;"><i class="fas fa-circle-notch fa-spin"></i></div>';
-
-        setTimeout(() => {
-          const matches = allProperties.filter(p => {
-            if (!p || p.category !== userSelection.category) return false;
-            const isRent = userSelection.type.includes('إيجار');
-            const title = (p.title || '').toString();
-            const isPropRent = title.includes('إيجار') || (p.category || '').includes('rent');
-            if (isRent !== isPropRent) return false;
-            let pNum = 0;
-            if (typeof p.price_num === 'number') {
-              pNum = p.price_num;
-            } else {
-              const digits = (p.price || '').toString().replace(/[^0-9]/g, '');
-              pNum = digits ? parseInt(digits, 10) : 0;
-            }
-            return pNum >= range[0] && pNum <= range[1];
-          });
-
-          status.textContent = matches.length > 0
-            ? `وجدنا لك ${matches.length} عروض تناسبك:`
-            : "عذراً، لا توجد نتائج مطابقة حالياً..";
-
-          content.innerHTML = '';
-          if (!matches.length) return;
-
-          matches.forEach(m => {
-            const a = document.createElement('a');
-            a.className = 'result-item';
-            a.href = m.url || '{{ site.baseurl }}/properties/';
-            a.style.cssText = 'background:#050505; border:1px solid #222; border-radius:15px; padding:12px; display:flex; align-items:center; gap:15px; text-decoration:none; transition:0.3s;';
-
-            const img = document.createElement('img');
-            img.className = 'result-img';
-            img.alt = m.title || 'عقار';
-            img.src = m.image || '{{ site.baseurl }}/assets/img/logo.webp';
-            img.style.cssText = 'width:80px; height:80px; border-radius:10px; object-fit:cover; border:1px solid #333;';
-            img.onerror = () => { img.src = '{{ site.baseurl }}/assets/img/logo.webp'; };
-
-            const info = document.createElement('div');
-            info.className = 'result-info';
-            const h4 = document.createElement('h4');
-            h4.textContent = m.title || 'عقار';
-            h4.style.cssText = 'color:#fff; font-size:0.95rem; margin-bottom:5px;';
-            const span = document.createElement('span');
-            span.textContent = m.price || '';
-            span.style.cssText = 'color:var(--color-primary); font-weight:bold; font-size:0.9rem;';
-            info.appendChild(h4);
-            info.appendChild(span);
-            a.appendChild(img);
-            a.appendChild(info);
-            content.appendChild(a);
-          });
-        }, 400);
-      };
-    })();
-
-    /* =========================================================
-       نظام الإشعارات المدمج داخل FAB
-       ========================================================= */
-    const notifBtn = document.getElementById('enableNotifInFab');
-    const notifTitle = document.getElementById('notifTitleFab');
-    const notifSub = document.getElementById('notifSubFab');
-
-    function showGrantedState() {
-      if (!notifBtn) return;
-      if (notifTitle) notifTitle.textContent = "الإشعارات مفعّلة";
-      if (notifSub) notifSub.textContent = "أنت الآن متصل بأحدث العروض";
-      notifBtn.style.borderColor = '#25D366';
-      const icon = notifBtn.querySelector('.fab-item-icon');
-      if (icon) {
-        icon.style.background = 'rgba(37, 211, 102, 0.2)';
-        icon.style.color = '#25D366';
-        icon.innerHTML = '<i class="fas fa-check-circle"></i>';
-      }
-    }
-
-    if (Notification.permission === "granted") {
-      showGrantedState();
-    }
-
-    notifBtn?.addEventListener('click', async () => {
-      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-      const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
-      const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyBZxGDQ-N-Sue4GdoAmCfoUjeRkmAbdCZU",
-        authDomain: "simsartalabak.firebaseapp.com",
-        projectId: "simsartalabak",
-        storageBucket: "simsartalabak.firebasestorage.app",
-        messagingSenderId: "733807203688",
-        appId: "1:733807203688:web:a0582925001409994e32dd"
-      };
-
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
-
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
-        const db = getFirestore(app);
-        const token = await getToken(messaging, { 
-          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" 
-        });
-        if (token) {
-          await setDoc(doc(db, "fcmTokens", token), { 
-            token, 
-            createdAt: new Date(), 
-            userAgent: navigator.userAgent 
-          });
-          showGrantedState();
-        }
-      } catch (err) {
-        console.error("FCM Error:", err);
-      }
-    });
   </script>
 </body>
 </html>
