@@ -46,19 +46,45 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* تنسيق زر الإشعارات الفاخر العائم المتناسق */
-    .prestige-notif-btn {
-      position: fixed; bottom: 110px; left: 24px; z-index: 999;
-      background: rgba(5, 5, 5, 0.85); border: 1px solid #d4af37; color: #d4af37;
-      padding: 12px 20px; border-radius: 50px; font-family: 'Cairo', sans-serif;
-      font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex;
-      align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(212,175,55,0.15);
-      backdrop-filter: blur(10px); transition: 0.3s ease;
+    /* زر استشارة فورية */
+    .prestige-call-button {
+      position: fixed; bottom: 20px; right: 20px; z-index: 998;
     }
-    .prestige-notif-btn:hover {
-      background: #d4af37; color: #050505; box-shadow: 0 4px 20px rgba(212,175,55,0.4);
+
+    /* مركز طلبك زر عائم */
+    .smart-search-trigger {
+      position: fixed; bottom: 20px; left: 20px; z-index: 998;
+      background: #d4af37; color: #000; font-weight: 900;
+      padding: 12px 24px; border-radius: 50px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+      border: 2px solid #fff; transition: 0.3s ease;
     }
-    @media (max-width: 768px) { .prestige-notif-btn { bottom: 100px; left: 16px; padding: 10px 16px; font-size: 0.8rem; } }
+    .smart-search-trigger:hover { transform: scale(1.05); }
+
+    /* قائمة مركز طلبك الرئيسية */
+    .hub-card-options {
+      display: flex; flex-direction: column; gap: 15px; margin-top: 20px; width: 100%;
+    }
+    .hub-option-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 20px; padding: 15px 20px; color: #fff; text-decoration: none;
+      transition: 0.3s ease; cursor: pointer; text-align: right;
+    }
+    .hub-option-btn:hover {
+      background: rgba(212, 175, 55, 0.1); border-color: #d4af37; transform: translateY(-2px);
+    }
+    .hub-option-btn .icon-box {
+      width: 45px; height: 45px; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-size: 1.3rem;
+    }
+    .hub-option-btn.whatsapp .icon-box { background: #25D366; color: #fff; }
+    .hub-option-btn.smart .icon-box { background: #d4af37; color: #000; }
+    .hub-option-btn.notif .icon-box { background: #ffd700; color: #000; }
+    .hub-option-btn .text-content h3 { font-size: 1.1rem; font-weight: 800; margin: 0 0 4px 0; color: #fff; }
+    .hub-option-btn .text-content p { font-size: 0.82rem; color: #aaa; margin: 0; }
+    .hub-option-btn .arrow-icon { color: #d4af37; font-size: 1.1rem; }
   </style>
 </head>
 
@@ -82,52 +108,103 @@
 
   {% include footer.html %}
 
+  <!-- زر فتح مركز طلبك المتوهج -->
   <div id="smartSearchTrigger" class="smart-search-trigger" onclick="openSmartSearch()">
     <div class="pulse-ring"></div>
-    <i class="fas fa-hand-sparkles"></i>
-    <span class="trigger-text">صمم طلبك</span>
+    <i class="fas fa-times" id="triggerCloseIcon" style="display:none;"></i>
+    <i class="fas fa-hand-sparkles" id="triggerSparkleIcon"></i>
+    <span class="trigger-text">مركز طلبك</span>
   </div>
 
+  <!-- النافذة المنبثقة لـ مركز طلبك -->
   <div id="smartSearchOverlay" class="smart-search-overlay">
     <div class="overlay-blur" onclick="closeSmartSearch()"></div>
     <div class="search-card-container">
+      
+      <!-- القائمة الرئيسية المحدثة المطابقة للصورة -->
+      <div class="smart-card" id="stepHub">
+        <span style="color: #d4af37; font-weight: 700; font-size: 0.9rem;">سمسار طلبك</span>
+        <h2 style="color: #fff; font-size: 1.6rem; font-weight: 900; margin: 5px 0 8px 0;">اختر طريقك إلى العقار المناسب</h2>
+        <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 20px;">كل خيار هنا صُمم ليختصر عليك وقتاً أو يرفع جودة قرارك.</p>
+        
+        <div class="hub-card-options">
+          <!-- 1. تحدث معنا على واتساب -->
+          <a href="https://wa.me/201147758857" target="_blank" class="hub-option-btn whatsapp">
+            <i class="fas fa-arrow-left arrow-icon"></i>
+            <div class="text-content">
+              <h3>تحدث معنا على واتساب</h3>
+              <p>رد بشري سريع لمساعدتك في القرار</p>
+            </div>
+            <div class="icon-box"><i class="fab fa-whatsapp"></i></div>
+          </a>
+
+          <!-- 2. صمم طلبك بذكاء -->
+          <div class="hub-option-btn smart" onclick="goToCard('step1')">
+            <i class="fas fa-arrow-left arrow-icon"></i>
+            <div class="text-content">
+              <h3>صمم طلبك بذكاء</h3>
+              <p>حوّل احتياجك وميزانيتك إلى نتائج مناسبة</p>
+            </div>
+            <div class="icon-box"><i class="fas fa-magic"></i></div>
+          </div>
+
+          <!-- 3. كن أول من يعلم -->
+          <div class="hub-option-btn notif" onclick="triggerNotificationPermission()">
+            <i class="fas fa-arrow-left arrow-icon"></i>
+            <div class="text-content">
+              <h3>كن أول من يعلم</h3>
+              <p>تنبيهات للفرص الجديدة عند تفعيلها</p>
+            </div>
+            <div class="icon-box"><i class="fas fa-bell"></i></div>
+          </div>
+        </div>
+
+        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 25px; background: #d4af37; border: none; color: #000; font-weight: 900; padding: 10px 25px; border-radius: 25px; cursor: pointer;">
+          <i class="fas fa-times"></i> إغلاق
+        </button>
+      </div>
+
+      <!-- الخطوة الأولى للبحث الذكي -->
       <div class="smart-card" id="step1">
-        <i class="fas fa-crown gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">مرحباً بك في بوابة النخبة</h2>
-        <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">نحن لا نعرض جدراناً، بل نصمم لك مستقبلاً.. ماذا نبحث عنه اليوم؟</p>
+        <i class="fas fa-crown gold-icon" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.4rem; font-weight: 900; margin-bottom: 10px;">ماذا نبحث عنه اليوم؟</h2>
         <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
           <button class="choice-btn" onclick="nextStep('apartments', 'تمليك')"><i class="fas fa-home"></i><span>تمليك العمر</span></button>
           <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار مفروش')"><i class="fas fa-couch"></i><span>إيجار مفروش (فندقي)</span></button>
           <button class="choice-btn" onclick="nextStep('apartments-rent', 'إيجار جديد')"><i class="fas fa-key"></i><span>إيجار جديد (فاضي)</span></button>
           <button class="choice-btn" onclick="handleCommercialSelection()"><i class="fas fa-chart-line"></i><span>تجاري وإداري</span></button>
         </div>
-        <button class="close-text-btn" onclick="closeSmartSearch()" style="margin-top: 20px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline; font-size: 0.85rem;">سأقوم بالتصفح بنفسي لاحقاً</button>
+        <button class="back-text-btn" onclick="goToCard('stepHub')" style="margin-top: 20px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem;"><i class="fas fa-arrow-right"></i> العودة للمركز</button>
       </div>
 
+      <!-- فرع التجاري والإداري -->
       <div class="smart-card" id="stepCommercialBranch">
-        <i class="fas fa-briefcase gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">النشاط التجاري والإداري</h2>
+        <i class="fas fa-briefcase gold-icon" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.4rem; font-weight: 900; margin-bottom: 10px;">النشاط التجاري والإداري</h2>
         <div class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
           <button class="choice-btn" onclick="nextStep('commercial', 'تمليك تجاري')"><i class="fas fa-building"></i><span>تمليك / شراء</span></button>
           <button class="choice-btn" onclick="nextStep('commercial', 'إيجار تجاري')"><i class="fas fa-file-contract"></i><span>إيجار شهري</span></button>
         </div>
-        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 20px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem;"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
 
+      <!-- الخطوة الثانية: الميزانية -->
       <div class="smart-card" id="step2">
-        <i class="fas fa-money-bill-wave gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 id="budgetTitle" style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">الميزانية المرصودة؟</h2>
+        <i class="fas fa-money-bill-wave gold-icon" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 id="budgetTitle" style="color: #fff; font-size: 1.4rem; font-weight: 900; margin-bottom: 10px;">الميزانية المرصودة؟</h2>
         <div id="budgetOptions" class="choice-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px;"></div>
-        <button class="back-text-btn" onclick="backToPrevious()" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;"><i class="fas fa-arrow-right"></i> العودة</button>
+        <button class="back-text-btn" onclick="backToPrevious()" style="margin-top: 20px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem;"><i class="fas fa-arrow-right"></i> العودة</button>
       </div>
 
+      <!-- نتائج البحث -->
       <div class="smart-card" id="stepResults">
-        <i class="fas fa-magic gold-icon" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px;"></i>
-        <h2 style="color: #fff; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">نتائج البحث المخصصة</h2>
-        <p id="resultsStatus" style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">جاري البحث في خزائن النخبة...</p>
-        <div id="resultsContent" class="results-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px; text-align: right;"></div>
-        <button class="back-text-btn" onclick="goToCard('step1')" style="margin-top: 25px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: auto;">بدء بحث جديد</button>
+        <i class="fas fa-magic gold-icon" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 15px;"></i>
+        <h2 style="color: #fff; font-size: 1.4rem; font-weight: 900; margin-bottom: 10px;">نتائج البحث المخصصة</h2>
+        <p id="resultsStatus" style="color: #aaa; font-size: 0.85rem; margin-bottom: 20px;">جاري البحث...</p>
+        <div id="resultsContent" class="results-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; text-align: right;"></div>
+        <button class="back-text-btn" onclick="goToCard('stepHub')" style="margin-top: 20px; background: none; border: none; color: var(--color-primary); cursor: pointer; font-weight: 700; font-size: 0.85rem;">العودة لمركز طلبك</button>
       </div>
+
     </div>
   </div>
 
@@ -139,9 +216,8 @@
     </div>
   </a>
 
-  <button id="enableNotif" class="prestige-notif-btn">
-    <i class="fas fa-bell"></i> <span>إشعارات النخبة</span>
-  </button>
+  <!-- سكربت وكيل Jotform المدمج المباشر -->
+  <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
 
   <script>
     (function() {
@@ -169,7 +245,7 @@
         const overlay = document.getElementById('smartSearchOverlay');
         if (!overlay) return;
         overlay.style.display = 'flex';
-        setTimeout(() => goToCard('step1'), 50);
+        setTimeout(() => goToCard('stepHub'), 50);
       };
 
       window.closeSmartSearch = function() {
@@ -241,7 +317,7 @@
         const status = document.getElementById('resultsStatus');
         if (!content || !status) return;
 
-        content.innerHTML = '<div style="font-size: 2rem; color: var(--color-primary); margin: 20px 0;"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        content.innerHTML = '<div style="font-size: 2rem; color: var(--color-primary); margin: 20px 0; text-align:center;"><i class="fas fa-circle-notch fa-spin"></i></div>';
 
         setTimeout(() => {
           const matches = allProperties.filter(p => {
@@ -303,38 +379,9 @@
         }
       };
     })();
-  </script>
 
-  <script>
-    const notifBtn = document.getElementById('enableNotif');
-
-    function hideNotifBtn(delay = 4000) {
-      setTimeout(() => {
-        if (notifBtn) {
-          notifBtn.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-          notifBtn.style.opacity = '0';
-          notifBtn.style.transform = 'translateY(10px)';
-          setTimeout(() => {
-            if (notifBtn) notifBtn.style.display = 'none';
-          }, 800);
-        }
-      }, delay);
-    }
-
-    function showGrantedState() {
-      if (!notifBtn) return;
-      notifBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span>الإشعارات مفعّلة</span>';
-      notifBtn.style.background = 'rgba(37, 211, 102, 0.15)';
-      notifBtn.style.color = '#25D366';
-      notifBtn.style.borderColor = '#25D366';
-      hideNotifBtn(4000);
-    }
-
-    if (Notification.permission === "granted") {
-      showGrantedState();
-    }
-
-    notifBtn?.addEventListener('click', async () => {
+    // تفعيل الإشعارات من زر مركز طلبك
+    async function triggerNotificationPermission() {
       const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
       const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
       const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
@@ -350,26 +397,26 @@
 
       try {
         const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
-
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
-        const db = getFirestore(app);
-        const token = await getToken(messaging, { 
-          vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" 
-        });
-        if (token) {
-          await setDoc(doc(db, "fcmTokens", token), { 
-            token, 
-            createdAt: new Date(), 
-            userAgent: navigator.userAgent 
+        if (permission === 'granted') {
+          const app = initializeApp(firebaseConfig);
+          const messaging = getMessaging(app);
+          const db = getFirestore(app);
+          const token = await getToken(messaging, { 
+            vapidKey: "BPr4VQ5Je55G-Ozn_dxQTOsdMtsbBD9RY_JjRMx369YXWdzU0Xm2dzb-q0Ez7uCsAVseeY1jShjzUMFvL2yxqAM" 
           });
-          showGrantedState();
+          if (token) {
+            await setDoc(doc(db, "fcmTokens", token), { 
+              token, 
+              createdAt: new Date(), 
+              userAgent: navigator.userAgent 
+            });
+            alert("تم تفعيل إشعارات النخبة بنجاح!");
+          }
         }
       } catch (err) {
         console.error("FCM Error:", err);
       }
-    });
+    }
   </script>
 </body>
 </html>
