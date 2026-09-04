@@ -155,10 +155,11 @@
       const text = input.value.trim();
       if (!text) return;
 
+      // 1. عرض رسالة العميل
       renderMsg(text, 'user');
       input.value = '';
 
-      // إظهار رسالة انتظار
+      // 2. إظهار مؤشر الانتظار
       const loadingDiv = renderMsg("جاري التفكير...", 'bot');
 
       try {
@@ -167,12 +168,21 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text })
         });
+
         const data = await res.json();
         
-        loadingDiv.remove();
-        renderMsg(data.response, 'bot');
+        // 3. استخراج النص المرن لاستيعاب كافة التنسيقات
+        const botReply = data.response || 
+                         data.reply || 
+                         data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                         "تم استقبال الطلب وجاري المتابعة.";
+
+        // 4. استبدال نص الانتظار بالرد الفعلي
+        loadingDiv.innerText = botReply;
+
       } catch (e) {
-        loadingDiv.innerText = "فيه ضغط على الشبكة، جرب تاني يا غالي.";
+        console.error(e);
+        loadingDiv.innerText = "تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً أو التواصل عبر الواتساب.";
       }
     }
 
