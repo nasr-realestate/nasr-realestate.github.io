@@ -78,7 +78,7 @@
     #user-input:focus { border-color: var(--gold); }
     #send-btn { background: var(--gold); border: none; border-radius: 8px; width: 40px; height: 40px; cursor: pointer; display: grid; place-items: center; }
 
-    /* ========== FAB القائمة العائمة (يمين) ========== */
+    /* ========== مركز طلبك: القائمة العائمة (يمين) ========== */
     .fab-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9996; display: none; backdrop-filter: blur(5px); }
     .fab-backdrop.active { display: block; }
     .fab-container { position: fixed; bottom: 24px; right: 24px; z-index: 9997; display: flex; flex-direction: column; align-items: flex-end; }
@@ -143,7 +143,7 @@
   </div>
 
   <script>
-    // رابط الوكيل الجديد في Cloudflare
+    // رابط الوكيل الرسمي في Cloudflare
     const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
 
     function toggleChat() {
@@ -158,7 +158,7 @@
       renderMsg(text, 'user');
       input.value = '';
 
-      // إظهار رسالة تفكير مؤقتة
+      // إظهار رسالة انتظار
       const loadingDiv = renderMsg("جاري التفكير...", 'bot');
 
       try {
@@ -169,7 +169,6 @@
         });
         const data = await res.json();
         
-        // إزالة رسالة التحميل ووضع الرد الحقيقي
         loadingDiv.remove();
         renderMsg(data.response, 'bot');
       } catch (e) {
