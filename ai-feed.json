@@ -2,84 +2,56 @@
 layout: null
 permalink: /ai-feed.json
 ---
-
 {
-  "schema_version": "1.1",
+  "schema_version": "1.3",
   "source": "Semsar Talabak Official Property Collection",
   "brand": "سمسار طلبك",
   "market": "مدينة نصر - القاهرة",
-  "website": {{ site.url | jsonify }},
-  "generated_at": {{ site.time | date_to_xmlschema | jsonify }},
-
+  "website": "https://nasr-realestate.github.io",
+  "generated_at": "{{ site.time | date_to_xmlschema }}",
   "usage_policy": {
     "inventory_note_ar": "هذه العقارات منشورة في أرشيف سمسار طلبك. وجود العقار في هذا الملف لا يؤكد أنه ما زال متاحاً حالياً.",
     "availability_rule_ar": "يجب إعادة التحقق من توافر العقار قبل إبلاغ العميل بأنه متاح أو ترتيب المعاينة.",
     "old_listing_rule_ar": "العقار القديم يمكن استخدامه لفهم السوق أو كمرشح لإعادة التحقق، لكن لا يتم تقديمه كعرض متاح مؤكداً."
   },
-
   "properties": [
-    {% assign ai_properties = site.properties | sort: "date" | reverse %}
-    {% for property in ai_properties %}
-
-      {% assign detected_transaction = property.transaction %}
-      {% unless detected_transaction %}
-        {% if property.title contains "إيجار" or property.title contains "ايجار" %}
-          {% assign detected_transaction = "rent" %}
-        {% else %}
-          {% assign detected_transaction = "sale" %}
-        {% endif %}
-      {% endunless %}
-
-      {% assign detected_category = property.category | default: "apartments" %}
-
-      {
-        "id": {{ property.id | default: property.slug | jsonify }},
-
-        "slug": {{ property.slug | jsonify }},
-
-        "title": {{ property.title | jsonify }},
-
-        "url": {{ property.url | absolute_url | jsonify }},
-
-        "date_posted": {{ property.date | date: "%Y-%m-%d" | jsonify }},
-
-        "transaction": {{ detected_transaction | jsonify }},
-
-        "category": {{ detected_category | jsonify }},
-
-        "availability": {
-          "status": {{ property.status | default: "unverified" | jsonify }},
-          "verified_at": {{ property.verified_at | default: nil | jsonify }},
-          "requires_verification": true
-        },
-
-        "location": {{ property.location | default: "" | jsonify }},
-
-        "price": {
-          "display": {{ property.price | default: "" | jsonify }},
-          "numeric": {% if property.price_num %}{{ property.price_num }}{% else %}null{% endif %},
-          "currency": "EGP"
-        },
-
-        "area": {
-          "display": {{ property.area | default: "" | jsonify }},
-          "numeric": {% if property.area_num %}{{ property.area_num }}{% else %}null{% endif %},
-          "unit": "sqm"
-        },
-
-        "rooms": {{ property.rooms | default: "" | jsonify }},
-
-        "bathrooms": {{ property.bathrooms | default: "" | jsonify }},
-
-        "floor": {{ property.floor | default: "" | jsonify }},
-
-        "finish": {{ property.finish | default: "" | jsonify }},
-
-        "image": {% if property.image_file %}{{ site.url | append: "/assets/img/properties/" | append: property.image_file | jsonify }}{% elsif property.image %}{{ property.image | absolute_url | jsonify }}{% else %}null{% endif %},
-
-        "description": {{ property.meta_description | default: property.description | default: "" | strip_html | strip_newlines | jsonify }}
-      }{% unless forloop.last %},{% endunless %}
-
+    {% for property in site.properties %}
+    {% capture full_clean %}{{ property.content | strip_html | normalize_whitespace | strip }}{% endcapture %}
+    {% capture search_raw %}{{ property.title }} {{ property.location }} {{ property.meta_description }} {{ property.description }} {{ full_clean }} {{ property.category }} {{ property.transaction }}{% endcapture %}
+    {
+      "id": {{ property.url | jsonify }},
+      "slug": {% if property.slug %}{{ property.slug | jsonify }}{% else %}{{ property.url | jsonify }}{% endif %},
+      "title": {{ property.title | jsonify }},
+      "url": {{ property.url | absolute_url | jsonify }},
+      "date_posted": {{ property.date | date: "%Y-%m-%d" | jsonify }},
+      "transaction": {{ property.transaction | default: "sale" | jsonify }},
+      "category": {{ property.category | default: "apartments" | jsonify }},
+      "availability": {
+        "status": {{ property.status | default: "unverified" | jsonify }},
+        "verified_at": {% if property.verified_at %}{{ property.verified_at | jsonify }}{% else %}null{% endif %},
+        "requires_verification": true
+      },
+      "location": {{ property.location | default: "" | jsonify }},
+      "price": {
+        "display": {{ property.price | default: "" | jsonify }},
+        "numeric": {% if property.price_num %}{{ property.price_num }}{% else %}null{% endif %},
+        "currency": "EGP"
+      },
+      "area": {
+        "display": {{ property.area | default: "" | jsonify }},
+        "numeric": {% if property.area_num %}{{ property.area_num }}{% else %}null{% endif %},
+        "unit": "sqm"
+      },
+      "rooms": {{ property.rooms | default: "" | jsonify }},
+      "rooms_num": {% if property.rooms_num %}{{ property.rooms_num }}{% else %}null{% endif %},
+      "bathrooms": {{ property.bathrooms | default: "" | jsonify }},
+      "floor": {{ property.floor | default: "" | jsonify }},
+      "finish": {{ property.finish | default: "" | jsonify }},
+      "image": {% if property.image_file %}{{ site.url | append: "/assets/img/properties/" | append: property.image_file | jsonify }}{% else %}null{% endif %},
+      "description_short": {{ property.meta_description | default: property.description | default: "" | jsonify }},
+      "description_full": {{ full_clean | truncate: 3000 | jsonify }},
+      "search_text": {{ search_raw | normalize_whitespace | truncate: 5000 | jsonify }}
+    }{% unless forloop.last %},{% endunless %}
     {% endfor %}
   ]
-      }
+}
