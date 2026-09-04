@@ -39,7 +39,7 @@
     }
     @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
 
-    /* ========== بوابة النخبة: فقاعة الشات ========== */
+    /* ========== بوابة النخبة: فقاعة الشات (يسار) ========== */
     #elite-chat-bubble {
       position: fixed; bottom: 24px; left: 24px; width: 65px; height: 65px;
       background: var(--black); border: 2px solid var(--gold); border-radius: 50%;
@@ -69,7 +69,7 @@
     .chat-header button { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; }
 
     #chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
-    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; position: relative; }
     .msg-bot { background: #1a1a1a; color: #eee; align-self: flex-start; border-bottom-right-radius: 2px; }
     .msg-user { background: var(--gold); color: #000; align-self: flex-end; font-weight: 700; border-bottom-left-radius: 2px; }
 
@@ -101,19 +101,19 @@
   <main>{{ content }}</main>
   {% include footer.html %}
 
-  <!-- ========== بوابة النخبة: الواجهة المستقلة ========== -->
+  <!-- ========== بوابة النخبة: الشات الذكي لطارق طنطاوي ========== -->
   <div id="elite-chat-bubble" onclick="toggleChat()">
-    <img src="assets/img/logo.webp" alt="طارق طنطاوي">
+    <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="طارق طنطاوي">
   </div>
 
   <div id="elite-chat-window">
     <div class="chat-header">
-        <img src="assets/img/logo.webp" alt="T">
+        <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="T">
         <span>خزانة العقارات | طارق طنطاوي</span>
         <button onclick="toggleChat()">×</button>
     </div>
     <div id="chat-messages">
-        <div class="msg msg-bot">أهلاً بك يا فندم.. معاك طارق طنطاوي بنفسه. اؤمرني طلبك إيه في مدينة نصر؟</div>
+        <div class="msg msg-bot">أهلاً بك يا فندم.. معاك طارق طنطاوي. اؤمرني طلبك إيه في مدينة نصر؟</div>
     </div>
     <div class="chat-input-area">
         <input type="text" id="user-input" placeholder="اكتب طلبك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
@@ -128,7 +128,7 @@
   <div class="fab-container" id="fabContainer">
     <div class="fab-menu">
       <a href="{{ '/add-your-property.html' | relative_url }}" class="fab-item">
-        <i class="fas fa-plus gold-text"></i>
+        <i class="fas fa-plus" style="color:var(--gold)"></i>
         <span><strong>أضف عقارك للعرض</strong></span>
       </a>
       <a href="https://wa.me/201147758857" class="fab-item">
@@ -143,8 +143,9 @@
   </div>
 
   <script>
-    // التحكم في الشات
-    let chatHistory = [];
+    // رابط الوكيل الجديد في Cloudflare
+    const WORKER_URL = "https://wakily.footcai-555.workers.dev";
+
     function toggleChat() {
       document.getElementById('elite-chat-window').classList.toggle('open');
     }
@@ -157,18 +158,22 @@
       renderMsg(text, 'user');
       input.value = '';
 
+      // إظهار رسالة تفكير مؤقتة
+      const loadingDiv = renderMsg("جاري التفكير...", 'bot');
+
       try {
-        const res = await fetch("https://semsar-chat.footcai-555.workers.dev", {
+        const res = await fetch(WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history: chatHistory })
+          body: JSON.stringify({ message: text })
         });
         const data = await res.json();
-        renderMsg(data.reply, 'bot');
-        chatHistory.push({ role: "user", parts: [{ text: text }] });
-        chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+        
+        // إزالة رسالة التحميل ووضع الرد الحقيقي
+        loadingDiv.remove();
+        renderMsg(data.response, 'bot');
       } catch (e) {
-        renderMsg("فيه ضغط على الشبكة، جرب تاني يا غالي.", 'bot');
+        loadingDiv.innerText = "فيه ضغط على الشبكة، جرب تاني يا غالي.";
       }
     }
 
@@ -179,9 +184,9 @@
       div.innerText = text;
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
+      return div;
     }
 
-    // التحكم في القائمة
     function toggleFab() {
       document.getElementById('fabContainer').classList.toggle('active');
       document.getElementById('fabBackdrop').classList.toggle('active');
