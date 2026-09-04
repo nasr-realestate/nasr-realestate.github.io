@@ -431,5 +431,33 @@
 
   <!-- وكيل Jotform AI -->
   <script src='https://cdn.jotfor.ms/agent/embedjs/019d95efcafa75be955b3a9f5775be53337b/embed.js'></script>
+  <!-- بوابة النخبة: كود الفقاعة العائمة (Widget) -->
+<style>
+  #tarek-chat-bubble {
+    position: fixed; bottom: 20px; left: 20px; width: 65px; height: 65px;
+    background: #050505; border: 2px solid #d4af37; border-radius: 50%;
+    cursor: pointer; z-index: 10000; box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+    display: flex; align-items: center; justify-content: center; transition: 0.3s;
+  }
+  #tarek-chat-bubble:hover { transform: scale(1.1); }
+  #tarek-chat-bubble img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  
+  #tarek-chat-window {
+    position: fixed; bottom: 100px; left: 20px; width: 350px; height: 500px;
+    background: #050505; border: 1px solid #d4af37; border-radius: 15px;
+    display: none; flex-direction: column; z-index: 10001; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    overflow: hidden; font-family: 'Cairo', sans-serif;
+  }
+  #tarek-chat-window.active { display: flex; }
+  /* بقية الـ CSS والتنسيق من الكود السابق يوضع هنا لضبط واجهة المحادثة */
+</style>
+
+<div id="tarek-chat-bubble" onclick="document.getElementById('tarek-chat-window').classList.toggle('active')">
+    <img src="assets/img/logo.webp" alt="طارق طنطاوي">
+</div>
+
+<div id="tarek-chat-window">
+    <!-- واجهة الشات والـ Script الخاص بالـ Cloudflare Worker كما اتفقنا -->
+</div>
 </body>
 </html>
