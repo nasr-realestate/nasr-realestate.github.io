@@ -200,6 +200,108 @@
       document.getElementById('fabContainer').classList.toggle('active');
       document.getElementById('fabBackdrop').classList.toggle('active');
     }
-  </script>
+  </script><!-- كود بوت الذكاء الاصطناعي الجاهز للاستخدام -->
+<div id="ai-chat-widget" style="position: fixed; bottom: 20px; left: 20px; z-index: 99999; font-family: Tahoma, sans-serif;">
+    <!-- زر فتح البوت العائم -->
+    <button id="chat-toggle-btn" style="background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        💬 تحدث مع الذكاء الاصطناعي
+    </button>
+
+    <!-- نافذة المحادثة (مخفية افتراضياً) -->
+    <div id="chat-window" style="display: none; width: 320px; height: 450px; background: white; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; left: 0;">
+        <!-- رأس نافذة المحادثة -->
+        <div style="background: #2563eb; color: white; padding: 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+            <span>مساعد الموقع الذكي</span>
+            <button id="chat-close-btn" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer;">✕</button>
+        </div>
+        <!-- منطقة عرض الرسائل -->
+        <div id="chat-messages" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9fafb; direction: rtl;">
+            <div style="align-self: flex-start; background: #e5e7eb; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 14px; color: #1f2937;">
+                أهلاً بك! كيف يمكنني مساعدتك اليوم؟
+            </div>
+        </div>
+        <!-- منطقة كتابة الرسالة -->
+        <div style="padding: 10px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; direction: rtl;">
+            <input type="text" id="chat-input" placeholder="اكتب رسالتك هنا..." style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-size: 14px;">
+            <button id="chat-send-btn" style="background: #2563eb; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold;">إرسال</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// رابط الـ Worker الخاص بك الذي أرسلته
+const workerUrl = "https://royal-snow-ea32.footcai-555.workers.dev/";
+
+const toggleBtn = document.getElementById("chat-toggle-btn");
+const closeBtn = document.getElementById("chat-close-btn");
+const chatWindow = document.getElementById("chat-window");
+const sendBtn = document.getElementById("chat-send-btn");
+const chatInput = document.getElementById("chat-input");
+const chatMessages = document.getElementById("chat-messages");
+
+// فتح وإغلاق النافذة
+toggleBtn.addEventListener("click", () => {
+    chatWindow.style.display = "flex";
+    toggleBtn.style.display = "none";
+    chatInput.focus();
+});
+
+closeBtn.addEventListener("click", () => {
+    chatWindow.style.display = "none";
+    toggleBtn.style.display = "flex";
+});
+
+// إرسال الرسالة عند الضغط على زر أو Enter
+async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    // عرض رسالة المستخدم
+    appendMessage(text, "user");
+    chatInput.value = "";
+    
+    // رسالة تحميل مؤقتة
+    const loadingId = appendMessage("جاري التفكير...", "bot");
+
+    try {
+        const res = await fetch(workerUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text })
+        });
+        
+        const data = await res.json();
+        
+        // إزالة رسالة التحميل ووضع رد البوت الحقيقي
+        document.getElementById(loadingId).remove();
+        appendMessage(data.response || "عذراً، لم أتلقَ ردًا.", "bot");
+    } catch (err) {
+        document.getElementById(loadingId).remove();
+        appendMessage("حدث خطأ في الاتصال بالخادم.", "bot");
+    }
+}
+
+function appendMessage(text, sender) {
+    const msgDiv = document.createElement("div");
+    const id = "msg_" + Math.random().toString(36).substr(2, 9);
+    msgDiv.id = id;
+    
+    if (sender === "user") {
+        msgDiv.style.cssText = "align-self: flex-end; background: #2563eb; color: white; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 14px; word-break: break-word;";
+    } else {
+        msgDiv.style.cssText = "align-self: flex-start; background: #e5e7eb; color: #1f2937; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 14px; word-break: break-word;";
+    }
+    
+    msgDiv.textContent = text;
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return id;
+}
+
+sendBtn.addEventListener("click", sendMessage);
+chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+});
+</script>
 </body>
 </html>
