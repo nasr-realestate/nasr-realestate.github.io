@@ -16,7 +16,7 @@
 
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#050505">
+  <meta name="theme-color" content="#d4af37">
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,163 +28,151 @@
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 
   <style>
-    /* ========== التصميم السيادي (أسود وذهبي) ========== */
-    :root { --gold: #d4af37; --black: #050505; --dark-gray: #121212; }
-    
-    #prestigeSplash {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: var(--black); display: flex; align-items: center; justify-content: center;
-      z-index: 100000; animation: splashFadeOut 0.5s ease 1.2s forwards;
-      pointer-events: none;
-    }
-    @keyframes splashFadeOut { to { opacity: 0; visibility: hidden; } }
+    :root { --gold: #d4af37; --light-gold: #fcf8e3; --royal-white: #ffffff; --text-gray: #444; }
 
-    /* ========== بوابة النخبة: فقاعة الشات (يسار) ========== */
+    /* ========== أيقونة طارق الوامضة (يسار) ========== */
     #elite-chat-bubble {
-      position: fixed; bottom: 24px; left: 24px; width: 65px; height: 65px;
-      background: var(--black); border: 2px solid var(--gold); border-radius: 50%;
-      cursor: pointer; z-index: 9999; box-shadow: 0 4px 25px rgba(212,175,55,0.4);
-      display: flex; align-items: center; justify-content: center; transition: 0.3s;
+      position: fixed; bottom: 30px; left: 30px; width: 75px; height: 75px;
+      background: var(--royal-white); border: 3px solid var(--gold); border-radius: 50%;
+      cursor: pointer; z-index: 10000; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    #elite-chat-bubble::after {
-      content: ''; position: absolute; width: 100%; height: 100%;
-      border-radius: 50%; border: 1px solid var(--gold); animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
-    #elite-chat-bubble:hover { transform: scale(1.1); }
+    #elite-chat-bubble:hover { transform: scale(1.1) rotate(5deg); }
     #elite-chat-bubble img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 
-    /* ========== نافذة المحادثة ========== */
+    /* الهالة الذهبية النابضة */
+    #elite-chat-bubble::after {
+      content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
+      border: 4px solid var(--gold); animation: goldenPulse 2s infinite; opacity: 0;
+    }
+    @keyframes goldenPulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    /* ========== نافذة طارق الاحترافية (لايت) ========== */
     #elite-chat-window {
-      position: fixed; bottom: 100px; left: 24px; width: 360px; max-width: 90vw; height: 500px;
-      background: var(--black); border: 1px solid var(--gold); border-radius: 18px;
-      display: none; flex-direction: column; z-index: 9998; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      position: fixed; bottom: 120px; left: 30px; width: 380px; max-width: 90vw; height: 550px;
+      background: var(--royal-white); border: 1px solid #e0e0e0; border-radius: 25px;
+      display: none; flex-direction: column; z-index: 9999; box-shadow: 0 25px 80px rgba(0,0,0,0.15);
       overflow: hidden; font-family: 'Cairo', sans-serif;
     }
-    #elite-chat-window.open { display: flex; }
+    #elite-chat-window.open { display: flex; animation: slideUp 0.4s ease; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    .chat-header { background: var(--dark-gray); padding: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--gold); }
-    .chat-header img { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--gold); }
-    .chat-header span { color: var(--gold); font-weight: 900; font-size: 0.9rem; flex: 1; }
-    .chat-header button { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; }
+    .chat-header { background: linear-gradient(135deg, #111, #333); padding: 20px; display: flex; align-items: center; gap: 15px; }
+    .chat-header img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--gold); }
+    .chat-header div { flex: 1; }
+    .chat-header div h4 { color: #fff; margin: 0; font-size: 0.95rem; font-weight: 900; }
+    .chat-header div p { color: var(--gold); margin: 0; font-size: 0.75rem; }
+    .chat-header button { background: none; border: none; color: #fff; cursor: pointer; font-size: 24px; opacity: 0.7; }
 
-    #chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
-    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; position: relative; }
-    .msg-bot { background: #1a1a1a; color: #eee; align-self: flex-start; border-bottom-right-radius: 2px; }
-    .msg-user { background: var(--gold); color: #000; align-self: flex-end; font-weight: 700; border-bottom-left-radius: 2px; }
+    #chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
+    
+    .msg { max-width: 80%; padding: 12px 18px; border-radius: 18px; font-size: 14px; line-height: 1.7; position: relative; }
+    .msg-bot { background: #fff; color: var(--text-gray); align-self: flex-start; border: 1px solid #eee; border-top-right-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .msg-user { background: var(--gold); color: #000; align-self: flex-end; font-weight: 700; border-top-left-radius: 5px; box-shadow: 0 4px 10px rgba(212,175,55,0.2); }
 
-    .chat-input-area { background: var(--dark-gray); padding: 12px; display: flex; gap: 8px; border-top: 1px solid #222; }
-    #user-input { flex: 1; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; color: #fff; outline: none; font-family: inherit; }
-    #user-input:focus { border-color: var(--gold); }
-    #send-btn { background: var(--gold); border: none; border-radius: 8px; width: 40px; height: 40px; cursor: pointer; display: grid; place-items: center; color: #000; }
+    .typing-indicator { font-style: italic; font-size: 12px; color: var(--gold); display: none; margin-bottom: 10px; }
 
-    /* ========== مركز طلبك: القائمة العائمة (يمين) ========== */
-    .fab-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9996; display: none; backdrop-filter: blur(5px); }
-    .fab-backdrop.active { display: block; }
-    .fab-container { position: fixed; bottom: 24px; right: 24px; z-index: 9997; display: flex; flex-direction: column; align-items: flex-end; }
-    .fab-main { background: var(--black); border: 2px solid var(--gold); color: var(--gold); padding: 12px 25px; border-radius: 50px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(212,175,55,0.3); }
-    .fab-menu { display: none; flex-direction: column; gap: 10px; margin-bottom: 15px; width: 280px; }
-    .fab-container.active .fab-menu { display: flex; }
-    .fab-item { background: #111; border: 1px solid #222; padding: 12px; border-radius: 15px; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
-    .fab-item:hover { border-color: var(--gold); transform: translateX(-5px); }
+    .chat-input-area { background: #fff; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #eee; }
+    #user-input { flex: 1; background: #f5f5f5; border: 1px solid #eee; border-radius: 30px; padding: 12px 20px; color: #333; outline: none; font-size: 14px; }
+    #user-input:focus { border-color: var(--gold); background: #fff; }
+    #send-btn { background: var(--gold); border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; font-size: 18px; transition: 0.3s; }
+    #send-btn:hover { transform: rotate(-20deg); background: #b8962d; }
+
+    /* القائمة اليمنى المعهودة */
+    .fab-container { position: fixed; bottom: 30px; right: 30px; z-index: 10000; }
+    .fab-main { background: #111; color: var(--gold); border: 2px solid var(--gold); padding: 15px 30px; border-radius: 50px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
   </style>
 </head>
 
-<body class="{{ page.body_class | default: 'default-page' }}">
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BTRF7NP" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-
-  <div id="prestigeSplash">
-    <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="خزانة العقارات" width="280">
-  </div>
-
+<body>
   {% include navbar.html %}
   <main>{{ content }}</main>
   {% include footer.html %}
 
-  <!-- ========== بوابة النخبة: الشات الذكي لطارق طنطاوي ========== -->
+  <!-- بوابة النخبة: أيقونة طارق (يسار) -->
   <div id="elite-chat-bubble" onclick="toggleChat()">
-    <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="طارق طنطاوي">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
   </div>
 
+  <!-- نافذة المحادثة المريحة -->
   <div id="elite-chat-window">
     <div class="chat-header">
-        <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="T">
-        <span>خزانة العقارات | طارق طنطاوي</span>
+        <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
+        <div>
+            <h4>طارق طنطاوي</h4>
+            <p id="tarek-status">متصل الآن</p>
+        </div>
         <button onclick="toggleChat()">×</button>
     </div>
     <div id="chat-messages">
-        <div class="msg msg-bot">أهلاً بك يا فندم.. معاك طارق طنطاوي. اؤمرني طلبك إيه في مدينة نصر؟</div>
+        <div class="msg msg-bot">أهلاً بك يا فندم.. معاك طارق طنطاوي. تحت أمرك في أي استشارة عقارية في مدينة نصر.</div>
     </div>
+    <div id="tarek-typing" class="typing-indicator" style="padding-right: 20px;">طارق يكتب الآن...</div>
     <div class="chat-input-area">
-        <input type="text" id="user-input" placeholder="اكتب طلبك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
+        <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
         <button id="send-btn" onclick="sendMsg()">
             <i class="fas fa-paper-plane"></i>
         </button>
     </div>
   </div>
 
-  <!-- ========== مركز طلبك: القائمة العائمة ========== -->
-  <div class="fab-backdrop" id="fabBackdrop"></div>
+  <!-- مركز طلبك (يمين) -->
   <div class="fab-container" id="fabContainer">
-    <div class="fab-menu">
-      <a href="{{ '/add-your-property.html' | relative_url }}" class="fab-item">
-        <i class="fas fa-plus" style="color:var(--gold)"></i>
-        <span><strong>أضف عقارك للعرض</strong></span>
-      </a>
-      <a href="https://wa.me/201147758857" class="fab-item">
-        <i class="fab fa-whatsapp" style="color:#25d366"></i>
-        <span><strong>حسم الصفقة (واتساب)</strong></span>
-      </a>
-    </div>
-    <button class="fab-main" onclick="toggleFab()">
-      <i class="fas fa-bars"></i>
-      <span>مركز طلبك</span>
+    <button class="fab-main" onclick="location.href='https://wa.me/201147758857'">
+      <i class="fab fa-whatsapp"></i>
+      <span>حسم الصفقة واتساب</span>
     </button>
   </div>
 
   <script>
-    // رابط الوكيل الرسمي في Cloudflare
     const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+    let chatHistory = JSON.parse(localStorage.getItem('tarek_chat_memory')) || [];
 
     function toggleChat() {
       document.getElementById('elite-chat-window').classList.toggle('open');
     }
+
+    // استرجاع المحادثة عند الفتح
+    window.onload = () => {
+        chatHistory.forEach(msg => renderMsg(msg.text, msg.type));
+    };
 
     async function sendMsg() {
       const input = document.getElementById('user-input');
       const text = input.value.trim();
       if (!text) return;
 
-      // عرض رسالة العميل
       renderMsg(text, 'user');
+      saveToMemory(text, 'user');
       input.value = '';
 
-      // إظهار مؤشر الانتظار
-      const loadingDiv = renderMsg("⏳ جاري التفكير...", 'bot');
+      // تغيير الحالة إلى "طارق يكتب"
+      const status = document.getElementById('tarek-status');
+      const typing = document.getElementById('tarek-typing');
+      status.innerText = "يكتب الآن...";
+      typing.style.display = "block";
 
       try {
         const res = await fetch(WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
+          body: JSON.stringify({ message: text, history: chatHistory })
         });
-
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
         const data = await res.json();
         
-        // استخراج النص المرن لاستيعاب كافة التنسيقات
-        const botReply = data.response || 
-                         data.reply || 
-                         data.candidates?.[0]?.content?.parts?.[0]?.text || 
-                         "تم استقبال طلبك، سيتم الرد قريباً.";
+        status.innerText = "متصل الآن";
+        typing.style.display = "none";
 
-        loadingDiv.innerText = botReply;
+        renderMsg(data.response, 'bot');
+        saveToMemory(data.response, 'bot');
 
       } catch (e) {
-        console.error(e);
-        loadingDiv.innerText = "⚠️ عذراً، حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً أو التواصل عبر واتساب.";
-        // يمكن إضافة زر لإعادة المحاولة هنا إذا أردت
+        status.innerText = "متصل الآن";
+        typing.style.display = "none";
+        renderMsg("يا فندم حصل ضغط على الشبكة، برجاء إرسال رسالتك مرة تانية.", 'bot');
       }
     }
 
@@ -198,9 +186,10 @@
       return div;
     }
 
-    function toggleFab() {
-      document.getElementById('fabContainer').classList.toggle('active');
-      document.getElementById('fabBackdrop').classList.toggle('active');
+    function saveToMemory(text, type) {
+        chatHistory.push({ text, type });
+        if (chatHistory.length > 20) chatHistory.shift();
+        localStorage.setItem('tarek_chat_memory', JSON.stringify(chatHistory));
     }
   </script>
 </body>
