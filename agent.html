@@ -51,7 +51,7 @@
     /* الهيدر الخاص بالوكيل */
     .agent-header {
       background: linear-gradient(135deg, #0d0d0d, #222222);
-      padding: 14px 18px;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -99,6 +99,28 @@
       box-shadow: 0 0 8px #2ecc71;
     }
 
+    /* شعار الموقع في الجانب الأيسر أعلى الهيدر */
+    .header-logo-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      transition: transform 0.2s ease;
+    }
+
+    .header-logo-link:hover {
+      transform: scale(1.08);
+    }
+
+    .header-logo-img {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      object-fit: cover;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    }
+
     /* شريط مؤشر التأهيل */
     .qual-box {
       background: #161616;
@@ -143,7 +165,6 @@
       flex-direction: column;
       gap: 12px;
       background: #141414;
-      padding-bottom: 80px;
     }
 
     .msg {
@@ -188,35 +209,7 @@
       font-size: 12px;
     }
 
-    /* الفوتر الخاص بالوكيل (زر تصفح الكتالوج العائم) */
-    .agent-custom-footer {
-      position: absolute;
-      bottom: 72px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      background: rgba(17, 17, 17, 0.92);
-      border: 1px solid var(--gold);
-      border-radius: 30px;
-      padding: 6px 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
-      backdrop-filter: blur(8px);
-      text-decoration: none;
-      transition: transform 0.2s;
-    }
-
-    .agent-custom-footer:hover {
-      transform: translateX(-50%) scale(1.03);
-    }
-
-    .semsar-logo-img { width: 24px; height: 24px; border-radius: 50%; }
-    .semsar-bar-text { color: var(--gold); font-size: 0.85rem; font-weight: 700; }
-
-    /* حقل الإدخال السفلي مع زر الإرسال الصريح */
+    /* حقل الإدخال السفلي وزر الإرسال */
     .chat-input-area {
       background: #1a1a1a;
       padding: 12px;
@@ -266,7 +259,7 @@
       background: var(--gold-hover);
     }
 
-    /* زر الواتساب لتأكيد الصفقة */
+    /* زر الواتساب */
     .deal-btn-wrapper {
       padding: 0 12px 12px 12px;
       background: #1a1a1a;
@@ -306,13 +299,17 @@
   <!-- هيدر الوكيل -->
   <header class="agent-header">
     <div class="agent-profile">
-      <!-- يمكنك تغيير مسار الصورة هنا إلى أي رابط تفضله -->
       <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="agent-avatar" onerror="this.src='https://nasr-realestate.github.io/assets/img/social-home.webp'">
       <div class="agent-info">
         <h1>طارق طنطاوي</h1>
         <p><span class="status-dot"></span> تأهيل ذكي لعملاء مدينة نصر وهليوبوليس</p>
       </div>
     </div>
+
+    <!-- الشعار في الجهة اليسرى مقابل صورتك بدون أي نصوص -->
+    <a href="/" class="header-logo-link" title="العودة للكتالوج الرئيسية">
+      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="header-logo-img" alt="شعار سمسار طلبك" onerror="this.src='https://via.placeholder.com/42'">
+    </a>
   </header>
 
   <!-- شريط مؤشر التأهيل -->
@@ -329,12 +326,6 @@
     <div id="tarek-typing" class="typing-indicator-box">جاري تحضير الرد...</div>
   </div>
 
-  <!-- الفوتر المخصص للوكيل: زر الانتقال للكتالوج الرئيسي -->
-  <a href="/" class="agent-custom-footer">
-    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="semsar-logo-img" alt="سمسار طلبك" onerror="this.src='https://via.placeholder.com/24'">
-    <span class="semsar-bar-text">تصفح المعرض والكتالوج 🏛️</span>
-  </a>
-
   <!-- منطقة الإدخال وزر الإرسال الصريح -->
   <div class="chat-input-area">
     <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
@@ -343,7 +334,7 @@
     </button>
   </div>
 
-  <!-- زر حسم الصفقة عبر الواتساب -->
+  <!-- زر الواتساب -->
   <div class="deal-btn-wrapper">
     <button id="dealBtn" class="deal-btn disabled" onclick="openDealWhatsApp()">
       <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
@@ -560,4 +551,5 @@
 </script>
 
 </body>
-</html>
+  </html>
+  
