@@ -217,6 +217,9 @@
       outline: none;
       font-size: 13.5px;
     }
+    #user-input:disabled {
+      background: #e9ecef;
+    }
     #send-btn {
       background: #075e54;
       border: none;
@@ -265,7 +268,7 @@
     </div>
 
     <div class="chat-input-area">
-      <input type="text" id="user-input" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendMsg()">
+      <input type="text" id="user-input" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()">
       <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
         <i class="fas fa-paper-plane"></i>
       </button>
@@ -275,11 +278,21 @@
   <script>
     const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
     const STORAGE_KEY = "tarek_whatsapp_chat_v3";
+    const SCORE_KEY = "tarek_qual_score";
+    const WA_KEY = "tarek_can_wa";
 
     let chatHistory = [];
+    let qualificationScore = parseInt(localStorage.getItem(SCORE_KEY) || "0");
+    let canShareWhatsapp = localStorage.getItem(WA_KEY) === "true";
+    let isSending = false;
 
     function toggleChat() {
-      document.getElementById("elite-chat-window").classList.toggle("open");
+      const windowEl = document.getElementById("elite-chat-window");
+      windowEl.classList.toggle("open");
+      if (windowEl.classList.contains("open")) {
+        scrollBottom();
+        document.getElementById("user-input").focus();
+      }
     }
 
     function getTimeString() {
@@ -289,6 +302,8 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+      localStorage.setItem(SCORE_KEY, qualificationScore.toString());
+      localStorage.setItem(WA_KEY, canShareWhatsapp ? "true" : "false");
     }
 
     function loadState() {
@@ -297,7 +312,7 @@
         if (!raw) return false;
         const data = JSON.parse(raw);
         if (!Array.isArray(data)) return false;
-        chatHistory = data.slice(-24);
+        chatHistory = data;
         return true;
       } catch {
         return false;
@@ -310,22 +325,17 @@
 
       Array.from(container.querySelectorAll(".msg")).forEach((n) => n.remove());
       chatHistory.forEach(msg => renderMsg(msg.text, msg.type, msg.time));
-      container.appendChild(typingBox);
+      if (typingBox) container.appendChild(typingBox);
       scrollBottom();
     }
 
     function parseMarkdown(text) {
-      // تحويل النص العريض **text** إلى <b>text</b>
       let parsed = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-      
-      // تحويل الروابط [Label](URL)
       const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
       parsed = parsed.replace(linkRegex, function(_, label, url) {
         const isWa = /wa\.me\//i.test(url);
         return `<br><a href="${url}" target="_blank" class="msg-link-btn">${isWa ? '<i class="fab fa-whatsapp"></i> ' : '<i class="fas fa-link"></i> '}${label}</a>`;
       });
-
-      // تحويل السطور الجديدة إلى <br>
       return parsed.replace(/\n/g, '<br>');
     }
 
@@ -343,39 +353,57 @@
 
       div.innerHTML = `<div>${formattedText}</div><div class="msg-time">${t}${checkMarks}</div>`;
 
-      container.insertBefore(div, typingBox);
+      if (typingBox) {
+        container.insertBefore(div, typingBox);
+      } else {
+        container.appendChild(div);
+      }
       scrollBottom();
     }
 
     function scrollBottom() {
       const container = document.getElementById("chat-messages");
-      container.scrollTop = container.scrollHeight;
+      if (container) container.scrollTop = container.scrollHeight;
+    }
+
+    function setControlsDisabled(disabled) {
+      isSending = disabled;
+      document.getElementById("user-input").disabled = disabled;
+      document.getElementById("send-btn").disabled = disabled;
+    }
+
+    function updateQualificationLocally(text) {
+      if (/ميزانية|جنيه|مليون|كاش|تقسيط/i.test(text)) qualificationScore += 1;
+      if (/مدينة نصر|مصر الجديدة|القاهرة الجديدة|التجمع/i.test(text)) qualificationScore += 1;
+      if (/شراء|جاهز|معاينة|شقة|فيلا/i.test(text)) qualificationScore += 1;
+      if (qualificationScore >= 3) canShareWhatsapp = true;
     }
 
     async function sendMsg() {
       const input = document.getElementById("user-input");
-      const sendBtn = document.getElementById("send-btn");
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || isSending) return;
 
+      setControlsDisabled(true);
       const time = getTimeString();
+      
+      updateQualificationLocally(text);
       renderMsg(text, "user", time);
       chatHistory.push({ text, type: "user", time });
-      if (chatHistory.length > 24) chatHistory.shift();
       saveState();
 
       input.value = "";
-      input.disabled = true;
-      sendBtn.disabled = true;
 
       const typing = document.getElementById("tarek-typing");
-      typing.style.display = "block";
+      if (typing) typing.style.display = "block";
       scrollBottom();
 
-      // تجهيز سجل المحادثة للتمرير إلى Cloudflare Worker
-      const formattedHistory = chatHistory.slice(0, -1).map(h => ({
+      // اقتطاع آخر 4 رسائل فقط لحماية الحصة المجانية
+      const recentMessages = chatHistory.slice(-4).map(h => ({
         role: h.type === "bot" ? "assistant" : "user",
-        message: h.text
+        message: h.text,
+        text: h.text,
+        type: h.type
       }));
 
       try {
@@ -384,36 +412,45 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             message: text,
-            history: formattedHistory
+            history: recentMessages,
+            messages: recentMessages,
+            qualificationScore: qualificationScore,
+            canShareWhatsapp: canShareWhatsapp
           })
         });
 
         const data = await res.json();
-        typing.style.display = "none";
+        if (typing) typing.style.display = "none";
 
-        const botReply = data.response || "تعذر تنفيذ الطلب الآن. حاول بعد قليل.";
+        if (typeof data.qualificationScore === "number") {
+          qualificationScore = Math.max(qualificationScore, data.qualificationScore);
+        }
+        if (data.canShareWhatsapp || qualificationScore >= 3) {
+          canShareWhatsapp = true;
+        }
+
+        const botReply = data.response || data.reply || "عذراً، حدث خطأ في معالجة طلبك.";
         const botTime = getTimeString();
 
         renderMsg(botReply, "bot", botTime);
         chatHistory.push({ text: botReply, type: "bot", time: botTime });
         saveState();
       } catch (e) {
-        typing.style.display = "none";
+        if (typing) typing.style.display = "none";
         const fallback = "في مشكلة اتصال مؤقتة. أرسل بيانات طلبك وأنا هتابع معاك هنا بنفسي.";
         const botTime = getTimeString();
         renderMsg(fallback, "bot", botTime);
         chatHistory.push({ text: fallback, type: "bot", time: botTime });
         saveState();
       } finally {
-        input.disabled = false;
-        sendBtn.disabled = false;
-        input.focus();
+        setControlsDisabled(false);
+        document.getElementById("user-input").focus();
       }
     }
 
     window.onload = () => {
       const hasState = loadState();
-      if (!hasState) {
+      if (!hasState || chatHistory.length === 0) {
         chatHistory = [
           {
             text: "أهلاً يا فندم، معاك طارق طنطاوي. بتدور على شقة في مدينة نصر ولا حابب تعرض عقارك للبيع؟",
