@@ -1,332 +1,366 @@
 ---
 layout: default
-title: "أضف عقارك مجاناً | سمسار طلبك"
-description: "هل لديك عقار للبيع أو الإيجار في مدينة نصر، هليوبوليس، أو التجمع الخامس؟ أضفه الآن مجاناً ليصل إلى آلاف المشترين الجادين في دقائق."
+title: "اعرض عقارك بذكاء | سمسار طلبك"
+description: "اعرض عقارك في مدينة نصر، هليوبوليس، والتجمع الخامس خلال ثوانٍ. تقييم فوري وتسويق مباشر عبر أ. طارق طنطاوي."
 permalink: /add-your-property.html
 image: "/assets/img/social-home.webp"
 ---
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Person",
-      "@id": "https://nasr-realestate.github.io/#tarek-tantawy",
-      "name": "طارق طنطاوي",
-      "jobTitle": "Strategic Real Estate Consultant",
-      "url": "https://nasr-realestate.github.io",
-      "description": "مستشار عقاري إستراتيجي، متخصص في إدارة وتوجيه الاستثمارات العقارية في مدينة نصر، هليوبوليس، والقاهرة الجديدة منذ عام 2014.",
-      "knowsAbout": [
-        "Real Estate Investment",
-        "Property Valuation",
-        "Nasr City Real Estate Market",
-        "New Cairo Premium Properties",
-        "Heliopolis Real Estate"
-      ],
-      "sameAs": [
-        "https://www.facebook.com/Tarekonly",
-        "https://www.linkedin.com/in/tarek-tantawy-444269162",
-        "https://maps.app.goo.gl/JxMtUtn95R4xYtMS9"
-      ]
-    },
-    {
-      "@type": "RealEstateAgent",
-      "@id": "https://nasr-realestate.github.io/#semsar-talabk",
-      "name": "سمسار طلبك",
-      "url": "https://nasr-realestate.github.io",
-      "logo": "https://nasr-realestate.github.io/assets/img/logo.webp",
-      "image": "https://nasr-realestate.github.io/assets/img/social-home.webp",
-      "description": "بوابتك العقارية الاستشارية الأولى لإدارة وتأمين الصفقات العقارية الحصرية ببيانات موثقة بالكامل.",
-      "founder": {
-        "@type": "Person",
-        "@id": "https://nasr-realestate.github.io/#tarek-tantawy"
-      },
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "16 Mohammed Hasan El-Gamal, Al Mintaqah as Sādisah",
-        "addressLocality": "Nasr City",
-        "addressRegion": "Cairo",
-        "postalCode": "11371",
-        "addressCountry": "EG"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 30.0635,
-        "longitude": 31.311
-      },
-      "areaServed": [
-        {
-          "@type": "AdministrativeArea",
-          "name": "Nasr City"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "New Cairo"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "Heliopolis"
-        }
-      ],
-      "sameAs": [
-        "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
-      ],
-      "priceRange": "$$$"
-    }
-  ]
-}
-</script>
 
-<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); padding-bottom: 5rem;">
-  <h1 class="gold-text" style="font-size: 2.8rem; font-weight: 900; margin-bottom: 15px;">خدمة الملاك الحصرية</h1>
-  <p style="color: #aaa; font-size: 1.1rem;">اعرض عقارك الآن ليتم تحليله وتأهيله بالذكاء الاصطناعي وعرضه أمام آلاف المشترين الجادين</p>
+<style>
+  .step-container {
+    max-width: 650px;
+    margin: 3rem auto;
+    background: #141414;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    color: #fff;
+    font-family: inherit;
+  }
+
+  .step-progress-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .step-progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #333;
+    z-index: 1;
+    transform: translateY(-50%);
+  }
+
+  .progress-fill {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    height: 2px;
+    background: #d4af37;
+    z-index: 1;
+    transform: translateY(-50%);
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .step-node {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #222;
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #aaa;
+    z-index: 2;
+    transition: 0.3s;
+  }
+
+  .step-node.active {
+    border-color: #d4af37;
+    background: #d4af37;
+    color: #000;
+  }
+
+  .form-step {
+    display: none;
+  }
+
+  .form-step.active {
+    display: block;
+    animation: fadeIn 0.4s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 1rem;
+  }
+
+  .option-btn {
+    background: #222;
+    border: 1px solid #333;
+    color: #ddd;
+    padding: 14px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    font-weight: 600;
+    transition: 0.2s;
+  }
+
+  .option-btn:hover, .option-btn.selected {
+    border-color: #d4af37;
+    background: rgba(212, 175, 55, 0.15);
+    color: #fff;
+  }
+
+  .quick-input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 14px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    margin-top: 8px;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .quick-input:focus {
+    border-color: #d4af37;
+  }
+
+  .step-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    gap: 10px;
+  }
+
+  .btn-next, .btn-prev {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    transition: 0.3s;
+  }
+
+  .btn-next {
+    background: #d4af37;
+    color: #000;
+    flex: 1;
+  }
+
+  .btn-next:hover {
+    background: #f3c83c;
+  }
+
+  .btn-prev {
+    background: #333;
+    color: #ccc;
+  }
+
+  .security-badge {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 15px;
+  }
+</style>
+
+<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); padding: 3rem 1rem 1rem; text-align: center;">
+  <h1 style="color: #d4af37; font-size: 2.2rem; font-weight: 900; margin-bottom: 10px;">عرض عقارك للبيع أو الإيجار</h1>
+  <p style="color: #aaa; font-size: 1rem; max-width: 500px; margin: 0 auto;">في أقل من دقيقة.. ابعت تفاصيل وحدتك مباشرة لتأهيلها وتسويقها مع أ. طارق طنطاوي</p>
 </header>
 
 <main>
-  <div class="listing-wrapper">
-    <div class="premium-card">
+  <div class="step-container">
+    
+    <!-- مؤشر الخطوات -->
+    <div class="step-progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+      <div class="step-node active" id="node1">1</div>
+      <div class="step-node" id="node2">2</div>
+      <div class="step-node" id="node3">3</div>
+    </div>
 
-      <div class="benefits-grid">
-        <div class="benefit-item">
-          <i class="fas fa-bolt benefit-icon"></i>
-          <div class="benefit-title">تقييم وتحليل فوري</div>
-          <div class="benefit-desc">مراجعة سعرك وتأهيل العقار بالذكاء الاصطناعي</div>
+    <form id="interactiveAddForm">
+
+      <!-- الخطوة 1: المعالم الأساسية -->
+      <div class="form-step active" id="step1">
+        <h3 style="color: #d4af37; margin-bottom: 5px;">1. نوع المعاملة والعقار</h3>
+        <p style="color: #888; font-size: 0.9rem;">اختر نوع العقار لسرعة التقييم:</p>
+        
+        <div class="options-grid" id="typeOptions">
+          <div class="option-btn selected" data-value="بيع">شقة للبيع</div>
+          <div class="option-btn" data-value="إيجار">شقة للإيجار</div>
+          <div class="option-btn" data-value="مكتب">مكتب إداري</div>
+          <div class="option-btn" data-value="محل">محل تجاري</div>
         </div>
-        <div class="benefit-item">
-          <i class="fas fa-shield-alt benefit-icon"></i>
-          <div class="benefit-title">خصوصية وأمان</div>
-          <div class="benefit-desc">نحافظ على سرية بيانات المالك الشخصية</div>
+
+        <div style="margin-top: 20px;">
+          <label style="font-size: 0.95rem; color: #ddd;">المنطقة والشارع (مثال: مدينة نصر - مكرم عبيد)</label>
+          <input type="text" id="propLocation" class="quick-input" placeholder="اكتب اسم الشارع أو المنطقة..." required>
         </div>
-        <div class="benefit-item">
-          <i class="fas fa-gem benefit-icon"></i>
-          <div class="benefit-title">تسويق موجه</div>
-          <div class="benefit-desc">استهداف المشترين الجادين في أسرع وقت</div>
+
+        <div class="step-actions">
+          <button type="button" class="btn-next" onclick="nextStep(2)">التالي <i class="fas fa-arrow-left"></i></button>
         </div>
       </div>
 
-      <form id="addPropertyForm">
+      <!-- الخطوة 2: المواصفات المباشرة -->
+      <div class="form-step" id="step2">
+        <h3 style="color: #d4af37; margin-bottom: 5px;">2. المساحة والسعر المطلوب</h3>
+        <p style="color: #888; font-size: 0.9rem;">ساعدنا في تحديد القيمة السوقية العادلة:</p>
 
-        <div class="section-divider">
-          <span class="section-title"><i class="fas fa-home"></i> مواصفات الوحدة الأساسية</span>
-          <div class="divider-line"></div>
-        </div>
-
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label>عنوان الإعلان المقترح</label>
-            <input type="text" id="prop_title" name="prop_title" class="custom-input" placeholder="مثال: شقة 180م الترا سوبر لوكس بجوار السراج مول" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+          <div>
+            <label style="font-size: 0.85rem; color: #ccc;">المساحة (متر مربع)</label>
+            <input type="number" id="propArea" class="quick-input" placeholder="مثال: 180" required>
           </div>
-          <div class="form-group">
-            <label>نوع العقار والصفقة</label>
-            <select id="prop_type" name="prop_type" class="custom-select" required>
-              <option value="" disabled selected>اختر من القائمة...</option>
-              <option value="بيع">شقة للبيع</option>
-              <option value="إيجار">شقة للإيجار</option>
-              <option value="محل">محل تجاري</option>
-              <option value="مكتب">مكتب إداري</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>السعر المطلوب (ج.م)</label>
-            <input type="text" id="prop_price" name="prop_price" class="custom-input" placeholder="مثال: 4,000,000" required>
-          </div>
-          <div class="form-group full-width">
-            <label>المساحة الصافية (متر مربع)</label>
-            <input type="number" id="prop_area" name="prop_area" class="custom-input" placeholder="مثال: 180" required>
+          <div>
+            <label style="font-size: 0.85rem; color: #ccc;">السعر المطلوب (ج.م)</label>
+            <input type="text" id="propPrice" class="quick-input" placeholder="مثال: 4,000,000" required>
           </div>
         </div>
 
-        <div class="section-divider">
-          <span class="section-title"><i class="fas fa-layer-group"></i> التشطيب والتقسيم</span>
-          <div class="divider-line"></div>
-        </div>
-
-        <div class="form-grid">
-          <div class="form-group">
-            <label>حالة التشطيب</label>
-            <select id="prop_finishing" name="prop_finishing" class="custom-select" required>
-              <option value="" disabled selected>اختر الحالة...</option>
-              <option value="سوبر لوكس">سوبر لوكس</option>
-              <option value="تحتاج الي تجديدات">تحتاج إلى تجديدات</option>
-              <option value="مجددة">مجددة بالكامل</option>
-              <option value="نصف تشطيب">نصف تشطيب</option>
-              <option value="طوب أحمر">طوب أحمر</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>الدور / الطابق</label>
-            <select id="prop_floor" name="prop_floor" class="custom-select" required>
-              <option value="" disabled selected>اختر...</option>
-              <option value="أرضي">أرضي</option>
-              <option value="أول">أول</option>
-              <option value="ثاني">ثاني</option>
-              <option value="متكرر">دور متكرر</option>
-              <option value="أخير">دور أخير</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>عدد الغرف</label>
-            <select id="prop_rooms" name="prop_rooms" class="custom-select" required>
-              <option value="" disabled selected>اختر...</option>
-              <option value="غرفتين">غرفتين</option>
-              <option value="3 غرف">3 غرف</option>
-              <option value="4 غرف">4 غرف</option>
-              <option value="5 غرف فأكثر">5 غرف فأكثر</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>عدد الحمامات</label>
-            <select id="prop_baths" name="prop_baths" class="custom-select" required>
-              <option value="" disabled selected>اختر...</option>
-              <option value="حمام واحد">حمام واحد</option>
-              <option value="حمامين">حمامين</option>
-              <option value="3 حمامات فأكثر">3 حمامات فأكثر</option>
-            </select>
+        <div style="margin-top: 15px;">
+          <label style="font-size: 0.85rem; color: #ccc;">مستوى التشطيب والدور</label>
+          <div class="options-grid" id="finishingOptions">
+            <div class="option-btn selected" data-value="سوبر لوكس">سوبر لوكس</div>
+            <div class="option-btn" data-value="تحتاج تجديد">تحتاج تجديد</div>
+            <div class="option-btn" data-value="نصف تشطيب">نصف تشطيب</div>
           </div>
         </div>
 
-        <div class="section-divider">
-          <span class="section-title"><i class="fas fa-map-marked-alt"></i> الموقع والتفاصيل</span>
-          <div class="divider-line"></div>
+        <div class="step-actions">
+          <button type="button" class="btn-prev" onclick="prevStep(1)">سابق</button>
+          <button type="button" class="btn-next" onclick="nextStep(3)">التالي <i class="fas fa-arrow-left"></i></button>
+        </div>
+      </div>
+
+      <!-- الخطوة 3: التواصل السريع والإنهاء -->
+      <div class="form-step" id="step3">
+        <h3 style="color: #d4af37; margin-bottom: 5px;">3. إرسال الملاحظات والتواصل</h3>
+        <p style="color: #888; font-size: 0.9rem;">بياناتك محمية وستصل حصرياً إلى أ. طارق طنطاوي:</p>
+
+        <div style="margin-top: 15px;">
+          <label style="font-size: 0.85rem; color: #ccc;">اسم المالك</label>
+          <input type="text" id="ownerName" class="quick-input" placeholder="اسمك الكريم" required>
         </div>
 
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label>موقع العقار بالتفصيل (المنطقة والشارع)</label>
-            <input type="text" id="prop_location" name="prop_location" class="custom-input" placeholder="مثال: مدينة نصر - شارع محمد حسن الجمل - المنطقة السادس" required>
-          </div>
-          <div class="form-group full-width">
-            <label>تفاصيل ومميزات إضافية</label>
-            <textarea id="prop_details" name="prop_details" class="custom-textarea" rows="4" placeholder="اكتب أي تفاصيل أخرى (فيو، سنة البناء، أسانسير، حصة جراج، حصة في الأرض...)"></textarea>
-          </div>
+        <div style="margin-top: 15px;">
+          <label style="font-size: 0.85rem; color: #ccc;">رقم الواتساب للتواصل المباشر</label>
+          <input type="tel" id="ownerPhone" class="quick-input" placeholder="01xxxxxxxxx" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
         </div>
 
-        <div class="section-divider">
-          <span class="section-title" style="background: rgba(212,175,55,0.2); color: #fff;"><i class="fas fa-user-shield"></i> بيانات التواصل الخاصة بالمالك</span>
-          <div class="divider-line" style="background: var(--color-primary);"></div>
+        <div style="margin-top: 15px;">
+          <label style="font-size: 0.85rem; color: #ccc;">ملاحظات إضافية (اختياري)</label>
+          <input type="text" id="propNotes" class="quick-input" placeholder="مثال: الدور السابع، أسانسير، حصة بالأرض...">
         </div>
 
-        <div class="form-grid">
-          <div class="form-group">
-            <label>اسم المالك (المعلن)</label>
-            <input type="text" id="owner_name" name="owner_name" class="custom-input" placeholder="اكتب الاسم الثلاثي" required>
-          </div>
-          <div class="form-group">
-            <label>رقم واتساب للتواصل المباشر</label>
-            <input type="tel" id="owner_phone" name="owner_phone" class="custom-input" placeholder="01xxxxxxxxx" maxlength="11" style="font-size: 1.2rem; letter-spacing: 2px; font-weight: bold; color: var(--color-primary);" oninput="this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11)" required>
-          </div>
-        </div>
-
-        <div class="submit-area">
-          <button type="submit" id="submitBtn" class="submit-btn">
-            عرض العقار المباشر ومراجعته مع طارق طنطاوي <i class="fas fa-rocket"></i>
+        <div class="step-actions">
+          <button type="button" class="btn-prev" onclick="prevStep(2)">سابق</button>
+          <button type="submit" id="submitBtn" class="btn-next" style="background: #25d366; color: #fff;">
+            ارسل للتقييم والتسويق <i class="fab fa-whatsapp"></i>
           </button>
-          <div class="security-note">
-            <i class="fas fa-lock"></i> بيانات المالك محمية ومشفرة ولا تظهر للمشترين نهائياً
-          </div>
         </div>
+      </div>
 
-      </form>
-    </div>
+      <div class="security-badge">
+        <i class="fas fa-user-shield" style="color: #d4af37;"></i> لا نقوم بنشر أرقام التواصل أو التفاصيل الخاصة للعلن إطلاقاً.
+      </div>
+
+    </form>
   </div>
 </main>
 
-<!-- النوافذ المنبثقة للرد والتحويل -->
-<div id="aiResultModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:15px;">
-  <div style="background:#181818; border:1px solid #d4af37; border-radius:12px; max-width:550px; width:100%; padding:25px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.8); color:#fff;">
-    <div style="font-size:2rem; color:#d4af37; margin-bottom:10px;"><i class="fas fa-check-circle"></i></div>
-    <h3 style="color:#d4af37; margin-bottom:15px; font-size:1.5rem;">تم تأهيل العقار بنجاح</h3>
-    <div id="aiResponseText" style="background:#222; padding:15px; border-radius:8px; border-right:3px solid #d4af37; text-align:right; font-size:0.95rem; line-height:1.6; margin-bottom:20px; color:#ddd; max-height:200px; overflow-y:auto;">
-      جاري استلام الرد...
-    </div>
-    <a id="whatsappDirectBtn" href="#" target="_blank" style="display:block; background:#25d366; color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-weight:bold; font-size:1.1rem; box-shadow:0 4px 15px rgba(37,211,102,0.3);">
-      <i class="fab fa-whatsapp"></i> إرسال التفاصيل كاملة إلى أ. طارق طنطاوي
-    </a>
-  </div>
-</div>
-
 <script>
-document.getElementById('addPropertyForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  const submitBtn = document.getElementById('submitBtn');
-  const originalBtnText = submitBtn.innerHTML;
-  
-  // تجميع البيانات من النموذج
-  const formData = {
-    title: document.getElementById('prop_title').value,
-    type: document.getElementById('prop_type').value,
-    price: document.getElementById('prop_price').value,
-    area: document.getElementById('prop_area').value,
-    finishing: document.getElementById('prop_finishing').value,
-    floor: document.getElementById('prop_floor').value,
-    rooms: document.getElementById('prop_rooms').value,
-    baths: document.getElementById('prop_baths').value,
-    location: document.getElementById('prop_location').value,
-    details: document.getElementById('prop_details').value,
-    ownerName: document.getElementById('owner_name').value,
-    ownerPhone: document.getElementById('owner_phone').value
-  };
+let currentStep = 1;
+let selectedType = "بيع";
+let selectedFinishing = "سوبر لوكس";
 
-  // تغيير شكل الزرار لأثبات التحميل
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحليل العقار بالذكاء الاصطناعي...';
-
-  // بناء الرسالة التي ستُرسل للوكيل الذكي
-  const promptMessage = `أنا مالك أرغب في عرض عقاري للبيع:\n` +
-    `- العنوان: ${formData.title}\n` +
-    `- النوع: ${formData.type}\n` +
-    `- السعر المطلوب: ${formData.price} ج.م\n` +
-    `- المساحة: ${formData.area} م2\n` +
-    `- الموقع: ${formData.location}\n` +
-    `- الدور: ${formData.floor} | التشطيب: ${formData.finishing}\n` +
-    `- التقسيم: ${formData.rooms} و ${formData.baths}\n` +
-    `- التفاصيل الإضافية: ${formData.details}\n` +
-    `- اسم المالك: ${formData.ownerName}`;
-
-  try {
-    // إرسال البيانات للـ Cloudflare Worker الخاص بك
-    const response = await fetch('https://smsar-talabk-agent.tarekonly.workers.dev', { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: promptMessage })
-    });
-
-    const data = await response.json();
-    const aiReply = data.response || "تم استقبال بيانات العقار بنجاح. اضغط على الزر أدناه لإرسال التفاصيل مباشرة للواتساب للبدء في التسويق.";
-
-    // إعداد نص رسالة الواتساب المباشرة
-    const waText = encodeURIComponent(
-      `السلام عليكم أ. طارق طنطاوي،\nأنا المالك: ${formData.ownerName}\n` +
-      `أرغب في عرض عقاري للتسويق:\n` +
-      `📍 العنوان: ${formData.title}\n` +
-      `📌 الموقع: ${formData.location}\n` +
-      `📐 المساحة: ${formData.area} متر | الدور: ${formData.floor}\n` +
-      `✨ التشطيب: ${formData.finishing}\n` +
-      `💰 السعر المطلوب: ${formData.price} ج.م\n` +
-      `📱 رقم التواصل: ${formData.ownerPhone}`
-    );
-
-    // إظهار نافذة التوجيه والنتيجة
-    document.getElementById('aiResponseText').innerText = aiReply;
-    document.getElementById('whatsappDirectBtn').href = `https://wa.me/201147758857?text=${waText}`;
-    document.getElementById('aiResultModal').style.display = 'flex';
-
-  } catch (err) {
-    console.error("Error submitting form:", err);
-    
-    // تحويل احتياطي للواتساب في حالة حدوث خطأ في الشبكة
-    const waText = encodeURIComponent(
-      `السلام عليكم أ. طارق، أرغب في إضافة عقاري للتسويق:\n` +
-      `العنوان: ${formData.title}\n` +
-      `الموقع: ${formData.location}\n` +
-      `السعر المطلوب: ${formData.price} ج.م`
-    );
-    window.location.href = `https://wa.me/201147758857?text=${waText}`;
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = originalBtnText;
-  }
+// إعداد خيارات الضغط السريع
+document.querySelectorAll('#typeOptions .option-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.remove('selected'));
+    this.classList.add('selected');
+    selectedType = this.getAttribute('data-value');
+  });
 });
-                                         </script>
-                                         
+
+document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#finishingOptions .option-btn').forEach(b => b.classList.remove('selected'));
+    this.classList.add('selected');
+    selectedFinishing = this.getAttribute('data-value');
+  });
+});
+
+function nextStep(step) {
+  // التحقق المباشر
+  if (step === 2 && !document.getElementById('propLocation').value.trim()) {
+    alert('برجاء كتابة المنطقة أو الشارع أولاً.');
+    return;
+  }
+  if (step === 3) {
+    if (!document.getElementById('propArea').value || !document.getElementById('propPrice').value) {
+      alert('برجاء إدخال المساحة والسعر المطلوبة.');
+      return;
+    }
+  }
+
+  document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step${step}`).classList.add('active');
+
+  // تحديث المؤشر البصري
+  document.getElementById(`node${step}`).classList.add('active');
+  const progressPercent = ((step - 1) / 2) * 100;
+  document.getElementById('progressFill').style.width = `${progressPercent}%`;
+  
+  currentStep = step;
+}
+
+function prevStep(step) {
+  document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step${step}`).classList.add('active');
+  
+  document.getElementById(`node${currentStep}`).classList.remove('active');
+  const progressPercent = ((step - 1) / 2) * 100;
+  document.getElementById('progressFill').style.width = `${progressPercent}%`;
+  
+  currentStep = step;
+}
+
+// الإرسال والربط بالوكيل الذكي والواتساب
+document.getElementById('interactiveAddForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const ownerName = document.getElementById('ownerName').value;
+  const ownerPhone = document.getElementById('ownerPhone').value;
+  const location = document.getElementById('propLocation').value;
+  const area = document.getElementById('propArea').value;
+  const price = document.getElementById('propPrice').value;
+  const notes = document.getElementById('propNotes').value;
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إعداد التقرير...';
+
+  // صياغة رسالة موجهة مباشرة لوكيل طارق طنطاوي
+  const waText = encodeURIComponent(
+    `السلام عليكم أ. طارق طنطاوي،\nأنا المالك: ${ownerName}\n` +
+    `عايز أعرض عقاري للتسويق والتقييم عندك:\n` +
+    `نوع المعاملة: ${selectedType}\n` +
+    `الموقع: ${location}\n` +
+    `المساحة: ${area} متر مربع\n` +
+    `التشطيب: ${selectedFinishing}\n` +
+    `السعر المطلوب: ${price} ج.م\n` +
+    (notes ? `ملاحظات: ${notes}\n` : '') +
+    `رقم التواصل: ${ownerPhone}`
+  );
+
+  // تحويل مباشر وسريع للواتساب لضمان عدم ضياع أي مالك
+  setTimeout(() => {
+    window.location.href = `https://wa.me/201147758857?text=${waText}`;
+  }, 600);
+});
+</script>
