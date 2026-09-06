@@ -642,7 +642,7 @@
     }
   }
 
-  // إدارة انميشن شاشة الدخول (Splash Screen)
+    // إدارة أنميشن شاشة الدخول (Splash Screen) - تم تعديل المدة إلى 5 ثوانٍ
   function initSplashAnimation() {
     const splash = document.getElementById("splash-screen");
     const app = document.getElementById("appContainer");
@@ -650,8 +650,9 @@
     setTimeout(() => {
       splash.classList.add("hide-splash");
       app.classList.add("show-app");
-    }, 2800); // إظهار المشهد لمدة 2.8 ثانية ثم الانتقال بسلاسة
+    }, 5000); // 5000 ملي ثانية = 5 ثوانٍ كاملة
   }
+  
 
   window.onload = () => {
     initSplashAnimation();
