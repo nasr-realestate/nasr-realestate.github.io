@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>الوكيل الذكي | أ. طارق طنطاوي</title>
+  <title>الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك</title>
 
   <!-- الخطوط والأيقونات -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,8 +15,8 @@
     :root {
       --gold: #d4af37;
       --gold-hover: #b8962d;
-      --dark-bg: #111111;
-      --dark-card: #1a1a1a;
+      --dark-bg: #0a0a0a;
+      --dark-card: #121212;
       --text-light: #f5f5f5;
       --text-muted: #aaa;
       --ok: #23c16b;
@@ -37,6 +37,97 @@
       overflow: hidden;
     }
 
+    /* شاشة الدخول الفاخرة (Splash Screen) */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #0d0d0d;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    .splash-title {
+      color: var(--gold);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 25px;
+      opacity: 0;
+      transform: translateY(-10px);
+      animation: splashTextIn 0.8s 0.2s forwards ease-out;
+    }
+
+    .splash-media-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .splash-logo {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+      opacity: 0;
+      transform: scale(0.6);
+      animation: splashPop 0.8s 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .splash-avatar {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(0.6);
+      animation: splashPop 0.8s 0.9s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .splash-subtitle {
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      max-width: 320px;
+      line-height: 1.6;
+      opacity: 0;
+      animation: splashTextIn 0.8s 1.3s forwards ease-out;
+    }
+
+    @keyframes splashPop {
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes splashTextIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* اخفاء شاشة الإبهار عند الانتهاء */
+    #splash-screen.hide-splash {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* حاوي التطبيق الأساسي */
     .agent-app-container {
       display: flex;
       flex-direction: column;
@@ -45,17 +136,23 @@
       margin: 0 auto;
       background: var(--dark-card);
       position: relative;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    .agent-app-container.show-app {
+      opacity: 1;
     }
 
     /* الهيدر الخاص بالوكيل */
     .agent-header {
-      background: linear-gradient(135deg, #0d0d0d, #222222);
+      background: linear-gradient(135deg, #0d0d0d, #1f1f1f);
       padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
       z-index: 10;
     }
 
@@ -66,8 +163,8 @@
     }
 
     .agent-avatar {
-      width: 46px;
-      height: 46px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       border: 2px solid var(--gold);
       object-fit: cover;
@@ -83,7 +180,7 @@
 
     .agent-info p {
       color: var(--gold);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       margin: 2px 0 0 0;
       display: flex;
       align-items: center;
@@ -99,7 +196,7 @@
       box-shadow: 0 0 8px #2ecc71;
     }
 
-    /* شعار الموقع في الجانب الأيسر أعلى الهيدر */
+    /* شعار الموقع في أعلى اليسار */
     .header-logo-link {
       display: flex;
       align-items: center;
@@ -113,12 +210,12 @@
     }
 
     .header-logo-img {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      border: 1px solid rgba(212, 175, 55, 0.5);
+      border: 1px solid rgba(212, 175, 55, 0.6);
       object-fit: cover;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     }
 
     /* شريط مؤشر التأهيل */
@@ -223,7 +320,7 @@
     #user-input {
       flex: 1;
       background: #262626;
-      border: 1px solid rgba(212, 175, 55, 0.2);
+      border: 1px solid rgba(212, 175, 55, 0.25);
       border-radius: 25px;
       padding: 10px 16px;
       color: #fff;
@@ -294,7 +391,22 @@
 </head>
 <body>
 
-<div class="agent-app-container">
+<!-- شاشة الإبهار وتجهيز الانطباع الأول (Splash Screen) -->
+<div id="splash-screen">
+  <div class="splash-title">سمسار طلبك | المنظومة العقارية الذكية</div>
+  
+  <div class="splash-media-container">
+    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" class="splash-logo" onerror="this.src='https://via.placeholder.com/110'">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="splash-avatar" onerror="this.src='https://via.placeholder.com/110'">
+  </div>
+
+  <div class="splash-subtitle">
+    أهلاً بك مع أ. طارق طنطاوي<br>
+    <span style="color: var(--gold); font-size: 0.85rem;">نُحلل طلبك بدقة ونضمن لك حسم الصفقة في مدينة نصر وهليوبوليس</span>
+  </div>
+</div>
+
+<div class="agent-app-container" id="appContainer">
   
   <!-- هيدر الوكيل -->
   <header class="agent-header">
@@ -306,9 +418,9 @@
       </div>
     </div>
 
-    <!-- الشعار في الجهة اليسرى مقابل صورتك بدون أي نصوص -->
+    <!-- الشعار في الجانب الأيسر أعلى الهيدر -->
     <a href="/" class="header-logo-link" title="العودة للكتالوج الرئيسية">
-      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="header-logo-img" alt="شعار سمسار طلبك" onerror="this.src='https://via.placeholder.com/42'">
+      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="header-logo-img" alt="شعار سمسار طلبك" onerror="this.src='https://via.placeholder.com/44'">
     </a>
   </header>
 
@@ -326,7 +438,7 @@
     <div id="tarek-typing" class="typing-indicator-box">جاري تحضير الرد...</div>
   </div>
 
-  <!-- منطقة الإدخال وزر الإرسال الصريح -->
+  <!-- منطقة الإدخال وزر الإرسال -->
   <div class="chat-input-area">
     <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
     <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
@@ -530,7 +642,20 @@
     }
   }
 
+  // إدارة انميشن شاشة الدخول (Splash Screen)
+  function initSplashAnimation() {
+    const splash = document.getElementById("splash-screen");
+    const app = document.getElementById("appContainer");
+
+    setTimeout(() => {
+      splash.classList.add("hide-splash");
+      app.classList.add("show-app");
+    }, 2800); // إظهار المشهد لمدة 2.8 ثانية ثم الانتقال بسلاسة
+  }
+
   window.onload = () => {
+    initSplashAnimation();
+
     const hasState = loadState();
     if (!hasState) {
       chatHistory = [
@@ -551,5 +676,4 @@
 </script>
 
 </body>
-  </html>
-  
+</html>
