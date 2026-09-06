@@ -38,7 +38,7 @@
       overflow: hidden;
     }
 
-    /* شاشة الدخول الفاخرة (Splash Screen) */
+    /* شاشة الدخول الفاخرة - تختفي تلقائياً بـ CSS دون التعليق */
     #splash-screen {
       position: fixed;
       top: 0;
@@ -53,7 +53,8 @@
       justify-content: center;
       text-align: center;
       padding: 20px;
-      transition: opacity 0.8s ease, visibility 0.8s ease;
+      animation: fadeOutSplash 0.8s 3.5s forwards ease-in-out;
+      pointer-events: none;
     }
 
     .splash-title {
@@ -122,10 +123,11 @@
       }
     }
 
-    /* إخفاء شاشة الدخول */
-    #splash-screen.hide-splash {
-      opacity: 0;
-      visibility: hidden;
+    @keyframes fadeOutSplash {
+      to {
+        opacity: 0;
+        visibility: hidden;
+      }
     }
 
     /* حاوي التطبيق الأساسي */
@@ -138,11 +140,6 @@
       background: var(--dark-card);
       position: relative;
       box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
-      opacity: 0;
-      transition: opacity 0.8s ease;
-    }
-
-    .agent-app-container.show-app {
       opacity: 1;
     }
 
@@ -197,7 +194,7 @@
       box-shadow: 0 0 8px #2ecc71;
     }
 
-    /* شعار الموقع في أعلى اليسار */
+    /* شعار الموقع أعلى اليسار */
     .header-logo-link {
       display: flex;
       align-items: center;
@@ -296,7 +293,7 @@
       border-top-left-radius: 4px;
     }
 
-    /* تنسيق أزرار الروابط التفاعلية داخل رسائل البوت */
+    /* تنسيق أزرار الروابط التفاعلية */
     .msg-bot a {
       display: inline-flex;
       align-items: center;
@@ -340,7 +337,7 @@
       font-size: 12px;
     }
 
-    /* حقل الإدخال السفلي وزر الإرسال */
+    /* حقل الإدخال وزر الإرسال */
     .chat-input-area {
       background: #1a1a1a;
       padding: 12px;
@@ -425,7 +422,7 @@
 </head>
 <body>
 
-<!-- شاشة الإبهار (Splash Screen) - 5 ثوانٍ -->
+<!-- شاشة الإبهار (Splash Screen) -->
 <div id="splash-screen">
   <div class="splash-title">سمسار طلبك | المنظومة العقارية الذكية</div>
   
@@ -467,12 +464,12 @@
     <div class="progress-track"><div id="qual-progress" class="progress-fill"></div></div>
   </div>
 
-  <!-- منطقة المحادثة والرسائل -->
+  <!-- منطقة المحادثة -->
   <div class="chat-area" id="chat-messages">
     <div id="tarek-typing" class="typing-indicator-box">جاري تحضير الرد...</div>
   </div>
 
-  <!-- منطقة الإدخال وزر الإرسال -->
+  <!-- منطقة الإدخال -->
   <div class="chat-input-area">
     <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
     <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
@@ -533,599 +530,7 @@
     const dealBtn = document.getElementById("dealBtn");
     const dealBtnText = document.getElementById("dealBtnText");
 
-    scoreEl.textContent = `${qualificationScore}/5`;
-    fillEl.style.width = `${Math.max(0, Math.min(100, (qualificationScore / 5) * 100))}%`;
-
-    if (canShareWhatsapp) {
-      stateEl.className = "qual-state ready";
-      stateEl.textContent = "جاهز للتواصل المباشر 🎯";
-      dealBtn.classList.remove("disabled");
-      dealBtnText.textContent = "حسم الصفقة عبر الواتساب المباشر";
-    } else {
-      stateEl.className = "qual-state wait";
-      stateEl.textContent = "نجمع بيانات أكثر";
-      dealBtn.classList.add("disabled");
-      dealBtnText.textContent = "يفتح بعد التأهيل أو بطلبك المباشر";
-    }
-  }
-
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      chatHistory,
-      qualificationScore,
-      canShareWhatsapp
-    }));
-  }
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      const data = JSON.parse(raw);
-      if (!Array.isArray(data.chatHistory)) return false;
-
-      chatHistory = data.chatHistory.slice(-24);
-      qualificationScore = Number(data.qualificationScore || 0);
-      canShareWhatsapp = Boolean(data.canShareWhatsapp);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function clearMessagesAndRehydrate() {
-    const container = document.getElementById("chat-messages");
-    const typingBox = document.getElementById("tarek-typing");
-
-    Array.from(container.querySelectorAll(".msg")).forEach((n) => n.remove());
-    chatHistory.forEach(msg => renderMsg(msg.text, msg.type));
-    container.appendChild(typingBox);
-    scrollBottom();
-  }
-
-  function openDealWhatsApp() {
-    if (!canShareWhatsapp) return;
-    window.open(WHATSAPP_URL, "_blank");
-  }
-
-  function renderMsg(text, type) {
-    const container = document.getElementById("chat-messages");
-    const typingBox = document.getElementById("tarek-typing");
-
-    const div = document.createElement("div");
-    div.className = `msg msg-${type}`;
-
-    if (type === "bot") {
-      // تحويل نصوص الماركداون والروابط إلى أزرار تفاعلية
-      div.innerHTML = marked.parse(text);
-
-      const links = div.querySelectorAll("a");
-      links.forEach(link => {
-        link.setAttribute("target", "_blank");
-        link.setAttribute("rel", "noopener noreferrer");
-      });
-    } else {
-      div.innerText = text;
-    }
-
-    container.insertBefore(div, typingBox);
-    scrollBottom();
-    return div;
-  }
-
-  function scrollBottom() {
-    const container = document.getElementById("chat-messages");
-    container.scrollTop = container.scrollHeight;
-  }
-
-  function pushHistory(text, type) {
-    chatHistory.push({ text, type, ts: Date.now() });
-    if (chatHistory.length > 24) chatHistory.shift();
-
-    const q = computeQualification(chatHistory);
-    qualificationScore = q.score;
-    if (q.qualified) canShareWhatsapp = true;
-
-    saveState();
-    updateQualificationUI();
-  }
-
-  async function sendMsg() {
-    const input = document.getElementById("user-input");
-    const text = input.value.trim();
-    if (!text) return;
-
-    renderMsg(text, "user");
-    pushHistory(text, "user");
-
-    if (detectDirectContactRequest(text)) {
-      canShareWhatsapp = true;
-      updateQualificationUI();
-      saveState();
-    }
-
-    input.value = "";
-
-    const typing = document.getElementById("tarek-typing");
-    typing.style.display = "block";
-    scrollBottom();
-
-    try {
-      const historyForApi = chatHistory
-        .filter(m => m.type === "user" || m.type === "bot")
-        .slice(-10)
-        .map(m => ({ role: m.type === "bot" ? "assistant" : "user", message: m.text }));
-
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: historyForApi })
-      });
-
-      const data = await res.json();
-      typing.style.display = "none";
-
-      const botReply = data.response || "تعذر تنفيذ الطلب الآن. حاول بعد قليل.";
-
-      if (typeof data.qualificationScore === "number") {
-        qualificationScore = data.qualificationScore;
-      }
-      if (typeof data.canShareWhatsapp === "boolean") {
-        canShareWhatsapp = data.canShareWhatsapp;
-      }
-      if (typeof data.qualified === "boolean" && data.qualified) {
-        canShareWhatsapp = true;
-      }
-
-      renderMsg(botReply, "bot");
-      pushHistory(botReply, "bot");
-      updateQualificationUI();
-    } catch (e) {
-      typing.style.display = "none";
-      const fallback = "في مشكلة اتصال مؤقتة. كمّل معايا بياناتك (المنطقة/المساحة/السعر) وأنا أتابع معاك هنا.";
-      renderMsg(fallback, "bot");
-      pushHistory(fallback, "bot");
-    }
-  }
-
-  // إدارة أنميشن شاشة الدخول (Splash Screen) - 5 ثوانٍ
-  function initSplashAnimation() {
-    const splash = document.getElementById("splash-screen");
-    const app = document.getElementById("appContainer");
-
-    setTimeout(() => {
-      splash.classList.add("hide-splash");
-      app.classList.add("show-app");
-    }, 5000);
-  }
-
-  window.onload = () => {
-    initSplashAnimation();
-
-    const hasState = loadState();
-    if (!hasState) {
-      chatHistory = [
-        {
-          text: "أهلاً بك، معاك طارق طنطاوي. خلّيني أفلترلك أفضل فرص مدينة نصر وهليوبوليس — بتشتري ولا بتبيع؟",
-          type: "bot",
-          ts: Date.now()
-        }
-      ];
-      qualificationScore = 0;
-      canShareWhatsapp = false;
-      saveState();
-    }
-
-    clearMessagesAndRehydrate();
-    updateQualificationUI();
-  };
-</script>
-
-</body>
-  </html>
-      /* حاوي التطبيق الأساسي */
-    .agent-app-container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      max-width: 650px;
-      margin: 0 auto;
-      background: var(--dark-card);
-      position: relative;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
-      opacity: 0;
-      transition: opacity 0.8s ease;
-    }
-
-    .agent-app-container.show-app {
-      opacity: 1;
-    }
-
-    /* الهيدر الخاص بالوكيل */
-    .agent-header {
-      background: linear-gradient(135deg, #0d0d0d, #1f1f1f);
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
-      z-index: 10;
-    }
-
-    .agent-profile {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .agent-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 2px solid var(--gold);
-      object-fit: cover;
-      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-    }
-
-    .agent-info h1 {
-      color: #ffffff;
-      font-size: 1.05rem;
-      margin: 0;
-      font-weight: 900;
-    }
-
-    .agent-info p {
-      color: var(--gold);
-      font-size: 0.76rem;
-      margin: 2px 0 0 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background: #2ecc71;
-      border-radius: 50%;
-      display: inline-block;
-      box-shadow: 0 0 8px #2ecc71;
-    }
-
-    /* شعار الموقع في أعلى اليسار */
-    .header-logo-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      transition: transform 0.2s ease;
-    }
-
-    .header-logo-link:hover {
-      transform: scale(1.08);
-    }
-
-    .header-logo-img {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 1px solid rgba(212, 175, 55, 0.6);
-      object-fit: cover;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    }
-
-    /* شريط مؤشر التأهيل */
-    .qual-box {
-      background: #161616;
-      border-bottom: 1px solid rgba(212, 175, 55, 0.12);
-      padding: 10px 16px;
-      color: #ddd;
-      font-size: 13px;
-    }
-
-    .qual-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 7px;
-    }
-
-    .qual-label strong { color: var(--gold); }
-    .qual-state.wait { color: var(--warn); font-weight: 700; }
-    .qual-state.ready { color: var(--ok); font-weight: 800; }
-
-    .progress-track {
-      height: 8px;
-      background: #2a2a2a;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      transition: width 0.35s ease;
-      background: linear-gradient(90deg, var(--gold), var(--ok));
-    }
-
-    /* منطقة الرسائل */
-    .chat-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #141414;
-    }
-
-    .msg {
-      max-width: 84%;
-      padding: 11px 15px;
-      border-radius: 16px;
-      font-size: 14px;
-      line-height: 1.7;
-      word-break: break-word;
-      animation: fadeIn 0.25s ease-in-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .msg-bot {
-      background: #222222;
-      color: var(--text-light);
-      align-self: flex-start;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-top-right-radius: 4px;
-    }
-
-    .msg-user {
-      background: linear-gradient(135deg, var(--gold), var(--gold-hover));
-      color: #000;
-      align-self: flex-end;
-      font-weight: 700;
-      border-top-left-radius: 4px;
-    }
-
-    /* تنسيق أزرار الروابط التفاعلية داخل رسائل البوت */
-    .msg-bot a {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: linear-gradient(135deg, #2a3547, #1e2532);
-      color: #ffffff !important;
-      padding: 8px 16px;
-      margin: 6px 0;
-      border-radius: 20px;
-      border: 1px solid rgba(212, 175, 55, 0.4);
-      font-weight: 700;
-      font-size: 0.88rem;
-      text-decoration: none !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transition: all 0.25s ease;
-    }
-
-    .msg-bot a:hover {
-      background: var(--gold);
-      color: #000000 !important;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 15px rgba(212, 175, 55, 0.4);
-    }
-
-    .msg-bot p {
-      margin: 0 0 8px 0;
-    }
-    .msg-bot p:last-child {
-      margin-bottom: 0;
-    }
-
-    .typing-indicator-box {
-      display: none;
-      align-self: flex-start;
-      background: #222222;
-      padding: 10px 14px;
-      border-radius: 14px;
-      border-top-right-radius: 4px;
-      color: var(--text-muted);
-      font-size: 12px;
-    }
-
-    /* حقل الإدخال السفلي وزر الإرسال */
-    .chat-input-area {
-      background: #1a1a1a;
-      padding: 12px;
-      display: flex;
-      gap: 8px;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      position: relative;
-      z-index: 5;
-    }
-
-    #user-input {
-      flex: 1;
-      background: #262626;
-      border: 1px solid rgba(212, 175, 55, 0.25);
-      border-radius: 25px;
-      padding: 10px 16px;
-      color: #fff;
-      outline: none;
-      font-size: 14px;
-      font-family: 'Cairo', sans-serif;
-      transition: 0.3s;
-    }
-
-    #user-input:focus {
-      border-color: var(--gold);
-      background: #2d2d2d;
-    }
-
-    #send-btn {
-      background: var(--gold);
-      border: none;
-      border-radius: 50%;
-      width: 42px;
-      height: 42px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #000;
-      font-size: 16px;
-      transition: 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    #send-btn:hover {
-      transform: rotate(-12deg) scale(1.05);
-      background: var(--gold-hover);
-    }
-
-    /* زر الواتساب */
-    .deal-btn-wrapper {
-      padding: 0 12px 12px 12px;
-      background: #1a1a1a;
-    }
-
-    .deal-btn {
-      width: 100%;
-      background: #25d366;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 10px;
-      font-weight: 800;
-      font-family: 'Cairo', sans-serif;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      text-decoration: none;
-      font-size: 0.95rem;
-      transition: 0.25s;
-    }
-
-    .deal-btn.disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      background: #333;
-      color: #888;
-    }
-  </style>
-</head>
-<body>
-
-<!-- شاشة الإبهار (Splash Screen) - 5 ثوانٍ -->
-<div id="splash-screen">
-  <div class="splash-title">سمسار طلبك | المنظومة العقارية الذكية</div>
-  
-  <div class="splash-media-container">
-    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" class="splash-logo" onerror="this.src='https://via.placeholder.com/110'">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="splash-avatar" onerror="this.src='https://via.placeholder.com/110'">
-  </div>
-
-  <div class="splash-subtitle">
-    أهلاً بك مع أ. طارق طنطاوي<br>
-    <span style="color: var(--gold); font-size: 0.85rem;">نُحلل طلبك بدقة ونضمن لك حسم الصفقة في مدينة نصر وهليوبوليس</span>
-  </div>
-</div>
-
-<div class="agent-app-container" id="appContainer">
-  
-  <!-- هيدر الوكيل -->
-  <header class="agent-header">
-    <div class="agent-profile">
-      <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="agent-avatar" onerror="this.src='https://nasr-realestate.github.io/assets/img/social-home.webp'">
-      <div class="agent-info">
-        <h1>طارق طنطاوي</h1>
-        <p><span class="status-dot"></span> تأهيل ذكي لعملاء مدينة نصر وهليوبوليس</p>
-      </div>
-    </div>
-
-    <!-- الشعار في أعلى اليسار -->
-    <a href="/" class="header-logo-link" title="العودة للكتالوج الرئيسية">
-      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="header-logo-img" alt="شعار سمسار طلبك" onerror="this.src='https://via.placeholder.com/44'">
-    </a>
-  </header>
-
-  <!-- شريط مؤشر التأهيل -->
-  <div class="qual-box">
-    <div class="qual-row">
-      <div>مؤشر التأهيل: <strong id="qual-score">0/5</strong></div>
-      <div id="qual-state" class="qual-state wait">نجمع بيانات أكثر</div>
-    </div>
-    <div class="progress-track"><div id="qual-progress" class="progress-fill"></div></div>
-  </div>
-
-  <!-- منطقة المحادثة والرسائل -->
-  <div class="chat-area" id="chat-messages">
-    <div id="tarek-typing" class="typing-indicator-box">جاري تحضير الرد...</div>
-  </div>
-
-  <!-- منطقة الإدخال وزر الإرسال -->
-  <div class="chat-input-area">
-    <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
-    <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
-      <i class="fas fa-paper-plane"></i>
-    </button>
-  </div>
-
-  <!-- زر الواتساب -->
-  <div class="deal-btn-wrapper">
-    <button id="dealBtn" class="deal-btn disabled" onclick="openDealWhatsApp()">
-      <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
-      <span id="dealBtnText">يفتح بعد التأهيل أو بطلبك المباشر</span>
-    </button>
-  </div>
-
-</div>
-<script>
-  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  const WHATSAPP_URL = "https://wa.me/201147758857";
-  const STORAGE_KEY = "tarek_agent_chat_memory_v1";
-
-  let chatHistory = [];
-  let qualificationScore = 0;
-  let canShareWhatsapp = false;
-
-  function normalizeText(s) {
-    return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
-  }
-
-  function detectDirectContactRequest(text) {
-    const t = normalizeText(text);
-    const keys = ["واتساب", "whatsapp", "رقم", "تواصل", "اتصال", "كلم", "مكالمة", "معاينة", "احجز"];
-    return keys.some(k => t.includes(k));
-  }
-
-  function computeQualification(history) {
-    const userText = history
-      .filter(m => m.type === "user")
-      .map(m => m.text)
-      .join(" \n ")
-      .toLowerCase();
-
-    const hasIntent = /(اشتري|شراء|بدور|عايز شقة|عايز شقه|محتاج شقة|بيع|بائع|اعرض عقار)/i.test(userText);
-    const hasBudget = /(ميزانية|ميزانيه|مليون|الف|ألف|جنيه|سعر|budget|k|m)/i.test(userText);
-    const hasLocation = /(مدينة نصر|مدينه نصر|عباس العقاد|مكرم عبيد|مصطفى النحاس|الحي السابع|الحي الثامن|زهراء مدينة نصر|المنطقة التاسعة|الواحة|مصر الجديدة|هليوبوليس)/i.test(userText);
-    const hasSpecs = /(متر|غرف|غرفة|حمام|دور|تشطيب|فيو|واجهة|واجهه|مصعد|اسانسير)/i.test(userText);
-    const hasTimeline = /(جاهز|خلال|الشهر|فوري|أسبوع|اسبوع|وقت|ميعاد|موعد)/i.test(userText);
-
-    const score = [hasIntent, hasBudget, hasLocation, hasSpecs, hasTimeline].filter(Boolean).length;
-    return { score, qualified: score >= 4 };
-  }
-
-  function updateQualificationUI() {
-    const scoreEl = document.getElementById("qual-score");
-    const stateEl = document.getElementById("qual-state");
-    const fillEl = document.getElementById("qual-progress");
-    const dealBtn = document.getElementById("dealBtn");
-    const dealBtnText = document.getElementById("dealBtnText");
+    if (!scoreEl || !stateEl || !fillEl || !dealBtn || !dealBtnText) return;
 
     scoreEl.textContent = `${qualificationScore}/5`;
     fillEl.style.width = `${Math.max(0, Math.min(100, (qualificationScore / 5) * 100))}%`;
@@ -1171,9 +576,10 @@
     const container = document.getElementById("chat-messages");
     const typingBox = document.getElementById("tarek-typing");
 
+    if (!container) return;
     Array.from(container.querySelectorAll(".msg")).forEach((n) => n.remove());
     chatHistory.forEach(msg => renderMsg(msg.text, msg.type));
-    container.appendChild(typingBox);
+    if (typingBox) container.appendChild(typingBox);
     scrollBottom();
   }
 
@@ -1186,11 +592,17 @@
     const container = document.getElementById("chat-messages");
     const typingBox = document.getElementById("tarek-typing");
 
+    if (!container) return;
+
     const div = document.createElement("div");
     div.className = `msg msg-${type}`;
 
     if (type === "bot") {
-      div.innerHTML = marked.parse(text);
+      try {
+        div.innerHTML = typeof marked !== "undefined" ? marked.parse(text) : text;
+      } catch (e) {
+        div.innerText = text;
+      }
 
       const links = div.querySelectorAll("a");
       links.forEach(link => {
@@ -1201,14 +613,18 @@
       div.innerText = text;
     }
 
-    container.insertBefore(div, typingBox);
+    if (typingBox) {
+      container.insertBefore(div, typingBox);
+    } else {
+      container.appendChild(div);
+    }
     scrollBottom();
     return div;
   }
 
   function scrollBottom() {
     const container = document.getElementById("chat-messages");
-    container.scrollTop = container.scrollHeight;
+    if (container) container.scrollTop = container.scrollHeight;
   }
 
   function pushHistory(text, type) {
@@ -1225,6 +641,8 @@
 
   async function sendMsg() {
     const input = document.getElementById("user-input");
+    if (!input) return;
+
     const text = input.value.trim();
     if (!text) return;
 
@@ -1240,7 +658,7 @@
     input.value = "";
 
     const typing = document.getElementById("tarek-typing");
-    typing.style.display = "block";
+    if (typing) typing.style.display = "block";
     scrollBottom();
 
     try {
@@ -1256,7 +674,7 @@
       });
 
       const data = await res.json();
-      typing.style.display = "none";
+      if (typing) typing.style.display = "none";
 
       const botReply = data.response || "تعذر تنفيذ الطلب الآن. حاول بعد قليل.";
 
@@ -1274,26 +692,14 @@
       pushHistory(botReply, "bot");
       updateQualificationUI();
     } catch (e) {
-      typing.style.display = "none";
+      if (typing) typing.style.display = "none";
       const fallback = "في مشكلة اتصال مؤقتة. كمّل معايا بياناتك (المنطقة/المساحة/السعر) وأنا أتابع معاك هنا.";
       renderMsg(fallback, "bot");
       pushHistory(fallback, "bot");
     }
   }
 
-  function initSplashAnimation() {
-    const splash = document.getElementById("splash-screen");
-    const app = document.getElementById("appContainer");
-
-    setTimeout(() => {
-      splash.classList.add("hide-splash");
-      app.classList.add("show-app");
-    }, 5000);
-  }
-
   window.onload = () => {
-    initSplashAnimation();
-
     const hasState = loadState();
     if (!hasState) {
       chatHistory = [
