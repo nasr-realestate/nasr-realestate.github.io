@@ -7,16 +7,23 @@ image: "/assets/img/social-home.webp"
 ---
 
 <style>
-  .step-container {
-    max-width: 650px;
-    margin: 3rem auto;
-    background: #141414;
-    border: 1px solid rgba(212, 175, 55, 0.3);
+  body {
+    background-color: #f8f9fa !important;
+    color: #212529;
+  }
+
+  .clean-wrapper {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  .clean-card {
+    background: #ffffff;
     border-radius: 16px;
     padding: 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    color: #fff;
-    font-family: inherit;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e9ecef;
   }
 
   .step-progress-bar {
@@ -32,8 +39,8 @@ image: "/assets/img/social-home.webp"
     top: 50%;
     left: 0;
     right: 0;
-    height: 2px;
-    background: #333;
+    height: 3px;
+    background: #e9ecef;
     z-index: 1;
     transform: translateY(-50%);
   }
@@ -42,8 +49,8 @@ image: "/assets/img/social-home.webp"
     position: absolute;
     top: 50%;
     right: 0;
-    height: 2px;
-    background: #d4af37;
+    height: 3px;
+    background: #1e3a8a;
     z-index: 1;
     transform: translateY(-50%);
     transition: width 0.3s ease;
@@ -51,24 +58,22 @@ image: "/assets/img/social-home.webp"
   }
 
   .step-node {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: #222;
-    border: 2px solid #444;
+    background: #e9ecef;
+    color: #6c757d;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    color: #aaa;
     z-index: 2;
     transition: 0.3s;
   }
 
   .step-node.active {
-    border-color: #d4af37;
-    background: #d4af37;
-    color: #000;
+    background: #1e3a8a;
+    color: #ffffff;
   }
 
   .form-step {
@@ -77,54 +82,57 @@ image: "/assets/img/social-home.webp"
 
   .form-step.active {
     display: block;
-    animation: fadeIn 0.4s ease-in-out;
+    animation: fadeIn 0.3s ease-in-out;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   .options-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
     margin-top: 1rem;
   }
 
   .option-btn {
-    background: #222;
-    border: 1px solid #333;
-    color: #ddd;
-    padding: 14px 10px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 12px 8px;
     border-radius: 10px;
     cursor: pointer;
     text-align: center;
     font-weight: 600;
+    font-size: 0.95rem;
     transition: 0.2s;
   }
 
   .option-btn:hover, .option-btn.selected {
-    border-color: #d4af37;
-    background: rgba(212, 175, 55, 0.15);
-    color: #fff;
+    border-color: #1e3a8a;
+    background: #eff6ff;
+    color: #1e3a8a;
   }
 
-  .quick-input {
+  .clean-input {
     width: 100%;
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
     padding: 14px;
     border-radius: 10px;
-    color: #fff;
+    color: #1e293b;
     font-size: 1rem;
-    margin-top: 8px;
+    margin-top: 6px;
     outline: none;
     box-sizing: border-box;
+    transition: 0.2s;
   }
 
-  .quick-input:focus {
-    border-color: #d4af37;
+  .clean-input:focus {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
   }
 
   .step-actions {
@@ -135,45 +143,49 @@ image: "/assets/img/social-home.webp"
   }
 
   .btn-next, .btn-prev {
-    padding: 12px 24px;
-    border-radius: 8px;
+    padding: 14px 24px;
+    border-radius: 10px;
     font-weight: bold;
+    font-size: 1rem;
     cursor: pointer;
     border: none;
-    transition: 0.3s;
+    transition: 0.2s;
   }
 
   .btn-next {
-    background: #d4af37;
-    color: #000;
+    background: #1e3a8a;
+    color: #ffffff;
     flex: 1;
   }
 
   .btn-next:hover {
-    background: #f3c83c;
+    background: #1d4ed8;
   }
 
   .btn-prev {
-    background: #333;
-    color: #ccc;
+    background: #e2e8f0;
+    color: #475569;
   }
 
   .security-badge {
     text-align: center;
     font-size: 0.85rem;
-    color: #888;
-    margin-top: 15px;
+    color: #64748b;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
 </style>
 
-<header class="page-header" style="background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); padding: 3rem 1rem 1rem; text-align: center;">
-  <h1 style="color: #d4af37; font-size: 2.2rem; font-weight: 900; margin-bottom: 10px;">عرض عقارك للبيع أو الإيجار</h1>
-  <p style="color: #aaa; font-size: 1rem; max-width: 500px; margin: 0 auto;">في أقل من دقيقة.. ابعت تفاصيل وحدتك مباشرة لتأهيلها وتسويقها مع أ. طارق طنطاوي</p>
-</header>
+<div class="clean-wrapper">
+  <header style="text-align: center; margin-bottom: 1.5rem;">
+    <h1 style="color: #0f172a; font-size: 1.8rem; font-weight: 800; margin-bottom: 8px;">اعرض عقارك للبيع أو الإيجار</h1>
+    <p style="color: #475569; font-size: 0.95rem;">خطوات بسيطة لتأهيل وتسويق عقارك مباشرة مع أ. طارق طنطاوي</p>
+  </header>
 
-<main>
-  <div class="step-container">
-    
+  <div class="clean-card">
     <!-- مؤشر الخطوات -->
     <div class="step-progress-bar">
       <div class="progress-fill" id="progressFill"></div>
@@ -184,10 +196,10 @@ image: "/assets/img/social-home.webp"
 
     <form id="interactiveAddForm">
 
-      <!-- الخطوة 1: المعالم الأساسية -->
+      <!-- الخطوة 1 -->
       <div class="form-step active" id="step1">
-        <h3 style="color: #d4af37; margin-bottom: 5px;">1. نوع المعاملة والعقار</h3>
-        <p style="color: #888; font-size: 0.9rem;">اختر نوع العقار لسرعة التقييم:</p>
+        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">1. نوع المعاملة والعقار</h3>
+        <p style="color: #64748b; font-size: 0.85rem;">اختر نوع العقار لسرعة التقييم:</p>
         
         <div class="options-grid" id="typeOptions">
           <div class="option-btn selected" data-value="بيع">شقة للبيع</div>
@@ -196,9 +208,9 @@ image: "/assets/img/social-home.webp"
           <div class="option-btn" data-value="محل">محل تجاري</div>
         </div>
 
-        <div style="margin-top: 20px;">
-          <label style="font-size: 0.95rem; color: #ddd;">المنطقة والشارع (مثال: مدينة نصر - مكرم عبيد)</label>
-          <input type="text" id="propLocation" class="quick-input" placeholder="اكتب اسم الشارع أو المنطقة..." required>
+        <div style="margin-top: 18px;">
+          <label style="font-size: 0.9rem; color: #334155; font-weight: 600;">المنطقة والشارع</label>
+          <input type="text" id="propLocation" class="clean-input" placeholder="مثال: مدينة نصر - مكرم عبيد" required>
         </div>
 
         <div class="step-actions">
@@ -206,24 +218,24 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 2: المواصفات المباشرة -->
+      <!-- الخطوة 2 -->
       <div class="form-step" id="step2">
-        <h3 style="color: #d4af37; margin-bottom: 5px;">2. المساحة والسعر المطلوب</h3>
-        <p style="color: #888; font-size: 0.9rem;">ساعدنا في تحديد القيمة السوقية العادلة:</p>
+        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">2. المساحة والسعر المطلوب</h3>
+        <p style="color: #64748b; font-size: 0.85rem;">ساعدنا في تحديد القيمة السوقية العادلة:</p>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px;">
           <div>
-            <label style="font-size: 0.85rem; color: #ccc;">المساحة (متر مربع)</label>
-            <input type="number" id="propArea" class="quick-input" placeholder="مثال: 180" required>
+            <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">المساحة (م²)</label>
+            <input type="number" id="propArea" class="clean-input" placeholder="180" required>
           </div>
           <div>
-            <label style="font-size: 0.85rem; color: #ccc;">السعر المطلوب (ج.م)</label>
-            <input type="text" id="propPrice" class="quick-input" placeholder="مثال: 4,000,000" required>
+            <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">السعر المطلوب (ج.م)</label>
+            <input type="text" id="propPrice" class="clean-input" placeholder="4,000,000" required>
           </div>
         </div>
 
-        <div style="margin-top: 15px;">
-          <label style="font-size: 0.85rem; color: #ccc;">مستوى التشطيب والدور</label>
+        <div style="margin-top: 16px;">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">حالة التشطيب</label>
           <div class="options-grid" id="finishingOptions">
             <div class="option-btn selected" data-value="سوبر لوكس">سوبر لوكس</div>
             <div class="option-btn" data-value="تحتاج تجديد">تحتاج تجديد</div>
@@ -237,48 +249,47 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 3: التواصل السريع والإنهاء -->
+      <!-- الخطوة 3 -->
       <div class="form-step" id="step3">
-        <h3 style="color: #d4af37; margin-bottom: 5px;">3. إرسال الملاحظات والتواصل</h3>
-        <p style="color: #888; font-size: 0.9rem;">بياناتك محمية وستصل حصرياً إلى أ. طارق طنطاوي:</p>
+        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">3. التواصل السريع</h3>
+        <p style="color: #64748b; font-size: 0.85rem;">بياناتك محمية وستصل حصرياً إلى أ. طارق طنطاوي:</p>
 
-        <div style="margin-top: 15px;">
-          <label style="font-size: 0.85rem; color: #ccc;">اسم المالك</label>
-          <input type="text" id="ownerName" class="quick-input" placeholder="اسمك الكريم" required>
+        <div style="margin-top: 14px;">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">اسم المالك</label>
+          <input type="text" id="ownerName" class="clean-input" placeholder="الاسم الكريم" required>
         </div>
 
-        <div style="margin-top: 15px;">
-          <label style="font-size: 0.85rem; color: #ccc;">رقم الواتساب للتواصل المباشر</label>
-          <input type="tel" id="ownerPhone" class="quick-input" placeholder="01xxxxxxxxx" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+        <div style="margin-top: 14px;">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">رقم الواتساب</label>
+          <input type="tel" id="ownerPhone" class="clean-input" placeholder="01xxxxxxxxx" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
         </div>
 
-        <div style="margin-top: 15px;">
-          <label style="font-size: 0.85rem; color: #ccc;">ملاحظات إضافية (اختياري)</label>
-          <input type="text" id="propNotes" class="quick-input" placeholder="مثال: الدور السابع، أسانسير، حصة بالأرض...">
+        <div style="margin-top: 14px;">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">ملاحظات (اختياري)</label>
+          <input type="text" id="propNotes" class="clean-input" placeholder="مثال: الدور السابع، أسانسير...">
         </div>
 
         <div class="step-actions">
           <button type="button" class="btn-prev" onclick="prevStep(2)">سابق</button>
-          <button type="submit" id="submitBtn" class="btn-next" style="background: #25d366; color: #fff;">
-            ارسل للتقييم والتسويق <i class="fab fa-whatsapp"></i>
+          <button type="submit" id="submitBtn" class="btn-next" style="background: #25d366;">
+            إرسال للواتساب مباشرة <i class="fab fa-whatsapp"></i>
           </button>
         </div>
       </div>
 
       <div class="security-badge">
-        <i class="fas fa-user-shield" style="color: #d4af37;"></i> لا نقوم بنشر أرقام التواصل أو التفاصيل الخاصة للعلن إطلاقاً.
+        <i class="fas fa-user-shield" style="color: #1e3a8a;"></i> بياناتك شفافة ومحمية ولا تظهر للعلن إطلاقاً.
       </div>
 
     </form>
   </div>
-</main>
+</div>
 
 <script>
 let currentStep = 1;
 let selectedType = "بيع";
 let selectedFinishing = "سوبر لوكس";
 
-// إعداد خيارات الضغط السريع
 document.querySelectorAll('#typeOptions .option-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.remove('selected'));
@@ -296,7 +307,6 @@ document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
 });
 
 function nextStep(step) {
-  // التحقق المباشر
   if (step === 2 && !document.getElementById('propLocation').value.trim()) {
     alert('برجاء كتابة المنطقة أو الشارع أولاً.');
     return;
@@ -311,7 +321,6 @@ function nextStep(step) {
   document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
   document.getElementById(`step${step}`).classList.add('active');
 
-  // تحديث المؤشر البصري
   document.getElementById(`node${step}`).classList.add('active');
   const progressPercent = ((step - 1) / 2) * 100;
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
@@ -330,7 +339,6 @@ function prevStep(step) {
   currentStep = step;
 }
 
-// الإرسال والربط بالوكيل الذكي والواتساب
 document.getElementById('interactiveAddForm').addEventListener('submit', async function(e) {
   e.preventDefault();
 
@@ -343,9 +351,8 @@ document.getElementById('interactiveAddForm').addEventListener('submit', async f
 
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إعداد التقرير...';
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
 
-  // صياغة رسالة موجهة مباشرة لوكيل طارق طنطاوي
   const waText = encodeURIComponent(
     `السلام عليكم أ. طارق طنطاوي،\nأنا المالك: ${ownerName}\n` +
     `عايز أعرض عقاري للتسويق والتقييم عندك:\n` +
@@ -358,9 +365,8 @@ document.getElementById('interactiveAddForm').addEventListener('submit', async f
     `رقم التواصل: ${ownerPhone}`
   );
 
-  // تحويل مباشر وسريع للواتساب لضمان عدم ضياع أي مالك
   setTimeout(() => {
     window.location.href = `https://wa.me/201147758857?text=${waText}`;
-  }, 600);
+  }, 400);
 });
 </script>
