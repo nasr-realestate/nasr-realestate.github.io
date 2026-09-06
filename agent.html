@@ -4,7 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>الوكيل الذكي | أ. طارق طنطاوي</title>
+
+  <!-- الخطوط والأيقونات -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <style>
+    :root {
+      --gold: #d4af37;
+      --gold-hover: #b8962d;
+      --dark-bg: #111111;
+      --dark-card: #1a1a1a;
+      --text-light: #f5f5f5;
+      --text-muted: #aaa;
+      --ok: #23c16b;
+      --warn: #f0b429;
+    }
+
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
@@ -14,8 +32,8 @@
       height: 100%;
       margin: 0;
       padding: 0;
-      background-color: #0b1120;
-      font-family: system-ui, -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, oxygen, ubuntu, cantarell, sans-serif;
+      background-color: var(--dark-bg);
+      font-family: 'Cairo', sans-serif;
       overflow: hidden;
     }
 
@@ -23,21 +41,21 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
-      background: #1e293b;
+      background: var(--dark-card);
       position: relative;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
     }
 
-    /* هيدر الوكيل الخاص */
+    /* الهيدر الخاص بالوكيل */
     .agent-header {
-      background: #0f172a;
-      padding: 12px 16px;
+      background: linear-gradient(135deg, #0d0d0d, #222222);
+      padding: 14px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
       z-index: 10;
     }
 
@@ -48,23 +66,24 @@
     }
 
     .agent-avatar {
-      width: 44px;
-      height: 44px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
-      border: 2px solid #d4af37;
+      border: 2px solid var(--gold);
       object-fit: cover;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
     }
 
     .agent-info h1 {
       color: #ffffff;
-      font-size: 0.98rem;
+      font-size: 1.05rem;
       margin: 0;
-      font-weight: 700;
+      font-weight: 900;
     }
 
     .agent-info p {
-      color: #38bdf8;
-      font-size: 0.75rem;
+      color: var(--gold);
+      font-size: 0.78rem;
       margin: 2px 0 0 0;
       display: flex;
       align-items: center;
@@ -74,41 +93,48 @@
     .status-dot {
       width: 8px;
       height: 8px;
-      background: #22c55e;
+      background: #2ecc71;
       border-radius: 50%;
       display: inline-block;
+      box-shadow: 0 0 8px #2ecc71;
     }
 
     /* شريط مؤشر التأهيل */
-    .qual-bar-container {
-      background: #182232;
-      padding: 8px 16px;
-      border-bottom: 1px solid #334155;
+    .qual-box {
+      background: #161616;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+      padding: 10px 16px;
+      color: #ddd;
+      font-size: 13px;
+    }
+
+    .qual-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.8rem;
+      gap: 8px;
+      margin-bottom: 7px;
     }
 
-    .qual-text { color: #94a3b8; }
-    .qual-score { color: #d4af37; font-weight: bold; }
+    .qual-label strong { color: var(--gold); }
+    .qual-state.wait { color: var(--warn); font-weight: 700; }
+    .qual-state.ready { color: var(--ok); font-weight: 800; }
 
-    .qual-progress-bg {
-      width: 100px;
-      height: 6px;
-      background: #334155;
-      border-radius: 3px;
+    .progress-track {
+      height: 8px;
+      background: #2a2a2a;
+      border-radius: 999px;
       overflow: hidden;
     }
 
-    .qual-progress-fill {
+    .progress-fill {
       height: 100%;
-      width: 20%;
-      background: linear-gradient(90deg, #d4af37, #22c55e);
-      transition: width 0.4s ease;
+      width: 0%;
+      transition: width 0.35s ease;
+      background: linear-gradient(90deg, var(--gold), var(--ok));
     }
 
-    /* منطقة الشات والرسائل */
+    /* منطقة الرسائل */
     .chat-area {
       flex: 1;
       overflow-y: auto;
@@ -116,16 +142,17 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      background: #0f172a;
-      padding-bottom: 75px;
+      background: #141414;
+      padding-bottom: 80px;
     }
 
-    .msg-bubble {
-      max-width: 85%;
-      padding: 12px 16px;
-      border-radius: 14px;
-      font-size: 0.92rem;
-      line-height: 1.5;
+    .msg {
+      max-width: 84%;
+      padding: 11px 15px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      word-break: break-word;
       animation: fadeIn 0.25s ease-in-out;
     }
 
@@ -134,30 +161,42 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .msg-agent {
-      background: #1e293b;
-      color: #f8fafc;
-      border: 1px solid #334155;
+    .msg-bot {
+      background: #222222;
+      color: var(--text-light);
       align-self: flex-start;
-      border-bottom-right-radius: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top-right-radius: 4px;
     }
 
     .msg-user {
-      background: #1e3a8a;
-      color: #ffffff;
+      background: linear-gradient(135deg, var(--gold), var(--gold-hover));
+      color: #000;
       align-self: flex-end;
-      border-bottom-left-radius: 2px;
+      font-weight: 700;
+      border-top-left-radius: 4px;
+    }
+
+    .typing-indicator-box {
+      display: none;
+      align-self: flex-start;
+      background: #222222;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border-top-right-radius: 4px;
+      color: var(--text-muted);
+      font-size: 12px;
     }
 
     /* الفوتر الخاص بالوكيل (زر تصفح الكتالوج العائم) */
     .agent-custom-footer {
       position: absolute;
-      bottom: 68px;
+      bottom: 72px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid #d4af37;
+      background: rgba(17, 17, 17, 0.92);
+      border: 1px solid var(--gold);
       border-radius: 30px;
       padding: 6px 18px;
       display: flex;
@@ -175,53 +214,88 @@
     }
 
     .semsar-logo-img { width: 24px; height: 24px; border-radius: 50%; }
-    .semsar-bar-text { color: #d4af37; font-size: 0.82rem; font-weight: 600; }
+    .semsar-bar-text { color: var(--gold); font-size: 0.85rem; font-weight: 700; }
 
-    /* حقل الإدخال السفلي */
-    .chat-input-wrapper {
-      background: #1e293b;
+    /* حقل الإدخال السفلي مع زر الإرسال الصريح */
+    .chat-input-area {
+      background: #1a1a1a;
       padding: 12px;
-      border-top: 1px solid #334155;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       position: relative;
       z-index: 5;
     }
 
-    .input-row { display: flex; gap: 8px; }
-
-    .chat-input {
+    #user-input {
       flex: 1;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #ffffff;
-      font-size: 0.9rem;
+      background: #262626;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 25px;
+      padding: 10px 16px;
+      color: #fff;
       outline: none;
+      font-size: 14px;
+      font-family: 'Cairo', sans-serif;
+      transition: 0.3s;
     }
 
-    .chat-input:focus { border-color: #d4af37; }
+    #user-input:focus {
+      border-color: var(--gold);
+      background: #2d2d2d;
+    }
 
-    .btn-send {
-      background: #d4af37;
+    #send-btn {
+      background: var(--gold);
       border: none;
-      color: #000;
-      padding: 0 16px;
-      border-radius: 8px;
-      font-weight: bold;
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-size: 16px;
+      transition: 0.2s ease;
+      flex-shrink: 0;
     }
 
-    .wa-direct-link {
-      display: none;
+    #send-btn:hover {
+      transform: rotate(-12deg) scale(1.05);
+      background: var(--gold-hover);
+    }
+
+    /* زر الواتساب لتأكيد الصفقة */
+    .deal-btn-wrapper {
+      padding: 0 12px 12px 12px;
+      background: #1a1a1a;
+    }
+
+    .deal-btn {
+      width: 100%;
       background: #25d366;
       color: #fff;
-      text-align: center;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: bold;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-family: 'Cairo', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       text-decoration: none;
-      margin-top: 8px;
       font-size: 0.95rem;
+      transition: 0.25s;
+    }
+
+    .deal-btn.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #333;
+      color: #888;
     }
   </style>
 </head>
@@ -232,121 +306,258 @@
   <!-- هيدر الوكيل -->
   <header class="agent-header">
     <div class="agent-profile">
-      <img src="/assets/img/social-home.webp" alt="أ. طارق طنطاوي" class="agent-avatar" onerror="this.src='https://via.placeholder.com/44'">
+      <!-- يمكنك تغيير مسار الصورة هنا إلى أي رابط تفضله -->
+      <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="agent-avatar" onerror="this.src='https://nasr-realestate.github.io/assets/img/social-home.webp'">
       <div class="agent-info">
-        <h1>الوكيل الذكي | طارق طنطاوي</h1>
-        <p><span class="status-dot"></span> التأهيل والفرز العقاري المباشر</p>
+        <h1>طارق طنطاوي</h1>
+        <p><span class="status-dot"></span> تأهيل ذكي لعملاء مدينة نصر وهليوبوليس</p>
       </div>
     </div>
   </header>
 
   <!-- شريط مؤشر التأهيل -->
-  <div class="qual-bar-container">
-    <span class="qual-text">مؤشر جاهزية الطلب:</span>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <div class="qual-progress-bg">
-        <div class="qual-progress-fill" id="qualFill"></div>
-      </div>
-      <span class="qual-score" id="qualScore">1/5</span>
+  <div class="qual-box">
+    <div class="qual-row">
+      <div>مؤشر التأهيل: <strong id="qual-score">0/5</strong></div>
+      <div id="qual-state" class="qual-state wait">نجمع بيانات أكثر</div>
     </div>
+    <div class="progress-track"><div id="qual-progress" class="progress-fill"></div></div>
   </div>
 
-  <!-- منطقة الرسائل -->
-  <div class="chat-area" id="chatArea">
-    <div class="msg-bubble msg-agent">
-      أهلاً بك.. معك الوكيل الذكي لـ <strong>أ. طارق طنطاوي</strong>.
-      <br><br>
-      لتوفير وقتك وتوجيهك للفرصة الأنسب فوراً، يرجى توضيح غرضك: (شراء / عرض عقار للبيع / إيجار / إداري)؟
-    </div>
+  <!-- منطقة المحادثة والرسائل -->
+  <div class="chat-area" id="chat-messages">
+    <div id="tarek-typing" class="typing-indicator-box">جاري تحضير الرد...</div>
   </div>
 
-  <!-- الفوتر المخصص للوكيل: زر "سمسار طلبك" للانتقال للموقع الرئيسي -->
+  <!-- الفوتر المخصص للوكيل: زر الانتقال للكتالوج الرئيسي -->
   <a href="/" class="agent-custom-footer">
-    <img src="/assets/img/logo.webp" class="semsar-logo-img" alt="سمسار طلبك" onerror="this.src='https://via.placeholder.com/24'">
+    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="semsar-logo-img" alt="سمسار طلبك" onerror="this.src='https://via.placeholder.com/24'">
     <span class="semsar-bar-text">تصفح المعرض والكتالوج 🏛️</span>
   </a>
 
-  <!-- حقل الإدخال والتحويل -->
-  <div class="chat-input-wrapper">
-    <div class="input-row">
-      <input type="text" id="userInput" class="chat-input" placeholder="اكتب تفاصيل طلبك هنا..." onkeypress="handleKey(event)">
-      <button class="btn-send" onclick="sendMsg()">إرسال</button>
-    </div>
-    <a href="#" id="waLink" class="wa-direct-link" target="_blank">تحويل مباشر لـ أ. طارق طنطاوي (تم التأهيل 🎯)</a>
+  <!-- منطقة الإدخال وزر الإرسال الصريح -->
+  <div class="chat-input-area">
+    <input type="text" id="user-input" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter') sendMsg()">
+    <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+
+  <!-- زر حسم الصفقة عبر الواتساب -->
+  <div class="deal-btn-wrapper">
+    <button id="dealBtn" class="deal-btn disabled" onclick="openDealWhatsApp()">
+      <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
+      <span id="dealBtnText">يفتح بعد التأهيل أو بطلبك المباشر</span>
+    </button>
   </div>
 
 </div>
 
 <script>
-let currentStep = 1;
-let leadDetails = { intent: "", location: "", budget: "", timeline: "" };
+  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+  const WHATSAPP_URL = "https://wa.me/201147758857";
+  const STORAGE_KEY = "tarek_agent_chat_memory_v1";
 
-function updateQual(score) {
-  document.getElementById('qualScore').innerText = `${score}/5`;
-  document.getElementById('qualFill').style.width = `${(score / 5) * 100}%`;
-}
+  let chatHistory = [];
+  let qualificationScore = 0;
+  let canShareWhatsapp = false;
 
-function handleKey(e) { if (e.key === 'Enter') sendMsg(); }
-
-function sendMsg() {
-  const input = document.getElementById('userInput');
-  const txt = input.value.trim();
-  if (!txt) return;
-
-  const chat = document.getElementById('chatArea');
-  const userBubble = document.createElement('div');
-  userBubble.className = 'msg-bubble msg-user';
-  userBubble.innerText = txt;
-  chat.appendChild(userBubble);
-  input.value = '';
-  chat.scrollTop = chat.scrollHeight;
-
-  if (currentStep === 1) {
-    leadDetails.intent = txt;
-    currentStep = 2;
-    updateQual(2);
-    setTimeout(() => { addAgentMsg("ممتاز. حدد لي **المنطقة المفضلة** (مثلاً: مكرم عبيد / المنطقة السادسة / مصر الجديدة) و**المساحة المطلوبة**."); }, 500);
-  } else if (currentStep === 2) {
-    leadDetails.location = txt;
-    currentStep = 3;
-    updateQual(3);
-    setTimeout(() => { addAgentMsg("تمام جداً. ما هي **الميزانية المحددة للتنفيذ الفوري** وطريقة الدفع (كاش / تمويل)؟"); }, 500);
-  } else if (currentStep === 3) {
-    leadDetails.budget = txt;
-    currentStep = 4;
-    updateQual(4);
-    setTimeout(() => { addAgentMsg("ما هو **المدى الزمني لتحديد المعاينة والتنفيذ**؟"); }, 500);
-  } else if (currentStep === 4) {
-    leadDetails.timeline = txt;
-    currentStep = 5;
-    updateQual(5);
-    setTimeout(() => {
-      addAgentMsg("<strong>تم تأهيل الطلب بنجاح! 🎯</strong><br>بياناتك مكتملة تماماً. اضغط الزر الأخضر للتحويل المباشر لـ أ. طارق طنطاوي لجدولة الخطوة التنفيذية.");
-      
-      const waLink = document.getElementById('waLink');
-      const textURI = encodeURIComponent(
-        `السلام عليكم أ. طارق طنطاوي، تم تأهيل طلبي عبر الوكيل الذكي:\n` +
-        `• الغرض: ${leadDetails.intent}\n` +
-        `• المنطقة والمساحة: ${leadDetails.location}\n` +
-        `• الميزانية والدفع: ${leadDetails.budget}\n` +
-        `• المدى الزمني: ${leadDetails.timeline}`
-      );
-      waLink.href = `https://wa.me/201147758857?text=${textURI}`;
-      waLink.style.display = 'block';
-    }, 500);
+  function normalizeText(s) {
+    return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
   }
-}
 
-function addAgentMsg(htmlContent) {
-  const chat = document.getElementById('chatArea');
-  const b = document.createElement('div');
-  b.className = 'msg-bubble msg-agent';
-  b.innerHTML = htmlContent;
-  chat.appendChild(b);
-  chat.scrollTop = chat.scrollHeight;
-}
+  function detectDirectContactRequest(text) {
+    const t = normalizeText(text);
+    const keys = ["واتساب", "whatsapp", "رقم", "تواصل", "اتصال", "كلم", "مكالمة", "معاينة", "احجز"];
+    return keys.some(k => t.includes(k));
+  }
+
+  function computeQualification(history) {
+    const userText = history
+      .filter(m => m.type === "user")
+      .map(m => m.text)
+      .join(" \n ")
+      .toLowerCase();
+
+    const hasIntent = /(اشتري|شراء|بدور|عايز شقة|عايز شقه|محتاج شقة|بيع|بائع|اعرض عقار)/i.test(userText);
+    const hasBudget = /(ميزانية|ميزانيه|مليون|الف|ألف|جنيه|سعر|budget|k|m)/i.test(userText);
+    const hasLocation = /(مدينة نصر|مدينه نصر|عباس العقاد|مكرم عبيد|مصطفى النحاس|الحي السابع|الحي الثامن|زهراء مدينة نصر|المنطقة التاسعة|الواحة|مصر الجديدة|هليوبوليس)/i.test(userText);
+    const hasSpecs = /(متر|غرف|غرفة|حمام|دور|تشطيب|فيو|واجهة|واجهه|مصعد|اسانسير)/i.test(userText);
+    const hasTimeline = /(جاهز|خلال|الشهر|فوري|أسبوع|اسبوع|وقت|ميعاد|موعد)/i.test(userText);
+
+    const score = [hasIntent, hasBudget, hasLocation, hasSpecs, hasTimeline].filter(Boolean).length;
+    return { score, qualified: score >= 4 };
+  }
+
+  function updateQualificationUI() {
+    const scoreEl = document.getElementById("qual-score");
+    const stateEl = document.getElementById("qual-state");
+    const fillEl = document.getElementById("qual-progress");
+    const dealBtn = document.getElementById("dealBtn");
+    const dealBtnText = document.getElementById("dealBtnText");
+
+    scoreEl.textContent = `${qualificationScore}/5`;
+    fillEl.style.width = `${Math.max(0, Math.min(100, (qualificationScore / 5) * 100))}%`;
+
+    if (canShareWhatsapp) {
+      stateEl.className = "qual-state ready";
+      stateEl.textContent = "جاهز للتواصل المباشر 🎯";
+      dealBtn.classList.remove("disabled");
+      dealBtnText.textContent = "حسم الصفقة عبر الواتساب المباشر";
+    } else {
+      stateEl.className = "qual-state wait";
+      stateEl.textContent = "نجمع بيانات أكثر";
+      dealBtn.classList.add("disabled");
+      dealBtnText.textContent = "يفتح بعد التأهيل أو بطلبك المباشر";
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      chatHistory,
+      qualificationScore,
+      canShareWhatsapp
+    }));
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data.chatHistory)) return false;
+
+      chatHistory = data.chatHistory.slice(-24);
+      qualificationScore = Number(data.qualificationScore || 0);
+      canShareWhatsapp = Boolean(data.canShareWhatsapp);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function clearMessagesAndRehydrate() {
+    const container = document.getElementById("chat-messages");
+    const typingBox = document.getElementById("tarek-typing");
+
+    Array.from(container.querySelectorAll(".msg")).forEach((n) => n.remove());
+    chatHistory.forEach(msg => renderMsg(msg.text, msg.type));
+    container.appendChild(typingBox);
+    scrollBottom();
+  }
+
+  function openDealWhatsApp() {
+    if (!canShareWhatsapp) return;
+    window.open(WHATSAPP_URL, "_blank");
+  }
+
+  function renderMsg(text, type) {
+    const container = document.getElementById("chat-messages");
+    const typingBox = document.getElementById("tarek-typing");
+
+    const div = document.createElement("div");
+    div.className = `msg msg-${type}`;
+    div.innerText = text;
+
+    container.insertBefore(div, typingBox);
+    scrollBottom();
+    return div;
+  }
+
+  function scrollBottom() {
+    const container = document.getElementById("chat-messages");
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function pushHistory(text, type) {
+    chatHistory.push({ text, type, ts: Date.now() });
+    if (chatHistory.length > 24) chatHistory.shift();
+
+    const q = computeQualification(chatHistory);
+    qualificationScore = q.score;
+    if (q.qualified) canShareWhatsapp = true;
+
+    saveState();
+    updateQualificationUI();
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById("user-input");
+    const text = input.value.trim();
+    if (!text) return;
+
+    renderMsg(text, "user");
+    pushHistory(text, "user");
+
+    if (detectDirectContactRequest(text)) {
+      canShareWhatsapp = true;
+      updateQualificationUI();
+      saveState();
+    }
+
+    input.value = "";
+
+    const typing = document.getElementById("tarek-typing");
+    typing.style.display = "block";
+    scrollBottom();
+
+    try {
+      const historyForApi = chatHistory
+        .filter(m => m.type === "user" || m.type === "bot")
+        .slice(-10)
+        .map(m => ({ role: m.type === "bot" ? "assistant" : "user", message: m.text }));
+
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: historyForApi })
+      });
+
+      const data = await res.json();
+      typing.style.display = "none";
+
+      const botReply = data.response || "تعذر تنفيذ الطلب الآن. حاول بعد قليل.";
+
+      if (typeof data.qualificationScore === "number") {
+        qualificationScore = data.qualificationScore;
+      }
+      if (typeof data.canShareWhatsapp === "boolean") {
+        canShareWhatsapp = data.canShareWhatsapp;
+      }
+      if (typeof data.qualified === "boolean" && data.qualified) {
+        canShareWhatsapp = true;
+      }
+
+      renderMsg(botReply, "bot");
+      pushHistory(botReply, "bot");
+      updateQualificationUI();
+    } catch (e) {
+      typing.style.display = "none";
+      const fallback = "في مشكلة اتصال مؤقتة. كمّل معايا بياناتك (المنطقة/المساحة/السعر) وأنا أتابع معاك هنا.";
+      renderMsg(fallback, "bot");
+      pushHistory(fallback, "bot");
+    }
+  }
+
+  window.onload = () => {
+    const hasState = loadState();
+    if (!hasState) {
+      chatHistory = [
+        {
+          text: "أهلاً بك، معاك طارق طنطاوي. خلّيني أفلترلك أفضل فرص مدينة نصر وهليوبوليس — بتشتري ولا بتبيع؟",
+          type: "bot",
+          ts: Date.now()
+        }
+      ];
+      qualificationScore = 0;
+      canShareWhatsapp = false;
+      saveState();
+    }
+
+    clearMessagesAndRehydrate();
+    updateQualificationUI();
+  };
 </script>
 
 </body>
-  </html>
-  
+</html>
