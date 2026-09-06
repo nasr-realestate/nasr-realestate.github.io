@@ -1,774 +1,378 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta property="og:title" content="الوكيل الذكي | أ. طارق طنطاوي">
-  <meta property="og:description" content="تأهيل وتقييم الفرص العقارية الذكي - مدينة نصر وهليوبوليس">
-  <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>الوكيل الذكي | أ. طارق طنطاوي - WhatsApp Agent</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الوكيل الذكي | أ. طارق طنطاوي</title>
 
-  <!-- الخطوط والأيقونات ومكتبة تحويل الماركداون -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Marked.js Parsing -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
     :root {
-      --wa-header-bg: #075e54;
-      --wa-header-dark: #121b22;
-      --wa-app-bg: #0b141a;
-      --wa-chat-bg: #0b141a;
-      --wa-msg-bot: #202c33;
-      --wa-msg-user: #005c4b;
-      --wa-text-light: #e9edef;
-      --wa-text-muted: #8696a0;
-      --wa-gold: #d4af37;
-      --wa-check-blue: #53bdeb;
-      --ok: #23c16b;
-      --warn: #f0b429;
+      --wa-bg: #e5ddd5;
+      --wa-header: #075e54;
+      --wa-teal: #128c7e;
+      --wa-bubble-user: #dcf8c6;
+      --wa-bubble-agent: #ffffff;
+      --wa-dark: #121b20;
     }
 
     * {
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body, html {
-      height: 100%;
       margin: 0;
       padding: 0;
-      background-color: #040d12;
-      font-family: 'Cairo', sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: #d1d7db;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .chat-card {
+      width: 100%;
+      max-width: 480px;
+      height: 100vh;
+      max-height: 850px;
+      background: var(--wa-bg);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: relative;
       overflow: hidden;
     }
 
-    /* شاشة الدخول (Splash Screen) */
-    #splash-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: var(--wa-app-bg);
-      z-index: 9999;
+    /* Splash Screen */
+    .splash-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--wa-dark);
+      color: #fff;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      text-align: center;
-      padding: 20px;
-      animation: fadeOutSplash 0.8s 3.2s forwards ease-in-out;
-      pointer-events: none;
-    }
-
-    .splash-title {
-      color: var(--wa-gold);
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 25px;
-      opacity: 0;
-      transform: translateY(-10px);
-      animation: splashTextIn 0.8s 0.2s forwards ease-out;
-    }
-
-    .splash-media-container {
-      display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 20px;
-      position: relative;
-      margin-bottom: 25px;
+      z-index: 100;
+      transition: opacity 0.5s ease, visibility 0.5s;
     }
-
-    .splash-logo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 2px solid var(--wa-gold);
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    .splash-screen.hidden {
       opacity: 0;
-      transform: scale(0.6);
-      animation: splashPop 0.8s 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      visibility: hidden;
     }
 
-    .splash-avatar {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 2px solid #25d366;
-      box-shadow: 0 0 20px rgba(37, 211, 102, 0.3);
-      object-fit: cover;
-      opacity: 0;
-      transform: scale(0.6);
-      animation: splashPop 0.8s 0.9s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .splash-subtitle {
-      color: #ffffff;
-      font-size: 0.95rem;
-      font-weight: 600;
-      max-width: 320px;
-      line-height: 1.6;
-      opacity: 0;
-      animation: splashTextIn 0.8s 1.3s forwards ease-out;
-    }
-
-    @keyframes splashPop {
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    @keyframes splashTextIn {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeOutSplash {
-      to { opacity: 0; visibility: hidden; }
-    }
-
-    /* حاوي التطبيق - WhatsApp Layout */
-    .agent-app-container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      max-width: 650px;
-      margin: 0 auto;
-      background: var(--wa-app-bg);
-      position: relative;
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
-    }
-
-    /* هيدر واتساب العلوي */
-    .agent-header {
-      background: var(--wa-header-dark);
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      z-index: 10;
-    }
-
-    .agent-profile {
+    /* Header */
+    .chat-header {
+      background: var(--wa-header);
+      color: #fff;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-
-    .agent-avatar-wrapper {
-      position: relative;
-    }
-
-    .agent-avatar {
-      width: 44px;
-      height: 44px;
+    .avatar {
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      object-fit: cover;
-      border: 1.5px solid var(--wa-gold);
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      background: #25d366;
-      border-radius: 50%;
-      position: absolute;
-      bottom: 2px;
-      left: 0;
-      border: 2px solid var(--wa-header-dark);
-    }
-
-    .agent-info h1 {
-      color: var(--wa-text-light);
-      font-size: 1.05rem;
-      margin: 0;
-      font-weight: 700;
+      background: var(--wa-teal);
+      color: #fff;
       display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .agent-info h1 .verified-badge {
-      color: #25d366;
-      font-size: 0.85rem;
-    }
-
-    .agent-info p {
-      color: var(--wa-text-muted);
-      font-size: 0.75rem;
-      margin: 2px 0 0 0;
-    }
-
-    .header-logo-link {
-      display: flex;
-      align-items: center;
       justify-content: center;
-      text-decoration: none;
-    }
-
-    .header-logo-img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 1px solid rgba(212, 175, 55, 0.5);
-      object-fit: cover;
-    }
-
-    /* شريط مؤشر التأهيل */
-    .qual-box {
-      background: #111b21;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 8px 16px;
-      color: var(--wa-text-muted);
-      font-size: 12px;
-    }
-
-    .qual-row {
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .header-info h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .header-info p {
+      font-size: 12px;
+      opacity: 0.85;
     }
 
-    .qual-label strong { color: var(--wa-gold); }
-    .qual-state.wait { color: var(--warn); font-weight: 700; }
-    .qual-state.ready { color: #25d366; font-weight: 800; }
-
-    .progress-track {
-      height: 6px;
-      background: #202c33;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      transition: width 0.35s ease;
-      background: linear-gradient(90deg, var(--wa-gold), #25d366);
-    }
-
-    /* منطقة المحادثة - WhatsApp Background Doodle */
-    .chat-area {
+    /* Messages Container */
+    .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 14px 12px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      background-color: #0b141a;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
-      background-size: 16px 16px;
+      gap: 10px;
     }
 
-    /* فقاعات محادثة الواتساب */
     .msg {
-      max-width: 82%;
-      padding: 8px 12px 6px 12px;
+      max-width: 80%;
+      padding: 8px 12px;
       border-radius: 8px;
       font-size: 14px;
-      line-height: 1.6;
-      word-break: break-word;
+      line-height: 1.4;
       position: relative;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      animation: fadeIn 0.2s ease-in-out;
+      word-break: break-word;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .msg-bot {
-      background: var(--wa-msg-bot);
-      color: var(--wa-text-light);
+    .msg.agent {
+      background: var(--wa-bubble-agent);
       align-self: flex-start;
-      border-top-right-radius: 0px;
+      border-top-right-radius: 0;
     }
-
-    .msg-user {
-      background: var(--wa-msg-user);
-      color: var(--wa-text-light);
+    .msg.user {
+      background: var(--wa-bubble-user);
       align-self: flex-end;
-      border-top-left-radius: 0px;
+      border-top-left-radius: 0;
     }
 
-    /* الوقت وعلامات الصح */
+    /* منع تداخل Markdown */
+    .msg-content p {
+      display: inline;
+      margin: 0;
+    }
+
     .msg-meta {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 4px;
-      font-size: 0.68rem;
-      color: var(--wa-text-muted);
-      margin-top: 4px;
+      font-size: 10px;
+      color: #888;
       float: left;
-      direction: ltr;
+      margin-top: 4px;
+      margin-right: 8px;
     }
 
-    .msg-user .msg-meta {
-      color: rgba(255, 255, 255, 0.6);
-    }
-
-    .blue-tick {
-      color: var(--wa-check-blue);
-      font-size: 0.75rem;
-    }
-
-    /* روابط الماركداون كأزرار أنيقة */
-    .msg-bot a {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: #111b21;
-      color: var(--wa-gold) !important;
-      padding: 6px 14px;
-      margin: 6px 0 2px 0;
-      border-radius: 16px;
-      border: 1px solid rgba(212, 175, 55, 0.4);
-      font-weight: 700;
-      font-size: 0.82rem;
-      text-decoration: none !important;
-      transition: all 0.2s ease;
-    }
-
-    .msg-bot a:hover {
-      background: var(--wa-gold);
-      color: #000 !important;
-    }
-
-    .msg-bot p { margin: 0 0 4px 0; }
-    .msg-bot p:last-child { margin-bottom: 0; }
-
+    /* Typing Indicator */
     .typing-indicator-box {
       display: none;
       align-self: flex-start;
-      background: var(--wa-msg-bot);
-      padding: 8px 14px;
+      background: var(--wa-bubble-agent);
+      padding: 10px 14px;
       border-radius: 8px;
-      border-top-right-radius: 0px;
-      color: var(--wa-text-muted);
+      border-top-right-radius: 0;
       font-size: 12px;
+      color: #555;
     }
 
-    /* منطقة الإدخال الشبيهة بالواتساب */
-    .chat-input-area {
-      background: #111b21;
-      padding: 10px;
+    /* Footer Input */
+    .chat-footer {
+      padding: 10px 12px;
+      background: #f0f2f5;
       display: flex;
-      align-items: center;
       gap: 8px;
-      z-index: 5;
-    }
-
-    .input-wrapper {
-      flex: 1;
-      background: #2a3942;
-      border-radius: 24px;
-      display: flex;
       align-items: center;
-      padding: 2px 14px;
     }
-
-    #user-input {
-      width: 100%;
-      background: transparent;
+    .chat-footer input {
+      flex: 1;
+      padding: 10px 14px;
       border: none;
-      padding: 8px 0;
-      color: var(--wa-text-light);
+      border-radius: 20px;
       outline: none;
       font-size: 14px;
-      font-family: 'Cairo', sans-serif;
     }
-
-    #user-input::placeholder {
-      color: var(--wa-text-muted);
+    .chat-footer input:disabled {
+      background: #e9ecef;
     }
-
-    #send-btn {
-      background: #00a884;
+    .send-btn {
+      background: var(--wa-teal);
+      color: #fff;
       border: none;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      width: 42px;
-      height: 42px;
       cursor: pointer;
       display: flex;
-      align-items: center;
       justify-content: center;
-      color: #fff;
+      align-items: center;
       font-size: 16px;
-      transition: 0.2s ease;
-      flex-shrink: 0;
     }
-
-    #send-btn:hover {
-      background: #029071;
-      transform: scale(1.04);
-    }
-
-    /* زر حسم الصفقة عبر الواتساب */
-    .deal-btn-wrapper {
-      padding: 0 10px 10px 10px;
-      background: #111b21;
-    }
-
-    .deal-btn {
-      width: 100%;
-      background: #25d366;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 20px;
-      font-weight: 700;
-      font-family: 'Cairo', sans-serif;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 0.9rem;
-      transition: 0.25s;
-    }
-
-    .deal-btn.disabled {
-      opacity: 0.35;
+    .send-btn:disabled {
+      background: #ccc;
       cursor: not-allowed;
-      background: #202c33;
-      color: var(--wa-text-muted);
     }
   </style>
 </head>
 <body>
 
-<!-- شاشة الإبهار (Splash Screen) -->
-<div id="splash-screen">
-  <div class="splash-title">سمسار طلبك | الوكيل الذكي</div>
-  
-  <div class="splash-media-container">
-    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" class="splash-logo" onerror="this.src='https://via.placeholder.com/100'">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="splash-avatar" onerror="this.src='https://via.placeholder.com/100'">
-  </div>
+  <div class="chat-card">
+    <!-- Splash Screen -->
+    <div id="splash" class="splash-screen">
+      <h2>الوكيل الذكي</h2>
+      <p style="margin-top: 8px; font-size: 14px; opacity: 0.8;">المستشار العقاري: أ. طارق طنطاوي</p>
+    </div>
 
-  <div class="splash-subtitle">
-    أهلاً بك مع أ. طارق طنطاوي<br>
-    <span style="color: var(--wa-gold); font-size: 0.85rem;">مساعدك الذكي لحسم أفضل الفرص في مدينة نصر وهليوبوليس</span>
-  </div>
-</div>
-
-<div class="agent-app-container" id="appContainer">
-  
-  <!-- هيدر واتساب -->
-  <header class="agent-header">
-    <div class="agent-profile">
-      <div class="agent-avatar-wrapper">
-        <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="agent-avatar" onerror="this.src='https://via.placeholder.com/44'">
-        <span class="status-dot"></span>
-      </div>
-      <div class="agent-info">
-        <h1>طارق طنطاوي <i class="fas fa-check-circle verified-badge"></i></h1>
-        <p>متصل الآن | الوكيل الذكي المباشر</p>
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="avatar">ط</div>
+      <div class="header-info">
+        <h3>أ. طارق طنطاوي</h3>
+        <p>متصل الآن | المستشار العقاري الذكي</p>
       </div>
     </div>
 
-    <!-- logo أعلى اليسار -->
-    <a href="/" class="header-logo-link" title="الكتالوج الرئيسي">
-      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" class="header-logo-img" alt="سمسار طلبك" onerror="this.src='https://via.placeholder.com/40'">
-    </a>
-  </header>
-
-  <!-- مؤشر التأهيل -->
-  <div class="qual-box">
-    <div class="qual-row">
-      <div>مؤشر جاهزية الطلب: <strong id="qual-score">0/5</strong></div>
-      <div id="qual-state" class="qual-state wait">في انتظار تفاصيل الطلب</div>
+    <!-- Messages Container -->
+    <div id="chat-messages" class="chat-messages">
+      <div id="tarek-typing" class="typing-indicator-box">جاري الكتابة...</div>
     </div>
-    <div class="progress-track"><div id="qual-progress" class="progress-fill"></div></div>
-  </div>
 
-  <!-- منطقة المحادثة -->
-  <div class="chat-area" id="chat-messages">
-    <div id="tarek-typing" class="typing-indicator-box">يكتب الآن...</div>
-  </div>
-
-  <!-- حقل الإدخال وزر الإرسال -->
-  <div class="chat-input-area">
-    <div class="input-wrapper">
-      <input type="text" id="user-input" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendMsg()">
+    <!-- Footer Input -->
+    <div class="chat-footer">
+      <input type="text" id="user-input" placeholder="اكتب استفسارك العقاري هنا..." onkeypress="handleKeyPress(event)" />
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">➤</button>
     </div>
-    <button id="send-btn" onclick="sendMsg()" aria-label="إرسال">
-      <i class="fas fa-paper-plane"></i>
-    </button>
   </div>
 
-  <!-- زر الواتساب السفلي -->
-  <div class="deal-btn-wrapper">
-    <button id="dealBtn" class="deal-btn disabled" onclick="openDealWhatsApp()">
-      <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
-      <span id="dealBtnText">يفتح التواصل المباشر بعد استكمال البيانات</span>
-    </button>
-  </div>
+  <script>
+    const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+    
+    let chatHistory = JSON.parse(localStorage.getItem("tarek_chat_history") || "[]");
+    let qualificationScore = parseInt(localStorage.getItem("tarek_qual_score") || "0");
+    let canShareWhatsapp = localStorage.getItem("tarek_can_wa") === "true";
+    let isSending = false;
 
-</div>
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        if (splash) splash.classList.add("hidden");
+      }, 1000);
 
-<script>
-  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  const WHATSAPP_URL = "https://wa.me/201147758857";
-  const STORAGE_KEY = "tarek_agent_chat_memory_v1";
+      if (chatHistory.length > 0) {
+        clearMessagesAndRehydrate();
+      } else {
+        const initMsg = "أهلاً بك. أنا الوكيل الذكي الخاص بالأستاذ طارق طنطاوي. كيف يمكنني مساعدتك اليوم في عقارات مدينة نصر، مصر الجديدة، أو القاهرة الجديدة؟";
+        pushHistory(initMsg, "agent");
+      }
+    });
 
-  let chatHistory = [];
-  let qualificationScore = 0;
-  let canShareWhatsapp = false;
-
-  function getTimeString() {
-    const d = new Date();
-    return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-  }
-
-  function normalizeText(s) {
-    return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
-  }
-
-  function detectDirectContactRequest(text) {
-    const t = normalizeText(text);
-    const keys = ["واتساب", "whatsapp", "رقم", "تواصل", "اتصال", "كلم", "مكالمة", "معاينة", "احجز"];
-    return keys.some(k => t.includes(k));
-  }
-
-  function computeQualification(history) {
-    const userText = history
-      .filter(m => m.type === "user")
-      .map(m => m.text)
-      .join(" \n ")
-      .toLowerCase();
-
-    const hasIntent = /(اشتري|شراء|بدور|عايز شقة|عايز شقه|محتاج شقة|بيع|بائع|اعرض عقار)/i.test(userText);
-    const hasBudget = /(ميزانية|ميزانيه|مليون|الف|ألف|جنيه|سعر|budget|k|m)/i.test(userText);
-    const hasLocation = /(مدينة نصر|مدينه نصر|عباس العقاد|مكرم عبيد|مصطفى النحاس|الحي السابع|الحي الثامن|زهراء مدينة نصر|المنطقة التاسعة|الواحة|مصر الجديدة|هليوبوليس)/i.test(userText);
-    const hasSpecs = /(متر|غرف|غرفة|حمام|دور|تشطيب|فيو|واجهة|واجهه|مصعد|اسانسير)/i.test(userText);
-    const hasTimeline = /(جاهز|خلال|الشهر|فوري|أسبوع|اسبوع|وقت|ميعاد|موعد)/i.test(userText);
-
-    const score = [hasIntent, hasBudget, hasLocation, hasSpecs, hasTimeline].filter(Boolean).length;
-    return { score, qualified: score >= 4 };
-  }
-
-  function updateQualificationUI() {
-    const scoreEl = document.getElementById("qual-score");
-    const stateEl = document.getElementById("qual-state");
-    const fillEl = document.getElementById("qual-progress");
-    const dealBtn = document.getElementById("dealBtn");
-    const dealBtnText = document.getElementById("dealBtnText");
-
-    if (!scoreEl || !stateEl || !fillEl || !dealBtn || !dealBtnText) return;
-
-    scoreEl.textContent = `${qualificationScore}/5`;
-    fillEl.style.width = `${Math.max(0, Math.min(100, (qualificationScore / 5) * 100))}%`;
-
-    if (canShareWhatsapp) {
-      stateEl.className = "qual-state ready";
-      stateEl.textContent = "جاهز للتواصل المباشر 🎯";
-      dealBtn.classList.remove("disabled");
-      dealBtnText.textContent = "حسم الصفقة عبر الواتساب المباشر";
-    } else {
-      stateEl.className = "qual-state wait";
-      stateEl.textContent = "في انتظار تفاصيل الطلب";
-      dealBtn.classList.add("disabled");
-      dealBtnText.textContent = "يفتح التواصل المباشر بعد استكمال البيانات";
+    function getCurrentTime() {
+      const now = new Date();
+      return now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
     }
-  }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      chatHistory,
-      qualificationScore,
-      canShareWhatsapp
-    }));
-  }
+    function renderMsg(text, type, timeStr) {
+      const container = document.getElementById("chat-messages");
+      const typingBox = document.getElementById("tarek-typing");
+      
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `msg ${type}`;
+      
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "msg-content";
+      contentDiv.innerHTML = marked.parse(text);
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      const data = JSON.parse(raw);
-      if (!Array.isArray(data.chatHistory)) return false;
+      const metaDiv = document.createElement("div");
+      metaDiv.className = "msg-meta";
+      metaDiv.innerText = timeStr || getCurrentTime();
 
-      chatHistory = data.chatHistory.slice(-24);
-      qualificationScore = Number(data.qualificationScore || 0);
-      canShareWhatsapp = Boolean(data.canShareWhatsapp);
-      return true;
-    } catch {
-      return false;
+      msgDiv.appendChild(contentDiv);
+      msgDiv.appendChild(metaDiv);
+
+      if (typingBox) {
+        container.insertBefore(msgDiv, typingBox);
+      } else {
+        container.appendChild(msgDiv);
+      }
+      
+      scrollBottom();
     }
-  }
 
-  function clearMessagesAndRehydrate() {
-    const container = document.getElementById("chat-messages");
-    const typingBox = document.getElementById("tarek-typing");
+    function scrollBottom() {
+      const container = document.getElementById("chat-messages");
+      if (container) container.scrollTop = container.scrollHeight;
+    }
 
-    if (!container) return;
-    Array.from(container.querySelectorAll(".msg")).forEach((n) => n.remove());
-    chatHistory.forEach(msg => renderMsg(msg.text, msg.type, msg.time));
-    if (typingBox) container.appendChild(typingBox);
-    scrollBottom();
-  }
+    function pushHistory(text, type) {
+      const timeStr = getCurrentTime();
+      chatHistory.push({ text, type, time: timeStr });
+      
+      if (type === "user") {
+        if (/ميزانية|جنيه|مليون|كاش|تقسيط/i.test(text)) qualificationScore += 1;
+        if (/مدينة نصر|مصر الجديدة|القاهرة الجديدة|التجمع/i.test(text)) qualificationScore += 1;
+        if (/شراء|جاهز|معاينة|شقة|فيلا/i.test(text)) qualificationScore += 1;
+        if (qualificationScore >= 3) canShareWhatsapp = true;
+      }
 
-  function openDealWhatsApp() {
-    if (!canShareWhatsapp) return;
-    window.open(WHATSAPP_URL, "_blank");
-  }
+      localStorage.setItem("tarek_chat_history", JSON.stringify(chatHistory));
+      localStorage.setItem("tarek_qual_score", qualificationScore.toString());
+      localStorage.setItem("tarek_can_wa", canShareWhatsapp ? "true" : "false");
 
-  function renderMsg(text, type, timeStr = null) {
-    const container = document.getElementById("chat-messages");
-    const typingBox = document.getElementById("tarek-typing");
+      renderMsg(text, type, timeStr);
+    }
 
-    if (!container) return;
+    function clearMessagesAndRehydrate() {
+      const container = document.getElementById("chat-messages");
+      const typingBox = document.getElementById("tarek-typing");
 
-    const div = document.createElement("div");
-    div.className = `msg msg-${type}`;
+      if (!container) return;
 
-    let bodyHtml = "";
-    if (type === "bot") {
+      const msgs = container.querySelectorAll(".msg");
+      msgs.forEach(m => m.remove());
+
+      chatHistory.forEach(msg => renderMsg(msg.text, msg.type, msg.time));
+
+      if (typingBox) container.appendChild(typingBox);
+      scrollBottom();
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === "Enter" && !isSending) sendMsg();
+    }
+
+    function setControlsDisabled(disabled) {
+      isSending = disabled;
+      document.getElementById("user-input").disabled = disabled;
+      document.getElementById("send-btn").disabled = disabled;
+    }
+
+    async function sendMsg() {
+      const input = document.getElementById("user-input");
+      const text = input.value.trim();
+      if (!text || isSending) return;
+
+      input.value = "";
+      setControlsDisabled(true);
+      pushHistory(text, "user");
+
+      const typingBox = document.getElementById("tarek-typing");
+      if (typingBox) typingBox.style.display = "block";
+      scrollBottom();
+
       try {
-        bodyHtml = typeof marked !== "undefined" ? marked.parse(text) : text;
-      } catch (e) {
-        bodyHtml = text;
-      }
-    } else {
-      bodyHtml = text;
-    }
+        // توفير الحصة: إرسال آخر 4 رسائل فقط لتوفير الـ Tokens
+        const recentMessages = chatHistory.slice(-4);
 
-    const msgTime = timeStr || getTimeString();
-    const ticks = type === "user" ? '<i class="fas fa-check-double blue-tick"></i>' : '';
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: recentMessages,
+            qualificationScore: qualificationScore,
+            canShareWhatsapp: canShareWhatsapp
+          })
+        });
 
-    div.innerHTML = `
-      <div class="msg-content">${bodyHtml}</div>
-      <div class="msg-meta">
-        <span>${msgTime}</span>
-        ${ticks}
-      </div>
-    `;
+        const data = await response.json();
+        
+        if (typingBox) typingBox.style.display = "none";
 
-    if (type === "bot") {
-      const links = div.querySelectorAll("a");
-      links.forEach(link => {
-        link.setAttribute("target", "_blank");
-        link.setAttribute("rel", "noopener noreferrer");
-      });
-    }
-
-    if (typingBox) {
-      container.insertBefore(div, typingBox);
-    } else {
-      container.appendChild(div);
-    }
-    scrollBottom();
-    return div;
-  }
-
-  function scrollBottom() {
-    const container = document.getElementById("chat-messages");
-    if (container) container.scrollTop = container.scrollHeight;
-  }
-
-  function pushHistory(text, type) {
-    const time = getTimeString();
-    chatHistory.push({ text, type, time, ts: Date.now() });
-    if (chatHistory.length > 24) chatHistory.shift();
-
-    const q = computeQualification(chatHistory);
-    qualificationScore = q.score;
-    if (q.qualified) canShareWhatsapp = true;
-
-    saveState();
-    updateQualificationUI();
-  }
-
-  async function sendMsg() {
-    const input = document.getElementById("user-input");
-    if (!input) return;
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    renderMsg(text, "user");
-    pushHistory(text, "user");
-
-    if (detectDirectContactRequest(text)) {
-      canShareWhatsapp = true;
-      updateQualificationUI();
-      saveState();
-    }
-
-    input.value = "";
-
-    const typing = document.getElementById("tarek-typing");
-    if (typing) typing.style.display = "block";
-    scrollBottom();
-
-    try {
-      const historyForApi = chatHistory
-        .filter(m => m.type === "user" || m.type === "bot")
-        .slice(-10)
-        .map(m => ({ role: m.type === "bot" ? "assistant" : "user", message: m.text }));
-
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: historyForApi })
-      });
-
-      const data = await res.json();
-      if (typing) typing.style.display = "none";
-
-      const botReply = data.response || "تعذر تنفيذ الطلب الآن. حاول بعد قليل.";
-
-      if (typeof data.qualificationScore === "number") {
-        qualificationScore = data.qualificationScore;
-      }
-      if (typeof data.canShareWhatsapp === "boolean") {
-        canShareWhatsapp = data.canShareWhatsapp;
-      }
-      if (typeof data.qualified === "boolean" && data.qualified) {
-        canShareWhatsapp = true;
-      }
-
-      renderMsg(botReply, "bot");
-      pushHistory(botReply, "bot");
-      updateQualificationUI();
-    } catch (e) {
-      if (typing) typing.style.display = "none";
-      const fallback = "في مشكلة اتصال مؤقتة. كمّل معايا بياناتك (المنطقة/المساحة/السعر) وأنا أتابع معاك هنا.";
-      renderMsg(fallback, "bot");
-      pushHistory(fallback, "bot");
-    }
-  }
-
-  window.onload = () => {
-    const hasState = loadState();
-    if (!hasState) {
-      chatHistory = [
-        {
-          text: "أهلاً بك، معاك أ. طارق طنطاوي. خلّيني أفلترلك أفضل فرص مدينة نصر وهليوبوليس — بتشتري ولا بتبيع؟",
-          type: "bot",
-          time: getTimeString(),
-          ts: Date.now()
+        if (typeof data.qualificationScore === "number") {
+          qualificationScore = Math.max(qualificationScore, data.qualificationScore);
+          localStorage.setItem("tarek_qual_score", qualificationScore.toString());
         }
-      ];
-      qualificationScore = 0;
-      canShareWhatsapp = false;
-      saveState();
+        if (data.canShareWhatsapp || qualificationScore >= 3) {
+          canShareWhatsapp = true;
+          localStorage.setItem("tarek_can_wa", "true");
+        }
+
+        const reply = data.reply || data.response || "عذراً، حدث خطأ في معالجة طلبك.";
+        pushHistory(reply, "agent");
+
+      } catch (err) {
+        if (typingBox) typingBox.style.display = "none";
+        pushHistory("تعذر الاتصال بالخادم حالياً. يرجى المحاولة لاحقاً.", "agent");
+      } finally {
+        setControlsDisabled(false);
+        document.getElementById("user-input").focus();
+      }
     }
-
-    clearMessagesAndRehydrate();
-    updateQualificationUI();
-  };
-</script>
-
+  </script>
 </body>
 </html>
