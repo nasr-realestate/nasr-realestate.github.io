@@ -234,6 +234,10 @@
     #send-btn:hover {
       background: #054840;
     }
+    #send-btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 
@@ -310,12 +314,19 @@
       scrollBottom();
     }
 
-    function parseMarkdownLinks(text) {
-      const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-      return text.replace(regex, function(_, label, url) {
+    function parseMarkdown(text) {
+      // تحويل النص العريض **text** إلى <b>text</b>
+      let parsed = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      
+      // تحويل الروابط [Label](URL)
+      const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+      parsed = parsed.replace(linkRegex, function(_, label, url) {
         const isWa = /wa\.me\//i.test(url);
         return `<br><a href="${url}" target="_blank" class="msg-link-btn">${isWa ? '<i class="fab fa-whatsapp"></i> ' : '<i class="fas fa-link"></i> '}${label}</a>`;
       });
+
+      // تحويل السطور الجديدة إلى <br>
+      return parsed.replace(/\n/g, '<br>');
     }
 
     function renderMsg(text, type, timeStr) {
@@ -328,10 +339,7 @@
       const t = timeStr || getTimeString();
       const checkMarks = type === "user" ? ' <i class="fas fa-check-double" style="color:#53bdeb;"></i>' : '';
 
-      let formattedText = text;
-      if (type === "bot" && /\[[^\]]+\]\(https?:\/\//.test(text)) {
-        formattedText = parseMarkdownLinks(text);
-      }
+      let formattedText = type === "bot" ? parseMarkdown(text) : text.replace(/\n/g, '<br>');
 
       div.innerHTML = `<div>${formattedText}</div><div class="msg-time">${t}${checkMarks}</div>`;
 
@@ -346,6 +354,7 @@
 
     async function sendMsg() {
       const input = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
       const text = input.value.trim();
       if (!text) return;
 
@@ -356,16 +365,27 @@
       saveState();
 
       input.value = "";
+      input.disabled = true;
+      sendBtn.disabled = true;
 
       const typing = document.getElementById("tarek-typing");
       typing.style.display = "block";
       scrollBottom();
 
+      // تجهيز سجل المحادثة للتمرير إلى Cloudflare Worker
+      const formattedHistory = chatHistory.slice(0, -1).map(h => ({
+        role: h.type === "bot" ? "assistant" : "user",
+        message: h.text
+      }));
+
       try {
         const res = await fetch(WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
+          body: JSON.stringify({ 
+            message: text,
+            history: formattedHistory
+          })
         });
 
         const data = await res.json();
@@ -384,6 +404,10 @@
         renderMsg(fallback, "bot", botTime);
         chatHistory.push({ text: fallback, type: "bot", time: botTime });
         saveState();
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
       }
     }
 
