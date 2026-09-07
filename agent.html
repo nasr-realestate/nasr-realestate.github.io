@@ -222,7 +222,7 @@
 
   <script>
     const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-    
+
     let chatHistory = JSON.parse(localStorage.getItem("tarek_chat_history") || "[]");
     let qualificationScore = parseInt(localStorage.getItem("tarek_qual_score") || "0");
     let canShareWhatsapp = localStorage.getItem("tarek_can_wa") === "true";
@@ -237,7 +237,8 @@
       if (chatHistory.length > 0) {
         clearMessagesAndRehydrate();
       } else {
-        const initMsg = "أهلاً بك. أنا الوكيل الذكي الخاص بالأستاذ طارق طنطاوي. كيف يمكنني مساعدتك اليوم في عقارات مدينة نصر، مصر الجديدة، أو القاهرة الجديدة؟";
+        // ✅ رسالة الترحيب مصحّحة — تذكر مدينة نصر والمربع الذهبي فقط (لم تُذكر مصر الجديدة/القاهرة الجديدة التي يرفضها البوت)
+        const initMsg = "أهلاً بيك 👋 أنا طارق طنطاوي، مكتب سمسار طلبك — متخصصين في مدينة نصر والمربع الذهبي.\n\nعاوز تشتري، تبيع، ولا تستأجر؟";
         pushHistory(initMsg, "agent");
       }
     });
@@ -250,10 +251,10 @@
     function renderMsg(text, type, timeStr) {
       const container = document.getElementById("chat-messages");
       const typingBox = document.getElementById("tarek-typing");
-      
+
       const msgDiv = document.createElement("div");
       msgDiv.className = `msg ${type}`;
-      
+
       const contentDiv = document.createElement("div");
       contentDiv.className = "msg-content";
       contentDiv.innerHTML = marked.parse(text);
@@ -270,7 +271,7 @@
       } else {
         container.appendChild(msgDiv);
       }
-      
+
       scrollBottom();
     }
 
@@ -282,7 +283,7 @@
     function pushHistory(text, type) {
       const timeStr = getCurrentTime();
       chatHistory.push({ text, type, time: timeStr });
-      
+
       if (type === "user") {
         if (/ميزانية|جنيه|مليون|كاش|تقسيط/i.test(text)) qualificationScore += 1;
         if (/مدينة نصر|مصر الجديدة|القاهرة الجديدة|التجمع/i.test(text)) qualificationScore += 1;
@@ -350,7 +351,7 @@
         });
 
         const data = await response.json();
-        
+
         if (typingBox) typingBox.style.display = "none";
 
         if (typeof data.qualificationScore === "number") {
