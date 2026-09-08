@@ -716,7 +716,10 @@
   // ============================================================
 
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  const WHATSAPP_URL = "https://wa.me/201147758857";
+  
+  // ✅ الرابط الجديد مع نص مسبق للتأهيل
+  const WHATSAPP_URL = "https://wa.me/201147758857?text=أهلاً%20طارق،%20تم%20تأهيلي%20للتحدث%20معك%20حول%20العقارات%20النخبوية.%0A%0Aتفاصيلي:%0A-٪20الغرض:%20(شراء/بيع/إيجار)%0A-٪20المنطقة:%20(مدينة%20نصر%20/%20مصر%20الجديدة)%0A-٪20الميزانية:%20أكثر%20من%204%20ملايين%20للشراء،%20أو%20أكثر%20من%2015٬000%20للإيجار.%0A%0Aأنتظر%20ردكم%20الكريم.";
+
   const STORAGE_KEY = "tarek_agent_chat_memory_v5";
   const QUICK_REPLY_TEXT = `أهلاً بك.. معك طارق طنطاوي. اعتذر عن عدم الرد حالياً لارتباطي بمواعيد عمل.
 
@@ -808,7 +811,6 @@ https://nasr-realestate.github.io/agent.html 🏢
       dealBtnText.textContent = 'يفتح بعد التأهيل أو بطلبك المباشر';
     }
 
-    // إظهار إشعار عند التأهيل
     if (qualificationScore >= 4 && !canShareWhatsapp) {
       canShareWhatsapp = true;
       saveState();
@@ -854,7 +856,6 @@ https://nasr-realestate.github.io/agent.html 🏢
         a.setAttribute('rel', 'noopener noreferrer');
       });
 
-      // إضافة أزرار سريعة للرد السريع
       if (isQuickReply) {
         const btnGroup = document.createElement('div');
         btnGroup.className = 'msg-btn-group';
@@ -991,20 +992,17 @@ https://nasr-realestate.github.io/agent.html 🏢
       if (typing) typing.style.display = 'none';
 
       if (data && data.response) {
-        // تحديث القيم من الـ Worker
         if (typeof data.qualificationScore === 'number') qualificationScore = data.qualificationScore;
         if (typeof data.canShareWhatsapp === 'boolean') canShareWhatsapp = data.canShareWhatsapp;
         saveState();
         updateQualificationUI();
 
-        // هل هي رسالة رد سريع؟ نتحقق من الكلمات المفتاحية
         const isQuick = data.response.includes('اعتذر عن عدم الرد') ||
                         data.response.includes('لضمان توجيهك') ||
                         data.response.includes('تفاصيل طلبك');
 
         pushHistory(data.response, 'bot', null, isQuick);
       } else {
-        // فشل الـ Worker – نعرض الرد السريع
         pushHistory(QUICK_REPLY_TEXT, 'bot', null, true);
         canShareWhatsapp = true;
         updateQualificationUI();
@@ -1014,8 +1012,6 @@ https://nasr-realestate.github.io/agent.html 🏢
     } catch (err) {
       if (typing) typing.style.display = 'none';
       console.error('Worker Error:', err);
-
-      // في حالة الخطأ نعرض الرد السريع
       pushHistory(QUICK_REPLY_TEXT, 'bot', null, true);
       canShareWhatsapp = true;
       updateQualificationUI();
@@ -1027,18 +1023,15 @@ https://nasr-realestate.github.io/agent.html 🏢
 
   // ===== تهيئة الصفحة =====
   function initApp() {
-    // إخفاء شاشة الدخول
     setTimeout(() => {
       document.getElementById('splash-screen').classList.add('hide-splash');
       document.getElementById('appContainer').classList.add('show-app');
     }, 2200);
 
-    // تحميل الحالة
     const hasState = loadState();
     if (hasState && chatHistory.length > 0) {
       clearMessagesAndRehydrate();
     } else {
-      // رسالة ترحيب افتراضية
       const welcome = `أهلاً بك يا فندم، أنا طارق طنطاوي. 🏢
 
 إيه اللي حضرتك بتدور عليه؟ شراء ولا إيجار؟ وفي أي منطقة؟
@@ -1049,10 +1042,8 @@ https://nasr-realestate.github.io/agent.html 🏢
     updateQualificationUI();
   }
 
-  // تشغيل التطبيق عند تحميل الصفحة
   document.addEventListener('DOMContentLoaded', initApp);
 
-  // إغلاق نموذج التأهيل بالضغط خارج البطاقة
   document.getElementById('quickFormOverlay').addEventListener('click', function(e) {
     if (e.target === this) toggleQuickForm();
   });
