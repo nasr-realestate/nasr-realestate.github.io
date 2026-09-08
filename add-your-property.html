@@ -13,7 +13,7 @@ image: "/assets/img/social-home.webp"
   }
 
   .clean-wrapper {
-    max-width: 600px;
+    max-width: 650px;
     margin: 2rem auto;
     padding: 0 1rem;
   }
@@ -135,6 +135,12 @@ image: "/assets/img/social-home.webp"
     box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
   }
 
+  .input-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 4px;
+  }
+
   .step-actions {
     display: flex;
     justify-content: space-between;
@@ -177,12 +183,32 @@ image: "/assets/img/social-home.webp"
     justify-content: center;
     gap: 6px;
   }
+
+  .price-hint {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #0369a1;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wa-btn-submit {
+    background: #25d366 !important;
+  }
+  .wa-btn-submit:hover {
+    background: #128c7e !important;
+  }
 </style>
 
 <div class="clean-wrapper">
   <header style="text-align: center; margin-bottom: 1.5rem;">
-    <h1 style="color: #0f172a; font-size: 1.8rem; font-weight: 800; margin-bottom: 8px;">اعرض عقارك للبيع أو الإيجار</h1>
-    <p style="color: #475569; font-size: 0.95rem;">خطوات بسيطة لتأهيل وتسويق عقارك مباشرة مع أ. طارق طنطاوي</p>
+    <h1 style="color: #0f172a; font-size: 1.8rem; font-weight: 800; margin-bottom: 8px;">🏢 اعرض عقارك بذكاء</h1>
+    <p style="color: #475569; font-size: 0.95rem;">خطوات بسيطة لتقييم وتسويق عقارك مباشرة مع <strong>أ. طارق طنطاوي</strong> – متخصص مدينة نصر وهليوبوليس</p>
   </header>
 
   <div class="clean-card">
@@ -196,21 +222,28 @@ image: "/assets/img/social-home.webp"
 
     <form id="interactiveAddForm">
 
-      <!-- الخطوة 1 -->
+      <!-- الخطوة 1: نوع المعاملة والعقار -->
       <div class="form-step active" id="step1">
         <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">1. نوع المعاملة والعقار</h3>
-        <p style="color: #64748b; font-size: 0.85rem;">اختر نوع العقار لسرعة التقييم:</p>
-        
+        <p style="color: #64748b; font-size: 0.85rem;">اختر نوع العقار لتوجيهك للقنوات المناسبة:</p>
+
         <div class="options-grid" id="typeOptions">
-          <div class="option-btn selected" data-value="بيع">شقة للبيع</div>
-          <div class="option-btn" data-value="إيجار">شقة للإيجار</div>
-          <div class="option-btn" data-value="مكتب">مكتب إداري</div>
-          <div class="option-btn" data-value="محل">محل تجاري</div>
+          <div class="option-btn selected" data-value="بيع">🏠 شقة للبيع</div>
+          <div class="option-btn" data-value="إيجار">🔑 شقة للإيجار</div>
+          <div class="option-btn" data-value="مكتب">🏢 مكتب إداري</div>
+          <div class="option-btn" data-value="محل">🛍️ محل تجاري</div>
+        </div>
+
+        <!-- تلميح حسب النوع -->
+        <div id="priceHint" class="price-hint">
+          <i class="fas fa-lightbulb"></i>
+          <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً</span>
         </div>
 
         <div style="margin-top: 18px;">
-          <label style="font-size: 0.9rem; color: #334155; font-weight: 600;">المنطقة والشارع</label>
-          <input type="text" id="propLocation" class="clean-input" placeholder="مثال: مدينة نصر - مكرم عبيد" required>
+          <label style="font-size: 0.9rem; color: #334155; font-weight: 600;">📍 المنطقة والشارع</label>
+          <input type="text" id="propLocation" class="clean-input" placeholder="مثال: مدينة نصر – شارع مكرم عبيد" required>
+          <div class="input-hint">مثال: المنطقة السادسة، عباس العقاد، مكرم عبيد، مصطفى النحاس</div>
         </div>
 
         <div class="step-actions">
@@ -218,10 +251,10 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 2 -->
+      <!-- الخطوة 2: التفاصيل الفنية -->
       <div class="form-step" id="step2">
-        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">2. المساحة والسعر المطلوب</h3>
-        <p style="color: #64748b; font-size: 0.85rem;">ساعدنا في تحديد القيمة السوقية العادلة:</p>
+        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">2. تفاصيل العقار</h3>
+        <p style="color: #64748b; font-size: 0.85rem;">أدخل البيانات المطلوبة للتقييم السريع:</p>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px;">
           <div>
@@ -234,12 +267,46 @@ image: "/assets/img/social-home.webp"
           </div>
         </div>
 
-        <div style="margin-top: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+          <div>
+            <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">عدد الغرف</label>
+            <select id="propRooms" class="clean-input">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5+">5+</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">عدد الحمامات</label>
+            <select id="propBaths" class="clean-input">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4+">4+</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">الدور</label>
+          <select id="propFloor" class="clean-input">
+            <option value="أرضي">أرضي</option>
+            <option value="الأول">الأول</option>
+            <option value="الثاني">الثاني</option>
+            <option value="الثالث" selected>الثالث</option>
+            <option value="الرابع">الرابع</option>
+            <option value="الخامس فما فوق">الخامس فما فوق</option>
+          </select>
+        </div>
+
+        <div style="margin-top: 12px;">
           <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">حالة التشطيب</label>
           <div class="options-grid" id="finishingOptions">
-            <div class="option-btn selected" data-value="سوبر لوكس">سوبر لوكس</div>
-            <div class="option-btn" data-value="تحتاج تجديد">تحتاج تجديد</div>
-            <div class="option-btn" data-value="نصف تشطيب">نصف تشطيب</div>
+            <div class="option-btn selected" data-value="سوبر لوكس">✨ سوبر لوكس</div>
+            <div class="option-btn" data-value="تحتاج تجديد">🔧 تحتاج تجديد</div>
+            <div class="option-btn" data-value="نصف تشطيب">🛠️ نصف تشطيب</div>
           </div>
         </div>
 
@@ -249,36 +316,37 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 3 -->
+      <!-- الخطوة 3: التواصل -->
       <div class="form-step" id="step3">
-        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">3. التواصل السريع</h3>
-        <p style="color: #64748b; font-size: 0.85rem;">بياناتك محمية وستصل حصرياً إلى أ. طارق طنطاوي:</p>
+        <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">3. بيانات التواصل</h3>
+        <p style="color: #64748b; font-size: 0.85rem;">بياناتك محمية بالكامل وتصل مباشرة إلى أ. طارق طنطاوي.</p>
 
         <div style="margin-top: 14px;">
-          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">اسم المالك</label>
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">👤 اسم المالك</label>
           <input type="text" id="ownerName" class="clean-input" placeholder="الاسم الكريم" required>
         </div>
 
         <div style="margin-top: 14px;">
-          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">رقم الواتساب</label>
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">📱 رقم الواتساب</label>
           <input type="tel" id="ownerPhone" class="clean-input" placeholder="01xxxxxxxxx" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+          <div class="input-hint">سيتم التواصل عبر هذا الرقم فوراً.</div>
         </div>
 
         <div style="margin-top: 14px;">
-          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">ملاحظات (اختياري)</label>
-          <input type="text" id="propNotes" class="clean-input" placeholder="مثال: الدور السابع، أسانسير...">
+          <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">📝 ملاحظات إضافية (اختياري)</label>
+          <input type="text" id="propNotes" class="clean-input" placeholder="مثال: يوجد أسانسير، واجهة بحرية، تشطيب فاخر...">
         </div>
 
         <div class="step-actions">
           <button type="button" class="btn-prev" onclick="prevStep(2)">سابق</button>
-          <button type="submit" id="submitBtn" class="btn-next" style="background: #25d366;">
-            إرسال للواتساب مباشرة <i class="fab fa-whatsapp"></i>
+          <button type="submit" id="submitBtn" class="btn-next wa-btn-submit">
+            <i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة
           </button>
         </div>
       </div>
 
       <div class="security-badge">
-        <i class="fas fa-user-shield" style="color: #1e3a8a;"></i> بياناتك شفافة ومحمية ولا تظهر للعلن إطلاقاً.
+        <i class="fas fa-user-shield" style="color: #1e3a8a;"></i> بياناتك آمنة ولا تظهر للعلن. نتواصل معك خلال 24 ساعة.
       </div>
 
     </form>
@@ -290,14 +358,24 @@ let currentStep = 1;
 let selectedType = "بيع";
 let selectedFinishing = "سوبر لوكس";
 
+// ===== اختيار نوع العقار =====
 document.querySelectorAll('#typeOptions .option-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.remove('selected'));
     this.classList.add('selected');
     selectedType = this.getAttribute('data-value');
+
+    // تحديث التلميح حسب النوع
+    const hint = document.getElementById('priceHint');
+    if (selectedType === 'إيجار') {
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> ⚠️ الحد الأدنى للإيجار النخبوي: 15,000 ج.م شهرياً`;
+    } else {
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> ⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً`;
+    }
   });
 });
 
+// ===== اختيار التشطيب =====
 document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#finishingOptions .option-btn').forEach(b => b.classList.remove('selected'));
@@ -306,6 +384,7 @@ document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
   });
 });
 
+// ===== التنقل بين الخطوات =====
 function nextStep(step) {
   if (step === 2 && !document.getElementById('propLocation').value.trim()) {
     alert('برجاء كتابة المنطقة أو الشارع أولاً.');
@@ -324,49 +403,76 @@ function nextStep(step) {
   document.getElementById(`node${step}`).classList.add('active');
   const progressPercent = ((step - 1) / 2) * 100;
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
-  
+
   currentStep = step;
 }
 
 function prevStep(step) {
   document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
   document.getElementById(`step${step}`).classList.add('active');
-  
+
   document.getElementById(`node${currentStep}`).classList.remove('active');
   const progressPercent = ((step - 1) / 2) * 100;
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
-  
+
   currentStep = step;
 }
 
-document.getElementById('interactiveAddForm').addEventListener('submit', async function(e) {
+// ===== إرسال النموذج عبر واتساب =====
+document.getElementById('interactiveAddForm').addEventListener('submit', function(e) {
   e.preventDefault();
 
-  const ownerName = document.getElementById('ownerName').value;
-  const ownerPhone = document.getElementById('ownerPhone').value;
-  const location = document.getElementById('propLocation').value;
-  const area = document.getElementById('propArea').value;
-  const price = document.getElementById('propPrice').value;
-  const notes = document.getElementById('propNotes').value;
+  const ownerName = document.getElementById('ownerName').value.trim();
+  const ownerPhone = document.getElementById('ownerPhone').value.trim();
+  const location = document.getElementById('propLocation').value.trim();
+  const area = document.getElementById('propArea').value.trim();
+  const price = document.getElementById('propPrice').value.trim();
+  const rooms = document.getElementById('propRooms').value;
+  const baths = document.getElementById('propBaths').value;
+  const floor = document.getElementById('propFloor').value;
+  const notes = document.getElementById('propNotes').value.trim();
+
+  // التحقق من الحقول المطلوبة
+  if (!ownerName || !ownerPhone || !location || !area || !price) {
+    alert('برجاء ملء جميع الحقول المطلوبة.');
+    return;
+  }
 
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
 
+  // بناء رسالة واتساب منظمة
   const waText = encodeURIComponent(
-    `السلام عليكم أ. طارق طنطاوي،\nأنا المالك: ${ownerName}\n` +
-    `عايز أعرض عقاري للتسويق والتقييم عندك:\n` +
-    `نوع المعاملة: ${selectedType}\n` +
-    `الموقع: ${location}\n` +
-    `المساحة: ${area} متر مربع\n` +
-    `التشطيب: ${selectedFinishing}\n` +
-    `السعر المطلوب: ${price} ج.م\n` +
-    (notes ? `ملاحظات: ${notes}\n` : '') +
-    `رقم التواصل: ${ownerPhone}`
+    `السلام عليكم أ. طارق طنطاوي،\n` +
+    `أنا المالك: ${ownerName}\n` +
+    `عايز أعرض عقاري للتسويق عندك:\n` +
+    `─────────────────\n` +
+    `🏷️ نوع المعاملة: ${selectedType}\n` +
+    `📍 الموقع: ${location}\n` +
+    `📐 المساحة: ${area} م²\n` +
+    `💰 السعر المطلوب: ${price} ج.م\n` +
+    `🛏️ الغرف: ${rooms}\n` +
+    `🛁 الحمامات: ${baths}\n` +
+    `🏢 الدور: ${floor}\n` +
+    `✨ التشطيب: ${selectedFinishing}\n` +
+    (notes ? `📝 ملاحظات: ${notes}\n` : '') +
+    `─────────────────\n` +
+    `📱 رقم التواصل: ${ownerPhone}\n` +
+    `أرجو تقييم العقار والتواصل معي في أقرب وقت.`
   );
 
+  // فتح واتساب
   setTimeout(() => {
     window.location.href = `https://wa.me/201147758857?text=${waText}`;
+        // إعادة تمكين الزر بعد ثواني (في حال الرجوع للصفحة)
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
+    }, 3000);
   }, 400);
 });
 </script>
+
+</body>
+</html>
