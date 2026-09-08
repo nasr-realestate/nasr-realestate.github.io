@@ -712,15 +712,16 @@
 <script>
   // ============================================================
   //  الكود الرئيسي – متكامل مع Worker وتحسينات متقدمة
+  //  نفس مفاتيح التخزين المستخدمة في النافذة المنبثقة
   // ============================================================
 
-  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  // ✅ رابط واتساب مع نص مسبق متكامل للتأهيل
-  const WHATSAPP_URL = "https://wa.me/201147758857?text=أهلاً%20طارق،%20تم%20تأهيلي%20للتحدث%20معك%20حول%20العقارات%20النخبوية.%0A%0Aتفاصيلي:%0A-٪20الغرض:%20(شراء/بيع/إيجار)%0A-٪20المنطقة:%20(مدينة%20نصر%20/%20مصر%20الجديدة)%0A-٪20الميزانية:%20أكثر%20من%204%20ملايين%20للشراء،%20أو%20أكثر%20من%2015٬000%20للإيجار.%0A%0Aأنتظر%20ردكم%20الكريم.";
-
+    // يجب أن تكون هذه المفاتيح متطابقة مع النافذة المنبثقة
   const STORAGE_KEY = "tarek_agent_chat_memory_v7";
   const SCORE_KEY = "tarek_qual_score_v7";
   const WA_KEY = "tarek_can_wa_v7";
+
+  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+  const WHATSAPP_URL = "https://wa.me/201147758857?text=أهلاً%20طارق،%20تم%20تأهيلي%20للتحدث%20معك%20حول%20العقارات%20النخبوية.%0A%0Aتفاصيلي:%0A-٪20الغرض:%20(شراء/بيع/إيجار)%0A-٪20المنطقة:%20(مدينة%20نصر%20/%20مصر%20الجديدة)%0A-٪20الميزانية:%20أكثر%20من%204%20ملايين%20للشراء،%20أو%20أكثر%20من%2015٬000%20للإيجار.%0A%0Aأنتظر%20ردكم%20الكريم.";
 
   let chatHistory = [];
   let qualificationScore = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -737,7 +738,7 @@
     if (container) container.scrollTop = container.scrollHeight;
   }
 
-  // ===== حفظ / استرجاع الحالة =====
+  // ===== حفظ الحالة في localStorage =====
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
@@ -746,13 +747,17 @@
     } catch {}
   }
 
+  // ===== استرجاع الحالة من localStorage =====
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
-      if (!Array.isArray(data)) return false;
+      if (!Array.isArray(data) || data.length === 0) return false;
       chatHistory = data;
+      // تحديث المؤشرات من localStorage
+      qualificationScore = parseInt(localStorage.getItem(SCORE_KEY) || "0");
+      canShareWhatsapp = localStorage.getItem(WA_KEY) === "true";
       return true;
     } catch {
       return false;
@@ -834,7 +839,6 @@
     }
 
     if (type === 'bot') {
-      // استخدام marked لتحويل الماركداون
       div.innerHTML = marked.parse(text);
       div.querySelectorAll('a').forEach(a => {
         a.setAttribute('target', '_blank');
@@ -988,7 +992,6 @@
 
         pushHistory(data.response, 'bot', null, isQuick);
       } else {
-        // رد سريع احتياطي
         const fallback = `أهلاً بك.. معك طارق طنطاوي. اعتذر عن عدم الرد حالياً لارتباطي بمواعيد عمل.
 
 لضمان توجيهك للفرصة العقارية الأنسب وتوفير وقتك، يرجى ترك تفاصيل طلبك:
@@ -1039,7 +1042,15 @@ https://nasr-realestate.github.io/agent.html 🏢
 
     const hasState = loadState();
     if (hasState && chatHistory.length > 0) {
+      // استعادة المحادثة مع رسالة ترحيب بالعودة
       clearMessagesAndRehydrate();
+      // نضيف رسالة ترحيب بالعودة إذا كانت المحادثة قديمة
+      const lastMsg = chatHistory[chatHistory.length - 1];
+      const restoreMsg = `مرحباً بعودتك يا فندم! تم استعادة محادثتك السابقة. 🎯`;
+      if (!lastMsg || lastMsg.text !== restoreMsg) {
+        // نتأكد من عدم إضافة الرسالة مرتين
+        pushHistory(restoreMsg, 'bot', null, false);
+      }
     } else {
       const welcome = `أهلاً بك يا فندم، أنا طارق طنطاوي. 🏢
 
@@ -1066,4 +1077,3 @@ https://nasr-realestate.github.io/agent.html 🏢
 
 </body>
 </html>
-  
