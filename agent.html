@@ -452,7 +452,7 @@
       transform: scale(1.01);
     }
 
-    /* ========== نموذج التأهيل السريع ========== */
+    /* ========== نموذج التأهيل السريع (نسخة محسّنة) ========== */
     .quick-form-overlay {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
@@ -469,12 +469,14 @@
     }
     .quick-form-card {
       background: #ffffff;
-      max-width: 420px;
+      max-width: 460px;
       width: 100%;
       border-radius: 24px;
       padding: 28px 24px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
       animation: fadeIn 0.3s ease;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .quick-form-card h2 {
       color: var(--wa-header);
@@ -511,6 +513,30 @@
       border-color: var(--wa-green);
       box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2);
     }
+    .quick-form-card .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .quick-form-card .option-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 10px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+    .quick-form-card .option-btn:hover,
+    .quick-form-card .option-btn.selected {
+      border-color: var(--wa-green);
+      background: #eff6ff;
+      color: #075e54;
+    }
     .quick-form-card .form-actions {
       display: flex;
       gap: 10px;
@@ -539,6 +565,9 @@
     }
     .quick-form-card .form-actions .btn-cancel:hover {
       background: #e0e0e0;
+    }
+    .quick-form-card .hidden-field {
+      display: none;
     }
 
     /* ========== إشعار منبثق ========== */
@@ -578,6 +607,9 @@
       .msg { max-width: 90%; font-size: 13px; }
       .agent-info h1 { font-size: 0.95rem; }
       .quick-form-card { padding: 20px 16px; }
+      .quick-form-card .options-grid {
+        grid-template-columns: 1fr 1fr;
+      }
     }
   </style>
 </head>
@@ -649,19 +681,28 @@
 
 </div>
 
-<!-- ========== نموذج التأهيل السريع ========== -->
+<!-- ========== نموذج التأهيل السريع (نسخة محسّنة ومتكاملة) ========== -->
 <div class="quick-form-overlay" id="quickFormOverlay">
   <div class="quick-form-card">
     <h2>📋 سجل طلبك بسرعة</h2>
-    <p>عبّر البيانات وهنرشح لك العقارات المناسبة فوراً</p>
+    <p>اختر نوع الطلب واملأ البيانات المطلوبة</p>
 
-    <label for="qf-purpose">الغرض</label>
+    <!-- نوع المستخدم -->
+    <label>أنا:</label>
+    <div class="options-grid" id="userTypeOptions">
+      <div class="option-btn selected" data-value="buyer">🔍 أبحث عن عقار</div>
+      <div class="option-btn" data-value="seller">📢 أعرض عقاري</div>
+    </div>
+
+    <!-- حقل نوع المعاملة -->
+    <label for="qf-purpose">نوع المعاملة</label>
     <select id="qf-purpose">
       <option value="شراء">شراء</option>
       <option value="بيع">بيع</option>
       <option value="إيجار">إيجار</option>
     </select>
 
+    <!-- حقل المنطقة -->
     <label for="qf-area">المنطقة</label>
     <select id="qf-area">
       <option value="مدينة نصر">مدينة نصر</option>
@@ -676,6 +717,7 @@
       <option value="مكرم عبيد">مكرم عبيد</option>
     </select>
 
+    <!-- حقل نوع العقار -->
     <label for="qf-type">نوع العقار</label>
     <select id="qf-type">
       <option value="شقة">شقة</option>
@@ -684,9 +726,15 @@
       <option value="إداري">إداري</option>
     </select>
 
-    <label for="qf-budget">الميزانية (جنيه)</label>
-    <input type="number" id="qf-budget" placeholder="مثال: 5000000" />
+    <!-- حقل المساحة -->
+    <label for="qf-area-sqm">المساحة (م²)</label>
+    <input type="number" id="qf-area-sqm" placeholder="مثال: 180" />
 
+    <!-- حقل السعر / الميزانية (يتغير حسب نوع المستخدم) -->
+    <label id="qf-price-label" for="qf-price">الميزانية المتاحة (ج.م)</label>
+    <input type="text" id="qf-price" placeholder="مثال: 5,000,000" />
+
+    <!-- حقل الغرف -->
     <label for="qf-rooms">عدد الغرف</label>
     <select id="qf-rooms">
       <option value="1">1</option>
@@ -695,6 +743,38 @@
       <option value="4">4</option>
       <option value="5+">5+</option>
     </select>
+
+    <!-- حقل الحمامات -->
+    <label for="qf-baths">عدد الحمامات</label>
+    <select id="qf-baths">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4+">4+</option>
+    </select>
+
+    <!-- حقل التشطيب (يظهر للبائعين فقط) -->
+    <div id="qf-finishing-group" class="hidden-field">
+      <label for="qf-finishing">حالة التشطيب</label>
+      <select id="qf-finishing">
+        <option value="سوبر لوكس">سوبر لوكس</option>
+        <option value="تحتاج تجديد">تحتاج تجديد</option>
+        <option value="نصف تشطيب">نصف تشطيب</option>
+      </select>
+    </div>
+
+    <!-- حقل الدور (يظهر للبائعين فقط) -->
+    <div id="qf-floor-group" class="hidden-field">
+      <label for="qf-floor">الدور</label>
+      <select id="qf-floor">
+        <option value="أرضي">أرضي</option>
+        <option value="الأول">الأول</option>
+        <option value="الثاني">الثاني</option>
+        <option value="الثالث" selected>الثالث</option>
+        <option value="الرابع">الرابع</option>
+        <option value="الخامس فما فوق">الخامس فما فوق</option>
+      </select>
+    </div>
 
     <div class="form-actions">
       <button class="btn-cancel" onclick="toggleQuickForm()">إلغاء</button>
@@ -715,7 +795,6 @@
   //  نفس مفاتيح التخزين المستخدمة في النافذة المنبثقة
   // ============================================================
 
-    // يجب أن تكون هذه المفاتيح متطابقة مع النافذة المنبثقة
   const STORAGE_KEY = "tarek_agent_chat_memory_v7";
   const SCORE_KEY = "tarek_qual_score_v7";
   const WA_KEY = "tarek_can_wa_v7";
@@ -755,7 +834,6 @@
       const data = JSON.parse(raw);
       if (!Array.isArray(data) || data.length === 0) return false;
       chatHistory = data;
-      // تحديث المؤشرات من localStorage
       qualificationScore = parseInt(localStorage.getItem(SCORE_KEY) || "0");
       canShareWhatsapp = localStorage.getItem(WA_KEY) === "true";
       return true;
@@ -916,22 +994,68 @@
     renderMsg(text, type, t, isQuickReply);
   }
 
-  // ===== نموذج التأهيل السريع =====
+  // ===== نموذج التأهيل السريع (النسخة المحسّنة) =====
   function toggleQuickForm() {
     const overlay = document.getElementById('quickFormOverlay');
     overlay.classList.toggle('show');
   }
 
+  // ===== تبديل حقول البائع/المشتري =====
+  document.querySelectorAll('#userTypeOptions .option-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#userTypeOptions .option-btn').forEach(b => b.classList.remove('selected'));
+      this.classList.add('selected');
+
+      const isSeller = this.getAttribute('data-value') === 'seller';
+      const priceLabel = document.getElementById('qf-price-label');
+      const finishingGroup = document.getElementById('qf-finishing-group');
+      const floorGroup = document.getElementById('qf-floor-group');
+
+      if (isSeller) {
+        priceLabel.textContent = 'السعر المطلوب (ج.م)';
+        finishingGroup.classList.remove('hidden-field');
+        floorGroup.classList.remove('hidden-field');
+      } else {
+        priceLabel.textContent = 'الميزانية المتاحة (ج.م)';
+        finishingGroup.classList.add('hidden-field');
+        floorGroup.classList.add('hidden-field');
+      }
+    });
+  });
+
   function submitQuickForm() {
+    const userType = document.querySelector('#userTypeOptions .option-btn.selected')?.getAttribute('data-value') || 'buyer';
     const purpose = document.getElementById('qf-purpose').value;
     const area = document.getElementById('qf-area').value;
     const type = document.getElementById('qf-type').value;
-    const budget = document.getElementById('qf-budget').value;
+    const price = document.getElementById('qf-price').value.trim();
     const rooms = document.getElementById('qf-rooms').value;
+    const baths = document.getElementById('qf-baths').value;
+    const areaSqm = document.getElementById('qf-area-sqm').value.trim();
+    const finishing = document.getElementById('qf-finishing').value;
+    const floor = document.getElementById('qf-floor').value;
 
-    let msg = `أبحث عن ${purpose}، ${type} في ${area}`;
-    if (budget) msg += `، بميزانية ${budget} جنيه`;
-    if (rooms) msg += `، ${rooms} غرف`;
+    let msg = '';
+
+    if (userType === 'seller') {
+      // بائع / مالك – نفس تنسيق صفحة إضافة العقار
+      msg = `أنا المالك، عايز أعرض عقاري:\n`;
+      msg += `نوع المعاملة: ${purpose}\n`;
+      msg += `الموقع: ${area}\n`;
+      msg += `المساحة: ${areaSqm || 'غير محدد'} م²\n`;
+      msg += `نوع العقار: ${type}\n`;
+      msg += `السعر المطلوب: ${price || 'غير محدد'} ج.م\n`;
+      msg += `عدد الغرف: ${rooms}\n`;
+      msg += `عدد الحمامات: ${baths}\n`;
+      msg += `التشطيب: ${finishing}\n`;
+      msg += `الدور: ${floor}\n`;
+    } else {
+      // مشتري / مستأجر
+      msg = `أبحث عن ${purpose}، ${type} في ${area}`;
+      if (areaSqm) msg += `، مساحة ${areaSqm} م²`;
+      if (price) msg += `، بميزانية ${price} جنيه`;
+      msg += `، ${rooms} غرف، ${baths} حمام`;
+    }
 
     toggleQuickForm();
     document.getElementById('user-input').value = msg;
@@ -1042,13 +1166,10 @@ https://nasr-realestate.github.io/agent.html 🏢
 
     const hasState = loadState();
     if (hasState && chatHistory.length > 0) {
-      // استعادة المحادثة مع رسالة ترحيب بالعودة
       clearMessagesAndRehydrate();
-      // نضيف رسالة ترحيب بالعودة إذا كانت المحادثة قديمة
       const lastMsg = chatHistory[chatHistory.length - 1];
       const restoreMsg = `مرحباً بعودتك يا فندم! تم استعادة محادثتك السابقة. 🎯`;
       if (!lastMsg || lastMsg.text !== restoreMsg) {
-        // نتأكد من عدم إضافة الرسالة مرتين
         pushHistory(restoreMsg, 'bot', null, false);
       }
     } else {
@@ -1068,7 +1189,6 @@ https://nasr-realestate.github.io/agent.html 🏢
     if (e.target === this) toggleQuickForm();
   });
 
-  // جعل الوظائف عامة للنقر من HTML
   window.toggleQuickForm = toggleQuickForm;
   window.submitQuickForm = submitQuickForm;
   window.sendMsg = sendMsg;
