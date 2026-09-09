@@ -120,27 +120,16 @@
 </div>
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  
-  // ✅ الرسالة النهائية للتأهيل (اللي هتظهر في واتساب)
-  const WHATSAPP_MESSAGE = `أهلاً طارق، تم تأهيلي ووافقت على أحد العروض.
 
-تفاصيلي:
-- الغرض: شراء
-- المنطقة: مدينة نصر
-- الميزانية: أكثر من 4 ملايين
-
-أنتظر ردكم.`;
-
-  // تحويل الرسالة إلى رابط مشفر
-  const WHATSAPP_URL = `https://wa.me/201147758857?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
-
-  const STORAGE_KEY = "tarek_chat_v8";
-  const SCORE_KEY = "tarek_score_v8";
-  const WA_KEY = "tarek_wa_v8";
+  const STORAGE_KEY = "tarek_chat_v9";
+  const SCORE_KEY = "tarek_score_v9";
+  const WA_KEY = "tarek_wa_v9";
+  const LEAD_KEY = "tarek_lead_v9";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
   let canShare = localStorage.getItem(WA_KEY) === "true";
+  let currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
   let isSending = false;
 
   const chat = document.getElementById('chatMessages');
@@ -160,6 +149,7 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     localStorage.setItem(SCORE_KEY, score.toString());
     localStorage.setItem(WA_KEY, canShare ? "true" : "false");
+    localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
   }
 
   function loadState() {
@@ -168,6 +158,7 @@
       if (raw) { history = JSON.parse(raw); }
       score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
       canShare = localStorage.getItem(WA_KEY) === "true";
+      currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
       return true;
     } catch { return false; }
   }
@@ -211,9 +202,23 @@
     updateUI();
   }
 
+  // بناء رابط الواتساب ديناميكياً بناءً على ملخص الحوار الفعلي للـ Lead
   function openWhatsApp() {
     if (!canShare) return;
-    window.open(WHATSAPP_URL, '_blank');
+
+    const leadType = currentLeadData.type || "استعلام عام";
+    const leadPrice = currentLeadData.price || "غير محدد";
+    const lastUserMsg = currentLeadData.userInput || "مهتم بالعقارات";
+
+    const dynamicMessage = `أهلاً طارق، تحدثت معك عبر الوكيل الذكي ومتمم للتفاصيل الآتية:
+- الغرض: ${leadType}
+- التفاصيل / الميزانية: ${leadPrice}
+- آخر طلب: ${lastUserMsg}
+
+أنتظر ردكم الكريم.`;
+
+    const whatsappUrl = `https://wa.me/201147758857?text=${encodeURIComponent(dynamicMessage)}`;
+    window.open(whatsappUrl, '_blank');
   }
 
   async function sendMsg() {
@@ -248,6 +253,8 @@
       if (data) {
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
+        if (data.leadData) currentLeadData = data.leadData;
+
         updateUI();
         const reply = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
         renderMsg(reply, 'bot');
@@ -271,9 +278,7 @@
     if (history.length > 0) {
       rehydrate();
     } else {
-      const welcome = `وعليكم السلام ورحمة الله وبركاته، يا أهلاً بيك يا فندم. معاك طارق طنطاوي، صاحب مكتب "سمسار طلبك" بخبرة من 2014 في سوق مدينة نصر.
-
-إيه اللي جابك النهاردة؟ شراء ولا إيجار؟ وفي أي منطقة؟`;
+      const welcome = `أهلاً بيك، معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
       renderMsg(welcome, 'bot');
       history.push({ text: welcome, type: 'bot', time: getTime() });
       saveState();
