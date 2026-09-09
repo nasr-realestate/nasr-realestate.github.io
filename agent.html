@@ -111,7 +111,20 @@
 </div>
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  const WHATSAPP_URL = "https://wa.me/201147758857?text=أهلاً%20طارق،%20تم%20تأهيلي%20ووافقت%20على%20أحد%20العروض.%0A%0Aتفاصيلي:%0A-٪20الغرض:%20شراء%0A-٪20المنطقة:%20مدينة%20نصر%0A-٪20الميزانية:%20أكثر%20من%204%20ملايين%0A%0Aأنتظر%20ردكم.";
+  
+  // ✅ الرسالة النهائية للتأهيل (اللي هتظهر في واتساب)
+  const WHATSAPP_MESSAGE = `أهلاً طارق، تم تأهيلي ووافقت على أحد العروض.
+
+تفاصيلي:
+- الغرض: شراء
+- المنطقة: مدينة نصر
+- الميزانية: أكثر من 4 ملايين
+
+أنتظر ردكم.`;
+
+  // تحويل الرسالة إلى رابط مشفر
+  const WHATSAPP_URL = `https://wa.me/201147758857?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+
   const STORAGE_KEY = "tarek_chat_v8";
   const SCORE_KEY = "tarek_score_v8";
   const WA_KEY = "tarek_wa_v8";
