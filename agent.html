@@ -28,19 +28,19 @@
     }
     .agent-app.show { opacity: 1; }
     .agent-header {
-      background: var(--wa-header); padding: 12px 16px; display: flex; align-items: center; gap: 12px; color: #fff;
+      background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff;
       flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;
     }
-    .agent-header img { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
+    .agent-header img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
     .agent-header .info { flex: 1; }
-    .agent-header .info h1 { font-size: 1rem; }
-    .agent-header .info p { font-size: 0.7rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
-    .agent-header .info p .dot { width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; display: inline-block; }
-    .agent-header .logo-link { color: #fff; font-size: 1.4rem; text-decoration: none; }
+    .agent-header .info h1 { font-size: 0.95rem; }
+    .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
+    .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
+    .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
     
     .qual-bar {
-      background: #fff; padding: 8px 14px; border-bottom: 1px solid #e9edef; display: flex; align-items: center;
-      justify-content: space-between; font-size: 12px; flex-shrink: 0; z-index: 10;
+      background: #fff; padding: 6px 14px; border-bottom: 1px solid #e9edef; display: flex; align-items: center;
+      justify-content: space-between; font-size: 11px; flex-shrink: 0; z-index: 10;
     }
     .qual-bar .score { font-weight: 700; color: #075e54; }
     .qual-bar .progress { height: 4px; background: #e9edef; border-radius: 999px; flex: 1; margin: 0 10px; overflow: hidden; }
@@ -50,58 +50,56 @@
     .qual-bar .state.ready { color: #23c16b; }
 
     .chat-area {
-      flex: 1; overflow-y: auto; padding: 16px 16px 90px 16px; display: flex; flex-direction: column; gap: 10px;
+      flex: 1; overflow-y: auto; padding: 14px 14px 110px 14px; display: flex; flex-direction: column; gap: 10px;
       background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px;
     }
-    .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
     .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 4px; font-weight: 600; }
     .msg a { color: #075e54; font-weight: 700; text-decoration: underline; }
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
 
-    /* منطقة الإدخال المثبتة بالأسفل فوق زر الواتساب العائم */
+    /* حاوية سفلية تجمع خانة الكتابة وزر الواتساب بوضوح تام */
     .bottom-dock {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      background: #f0f0f0;
-      border-top: 1px solid #e2e8f0;
+      background: #eae6df;
+      border-top: 1px solid #d1d7db;
       z-index: 100;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
-      padding-bottom: env(safe-area-inset-bottom, 10px);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      padding-bottom: env(safe-area-inset-bottom, 8px);
     }
 
     .input-area {
-      padding: 10px 12px; display: flex; gap: 8px; width: 100%;
+      padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center;
     }
     .input-area input {
-      flex: 1; border: none; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif;
-      font-size: 14px; outline: none; border: 1px solid #cbd5e1;
+      flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif;
+      font-size: 14px; outline: none;
     }
-    .input-area input:focus { box-shadow: 0 0 0 2px var(--wa-green); border-color: var(--wa-green); }
+    .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
     .input-area button {
-      background: var(--wa-green); border: none; border-radius: 50%; width: 42px; height: 42px; color: #fff;
-      font-size: 16px; cursor: pointer; transition: 0.2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff;
+      font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     }
-    .input-area button:hover { background: #128c7e; transform: scale(1.04); }
 
-    /* زر واتساب عائم وواضح تماماً لا يمكن اختفاؤه */
+    /* تصميم زر الواتساب البارز والواضح تماماً عند التأهيل */
     .deal-wrapper { 
-      padding: 6px 12px 10px 12px; 
-      background: #f0f0f0; 
+      padding: 4px 12px 10px 12px; 
       width: 100%;
     }
     .deal-btn {
       width: 100%; 
-      background: var(--wa-green); 
-      color: #fff; 
+      background: #25d366; 
+      color: #ffffff; 
       border: none; 
-      padding: 14px; 
-      border-radius: 14px;
+      padding: 13px; 
+      border-radius: 12px;
       font-weight: 800; 
       font-family: 'Cairo', sans-serif; 
       cursor: pointer; 
@@ -109,29 +107,19 @@
       align-items: center;
       justify-content: center; 
       gap: 10px; 
-      font-size: 1.05rem; 
-      transition: 0.25s;
-      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+      font-size: 1rem; 
+      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.5);
+      animation: pulseGlow 1.8s infinite;
     }
-    .deal-btn.disabled { 
-      opacity: 0.4; 
-      cursor: not-allowed; 
-      background: #cbd5e1; 
-      color: #64748b; 
-      box-shadow: none;
-      display: none; /* إخفاء الزر تماماً حتى يكتمل التأهيل لكي لا يزحم الشاشة */
+    .deal-btn.hidden { 
+      display: none !important; 
     }
-    .deal-btn:not(.disabled) {
-      display: flex;
-      animation: pulseGlow 2s infinite;
-    }
-    .deal-btn:not(.disabled):hover { 
-      background: #128c7e; 
-      transform: scale(1.01); 
+    .deal-btn:hover { 
+      background: #1ebe5d; 
     }
 
     @keyframes pulseGlow {
-      0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.6); }
+      0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
       70% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0); }
       100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
     }
@@ -160,16 +148,18 @@
     <div class="typing" id="typingIndicator">طارق بيكتب...</div>
   </div>
 
-  <!-- حاوية سفلية تجمع خانة الكتابة وزر الواتساب لضمان عدم اختفائهم أبداً -->
+  <!-- الحاوية السفلية الثابتة -->
   <div class="bottom-dock">
+    <!-- زر الواتساب (يظهر فقط إذا اكتمل التأهيل أو تم تفعيله) -->
+    <div class="deal-wrapper" id="dealWrapper" style="display: none;">
+      <button class="deal-btn" onclick="openWhatsApp()">
+        <i class="fab fa-whatsapp" style="font-size: 1.4rem;"></i> <span>تواصل مع أ. طارق عبر واتساب الآن</span>
+      </button>
+    </div>
+
     <div class="input-area">
       <input type="text" id="userInput" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()">
       <button id="sendBtn" onclick="sendMsg()"><i class="fas fa-paper-plane"></i></button>
-    </div>
-    <div class="deal-wrapper">
-      <button class="deal-btn disabled" id="dealBtn" onclick="openWhatsApp()">
-        <i class="fab fa-whatsapp" style="font-size: 1.4rem;"></i> <span id="dealText">تواصل مع طارق مباشرة عبر واتساب</span>
-      </button>
     </div>
   </div>
 </div>
@@ -178,10 +168,10 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v12";
-  const SCORE_KEY = "tarek_score_v12";
-  const WA_KEY = "tarek_wa_v12";
-  const LEAD_KEY = "tarek_lead_v12";
+  const STORAGE_KEY = "tarek_chat_v13";
+  const SCORE_KEY = "tarek_score_v13";
+  const WA_KEY = "tarek_wa_v13";
+  const LEAD_KEY = "tarek_lead_v13";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -196,7 +186,7 @@
   const scoreEl = document.getElementById('qualScore');
   const progress = document.getElementById('qualProgress');
   const stateEl = document.getElementById('qualState');
-  const dealBtn = document.getElementById('dealBtn');
+  const dealWrapper = document.getElementById('dealWrapper');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
@@ -222,14 +212,15 @@
   function updateUI() {
     scoreEl.textContent = `${score}/5`;
     progress.style.width = `${Math.min(100, (score / 5) * 100)}%`;
-    if (canShare) {
+    
+    if (canShare || score >= 5) {
       stateEl.className = 'state ready';
       stateEl.textContent = 'جاهز للتواصل ✅';
-      dealBtn.classList.remove('disabled');
+      dealWrapper.style.display = 'block'; // إظهار زر واتساب بالكامل وبشكل بارز
     } else {
       stateEl.className = 'state wait';
       stateEl.textContent = 'جمع بيانات';
-      dealBtn.classList.add('disabled');
+      dealWrapper.style.display = 'none'; // إخفاء الزر طالما لم يكتمل التأهيل
     }
     saveState();
   }
@@ -256,11 +247,7 @@
     updateUI();
   }
 
-  // استنباط رسالة واتساب ذكية ومفصلة تعكس كلام العميل وإنجاز المحادثة بدقة
   function openWhatsApp() {
-    if (!canShare) return;
-
-    // استخراج آخر الرسائل التي كتبها المستخدم لتركيب ملخص حقيقي مبهر
     const userMessages = history.filter(m => m.type === 'user').map(m => m.text);
     const summaryUserText = userMessages.length > 0 ? userMessages.join(' | ') : "مهتم بعقارات مدينة نصر";
 
@@ -314,6 +301,11 @@ ${summaryUserText}
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
         if (data.leadData) currentLeadData = data.leadData;
 
+        // إذا وصل الـ score لـ 5 أو الـ worker قال مسموح بالمشاركة، نفعل الزر فوراً
+        if (score >= 5 || data.canShareWhatsapp) {
+          canShare = true;
+        }
+
         updateUI();
         const reply = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
         renderMsg(reply, 'bot');
@@ -321,7 +313,7 @@ ${summaryUserText}
         saveState();
       }
     } catch (err) {
-      typing.style.display = 'none';
+      typing.style.display, (typing.style.display = 'none');
       renderMsg('عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.', 'bot');
     } finally {
       isSending = false;
@@ -338,7 +330,7 @@ ${summaryUserText}
     } else {
       const welcome = `أهلاً بيك، معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
       renderMsg(welcome, 'bot');
-      history.push({ text: welcome, type: 'bot', time: getTime() });
+      history.push({ text: welcome, type: 'bot', time: getTime()`, type: 'bot', time: getTime() });
       saveState();
     }
     updateUI();
