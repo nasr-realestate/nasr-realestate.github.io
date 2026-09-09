@@ -24,7 +24,7 @@
     }
     .agent-app {
       max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column;
-      box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.6s ease; position: relative;
+      box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative;
     }
     .agent-app.show { opacity: 1; }
     .agent-header {
@@ -60,7 +60,7 @@
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
 
-    /* حاوية سفلية تجمع خانة الكتابة وزر الواتساب بوضوح تام */
+    /* الحاوية السفلية */
     .bottom-dock {
       position: absolute;
       bottom: 0;
@@ -88,7 +88,7 @@
       font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     }
 
-    /* تصميم زر الواتساب البارز والواضح تماماً عند التأهيل */
+    /* زر الواتساب البارز */
     .deal-wrapper { 
       padding: 4px 12px 10px 12px; 
       width: 100%;
@@ -111,19 +111,13 @@
       box-shadow: 0 4px 15px rgba(37, 211, 102, 0.5);
       animation: pulseGlow 1.8s infinite;
     }
-    .deal-btn.hidden { 
-      display: none !important; 
-    }
-    .deal-btn:hover { 
-      background: #1ebe5d; 
-    }
+    .deal-btn:hover { background: #1ebe5d; }
 
     @keyframes pulseGlow {
       0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
       70% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0); }
       100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
     }
-
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
@@ -148,9 +142,7 @@
     <div class="typing" id="typingIndicator">طارق بيكتب...</div>
   </div>
 
-  <!-- الحاوية السفلية الثابتة -->
   <div class="bottom-dock">
-    <!-- زر الواتساب (يظهر فقط إذا اكتمل التأهيل أو تم تفعيله) -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <button class="deal-btn" onclick="openWhatsApp()">
         <i class="fab fa-whatsapp" style="font-size: 1.4rem;"></i> <span>تواصل مع أ. طارق عبر واتساب الآن</span>
@@ -168,10 +160,10 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v13";
-  const SCORE_KEY = "tarek_score_v13";
-  const WA_KEY = "tarek_wa_v13";
-  const LEAD_KEY = "tarek_lead_v13";
+  const STORAGE_KEY = "tarek_chat_v14";
+  const SCORE_KEY = "tarek_score_v14";
+  const WA_KEY = "tarek_wa_v14";
+  const LEAD_KEY = "tarek_lead_v14";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -216,11 +208,11 @@
     if (canShare || score >= 5) {
       stateEl.className = 'state ready';
       stateEl.textContent = 'جاهز للتواصل ✅';
-      dealWrapper.style.display = 'block'; // إظهار زر واتساب بالكامل وبشكل بارز
+      dealWrapper.style.display = 'block';
     } else {
       stateEl.className = 'state wait';
       stateEl.textContent = 'جمع بيانات';
-      dealWrapper.style.display = 'none'; // إخفاء الزر طالما لم يكتمل التأهيل
+      dealWrapper.style.display = 'none';
     }
     saveState();
   }
@@ -301,7 +293,6 @@ ${summaryUserText}
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
         if (data.leadData) currentLeadData = data.leadData;
 
-        // إذا وصل الـ score لـ 5 أو الـ worker قال مسموح بالمشاركة، نفعل الزر فوراً
         if (score >= 5 || data.canShareWhatsapp) {
           canShare = true;
         }
@@ -313,7 +304,7 @@ ${summaryUserText}
         saveState();
       }
     } catch (err) {
-      typing.style.display, (typing.style.display = 'none');
+      typing.style.display = 'none';
       renderMsg('عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.', 'bot');
     } finally {
       isSending = false;
@@ -330,7 +321,7 @@ ${summaryUserText}
     } else {
       const welcome = `أهلاً بيك، معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
       renderMsg(welcome, 'bot');
-      history.push({ text: welcome, type: 'bot', time: getTime()`, type: 'bot', time: getTime() });
+      history.push({ text: welcome, type: 'bot', time: getTime() });
       saveState();
     }
     updateUI();
