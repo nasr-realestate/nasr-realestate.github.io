@@ -3,15 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- ===== مقتطف تحسين مشاركة الرابط على واتساب ومنصات التواصل ===== -->
-<meta property="og:title" content="الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك" />
-<meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014. استشارة فورية وعقارات نخبوية." />
-<meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://nasr-realestate.github.io/agent.html" />
-<meta property="og:type" content="website" />
-<meta name="twitter:card" content="summary_large_image" />
+  <meta property="og:title" content="الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك" />
+  <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014. استشارة فورية وعقارات نخبوية." />
+  <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
   <title>الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,8 +54,7 @@
     .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; }
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
     .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 4px; font-weight: 600; }
-    .msg a { color: #075e54; font-weight: 700; text-decoration: none; }
-    .msg a:hover { text-decoration: underline; }
+    .msg a { color: #075e54; font-weight: 700; text-decoration: underline; }
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
     .input-area {
@@ -78,15 +71,53 @@
       font-size: 16px; cursor: pointer; transition: 0.2s; flex-shrink: 0;
     }
     .input-area button:hover { background: #128c7e; transform: scale(1.04); }
-    .input-area button:disabled { opacity: 0.5; }
-    .deal-wrapper { padding: 0 12px 12px 12px; background: #f0f0f0; flex-shrink: 0; }
-    .deal-btn {
-      width: 100%; background: var(--wa-green); color: #fff; border: none; padding: 12px; border-radius: 12px;
-      font-weight: 800; font-family: 'Cairo', sans-serif; cursor: pointer; display: flex; align-items: center;
-      justify-content: center; gap: 8px; font-size: 0.95rem; transition: 0.25s;
+    
+    /* تحسين وتعديل منطقة زر الواتساب السفلي ليظهر بوضوح كامل ولا يُقطع */
+    .deal-wrapper { 
+      padding: 10px 14px 18px 14px; 
+      background: #f0f0f0; 
+      flex-shrink: 0; 
+      border-top: 1px solid #e2e8f0;
     }
-    .deal-btn.disabled { opacity: 0.4; cursor: not-allowed; background: #ccc; color: #888; }
-    .deal-btn:not(.disabled):hover { background: #128c7e; transform: scale(1.01); }
+    .deal-btn {
+      width: 100%; 
+      background: var(--wa-green); 
+      color: #fff; 
+      border: none; 
+      padding: 14px; 
+      border-radius: 14px;
+      font-weight: 800; 
+      font-family: 'Cairo', sans-serif; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center;
+      justify-content: center; 
+      gap: 10px; 
+      font-size: 1.05rem; 
+      transition: 0.25s;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+    }
+    .deal-btn.disabled { 
+      opacity: 0.45; 
+      cursor: not-allowed; 
+      background: #cbd5e1; 
+      color: #64748b; 
+      box-shadow: none;
+    }
+    .deal-btn:not(.disabled) {
+      animation: pulseGlow 2s infinite;
+    }
+    .deal-btn:not(.disabled):hover { 
+      background: #128c7e; 
+      transform: scale(1.02); 
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+      70% { box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+    }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
@@ -114,17 +145,18 @@
   </div>
   <div class="deal-wrapper">
     <button class="deal-btn disabled" id="dealBtn" onclick="openWhatsApp()">
-      <i class="fab fa-whatsapp"></i> <span id="dealText">يفتح بعد التأكيد</span>
+      <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i> <span id="dealText">يفتح بعد التأكيد</span>
     </button>
   </div>
 </div>
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+  const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v9";
-  const SCORE_KEY = "tarek_score_v9";
-  const WA_KEY = "tarek_wa_v9";
-  const LEAD_KEY = "tarek_lead_v9";
+  const STORAGE_KEY = "tarek_chat_v11";
+  const SCORE_KEY = "tarek_score_v11";
+  const WA_KEY = "tarek_wa_v11";
+  const LEAD_KEY = "tarek_lead_v11";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -170,12 +202,12 @@
       stateEl.className = 'state ready';
       stateEl.textContent = 'جاهز للتأكيد ✅';
       dealBtn.classList.remove('disabled');
-      dealText.textContent = 'تواصل مع طارق مباشرة';
+      dealText.textContent = 'تواصل مع طارق مباشرة عبر واتساب';
     } else {
       stateEl.className = 'state wait';
       stateEl.textContent = 'جمع بيانات';
       dealBtn.classList.add('disabled');
-      dealText.textContent = 'أكمل التأهيل أولاً';
+      dealText.textContent = 'يفتح بعد اكتمال التأهيل';
     }
     saveState();
   }
@@ -202,22 +234,21 @@
     updateUI();
   }
 
-  // بناء رابط الواتساب ديناميكياً بناءً على ملخص الحوار الفعلي للـ Lead
   function openWhatsApp() {
     if (!canShare) return;
 
-    const leadType = currentLeadData.type || "استعلام عام";
+    const leadType = currentLeadData.type || "استعلام عقاري";
     const leadPrice = currentLeadData.price || "غير محدد";
-    const lastUserMsg = currentLeadData.userInput || "مهتم بالعقارات";
+    const lastUserMsg = currentLeadData.userInput || "مهتم بعقارات مدينة نصر";
 
-    const dynamicMessage = `أهلاً طارق، تحدثت معك عبر الوكيل الذكي ومتمم للتفاصيل الآتية:
-- الغرض: ${leadType}
-- التفاصيل / الميزانية: ${leadPrice}
-- آخر طلب: ${lastUserMsg}
+    const dynamicMessage = `أهلاً طارق، تحدثت معك عبر الوكيل الذكي وهذه تفاصيل طلبي:
+- نوع الطلب: ${leadType}
+- التفاصيل: ${leadPrice}
+- آخر استفسار: ${lastUserMsg}
 
 أنتظر ردكم الكريم.`;
 
-    const whatsappUrl = `https://wa.me/201147758857?text=${encodeURIComponent(dynamicMessage)}`;
+    const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(dynamicMessage)}`;
     window.open(whatsappUrl, '_blank');
   }
 
@@ -271,7 +302,6 @@
     }
   }
 
-  // بدء التطبيق
   (function init() {
     document.getElementById('app').classList.add('show');
     loadState();
