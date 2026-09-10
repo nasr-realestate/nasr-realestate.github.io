@@ -38,7 +38,7 @@
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
     .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
 
-    /* إخفاء شريط التأهيل تماماً (التأهيل الخفي) */
+    /* إلغاء شريط التأهيل مرئياً تماماً (تأهيل خفي) */
     .qual-bar { display: none !important; }
 
     .chat-area {
@@ -79,7 +79,7 @@
       font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     }
 
-    /* === التصميم الجديد لزر الإشعار العائم (WhatsApp Notification Style) === */
+    /* كارت إشعار الواتساب المرتبط حصرياً بقرار الـ Source (الـ Worker) */
     .deal-wrapper { 
       padding: 8px 12px 4px 12px; 
       width: 100%;
@@ -162,15 +162,15 @@
   </div>
 
   <div class="bottom-dock">
-    <!-- كارت الإشعار الذكي للواتساب (يظهر بمجرد جاهزية العميل) -->
+    <!-- يظهر حصرياً بناءً على إشارة الـ Source (Worker) عند اكتمال الـ 5 شروط -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <div class="whatsapp-notification-card" onclick="openWhatsApp()">
         <div class="wa-icon-box">
           <i class="fab fa-whatsapp"></i>
         </div>
         <div class="wa-text-box">
-          <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">جاهز</span></div>
-          <div class="wa-subtitle">سيتم نقل تفاصيل طلبك وملخص الشات لواتساب مباشرة</div>
+          <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span></div>
+          <div class="wa-subtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
         </div>
       </div>
     </div>
@@ -186,10 +186,10 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v15";
-  const SCORE_KEY = "tarek_score_v15";
-  const WA_KEY = "tarek_wa_v15";
-  const LEAD_KEY = "tarek_lead_v15";
+  const STORAGE_KEY = "tarek_chat_v17";
+  const SCORE_KEY = "tarek_score_v17";
+  const WA_KEY = "tarek_wa_v17";
+  const LEAD_KEY = "tarek_lead_v17";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -225,10 +225,8 @@
   }
 
   function updateUI() {
-    const analysis = analyzeChatHistory();
-    const dataComplete = hasCompleteLeadData(analysis);
-
-    if ((score >= 5 || canShare) && dataComplete) {
+    // الربط أصبح صارماً مع الـ Source (Worker): لا يظهر الزر إلا إذا وافق السيرفر وقرر اكتمال التأهيل
+    if (canShare || score >= 5) {
       dealWrapper.style.display = 'block';
     } else {
       dealWrapper.style.display = 'none';
@@ -258,81 +256,26 @@
     updateUI();
   }
 
-  function analyzeChatHistory() {
-    const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' ');
-    let type = "استفسار عقاري";
-    let budget = "غير محدد";
-    let rooms = "غير محدد";
-    let location = "مدينة نصر";
-    let notes = "";
+  function buildProfessionalLeadMessage() {
+    const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' | ');
+    const leadType = currentLeadData.type || "استعلام عقاري";
+    const leadPrice = currentLeadData.price || "حسب الاتفاق";
 
-    if (/(شراء|تمليك|اشترى|buy)/i.test(userMessages)) {
-      type = "شراء";
-    } else if (/(إيجار|ايجار|إجار|أجار|استئجار|rent)/i.test(userMessages)) {
-      type = "إيجار";
-    }
-
-    const priceMatches = userMessages.match(/(\d{3,})\s*(?:ألف|الف|k|K)?|(\d+)\s*(?:ألف|الف)/g);
-    if (priceMatches) {
-      const lastPrice = priceMatches[priceMatches.length - 1];
-      const num = parseInt(lastPrice.replace(/[^0-9]/g, ''));
-      if (num && num >= 1000) {
-        budget = `${num.toLocaleString('en-US')} جنيه`;
-      } else if (num && num > 0 && num <= 100) {
-        budget = `${num} ألف جنيه`;
-      }
-    }
-
-    const roomsMatch = userMessages.match(/(\d+)\s*(?:غرف|غرفة|اوض|أوض|غرفه|حجرات)/);
-    if (roomsMatch) {
-      const num = parseInt(roomsMatch[1]);
-      if (!isNaN(num) && num > 0) rooms = `${num} غرف`;
-    } else if (/غرفتين/.test(userMessages)) {
-      rooms = "غرفتين";
-    } else if (/غرفة واحدة|اوضة واحدة|أوضة واحدة/.test(userMessages)) {
-      rooms = "غرفة واحدة";
-    }
-
-    if (/بنتهاوس|بنت هوس/i.test(userMessages)) notes += "يفضل شقة بنتهاوس. ";
-    if (/متشطبة|تشطيب|نضيفة|سوبر لوكس/.test(userMessages)) notes += "يرغب في تشطيب جيد. ";
-
-    if (currentLeadData && currentLeadData.type && currentLeadData.type !== "استعلام عقاري عام") {
-      type = currentLeadData.type;
-    }
-    if (currentLeadData && currentLeadData.price && currentLeadData.price !== "حسب المعاينة / الاتفاق") {
-      budget = currentLeadData.price;
-    }
-
-    notes = notes.trim() || "يرجى الاستفسار عن المزيد من التفاصيل.";
-    return { type, budget, rooms, location, notes };
-  }
-
-  function hasCompleteLeadData(a) {
-    const requiredFields = ['type', 'budget', 'rooms'];
-    let filledCount = 0;
-    if (a.type && a.type !== 'استفسار عقاري' && a.type !== 'غير محدد') filledCount++;
-    if (a.budget && a.budget !== 'غير محدد') filledCount++;
-    if (a.rooms && a.rooms !== 'غير محدد') filledCount++;
-    return filledCount >= 3;
-  }
-
-  function buildProfessionalLeadMessage(a) {
     return `أستاذ طارق، تحية طيبة،
 
-تواصلت معك عبر منصة "الوكيل الذكي"، ويسعدني أن أشارككم ملخص طلبي:
+تواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:
 
-- نوع العملية: ${a.type}
-- المنطقة المرغوبة: ${a.location}
-- الميزانية: ${a.budget}
-- عدد الغرف: ${a.rooms}
-- ملاحظات إضافية: ${a.notes}
+- نوع الطلب: ${leadType}
+- الميزانية / السعر: ${leadPrice}
+- تفاصيل المحادثة: 
+${userMessages}
 
-أتمنى التواصل معي لاستكمال التفاصيل، وشكراً لوقتك.`;
+أتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
   }
 
   function openWhatsApp() {
-    const analysis = analyzeChatHistory();
-    const leadMessage = buildProfessionalLeadMessage(analysis);
+    if (!canShare && score < 5) return;
+    const leadMessage = buildProfessionalLeadMessage();
     const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`;
     window.open(whatsappUrl, '_blank');
   }
@@ -367,21 +310,13 @@
       typing.style.display = 'none';
 
       if (data) {
+        // اعتماد حصري على قادم الـ Source (الـ Worker)
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
-        if (data.leadData) {
-          currentLeadData = data.leadData;
-        } else {
-          currentLeadData = analyzeChatHistory();
-        }
-
-        const replyText = data.response || data.reply || '';
-        if (score >= 5 || data.canShareWhatsapp || /واتساب|الواتساب|تواصل معنا|تواصل معي|دوس على/i.test(replyText)) {
-          canShare = true;
-          score = 5;
-        }
+        if (data.leadData) currentLeadData = data.leadData;
 
         updateUI();
+        const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
         renderMsg(replyText, 'bot');
         history.push({ text: replyText, type: 'bot', time: getTime() });
         saveState();
