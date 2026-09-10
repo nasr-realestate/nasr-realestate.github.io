@@ -52,6 +52,19 @@
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
 
+    /* أزرار الخيارات (Slot-Filling buttons) */
+    .option-buttons-wrap {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%;
+    }
+    .option-btn {
+      background: #fff; border: 1px solid #25d366; color: #075e54;
+      padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif;
+      font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s;
+    }
+    .option-btn:hover { background: #dcf8c6; }
+    .option-btn:active { transform: scale(0.96); }
+
     .bottom-dock {
       position: absolute;
       bottom: 0;
@@ -190,11 +203,16 @@
   const SCORE_KEY = "tarek_score_v17";
   const WA_KEY = "tarek_wa_v17";
   const LEAD_KEY = "tarek_lead_v17";
+  const FORM_STATE_KEY = "tarek_form_state_v17";
+  const OPTIONS_KEY = "tarek_options_v17";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
   let canShare = localStorage.getItem(WA_KEY) === "true";
   let currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
+  let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
+  let lastWaMessage = null;             // آخر رسالة واتساب جاهزة من الـ Worker (مسار البائع/المؤجر)
+  let lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null"); // آخر خيارات معروضة
   let isSending = false;
 
   const chat = document.getElementById('chatMessages');
@@ -211,6 +229,8 @@
     localStorage.setItem(SCORE_KEY, score.toString());
     localStorage.setItem(WA_KEY, canShare ? "true" : "false");
     localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
+    localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
+    localStorage.setItem(OPTIONS_KEY, JSON.stringify(lastOptions));
   }
 
   function loadState() {
@@ -220,17 +240,29 @@
       score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
       canShare = localStorage.getItem(WA_KEY) === "true";
       currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
+      currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
+      lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
       return true;
     } catch { return false; }
   }
 
   function updateUI() {
-    // الربط أصبح صارماً مع الـ Source (Worker): لا يظهر الزر إلا إذا وافق السيرفر وقرر اكتمال التأهيل
+    // الربط صارم مع الـ Source (Worker): لا يظهر الزر إلا إذا وافق السيرفر وقرر اكتمال التأهيل
     if (canShare || score >= 5) {
       dealWrapper.style.display = 'block';
     } else {
       dealWrapper.style.display = 'none';
     }
+
+    // تصفير سياق الفورم لما يكتمل (formState.active === false) عشان نسمح بطلب جديد نظيف
+    if (currentFormState && currentFormState.active === false) {
+      currentFormState = null;
+      lastWaMessage = null;
+      lastOptions = null;
+      localStorage.removeItem(FORM_STATE_KEY);
+      localStorage.removeItem(OPTIONS_KEY);
+    }
+
     saveState();
   }
 
@@ -250,9 +282,41 @@
     scroll();
   }
 
+  // ============ أزرار الخيارات (Slot-Filling) ============
+  function renderOptions(options) {
+    if (!options || !options.length) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'option-buttons-wrap';
+
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option-btn';
+      btn.innerText = opt;
+      btn.onclick = () => {
+        if (isSending) return;
+        // امسح كل الأزرار المعروضة قبل الإرسال لمنع الضغط المزدوج
+        document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+        lastOptions = null;
+        input.value = opt;
+        sendMsg();
+      };
+      wrap.appendChild(btn);
+    });
+
+    chat.insertBefore(wrap, typing);
+    scroll();
+  }
+
   function rehydrate() {
     chat.querySelectorAll('.msg').forEach(el => el.remove());
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     history.forEach(m => renderMsg(m.text, m.type, m.time));
+    // استرجاع الأزرار لو كانت آخر خطوة فورم فيها خيارات ولسه معلقة
+    if (lastOptions && lastOptions.length && currentFormState && currentFormState.active) {
+      renderOptions(lastOptions);
+    }
     updateUI();
   }
 
@@ -275,7 +339,9 @@ ${userMessages}
 
   function openWhatsApp() {
     if (!canShare && score < 5) return;
-    const leadMessage = buildProfessionalLeadMessage();
+    // لو العميل بائع/مؤجر وخلص الفورم → نستخدم رسالة الـ Worker المنسقة
+    // لو مشتري/مستأجر → نستخدم الدالة القديمة
+    const leadMessage = lastWaMessage || buildProfessionalLeadMessage();
     const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`;
     window.open(whatsappUrl, '_blank');
   }
@@ -286,6 +352,10 @@ ${userMessages}
     input.value = '';
     isSending = true;
     sendBtn.disabled = true;
+
+    // امسح أي أزرار خيارات متبقية من الرسالة السابقة
+    document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+    lastOptions = null;
 
     renderMsg(text, 'user');
     history.push({ text, type: 'user', time: getTime() });
@@ -303,7 +373,8 @@ ${userMessages}
           message: text,
           history: historyForApi,
           qualificationScore: score,
-          canShareWhatsapp: canShare
+          canShareWhatsapp: canShare,
+          formState: currentFormState
         })
       });
       const data = await res.json();
@@ -314,12 +385,21 @@ ${userMessages}
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
         if (data.leadData) currentLeadData = data.leadData;
+        if (data.formState !== undefined) currentFormState = data.formState;
+        if (data.waMessage) lastWaMessage = data.waMessage;
 
         updateUI();
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
         renderMsg(replyText, 'bot');
         history.push({ text: replyText, type: 'bot', time: getTime() });
         saveState();
+
+        // لو الرد جايب خيارات ثابتة (أزرار)، ارسمها تحت رسالة البوت
+        if (data.options && data.options.length) {
+          lastOptions = data.options;
+          renderOptions(data.options);
+          saveState();
+        }
       }
     } catch (err) {
       typing.style.display = 'none';
