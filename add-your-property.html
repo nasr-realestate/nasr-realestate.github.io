@@ -203,6 +203,18 @@ image: "/assets/img/social-home.webp"
   .wa-btn-submit:hover {
     background: #128c7e !important;
   }
+
+  /* تنبيه السعر */
+  .price-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 10px;
+    color: #856404;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    display: none;
+  }
 </style>
 
 <div class="clean-wrapper">
@@ -212,7 +224,6 @@ image: "/assets/img/social-home.webp"
   </header>
 
   <div class="clean-card">
-    <!-- مؤشر الخطوات -->
     <div class="step-progress-bar">
       <div class="progress-fill" id="progressFill"></div>
       <div class="step-node active" id="node1">1</div>
@@ -221,8 +232,7 @@ image: "/assets/img/social-home.webp"
     </div>
 
     <form id="interactiveAddForm">
-
-      <!-- الخطوة 1: نوع المعاملة والعقار -->
+      <!-- الخطوة 1 -->
       <div class="form-step active" id="step1">
         <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">1. نوع المعاملة والعقار</h3>
         <p style="color: #64748b; font-size: 0.85rem;">اختر نوع العقار لتوجيهك للقنوات المناسبة:</p>
@@ -234,7 +244,6 @@ image: "/assets/img/social-home.webp"
           <div class="option-btn" data-value="محل">🛍️ محل تجاري</div>
         </div>
 
-        <!-- تلميح حسب النوع -->
         <div id="priceHint" class="price-hint">
           <i class="fas fa-lightbulb"></i>
           <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً</span>
@@ -251,7 +260,7 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 2: التفاصيل الفنية -->
+      <!-- الخطوة 2 -->
       <div class="form-step" id="step2">
         <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">2. تفاصيل العقار</h3>
         <p style="color: #64748b; font-size: 0.85rem;">أدخل البيانات المطلوبة للتقييم السريع:</p>
@@ -265,6 +274,9 @@ image: "/assets/img/social-home.webp"
             <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">السعر المطلوب (ج.م)</label>
             <input type="text" id="propPrice" class="clean-input" placeholder="4,000,000" required>
           </div>
+        </div>
+        <div id="priceWarning" class="price-warning">
+          ⚠️ السعر المدخل أقل من الحد الأدنى المعتاد لدينا. قد لا يتم قبول العقار، لكن يمكنك الإرسال وسنوافيك بالرأي.
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
@@ -316,7 +328,7 @@ image: "/assets/img/social-home.webp"
         </div>
       </div>
 
-      <!-- الخطوة 3: التواصل -->
+      <!-- الخطوة 3 -->
       <div class="form-step" id="step3">
         <h3 style="color: #0f172a; font-size: 1.1rem; margin-bottom: 4px;">3. بيانات التواصل</h3>
         <p style="color: #64748b; font-size: 0.85rem;">بياناتك محمية بالكامل وتصل مباشرة إلى أ. طارق طنطاوي.</p>
@@ -348,7 +360,6 @@ image: "/assets/img/social-home.webp"
       <div class="security-badge">
         <i class="fas fa-user-shield" style="color: #1e3a8a;"></i> بياناتك آمنة ولا تظهر للعلن. نتواصل معك خلال 24 ساعة.
       </div>
-
     </form>
   </div>
 </div>
@@ -358,20 +369,65 @@ let currentStep = 1;
 let selectedType = "بيع";
 let selectedFinishing = "سوبر لوكس";
 
+// ===== تحميل البيانات المحفوظة =====
+function loadSavedData() {
+  const saved = localStorage.getItem('addPropertyDraft');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (data.type) selectedType = data.type;
+      if (data.finishing) selectedFinishing = data.finishing;
+      if (data.location) document.getElementById('propLocation').value = data.location;
+      if (data.area) document.getElementById('propArea').value = data.area;
+      if (data.price) document.getElementById('propPrice').value = data.price;
+      if (data.rooms) document.getElementById('propRooms').value = data.rooms;
+      if (data.baths) document.getElementById('propBaths').value = data.baths;
+      if (data.floor) document.getElementById('propFloor').value = data.floor;
+      if (data.ownerName) document.getElementById('ownerName').value = data.ownerName;
+      if (data.ownerPhone) document.getElementById('ownerPhone').value = data.ownerPhone;
+      if (data.notes) document.getElementById('propNotes').value = data.notes;
+      updateSelectedButtons();
+    } catch (e) {}
+  }
+}
+
+// ===== حفظ تلقائي عند أي تغيير =====
+function saveDraft() {
+  const data = {
+    type: selectedType,
+    finishing: selectedFinishing,
+    location: document.getElementById('propLocation').value,
+    area: document.getElementById('propArea').value,
+    price: document.getElementById('propPrice').value,
+    rooms: document.getElementById('propRooms').value,
+    baths: document.getElementById('propBaths').value,
+    floor: document.getElementById('propFloor').value,
+    ownerName: document.getElementById('ownerName').value,
+    ownerPhone: document.getElementById('ownerPhone').value,
+    notes: document.getElementById('propNotes').value
+  };
+  localStorage.setItem('addPropertyDraft', JSON.stringify(data));
+}
+
+// تحديث الواجهة لتحديد الأزرار حسب القيم المحفوظة
+function updateSelectedButtons() {
+  document.querySelectorAll('#typeOptions .option-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.getAttribute('data-value') === selectedType);
+  });
+  document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.getAttribute('data-value') === selectedFinishing);
+  });
+  updatePriceHint();
+}
+
 // ===== اختيار نوع العقار =====
 document.querySelectorAll('#typeOptions .option-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.remove('selected'));
     this.classList.add('selected');
     selectedType = this.getAttribute('data-value');
-
-    // تحديث التلميح حسب النوع
-    const hint = document.getElementById('priceHint');
-    if (selectedType === 'إيجار') {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> ⚠️ الحد الأدنى للإيجار النخبوي: 15,000 ج.م شهرياً`;
-    } else {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> ⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً`;
-    }
+    updatePriceHint();
+    saveDraft();
   });
 });
 
@@ -381,8 +437,33 @@ document.querySelectorAll('#finishingOptions .option-btn').forEach(btn => {
     document.querySelectorAll('#finishingOptions .option-btn').forEach(b => b.classList.remove('selected'));
     this.classList.add('selected');
     selectedFinishing = this.getAttribute('data-value');
+    saveDraft();
   });
 });
+
+// تحديث تلميح السعر حسب النوع
+function updatePriceHint() {
+  const hint = document.getElementById('priceHint');
+  if (selectedType === 'إيجار' || selectedType === 'مكتب' || selectedType === 'محل') {
+    hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للإيجار النخبوي: 15,000 ج.م شهرياً</span>`;
+  } else {
+    hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً</span>`;
+  }
+}
+
+// ===== التحقق من السعر =====
+function validatePrice() {
+  const rawPrice = document.getElementById('propPrice').value.replace(/,/g, '').trim();
+  if (!rawPrice) return false;
+  const priceNum = parseInt(rawPrice);
+  if (isNaN(priceNum)) return false;
+  
+  if (selectedType === 'إيجار' || selectedType === 'مكتب' || selectedType === 'محل') {
+    return priceNum >= 15000;
+  } else {
+    return priceNum >= 4000000;
+  }
+}
 
 // ===== التنقل بين الخطوات =====
 function nextStep(step) {
@@ -395,6 +476,14 @@ function nextStep(step) {
       alert('برجاء إدخال المساحة والسعر المطلوبة.');
       return;
     }
+    // إظهار تحذير إذا كان السعر أقل من الحد الأدنى
+    const priceOk = validatePrice();
+    const warning = document.getElementById('priceWarning');
+    if (!priceOk) {
+      warning.style.display = 'block';
+    } else {
+      warning.style.display = 'none';
+    }
   }
 
   document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
@@ -405,6 +494,7 @@ function nextStep(step) {
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
 
   currentStep = step;
+  saveDraft();
 }
 
 function prevStep(step) {
@@ -416,6 +506,7 @@ function prevStep(step) {
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
 
   currentStep = step;
+  saveDraft();
 }
 
 // ===== إرسال النموذج عبر واتساب =====
@@ -432,7 +523,6 @@ document.getElementById('interactiveAddForm').addEventListener('submit', functio
   const floor = document.getElementById('propFloor').value;
   const notes = document.getElementById('propNotes').value.trim();
 
-  // التحقق من الحقول المطلوبة
   if (!ownerName || !ownerPhone || !location || !area || !price) {
     alert('برجاء ملء جميع الحقول المطلوبة.');
     return;
@@ -442,7 +532,6 @@ document.getElementById('interactiveAddForm').addEventListener('submit', functio
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
 
-  // بناء رسالة واتساب منظمة
   const waText = encodeURIComponent(
     `السلام عليكم أ. طارق طنطاوي،\n` +
     `أنا المالك: ${ownerName}\n` +
@@ -462,17 +551,26 @@ document.getElementById('interactiveAddForm').addEventListener('submit', functio
     `أرجو تقييم العقار والتواصل معي في أقرب وقت.`
   );
 
-  // فتح واتساب
   setTimeout(() => {
+    // مسح المسودة بعد الإرسال الناجح (اختياري)
+    localStorage.removeItem('addPropertyDraft');
     window.location.href = `https://wa.me/201147758857?text=${waText}`;
-        // إعادة تمكين الزر بعد ثواني (في حال الرجوع للصفحة)
     setTimeout(() => {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
     }, 3000);
   }, 400);
 });
-</script>
 
+// ===== تهيئة الصفحة =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadSavedData();
+  // حفظ عند أي إدخال
+  document.querySelectorAll('.clean-input').forEach(input => {
+    input.addEventListener('input', saveDraft);
+    input.addEventListener('change', saveDraft);
+  });
+});
+</script>
 </body>
 </html>
