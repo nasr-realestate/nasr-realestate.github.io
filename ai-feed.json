@@ -4,7 +4,7 @@ permalink: /ai-feed.json
 sitemap: false
 ---
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "brand": "سمسار طلبك",
   "generated_at": {{ site.time | date_to_xmlschema | jsonify }},
   "total_count": {{ site.properties | size }},
@@ -17,27 +17,27 @@ sitemap: false
       "url": {{ property.url | absolute_url | jsonify }},
       "slug": {{ property.slug | default: property.id | default: "" | jsonify }},
       
-      "transaction": {% if property.category == "rents" or property.category == "rent" or property.title contains "إيجار" or property.title contains "ايجار" %}"rent"{% else %}"sale"{% endif %},
+      "transaction": {% if property.category contains "rent" or property.title contains "إيجار" or property.title contains "ايجار" or property.title contains "للإيجار" or property.title contains "للايجار" or property.title contains "شهرياً" or property.title contains "شهريا" %}"rent"{% else %}"sale"{% endif %},
       
-      "propertyType": {% if property.category == "shops" or property.category == "shop" or property.title contains "محل" or property.title contains "تجارى" or property.title contains "تجاري" %}"shop"{% elsif property.category == "offices" or property.category == "office" or property.title contains "مكتب" or property.title contains "مقر" or property.title contains "إداري" or property.title contains "إدارى" %}"office"{% else %}"apartment"{% endif %},
+      "propertyType": {% if property.category contains "shop" or property.category contains "commercial" or property.title contains "محل" or property.title contains "تجارى" or property.title contains "تجاري" or property.title contains "معرض" or property.title contains "صيدلية" %}"shop"{% elsif property.category contains "office" or property.category contains "admin" or property.title contains "مكتب" or property.title contains "مقر" or property.title contains "إداري" or property.title contains "إدارى" %}"office"{% elsif property.category contains "villa" or property.title contains "فيلا" or property.title contains "دوبلكس" %}"villa"{% else %}"apartment"{% endif %},
       
       "category": {{ property.category | default: "apartments" | jsonify }},
       "location": {{ property.location | default: "" | jsonify }},
       
-      "price": "{{ property.price | default: '' }}",
-      "priceNumeric": {% assign p = property.price | default: "0" | remove: "," | remove: " ج.م" | remove: "ج.م" | strip %}{{ p | default: 0 }},
+      "price": {{ property.price | default: "" | jsonify }},
+      "priceNumeric": "{{ property.price | default: '' }}",
       
-      "area": "{{ property.area | default: '' }}",
-      "areaNumeric": {% assign a = property.area | default: "0" | remove: "," | remove: " م" | strip %}{{ a | default: 0 }},
+      "area": {{ property.area | default: "" | jsonify }},
+      "areaNumeric": "{{ property.area | default: '' }}",
       
-      "rooms": "{{ property.rooms | default: '' }}",
-      "baths": "{{ property.bathrooms | default: property.baths | default: '' }}",
+      "rooms": {{ property.rooms | default: "" | jsonify }},
+      "baths": {{ property.bathrooms | default: property.baths | default: "" | jsonify }},
       "floor": {{ property.floor | default: "" | jsonify }},
       "finish": {{ property.finish | default: "" | jsonify }},
       
-      "furnished": {% if property.furnished == true or property.title contains "مفروش" or property.meta_description contains "مفروش" %}true{% else %}false{% endif %},
+      "furnished": {% if property.title contains "غير مفروش" or property.title contains "فاضية" or property.title contains "مش مفروش" %}false{% elsif property.furnished == true %}true{% elsif property.title contains "مفروش" or property.meta_description contains "مفروش" %}true{% else %}false{% endif %},
       
-      "description": {{ property.meta_description | default: property.description | default: "" | strip_html | truncate: 160 | jsonify }},
+      "description": {{ property.meta_description | default: property.description | default: "" | strip_html | truncate: 200 | jsonify }},
       "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ property.image_file }}",
       
       "date": {{ property.date | date_to_xmlschema | jsonify }},
