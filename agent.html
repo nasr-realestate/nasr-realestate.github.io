@@ -42,9 +42,9 @@
     .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; }
     .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
     .input-area button { background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; }
+    .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; animation: fadeInCard 0.45s ease-out; }
 
-    /* ==== الزر الجميل - الحالة الفعّالة ==== */
+    /* ==== البانر الأخضر الحقيقي (يظهر بس لما العميل يخلّص) ==== */
     .whatsapp-notification-card { width: 100%; background: #fff; border-right: 5px solid #25d366; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12); transition: all 0.2s ease; animation: slideUpPulse 1.5s infinite alternate; }
     .whatsapp-notification-card:hover { background: #f9fffb; transform: translateY(-2px); }
     .whatsapp-notification-card .wa-icon-box { width: 38px; height: 38px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(37,211,102,0.4); }
@@ -52,21 +52,9 @@
     .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 800; color: #075e54; display: flex; align-items: center; gap: 5px; }
     .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #4b5563; margin-top: 1px; }
 
-    /* ==== 🆕 الزر الجميل - الحالة المعطّلة ==== */
-    .whatsapp-notification-card.disabled {
-      border-right-color: #94a3b8;
-      background: #f1f5f9;
-      cursor: not-allowed;
-      animation: none;
-      opacity: 0.85;
-    }
-    .whatsapp-notification-card.disabled:hover { background: #f1f5f9; transform: none; }
-    .whatsapp-notification-card.disabled .wa-icon-box { background: #94a3b8; box-shadow: none; }
-    .whatsapp-notification-card.disabled .wa-title { color: #64748b; }
-    .whatsapp-notification-card.disabled .wa-subtitle { color: #94a3b8; }
-
     @keyframes slideUpPulse { 0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); } 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -85,16 +73,13 @@
   </div>
 
   <div class="bottom-dock">
-    <!-- يظهر الزر من أول رد من الـ Worker، ويتحول بين معطّل/فعّال -->
+    <!-- 🆕 البانر الأخضر يظهر فقط لما readyToSend = true -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
-        <div class="wa-icon-box" id="waIconBox"><i class="fab fa-whatsapp" id="waIcon"></i></div>
+        <div class="wa-icon-box"><i class="fab fa-whatsapp"></i></div>
         <div class="wa-text-box">
-          <div class="wa-title" id="waTitle">
-            اضغط هنا لمتابعة المحادثة مع أ. طارق
-            <span id="waBadge" style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span>
-          </div>
-          <div class="wa-subtitle" id="waSubtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
+          <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span></div>
+          <div class="wa-subtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
         </div>
       </div>
     </div>
@@ -136,12 +121,6 @@
   const sendBtn = document.getElementById('sendBtn');
   const typing = document.getElementById('typingIndicator');
   const dealWrapper = document.getElementById('dealWrapper');
-  const waCard = document.getElementById('waCard');
-  const waIconBox = document.getElementById('waIconBox');
-  const waIcon = document.getElementById('waIcon');
-  const waTitle = document.getElementById('waTitle');
-  const waBadge = document.getElementById('waBadge');
-  const waSubtitle = document.getElementById('waSubtitle');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
@@ -174,32 +153,12 @@
     } catch { return false; }
   }
 
-  // 🆕 تحديث شكل الزر بناءً على readyToSend + progress
+  // 🆕 عرض البانر الأخضر فقط لو readyToSend = true
   function renderWhatsAppButton() {
-    if (!canShare && score < 5) {
-      dealWrapper.style.display = 'none';
-      return;
-    }
-    dealWrapper.style.display = 'block';
-
-    if (readyToSend) {
-      // الحالة الفعّالة (زي الأصل)
-      waCard.classList.remove('disabled');
-      waIconBox.innerHTML = '<i class="fab fa-whatsapp"></i>';
-      waTitle.innerHTML = 'اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span>';
-      waSubtitle.innerText = 'تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب';
+    if (readyToSend && (canShare || score >= 5)) {
+      dealWrapper.style.display = 'block';
     } else {
-      // الحالة المعطّلة
-      waCard.classList.add('disabled');
-      waIconBox.innerHTML = '<i class="fas fa-lock"></i>';
-
-      if (currentProgress && currentProgress.remaining > 0) {
-        waTitle.innerHTML = '🔒 كمّل بياناتك الأول عشان نوصل بأ. طارق';
-        waSubtitle.innerText = `📊 فاضل ${currentProgress.remaining} أسئلة (${currentProgress.current} من ${currentProgress.total})`;
-      } else {
-        waTitle.innerHTML = '🔒 لسه بنجمع بياناتك...';
-        waSubtitle.innerText = 'كمّل مع طارق شوية عشان نقدر نوصلك بأدق تفاصيل';
-      }
+      dealWrapper.style.display = 'none';
     }
   }
 
@@ -269,9 +228,9 @@
     return `أستاذ طارق، تحية طيبة،\n\nتواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nأتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
   }
 
-  // 🆕 زر الواتساب: لو الزر معطّل والعميل دوس، نطلّع تنبيه محلي
+  // زر الواتساب (يفتح واتساب لما البانر الأخضر ظاهر)
   function openWhatsApp() {
-    // لو الزر معطّل → رسالة تنبيه محلية (بدون ما نفتح واتساب)
+    // لو الزر مظهرش بعد (احتياطي) → تنبيه محلي
     if (!readyToSend) {
       const remaining = currentProgress?.remaining || 0;
       const total = currentProgress?.total || 0;
@@ -285,7 +244,6 @@
       return;
     }
 
-    // الزر فعّال → افتح واتساب
     if (!canShare && score < 5) return;
     const leadMessage = lastWaMessage || buildProfessionalLeadMessage();
     window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`, '_blank');
