@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta property="og:title" content="الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك" />
-  <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014. استشارة فورية وعقارات نخبوية." />
+  <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014." />
   <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
   <title>الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,141 +15,41 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html { height: 100%; background: #0a0a0a; font-family: 'Cairo', sans-serif; overflow: hidden; }
-    :root {
-      --wa-header: #075e54;
-      --wa-bg: #efeae2;
-      --wa-msg-in: #ffffff;
-      --wa-msg-out: #dcf8c6;
-      --wa-green: #25d366;
-    }
-    .agent-app {
-      max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column;
-      box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative;
-    }
+    :root { --wa-header: #075e54; --wa-bg: #efeae2; --wa-msg-in: #fff; --wa-msg-out: #dcf8c6; --wa-green: #25d366; }
+    .agent-app { max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative; }
     .agent-app.show { opacity: 1; }
-    .agent-header {
-      background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff;
-      flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;
-    }
+    .agent-header { background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; }
     .agent-header img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
     .agent-header .info { flex: 1; }
     .agent-header .info h1 { font-size: 0.95rem; }
     .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
     .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
-
-    /* إلغاء شريط التأهيل مرئياً تماماً (تأهيل خفي) */
     .qual-bar { display: none !important; }
-
-    .chat-area {
-      flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px;
-      background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px;
-    }
+    .chat-area { flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px; }
     .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
     .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 4px; font-weight: 600; }
     .msg a { color: #075e54; font-weight: 700; text-decoration: underline; }
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
-
-    /* أزرار الخيارات (Slot-Filling buttons) */
-    .option-buttons-wrap {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%;
-    }
-    .option-btn {
-      background: #fff; border: 1px solid #25d366; color: #075e54;
-      padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif;
-      font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s;
-    }
+    .option-buttons-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%; }
+    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s; }
     .option-btn:hover { background: #dcf8c6; }
     .option-btn:active { transform: scale(0.96); }
-
-    .bottom-dock {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #f0f0f0;
-      border-top: 1px solid #d1d7db;
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 -6px 25px rgba(0,0,0,0.18);
-      padding-bottom: env(safe-area-inset-bottom, 8px);
-    }
-
-    .input-area {
-      padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center; background: #eae6df;
-    }
-    .input-area input {
-      flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif;
-      font-size: 14px; outline: none;
-    }
+    .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; background: #f0f0f0; border-top: 1px solid #d1d7db; z-index: 100; display: flex; flex-direction: column; box-shadow: 0 -6px 25px rgba(0,0,0,0.18); padding-bottom: env(safe-area-inset-bottom, 8px); }
+    .input-area { padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center; background: #eae6df; }
+    .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; }
     .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
-    .input-area button {
-      background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff;
-      font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    }
-
-    /* كارت إشعار الواتساب المرتبط حصرياً بقرار الـ Source (الـ Worker) */
-    .deal-wrapper { 
-      padding: 8px 12px 4px 12px; 
-      width: 100%;
-      background: #eae6df;
-    }
-    .whatsapp-notification-card {
-      width: 100%;
-      background: #ffffff;
-      border-right: 5px solid #25d366;
-      border-radius: 10px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-      transition: all 0.2s ease;
-      animation: slideUpPulse 1.5s infinite alternate;
-    }
-    .whatsapp-notification-card:hover {
-      background: #f9fffb;
-      transform: translateY(-2px);
-    }
-    .whatsapp-notification-card .wa-icon-box {
-      width: 38px;
-      height: 38px;
-      background: #25d366;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 1.2rem;
-      flex-shrink: 0;
-      box-shadow: 0 2px 5px rgba(37,211,102,0.4);
-    }
-    .whatsapp-notification-card .wa-text-box {
-      flex: 1;
-    }
-    .whatsapp-notification-card .wa-title {
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: #075e54;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .whatsapp-notification-card .wa-subtitle {
-      font-size: 0.75rem;
-      color: #4b5563;
-      margin-top: 1px;
-    }
-
-    @keyframes slideUpPulse {
-      0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); }
-      100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); }
-    }
+    .input-area button { background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; }
+    .whatsapp-notification-card { width: 100%; background: #fff; border-right: 5px solid #25d366; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12); transition: all 0.2s ease; animation: slideUpPulse 1.5s infinite alternate; }
+    .whatsapp-notification-card:hover { background: #f9fffb; transform: translateY(-2px); }
+    .whatsapp-notification-card .wa-icon-box { width: 38px; height: 38px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(37,211,102,0.4); }
+    .whatsapp-notification-card .wa-text-box { flex: 1; }
+    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 800; color: #075e54; display: flex; align-items: center; gap: 5px; }
+    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #4b5563; margin-top: 1px; }
+    @keyframes slideUpPulse { 0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); } 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
@@ -164,23 +64,14 @@
     <a href="/" class="logo-link"><i class="fas fa-home"></i></a>
   </div>
 
-  <div class="qual-bar">
-    <span>التأهيل: <span class="score" id="qualScore">0/5</span></span>
-    <div class="progress"><div class="fill" id="qualProgress"></div></div>
-    <span class="state wait" id="qualState">جمع بيانات</span>
-  </div>
-
   <div class="chat-area" id="chatMessages">
     <div class="typing" id="typingIndicator">طارق بيكتب...</div>
   </div>
 
   <div class="bottom-dock">
-    <!-- يظهر حصرياً بناءً على إشارة الـ Source (Worker) عند اكتمال الـ 5 شروط -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <div class="whatsapp-notification-card" onclick="openWhatsApp()">
-        <div class="wa-icon-box">
-          <i class="fab fa-whatsapp"></i>
-        </div>
+        <div class="wa-icon-box"><i class="fab fa-whatsapp"></i></div>
         <div class="wa-text-box">
           <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span></div>
           <div class="wa-subtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
@@ -205,14 +96,15 @@
   const LEAD_KEY = "tarek_lead_v17";
   const FORM_STATE_KEY = "tarek_form_state_v17";
   const OPTIONS_KEY = "tarek_options_v17";
+  const WA_MSG_KEY = "tarek_wa_msg_v17";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
   let canShare = localStorage.getItem(WA_KEY) === "true";
   let currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
   let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
-  let lastWaMessage = null;             // آخر رسالة واتساب جاهزة من الـ Worker (مسار البائع/المؤجر)
-  let lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null"); // آخر خيارات معروضة
+  let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
+  let lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
   let isSending = false;
 
   const chat = document.getElementById('chatMessages');
@@ -231,49 +123,41 @@
     localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
     localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
     localStorage.setItem(OPTIONS_KEY, JSON.stringify(lastOptions));
+    if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
   }
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { history = JSON.parse(raw); }
+      if (raw) history = JSON.parse(raw);
       score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
       canShare = localStorage.getItem(WA_KEY) === "true";
       currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
       currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
       lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
+      lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
       return true;
     } catch { return false; }
   }
 
   function updateUI() {
-    // الربط صارم مع الـ Source (Worker): لا يظهر الزر إلا إذا وافق السيرفر وقرر اكتمال التأهيل
-    if (canShare || score >= 5) {
-      dealWrapper.style.display = 'block';
-    } else {
-      dealWrapper.style.display = 'none';
-    }
+    if (canShare || score >= 5) dealWrapper.style.display = 'block';
+    else dealWrapper.style.display = 'none';
 
-    // تصفير سياق الفورم لما يكتمل (formState.active === false) عشان نسمح بطلب جديد نظيف
     if (currentFormState && currentFormState.active === false) {
       currentFormState = null;
-      lastWaMessage = null;
       lastOptions = null;
       localStorage.removeItem(FORM_STATE_KEY);
       localStorage.removeItem(OPTIONS_KEY);
     }
-
     saveState();
   }
 
   function renderMsg(text, type, time) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
-    if (type === 'bot') {
-      div.innerHTML = marked.parse(text);
-    } else {
-      div.innerText = text;
-    }
+    if (type === 'bot') div.innerHTML = marked.parse(text);
+    else div.innerText = text;
     const t = document.createElement('div');
     t.className = 'msg-time';
     t.innerText = time || getTime();
@@ -282,13 +166,10 @@
     scroll();
   }
 
-  // ============ أزرار الخيارات (Slot-Filling) ============
   function renderOptions(options) {
     if (!options || !options.length) return;
-
     const wrap = document.createElement('div');
     wrap.className = 'option-buttons-wrap';
-
     options.forEach(opt => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -296,7 +177,6 @@
       btn.innerText = opt;
       btn.onclick = () => {
         if (isSending) return;
-        // امسح كل الأزرار المعروضة قبل الإرسال لمنع الضغط المزدوج
         document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
         lastOptions = null;
         input.value = opt;
@@ -304,7 +184,6 @@
       };
       wrap.appendChild(btn);
     });
-
     chat.insertBefore(wrap, typing);
     scroll();
   }
@@ -313,7 +192,6 @@
     chat.querySelectorAll('.msg').forEach(el => el.remove());
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     history.forEach(m => renderMsg(m.text, m.type, m.time));
-    // استرجاع الأزرار لو كانت آخر خطوة فورم فيها خيارات ولسه معلقة
     if (lastOptions && lastOptions.length && currentFormState && currentFormState.active) {
       renderOptions(lastOptions);
     }
@@ -324,26 +202,13 @@
     const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' | ');
     const leadType = currentLeadData.type || "استعلام عقاري";
     const leadPrice = currentLeadData.price || "حسب الاتفاق";
-
-    return `أستاذ طارق، تحية طيبة،
-
-تواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:
-
-- نوع الطلب: ${leadType}
-- الميزانية / السعر: ${leadPrice}
-- تفاصيل المحادثة: 
-${userMessages}
-
-أتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
+    return `أستاذ طارق، تحية طيبة،\n\nتواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nأتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
   }
 
   function openWhatsApp() {
     if (!canShare && score < 5) return;
-    // لو العميل بائع/مؤجر وخلص الفورم → نستخدم رسالة الـ Worker المنسقة
-    // لو مشتري/مستأجر → نستخدم الدالة القديمة
     const leadMessage = lastWaMessage || buildProfessionalLeadMessage();
-    const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`;
-    window.open(whatsappUrl, '_blank');
+    window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`, '_blank');
   }
 
   async function sendMsg() {
@@ -353,7 +218,6 @@ ${userMessages}
     isSending = true;
     sendBtn.disabled = true;
 
-    // امسح أي أزرار خيارات متبقية من الرسالة السابقة
     document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     lastOptions = null;
 
@@ -381,7 +245,6 @@ ${userMessages}
       typing.style.display = 'none';
 
       if (data) {
-        // اعتماد حصري على قادم الـ Source (الـ Worker)
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
         if (data.leadData) currentLeadData = data.leadData;
@@ -394,7 +257,6 @@ ${userMessages}
         history.push({ text: replyText, type: 'bot', time: getTime() });
         saveState();
 
-        // لو الرد جايب خيارات ثابتة (أزرار)، ارسمها تحت رسالة البوت
         if (data.options && data.options.length) {
           lastOptions = data.options;
           renderOptions(data.options);
