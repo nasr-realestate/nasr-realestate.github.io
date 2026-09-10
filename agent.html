@@ -37,7 +37,7 @@
     .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
     .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
-    
+
     .qual-bar {
       background: #fff; padding: 6px 14px; border-bottom: 1px solid #e9edef; display: flex; align-items: center;
       justify-content: space-between; font-size: 11px; flex-shrink: 0; z-index: 10;
@@ -60,7 +60,6 @@
     .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
 
-    /* الحاوية السفلية */
     .bottom-dock {
       position: absolute;
       bottom: 0;
@@ -88,27 +87,11 @@
       font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     }
 
-    /* زر الواتساب البارز */
-    .deal-wrapper { 
-      padding: 4px 12px 10px 12px; 
-      width: 100%;
-    }
+    .deal-wrapper { padding: 4px 12px 10px 12px; width: 100%; }
     .deal-btn {
-      width: 100%; 
-      background: #25d366; 
-      color: #ffffff; 
-      border: none; 
-      padding: 13px; 
-      border-radius: 12px;
-      font-weight: 800; 
-      font-family: 'Cairo', sans-serif; 
-      cursor: pointer; 
-      display: flex; 
-      align-items: center;
-      justify-content: center; 
-      gap: 10px; 
-      font-size: 1rem; 
-      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.5);
+      width: 100%; background: #25d366; color: #ffffff; border: none; padding: 13px; border-radius: 12px;
+      font-weight: 800; font-family: 'Cairo', sans-serif; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 10px; font-size: 1rem; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.5);
       animation: pulseGlow 1.8s infinite;
     }
     .deal-btn:hover { background: #1ebe5d; }
@@ -131,7 +114,7 @@
     </div>
     <a href="/" class="logo-link"><i class="fas fa-home"></i></a>
   </div>
-  
+
   <div class="qual-bar">
     <span>التأهيل: <span class="score" id="qualScore">0/5</span></span>
     <div class="progress"><div class="fill" id="qualProgress"></div></div>
@@ -202,10 +185,17 @@
   }
 
   function updateUI() {
+    // تحليل المحادثة الحالية لاستخراج بيانات العميل
+    const analysis = analyzeChatHistory();
+    const dataComplete = hasCompleteLeadData(analysis);
+
     scoreEl.textContent = `${score}/5`;
     progress.style.width = `${Math.min(100, (score / 5) * 100)}%`;
-    
-    if (canShare || score >= 5) {
+
+    // الزر يظهر فقط إذا:
+    // 1) البيانات مكتملة (3 حقول أساسية على الأقل)
+    // 2) إما العميل وصل لسكور 5 أو الـ API سمح له
+    if ((score >= 5 || canShare) && dataComplete) {
       stateEl.className = 'state ready';
       stateEl.textContent = 'جاهز للتواصل ✅';
       dealWrapper.style.display = 'block';
@@ -239,23 +229,103 @@
     updateUI();
   }
 
+  // ========== دوال التحليل الجديدة ==========
+  function analyzeChatHistory() {
+    const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' ');
+    let type = "استفسار عقاري";
+    let budget = "غير محدد";
+    let rooms = "غير محدد";
+    let location = "مدينة نصر";
+    let notes = "";
+
+    // تحديد نوع العملية
+    if (/(شراء|تمليك|اشترى|buy)/i.test(userMessages)) {
+      type = "شراء";
+    } else if (/(إيجار|ايجار|إجار|أجار|استئجار|rent)/i.test(userMessages)) {
+      type = "إيجار";
+    }
+
+    // استخراج السعر (آخر رقم منطقي)
+    const priceMatches = userMessages.match(/(\d{3,})\s*(?:ألف|الف|k|K)?|(\d+)\s*(?:ألف|الف)/g);
+    if (priceMatches) {
+      const lastPrice = priceMatches[priceMatches.length - 1];
+      const num = parseInt(lastPrice.replace(/[^0-9]/g, ''));
+      if (num && num >= 1000) {
+        budget = `${num.toLocaleString('en-US')} جنيه`;
+      } else if (num && num > 0 && num <= 100) {
+        budget = `${num} ألف جنيه`;
+      }
+    }
+
+    // استخراج عدد الغرف
+    const roomsMatch = userMessages.match(/(\d+)\s*(?:غرف|غرفة|اوض|أوض|غرفه|حجرات)/);
+    if (roomsMatch) {
+      const num = parseInt(roomsMatch[1]);
+      if (!isNaN(num) && num > 0) rooms = `${num} غرف`;
+    } else if (/غرفتين/.test(userMessages)) {
+      rooms = "غرفتين";
+    } else if (/غرفة واحدة|اوضة واحدة|أوضة واحدة|اوضه واحده/.test(userMessages)) {
+      rooms = "غرفة واحدة";
+    }
+
+    // ملاحظات إضافية
+    if (/بنتهاوس|بنت هوس|penthous/i.test(userMessages)) {
+      notes += "يفضل شقة بنتهاوس. ";
+    }
+    if (/متشطبة|تشطيب|نضيفة|نضيفه|سوبر لوكس|سوبرلوكس/.test(userMessages)) {
+      notes += "يرغب في تشطيب جيد ونظافة عالية. ";
+    }
+    if (/حمامين|حمامين|2 حمام/.test(userMessages)) {
+      notes += "عدد الحمامات المطلوبة: 2. ";
+    }
+    if (/مصعد|اسانسير|أسانسير|اسانصير/.test(userMessages)) {
+      notes += "يفضل وجود مصعد. ";
+    }
+
+    // تحسينات من currentLeadData إن وجدت
+    if (currentLeadData && currentLeadData.type && currentLeadData.type !== "استعلام عقاري عام") {
+      type = currentLeadData.type;
+    }
+    if (currentLeadData && currentLeadData.price && currentLeadData.price !== "حسب المعاينة / الاتفاق") {
+      budget = currentLeadData.price;
+    }
+
+    notes = notes.trim() || "يرجى الاستفسار عن المزيد من التفاصيل.";
+
+    return { type, budget, rooms, location, notes };
+  }
+
+  function hasCompleteLeadData(a) {
+    const requiredFields = ['type', 'budget', 'rooms'];
+    let filledCount = 0;
+
+    if (a.type && a.type !== 'استفسار عقاري' && a.type !== 'غير محدد') filledCount++;
+    if (a.budget && a.budget !== 'غير محدد') filledCount++;
+    if (a.rooms && a.rooms !== 'غير محدد') filledCount++;
+    if (a.location && a.location !== 'غير محدد') filledCount++; // لو حابب نحسبها
+
+    // نشترط 3 من 4 حقول أساسية على الأقل
+    return filledCount >= 3;
+  }
+
+  function buildProfessionalLeadMessage(a) {
+    return `أستاذ طارق، تحية طيبة،
+
+تواصلت معك عبر منصة "الوكيل الذكي"، ويسعدني أن أشارككم ملخص طلبي:
+
+- نوع العملية: ${a.type}
+- المنطقة المرغوبة: ${a.location}
+- الميزانية: ${a.budget}
+- عدد الغرف: ${a.rooms}
+- ملاحظات إضافية: ${a.notes}
+
+أتمنى التواصل معي لاستكمال التفاصيل، وشكراً لوقتك.`;
+  }
+
   function openWhatsApp() {
-    const userMessages = history.filter(m => m.type === 'user').map(m => m.text);
-    const summaryUserText = userMessages.length > 0 ? userMessages.join(' | ') : "مهتم بعقارات مدينة نصر";
-
-    const leadType = currentLeadData.type || "استعلام عقاري عام";
-    const leadPrice = currentLeadData.price || "حسب المعاينة / الاتفاق";
-
-    const smartMessage = `أهلاً أ. طارق، تواصلت معك عبر "الوكيل الذكي" وهذا ملخص طلبي وتفاصيل محادثتي:
-
-- طبيعة الطلب: ${leadType}
-- الميزانية / السعر المذكور: ${leadPrice}
-- تفاصيل ما طلُب بالمحادثة: 
-${summaryUserText}
-
-أنتظر ردكم الكريم لتأكيد التفاصيل.`;
-
-    const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(smartMessage)}`;
+    const analysis = analyzeChatHistory();
+    const leadMessage = buildProfessionalLeadMessage(analysis);
+    const whatsappUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`;
     window.open(whatsappUrl, '_blank');
   }
 
@@ -291,7 +361,12 @@ ${summaryUserText}
       if (data) {
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
         if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
-        if (data.leadData) currentLeadData = data.leadData;
+        if (data.leadData) {
+          currentLeadData = data.leadData;
+        } else {
+          // لو الـ API مرجعش leadData، نحسبها محلياً
+          currentLeadData = analyzeChatHistory();
+        }
 
         if (score >= 5 || data.canShareWhatsapp) {
           canShare = true;
