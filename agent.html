@@ -43,12 +43,28 @@
     .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
     .input-area button { background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; }
+
+    /* ==== الزر الجميل - الحالة الفعّالة ==== */
     .whatsapp-notification-card { width: 100%; background: #fff; border-right: 5px solid #25d366; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12); transition: all 0.2s ease; animation: slideUpPulse 1.5s infinite alternate; }
     .whatsapp-notification-card:hover { background: #f9fffb; transform: translateY(-2px); }
     .whatsapp-notification-card .wa-icon-box { width: 38px; height: 38px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(37,211,102,0.4); }
     .whatsapp-notification-card .wa-text-box { flex: 1; }
     .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 800; color: #075e54; display: flex; align-items: center; gap: 5px; }
     .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #4b5563; margin-top: 1px; }
+
+    /* ==== 🆕 الزر الجميل - الحالة المعطّلة ==== */
+    .whatsapp-notification-card.disabled {
+      border-right-color: #94a3b8;
+      background: #f1f5f9;
+      cursor: not-allowed;
+      animation: none;
+      opacity: 0.85;
+    }
+    .whatsapp-notification-card.disabled:hover { background: #f1f5f9; transform: none; }
+    .whatsapp-notification-card.disabled .wa-icon-box { background: #94a3b8; box-shadow: none; }
+    .whatsapp-notification-card.disabled .wa-title { color: #64748b; }
+    .whatsapp-notification-card.disabled .wa-subtitle { color: #94a3b8; }
+
     @keyframes slideUpPulse { 0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); } 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   </style>
@@ -69,12 +85,16 @@
   </div>
 
   <div class="bottom-dock">
+    <!-- يظهر الزر من أول رد من الـ Worker، ويتحول بين معطّل/فعّال -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
-      <div class="whatsapp-notification-card" onclick="openWhatsApp()">
-        <div class="wa-icon-box"><i class="fab fa-whatsapp"></i></div>
+      <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
+        <div class="wa-icon-box" id="waIconBox"><i class="fab fa-whatsapp" id="waIcon"></i></div>
         <div class="wa-text-box">
-          <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span></div>
-          <div class="wa-subtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
+          <div class="wa-title" id="waTitle">
+            اضغط هنا لمتابعة المحادثة مع أ. طارق
+            <span id="waBadge" style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span>
+          </div>
+          <div class="wa-subtitle" id="waSubtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
         </div>
       </div>
     </div>
@@ -97,6 +117,8 @@
   const FORM_STATE_KEY = "tarek_form_state_v17";
   const OPTIONS_KEY = "tarek_options_v17";
   const WA_MSG_KEY = "tarek_wa_msg_v17";
+  const PROGRESS_KEY = "tarek_progress_v17";
+  const READY_KEY = "tarek_ready_v17";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -105,6 +127,8 @@
   let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
   let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
   let lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
+  let currentProgress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
+  let readyToSend = localStorage.getItem(READY_KEY) === "true";
   let isSending = false;
 
   const chat = document.getElementById('chatMessages');
@@ -112,6 +136,12 @@
   const sendBtn = document.getElementById('sendBtn');
   const typing = document.getElementById('typingIndicator');
   const dealWrapper = document.getElementById('dealWrapper');
+  const waCard = document.getElementById('waCard');
+  const waIconBox = document.getElementById('waIconBox');
+  const waIcon = document.getElementById('waIcon');
+  const waTitle = document.getElementById('waTitle');
+  const waBadge = document.getElementById('waBadge');
+  const waSubtitle = document.getElementById('waSubtitle');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
@@ -123,7 +153,9 @@
     localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
     localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
     localStorage.setItem(OPTIONS_KEY, JSON.stringify(lastOptions));
+    localStorage.setItem(READY_KEY, readyToSend ? "true" : "false");
     if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
+    if (currentProgress) localStorage.setItem(PROGRESS_KEY, JSON.stringify(currentProgress));
   }
 
   function loadState() {
@@ -136,19 +168,51 @@
       currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
       lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
       lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
+      currentProgress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
+      readyToSend = localStorage.getItem(READY_KEY) === "true";
       return true;
     } catch { return false; }
   }
 
+  // 🆕 تحديث شكل الزر بناءً على readyToSend + progress
+  function renderWhatsAppButton() {
+    if (!canShare && score < 5) {
+      dealWrapper.style.display = 'none';
+      return;
+    }
+    dealWrapper.style.display = 'block';
+
+    if (readyToSend) {
+      // الحالة الفعّالة (زي الأصل)
+      waCard.classList.remove('disabled');
+      waIconBox.innerHTML = '<i class="fab fa-whatsapp"></i>';
+      waTitle.innerHTML = 'اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span>';
+      waSubtitle.innerText = 'تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب';
+    } else {
+      // الحالة المعطّلة
+      waCard.classList.add('disabled');
+      waIconBox.innerHTML = '<i class="fas fa-lock"></i>';
+
+      if (currentProgress && currentProgress.remaining > 0) {
+        waTitle.innerHTML = '🔒 كمّل بياناتك الأول عشان نوصل بأ. طارق';
+        waSubtitle.innerText = `📊 فاضل ${currentProgress.remaining} أسئلة (${currentProgress.current} من ${currentProgress.total})`;
+      } else {
+        waTitle.innerHTML = '🔒 لسه بنجمع بياناتك...';
+        waSubtitle.innerText = 'كمّل مع طارق شوية عشان نقدر نوصلك بأدق تفاصيل';
+      }
+    }
+  }
+
   function updateUI() {
-    if (canShare || score >= 5) dealWrapper.style.display = 'block';
-    else dealWrapper.style.display = 'none';
+    renderWhatsAppButton();
 
     if (currentFormState && currentFormState.active === false) {
       currentFormState = null;
       lastOptions = null;
+      currentProgress = null;
       localStorage.removeItem(FORM_STATE_KEY);
       localStorage.removeItem(OPTIONS_KEY);
+      localStorage.removeItem(PROGRESS_KEY);
     }
     saveState();
   }
@@ -205,7 +269,23 @@
     return `أستاذ طارق، تحية طيبة،\n\nتواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nأتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
   }
 
+  // 🆕 زر الواتساب: لو الزر معطّل والعميل دوس، نطلّع تنبيه محلي
   function openWhatsApp() {
+    // لو الزر معطّل → رسالة تنبيه محلية (بدون ما نفتح واتساب)
+    if (!readyToSend) {
+      const remaining = currentProgress?.remaining || 0;
+      const total = currentProgress?.total || 0;
+      const current = currentProgress?.current || 0;
+      const warnText = remaining > 0
+        ? `لسه فاضل ${remaining} أسئلة يا فندم 📊 (${current} من ${total}). خلّصهم كلهم عشان تبعتلي بياناتك كاملة مرة واحدة وتوفّر وقتك.`
+        : `لسه بنجمع بياناتك يا فندم، كمّل معايا شوية كمان عشان أقدر أوصلك بأ. طارق بأدق تفاصيل.`;
+      renderMsg(warnText, 'bot');
+      history.push({ text: warnText, type: 'bot', time: getTime() });
+      saveState();
+      return;
+    }
+
+    // الزر فعّال → افتح واتساب
     if (!canShare && score < 5) return;
     const leadMessage = lastWaMessage || buildProfessionalLeadMessage();
     window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`, '_blank');
@@ -250,6 +330,8 @@
         if (data.leadData) currentLeadData = data.leadData;
         if (data.formState !== undefined) currentFormState = data.formState;
         if (data.waMessage) lastWaMessage = data.waMessage;
+        if (data.progress !== undefined) currentProgress = data.progress;
+        if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
 
         updateUI();
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
