@@ -25,10 +25,21 @@ author:
   url: "https://nasr-realestate.github.io/about/"
   avatar: "/assets/img/tarek-tantawy.webp"
 
+# --- التواصل (محدّث ليتوافق مع Worker) ---
 contact:
   whatsapp: "+201147758857"
   whatsapp_url: "https://wa.me/201147758857"
   email: "tarek@nasr-realestate.com"
+  # 🆕 أرقام إضافية
+  alaa_phone: "+201022171667"
+  alaa_whatsapp_url: "https://wa.me/201022171667"
+
+# 🆕 المكتب (محدّث ليتوافق مع Worker)
+office:
+  address: "16 شارع محمد حسن الجمل - المنطقة السادسة - مدينة نصر"
+  map_url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
+  hours: "من 12 الضهر لحد 9 بالليل، ما عدا الجمعة"
+  hours_exception: "الجمعة إجازة"
 
 # --- الربط التقني والأرشفة ---
 webmaster_verifications:
@@ -44,7 +55,7 @@ plugins:
   - jekyll-feed
   - jekyll-sitemap
 
-# --- إدارة الروابط (هنا تم إنهاء العربي في الـ URL) ---
+# --- إدارة الروابط ---
 collections:
   properties:
     output: true
@@ -53,12 +64,10 @@ collections:
     output: true
     permalink: /requests/:slug/
 
-# --- الإعدادات الافتراضية المعدلة ---
+# --- الإعدادات الافتراضية ---
 defaults:
   - scope:
-
-  - scope:
-      path: "" # بقية صفحات الموقع العادية
+      path: ""
     values:
       layout: "default"
       lang: "ar"
@@ -95,4 +104,3 @@ exclude:
   - node_modules
   - package.json
   - package-lock.json
-  
