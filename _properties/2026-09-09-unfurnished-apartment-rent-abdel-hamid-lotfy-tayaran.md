@@ -1,20 +1,22 @@
 ---
 layout: property_page
-title: "شقة للإيجار (غير مفروشة) ناصية مميزة بشارع عبد الحميد لطفي وتقاطع الطيران"
+title: "شقة 150م قانون جديد للإيجار - ناصية عبد الحميد لطفي والطيران"
 date: 2026-09-09
-location: "شارع عبد الحميد لطفي تقاطع شارع الطيران، مدينة نصر"
+location: "شارع عبد الحميد لطفي - تقاطع شارع الطيران - مدينة نصر"
 price: "13,000 ج.م / شهرياً"
-category: apartments
-id: "apt-rent-tayaran-001"
-slug: "unfurnished-apartment-rent-abdel-hamid-lotfy-tayaran"
+category: apartments-rent
+id: "rent-abdel-hamid-lotfy-tayaran-150m"
+slug: "rent-abdel-hamid-lotfy-tayaran-150m"
 image_file: "Unfurnished-Apartment-Rent-Abdel-Hamid-Lotfy-Nasr-City.webp"
-area: "[غير محدد - مساحة رحبة]"
-rooms: "[غرف نوم + ريسبشن]"
-bathrooms: "[1 حمام]"
-floor: "الرابع"
+area: "150 متر مربع"
+rooms: "3 غرف نوم + ريسبشن"
+bathrooms: "1 حمام"
+floor: "الدور الرابع"
 finish: "جاهزة للسكن"
-meta_title: "شقة للإيجار غير مفروشة بشارع الطيران وعبد الحميد لطفي"
-meta_description: "شقة للإيجار قانون جديد بمدينة نصر، ناصية مميزة، غرف على الشارع الرئيسي وريسبشن بحري، موقع استراتيجي بشارع عبد الحميد لطفي والطيران."
+furnished: false
+duration: "سنة"
+meta_title: "شقة 150م قانون جديد للإيجار في شارع الطيران مدينة نصر | ناصية مميزة"
+meta_description: "شقة 150م قانون جديد للإيجار في ناصية عبد الحميد لطفي وتقاطع الطيران بمدينة نصر. 3 غرف نوم، ريسبشن بحري، موقع استراتيجي. الإيجار 13,000 ج.م شهرياً."
 ---
 
 <script type="application/ld+json">
