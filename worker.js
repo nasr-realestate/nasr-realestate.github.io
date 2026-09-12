@@ -1860,7 +1860,9 @@ export default {
       }
 
       // K. Gemini
-      if (userMessage.length > 5 && !/^(هلا|ازيك|السلام|مرحبا|صباح|مساء)/i.test(userMessage)) {
+      // أي رسالة عامة لم تدخل مساراً أو قاعدة ثابتة تصل إلى Gemini.
+      // الترحيب الأول لا يمر من هنا؛ صفحة agent.html ترسله محلياً بدون Gemini.
+      if (userMessage.length > 0) {
         const geminiReply = await askGeminiBrief(env, userMessage);
         if (geminiReply) {
           return jsonResponse({
