@@ -10,13 +10,13 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html { height: 100%; background: #0a0a0a; font-family: 'Cairo', sans-serif; overflow: hidden; }
+    body, html { height: 100%; background: #0a0a0a; font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; font-size: 14px; }
     :root {
       --wa-header: #075e54;
       --wa-bg: #efeae2;
@@ -26,65 +26,40 @@
     }
     .agent-app { max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative; }
     .agent-app.show { opacity: 1; }
-    .agent-header { background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; position: relative; }
-    .agent-header img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
-    .agent-header .info { flex: 1; }
-    .agent-header .info h1 { font-size: 0.95rem; }
-    .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
+    .agent-header { background: var(--wa-header); padding: 10px 14px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; position: relative; }
+    .agent-header img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
+    .agent-header .info { flex: 1; min-width: 0; }
+    .agent-header .info h1 { font-size: 0.95rem; font-weight: 600; line-height: 1.2; }
+    .agent-header .info p { font-size: 0.7rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; margin-top: 1px; }
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
-    .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
 
-    /* 🆕 زر القائمة (ثلاث نقاط) */
-    .menu-btn {
-      background: transparent;
-      border: none;
+    /* 🆕 شعار سمسار طلبك */
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       color: #fff;
-      font-size: 1.3rem;
-      cursor: pointer;
-      padding: 6px 10px;
-      border-radius: 50%;
-      transition: background 0.15s;
+      font-size: 0.7rem;
+      font-weight: 600;
+      opacity: 0.9;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 20px;
     }
+    .brand-logo img {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 50%;
+    }
+
+    .menu-btn { background: transparent; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
     .menu-btn:hover { background: rgba(255,255,255,0.15); }
     .menu-btn:active { transform: scale(0.92); }
 
-    /* 🆕 القائمة المنسدلة */
-    .menu-dropdown {
-      position: absolute;
-      top: 60px;
-      left: 12px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-      min-width: 220px;
-      padding: 6px 0;
-      z-index: 999;
-      opacity: 0;
-      transform: translateY(-10px);
-      pointer-events: none;
-      transition: all 0.2s ease;
-    }
-    .menu-dropdown.open {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-    .menu-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      color: #111;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      border: none;
-      background: transparent;
-      width: 100%;
-      text-align: right;
-      font-family: 'Cairo', sans-serif;
-    }
+    .menu-dropdown { position: absolute; top: 60px; left: 12px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); min-width: 220px; padding: 6px 0; z-index: 999; opacity: 0; transform: translateY(-10px); pointer-events: none; transition: all 0.2s ease; }
+    .menu-dropdown.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #111; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; border: none; background: transparent; width: 100%; text-align: right; font-family: 'IBM Plex Sans Arabic', sans-serif; }
     .menu-item:hover { background: #f0fdf4; }
     .menu-item i { font-size: 1rem; width: 20px; text-align: center; }
     .menu-item.danger { color: #dc2626; }
@@ -93,110 +68,41 @@
     .menu-item.info { color: #2563eb; }
     .menu-separator { height: 1px; background: #e5e7eb; margin: 4px 0; }
 
-    /* 🆕 مودال "من هو طارق طنطاوي" */
-    .info-modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 20px;
-      animation: fadeIn 0.2s ease;
-    }
+    .info-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; animation: fadeIn 0.2s ease; }
     .info-modal-overlay.show { display: flex; }
-    .info-modal {
-      background: #fff;
-      border-radius: 18px;
-      max-width: 420px;
-      width: 100%;
-      padding: 24px 20px 20px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-      animation: scaleIn 0.25s ease;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    .info-modal img {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      border: 4px solid var(--wa-green);
-      object-fit: cover;
-      margin-bottom: 14px;
-    }
-    .info-modal h2 {
-      font-size: 1.25rem;
-      color: #075e54;
-      margin-bottom: 6px;
-    }
-    .info-modal .subtitle {
-      font-size: 0.8rem;
-      color: #6b7280;
-      margin-bottom: 16px;
-    }
-    .info-modal p {
-      font-size: 0.9rem;
-      line-height: 1.7;
-      color: #374151;
-      text-align: right;
-      margin-bottom: 14px;
-    }
-    .info-modal .close-modal-btn {
-      background: var(--wa-green);
-      color: #fff;
-      border: none;
-      padding: 10px 30px;
-      border-radius: 24px;
-      font-family: 'Cairo', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 6px;
-      transition: 0.15s;
-    }
+    .info-modal { background: #fff; border-radius: 18px; max-width: 420px; width: 100%; padding: 24px 20px 20px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: scaleIn 0.25s ease; max-height: 85vh; overflow-y: auto; }
+    .info-modal img { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--wa-green); object-fit: cover; margin-bottom: 14px; }
+    .info-modal h2 { font-size: 1.25rem; color: #075e54; margin-bottom: 6px; font-weight: 700; }
+    .info-modal .subtitle { font-size: 0.8rem; color: #6b7280; margin-bottom: 16px; }
+    .info-modal p { font-size: 0.9rem; line-height: 1.7; color: #374151; text-align: right; margin-bottom: 14px; font-family: 'IBM Plex Sans Arabic', sans-serif; }
+    .info-modal .close-modal-btn { background: var(--wa-green); color: #fff; border: none; padding: 10px 30px; border-radius: 24px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; transition: 0.15s; }
     .info-modal .close-modal-btn:hover { background: #1fb955; }
 
-    @keyframes scaleIn {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
     .chat-area { flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px; }
-    .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
-    .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
-    .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 4px; font-weight: 600; }
-    .msg a { color: #075e54; font-weight: 700; text-decoration: underline; }
-    .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
-    .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
+    .msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.55; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: fadeIn 0.2s ease; word-break: break-word; font-family: 'IBM Plex Sans Arabic', sans-serif; }
+    .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 3px; color: #111; }
+    .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 3px; font-weight: 500; }
+    .msg a { color: #075e54; font-weight: 600; text-decoration: underline; }
+    .msg-time { font-size: 10px; color: #999; margin-top: 3px; text-align: left; }
+    .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 12px; border-top-right-radius: 3px; font-size: 12px; color: #888; }
     .option-buttons-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%; }
 
-    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s; }
+    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: 0.15s; }
     .option-btn:hover { background: #dcf8c6; }
     .option-btn:active { transform: scale(0.96); }
 
-    .option-btn.highlighted {
-      background: #ff6b35;
-      border-color: #ff6b35;
-      color: #fff;
-      transform: scale(1.08);
-      box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
-      animation: pulseHighlight 1.5s infinite;
-    }
+    .option-btn.highlighted { background: #ff6b35; border-color: #ff6b35; color: #fff; transform: scale(1.08); box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); animation: pulseHighlight 1.5s infinite; }
     .option-btn.highlighted:hover { background: #e85a2a; border-color: #e85a2a; }
-
     .option-btn.faded { opacity: 0.4; filter: grayscale(80%); }
     .option-btn.faded:hover { opacity: 0.6; }
 
-    @keyframes pulseHighlight {
-      0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); }
-      50% { box-shadow: 0 0 30px rgba(255, 107, 53, 0.95); }
-    }
+    @keyframes pulseHighlight { 0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); } 50% { box-shadow: 0 0 30px rgba(255, 107, 53, 0.95); } }
 
     .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; background: #f0f0f0; border-top: 1px solid #d1d7db; z-index: 100; display: flex; flex-direction: column; box-shadow: 0 -6px 25px rgba(0,0,0,0.18); padding-bottom: env(safe-area-inset-bottom, 8px); }
     .input-area { padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center; background: #eae6df; }
-    .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; }
+    .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 14px; outline: none; }
     .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
     .input-area button { background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; animation: fadeInCard 0.45s ease-out; }
@@ -205,7 +111,7 @@
     .whatsapp-notification-card:hover { background: #f9fffb; transform: translateY(-2px); }
     .whatsapp-notification-card .wa-icon-box { width: 38px; height: 38px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(37,211,102,0.4); }
     .whatsapp-notification-card .wa-text-box { flex: 1; }
-    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 800; color: #075e54; display: flex; align-items: center; gap: 5px; }
+    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 700; color: #075e54; display: flex; align-items: center; gap: 5px; }
     .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #4b5563; margin-top: 1px; }
 
     @keyframes slideUpPulse { 0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); } 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); } }
@@ -223,6 +129,11 @@
     <div class="info">
       <h1>طارق طنطاوي</h1>
       <p><span class="dot"></span> خبرة عقارية من 2014</p>
+    </div>
+
+    <div class="brand-logo">
+      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" onerror="this.style.display='none'">
+      <span>سمسار طلبك</span>
     </div>
 
     <button class="menu-btn" id="menuBtn" onclick="toggleMenu(event)" aria-label="القائمة">
@@ -273,7 +184,6 @@
   </div>
 </div>
 
-<!-- 🆕 مودال "من هو طارق طنطاوي" -->
 <div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
   <div class="info-modal">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
@@ -296,17 +206,17 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v27";
-  const SCORE_KEY = "tarek_score_v27";
-  const WA_KEY = "tarek_wa_v27";
-  const LEAD_KEY = "tarek_lead_v27";
-  const FORM_STATE_KEY = "tarek_form_state_v27";
-  const OPTIONS_KEY = "tarek_options_v27";
-  const WA_MSG_KEY = "tarek_wa_msg_v27";
-  const PROGRESS_KEY = "tarek_progress_v27";
-  const READY_KEY = "tarek_ready_v27";
-  const HIGHLIGHT_KEY = "tarek_highlight_v27";
-  const FADED_KEY = "tarek_faded_v27";
+  const STORAGE_KEY = "tarek_chat_v28";
+  const SCORE_KEY = "tarek_score_v28";
+  const WA_KEY = "tarek_wa_v28";
+  const LEAD_KEY = "tarek_lead_v28";
+  const FORM_STATE_KEY = "tarek_form_state_v28";
+  const OPTIONS_KEY = "tarek_options_v28";
+  const WA_MSG_KEY = "tarek_wa_msg_v28";
+  const PROGRESS_KEY = "tarek_progress_v28";
+  const READY_KEY = "tarek_ready_v28";
+  const HIGHLIGHT_KEY = "tarek_highlight_v28";
+  const FADED_KEY = "tarek_faded_v28";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -332,37 +242,22 @@
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
 
-  // 🆕 فتح/إغلاق القائمة
-  function toggleMenu(e) {
-    if (e) e.stopPropagation();
-    menuDropdown.classList.toggle('open');
-  }
-
-  // إغلاق القائمة لما تدوس في أي مكان
+  function toggleMenu(e) { if (e) e.stopPropagation(); menuDropdown.classList.toggle('open'); }
   document.addEventListener('click', function(e) {
     if (!menuDropdown.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
       menuDropdown.classList.remove('open');
     }
   });
 
-  // 🆕 من هو طارق طنطاوي
-  function showAboutModal() {
-    menuDropdown.classList.remove('open');
-    document.getElementById('aboutModal').classList.add('show');
-  }
+  function showAboutModal() { menuDropdown.classList.remove('open'); document.getElementById('aboutModal').classList.add('show'); }
+  function closeAboutModal() { document.getElementById('aboutModal').classList.remove('show'); }
 
-  function closeAboutModal() {
-    document.getElementById('aboutModal').classList.remove('show');
-  }
-
-  // 🆕 بدء محادثة جديدة (يمسح المحادثة الحالية ويبدأ من الأول)
   function startNewChat() {
     menuDropdown.classList.remove('open');
     if (!confirm('هتبدأ محادثة جديدة والرسايل الحالية هتتمسح. متأكد؟')) return;
     resetAll();
   }
 
-  // 🆕 حذف المحادثة
   function deleteChat() {
     menuDropdown.classList.remove('open');
     if (!confirm('هتحذف كل المحادثة نهائياً. متأكد؟')) return;
@@ -370,7 +265,6 @@
   }
 
   function resetAll() {
-    // امسح كل localStorage
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(SCORE_KEY);
     localStorage.removeItem(WA_KEY);
@@ -383,7 +277,6 @@
     localStorage.removeItem(HIGHLIGHT_KEY);
     localStorage.removeItem(FADED_KEY);
 
-    // صفّر المتغيرات
     history = [];
     score = 0;
     canShare = false;
@@ -396,11 +289,9 @@
     currentProgress = null;
     readyToSend = false;
 
-    // امسح الشات
     chat.querySelectorAll('.msg').forEach(el => el.remove());
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
 
-    // رسالة ترحيب جديدة
     const welcome = `معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.`;
     renderMsg(welcome, 'bot');
     history.push({ text: welcome, type: 'bot', time: getTime() });
@@ -442,11 +333,8 @@
   }
 
   function renderWhatsAppButton() {
-    if (readyToSend && (canShare || score >= 5)) {
-      dealWrapper.style.display = 'block';
-    } else {
-      dealWrapper.style.display = 'none';
-    }
+    if (readyToSend && (canShare || score >= 5)) dealWrapper.style.display = 'block';
+    else dealWrapper.style.display = 'none';
   }
 
   function updateUI() {
@@ -481,7 +369,6 @@
 
   function renderOptions(options, highlight, faded) {
     if (!options || !options.length) return;
-
     const wrap = document.createElement('div');
     wrap.className = 'option-buttons-wrap';
 
@@ -491,11 +378,8 @@
       btn.className = 'option-btn';
       btn.innerText = opt;
 
-      if (highlight && opt === highlight) {
-        btn.classList.add('highlighted');
-      } else if (faded && Array.isArray(faded) && faded.includes(opt)) {
-        btn.classList.add('faded');
-      }
+      if (highlight && opt === highlight) btn.classList.add('highlighted');
+      else if (faded && Array.isArray(faded) && faded.includes(opt)) btn.classList.add('faded');
 
       btn.onclick = () => {
         if (isSending) return;
