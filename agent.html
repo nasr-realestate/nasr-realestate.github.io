@@ -34,6 +34,7 @@
       --wa-msg-in: #fff;
       --wa-msg-out: #dcf8c6;
       --wa-green: #25d366;
+      --highlight-color: #ff6b35;
     }
 
     .agent-app {
@@ -175,7 +176,7 @@
       gap: 6px;
       padding: 2px 4px 8px 4px;
       align-self: flex-start;
-      max-width: 85%;
+      max-width: 90%;
     }
 
     .option-btn {
@@ -188,7 +189,7 @@
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
-      transition: 0.15s;
+      transition: all 0.25s ease;
     }
 
     .option-btn:hover {
@@ -197,6 +198,46 @@
 
     .option-btn:active {
       transform: scale(0.96);
+    }
+
+    /* 🆕 زر منوّر */
+    .option-btn.highlighted {
+      background: var(--highlight-color);
+      color: #fff;
+      border-color: var(--highlight-color);
+      transform: scale(1.08);
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.7);
+      animation: pulseHighlight 1.5s infinite alternate;
+      font-size: 14px;
+      padding: 10px 16px;
+    }
+
+    .option-btn.highlighted:hover {
+      background: #ff5722;
+      transform: scale(1.12);
+    }
+
+    /* 🆕 زر باهت */
+    .option-btn.faded {
+      opacity: 0.35;
+      filter: grayscale(70%);
+      transform: scale(0.95);
+    }
+
+    .option-btn.faded:hover {
+      opacity: 0.6;
+      filter: grayscale(40%);
+    }
+
+    @keyframes pulseHighlight {
+      0% {
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+        transform: scale(1.05);
+      }
+      100% {
+        box-shadow: 0 0 30px rgba(255, 107, 53, 0.95);
+        transform: scale(1.1);
+      }
     }
 
     .bottom-dock {
@@ -259,8 +300,6 @@
       background: #eae6df;
       animation: fadeInCard 0.45s ease-out;
     }
-
-    /* ==== البانر الأخضر الحقيقي (يظهر بس لما العميل يخلّص) ==== */
 
     .whatsapp-notification-card {
       width: 100%;
@@ -374,7 +413,6 @@
 
   <div class="bottom-dock">
 
-    <!-- البانر الأخضر يظهر فقط لما readyToSend = true -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
 
       <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
@@ -422,15 +460,17 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v17";
-  const SCORE_KEY = "tarek_score_v17";
-  const WA_KEY = "tarek_wa_v17";
-  const LEAD_KEY = "tarek_lead_v17";
-  const FORM_STATE_KEY = "tarek_form_state_v17";
-  const OPTIONS_KEY = "tarek_options_v17";
-  const WA_MSG_KEY = "tarek_wa_msg_v17";
-  const PROGRESS_KEY = "tarek_progress_v17";
-  const READY_KEY = "tarek_ready_v17";
+  const STORAGE_KEY = "tarek_chat_v25";
+  const SCORE_KEY = "tarek_score_v25";
+  const WA_KEY = "tarek_wa_v25";
+  const LEAD_KEY = "tarek_lead_v25";
+  const FORM_STATE_KEY = "tarek_form_state_v25";
+  const OPTIONS_KEY = "tarek_options_v25";
+  const WA_MSG_KEY = "tarek_wa_msg_v25";
+  const PROGRESS_KEY = "tarek_progress_v25";
+  const READY_KEY = "tarek_ready_v25";
+  const HIGHLIGHT_KEY = "tarek_highlight_v25";
+  const FADED_KEY = "tarek_faded_v25";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -441,6 +481,8 @@
   let lastOptions = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null");
   let currentProgress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
   let readyToSend = localStorage.getItem(READY_KEY) === "true";
+  let highlightButton = localStorage.getItem(HIGHLIGHT_KEY) || null;
+  let fadedButtons = JSON.parse(localStorage.getItem(FADED_KEY) || "null");
   let isSending = false;
 
   const chat = document.getElementById('chatMessages');
@@ -477,6 +519,18 @@
     if (currentProgress) {
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(currentProgress));
     }
+
+    if (highlightButton) {
+      localStorage.setItem(HIGHLIGHT_KEY, highlightButton);
+    } else {
+      localStorage.removeItem(HIGHLIGHT_KEY);
+    }
+
+    if (fadedButtons) {
+      localStorage.setItem(FADED_KEY, JSON.stringify(fadedButtons));
+    } else {
+      localStorage.removeItem(FADED_KEY);
+    }
   }
 
   function loadState() {
@@ -497,6 +551,8 @@
       lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
       currentProgress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
       readyToSend = localStorage.getItem(READY_KEY) === "true";
+      highlightButton = localStorage.getItem(HIGHLIGHT_KEY) || null;
+      fadedButtons = JSON.parse(localStorage.getItem(FADED_KEY) || "null");
 
       return true;
 
@@ -505,7 +561,6 @@
     }
   }
 
-  // عرض البانر الأخضر فقط لو readyToSend = true
   function renderWhatsAppButton() {
 
     if (readyToSend && (canShare || score >= 5)) {
@@ -519,15 +574,19 @@
 
     renderWhatsAppButton();
 
-    if (currentFormState && currentFormState.active === false) {
+    if (currentFormState && currentFormState.active === false && currentFormState.lifecycle !== 'completed') {
 
       currentFormState = null;
       lastOptions = null;
       currentProgress = null;
+      highlightButton = null;
+      fadedButtons = null;
 
       localStorage.removeItem(FORM_STATE_KEY);
       localStorage.removeItem(OPTIONS_KEY);
       localStorage.removeItem(PROGRESS_KEY);
+      localStorage.removeItem(HIGHLIGHT_KEY);
+      localStorage.removeItem(FADED_KEY);
     }
 
     saveState();
@@ -557,7 +616,8 @@
     scroll();
   }
 
-  function renderOptions(options) {
+  // 🆕 عرض الأزرار مع highlight + faded
+  function renderOptions(options, highlight, faded) {
 
     if (!options || !options.length) return;
 
@@ -573,6 +633,15 @@
       btn.className = 'option-btn';
       btn.innerText = opt;
 
+      // 🆕 زر منوّر
+      if (highlight && opt === highlight) {
+        btn.classList.add('highlighted');
+      }
+      // 🆕 زر باهت
+      else if (faded && faded.includes(opt)) {
+        btn.classList.add('faded');
+      }
+
       btn.onclick = () => {
 
         if (isSending) return;
@@ -582,6 +651,8 @@
           .forEach(el => el.remove());
 
         lastOptions = null;
+        highlightButton = null;
+        fadedButtons = null;
 
         input.value = opt;
 
@@ -612,7 +683,9 @@
       currentFormState &&
       currentFormState.active
     ) {
-      renderOptions(lastOptions);
+      renderOptions(lastOptions, highlightButton, fadedButtons);
+    } else if (lastOptions && lastOptions.length && highlightButton) {
+      renderOptions(lastOptions, highlightButton, fadedButtons);
     }
 
     updateUI();
@@ -630,7 +703,7 @@
 
     return `أستاذ طارق،
 
-تواصلت مع سمسار طلبك وده ملخص طلبي بعد تسجيل البيانات:
+تواصلت مع سمسار طلبك وده ملخص طلبي:
 
 - نوع الطلب: ${leadType}
 - الميزانية / السعر: ${leadPrice}
@@ -640,10 +713,8 @@ ${userMessages}
 محتاج أتواصل مع حضرتك لاستكمال التفاصيل والمعاينة.`;
   }
 
-  // زر الواتساب
   function openWhatsApp() {
 
-    // لو الزر مظهرش بعد (احتياطي) → تنبيه محلي
     if (!readyToSend) {
 
       const remaining = currentProgress?.remaining || 0;
@@ -652,7 +723,7 @@ ${userMessages}
 
       const warnText = remaining > 0
         ? `لسه فاضل ${remaining} أسئلة (${current} من ${total}). كمّلهم عشان أبعت لأ. طارق بياناتك كاملة.`
-        : `لسه بنجمع بياناتك، كمّل معايا شوية كمان عشان أوصّل لأ. طارق تفاصيل طلبك.`;
+        : `لسه بنجمع بياناتك، كمّل معايا شوية كمان.`;
 
       renderMsg(warnText, 'bot');
 
@@ -769,6 +840,15 @@ ${userMessages}
           readyToSend = data.readyToSend;
         }
 
+        // 🆕 الأزرار النيّرة
+        if (data.highlightButton !== undefined) {
+          highlightButton = data.highlightButton;
+        }
+
+        if (data.fadedButtons !== undefined) {
+          fadedButtons = data.fadedButtons;
+        }
+
         updateUI();
 
         const replyText =
@@ -790,7 +870,7 @@ ${userMessages}
 
           lastOptions = data.options;
 
-          renderOptions(data.options);
+          renderOptions(data.options, highlightButton, fadedButtons);
 
           saveState();
         }
