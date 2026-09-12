@@ -27,7 +27,7 @@
     .agent-app { max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative; }
     .agent-app.show { opacity: 1; }
     
-    /* هيدر واتساب الاحترافي */
+    /* هيدر واتساب */
     .agent-header { background: var(--wa-header); padding: 10px 14px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; position: relative; }
     .agent-header img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
     .agent-header .info { flex: 1; min-width: 0; }
@@ -35,7 +35,7 @@
     .agent-header .info p { font-size: 0.7rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; margin-top: 1px; }
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
 
-    /* شعار سمسار طلبك الهيدر */
+    /* شعار سمسار طلبك (قابل للنقر وينقل للرئيسية) */
     .brand-logo {
       display: flex;
       align-items: center;
@@ -43,12 +43,15 @@
       color: #fff;
       font-size: 0.7rem;
       font-weight: 600;
-      opacity: 0.9;
-      padding: 4px 8px;
-      background: rgba(255,255,255,0.12);
+      opacity: 0.95;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.15);
       border-radius: 20px;
+      text-decoration: none;
+      transition: background 0.2s;
     }
-    .brand-logo img { width: 20px; height: 20px; border: none; border-radius: 50%; }
+    .brand-logo:hover { background: rgba(255,255,255,0.25); }
+    .brand-logo img { width: 20px; height: 20px; border: none; border-radius: 50%; object-fit: cover; }
 
     .menu-btn { background: transparent; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
     .menu-btn:hover { background: rgba(255,255,255,0.15); }
@@ -78,7 +81,7 @@
 
     @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
-    /* ساحة الشات بتصميم واتساب الداكن النقطي */
+    /* ساحة الشات */
     .chat-area { flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px; }
     .msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.55; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: fadeIn 0.2s ease; word-break: break-word; font-family: 'IBM Plex Sans Arabic', sans-serif; }
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 3px; color: #111; }
@@ -87,17 +90,13 @@
     .msg-time { font-size: 10px; color: #999; margin-top: 3px; text-align: left; }
     .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 12px; border-top-right-radius: 3px; font-size: 12px; color: #888; }
     
-    /* أزرار الخيارات السريعة داخل الشات */
-    .option-buttons-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%; }
-    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: 0.15s; }
-    .option-btn:hover { background: #dcf8c6; }
-    .option-btn:active { transform: scale(0.96); }
-    .option-btn.highlighted { background: #ff6b35; border-color: #ff6b35; color: #fff; transform: scale(1.08); box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); animation: pulseHighlight 1.5s infinite; }
-    .option-btn.highlighted:hover { background: #e85a2a; border-color: #e85a2a; }
-    .option-btn.faded { opacity: 0.4; filter: grayscale(80%); }
-    .option-btn.faded:hover { opacity: 0.6; }
-
-    @keyframes pulseHighlight { 0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); } 50% { box-shadow: 0 0 30px rgba(255, 107, 53, 0.95); } }
+    /* أزرار الخيارات السريعة المتناسقة تماماً مع واتساب */
+    .option-buttons-wrap { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 8px 2px; align-self: flex-start; max-width: 85%; width: 100%; }
+    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 10px 16px; border-radius: 12px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .option-btn:hover { background: #f0fdf4; border-color: #128c7e; }
+    .option-btn:active { transform: scale(0.98); }
+    .option-btn.highlighted { background: #25d366; border-color: #25d366; color: #fff; }
+    .option-btn.faded { opacity: 0.5; filter: grayscale(50%); background: #f3f4f6; border-color: #d1d5db; color: #6b7280; pointer-events: none; }
 
     /* منطقة الإدخال وزر الواتساب السفلي العائم */
     .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; background: #f0f0f0; border-top: 1px solid #d1d7db; z-index: 100; display: flex; flex-direction: column; box-shadow: 0 -6px 25px rgba(0,0,0,0.18); padding-bottom: env(safe-area-inset-bottom, 8px); }
@@ -124,7 +123,7 @@
 
 <div class="agent-app" id="app">
 
-  <!-- هيدر التطبيق المطابق لشكل واتساب الحقيقي -->
+  <!-- هيدر واتساب الاحترافي -->
   <div class="agent-header">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
     <div class="info">
@@ -132,10 +131,11 @@
       <p><span class="dot"></span> خبرة عقارية من 2014</p>
     </div>
 
-    <div class="brand-logo">
+    <!-- شعار سمسار طلبك أصبح رابطاً ينقل للرئيسية -->
+    <a href="/" class="brand-logo" title="الرئيسية">
       <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" onerror="this.style.display='none'">
       <span>سمسار طلبك</span>
-    </div>
+    </a>
 
     <button class="menu-btn" id="menuBtn" onclick="toggleMenu(event)" aria-label="القائمة">
       <i class="fas fa-ellipsis-v"></i>
@@ -209,17 +209,17 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v29";
-  const SCORE_KEY = "tarek_score_v29";
-  const WA_KEY = "tarek_wa_v29";
-  const LEAD_KEY = "tarek_lead_v29";
-  const FORM_STATE_KEY = "tarek_form_state_v29";
-  const OPTIONS_KEY = "tarek_options_v29";
-  const WA_MSG_KEY = "tarek_wa_msg_v29";
-  const PROGRESS_KEY = "tarek_progress_v29";
-  const READY_KEY = "tarek_ready_v29";
-  const HIGHLIGHT_KEY = "tarek_highlight_v29";
-  const FADED_KEY = "tarek_faded_v29";
+  const STORAGE_KEY = "tarek_chat_v30";
+  const SCORE_KEY = "tarek_score_v30";
+  const WA_KEY = "tarek_wa_v30";
+  const LEAD_KEY = "tarek_lead_v30";
+  const FORM_STATE_KEY = "tarek_form_state_v30";
+  const OPTIONS_KEY = "tarek_options_v30";
+  const WA_MSG_KEY = "tarek_wa_msg_v30";
+  const PROGRESS_KEY = "tarek_progress_v30";
+  const READY_KEY = "tarek_ready_v30";
+  const HIGHLIGHT_KEY = "tarek_highlight_v30";
+  const FADED_KEY = "tarek_faded_v30";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -298,6 +298,9 @@
     const welcome = `معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.`;
     renderMsg(welcome, 'bot');
     history.push({ text: welcome, type: 'bot', time: getTime() });
+
+    lastOptions = ["اشترى 🔍", "أستأجر 🏠", "أبيع 💰", "أأجر 🔑"];
+    renderOptions(lastOptions, null, null);
 
     updateUI();
     saveState();
@@ -484,7 +487,6 @@
       renderMsg(welcome, 'bot');
       history.push({ text: welcome, type: 'bot', time: getTime() });
       
-      // أزرار البداية السريعة المطابقة لروح واتساب
       lastOptions = ["اشترى 🔍", "أستأجر 🏠", "أبيع 💰", "أأجر 🔑"];
       renderOptions(lastOptions, null, null);
       saveState();
