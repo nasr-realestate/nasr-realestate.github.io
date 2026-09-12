@@ -2,14 +2,13 @@
 // @ts-nocheck
 /**
  * Worker: Semsar Talabak - Tarek Tantawy
- * V24 - الإصدار الاحترافي النهائي
+ * V25 - الإصدار الاحترافي مع Gemini التفاعلي + أزرار ثابتة
  * ============================================================
- * الجديد في V24:
- * - Lifecycle كامل: active → completed → archived
- * - رد مناسب بعد إكمال الفورم (3 خيارات)
- * - شاشة رجوع محسّنة
- * - Logging كامل
- * - State Machine واضح
+ * الجديد في V25:
+ * - 🆕 زر «بدء من جديد» + «حذف المحادثة» ثابتين مع كل رد
+ * - 🆕 Gemini بيتدخل لما العميل يقول حاجة ملهاش علاقة بالسؤال
+ * - 🆕 التعامل مع: "الدنيا حر"، "عمولتكو"، "عايزه أبيع بسرعه"، إلخ
+ * - 🆕 persistentButtons + clearChat في كل response
  */
 
 const ALAA_PHONE = "+201022171667";
@@ -37,6 +36,11 @@ const BTN_CANCEL = "إلغاء التسجيل ✕";
 const BTN_BACK = "⬅️ رجوع";
 const BTN_CANCEL_BACK = "إلغاء الرجوع";
 const BTN_ANY_AREA = "أي منطقة في مدينة نصر";
+
+// 🆕 الأزرار الثابتة (بتظهر مع كل رد)
+const BTN_RESTART = "🔄 بدء من جديد";
+const BTN_CLEAR = "🗑️ حذف المحادثة";
+const PERSISTENT_BUTTONS = [BTN_RESTART, BTN_CLEAR];
 
 // 🆕 أزرار ما بعد الإكمال
 const BTN_SEND_WA = "✅ ابعت على واتساب";
@@ -96,13 +100,13 @@ const INTENTS = {
 };
 
 // =====================================================================
-// 🎯 Lifecycle — حالات الفورم
+// 🎯 Lifecycle
 // =====================================================================
 const LIFECYCLE = {
-  ACTIVE: "active",         // الفورم شغال
-  COMPLETED: "completed",   // خلص الفورم
-  CANCELLED: "cancelled",   // العميل ألغى
-  ARCHIVED: "archived"      // بعد ما اتبعت على واتساب أو العميل بدأ جديد
+  ACTIVE: "active",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+  ARCHIVED: "archived"
 };
 
 // =====================================================================
@@ -195,13 +199,14 @@ function getFieldLabel(stepId) {
 // 🚫 Canned Rules
 // =====================================================================
 const INTERRUPT_RULES = [
-  { test: /عمول|السعي|سعيكم|نسبتكم|بتاخد(?:وا|و)?\s*كام|هتاخد كام|مصاريف|سمسرة|سمسره/i, answer: "العمولة معلنة ومتفق عليها بعد المعاينة والتقييم. مفيش حاجة مخبية." },
+  { test: /عمول|السعي|سعيكم|نسبتكم|بتاخد(?:وا|و)?\s*كام|هتاخد كام|مصاريف|سمسرة|سمسره/i, answer: "العمولة معلنة ومتفق عليها بعد المعاينة والتقييم. مفيش حاجة مخبية 👌" },
   { test: /^اسمك ايه|^اسمك إيه|حضرتك اسمك|^انت مين|^أنت مين|مين حضرتك/i, answer: "أنا طارق طنطاوي، سمسار مدينة نصر من 2014." },
   { test: /مستعجلين|بتضغطوا|هتبيعوني بسرعة/i, answer: "مش مستعجلين على حساب حقك. بنختار المشتري الجد بس." },
   { test: /بتشتغلوا ازاي|طريقة العمل|بتاخدوا العقار إزاي/i, answer: "معاينة، تقييم، تصوير، تسويق، وبعدين بوصلك العميل الجاد." },
   { test: /عنوانكم|فين مكانكم|نيجي إزاي|فين المكتب/i, answer: `${OFFICE_ADDRESS}\n${OFFICE_MAP_URL}\n${OFFICE_HOURS}` },
   { test: /طلاب|طلبة|مغتربين|مغتربات|سكن طلاب/i, answer: `سكن الطلاب مع الأستاذة آلاء: ${ALAA_PHONE}` },
-  { test: /ضمان|تأمينكم|هتنصب|بتاخدوا مقدم/i, answer: "شغلنا بالعقد الواضح. مفيش فلوس بتتحرك قبل الاتفاق." }
+  { test: /ضمان|تأمينكم|هتنصب|بتاخدوا مقدم/i, answer: "شغلنا بالعقد الواضح. مفيش فلوس بتتحرك قبل الاتفاق." },
+  { test: /بسرعه|بسرعة|مستعجل|مستعجله|مستعجلة|عايزه بسرعة|عايز أبيع بسرعه|محتاجه بسرعة/i, answer: "شغلنا سريع بإذن الله. كمّل بياناتك وأنا هبدأ فوراً مع أول عميل جد." }
 ];
 
 // =====================================================================
@@ -331,6 +336,40 @@ function isLikelyQuestion(text) {
   return false;
 }
 
+// 🆕 كشف الرسائل اللي مش إجابة واضحة للسؤال
+function looksLikeOffTopicOrQuestion(msg, currentStep) {
+  const t = String(msg || "").trim();
+  if (!t || t.length < 2) return false;
+
+  // لو السؤال عن سعر/مساحة/رقم — لو فيه أرقام يبقى إجابة
+  if (currentStep && ["price", "priceWeekly", "priceMonthly", "priceYearly", "area", "budget", "ownerPhone", "phone"].includes(currentStep.id)) {
+    if (/\d/.test(t)) return false;
+  }
+
+  // علامة استفهام = سؤال
+  if (/[؟?]/.test(t)) return true;
+
+  // كلمات سؤال
+  if (/^(و)?(ايه|إيه|كام|مين|ازاي|إزاي|ليه|فين|هل|امتى|بكام|معنى|يعني|طب|بس)/.test(t)) return true;
+
+  // كلمات عاطفية/موضوعية = مش إجابة
+  if (/\b(حر|برد|دنيا|جو|مطر|عمول|سعر|غالي|رخيص|بسرعه|بسرعة|مستعجل|خايف|قلق|مش عارف|تايه|محتار|صعب|سهل|تعبان|زهقت|ملل|مليت|حب|كره|شغل|ظروف|حالة|اسرة|أسرة|عيال|جواز|طلاق|مشكلة|مشكله)\b/i.test(t)) return true;
+
+  // رسالة طويلة (أكتر من 8 كلمات) غالباً مش إجابة مباشرة
+  if (t.split(/\s+/).length > 8) return true;
+
+  return false;
+}
+
+// 🆕 الأزرار الثابتة
+function isRestartBtn(msg) {
+  return isBtn(msg, BTN_RESTART) || /^(بدء من جديد|ابدأ من جديد|بداية جديدة|من الأول|من الاول|restart|reset)$/i.test(String(msg).trim());
+}
+
+function isClearBtn(msg) {
+  return isBtn(msg, BTN_CLEAR) || /^(حذف المحادثة|مسح المحادثة|احذف المحادثة|امسح المحادثة|clear|احذف|امسح)$/i.test(String(msg).trim());
+}
+
 function isSkip(msg) {
   if (isBtn(msg, BTN_SKIP) || isBtn(msg, "تخطي السؤال") || isBtn(msg, "تخطي")) return true;
   return /^(تخطي|تخطي السؤال|سكيب|skip|بعدين|مش دلوقتي|مش متأكد|مفيش)$/i.test(String(msg).trim());
@@ -358,7 +397,6 @@ function isAnyArea(msg) {
   return isBtn(msg, BTN_ANY_AREA) || /أي منطقة|اي منطقة|كل المناطق|مدينة نصر كلها/i.test(String(msg).trim());
 }
 
-// 🆕 أزرار ما بعد الإكمال
 function isSendWaBtn(msg) {
   return isBtn(msg, BTN_SEND_WA) || /^(ابعت على واتساب|ابعت واتساب|واتساب)$/i.test(String(msg).trim());
 }
@@ -371,7 +409,6 @@ function isNewRequestBtn(msg) {
   return isBtn(msg, BTN_NEW_REQUEST) || /^(طلب جديد|جديد|ابدا من جديد|محادثة جديدة)$/i.test(String(msg).trim());
 }
 
-// الأزرار الرئيسية
 function isBuyBtn(msg) {
   return isBtn(msg, BTN_BUY) || /^(عايز أشتري|عايز اشتري|أشتري|اشتري)$/i.test(String(msg).trim());
 }
@@ -388,7 +425,6 @@ function isLandlordBtn(msg) {
   return isBtn(msg, BTN_LANDLORD) || /^(عايز أأجر|عايز اجر|أأجر|ااجر|أؤجر|عايز أؤجر)$/i.test(String(msg).trim());
 }
 
-// التحقق من النطاق
 function isOutOfCoverage(text) {
   return OUT_OF_COVERAGE_PATTERN.test(String(text || "").trim());
 }
@@ -566,7 +602,6 @@ function askStep(steps, idx, formState, prefix) {
   };
 }
 
-// 🆕 إكمال فورم المالك
 function completeOwnerForm(formState, data) {
   const steps = getSteps(formState.type);
   const waMessage = buildOwnerWaMessage(formState.type, data);
@@ -593,7 +628,7 @@ function completeOwnerForm(formState, data) {
 
 function cancelForm(formState) {
   return {
-    response: "تم الإلغاء. لو حبيت تبدأ من جديد، قولّي.",
+    response: "تم الإلغاء. لو حبيت تبدأ من جديد، دوس [🔄 بدء من جديد].",
     formState: {
       active: false,
       lifecycle: LIFECYCLE.CANCELLED,
@@ -632,7 +667,7 @@ function findMissingRequired(steps, data) {
 }
 
 // =====================================================================
-// 🤖 Gemini Brief
+// 🤖 Gemini Brief (بدون سياق)
 // =====================================================================
 async function askGeminiBrief(env, question) {
   const apiKey = env && env.GEMINI_API_KEY;
@@ -654,6 +689,57 @@ async function askGeminiBrief(env, question) {
         }]
       },
       generationConfig: { maxOutputTokens: 120, temperature: 0.1, responseMimeType: "application/json" }
+    };
+    const r = await fetch(`${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const raw = (j?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+    if (!raw) return null;
+    try { return JSON.parse(raw)?.answer?.trim() || null; } catch (_) { return raw; }
+  } catch (e) {
+    return null;
+  }
+}
+
+// =====================================================================
+// 🆕 Gemini With Context — بيتدخل في وسط الفورم
+// =====================================================================
+async function askGeminiWithContext(env, userMessage, currentQuestion, flowType) {
+  const apiKey = env && env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const contextLabel = flowType === "rent" ? "إيجار" : flowType === "sale" ? "بيع" : "عقاري";
+
+  try {
+    const payload = {
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `العميل في وسط تسجيل بيانات ${contextLabel}.\n\nالسؤال الحالي: "${currentQuestion}"\n\nرسالة العميل: "${userMessage}"`
+        }]
+      }],
+      systemInstruction: {
+        parts: [{
+          text: `أنت طارق طنطاوي، سمسار عقارات مصري في مدينة نصر من 2014.
+
+[سياق]: العميل في وسط فورم تسجيل بيانات ${contextLabel}.
+
+[قواعد صارمة]:
+1. اتكلم بالعامية المصرية الأصيلة
+2. جاوب في سطر أو سطرين بالكتير
+3. لو العميل قال كلام ملهاش علاقة (زي: "الدنيا حر"، "الجو حلو"، "تعبان") → تجاوب بلطف في سطر واحد وترجع تسأله السؤال تاني بشكل طبيعي
+4. لو سأل عن العمولة → "العمولة معلنة ومتفق عليها بعد المعاينة والتقييم 👌"
+5. لو مستعجل → "شغلنا سريع بإذن الله، كمّل بياناتك وأنا هبدأ فوراً"
+6. لو سأل عن الضمان → "شغلنا بالعقد الواضح، مفيش فلوس بتتحرك قبل الاتفاق"
+7. ممنوع تقول: "يا هلا"، "منور"، "يا باشا"، "لقطة"، "يا غالي"
+8. ممنوع تسأل سؤال جديد مختلف عن السؤال الحالي
+9. في آخر ردك، اسأل السؤال الحالي تاني بشكل طبيعي (بدون حرف "؟" منفصل)
+10. أعد JSON فقط بالشكل {"answer":"..."}`
+        }]
+      },
+      generationConfig: { maxOutputTokens: 180, temperature: 0.2, responseMimeType: "application/json" }
     };
     const r = await fetch(`${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
@@ -811,14 +897,26 @@ async function processOwnerFlow(formState, userMessage, env) {
   const currentStep = steps[formState.stepIndex] || steps[nextStepIndex(steps, data, 0)];
   const matchesOption = currentStep && currentStep.type === "buttons" && matchOption(msg, currentStep.options);
 
-  if (!isSkip(msg) && !matchesOption && (formState.awaitingQuestion || isLikelyQuestion(msg))) {
+  // 🆕 لو الرسالة واضحة إنها سؤال/Off-topic → Gemini/Canned
+  if (!isSkip(msg) && !matchesOption && looksLikeOffTopicOrQuestion(msg, currentStep)) {
     const canned = matchInterrupt(msg);
     let answer = canned;
     if (!answer) {
-      answer = await askGeminiBrief(env, msg);
+      answer = await askGeminiWithContext(env, msg, currentStep.q, formState.type);
       if (!answer) answer = "معلش، ممكن نكمّل البيانات الأول؟";
     }
-    return askStep(steps, formState.stepIndex, { ...formState, data }, answer);
+    // لو Gemini نسى السؤال في آخر رد، نضيفه
+    if (answer && !answer.includes(currentStep.q.replace("؟", "").slice(0, 10))) {
+      answer = `${answer}\n\n${decorateWithProgress(currentStep.q, buildProgress(steps, data, formState.stepIndex), true)}`;
+    }
+    return {
+      response: answer,
+      formState: { ...formState, data, awaitingQuestion: false },
+      options: withControls(currentStep.type === "buttons" ? currentStep.options : [], data, formState.stepIndex > 0),
+      done: false, readyToSend: false,
+      progress: buildProgress(steps, data, formState.stepIndex),
+      waMessage: buildOwnerWaMessage(formState.type, data)
+    };
   }
 
   if (isSkip(msg)) {
@@ -836,7 +934,7 @@ async function processOwnerFlow(formState, userMessage, env) {
 
     if (filled.reason === "out_of_coverage") {
       return {
-        response: `معلش يا فندم، شغلنا في مدينة نصر بس. لو عندك عقار في مدينة نصر، أنا تحت أمرك.`,
+        response: `معلش يا فندم، شغلنا في مدينة نصر بس. لو عندك عقار في مدينة نصر، أنا تحت أمرك 🙏`,
         formState: {
           active: false,
           lifecycle: LIFECYCLE.CANCELLED,
@@ -858,11 +956,22 @@ async function processOwnerFlow(formState, userMessage, env) {
         const canned = matchInterrupt(msg);
         let answer = canned;
         if (!answer) {
-          answer = await askGeminiBrief(env, msg);
+          answer = await askGeminiWithContext(env, msg, currentStep.q, formState.type);
           if (!answer) answer = "معلش، نكمّل البيانات الأول؟";
         }
-        return askStep(steps, formState.stepIndex, { ...formState, data: merged }, answer);
+        if (answer && !answer.includes(currentStep.q.replace("؟", "").slice(0, 10))) {
+          answer = `${answer}\n\n${decorateWithProgress(currentStep.q, buildProgress(steps, merged, formState.stepIndex), true)}`;
+        }
+        return {
+          response: answer,
+          formState: { ...formState, data: merged, awaitingQuestion: false },
+          options: withControls(currentStep.type === "buttons" ? currentStep.options : [], merged, formState.stepIndex > 0),
+          done: false, readyToSend: false,
+          progress: buildProgress(steps, merged, formState.stepIndex),
+          waMessage: buildOwnerWaMessage(formState.type, merged)
+        };
       }
+
       const progress = buildProgress(steps, merged, formState.stepIndex);
       const showBack = formState.stepIndex > 0;
       return {
@@ -897,7 +1006,6 @@ function processPostComplete(formState, userMessage) {
   const msg = String(userMessage || "").trim();
   const data = formState.data || {};
 
-  // ✅ ابعت على واتساب
   if (isSendWaBtn(msg)) {
     return {
       response: `تمام، دوس على البانر الأخضر تحت 👇`,
@@ -909,7 +1017,6 @@ function processPostComplete(formState, userMessage) {
     };
   }
 
-  // ⬅️ عدّل حاجة
   if (isEditBtn(msg)) {
     const steps = formState.type === "sale" ? SALE_STEPS : (formState.type === "rent" ? RENT_OWN_STEPS : getBuyerSteps(formState.type));
     const review = buildReviewScreen(steps, data);
@@ -926,7 +1033,6 @@ function processPostComplete(formState, userMessage) {
     };
   }
 
-  // 🆕 طلب جديد
   if (isNewRequestBtn(msg)) {
     return {
       response: "تمام، اختار نوع الطلب الجديد:",
@@ -943,7 +1049,6 @@ function processPostComplete(formState, userMessage) {
     };
   }
 
-  // أي رسالة تانية
   return {
     response: `تمام، البيانات محفوظة ✅\nاختار:`,
     formState: formState,
@@ -1092,12 +1197,27 @@ async function processBuyerFlow(formState, userMessage, env) {
     return { response: "حصل خطأ، نبدأ من الأول؟", formState: { ...formState, active: false, lifecycle: LIFECYCLE.CANCELLED }, options: MAIN_MENU_BUTTONS, done: false, readyToSend: false };
   }
 
-  if (isLikelyQuestion(msg) && currentStep.type !== "buttons" && currentStep.type !== "dynamic_buttons") {
+  const isButtonStep = currentStep.type === "buttons" || currentStep.type === "dynamic_buttons";
+  let matchesOption = false;
+  if (isButtonStep) {
+    let opts = currentStep.options || [];
+    if (currentStep.type === "dynamic_buttons") {
+      const feed = await fetchPropertyFeed();
+      opts = getLandmarkButtons(feed.properties || []);
+    }
+    matchesOption = !!matchOption(msg, opts);
+  }
+
+  // 🆕 لو سؤال/Off-topic → Gemini/Canned
+  if (!isSkip(msg) && !matchesOption && looksLikeOffTopicOrQuestion(msg, currentStep)) {
     const canned = matchInterrupt(msg);
     let answer = canned;
     if (!answer) {
-      answer = await askGeminiBrief(env, msg);
+      answer = await askGeminiWithContext(env, msg, currentStep.q, formState.type);
       if (!answer) answer = "معلش، نكمّل؟";
+    }
+    if (answer && !answer.includes(currentStep.q.replace("؟", "").slice(0, 10))) {
+      answer = `${answer}\n\n${decorateWithProgress(currentStep.q, buildProgress(steps, data, formState.stepIndex), true)}`;
     }
     return await askBuyerStep(steps, formState.stepIndex, { ...formState, data }, answer);
   }
@@ -1123,7 +1243,7 @@ async function processBuyerFlow(formState, userMessage, env) {
   } else if (currentStep.id === "landmark") {
     if (isOutOfCoverage(trimmed)) {
       return {
-        response: `معلش يا فندم، شغلنا في مدينة نصر بس.`,
+        response: `معلش يا فندم، شغلنا في مدينة نصر بس 🙏`,
         formState: { active: false, lifecycle: LIFECYCLE.CANCELLED, flowType: null, type: formState.type, stepIndex: -1, data: {}, awaitingQuestion: false },
         options: MAIN_MENU_BUTTONS,
         done: false, readyToSend: false, cancelled: true,
@@ -1137,7 +1257,7 @@ async function processBuyerFlow(formState, userMessage, env) {
       if (t.length >= 2 && t.length <= 60) { data.landmark = t; filled = { ok: true }; }
       else filled = { ok: false, reason: "اختار المنطقة من الأزرار." };
     }
-  } else if (currentStep.type === "buttons" || currentStep.type === "dynamic_buttons") {
+  } else if (isButtonStep) {
     let opts = currentStep.options || [];
     if (currentStep.type === "dynamic_buttons") {
       const feed = await fetchPropertyFeed();
@@ -1581,7 +1701,12 @@ export default {
 
     const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
     if (isRateLimited(clientIP)) {
-      return jsonResponse({ response: "استنى شوية، بتبعت رسايل كتير.", options: MAIN_MENU_BUTTONS, qualificationScore: 0, canShareWhatsapp: false, readyToSend: false }, 429);
+      return jsonResponse({
+        response: "استنى شوية، بتبعت رسايل كتير.",
+        options: MAIN_MENU_BUTTONS,
+        persistentButtons: PERSISTENT_BUTTONS,
+        qualificationScore: 0, canShareWhatsapp: false, readyToSend: false
+      }, 429);
     }
 
     try {
@@ -1591,15 +1716,59 @@ export default {
       const incomingFormState = body.formState || null;
       const apiKey = env.GEMINI_API_KEY;
 
-      logEvent("REQUEST", { ip: clientIP, message: userMessage.slice(0, 100), hasForm: !!incomingFormState, lifecycle: incomingFormState?.lifecycle });
+      logEvent("REQUEST", {
+        ip: clientIP,
+        message: userMessage.slice(0, 100),
+        hasForm: !!incomingFormState,
+        lifecycle: incomingFormState?.lifecycle
+      });
 
-      if (!apiKey) return jsonResponse({ response: "حصل خطأ مؤقت. حاول تاني.", options: MAIN_MENU_BUTTONS }, 500);
+      if (!apiKey) return jsonResponse({
+        response: "حصل خطأ مؤقت. حاول تاني.",
+        options: MAIN_MENU_BUTTONS,
+        persistentButtons: PERSISTENT_BUTTONS
+      }, 500);
+
+      // 🆕 Z. الأزرار الثابتة — بتشتغل مع أي حالة
+      if (isClearBtn(userMessage)) {
+        logEvent("CLEAR_CHAT", {});
+        return jsonResponse({
+          response: "تم مسح المحادثة ✅\nابدأ من جديد:",
+          reply: "تم مسح المحادثة ✅",
+          options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: null,
+          clearChat: true,
+          qualificationScore: 0,
+          canShareWhatsapp: false,
+          readyToSend: false,
+          leadData: { type: "حذف محادثة" }
+        });
+      }
+
+      if (isRestartBtn(userMessage)) {
+        logEvent("RESTART_CHAT", {});
+        return jsonResponse({
+          response: "تمام، بدأنا من جديد 🔄\nاختار طلبك:",
+          reply: "تمام، بدأنا من جديد 🔄",
+          options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: null,
+          clearChat: true,
+          qualificationScore: 0,
+          canShareWhatsapp: false,
+          readyToSend: false,
+          leadData: { type: "بداية جديدة" }
+        });
+      }
 
       // A. فورم مكتمل خارجي
       if (body.source === "form-complete" && body.data) {
         const formType = body.type === "sale" ? "sale" : "rent";
         return jsonResponse({
           response: "تم استلام بياناتك ✅", reply: "تم استلام بياناتك ✅",
+          options: null,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 5, canShareWhatsapp: true, readyToSend: true,
           progress: { current: 100, total: 100, remaining: 0, percent: 100 },
           leadData: { type: formType === "sale" ? "بيع عقار" : "إيجار عقار", source: "form", ...body.data },
@@ -1608,13 +1777,15 @@ export default {
         });
       }
 
-      // 🆕 B. معالجة حالات ما بعد الإكمال (قبل أي شيء)
+      // B. معالجة حالات ما بعد الإكمال
       if (incomingFormState && incomingFormState.lifecycle === LIFECYCLE.COMPLETED) {
         logEvent("POST_COMPLETE", { flowType: incomingFormState.flowType });
         const result = processPostComplete(incomingFormState, userMessage);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 5,
           canShareWhatsapp: result.canShareWhatsapp || true,
           readyToSend: result.readyToSend || false,
@@ -1631,7 +1802,9 @@ export default {
           const result = await startBuyerFlow("sale");
           return jsonResponse({
             response: result.response, reply: result.response,
-            options: result.options, formState: result.formState,
+            options: result.options,
+            persistentButtons: PERSISTENT_BUTTONS,
+            formState: result.formState,
             qualificationScore: 2, canShareWhatsapp: false, readyToSend: false,
             progress: result.progress,
             leadData: { type: "شراء (جاري)" }
@@ -1642,7 +1815,9 @@ export default {
           const result = await startBuyerFlow("rent");
           return jsonResponse({
             response: result.response, reply: result.response,
-            options: result.options, formState: result.formState,
+            options: result.options,
+            persistentButtons: PERSISTENT_BUTTONS,
+            formState: result.formState,
             qualificationScore: 2, canShareWhatsapp: false, readyToSend: false,
             progress: result.progress,
             leadData: { type: "إيجار (جاري)" }
@@ -1653,7 +1828,9 @@ export default {
           const result = startOwnerForm("sale");
           return jsonResponse({
             response: result.response, reply: result.response,
-            options: result.options, formState: result.formState,
+            options: result.options,
+            persistentButtons: PERSISTENT_BUTTONS,
+            formState: result.formState,
             qualificationScore: 4, canShareWhatsapp: true, readyToSend: false,
             progress: result.progress, waMessage: null,
             leadData: { type: "بيع (مالك)" }
@@ -1664,7 +1841,9 @@ export default {
           const result = startOwnerForm("rent");
           return jsonResponse({
             response: result.response, reply: result.response,
-            options: result.options, formState: result.formState,
+            options: result.options,
+            persistentButtons: PERSISTENT_BUTTONS,
+            formState: result.formState,
             qualificationScore: 4, canShareWhatsapp: true, readyToSend: false,
             progress: result.progress, waMessage: null,
             leadData: { type: "إيجار (مالك)" }
@@ -1677,7 +1856,9 @@ export default {
         const result = await processOwnerFlow(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: result.cancelled ? 1 : (result.done ? 5 : 3),
           canShareWhatsapp: result.cancelled ? false : true,
           readyToSend: result.readyToSend || false,
@@ -1692,7 +1873,9 @@ export default {
         const result = await processReviewScreen(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 3, canShareWhatsapp: true, readyToSend: false,
           progress: result.progress || null, leadData: null, waMessage: result.waMessage || null
         });
@@ -1703,7 +1886,9 @@ export default {
         const result = await processBuyerFlow(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: result.cancelled ? 1 : (result.done ? 5 : 3),
           canShareWhatsapp: result.canShareWhatsapp || false,
           readyToSend: result.readyToSend || false,
@@ -1720,7 +1905,9 @@ export default {
         const result = await processReviewScreen(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 3, canShareWhatsapp: false, readyToSend: false,
           progress: result.progress || null, leadData: null, waMessage: null
         });
@@ -1731,7 +1918,9 @@ export default {
         const result = await processBuyerSelect(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: result.done ? 5 : 4,
           canShareWhatsapp: result.canShareWhatsapp || false,
           readyToSend: result.readyToSend || false,
@@ -1744,7 +1933,9 @@ export default {
         const result = await processBuyerNoResults(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: result.done ? 5 : 4,
           canShareWhatsapp: result.canShareWhatsapp || false,
           readyToSend: result.readyToSend || false,
@@ -1757,7 +1948,9 @@ export default {
         const result = await processBuyerPhoneOnly(incomingFormState, userMessage, env);
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 5,
           canShareWhatsapp: result.canShareWhatsapp || false,
           readyToSend: result.readyToSend || false,
@@ -1769,8 +1962,9 @@ export default {
       if (isOutOfCoverage(userMessage) && !isInNasrCity(userMessage)) {
         logEvent("OUT_OF_COVERAGE", { message: userMessage });
         return jsonResponse({
-          response: `معلش يا فندم، شغلنا في مدينة نصر بس. لو بتدور في مدينة نصر، أنا تحت أمرك.`,
+          response: `معلش يا فندم، شغلنا في مدينة نصر بس. لو بتدور في مدينة نصر، أنا تحت أمرك 🙏`,
           options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 0, canShareWhatsapp: false, readyToSend: false,
           leadData: { type: "خارج النطاق" }
         });
@@ -1783,7 +1977,9 @@ export default {
         const result = startOwnerForm("sale");
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 4, canShareWhatsapp: true, readyToSend: false,
           progress: result.progress, waMessage: null,
           leadData: { type: "بيع (مالك)" }
@@ -1793,7 +1989,9 @@ export default {
         const result = startOwnerForm("rent");
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 4, canShareWhatsapp: true, readyToSend: false,
           progress: result.progress, waMessage: null,
           leadData: { type: "إيجار (مالك)" }
@@ -1803,7 +2001,9 @@ export default {
         const result = await startBuyerFlow("sale");
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 2, canShareWhatsapp: false, readyToSend: false,
           progress: result.progress,
           leadData: { type: "شراء (جاري)" }
@@ -1813,7 +2013,9 @@ export default {
         const result = await startBuyerFlow("rent");
         return jsonResponse({
           response: result.response, reply: result.response,
-          options: result.options, formState: result.formState,
+          options: result.options,
+          persistentButtons: PERSISTENT_BUTTONS,
+          formState: result.formState,
           qualificationScore: 2, canShareWhatsapp: false, readyToSend: false,
           progress: result.progress,
           leadData: { type: "إيجار (جاري)" }
@@ -1825,6 +2027,7 @@ export default {
         return jsonResponse({
           response: `${OFFICE_ADDRESS}\n${OFFICE_MAP_URL}\n${OFFICE_HOURS}`,
           options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 1, canShareWhatsapp: false, readyToSend: false,
           leadData: { type: "معلومات" }
         });
@@ -1833,6 +2036,7 @@ export default {
         return jsonResponse({
           response: `سكن الطلاب مع الأستاذة آلاء: ${ALAA_PHONE}`,
           options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 1, canShareWhatsapp: false, readyToSend: false,
           leadData: { type: "سكن طلاب" }
         });
@@ -1841,33 +2045,34 @@ export default {
       // I. غير عقاري
       if (/سيارة|عربية|موبايل|أجهزة|ساعة/i.test(userMessage)) {
         return jsonResponse({
-          response: `بنشتغل في العقارات بس.`,
+          response: `بنشتغل في العقارات بس 🙏`,
           options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 0, canShareWhatsapp: false, readyToSend: false,
           leadData: { type: "غير عقاري" }
         });
       }
 
-      // J. سؤال جانبي
+      // J. سؤال جانبي من القواعد الجاهزة
       const metaAnswer = matchInterrupt(userMessage);
       if (metaAnswer) {
         return jsonResponse({
           response: metaAnswer,
           options: MAIN_MENU_BUTTONS,
+          persistentButtons: PERSISTENT_BUTTONS,
           qualificationScore: 1, canShareWhatsapp: false, readyToSend: false,
           leadData: { type: "سؤال عام" }
         });
       }
 
-      // K. Gemini
-      // أي رسالة عامة لم تدخل مساراً أو قاعدة ثابتة تصل إلى Gemini.
-      // الترحيب الأول لا يمر من هنا؛ صفحة agent.html ترسله محلياً بدون Gemini.
+      // K. Gemini (لأي رسالة عامة لم تدخل مسار)
       if (userMessage.length > 0) {
         const geminiReply = await askGeminiBrief(env, userMessage);
         if (geminiReply) {
           return jsonResponse({
             response: geminiReply,
             options: MAIN_MENU_BUTTONS,
+            persistentButtons: PERSISTENT_BUTTONS,
             qualificationScore: 1, canShareWhatsapp: false, readyToSend: false,
             leadData: { type: "سؤال عام (Gemini)" }
           });
@@ -1878,13 +2083,18 @@ export default {
       return jsonResponse({
         response: "معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.",
         options: MAIN_MENU_BUTTONS,
+        persistentButtons: PERSISTENT_BUTTONS,
         qualificationScore: 1, canShareWhatsapp: false, readyToSend: false,
         leadData: { type: "استفسار مبدئي" }
       });
 
     } catch (err) {
       logEvent("ERROR", { message: err.message, stack: err.stack });
-      return jsonResponse({ response: "حصلت مشكلة مؤقتة، جرّب تاني.", options: MAIN_MENU_BUTTONS }, 500);
+      return jsonResponse({
+        response: "حصلت مشكلة مؤقتة، جرّب تاني.",
+        options: MAIN_MENU_BUTTONS,
+        persistentButtons: PERSISTENT_BUTTONS
+      }, 500);
     }
   },
 
