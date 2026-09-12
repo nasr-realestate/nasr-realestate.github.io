@@ -26,13 +26,143 @@
     }
     .agent-app { max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative; }
     .agent-app.show { opacity: 1; }
-    .agent-header { background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; }
+    .agent-header { background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; position: relative; }
     .agent-header img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
     .agent-header .info { flex: 1; }
     .agent-header .info h1 { font-size: 0.95rem; }
     .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
     .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
     .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
+
+    /* 🆕 زر القائمة (ثلاث نقاط) */
+    .menu-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 50%;
+      transition: background 0.15s;
+    }
+    .menu-btn:hover { background: rgba(255,255,255,0.15); }
+    .menu-btn:active { transform: scale(0.92); }
+
+    /* 🆕 القائمة المنسدلة */
+    .menu-dropdown {
+      position: absolute;
+      top: 60px;
+      left: 12px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      min-width: 220px;
+      padding: 6px 0;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+    .menu-dropdown.open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: #111;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: right;
+      font-family: 'Cairo', sans-serif;
+    }
+    .menu-item:hover { background: #f0fdf4; }
+    .menu-item i { font-size: 1rem; width: 20px; text-align: center; }
+    .menu-item.danger { color: #dc2626; }
+    .menu-item.danger:hover { background: #fef2f2; }
+    .menu-item.primary { color: #075e54; }
+    .menu-item.info { color: #2563eb; }
+    .menu-separator { height: 1px; background: #e5e7eb; margin: 4px 0; }
+
+    /* 🆕 مودال "من هو طارق طنطاوي" */
+    .info-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+    }
+    .info-modal-overlay.show { display: flex; }
+    .info-modal {
+      background: #fff;
+      border-radius: 18px;
+      max-width: 420px;
+      width: 100%;
+      padding: 24px 20px 20px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      animation: scaleIn 0.25s ease;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .info-modal img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 4px solid var(--wa-green);
+      object-fit: cover;
+      margin-bottom: 14px;
+    }
+    .info-modal h2 {
+      font-size: 1.25rem;
+      color: #075e54;
+      margin-bottom: 6px;
+    }
+    .info-modal .subtitle {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+    .info-modal p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: #374151;
+      text-align: right;
+      margin-bottom: 14px;
+    }
+    .info-modal .close-modal-btn {
+      background: var(--wa-green);
+      color: #fff;
+      border: none;
+      padding: 10px 30px;
+      border-radius: 24px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: 0.15s;
+    }
+    .info-modal .close-modal-btn:hover { background: #1fb955; }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
     .chat-area { flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px; }
     .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
@@ -94,7 +224,26 @@
       <h1>طارق طنطاوي</h1>
       <p><span class="dot"></span> خبرة عقارية من 2014</p>
     </div>
-    <a href="/" class="logo-link"><i class="fas fa-home"></i></a>
+
+    <button class="menu-btn" id="menuBtn" onclick="toggleMenu(event)" aria-label="القائمة">
+      <i class="fas fa-ellipsis-v"></i>
+    </button>
+
+    <div class="menu-dropdown" id="menuDropdown">
+      <button class="menu-item info" onclick="showAboutModal()">
+        <i class="fas fa-user-tie"></i>
+        من هو طارق طنطاوي؟
+      </button>
+      <div class="menu-separator"></div>
+      <button class="menu-item primary" onclick="startNewChat()">
+        <i class="fas fa-redo"></i>
+        بدء محادثة جديدة
+      </button>
+      <button class="menu-item danger" onclick="deleteChat()">
+        <i class="fas fa-trash-alt"></i>
+        حذف المحادثة
+      </button>
+    </div>
   </div>
 
   <div class="chat-area" id="chatMessages">
@@ -124,21 +273,40 @@
   </div>
 </div>
 
+<!-- 🆕 مودال "من هو طارق طنطاوي" -->
+<div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
+  <div class="info-modal">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
+    <h2>أ. طارق طنطاوي</h2>
+    <div class="subtitle">سمسار عقارات — مدينة نصر</div>
+    <p>
+      خبير عقاري في مدينة نصر من 2014.
+      متخصص في بيع وشراء وتأجير الشقق والمحلات والمكاتب.
+      بخبرة تزيد عن 10 سنين في السوق العقاري المصري.
+    </p>
+    <p style="background: #f0fdf4; padding: 10px; border-radius: 10px; font-size: 0.85rem;">
+      <i class="fas fa-map-marker-alt" style="color: #25d366;"></i>
+      مدينة نصر فقط — المناطق السادسة والثامنة والعاشرة والحي السابع والعاشر
+    </p>
+    <button class="close-modal-btn" onclick="closeAboutModal()">تمام</button>
+  </div>
+</div>
+
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v26";
-  const SCORE_KEY = "tarek_score_v26";
-  const WA_KEY = "tarek_wa_v26";
-  const LEAD_KEY = "tarek_lead_v26";
-  const FORM_STATE_KEY = "tarek_form_state_v26";
-  const OPTIONS_KEY = "tarek_options_v26";
-  const WA_MSG_KEY = "tarek_wa_msg_v26";
-  const PROGRESS_KEY = "tarek_progress_v26";
-  const READY_KEY = "tarek_ready_v26";
-  const HIGHLIGHT_KEY = "tarek_highlight_v26";
-  const FADED_KEY = "tarek_faded_v26";
+  const STORAGE_KEY = "tarek_chat_v27";
+  const SCORE_KEY = "tarek_score_v27";
+  const WA_KEY = "tarek_wa_v27";
+  const LEAD_KEY = "tarek_lead_v27";
+  const FORM_STATE_KEY = "tarek_form_state_v27";
+  const OPTIONS_KEY = "tarek_options_v27";
+  const WA_MSG_KEY = "tarek_wa_msg_v27";
+  const PROGRESS_KEY = "tarek_progress_v27";
+  const READY_KEY = "tarek_ready_v27";
+  const HIGHLIGHT_KEY = "tarek_highlight_v27";
+  const FADED_KEY = "tarek_faded_v27";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -158,9 +326,88 @@
   const sendBtn = document.getElementById('sendBtn');
   const typing = document.getElementById('typingIndicator');
   const dealWrapper = document.getElementById('dealWrapper');
+  const menuBtn = document.getElementById('menuBtn');
+  const menuDropdown = document.getElementById('menuDropdown');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
+
+  // 🆕 فتح/إغلاق القائمة
+  function toggleMenu(e) {
+    if (e) e.stopPropagation();
+    menuDropdown.classList.toggle('open');
+  }
+
+  // إغلاق القائمة لما تدوس في أي مكان
+  document.addEventListener('click', function(e) {
+    if (!menuDropdown.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
+      menuDropdown.classList.remove('open');
+    }
+  });
+
+  // 🆕 من هو طارق طنطاوي
+  function showAboutModal() {
+    menuDropdown.classList.remove('open');
+    document.getElementById('aboutModal').classList.add('show');
+  }
+
+  function closeAboutModal() {
+    document.getElementById('aboutModal').classList.remove('show');
+  }
+
+  // 🆕 بدء محادثة جديدة (يمسح المحادثة الحالية ويبدأ من الأول)
+  function startNewChat() {
+    menuDropdown.classList.remove('open');
+    if (!confirm('هتبدأ محادثة جديدة والرسايل الحالية هتتمسح. متأكد؟')) return;
+    resetAll();
+  }
+
+  // 🆕 حذف المحادثة
+  function deleteChat() {
+    menuDropdown.classList.remove('open');
+    if (!confirm('هتحذف كل المحادثة نهائياً. متأكد؟')) return;
+    resetAll();
+  }
+
+  function resetAll() {
+    // امسح كل localStorage
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SCORE_KEY);
+    localStorage.removeItem(WA_KEY);
+    localStorage.removeItem(LEAD_KEY);
+    localStorage.removeItem(FORM_STATE_KEY);
+    localStorage.removeItem(OPTIONS_KEY);
+    localStorage.removeItem(WA_MSG_KEY);
+    localStorage.removeItem(PROGRESS_KEY);
+    localStorage.removeItem(READY_KEY);
+    localStorage.removeItem(HIGHLIGHT_KEY);
+    localStorage.removeItem(FADED_KEY);
+
+    // صفّر المتغيرات
+    history = [];
+    score = 0;
+    canShare = false;
+    currentLeadData = {};
+    currentFormState = null;
+    lastWaMessage = null;
+    lastOptions = null;
+    lastHighlight = null;
+    lastFaded = null;
+    currentProgress = null;
+    readyToSend = false;
+
+    // امسح الشات
+    chat.querySelectorAll('.msg').forEach(el => el.remove());
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+
+    // رسالة ترحيب جديدة
+    const welcome = `معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.`;
+    renderMsg(welcome, 'bot');
+    history.push({ text: welcome, type: 'bot', time: getTime() });
+
+    updateUI();
+    saveState();
+  }
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
@@ -392,6 +639,11 @@
 
   window.sendMsg = sendMsg;
   window.openWhatsApp = openWhatsApp;
+  window.toggleMenu = toggleMenu;
+  window.showAboutModal = showAboutModal;
+  window.closeAboutModal = closeAboutModal;
+  window.startNewChat = startNewChat;
+  window.deleteChat = deleteChat;
 </script>
 
 </body>
