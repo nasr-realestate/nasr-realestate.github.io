@@ -42,7 +42,6 @@
     }
     .agent-app.show { opacity: 1; }
 
-    /* هيدر واتساب */
     .agent-header {
       background: #005c4b;
       padding: 10px 14px;
@@ -89,7 +88,6 @@
     .menu-item.danger { color: #ea0038; }
     .menu-separator { height: 1px; background: #f0f2f5; margin: 4px 0; }
 
-    /* موديل التعريف */
     .info-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
     .info-modal-overlay.show { display: flex; }
     .info-modal { background: #fff; border-radius: 12px; max-width: 400px; width: 100%; padding: 24px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -99,11 +97,10 @@
     .info-modal p { font-size: 0.85rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
-    /* ساحة الشات */
     .chat-area {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 12px 20px 12px;
+      padding: 12px 12px 16px 12px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -132,7 +129,48 @@
 
     .typing { display: none; align-self: flex-start; background: #fff; padding: 8px 12px; border-radius: 7.5px; font-size: 12px; color: #667781; box-shadow: 0 1px 0.5px rgba(0,0,0,0.1); }
 
-    /* 🌟 الحاوية السفلية — بدون position absolute — flex طبيعي */
+    /* 🌟 الأزرار — كأزرار inline داخل الشات */
+    .option-buttons-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px 0 8px 0;
+      align-self: flex-start;
+      max-width: 90%;
+      animation: fadeIn 0.25s ease;
+    }
+    .option-btn {
+      background: #fff;
+      border: 1px solid #d1d7db;
+      color: #00a884;
+      padding: 9px 16px;
+      border-radius: 20px;
+      font-family: 'IBM Plex Sans Arabic', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .option-btn:hover { background: #f0f2f5; transform: translateY(-1px); }
+    .option-btn:active { background: #e2e8f0; transform: scale(0.97); }
+    .option-btn.highlighted {
+      background: #00a884;
+      color: #fff;
+      border-color: #00a884;
+      box-shadow: 0 0 15px rgba(0,168,132,0.5);
+      animation: pulseBtn 1.5s infinite;
+    }
+    .option-btn.faded {
+      opacity: 0.45;
+      background: #f0f2f5;
+      color: #667781;
+      pointer-events: none;
+      border-color: transparent;
+    }
+
+    /* 🌟 الحاوية السفلية flex — لا تغطي الأزرار */
     .bottom-dock {
       flex-shrink: 0;
       background: var(--wa-input-bg);
@@ -143,10 +181,7 @@
       padding-bottom: max(env(safe-area-inset-bottom), 8px);
     }
 
-    .deal-wrapper {
-      padding: 8px 10px 6px 10px;
-      width: 100%;
-    }
+    .deal-wrapper { padding: 8px 10px 6px 10px; width: 100%; }
     .whatsapp-notification-card {
       width: 100%;
       background: #fff;
@@ -165,7 +200,6 @@
     .whatsapp-notification-card .wa-title { font-size: 0.8rem; font-weight: 700; color: #111b21; display: flex; align-items: center; gap: 4px; }
     .whatsapp-notification-card .wa-subtitle { font-size: 0.7rem; color: #667781; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* 🌟 خانة الكتابة — مرنة وآمنة */
     .input-area {
       padding: 8px 10px 8px 10px;
       display: flex;
@@ -190,7 +224,6 @@
     }
     .input-area input:focus { box-shadow: inset 0 0 0 1px #00a884; }
 
-    /* 🌟 زر الإرسال — واضح وكامل بدون قطع */
     .input-area button {
       background: #00a884;
       border: none;
@@ -215,6 +248,7 @@
 
     @keyframes slideUpPulse { 0% { box-shadow: 0 2px 6px rgba(0,168,132,0.2); } 100% { box-shadow: 0 4px 15px rgba(0,168,132,0.4); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 12px rgba(0,168,132,0.4); } 50% { box-shadow: 0 0 22px rgba(0,168,132,0.8); } }
   </style>
 </head>
 
@@ -222,7 +256,6 @@
 
 <div class="agent-app" id="app">
 
-  <!-- هيدر واتساب -->
   <div class="agent-header">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
     <div class="info" onclick="showAboutModal()">
@@ -256,12 +289,10 @@
     </div>
   </div>
 
-  <!-- ساحة الشات -->
   <div class="chat-area" id="chatMessages">
     <div class="typing" id="typingIndicator">طارق يكتب الآن...</div>
   </div>
 
-  <!-- الحاوية السفلية -->
   <div class="bottom-dock">
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
@@ -284,7 +315,6 @@
 
 </div>
 
-<!-- موديل معلومات طارق -->
 <div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
   <div class="info-modal">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
@@ -299,13 +329,13 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v32";
-  const SCORE_KEY = "tarek_score_v32";
-  const WA_KEY = "tarek_wa_v32";
-  const LEAD_KEY = "tarek_lead_v32";
-  const FORM_STATE_KEY = "tarek_form_state_v32";
-  const WA_MSG_KEY = "tarek_wa_msg_v32";
-  const READY_KEY = "tarek_ready_v32";
+  const STORAGE_KEY = "tarek_chat_v33";
+  const SCORE_KEY = "tarek_score_v33";
+  const WA_KEY = "tarek_wa_v33";
+  const LEAD_KEY = "tarek_lead_v33";
+  const FORM_STATE_KEY = "tarek_form_state_v33";
+  const WA_MSG_KEY = "tarek_wa_msg_v33";
+  const READY_KEY = "tarek_ready_v33";
 
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
@@ -367,6 +397,7 @@
     readyToSend = false;
 
     chat.querySelectorAll('.msg').forEach(el => el.remove());
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
 
     const welcome = `معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
     renderMsg(welcome, 'bot');
@@ -423,8 +454,42 @@
     scroll();
   }
 
+  function renderOptions(options, highlight, faded) {
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+    if (!options || options.length === 0) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'option-buttons-wrap';
+
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option-btn';
+      btn.innerText = opt;
+      if (highlight && opt === highlight) btn.classList.add('highlighted');
+      if (faded && Array.isArray(faded) && faded.includes(opt)) btn.classList.add('faded');
+
+      btn.onclick = function() {
+        if (isSending) return;
+        wrap.querySelectorAll('.option-btn').forEach(b => {
+          b.classList.add('faded');
+          b.style.pointerEvents = 'none';
+        });
+        btn.classList.remove('faded');
+        btn.classList.add('highlighted');
+        input.value = opt;
+        sendMsg();
+      };
+      wrap.appendChild(btn);
+    });
+
+    chat.insertBefore(wrap, typing);
+    scroll();
+  }
+
   function rehydrate() {
     chat.querySelectorAll('.msg').forEach(el => el.remove());
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     history.forEach(m => renderMsg(m.text, m.type, m.time));
     updateUI();
   }
@@ -434,12 +499,14 @@
     window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  async function sendMsg() {
+    async function sendMsg() {
     const text = input.value.trim();
     if (!text || isSending) return;
     input.value = '';
     isSending = true;
     sendBtn.disabled = true;
+
+    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
 
     renderMsg(text, 'user');
     history.push({ text, type: 'user', time: getTime() });
@@ -478,6 +545,10 @@
 
         updateUI();
         saveState();
+
+        if (data.options && data.options.length) {
+          renderOptions(data.options, data.highlightButton || null, data.fadedButtons || null);
+        }
       }
     } catch (err) {
       typing.style.display = 'none';
