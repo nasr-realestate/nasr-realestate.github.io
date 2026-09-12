@@ -4,7 +4,7 @@ permalink: /ai-feed.json
 sitemap: false
 ---
 {
-  "schema_version": "2.1",
+  "schema_version": "2.2",
   "brand": "سمسار طلبك",
   "generated_at": {{ site.time | date_to_xmlschema | jsonify }},
   "total_count": {{ site.properties | size }},
@@ -16,30 +16,34 @@ sitemap: false
       "title": {{ property.title | jsonify }},
       "url": {{ property.url | absolute_url | jsonify }},
       "slug": {{ property.slug | default: property.id | default: "" | jsonify }},
-      
+
       "transaction": {% if property.category contains "rent" or property.title contains "إيجار" or property.title contains "ايجار" or property.title contains "للإيجار" or property.title contains "للايجار" or property.title contains "شهرياً" or property.title contains "شهريا" %}"rent"{% else %}"sale"{% endif %},
-      
+
       "propertyType": {% if property.category contains "shop" or property.category contains "commercial" or property.title contains "محل" or property.title contains "تجارى" or property.title contains "تجاري" or property.title contains "معرض" or property.title contains "صيدلية" %}"shop"{% elsif property.category contains "office" or property.category contains "admin" or property.title contains "مكتب" or property.title contains "مقر" or property.title contains "إداري" or property.title contains "إدارى" %}"office"{% elsif property.category contains "villa" or property.title contains "فيلا" or property.title contains "دوبلكس" %}"villa"{% else %}"apartment"{% endif %},
-      
+
       "category": {{ property.category | default: "apartments" | jsonify }},
       "location": {{ property.location | default: "" | jsonify }},
-      
+
       "price": {{ property.price | default: "" | jsonify }},
-      "priceNumeric": "{{ property.price | default: '' }}",
-      
+      "priceNumeric": {{ property.priceNumeric | default: 0 | jsonify }},
+
       "area": {{ property.area | default: "" | jsonify }},
-      "areaNumeric": "{{ property.area | default: '' }}",
-      
+      "areaNumeric": {{ property.areaNumeric | default: 0 | jsonify }},
+
       "rooms": {{ property.rooms | default: "" | jsonify }},
+      "roomsNumeric": {{ property.roomsNumeric | default: 0 | jsonify }},
+
       "baths": {{ property.bathrooms | default: property.baths | default: "" | jsonify }},
+      "bathsNumeric": {{ property.bathsNumeric | default: 0 | jsonify }},
+
       "floor": {{ property.floor | default: "" | jsonify }},
       "finish": {{ property.finish | default: "" | jsonify }},
-      
+
       "furnished": {% if property.title contains "غير مفروش" or property.title contains "فاضية" or property.title contains "مش مفروش" %}false{% elsif property.furnished == true %}true{% elsif property.title contains "مفروش" or property.meta_description contains "مفروش" %}true{% else %}false{% endif %},
-      
+
       "description": {{ property.meta_description | default: property.description | default: "" | strip_html | truncate: 200 | jsonify }},
       "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ property.image_file }}",
-      
+
       "date": {{ property.date | date_to_xmlschema | jsonify }},
       "meta_title": {{ property.meta_title | default: property.title | jsonify }}
     }{% unless forloop.last %},{% endunless %}
