@@ -7,68 +7,365 @@
   <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014." />
   <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
   <title>سمسار طلبك | أ. طارق طنطاوي</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html { height: 100%; background: #0a0a0a; font-family: 'Cairo', sans-serif; overflow: hidden; }
-    :root { --wa-header: #075e54; --wa-bg: #efeae2; --wa-msg-in: #fff; --wa-msg-out: #dcf8c6; --wa-green: #25d366; }
-    .agent-app { max-width: 650px; height: 100vh; height: 100dvh; margin: 0 auto; background: var(--wa-bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.4s ease; position: relative; }
-    .agent-app.show { opacity: 1; }
-    .agent-header { background: var(--wa-header); padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; }
-    .agent-header img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
-    .agent-header .info { flex: 1; }
-    .agent-header .info h1 { font-size: 0.95rem; }
-    .agent-header .info p { font-size: 0.65rem; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
-    .agent-header .info p .dot { width: 7px; height: 7px; background: #2ecc71; border-radius: 50%; display: inline-block; }
-    .agent-header .logo-link { color: #fff; font-size: 1.2rem; text-decoration: none; }
-    .qual-bar { display: none !important; }
-    .chat-area { flex: 1; overflow-y: auto; padding: 14px 14px 120px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--wa-bg); background-image: radial-gradient(#cbd5e1 0.8px, transparent 0); background-size: 12px 12px; }
-    .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.04); animation: fadeIn 0.2s ease; word-break: break-word; }
-    .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 4px; color: #111; }
-    .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 4px; font-weight: 600; }
-    .msg a { color: #075e54; font-weight: 700; text-decoration: underline; }
-    .msg-time { font-size: 9px; color: #888; margin-top: 4px; text-align: left; }
-    .typing { display: none; align-self: flex-start; background: #fff; padding: 10px 14px; border-radius: 14px; border-top-right-radius: 4px; font-size: 12px; color: #888; }
-    .option-buttons-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 8px 4px; align-self: flex-start; max-width: 85%; }
-    .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s; }
-    .option-btn:hover { background: #dcf8c6; }
-    .option-btn:active { transform: scale(0.96); }
-    .main-menu-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 12px 8px; background: #eae6df; }
-    .main-menu-btn { flex: 1 1 44%; min-width: 132px; background: #fff; border: 1px solid #25d366; color: #075e54; padding: 9px 8px; border-radius: 18px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .main-menu-btn:hover { background: #dcf8c6; }
-    .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; background: #f0f0f0; border-top: 1px solid #d1d7db; z-index: 100; display: flex; flex-direction: column; box-shadow: 0 -6px 25px rgba(0,0,0,0.18); padding-bottom: env(safe-area-inset-bottom, 8px); }
-    .input-area { padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center; background: #eae6df; }
-    .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; }
-    .input-area input:focus { border-color: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2); }
-    .input-area button { background: var(--wa-green); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .deal-wrapper { padding: 8px 12px 4px 12px; width: 100%; background: #eae6df; animation: fadeInCard 0.45s ease-out; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      height: 100%;
+      background: #0a0a0a;
+      font-family: 'Cairo', sans-serif;
+      overflow: hidden;
+    }
+
+    :root {
+      --wa-header: #075e54;
+      --wa-bg: #efeae2;
+      --wa-msg-in: #fff;
+      --wa-msg-out: #dcf8c6;
+      --wa-green: #25d366;
+    }
+
+    .agent-app {
+      max-width: 650px;
+      height: 100vh;
+      height: 100dvh;
+      margin: 0 auto;
+      background: var(--wa-bg);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 50px rgba(0,0,0,0.9);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      position: relative;
+    }
+
+    .agent-app.show {
+      opacity: 1;
+    }
+
+    .agent-header {
+      background: var(--wa-header);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+
+    .agent-header img {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      object-fit: cover;
+    }
+
+    .agent-header .info {
+      flex: 1;
+    }
+
+    .agent-header .info h1 {
+      font-size: 0.95rem;
+    }
+
+    .agent-header .info p {
+      font-size: 0.65rem;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .agent-header .info p .dot {
+      width: 7px;
+      height: 7px;
+      background: #2ecc71;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .agent-header .logo-link {
+      color: #fff;
+      font-size: 1.2rem;
+      text-decoration: none;
+    }
+
+    .qual-bar {
+      display: none !important;
+    }
+
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 120px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--wa-bg);
+      background-image: radial-gradient(#cbd5e1 0.8px, transparent 0);
+      background-size: 12px 12px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      animation: fadeIn 0.2s ease;
+      word-break: break-word;
+    }
+
+    .msg-bot {
+      background: var(--wa-msg-in);
+      align-self: flex-start;
+      border-top-right-radius: 4px;
+      color: #111;
+    }
+
+    .msg-user {
+      background: var(--wa-msg-out);
+      align-self: flex-end;
+      border-top-left-radius: 4px;
+      font-weight: 600;
+    }
+
+    .msg a {
+      color: #075e54;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    .msg-time {
+      font-size: 9px;
+      color: #888;
+      margin-top: 4px;
+      text-align: left;
+    }
+
+    .typing {
+      display: none;
+      align-self: flex-start;
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border-top-right-radius: 4px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .option-buttons-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 2px 4px 8px 4px;
+      align-self: flex-start;
+      max-width: 85%;
+    }
+
+    .option-btn {
+      background: #fff;
+      border: 1px solid #25d366;
+      color: #075e54;
+      padding: 8px 14px;
+      border-radius: 16px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .option-btn:hover {
+      background: #dcf8c6;
+    }
+
+    .option-btn:active {
+      transform: scale(0.96);
+    }
+
+    .bottom-dock {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #f0f0f0;
+      border-top: 1px solid #d1d7db;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -6px 25px rgba(0,0,0,0.18);
+      padding-bottom: env(safe-area-inset-bottom, 8px);
+    }
+
+    .input-area {
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      align-items: center;
+      background: #eae6df;
+    }
+
+    .input-area input {
+      flex: 1;
+      border: 1px solid #cbd5e1;
+      border-radius: 24px;
+      padding: 10px 16px;
+      background: #fff;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .input-area input:focus {
+      border-color: var(--wa-green);
+      box-shadow: 0 0 0 2px rgba(37,211,102,0.2);
+    }
+
+    .input-area button {
+      background: var(--wa-green);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .deal-wrapper {
+      padding: 8px 12px 4px 12px;
+      width: 100%;
+      background: #eae6df;
+      animation: fadeInCard 0.45s ease-out;
+    }
 
     /* ==== البانر الأخضر الحقيقي (يظهر بس لما العميل يخلّص) ==== */
-    .whatsapp-notification-card { width: 100%; background: #fff; border-right: 5px solid #25d366; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12); transition: all 0.2s ease; animation: slideUpPulse 1.5s infinite alternate; }
-    .whatsapp-notification-card:hover { background: #f9fffb; transform: translateY(-2px); }
-    .whatsapp-notification-card .wa-icon-box { width: 38px; height: 38px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(37,211,102,0.4); }
-    .whatsapp-notification-card .wa-text-box { flex: 1; }
-    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 800; color: #075e54; display: flex; align-items: center; gap: 5px; }
-    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #4b5563; margin-top: 1px; }
 
-    @keyframes slideUpPulse { 0% { box-shadow: 0 4px 12px rgba(37,211,102,0.2); } 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); } }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeInCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .whatsapp-notification-card {
+      width: 100%;
+      background: #fff;
+      border-right: 5px solid #25d366;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      transition: all 0.2s ease;
+      animation: slideUpPulse 1.5s infinite alternate;
+    }
+
+    .whatsapp-notification-card:hover {
+      background: #f9fffb;
+      transform: translateY(-2px);
+    }
+
+    .whatsapp-notification-card .wa-icon-box {
+      width: 38px;
+      height: 38px;
+      background: #25d366;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      box-shadow: 0 2px 5px rgba(37,211,102,0.4);
+    }
+
+    .whatsapp-notification-card .wa-text-box {
+      flex: 1;
+    }
+
+    .whatsapp-notification-card .wa-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #075e54;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .whatsapp-notification-card .wa-subtitle {
+      font-size: 0.75rem;
+      color: #4b5563;
+      margin-top: 1px;
+    }
+
+    @keyframes slideUpPulse {
+      0% {
+        box-shadow: 0 4px 12px rgba(37,211,102,0.2);
+      }
+      100% {
+        box-shadow: 0 4px 20px rgba(37,211,102,0.5);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInCard {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
+
 <body>
+
 <div class="agent-app" id="app">
+
   <div class="agent-header">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
+
     <div class="info">
       <h1>طارق طنطاوي</h1>
-      <p><span class="dot"></span> خبرة عقارية من 2014</p>
+      <p>
+        <span class="dot"></span>
+        خبرة عقارية من 2014
+      </p>
     </div>
-    <a href="/" class="logo-link"><i class="fas fa-home"></i></a>
+
+    <a href="/" class="logo-link">
+      <i class="fas fa-home"></i>
+    </a>
   </div>
 
   <div class="chat-area" id="chatMessages">
@@ -76,29 +373,54 @@
   </div>
 
   <div class="bottom-dock">
-    <!-- 🆕 البانر الأخضر يظهر فقط لما readyToSend = true -->
+
+    <!-- البانر الأخضر يظهر فقط لما readyToSend = true -->
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
+
       <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
-        <div class="wa-icon-box"><i class="fab fa-whatsapp"></i></div>
-        <div class="wa-text-box">
-          <div class="wa-title">اضغط هنا لمتابعة المحادثة مع أ. طارق <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">موثق</span></div>
-          <div class="wa-subtitle">تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب</div>
+
+        <div class="wa-icon-box">
+          <i class="fab fa-whatsapp"></i>
         </div>
+
+        <div class="wa-text-box">
+          <div class="wa-title">
+            اضغط هنا لمتابعة المحادثة مع أ. طارق
+            <span style="font-size: 10px; background: #25d366; color: #fff; padding: 1px 6px; border-radius: 10px;">
+              موثق
+            </span>
+          </div>
+
+          <div class="wa-subtitle">
+            تم تأهيل طلبك بنجاح، سيتم نقل تفاصيل المحادثة لواتساب
+          </div>
+        </div>
+
       </div>
     </div>
-    <div class="main-menu-wrap" id="mainMenu" aria-label="القائمة الرئيسية"></div>
 
     <div class="input-area">
-      <input type="text" id="userInput" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()">
-      <button id="sendBtn" onclick="sendMsg()"><i class="fas fa-paper-plane"></i></button>
+
+      <input
+        type="text"
+        id="userInput"
+        placeholder="اكتب استفسارك هنا..."
+        onkeypress="if(event.key==='Enter' && !isSending) sendMsg()"
+      >
+
+      <button id="sendBtn" onclick="sendMsg()">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+
     </div>
+
   </div>
 </div>
 
 <script>
+
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
-  const MAIN_MENU_BUTTONS = ['🔍 أشتري', '🏠 أستأجر', '💰 أبيع', '🔑 أأجر'];
 
   const STORAGE_KEY = "tarek_chat_v17";
   const SCORE_KEY = "tarek_score_v17";
@@ -127,10 +449,19 @@
   const typing = document.getElementById('typingIndicator');
   const dealWrapper = document.getElementById('dealWrapper');
 
-  function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
-  function scroll() { chat.scrollTop = chat.scrollHeight; }
+  function getTime() {
+    return new Date().toLocaleTimeString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function scroll() {
+    chat.scrollTop = chat.scrollHeight;
+  }
 
   function saveState() {
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     localStorage.setItem(SCORE_KEY, score.toString());
     localStorage.setItem(WA_KEY, canShare ? "true" : "false");
@@ -138,14 +469,26 @@
     localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
     localStorage.setItem(OPTIONS_KEY, JSON.stringify(lastOptions));
     localStorage.setItem(READY_KEY, readyToSend ? "true" : "false");
-    if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
-    if (currentProgress) localStorage.setItem(PROGRESS_KEY, JSON.stringify(currentProgress));
+
+    if (lastWaMessage) {
+      localStorage.setItem(WA_MSG_KEY, lastWaMessage);
+    }
+
+    if (currentProgress) {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(currentProgress));
+    }
   }
 
   function loadState() {
+
     try {
+
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) history = JSON.parse(raw);
+
+      if (raw) {
+        history = JSON.parse(raw);
+      }
+
       score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
       canShare = localStorage.getItem(WA_KEY) === "true";
       currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
@@ -154,12 +497,17 @@
       lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
       currentProgress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
       readyToSend = localStorage.getItem(READY_KEY) === "true";
+
       return true;
-    } catch { return false; }
+
+    } catch {
+      return false;
+    }
   }
 
-  // 🆕 عرض البانر الأخضر فقط لو readyToSend = true
+  // عرض البانر الأخضر فقط لو readyToSend = true
   function renderWhatsAppButton() {
+
     if (readyToSend && (canShare || score >= 5)) {
       dealWrapper.style.display = 'block';
     } else {
@@ -168,130 +516,216 @@
   }
 
   function updateUI() {
+
     renderWhatsAppButton();
 
     if (currentFormState && currentFormState.active === false) {
+
       currentFormState = null;
       lastOptions = null;
       currentProgress = null;
+
       localStorage.removeItem(FORM_STATE_KEY);
       localStorage.removeItem(OPTIONS_KEY);
       localStorage.removeItem(PROGRESS_KEY);
     }
-    renderMainMenu();
+
     saveState();
   }
 
   function renderMsg(text, type, time) {
+
     const div = document.createElement('div');
+
     div.className = `msg msg-${type}`;
-    if (type === 'bot') div.innerHTML = marked.parse(text);
-    else div.innerText = text;
+
+    if (type === 'bot') {
+      div.innerHTML = marked.parse(text);
+    } else {
+      div.innerText = text;
+    }
+
     const t = document.createElement('div');
+
     t.className = 'msg-time';
     t.innerText = time || getTime();
+
     div.appendChild(t);
+
     chat.insertBefore(div, typing);
+
     scroll();
   }
 
   function renderOptions(options) {
+
     if (!options || !options.length) return;
+
     const wrap = document.createElement('div');
+
     wrap.className = 'option-buttons-wrap';
+
     options.forEach(opt => {
+
       const btn = document.createElement('button');
+
       btn.type = 'button';
       btn.className = 'option-btn';
       btn.innerText = opt;
+
       btn.onclick = () => {
+
         if (isSending) return;
-        document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+
+        document
+          .querySelectorAll('.option-buttons-wrap')
+          .forEach(el => el.remove());
+
         lastOptions = null;
+
         input.value = opt;
+
         sendMsg();
       };
+
       wrap.appendChild(btn);
     });
+
     chat.insertBefore(wrap, typing);
+
     scroll();
   }
 
-  function renderMainMenu() {
-    const menu = document.getElementById('mainMenu');
-    menu.innerHTML = '';
-    if (currentFormState && currentFormState.active) { menu.style.display = 'none'; return; }
-    menu.style.display = 'flex';
-    MAIN_MENU_BUTTONS.forEach(label => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'main-menu-btn';
-      btn.innerText = label;
-      btn.onclick = () => { if (!isSending) { input.value = label; sendMsg(); } };
-      menu.appendChild(btn);
-    });
-  }
-
   function rehydrate() {
+
     chat.querySelectorAll('.msg').forEach(el => el.remove());
-    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+
+    chat
+      .querySelectorAll('.option-buttons-wrap')
+      .forEach(el => el.remove());
+
     history.forEach(m => renderMsg(m.text, m.type, m.time));
-    if (lastOptions && lastOptions.length && currentFormState && currentFormState.active) {
+
+    if (
+      lastOptions &&
+      lastOptions.length &&
+      currentFormState &&
+      currentFormState.active
+    ) {
       renderOptions(lastOptions);
     }
+
     updateUI();
   }
 
   function buildProfessionalLeadMessage() {
-    const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' | ');
+
+    const userMessages = history
+      .filter(m => m.type === 'user')
+      .map(m => m.text)
+      .join(' | ');
+
     const leadType = currentLeadData.type || "استعلام عقاري";
     const leadPrice = currentLeadData.price || "حسب الاتفاق";
-    return `أستاذ طارق،\n\nتواصلت مع سمسار طلبك وده ملخص طلبي بعد تسجيل البيانات:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nمحتاج أتواصل مع حضرتك لاستكمال التفاصيل والمعاينة.`;
+
+    return `أستاذ طارق،
+
+تواصلت مع سمسار طلبك وده ملخص طلبي بعد تسجيل البيانات:
+
+- نوع الطلب: ${leadType}
+- الميزانية / السعر: ${leadPrice}
+- تفاصيل المحادثة:
+${userMessages}
+
+محتاج أتواصل مع حضرتك لاستكمال التفاصيل والمعاينة.`;
   }
 
-  // زر الواتساب (يفتح واتساب لما البانر الأخضر ظاهر)
+  // زر الواتساب
   function openWhatsApp() {
+
     // لو الزر مظهرش بعد (احتياطي) → تنبيه محلي
     if (!readyToSend) {
+
       const remaining = currentProgress?.remaining || 0;
       const total = currentProgress?.total || 0;
       const current = currentProgress?.current || 0;
+
       const warnText = remaining > 0
         ? `لسه فاضل ${remaining} أسئلة (${current} من ${total}). كمّلهم عشان أبعت لأ. طارق بياناتك كاملة.`
         : `لسه بنجمع بياناتك، كمّل معايا شوية كمان عشان أوصّل لأ. طارق تفاصيل طلبك.`;
+
       renderMsg(warnText, 'bot');
-      history.push({ text: warnText, type: 'bot', time: getTime() });
+
+      history.push({
+        text: warnText,
+        type: 'bot',
+        time: getTime()
+      });
+
       saveState();
+
       return;
     }
 
     if (!canShare && score < 5) return;
-    const leadMessage = lastWaMessage || buildProfessionalLeadMessage();
-    window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`, '_blank');
+
+    const leadMessage =
+      lastWaMessage || buildProfessionalLeadMessage();
+
+    window.open(
+      `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(leadMessage)}`,
+      '_blank'
+    );
   }
 
   async function sendMsg() {
+
     const text = input.value.trim();
+
     if (!text || isSending) return;
+
     input.value = '';
+
     isSending = true;
     sendBtn.disabled = true;
 
-    document.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
+    document
+      .querySelectorAll('.option-buttons-wrap')
+      .forEach(el => el.remove());
+
     lastOptions = null;
 
     renderMsg(text, 'user');
-    history.push({ text, type: 'user', time: getTime() });
+
+    history.push({
+      text,
+      type: 'user',
+      time: getTime()
+    });
+
     saveState();
 
     typing.style.display = 'block';
+
     scroll();
 
     try {
-      const historyForApi = history.slice(-8).map(m => ({ role: m.type === 'bot' ? 'assistant' : 'user', message: m.text }));
+
+      const historyForApi = history
+        .slice(-8)
+        .map(m => ({
+          role: m.type === 'bot' ? 'assistant' : 'user',
+          message: m.text
+        }));
+
       const res = await fetch(WORKER_URL, {
+
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
         body: JSON.stringify({
           message: text,
           history: historyForApi,
@@ -300,56 +734,123 @@
           formState: currentFormState
         })
       });
+
       const data = await res.json();
+
       typing.style.display = 'none';
 
       if (data) {
-        if (data.qualificationScore !== undefined) score = data.qualificationScore;
-        if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
-        if (data.leadData) currentLeadData = data.leadData;
-        if (data.formState !== undefined) currentFormState = data.formState;
-        if (data.waMessage) lastWaMessage = data.waMessage;
-        if (data.progress !== undefined) currentProgress = data.progress;
-        if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
+
+        if (data.qualificationScore !== undefined) {
+          score = data.qualificationScore;
+        }
+
+        if (data.canShareWhatsapp !== undefined) {
+          canShare = data.canShareWhatsapp;
+        }
+
+        if (data.leadData) {
+          currentLeadData = data.leadData;
+        }
+
+        if (data.formState !== undefined) {
+          currentFormState = data.formState;
+        }
+
+        if (data.waMessage) {
+          lastWaMessage = data.waMessage;
+        }
+
+        if (data.progress !== undefined) {
+          currentProgress = data.progress;
+        }
+
+        if (data.readyToSend !== undefined) {
+          readyToSend = data.readyToSend;
+        }
 
         updateUI();
-        const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
+
+        const replyText =
+          data.response ||
+          data.reply ||
+          'معاك طارق، إزاي أقدر أساعدك؟';
+
         renderMsg(replyText, 'bot');
-        history.push({ text: replyText, type: 'bot', time: getTime() });
+
+        history.push({
+          text: replyText,
+          type: 'bot',
+          time: getTime()
+        });
+
         saveState();
 
         if (data.options && data.options.length) {
+
           lastOptions = data.options;
+
           renderOptions(data.options);
+
           saveState();
         }
       }
+
     } catch (err) {
+
       typing.style.display = 'none';
-      renderMsg('عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.', 'bot');
+
+      renderMsg(
+        'عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.',
+        'bot'
+      );
+
     } finally {
+
       isSending = false;
+
       sendBtn.disabled = false;
+
       input.focus();
     }
   }
 
   (function init() {
-    document.getElementById('app').classList.add('show');
+
+    document
+      .getElementById('app')
+      .classList.add('show');
+
     loadState();
+
     if (history.length > 0) {
+
       rehydrate();
+
     } else {
-      const welcome = `معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.`;
+
+      const welcome =
+        `معاك طارق طنطاوي. اكتبلي محتاج إيه في مدينة نصر.`;
+
       renderMsg(welcome, 'bot');
-      history.push({ text: welcome, type: 'bot', time: getTime() });
+
+      history.push({
+        text: welcome,
+        type: 'bot',
+        time: getTime()
+      });
+
       saveState();
     }
+
     updateUI();
+
   })();
 
   window.sendMsg = sendMsg;
   window.openWhatsApp = openWhatsApp;
+
 </script>
+
 </body>
 </html>
