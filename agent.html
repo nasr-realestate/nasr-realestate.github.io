@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta property="og:title" content="الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك" />
+  <meta property="og:title" content="سمسار طلبك | أ. طارق طنطاوي" />
   <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014." />
   <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
-  <title>الوكيل الذكي | أ. طارق طنطاوي - سمسار طلبك</title>
+  <title>سمسار طلبك | أ. طارق طنطاوي</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -37,6 +37,9 @@
     .option-btn { background: #fff; border: 1px solid #25d366; color: #075e54; padding: 8px 14px; border-radius: 16px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.15s; }
     .option-btn:hover { background: #dcf8c6; }
     .option-btn:active { transform: scale(0.96); }
+    .main-menu-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 12px 8px; background: #eae6df; }
+    .main-menu-btn { flex: 1 1 44%; min-width: 132px; background: #fff; border: 1px solid #25d366; color: #075e54; padding: 9px 8px; border-radius: 18px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .main-menu-btn:hover { background: #dcf8c6; }
     .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; background: #f0f0f0; border-top: 1px solid #d1d7db; z-index: 100; display: flex; flex-direction: column; box-shadow: 0 -6px 25px rgba(0,0,0,0.18); padding-bottom: env(safe-area-inset-bottom, 8px); }
     .input-area { padding: 8px 12px; display: flex; gap: 8px; width: 100%; align-items: center; background: #eae6df; }
     .input-area input { flex: 1; border: 1px solid #cbd5e1; border-radius: 24px; padding: 10px 16px; background: #fff; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; }
@@ -83,6 +86,7 @@
         </div>
       </div>
     </div>
+    <div class="main-menu-wrap" id="mainMenu" aria-label="القائمة الرئيسية"></div>
 
     <div class="input-area">
       <input type="text" id="userInput" placeholder="اكتب استفسارك هنا..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()">
@@ -94,6 +98,7 @@
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
+  const MAIN_MENU_BUTTONS = ['🔍 أشتري', '🏠 أستأجر', '💰 أبيع', '🔑 أأجر'];
 
   const STORAGE_KEY = "tarek_chat_v17";
   const SCORE_KEY = "tarek_score_v17";
@@ -173,6 +178,7 @@
       localStorage.removeItem(OPTIONS_KEY);
       localStorage.removeItem(PROGRESS_KEY);
     }
+    renderMainMenu();
     saveState();
   }
 
@@ -211,6 +217,21 @@
     scroll();
   }
 
+  function renderMainMenu() {
+    const menu = document.getElementById('mainMenu');
+    menu.innerHTML = '';
+    if (currentFormState && currentFormState.active) { menu.style.display = 'none'; return; }
+    menu.style.display = 'flex';
+    MAIN_MENU_BUTTONS.forEach(label => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'main-menu-btn';
+      btn.innerText = label;
+      btn.onclick = () => { if (!isSending) { input.value = label; sendMsg(); } };
+      menu.appendChild(btn);
+    });
+  }
+
   function rehydrate() {
     chat.querySelectorAll('.msg').forEach(el => el.remove());
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
@@ -225,7 +246,7 @@
     const userMessages = history.filter(m => m.type === 'user').map(m => m.text).join(' | ');
     const leadType = currentLeadData.type || "استعلام عقاري";
     const leadPrice = currentLeadData.price || "حسب الاتفاق";
-    return `أستاذ طارق، تحية طيبة،\n\nتواصلت معك عبر منصة "الوكيل الذكي" وتم تأهيل طلبي، ويسعدني أن أشارككم ملخص التفاصيل:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nأتمنى التواصل معي لاستكمال المعاينة، وشكراً لوقتك.`;
+    return `أستاذ طارق،\n\nتواصلت مع سمسار طلبك وده ملخص طلبي بعد تسجيل البيانات:\n\n- نوع الطلب: ${leadType}\n- الميزانية / السعر: ${leadPrice}\n- تفاصيل المحادثة: \n${userMessages}\n\nمحتاج أتواصل مع حضرتك لاستكمال التفاصيل والمعاينة.`;
   }
 
   // زر الواتساب (يفتح واتساب لما البانر الأخضر ظاهر)
@@ -236,8 +257,8 @@
       const total = currentProgress?.total || 0;
       const current = currentProgress?.current || 0;
       const warnText = remaining > 0
-        ? `لسه فاضل ${remaining} أسئلة يا فندم 📊 (${current} من ${total}). خلّصهم كلهم عشان تبعتلي بياناتك كاملة مرة واحدة وتوفّر وقتك.`
-        : `لسه بنجمع بياناتك يا فندم، كمّل معايا شوية كمان عشان أقدر أوصلك بأ. طارق بأدق تفاصيل.`;
+        ? `لسه فاضل ${remaining} أسئلة (${current} من ${total}). كمّلهم عشان أبعت لأ. طارق بياناتك كاملة.`
+        : `لسه بنجمع بياناتك، كمّل معايا شوية كمان عشان أوصّل لأ. طارق تفاصيل طلبك.`;
       renderMsg(warnText, 'bot');
       history.push({ text: warnText, type: 'bot', time: getTime() });
       saveState();
@@ -319,7 +340,7 @@
     if (history.length > 0) {
       rehydrate();
     } else {
-      const welcome = `أهلاً بيك، معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
+      const welcome = `معاك طارق طنطاوي. اختار طلبك من الأزرار أو اكتبلي محتاج إيه في مدينة نصر.`;
       renderMsg(welcome, 'bot');
       history.push({ text: welcome, type: 'bot', time: getTime() });
       saveState();
