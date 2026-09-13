@@ -16,7 +16,8 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html { height: 100%; background: #0b141a; font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; font-size: 14px; }
+    /* 🆕 V34: حجم الخط الأساسي كان صغير (14px) — رُفع لمستوى متوسط يقارب واتساب الحقيقي */
+    body, html { height: 100%; background: #0b141a; font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; font-size: 15.5px; }
 
     :root {
       --wa-header: #00a884;
@@ -25,6 +26,7 @@
       --wa-msg-out: #d9fdd3;
       --wa-green: #00a884;
       --wa-input-bg: #f0f2f5;
+      --wa-tick-blue: #53bdeb;
     }
 
     .agent-app {
@@ -56,16 +58,18 @@
     }
     .agent-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .agent-header .info { flex: 1; min-width: 0; cursor: pointer; }
-    .agent-header .info h1 { font-size: 0.95rem; font-weight: 600; line-height: 1.2; color: #e9edef; }
-    .agent-header .info p { font-size: 0.7rem; opacity: 0.8; display: flex; align-items: center; gap: 4px; margin-top: 1px; color: #8696a0; }
-    .agent-header .info p .dot { width: 7px; height: 7px; background: #25d366; border-radius: 50%; display: inline-block; }
+    .agent-header .info h1 { font-size: 1.05rem; font-weight: 600; line-height: 1.2; color: #e9edef; }
+    .agent-header .info p { font-size: 0.8rem; opacity: 0.85; display: flex; align-items: center; gap: 4px; margin-top: 2px; color: #8696a0; transition: color 0.15s; }
+    .agent-header .info p .dot { width: 7px; height: 7px; background: #25d366; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: opacity 0.15s; }
+    .agent-header .info p.is-typing { color: #d9fdd3; font-style: normal; }
+    .agent-header .info p.is-typing .dot { opacity: 0; width: 0; }
 
     .brand-logo {
       display: flex;
       align-items: center;
       gap: 6px;
       color: #fff;
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       font-weight: 600;
       opacity: 0.95;
       padding: 5px 10px;
@@ -77,14 +81,14 @@
     .brand-logo:hover { background: rgba(255,255,255,0.2); }
     .brand-logo img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 
-    .menu-btn { background: transparent; border: none; color: #aebac1; font-size: 1.2rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
+    .menu-btn { background: transparent; border: none; color: #aebac1; font-size: 1.25rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
     .menu-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
     .menu-dropdown { position: absolute; top: 60px; left: 12px; background: #fff; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; padding: 8px 0; z-index: 999; opacity: 0; transform: translateY(-10px); pointer-events: none; transition: all 0.15s ease; }
     .menu-dropdown.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #111; font-size: 14px; cursor: pointer; transition: background 0.15s; border: none; background: transparent; width: 100%; text-align: right; font-family: 'IBM Plex Sans Arabic', sans-serif; }
+    .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #111; font-size: 15px; cursor: pointer; transition: background 0.15s; border: none; background: transparent; width: 100%; text-align: right; font-family: 'IBM Plex Sans Arabic', sans-serif; }
     .menu-item:hover { background: #f5f6f6; }
-    .menu-item i { font-size: 1rem; width: 20px; text-align: center; color: #54656f; }
+    .menu-item i { font-size: 1.05rem; width: 20px; text-align: center; color: #54656f; }
     .menu-item.danger { color: #ea0038; }
     .menu-separator { height: 1px; background: #f0f2f5; margin: 4px 0; }
 
@@ -92,9 +96,9 @@
     .info-modal-overlay.show { display: flex; }
     .info-modal { background: #fff; border-radius: 12px; max-width: 400px; width: 100%; padding: 24px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .info-modal img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #00a884; object-fit: cover; margin-bottom: 12px; }
-    .info-modal h2 { font-size: 1.15rem; color: #111; margin-bottom: 4px; font-weight: 700; }
-    .info-modal .subtitle { font-size: 0.8rem; color: #667781; margin-bottom: 14px; }
-    .info-modal p { font-size: 0.85rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
+    .info-modal h2 { font-size: 1.2rem; color: #111; margin-bottom: 4px; font-weight: 700; }
+    .info-modal .subtitle { font-size: 0.85rem; color: #667781; margin-bottom: 14px; }
+    .info-modal p { font-size: 0.9rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
     .chat-area {
@@ -103,19 +107,20 @@
       padding: 12px 12px 16px 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 9px;
       background-color: var(--wa-bg);
       background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
       background-repeat: repeat;
       background-size: 400px;
     }
 
+    /* 🆕 V34: فقاعة الرسالة — نفس التنسيق + مساحة لعلامات القراءة */
     .msg {
       max-width: 82%;
       padding: 6px 10px 8px 10px;
       border-radius: 7.5px;
-      font-size: 13.5px;
-      line-height: 1.45;
+      font-size: 15px;
+      line-height: 1.5;
       box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
       word-break: break-word;
       font-family: 'IBM Plex Sans Arabic', sans-serif;
@@ -125,9 +130,36 @@
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 0px; color: #111b21; }
     .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 0px; color: #111b21; }
     .msg a { color: #00a884; font-weight: 600; text-decoration: underline; }
-    .msg-time { font-size: 10px; color: #667781; margin-top: 2px; text-align: left; float: left; margin-left: 8px; transform: translateY(4px); }
 
-    .typing { display: none; align-self: flex-start; background: #fff; padding: 8px 12px; border-radius: 7.5px; font-size: 12px; color: #667781; box-shadow: 0 1px 0.5px rgba(0,0,0,0.1); }
+    /* 🆕 V34: ذيل الفقاعة الحقيقي بتاع واتساب (مثلث صغير عند الزاوية المسطحة) */
+    .msg-bot::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 0 13px 8px;
+      border-color: transparent transparent transparent var(--wa-msg-in);
+    }
+    .msg-user::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 8px 13px 0;
+      border-color: transparent var(--wa-msg-out) transparent transparent;
+    }
+
+    .msg-time { font-size: 11px; color: #667781; margin-top: 2px; text-align: left; float: left; margin-left: 8px; transform: translateY(4px); display: flex; align-items: center; gap: 3px; }
+    .msg-time .ticks { color: var(--wa-tick-blue); font-size: 13px; line-height: 1; letter-spacing: -3px; }
+
+    /* الفقاعة القديمة لمؤشر الكتابة لم تعد تُعرض، محتفظ بها كمرساة (anchor) فقط لعنصر insertBefore */
+    .typing { display: none; }
 
     /* 🌟 الأزرار — كأزرار inline داخل الشات */
     .option-buttons-wrap {
@@ -146,7 +178,7 @@
       padding: 9px 16px;
       border-radius: 20px;
       font-family: 'IBM Plex Sans Arabic', sans-serif;
-      font-size: 13.5px;
+      font-size: 14.5px;
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -197,34 +229,64 @@
     }
     .whatsapp-notification-card .wa-icon-box { width: 34px; height: 34px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0; }
     .whatsapp-notification-card .wa-text-box { flex: 1; min-width: 0; }
-    .whatsapp-notification-card .wa-title { font-size: 0.8rem; font-weight: 700; color: #111b21; display: flex; align-items: center; gap: 4px; }
-    .whatsapp-notification-card .wa-subtitle { font-size: 0.7rem; color: #667781; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 700; color: #111b21; display: flex; align-items: center; gap: 4px; }
+    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #667781; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+    /* 🆕 V34: صف الإدخال — إيموجي + دبوس إرفاق + تبديل مايك/إرسال زي واتساب الحقيقي */
     .input-area {
       padding: 8px 10px 8px 10px;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       width: 100%;
       align-items: center;
       background: var(--wa-input-bg);
       min-height: 56px;
     }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: #54656f;
+      font-size: 1.35rem;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(0,0,0,0.06); }
+
+    .input-pill {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: inset 0 0 0 1px #e2e8f0;
+      padding: 0 6px 0 10px;
+      min-width: 0;
+      transition: box-shadow 0.15s;
+    }
+    .input-pill:focus-within { box-shadow: inset 0 0 0 1px #00a884; }
+
     .input-area input {
       flex: 1;
       border: none;
-      border-radius: 10px;
-      padding: 11px 14px;
-      background: #fff;
+      padding: 11px 6px;
+      background: transparent;
       font-family: 'IBM Plex Sans Arabic', sans-serif;
-      font-size: 14px;
+      font-size: 15px;
       outline: none;
       color: #111b21;
-      box-shadow: inset 0 0 0 1px #e2e8f0;
       min-width: 0;
     }
-    .input-area input:focus { box-shadow: inset 0 0 0 1px #00a884; }
 
-    .input-area button {
+    .input-area .send-btn {
       background: #00a884;
       border: none;
       border-radius: 50%;
@@ -233,7 +295,7 @@
       min-width: 46px;
       min-height: 46px;
       color: #fff;
-      font-size: 16px;
+      font-size: 17px;
       cursor: pointer;
       flex-shrink: 0;
       display: flex;
@@ -242,9 +304,9 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       transition: background 0.15s, transform 0.1s;
     }
-    .input-area button:hover { background: #019474; }
-    .input-area button:active { transform: scale(0.92); }
-    .input-area button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .input-area .send-btn:hover { background: #019474; }
+    .input-area .send-btn:active { transform: scale(0.92); }
+    .input-area .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
     @keyframes slideUpPulse { 0% { box-shadow: 0 2px 6px rgba(0,168,132,0.2); } 100% { box-shadow: 0 4px 15px rgba(0,168,132,0.4); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
@@ -260,7 +322,7 @@
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
     <div class="info" onclick="showAboutModal()">
       <h1>طارق طنطاوي</h1>
-      <p><span class="dot"></span> متصل الان</p>
+      <p id="statusLine"><span class="dot"></span> <span id="statusText">متصل الان</span></p>
     </div>
 
     <a href="/" class="brand-logo" title="الرئيسية">
@@ -308,8 +370,16 @@
     </div>
 
     <div class="input-area">
-      <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()">
-      <button id="sendBtn" onclick="sendMsg()"><i class="fas fa-paper-plane" style="transform: rotate(180deg);"></i></button>
+      <button class="icon-btn" id="emojiBtn" onclick="onEmojiClick()" aria-label="إيموجي">
+        <i class="far fa-smile"></i>
+      </button>
+      <div class="input-pill">
+        <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()" oninput="onInputChanged()">
+        <button class="icon-btn" id="attachBtn" onclick="onAttachClick()" aria-label="إرفاق">
+          <i class="fas fa-paperclip"></i>
+        </button>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="onSendBtnClick()"><i class="fas fa-microphone" id="sendBtnIcon"></i></button>
     </div>
   </div>
 
@@ -349,10 +419,13 @@
   const chat = document.getElementById('chatMessages');
   const input = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
+  const sendBtnIcon = document.getElementById('sendBtnIcon');
   const typing = document.getElementById('typingIndicator');
   const dealWrapper = document.getElementById('dealWrapper');
   const menuBtn = document.getElementById('menuBtn');
   const menuDropdown = document.getElementById('menuDropdown');
+  const statusLine = document.getElementById('statusLine');
+  const statusText = document.getElementById('statusText');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
@@ -366,6 +439,50 @@
 
   function showAboutModal() { menuDropdown.classList.remove('open'); document.getElementById('aboutModal').classList.add('show'); }
   function closeAboutModal() { document.getElementById('aboutModal').classList.remove('show'); }
+
+  // 🆕 V34: حالة الهيدر (متصل الآن / يكتب...) بدل فقاعة "طارق يكتب الآن" داخل الشات
+  // ده السلوك الحرفي لواتساب: حالة الكتابة بتظهر في شريط الهيدر مكان "متصل الآن".
+  function setTypingStatus(isTyping) {
+    if (isTyping) {
+      statusText.innerText = 'يكتب الآن...';
+      statusLine.classList.add('is-typing');
+    } else {
+      statusText.innerText = 'متصل الان';
+      statusLine.classList.remove('is-typing');
+    }
+  }
+
+  // 🆕 V34: تبديل أيقونة زر الإرسال بين المايك (لا يوجد نص) والإرسال (يوجد نص) — سلوك واتساب الحرفي
+  function onInputChanged() {
+    const hasText = input.value.trim().length > 0;
+    if (hasText) {
+      sendBtnIcon.className = 'fas fa-paper-plane';
+      sendBtnIcon.style.transform = 'rotate(180deg)';
+    } else {
+      sendBtnIcon.className = 'fas fa-microphone';
+      sendBtnIcon.style.transform = 'none';
+    }
+  }
+
+  function onSendBtnClick() {
+    const hasText = input.value.trim().length > 0;
+    if (hasText) {
+      sendMsg();
+    } else {
+      // زر المايك ديكوري - التسجيل الصوتي غير مفعّل في هذه النسخة
+      input.focus();
+    }
+  }
+
+  function onEmojiClick() {
+    // زر الإيموجي ديكوري في هذه النسخة - بيركّز على خانة الكتابة
+    input.focus();
+  }
+
+  function onAttachClick() {
+    // زر الإرفاق ديكوري في هذه النسخة
+    input.focus();
+  }
 
   function startNewChat() {
     menuDropdown.classList.remove('open');
@@ -441,14 +558,25 @@
     saveState();
   }
 
+  // 🆕 V34: رسائل العميل بتاخد وقت + علامتين صح زرقاوين (✓✓) زي واتساب الحقيقي
+  // (بما إن طارق دايمًا بيرد، بنعرضها كـ"مقروءة" فور الرد)
   function renderMsg(text, type, time) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
     if (type === 'bot') div.innerHTML = marked.parse(text);
     else div.innerText = text;
+
     const t = document.createElement('div');
     t.className = 'msg-time';
-    t.innerText = time || getTime();
+    if (type === 'user') {
+      const ticks = document.createElement('span');
+      ticks.className = 'ticks';
+      ticks.innerText = '✓✓';
+      t.appendChild(document.createTextNode(time || getTime()));
+      t.appendChild(ticks);
+    } else {
+      t.innerText = time || getTime();
+    }
     div.appendChild(t);
     chat.insertBefore(div, typing);
     scroll();
@@ -503,6 +631,7 @@
     const text = input.value.trim();
     if (!text || isSending) return;
     input.value = '';
+    onInputChanged();
     isSending = true;
     sendBtn.disabled = true;
 
@@ -512,7 +641,7 @@
     history.push({ text, type: 'user', time: getTime() });
     saveState();
 
-    typing.style.display = 'block';
+    setTypingStatus(true);
     scroll();
 
     try {
@@ -529,7 +658,7 @@
         })
       });
       const data = await res.json();
-      typing.style.display = 'none';
+      setTypingStatus(false);
 
       if (data) {
         if (data.qualificationScore !== undefined) score = data.qualificationScore;
@@ -551,7 +680,7 @@
         }
       }
     } catch (err) {
-      typing.style.display = 'none';
+      setTypingStatus(false);
       renderMsg('عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.', 'bot');
     } finally {
       isSending = false;
@@ -572,6 +701,7 @@
       saveState();
     }
     updateUI();
+    onInputChanged();
   })();
 
   window.sendMsg = sendMsg;
@@ -581,6 +711,10 @@
   window.closeAboutModal = closeAboutModal;
   window.startNewChat = startNewChat;
   window.deleteChat = deleteChat;
+  window.onInputChanged = onInputChanged;
+  window.onSendBtnClick = onSendBtnClick;
+  window.onEmojiClick = onEmojiClick;
+  window.onAttachClick = onAttachClick;
 </script>
 </body>
 </html>
