@@ -312,27 +312,34 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
+      transition: background 0.15s, color 0.2s, opacity 0.2s;
     }
     .icon-btn:hover { background: rgba(0,0,0,0.06); }
 
-    /* 🆕 V36: حالة تعطيل زر الإرفاق */
-    .icon-btn:disabled {
-      opacity: 0.3;
+    /* V37: زر المشبك الباهت (معطّل) */
+    .icon-btn#attachBtn:disabled {
+      opacity: 0.35;
+      color: #8696a0;
       cursor: not-allowed;
-      pointer-events: none;
-      background: transparent !important;
+      pointer-events: auto;
     }
-    .icon-btn:disabled:hover { background: transparent; }
+    .icon-btn#attachBtn:disabled:hover { background: transparent; }
 
-    /* 🆕 V36: وميض خفيف عند تفعيل زر الإرفاق */
-    .icon-btn.attach-activated {
+    /* V37: زر المشبك المفعّل (أخضر دائم) */
+    .icon-btn#attachBtn:not(:disabled) {
       color: #00a884;
-      animation: attachGlow 0.8s ease-out;
+      opacity: 1;
+    }
+    .icon-btn#attachBtn:not(:disabled):hover { background: rgba(0,168,132,0.12); }
+
+    /* V37: وميض أخضر لحظة التفعيل */
+    .icon-btn.attach-activated {
+      animation: attachGlow 1s ease-out;
     }
     @keyframes attachGlow {
-      0% { background: rgba(0,168,132,0.3); transform: scale(1.15); }
-      100% { background: transparent; transform: scale(1); }
+      0% { background: rgba(0,168,132,0.5); transform: scale(1.25); color: #fff; }
+      50% { background: rgba(0,168,132,0.3); transform: scale(1.1); }
+      100% { background: transparent; transform: scale(1); color: #00a884; }
     }
 
     .input-pill {
@@ -416,7 +423,6 @@
       justify-content: center;
     }
 
-    /* 🆕 V36: tooltip عند محاولة استخدام زر معطّل */
     .attach-tooltip {
       position: fixed;
       bottom: 90px;
@@ -505,7 +511,6 @@
       </button>
       <div class="input-pill">
         <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()" oninput="onInputChanged()">
-        <!-- 🆕 V36: زر الإرفاق معطّل افتراضيًا -->
         <button class="icon-btn" id="attachBtn" onclick="onAttachClick()" aria-label="إرفاق صور" disabled>
           <i class="fas fa-paperclip"></i>
         </button>
@@ -532,7 +537,6 @@
   <img id="lightboxImg" src="" alt="صورة">
 </div>
 
-<!-- 🆕 V36: tooltip لتنبيه المستخدم إن الزر لسه معطّل -->
 <div class="attach-tooltip" id="attachTooltip">🔒 الإرفاق متاح بعد ما تكمّل تفاصيل العقار</div>
 
 <script>
@@ -540,14 +544,14 @@
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v36";
-  const SCORE_KEY = "tarek_score_v36";
-  const WA_KEY = "tarek_wa_v36";
-  const LEAD_KEY = "tarek_lead_v36";
-  const FORM_STATE_KEY = "tarek_form_state_v36";
-  const WA_MSG_KEY = "tarek_wa_msg_v36";
-  const READY_KEY = "tarek_ready_v36";
-  const ATTACH_KEY = "tarek_attach_v36";
+  const STORAGE_KEY = "tarek_chat_v37";
+  const SCORE_KEY = "tarek_score_v37";
+  const WA_KEY = "tarek_wa_v37";
+  const LEAD_KEY = "tarek_lead_v37";
+  const FORM_STATE_KEY = "tarek_form_state_v37";
+  const WA_MSG_KEY = "tarek_wa_msg_v37";
+  const READY_KEY = "tarek_ready_v37";
+  const ATTACH_KEY = "tarek_attach_v37";
 
   const MAX_IMAGES = 5;
 
@@ -558,7 +562,7 @@
   let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
   let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
   let readyToSend = localStorage.getItem(READY_KEY) === "true";
-  let attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";  // 🆕 V36
+  let attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";
   let isSending = false;
 
   let pendingImages = [];
@@ -601,7 +605,7 @@
     }
   }
 
-  // 🆕 V36: تحديث حالة زر الإرفاق
+  // V37: تحديث حالة زر المشبك
   function updateAttachButton(animate = false) {
     if (!attachBtn) return;
     if (attachEnabled) {
@@ -609,7 +613,7 @@
       attachBtn.title = 'إرفاق صور العقار (حتى 5 صور)';
       if (animate) {
         attachBtn.classList.add('attach-activated');
-        setTimeout(() => attachBtn.classList.remove('attach-activated'), 900);
+        setTimeout(() => attachBtn.classList.remove('attach-activated'), 1100);
       }
     } else {
       attachBtn.disabled = true;
@@ -618,7 +622,6 @@
     localStorage.setItem(ATTACH_KEY, attachEnabled ? "true" : "false");
   }
 
-  // 🆕 V36: tooltip لما يلمس الزر وهو معطّل
   function showAttachTooltip() {
     attachTooltip.classList.add('show');
     setTimeout(() => attachTooltip.classList.remove('show'), 1800);
@@ -993,7 +996,7 @@
         if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
         if (data.waMessage) lastWaMessage = data.waMessage;
 
-        // 🆕 V36: تحديث حالة زر الإرفاق
+        // V37: تحديث حالة زر الإرفاق
         if (data.enableAttach === true && !attachEnabled) {
           attachEnabled = true;
           updateAttachButton(true);
@@ -1004,7 +1007,7 @@
           updateAttachButton();
         }
 
-        // 🆕 V36: لو الـ Worker رجّع imageUrls في waMessage (للـ edge cases)
+        // لو الـ Worker بعت imageUrls في الرد
         if (data.imageUrls && data.imageUrls.length && lastWaMessage && !lastWaMessage.includes('📷')) {
           lastWaMessage = lastWaMessage + '\n\n📷 صور العقار:\n' + data.imageUrls.join('\n');
         }
