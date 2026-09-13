@@ -197,7 +197,6 @@
       border-color: transparent;
     }
 
-    /* 🆕 V35: معاينة الصور المرفقة داخل الشات */
     .images-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
@@ -214,18 +213,7 @@
       border: 1px solid rgba(0,0,0,0.08);
     }
     .msg-user .images-grid { justify-content: flex-end; }
-    .img-upload-status {
-      font-size: 11.5px;
-      color: #667781;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .img-upload-status.error { color: #ea0038; }
-    .img-upload-status.success { color: #00a884; }
 
-    /* 🆕 V35: شريط معاينة الصور فوق خانة الكتابة */
     .attachment-preview-bar {
       display: none;
       padding: 6px 10px;
@@ -328,6 +316,25 @@
     }
     .icon-btn:hover { background: rgba(0,0,0,0.06); }
 
+    /* 🆕 V36: حالة تعطيل زر الإرفاق */
+    .icon-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+      background: transparent !important;
+    }
+    .icon-btn:disabled:hover { background: transparent; }
+
+    /* 🆕 V36: وميض خفيف عند تفعيل زر الإرفاق */
+    .icon-btn.attach-activated {
+      color: #00a884;
+      animation: attachGlow 0.8s ease-out;
+    }
+    @keyframes attachGlow {
+      0% { background: rgba(0,168,132,0.3); transform: scale(1.15); }
+      100% { background: transparent; transform: scale(1); }
+    }
+
     .input-pill {
       flex: 1;
       display: flex;
@@ -375,7 +382,6 @@
     .input-area .send-btn:active { transform: scale(0.92); }
     .input-area .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    /* 🆕 V35: Lightbox لعرض الصورة بالحجم الكامل */
     .lightbox-overlay {
       position: fixed;
       inset: 0;
@@ -409,6 +415,25 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* 🆕 V36: tooltip عند محاولة استخدام زر معطّل */
+    .attach-tooltip {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 10001;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .attach-tooltip.show { opacity: 1; }
 
     @keyframes slideUpPulse { 0% { box-shadow: 0 2px 6px rgba(0,168,132,0.2); } 100% { box-shadow: 0 4px 15px rgba(0,168,132,0.4); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
@@ -459,7 +484,6 @@
 
   <div class="bottom-dock">
 
-    <!-- 🆕 V35: شريط معاينة الصور قبل الرفع -->
     <div class="attachment-preview-bar" id="attachmentPreviewBar"></div>
 
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
@@ -481,8 +505,8 @@
       </button>
       <div class="input-pill">
         <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()" oninput="onInputChanged()">
-        <!-- 🆕 V35: زر الإرفاق بقى فعّال لرفع الصور -->
-        <button class="icon-btn" id="attachBtn" onclick="onAttachClick()" aria-label="إرفاق صور">
+        <!-- 🆕 V36: زر الإرفاق معطّل افتراضيًا -->
+        <button class="icon-btn" id="attachBtn" onclick="onAttachClick()" aria-label="إرفاق صور" disabled>
           <i class="fas fa-paperclip"></i>
         </button>
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
@@ -503,25 +527,27 @@
   </div>
 </div>
 
-<!-- 🆕 V35: Lightbox لعرض الصور -->
 <div class="lightbox-overlay" id="lightbox" onclick="if(event.target===this) closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightboxImg" src="" alt="صورة">
 </div>
+
+<!-- 🆕 V36: tooltip لتنبيه المستخدم إن الزر لسه معطّل -->
+<div class="attach-tooltip" id="attachTooltip">🔒 الإرفاق متاح بعد ما تكمّل تفاصيل العقار</div>
 
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v33";
-  const SCORE_KEY = "tarek_score_v33";
-  const WA_KEY = "tarek_wa_v33";
-  const LEAD_KEY = "tarek_lead_v33";
-  const FORM_STATE_KEY = "tarek_form_state_v33";
-  const WA_MSG_KEY = "tarek_wa_msg_v33";
-  const READY_KEY = "tarek_ready_v33";
-  const IMAGES_KEY = "tarek_images_v33";
+  const STORAGE_KEY = "tarek_chat_v36";
+  const SCORE_KEY = "tarek_score_v36";
+  const WA_KEY = "tarek_wa_v36";
+  const LEAD_KEY = "tarek_lead_v36";
+  const FORM_STATE_KEY = "tarek_form_state_v36";
+  const WA_MSG_KEY = "tarek_wa_msg_v36";
+  const READY_KEY = "tarek_ready_v36";
+  const ATTACH_KEY = "tarek_attach_v36";
 
   const MAX_IMAGES = 5;
 
@@ -532,10 +558,10 @@
   let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
   let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
   let readyToSend = localStorage.getItem(READY_KEY) === "true";
+  let attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";  // 🆕 V36
   let isSending = false;
 
-  // 🆕 V35: مخزن الصور المرفقة قبل الإرسال
-  let pendingImages = []; // [{ id, dataUrl, base64 }]
+  let pendingImages = [];
 
   const chat = document.getElementById('chatMessages');
   const input = document.getElementById('userInput');
@@ -549,6 +575,8 @@
   const statusText = document.getElementById('statusText');
   const fileInput = document.getElementById('fileInput');
   const attachmentPreviewBar = document.getElementById('attachmentPreviewBar');
+  const attachBtn = document.getElementById('attachBtn');
+  const attachTooltip = document.getElementById('attachTooltip');
 
   function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   function scroll() { chat.scrollTop = chat.scrollHeight; }
@@ -573,6 +601,29 @@
     }
   }
 
+  // 🆕 V36: تحديث حالة زر الإرفاق
+  function updateAttachButton(animate = false) {
+    if (!attachBtn) return;
+    if (attachEnabled) {
+      attachBtn.disabled = false;
+      attachBtn.title = 'إرفاق صور العقار (حتى 5 صور)';
+      if (animate) {
+        attachBtn.classList.add('attach-activated');
+        setTimeout(() => attachBtn.classList.remove('attach-activated'), 900);
+      }
+    } else {
+      attachBtn.disabled = true;
+      attachBtn.title = '🔒 متاح بعد ما تكمّل تفاصيل العقار';
+    }
+    localStorage.setItem(ATTACH_KEY, attachEnabled ? "true" : "false");
+  }
+
+  // 🆕 V36: tooltip لما يلمس الزر وهو معطّل
+  function showAttachTooltip() {
+    attachTooltip.classList.add('show');
+    setTimeout(() => attachTooltip.classList.remove('show'), 1800);
+  }
+
   function onInputChanged() {
     const hasText = input.value.trim().length > 0;
     if (hasText) {
@@ -595,8 +646,11 @@
 
   function onEmojiClick() { input.focus(); }
 
-  // 🆕 V35: زر الإرفاق بقى بيفتح نافذة اختيار الصور
   function onAttachClick() {
+    if (!attachEnabled) {
+      showAttachTooltip();
+      return;
+    }
     if (pendingImages.length >= MAX_IMAGES) {
       alert(`الحد الأقصى ${MAX_IMAGES} صور في المرة الواحدة.`);
       return;
@@ -604,7 +658,6 @@
     fileInput.click();
   }
 
-  // 🆕 V35: استقبال الصور المختارة → قراءة Base64 → معاينة
   function onFilesSelected(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -635,7 +688,6 @@
     fileInput.value = '';
   }
 
-  // 🆕 V35: رسم شريط معاينة الصور
   function renderAttachmentPreview() {
     attachmentPreviewBar.innerHTML = '';
     if (pendingImages.length === 0) {
@@ -681,7 +733,6 @@
     document.getElementById('lightboxImg').src = '';
   }
 
-  // 🆕 V35: رفع الصور على الـ Worker → ImgBB
   async function uploadPendingImages() {
     if (pendingImages.length === 0) return { ok: true, urls: [] };
     try {
@@ -720,7 +771,7 @@
     localStorage.removeItem(FORM_STATE_KEY);
     localStorage.removeItem(WA_MSG_KEY);
     localStorage.removeItem(READY_KEY);
-    localStorage.removeItem(IMAGES_KEY);
+    localStorage.removeItem(ATTACH_KEY);
 
     history = [];
     score = 0;
@@ -729,11 +780,13 @@
     currentFormState = null;
     lastWaMessage = null;
     readyToSend = false;
+    attachEnabled = false;
     pendingImages = [];
 
     chat.querySelectorAll('.msg').forEach(el => el.remove());
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     renderAttachmentPreview();
+    updateAttachButton();
 
     const welcome = `معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
     renderMsg(welcome, 'bot');
@@ -750,6 +803,7 @@
     localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
     localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
     localStorage.setItem(READY_KEY, readyToSend ? "true" : "false");
+    localStorage.setItem(ATTACH_KEY, attachEnabled ? "true" : "false");
     if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
   }
 
@@ -763,6 +817,7 @@
       currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
       lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
       readyToSend = localStorage.getItem(READY_KEY) === "true";
+      attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";
       return true;
     } catch { return false; }
   }
@@ -777,12 +832,10 @@
     saveState();
   }
 
-  // 🆕 V35: دعم عرض الصور المرفقة داخل الرسالة نفسها
   function renderMsg(text, type, time, images) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
 
-    // لو فيه نص، نعرضه. لو مفيش نص بس فيه صور، مش هنعرض فقرة فاضية
     if (text && text.trim()) {
       const contentDiv = document.createElement('div');
       if (type === 'bot') contentDiv.innerHTML = marked.parse(text);
@@ -790,7 +843,6 @@
       div.appendChild(contentDiv);
     }
 
-    // شبكة الصور (لو فيه)
     if (images && images.length) {
       const grid = document.createElement('div');
       grid.className = 'images-grid';
@@ -878,12 +930,10 @@
 
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
 
-    // 🆕 V35: لو فيه صور → ارفعها الأول
     let uploadedUrls = [];
     let uploadError = null;
 
     if (hasImages) {
-      // اعرض رسالة المستخدم فورًا مع الصور (معاينة محلية)
       const localPreviews = pendingImages.map(p => p.dataUrl);
       renderMsg(text || '', 'user', null, localPreviews);
       history.push({ text: text || '', type: 'user', time: getTime(), images: localPreviews });
@@ -892,25 +942,20 @@
       setTypingStatus(true);
       scroll();
 
-      // ارفع على ImgBB عبر الـ Worker
       const uploadRes = await uploadPendingImages();
       setTypingStatus(false);
 
       if (!uploadRes.ok) {
         uploadError = uploadRes.error || 'فشل رفع الصور';
-        // اعرض تنبيه فشل الرفع في فقاعة جديدة
         renderMsg(`⚠️ ${uploadError}. تقدر تبعت الصور على واتساب مباشرة.`, 'bot');
       } else {
         uploadedUrls = uploadRes.urls;
-        // اعرض رسالة تأكيد نجاح الرفع
         renderMsg(`✅ تم رفع ${uploadedUrls.length} صورة بنجاح.`, 'bot');
       }
 
-      // فضي قائمة الانتظار
       pendingImages = [];
       renderAttachmentPreview();
     } else {
-      // سلوك عادي بدون صور
       renderMsg(text, 'user');
       history.push({ text, type: 'user', time: getTime() });
       saveState();
@@ -934,7 +979,6 @@
           qualificationScore: score,
           canShareWhatsapp: canShare,
           formState: currentFormState,
-          // 🆕 V35: نمرر روابط ImgBB للـ Worker لو موجودة (مفيدة لو حبيت تستخدمها في waMessage)
           imageUrls: uploadedUrls
         })
       });
@@ -949,11 +993,20 @@
         if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
         if (data.waMessage) lastWaMessage = data.waMessage;
 
-        // لو الـ Worker رجّع imageUrls (زي ما طلبت)، نضيفها على آخر waMessage
-        if (data.imageUrls && data.imageUrls.length && lastWaMessage) {
+        // 🆕 V36: تحديث حالة زر الإرفاق
+        if (data.enableAttach === true && !attachEnabled) {
+          attachEnabled = true;
+          updateAttachButton(true);
+        } else if (data.enableAttach === false && attachEnabled) {
+          attachEnabled = false;
+          updateAttachButton();
+        } else if (data.enableAttach === true) {
+          updateAttachButton();
+        }
+
+        // 🆕 V36: لو الـ Worker رجّع imageUrls في waMessage (للـ edge cases)
+        if (data.imageUrls && data.imageUrls.length && lastWaMessage && !lastWaMessage.includes('📷')) {
           lastWaMessage = lastWaMessage + '\n\n📷 صور العقار:\n' + data.imageUrls.join('\n');
-        } else if (uploadedUrls.length && lastWaMessage) {
-          lastWaMessage = lastWaMessage + '\n\n📷 صور العقار:\n' + uploadedUrls.join('\n');
         }
 
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
@@ -989,6 +1042,7 @@
       saveState();
     }
     updateUI();
+    updateAttachButton();
     onInputChanged();
     renderAttachmentPreview();
   })();
