@@ -26,9 +26,6 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* ============================================================
-       الهيدر
-       ============================================================ */
     .header {
       position: sticky;
       top: 0;
@@ -93,14 +90,13 @@
     }
     .header .back-btn:active { background: rgba(255,255,255,0.3); }
 
-    /* ============================================================
-       الهيرو (معلومات العقار)
-       ============================================================ */
     .hero-info {
       background: #111b21;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       padding: 16px;
+      display: none;
     }
+    .hero-info.show { display: block; }
 
     .hero-info .property-title {
       font-size: 1.1rem;
@@ -138,9 +134,6 @@
       border-color: rgba(255,193,7,0.3);
     }
 
-    /* ============================================================
-       شبكة الصور
-       ============================================================ */
     .images-section {
       padding: 16px;
       max-width: 1200px;
@@ -234,9 +227,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* ============================================================
-       حالة فارغة
-       ============================================================ */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -262,9 +252,22 @@
       margin: 0 auto;
     }
 
-    /* ============================================================
-       الفوتر (تواصل واتساب)
-       ============================================================ */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8696a0;
+    }
+    .loading-state .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(0,168,132,0.2);
+      border-top-color: #00a884;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .footer-cta {
       position: sticky;
       bottom: 0;
@@ -317,9 +320,6 @@
       opacity: 0.9;
     }
 
-    /* ============================================================
-       Lightbox
-       ============================================================ */
     .lightbox {
       position: fixed;
       inset: 0;
@@ -446,9 +446,6 @@
     .lightbox .lb-action-btn.green { background: #00a884; }
     .lightbox .lb-action-btn.green:active { background: #019474; }
 
-    /* ============================================================
-       Loader / Skeleton
-       ============================================================ */
     .skeleton {
       aspect-ratio: 1 / 1;
       border-radius: 12px;
@@ -462,9 +459,6 @@
       100% { background-position: -200% 0; }
     }
 
-    /* ============================================================
-       Toast
-       ============================================================ */
     .toast {
       position: fixed;
       bottom: 100px;
@@ -487,9 +481,6 @@
     }
     .toast.show { opacity: 1; }
 
-    /* ============================================================
-       Responsive
-       ============================================================ */
     @media (min-width: 768px) {
       .images-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
       .hero-info { padding: 20px; }
@@ -499,9 +490,6 @@
 </head>
 <body>
 
-<!-- ============================================================
-     الهيدر
-     ============================================================ -->
 <header class="header">
   <button class="back-btn" onclick="goBack()" aria-label="رجوع">
     <i class="fas fa-arrow-right"></i>
@@ -517,30 +505,23 @@
   </div>
 </header>
 
-<!-- ============================================================
-     معلومات العقار
-     ============================================================ -->
-<div class="hero-info" id="heroInfo" style="display: none;">
+<div class="hero-info" id="heroInfo">
   <div class="property-title" id="propertyTitle"></div>
   <div class="property-meta" id="propertyMeta"></div>
 </div>
 
-<!-- ============================================================
-     شبكة الصور
-     ============================================================ -->
 <main class="images-section">
   <div class="section-label">
     <i class="fas fa-images"></i>
     <span id="imagesLabel">جاري تحميل الصور...</span>
   </div>
 
-  <div class="images-grid" id="imagesGrid">
-    <!-- Skeleton loading -->
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <div>جاري تحميل البيانات...</div>
   </div>
+
+  <div class="images-grid" id="imagesGrid" style="display: none;"></div>
 
   <div class="empty-state" id="emptyState" style="display: none;">
     <i class="fas fa-image"></i>
@@ -549,9 +530,6 @@
   </div>
 </main>
 
-<!-- ============================================================
-     الفوتر - تواصل واتساب
-     ============================================================ -->
 <div class="footer-cta" id="footerCta" style="display: none;">
   <a href="#" class="cta-card" id="waContactBtn" target="_blank" rel="noopener">
     <div class="cta-icon">
@@ -567,9 +545,6 @@
   </a>
 </div>
 
-<!-- ============================================================
-     Lightbox
-     ============================================================ -->
 <div class="lightbox" id="lightbox">
   <div class="lb-counter" id="lbCounter">1 / 1</div>
   <button class="lb-close" onclick="closeLightbox()" aria-label="إغلاق">
@@ -606,18 +581,21 @@
   // ============================================================
   const TAREK_PHONE = "201147758857";
   const FALLBACK_IMG = "https://nasr-realestate.github.io/assets/img/logo.webp";
+  const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
 
   // ============================================================
   // الحالة
   // ============================================================
   let imagesList = [];
   let currentIndex = 0;
+  let propertyData = null;
 
   // ============================================================
   // DOM
   // ============================================================
   const imagesGrid = document.getElementById('imagesGrid');
   const emptyState = document.getElementById('emptyState');
+  const loadingState = document.getElementById('loadingState');
   const imagesLabel = document.getElementById('imagesLabel');
   const heroInfo = document.getElementById('heroInfo');
   const propertyTitle = document.getElementById('propertyTitle');
@@ -645,75 +623,188 @@
   }
 
   function getQueryParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  function formatNumber(value) {
+    if (value === null || value === undefined || value === "") return "";
+    const n = Number(value);
+    if (isNaN(n)) return String(value);
+    return n.toLocaleString("en-US");
   }
 
   // ============================================================
-  // Load images from URL parameters
+  // V39: قراءة البيانات من ai-feed.json عبر slug
   // ============================================================
-  function loadImages() {
-    // 1) ?images=url1,url2,url3
+  async function loadFromSlug(slug) {
+    try {
+      const res = await fetch(AI_FEED_URL, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('feed fetch failed');
+      const feed = await res.json();
+      const properties = feed.properties || [];
+      const prop = properties.find(p => p.id === slug || p.slug === slug);
+      return prop || null;
+    } catch (e) {
+      console.error("[Slug] error:", e);
+      return null;
+    }
+  }
+
+  // ============================================================
+  // V39: decode من hash (fallback)
+  // ============================================================
+  function decodeGalleryData() {
+    let d = window.location.hash.substring(1);
+    if (!d) d = getQueryParam('d') || '';
+    if (!d) return null;
+
+    try {
+      let b64 = d.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const json = decodeURIComponent(escape(atob(b64)));
+      const parsed = JSON.parse(json);
+      return {
+        images: parsed.i || [],
+        title: parsed.t || '',
+        price: parsed.p || '',
+        area: parsed.a || '',
+        location: parsed.l || '',
+        type: parsed.y || ''
+      };
+    } catch (e) {
+      console.error("[Hash] decode error:", e);
+      return null;
+    }
+  }
+
+  // ============================================================
+  // V39: legacy URL params (للتوافق مع القديم)
+  // ============================================================
+  function loadFromLegacyParams() {
     const imagesParam = getQueryParam('images');
     if (imagesParam) {
-      return imagesParam.split(',').map(u => u.trim()).filter(Boolean);
+      return {
+        images: imagesParam.split(',').map(u => u.trim()).filter(Boolean),
+        title: getQueryParam('title') || '',
+        price: getQueryParam('price') || '',
+        area: getQueryParam('area') || '',
+        location: getQueryParam('location') || '',
+        type: getQueryParam('type') || ''
+      };
     }
 
-    // 2) ?urls=url1&urls=url2 (multi-value)
     const urlsParam = new URLSearchParams(window.location.search).getAll('urls');
     if (urlsParam.length) {
-      return urlsParam.map(u => u.trim()).filter(Boolean);
+      return {
+        images: urlsParam.map(u => u.trim()).filter(Boolean),
+        title: getQueryParam('title') || '',
+        price: getQueryParam('price') || '',
+        area: getQueryParam('area') || '',
+        location: getQueryParam('location') || '',
+        type: getQueryParam('type') || ''
+      };
     }
 
-    // 3) ?img=single
     const singleImg = getQueryParam('img');
-    if (singleImg) return [singleImg.trim()];
+    if (singleImg) {
+      return {
+        images: [singleImg.trim()],
+        title: getQueryParam('title') || '',
+        price: getQueryParam('price') || '',
+        area: getQueryParam('area') || '',
+        location: getQueryParam('location') || '',
+        type: getQueryParam('type') || ''
+      };
+    }
 
-    return [];
+    return null;
   }
 
   // ============================================================
-  // Load property metadata from URL
+  // V39: استخراج الصور من بيانات العقار
   // ============================================================
-  function loadMetadata() {
-    const title = getQueryParam('title');
-    const price = getQueryParam('price');
-    const area = getQueryParam('area');
-    const location = getQueryParam('location');
-    const type = getQueryParam('type');
+  function extractImagesFromProperty(prop) {
+    const imgs = [];
 
-    if (!title && !price && !area && !location) return;
+    // 1. images array (لو موجود)
+    if (Array.isArray(prop.images) && prop.images.length > 0) {
+      prop.images.forEach(u => { if (u) imgs.push(u); });
+    }
 
-    if (title) {
-      propertyTitle.innerText = title;
-      heroInfo.style.display = 'block';
+    // 2. image (صورة واحدة)
+    if (prop.image && !imgs.includes(prop.image)) {
+      imgs.push(prop.image);
+    }
+
+    return imgs;
+  }
+
+  // ============================================================
+  // V39: بناء بيانات العرض
+  // ============================================================
+  function buildDisplayData(prop) {
+    return {
+      images: extractImagesFromProperty(prop),
+      title: prop.title || '',
+      price: prop.priceDisplay || (prop.priceNumeric ? `${formatNumber(prop.priceNumeric)} ج.م` : ''),
+      area: prop.area ? String(prop.area) : '',
+      location: prop.location || '',
+      type: prop.propertyType === 'apartment' ? 'شقة' :
+            prop.propertyType === 'villa' ? 'فيلا' :
+            prop.propertyType === 'shop' ? 'محل تجاري' :
+            prop.propertyType === 'office' ? 'مكتب إداري' :
+            prop.propertyType === 'storage' ? 'مخزن' :
+            prop.propertyType || ''
+    };
+  }
+
+  // ============================================================
+  // Render
+  // ============================================================
+  function renderMetadata(data) {
+    if (!data) return;
+
+    if (data.title) {
+      propertyTitle.innerText = data.title;
+      heroInfo.classList.add('show');
     }
 
     const chips = [];
-    if (type) chips.push({ icon: 'fa-home', text: type });
-    if (location) chips.push({ icon: 'fa-map-marker-alt', text: location });
-    if (area) chips.push({ icon: 'fa-ruler-combined', text: `${area} م²` });
-    if (price) chips.push({ icon: 'fa-tag', text: price, cls: 'price' });
+    if (data.type) chips.push({ icon: 'fa-home', text: data.type });
+    if (data.location) chips.push({ icon: 'fa-map-marker-alt', text: data.location });
+    if (data.area) chips.push({ icon: 'fa-ruler-combined', text: `${data.area} م²` });
+    if (data.price) chips.push({ icon: 'fa-tag', text: data.price, cls: 'price' });
 
     propertyMeta.innerHTML = chips.map(c =>
-      `<span class="meta-chip ${c.cls || ''}"><i class="fas ${c.icon}"></i> ${c.text}</span>`
+      `<span class="meta-chip ${c.cls || ''}"><i class="fas ${c.icon}"></i> ${escapeHtml(c.text)}</span>`
     ).join('');
 
-    if (chips.length > 0) heroInfo.style.display = 'block';
+    if (chips.length > 0) heroInfo.classList.add('show');
   }
 
-  // ============================================================
-  // Render image grid
-  // ============================================================
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function renderImages() {
     imagesGrid.innerHTML = '';
 
     if (imagesList.length === 0) {
+      loadingState.style.display = 'none';
       imagesGrid.style.display = 'none';
       emptyState.style.display = 'block';
       imagesLabel.innerText = 'لا توجد صور';
       return;
     }
+
+    loadingState.style.display = 'none';
+    emptyState.style.display = 'none';
+    imagesGrid.style.display = 'grid';
 
     imagesLabel.innerText = `${imagesList.length} ${imagesList.length === 1 ? 'صورة' : 'صور'} متاحة`;
 
@@ -749,6 +840,15 @@
     });
   }
 
+  function showEmpty(title, message) {
+    loadingState.style.display = 'none';
+    imagesGrid.style.display = 'none';
+    emptyState.style.display = 'block';
+    if (title) emptyState.querySelector('h2').innerText = title;
+    if (message) emptyState.querySelector('p').innerText = message;
+    imagesLabel.innerText = 'لا توجد صور';
+  }
+
   // ============================================================
   // Lightbox
   // ============================================================
@@ -769,7 +869,6 @@
     lbImage.src = imagesList[currentIndex];
     lbCounter.innerText = `${currentIndex + 1} / ${imagesList.length}`;
 
-    // Hide navigation if only one image
     const showNav = imagesList.length > 1;
     document.querySelector('.lb-prev').style.display = showNav ? 'flex' : 'none';
     document.querySelector('.lb-next').style.display = showNav ? 'flex' : 'none';
@@ -816,15 +915,13 @@
     const url = imagesList[currentIndex];
     if (!url) return;
 
-    const shareData = {
-      title: 'صور العقار - سمسار طلبك',
-      text: 'شاهد صور العقار من سمسار طلبك',
-      url: url
-    };
-
     if (navigator.share) {
       try {
-        await navigator.share(shareData);
+        await navigator.share({
+          title: 'صور العقار - سمسار طلبك',
+          text: 'شاهد صور العقار من سمسار طلبك',
+          url: url
+        });
         return;
       } catch (e) {
         if (e.name === 'AbortError') return;
@@ -840,7 +937,7 @@
   }
 
   // ============================================================
-  // Keyboard navigation
+  // Keyboard + Swipe
   // ============================================================
   document.addEventListener('keydown', (e) => {
     if (!lightbox.classList.contains('show')) return;
@@ -849,7 +946,6 @@
     if (e.key === 'ArrowLeft') nextImage();
   });
 
-  // Swipe navigation
   let touchStartX = 0;
   let touchEndX = 0;
 
@@ -870,8 +966,8 @@
   // WhatsApp CTA
   // ============================================================
   function setupWhatsAppCTA() {
-    const propertyTitleText = getQueryParam('title') || 'العقار';
-    const waMsg = `السلام عليكم أ. طارق،\nشاهدت صور ${propertyTitleText} على الرابط، وعايز أستفسر عن التفاصيل والمعاينة.`;
+    const titleText = (propertyData && propertyData.title) || 'العقار';
+    const waMsg = `السلام عليكم أ. طارق،\nشاهدت صور ${titleText} على الرابط، وعايز أستفسر عن التفاصيل والمعاينة.`;
     waContactBtn.href = `https://wa.me/${TAREK_PHONE}?text=${encodeURIComponent(waMsg)}`;
     footerCta.style.display = 'block';
   }
@@ -879,18 +975,65 @@
   // ============================================================
   // Init
   // ============================================================
-  (function init() {
-    loadMetadata();
-    imagesList = loadImages();
+  (async function init() {
+    // 1) الأولوية: Slug من ai-feed.json
+    const slug = getQueryParam('s') || getQueryParam('slug');
 
-    if (imagesList.length > 0) {
-      renderImages();
-      setupWhatsAppCTA();
-    } else {
-      imagesGrid.style.display = 'none';
-      emptyState.style.display = 'block';
-      imagesLabel.innerText = 'لا توجد صور';
+    if (slug) {
+      const prop = await loadFromSlug(slug);
+
+      if (prop) {
+        propertyData = prop;
+        const data = buildDisplayData(prop);
+        imagesList = data.images || [];
+
+        renderMetadata(data);
+
+        if (imagesList.length > 0) {
+          renderImages();
+          setupWhatsAppCTA();
+        } else {
+          showEmpty('لا توجد صور لهذا العقار', 'الصور هتظهر هنا لما يتم رفعها.');
+        }
+        return;
+      } else {
+        showEmpty('العقار غير موجود', 'تأكد من الرابط أو تواصل مع أ. طارق.');
+        return;
+      }
     }
+
+    // 2) Hash base64 (fallback)
+    const hashData = decodeGalleryData();
+    if (hashData) {
+      imagesList = hashData.images || [];
+      renderMetadata(hashData);
+
+      if (imagesList.length > 0) {
+        renderImages();
+        setupWhatsAppCTA();
+      } else {
+        showEmpty();
+      }
+      return;
+    }
+
+    // 3) Legacy params
+    const legacyData = loadFromLegacyParams();
+    if (legacyData) {
+      imagesList = legacyData.images || [];
+      renderMetadata(legacyData);
+
+      if (imagesList.length > 0) {
+        renderImages();
+        setupWhatsAppCTA();
+      } else {
+        showEmpty();
+      }
+      return;
+    }
+
+    // 4) لا يوجد شيء
+    showEmpty('لا توجد بيانات', 'الرابط غير صحيح أو انتهت صلاحيته.');
   })();
 
   // Expose globals
