@@ -606,7 +606,6 @@
 
 </div>
 
-<!-- Modals -->
 <div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
   <div class="info-modal">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
@@ -629,9 +628,6 @@
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
 
-  // ============================================================
-  // V39 FINAL: مفاتيح localStorage (منفصلة عن V38)
-  // ============================================================
   const STORAGE_KEY = "tarek_chat_v39";
   const SCORE_KEY = "tarek_score_v39";
   const WA_KEY = "tarek_wa_v39";
@@ -642,9 +638,6 @@
 
   const MAX_IMAGES = 5;
 
-  // ============================================================
-  // الحالة العامة
-  // ============================================================
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
   let canShare = localStorage.getItem(WA_KEY) === "true";
@@ -657,9 +650,6 @@
   let pendingImages = [];
   let isInImagesStep = false;
 
-  // ============================================================
-  // DOM Elements
-  // ============================================================
   const chat = document.getElementById('chatMessages');
   const input = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
@@ -678,9 +668,6 @@
   const imagesPreviewStrip = document.getElementById('imagesPreviewStrip');
   const toast = document.getElementById('toast');
 
-  // ============================================================
-  // Utilities
-  // ============================================================
   function getTime() {
     return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
   }
@@ -691,15 +678,9 @@
       setTimeout(() => {
         const lastChild = chat.lastElementChild;
         if (lastChild && lastChild.classList.contains('option-buttons-wrap')) {
-          lastChild.scrollIntoView({
-            behavior: smooth ? 'smooth' : 'auto',
-            block: 'end'
-          });
+          lastChild.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
         } else {
-          chat.scrollTo({
-            top: chat.scrollHeight,
-            behavior: smooth ? 'smooth' : 'auto'
-          });
+          chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
         }
       }, delay);
     });
@@ -709,9 +690,7 @@
     toast.innerText = text;
     toast.classList.add('show');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => {
-      toast.classList.remove('show');
-    }, duration);
+    showToast._t = setTimeout(() => { toast.classList.remove('show'); }, duration);
   }
 
   function toggleMenu(e) {
@@ -743,9 +722,6 @@
     }
   }
 
-  // ============================================================
-  // V39 FINAL: زر الكاميرا
-  // ============================================================
   function setCameraButtonVisible(visible) {
     if (visible) {
       cameraBtn.classList.add('show');
@@ -765,9 +741,6 @@
     fileInput.click();
   }
 
-  // ============================================================
-  // V39 FINAL: معاينة الصور المصغّرة
-  // ============================================================
   function renderImagesPreviewStrip() {
     if (pendingImages.length === 0) {
       imagesPreviewStrip.classList.remove('show');
@@ -805,9 +778,6 @@
     });
   }
 
-  // ============================================================
-  // V39 FINAL: File selection
-  // ============================================================
   function onFilesSelected(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -838,9 +808,6 @@
     fileInput.value = '';
   }
 
-  // ============================================================
-  // Lightbox
-  // ============================================================
   function openLightbox(src) {
     document.getElementById('lightboxImg').src = src;
     document.getElementById('lightbox').classList.add('show');
@@ -850,9 +817,6 @@
     document.getElementById('lightboxImg').src = '';
   }
 
-  // ============================================================
-  // V39 FINAL: رفع الصور مع Progress + try/finally
-  // ============================================================
   function showUploadProgress(current, total) {
     uploadProgressBar.classList.add('show');
     const percent = total > 0 ? Math.round((current / total) * 100) : 0;
@@ -898,9 +862,6 @@
     }
   }
 
-  // ============================================================
-  // Reset
-  // ============================================================
   function startNewChat() {
     menuDropdown.classList.remove('open');
     if (!confirm('بدء محادثة جديدة؟')) return;
@@ -942,9 +903,6 @@
     saveState();
   }
 
-  // ============================================================
-  // State
-  // ============================================================
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     localStorage.setItem(SCORE_KEY, score.toString());
@@ -979,9 +937,6 @@
     saveState();
   }
 
-  // ============================================================
-  // Rendering
-  // ============================================================
   function renderImagesGrid(images) {
     if (!images || !images.length) return null;
     const grid = document.createElement('div');
@@ -1020,9 +975,6 @@
     return card;
   }
 
-  // ============================================================
-  // V39 FINAL: renderMsg — مع تحويل الأرقام العربية للاتينية
-  // ============================================================
   function renderMsg(text, type, time, images) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
@@ -1030,7 +982,6 @@
     if (text && text.trim()) {
       const contentDiv = document.createElement('div');
       if (type === 'bot') {
-        // ✅ V39 FINAL: تحويل الأرقام العربية للاتينية قبل العرض
         const normalizedText = String(text)
           .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 
@@ -1069,9 +1020,6 @@
     scroll();
   }
 
-  // ============================================================
-  // V39 FINAL: renderOptions — متناغم مع الـWorker
-  // ============================================================
   function renderOptions(options, highlight, faded) {
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     if (!options || options.length === 0) return;
@@ -1092,9 +1040,6 @@
 
         const optText = String(opt || '').trim();
 
-        // ============================================================
-        // V39 FINAL: "📷 أرفق صور" / "📷 إضافة صور" → افتح الـPicker محليًا
-        // ============================================================
         if (optText.includes('أرفق صور') || optText.includes('إضافة صور')) {
           wrap.querySelectorAll('.option-btn').forEach(b => {
             b.classList.add('faded');
@@ -1109,21 +1054,14 @@
           }
           setCameraButtonVisible(true);
           fileInput.click();
-          return; // ← مفيش sendMsg
+          return;
         }
 
-        // ============================================================
-        // V39 FINAL: "🗑️ احذف الكل" → مسح محلي + إرسال للـWorker
-        // ============================================================
         if (optText.includes('احذف الكل')) {
           pendingImages = [];
           renderImagesPreviewStrip();
-          // كمّل عادي — نبعت للـWorker عشان يرد
         }
 
-        // ============================================================
-        // V39 FINAL: "✅ تمام، كمّل"
-        // ============================================================
         if (optText.includes('تمام، كمّل') || optText.includes('تمام كمّل')) {
           if (pendingImages.length > 0) {
             input.value = "✅ تمام، كمّل";
@@ -1136,7 +1074,6 @@
             sendMsg();
             return;
           }
-          // لو مفيش صور، ابعت "تخطي" عشان الـWorker يمشي
           input.value = "⏭ تخطي (بدون صور)";
           wrap.querySelectorAll('.option-btn').forEach(b => {
             b.classList.add('faded');
@@ -1148,17 +1085,11 @@
           return;
         }
 
-        // ============================================================
-        // V39 FINAL: "⏭ تخطي (بدون صور)" → مسح الصور المعلّقة
-        // ============================================================
         if (optText.includes('تخطي (بدون صور)') || optText.includes('تخطي بدون صور')) {
           pendingImages = [];
           renderImagesPreviewStrip();
         }
 
-        // ============================================================
-        // السلوك الافتراضي
-        // ============================================================
         wrap.querySelectorAll('.option-btn').forEach(b => {
           b.classList.add('faded');
           b.style.pointerEvents = 'none';
@@ -1182,9 +1113,6 @@
     updateUI();
   }
 
-  // ============================================================
-  // V39 FINAL: استخراج روابط الصور من نص waMessage
-  // ============================================================
   function extractImageUrlsFromMessage(text) {
     if (!text) return [];
     const urls = [];
@@ -1196,9 +1124,6 @@
     return urls;
   }
 
-  // ============================================================
-  // V39 FINAL: فتح واتساب مع Web Share API
-  // ============================================================
   async function openWhatsApp() {
     const msg = lastWaMessage || "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
 
@@ -1215,10 +1140,7 @@
         }));
         const validFiles = files.filter(Boolean);
         if (validFiles.length > 0 && navigator.canShare({ files: validFiles })) {
-          await navigator.share({
-            text: msg,
-            files: validFiles
-          });
+          await navigator.share({ text: msg, files: validFiles });
           return;
         }
       }
@@ -1227,9 +1149,6 @@
     window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  // ============================================================
-  // Input
-  // ============================================================
   function onInputChanged() {
     const hasText = input.value.trim().length > 0;
     if (hasText) {
@@ -1252,9 +1171,6 @@
 
   function onEmojiClick() { input.focus(); }
 
-  // ============================================================
-  // V39 FINAL: sendMsg — متناغم مع الـWorker
-  // ============================================================
   async function sendMsg() {
     const text = input.value.trim();
     const hasPendingImages = pendingImages.length > 0;
@@ -1271,9 +1187,6 @@
     let uploadedUrls = [];
     let userMessageForApi = text;
 
-    // --------------------------------------------------------
-    // V39 FINAL: لو في صور معلّقة → ارفعها الأول
-    // --------------------------------------------------------
     if (hasPendingImages) {
       const localPreviews = pendingImages.map(p => p.dataUrl);
       const displayText = text || "✅ تمام، كمّل";
@@ -1314,9 +1227,6 @@
       scroll();
     }
 
-    // --------------------------------------------------------
-    // إرسال للـWorker
-    // --------------------------------------------------------
     try {
       const historyForApi = history.map(m => ({
         role: m.type === 'bot' ? 'assistant' : 'user',
@@ -1360,9 +1270,6 @@
           images: replyImages
         });
 
-        // ============================================================
-        // V39 FINAL: زر الكاميرا يعتمد على options بس
-        // ============================================================
         const hasImagesBtn = data.options && data.options.some(o =>
           typeof o === 'string' && (
             o.includes('أرفق صور') ||
@@ -1404,9 +1311,6 @@
     }
   }
 
-  // ============================================================
-  // V39 FINAL: isImagesDoneBtn (موحّدة مع الـWorker)
-  // ============================================================
   function isImagesDoneBtn(text) {
     const t = String(text || '').trim();
     if (!t) return false;
@@ -1416,9 +1320,6 @@
     return false;
   }
 
-  // ============================================================
-  // Init
-  // ============================================================
   (function init() {
     document.getElementById('app').classList.add('show');
     loadState();
@@ -1439,9 +1340,6 @@
     hideUploadProgress();
   })();
 
-  // ============================================================
-  // Expose Globals
-  // ============================================================
   window.sendMsg = sendMsg;
   window.openWhatsApp = openWhatsApp;
   window.toggleMenu = toggleMenu;
