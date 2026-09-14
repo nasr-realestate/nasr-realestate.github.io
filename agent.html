@@ -6,8 +6,6 @@
   <meta property="og:title" content="سمسار طلبك | أ. طارق طنطاوي" />
   <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014." />
   <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/team/tareq.webp" />
-  <meta property="og:image:width" content="400" />
-<meta property="og:image:height" content="400" />
   <title>سمسار طلبك | أ. طارق طنطاوي</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -103,10 +101,13 @@
     .info-modal p { font-size: 0.9rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
+    /* ============================================================ */
+    /* V39: chat-area مع padding-bottom كافي + scroll smooth        */
+    /* ============================================================ */
     .chat-area {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 12px 16px 12px;
+      padding: 12px 12px 32px 12px;
       display: flex;
       flex-direction: column;
       gap: 9px;
@@ -114,6 +115,8 @@
       background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
       background-repeat: repeat;
       background-size: 400px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
 
     .msg {
@@ -131,6 +134,8 @@
     .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 0px; color: #111b21; }
     .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 0px; color: #111b21; }
     .msg a { color: #00a884; font-weight: 600; text-decoration: underline; word-break: break-all; }
+    .msg strong { font-weight: 700; }
+    .msg em { font-style: italic; }
 
     .msg-bot::before {
       content: "";
@@ -200,17 +205,19 @@
       border-color: transparent;
     }
 
-    /* شبكة الصور المصغّرة */
+    /* ============================================================ */
+    /* V39: شبكة الصور في الفقاعة                                    */
+    /* ============================================================ */
     .images-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 6px;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 5px;
       margin-top: 6px;
       max-width: 100%;
     }
     .images-grid img {
       width: 100%;
-      height: 90px;
+      height: 80px;
       object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
@@ -220,7 +227,99 @@
     .images-grid img:hover { transform: scale(1.03); }
     .msg-user .images-grid { justify-content: flex-end; }
 
-    /* V38: شبكة صور العقار في رسالة التأهل */
+    /* ============================================================ */
+    /* V39: شريط رفع الصور                                           */
+    /* ============================================================ */
+    .upload-progress-bar {
+      display: none;
+      padding: 10px 14px;
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .upload-progress-bar.show { display: flex; }
+    .upload-progress-bar .progress-label {
+      font-size: 13px;
+      color: #005c4b;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .upload-progress-bar .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .upload-progress-bar .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00a884, #25d366);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* ============================================================ */
+    /* V39: معاينة الصور المرفوعة (thumbnails صغيرة)                 */
+    /* ============================================================ */
+    .images-preview-strip {
+      display: none;
+      padding: 8px 12px;
+      background: #f0f8f4;
+      border-top: 1px solid #d9fdd3;
+      gap: 6px;
+      overflow-x: auto;
+      align-items: center;
+    }
+    .images-preview-strip.show { display: flex; }
+    .images-preview-strip .strip-count {
+      font-size: 12px;
+      color: #005c4b;
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 0 6px;
+    }
+    .images-preview-strip .strip-thumb {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      min-width: 50px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .images-preview-strip .strip-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .images-preview-strip .strip-thumb .rm-btn {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ea0038;
+      color: #fff;
+      border: 2px solid #fff;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    /* ============================================================ */
+    /* V39: كارت معاينة الصور (لرسالة التأهل)                        */
+    /* ============================================================ */
     .wa-preview-card {
       margin-top: 8px;
       background: #f0f8f4;
@@ -249,51 +348,6 @@
       border-radius: 7px;
       cursor: pointer;
       border: 1px solid rgba(0,168,132,0.2);
-    }
-
-    .attachment-preview-bar {
-      display: none;
-      padding: 6px 10px;
-      background: #fff;
-      border-top: 1px solid #e2e8f0;
-      gap: 6px;
-      overflow-x: auto;
-      align-items: center;
-    }
-    .attachment-preview-bar.show { display: flex; }
-    .attachment-thumb {
-      position: relative;
-      width: 56px;
-      height: 56px;
-      min-width: 56px;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid #d1d7db;
-      background: #f0f2f5;
-    }
-    .attachment-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .attachment-thumb .remove-thumb {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.65);
-      color: #fff;
-      border: none;
-      font-size: 11px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-    }
-    .attachment-count {
-      font-size: 12px;
-      color: #54656f;
-      white-space: nowrap;
-      padding: 0 4px;
     }
 
     .bottom-dock {
@@ -353,27 +407,23 @@
     }
     .icon-btn:hover { background: rgba(0,0,0,0.06); }
 
-    .icon-btn#attachBtn:disabled {
-      opacity: 0.35;
-      color: #8696a0;
-      cursor: not-allowed;
-      pointer-events: auto;
+    /* V39: زر الكاميرا (يظهر في خطوة الصور فقط) */
+    .icon-btn#cameraBtn {
+      background: #00a884;
+      color: #fff;
+      display: none;
+      animation: pulseCamera 2s infinite;
     }
-    .icon-btn#attachBtn:disabled:hover { background: transparent; }
-
-    .icon-btn#attachBtn:not(:disabled) {
-      color: #00a884;
-      opacity: 1;
+    .icon-btn#cameraBtn.show {
+      display: flex;
     }
-    .icon-btn#attachBtn:not(:disabled):hover { background: rgba(0,168,132,0.12); }
-
-    .icon-btn.attach-activated {
-      animation: attachGlow 1s ease-out;
+    .icon-btn#cameraBtn:hover {
+      background: #019474;
+      transform: scale(1.05);
     }
-    @keyframes attachGlow {
-      0% { background: rgba(0,168,132,0.5); transform: scale(1.25); color: #fff; }
-      50% { background: rgba(0,168,132,0.3); transform: scale(1.1); }
-      100% { background: transparent; transform: scale(1); color: #00a884; }
+    @keyframes pulseCamera {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(0,168,132,0); }
     }
 
     .input-pill {
@@ -457,23 +507,27 @@
       justify-content: center;
     }
 
-    .attach-tooltip {
+    /* V39: toast صغير للتنبيهات */
+    .toast {
       position: fixed;
-      bottom: 90px;
+      bottom: 100px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.85);
       color: #fff;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 22px;
+      font-size: 13.5px;
       z-index: 10001;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s;
+      transition: opacity 0.25s;
       white-space: nowrap;
+      max-width: 90vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .attach-tooltip.show { opacity: 1; }
+    .toast.show { opacity: 1; }
 
     @keyframes slideUpPulse { 0% { box-shadow: 0 2px 6px rgba(0,168,132,0.2); } 100% { box-shadow: 0 4px 15px rgba(0,168,132,0.4); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
@@ -522,7 +576,19 @@
 
   <div class="bottom-dock">
 
-    <div class="attachment-preview-bar" id="attachmentPreviewBar"></div>
+    <!-- V39: شريط رفع الصور -->
+    <div class="upload-progress-bar" id="uploadProgressBar">
+      <div class="progress-label" id="uploadProgressLabel">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span>جاري رفع الصور...</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="uploadProgressFill"></div>
+      </div>
+    </div>
+
+    <!-- V39: معاينة الصور المصغّرة -->
+    <div class="images-preview-strip" id="imagesPreviewStrip"></div>
 
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
       <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
@@ -541,19 +607,26 @@
       <button class="icon-btn" id="emojiBtn" onclick="onEmojiClick()" aria-label="إيموجي">
         <i class="far fa-smile"></i>
       </button>
+
+      <!-- V39: زر الكاميرا (يظهر فقط في خطوة الصور) -->
+      <button class="icon-btn" id="cameraBtn" onclick="onCameraClick()" aria-label="إرفاق صور">
+        <i class="fas fa-camera"></i>
+      </button>
+
       <div class="input-pill">
         <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()" oninput="onInputChanged()">
-        <button class="icon-btn" id="attachBtn" onclick="onAttachClick()" aria-label="إرفاق صور" disabled>
-          <i class="fas fa-paperclip"></i>
-        </button>
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
       </div>
-      <button class="send-btn" id="sendBtn" onclick="onSendBtnClick()"><i class="fas fa-microphone" id="sendBtnIcon"></i></button>
+
+      <button class="send-btn" id="sendBtn" onclick="onSendBtnClick()">
+        <i class="fas fa-microphone" id="sendBtnIcon"></i>
+      </button>
     </div>
   </div>
 
 </div>
 
+<!-- Modals -->
 <div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
   <div class="info-modal">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
@@ -569,23 +642,27 @@
   <img id="lightboxImg" src="" alt="صورة">
 </div>
 
-<div class="attach-tooltip" id="attachTooltip">🔒 الإرفاق متاح بعد ما تكمّل تفاصيل العقار</div><script>
+<div class="toast" id="toast">رسالة تنبيه</div><script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
 
-  const STORAGE_KEY = "tarek_chat_v38";
-  const SCORE_KEY = "tarek_score_v38";
-  const WA_KEY = "tarek_wa_v38";
-  const LEAD_KEY = "tarek_lead_v38";
-  const FORM_STATE_KEY = "tarek_form_state_v38";
-  const WA_MSG_KEY = "tarek_wa_msg_v38";
-  const READY_KEY = "tarek_ready_v38";
-  const ATTACH_KEY = "tarek_attach_v38";
-  const ATTACH_TOOLTIP_KEY = "tarek_attach_tooltip_shown_v38";
+  // ============================================================
+  // V39: مفاتيح localStorage جديدة (منفصلة عن V38)
+  // ============================================================
+  const STORAGE_KEY = "tarek_chat_v39";
+  const SCORE_KEY = "tarek_score_v39";
+  const WA_KEY = "tarek_wa_v39";
+  const LEAD_KEY = "tarek_lead_v39";
+  const FORM_STATE_KEY = "tarek_form_state_v39";
+  const WA_MSG_KEY = "tarek_wa_msg_v39";
+  const READY_KEY = "tarek_ready_v39";
 
   const MAX_IMAGES = 5;
 
+  // ============================================================
+  // الحالة العامة
+  // ============================================================
   let history = [];
   let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
   let canShare = localStorage.getItem(WA_KEY) === "true";
@@ -593,12 +670,17 @@
   let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
   let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
   let readyToSend = localStorage.getItem(READY_KEY) === "true";
-  let attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";
-  let attachTooltipShown = localStorage.getItem(ATTACH_TOOLTIP_KEY) === "true";
   let isSending = false;
 
+  // V39: صور معلّقة (في خطوة الصور)
   let pendingImages = [];
 
+  // V39: هل احنا دلوقتي في خطوة صور؟
+  let isInImagesStep = false;
+
+  // ============================================================
+  // DOM Elements
+  // ============================================================
   const chat = document.getElementById('chatMessages');
   const input = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
@@ -610,26 +692,74 @@
   const statusLine = document.getElementById('statusLine');
   const statusText = document.getElementById('statusText');
   const fileInput = document.getElementById('fileInput');
-  const attachmentPreviewBar = document.getElementById('attachmentPreviewBar');
-  const attachBtn = document.getElementById('attachBtn');
-  const attachTooltip = document.getElementById('attachTooltip');
+  const cameraBtn = document.getElementById('cameraBtn');
+  const uploadProgressBar = document.getElementById('uploadProgressBar');
+  const uploadProgressLabel = document.getElementById('uploadProgressLabel');
+  const uploadProgressFill = document.getElementById('uploadProgressFill');
+  const imagesPreviewStrip = document.getElementById('imagesPreviewStrip');
+  const toast = document.getElementById('toast');
 
-  function getTime() { return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
-  function scroll() { chat.scrollTop = chat.scrollHeight; }
+  // ============================================================
+  // Utilities
+  // ============================================================
+  function getTime() {
+    return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  }
 
-  function toggleMenu(e) { if (e) e.stopPropagation(); menuDropdown.classList.toggle('open'); }
+  /**
+   * V39: scroll ذكي مع انتظار DOM
+   */
+  function scroll(options = {}) {
+    const { smooth = true, delay = 50 } = options;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const lastChild = chat.lastElementChild;
+        if (lastChild && lastChild.classList.contains('option-buttons-wrap')) {
+          lastChild.scrollIntoView({
+            behavior: smooth ? 'smooth' : 'auto',
+            block: 'end'
+          });
+        } else {
+          chat.scrollTo({
+            top: chat.scrollHeight,
+            behavior: smooth ? 'smooth' : 'auto'
+          });
+        }
+      }, delay);
+    });
+  }
+
+  function showToast(text, duration = 2400) {
+    toast.innerText = text;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => {
+      toast.classList.remove('show');
+    }, duration);
+  }
+
+  function toggleMenu(e) {
+    if (e) e.stopPropagation();
+    menuDropdown.classList.toggle('open');
+  }
+
   document.addEventListener('click', function(e) {
     if (!menuDropdown.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
       menuDropdown.classList.remove('open');
     }
   });
 
-  function showAboutModal() { menuDropdown.classList.remove('open'); document.getElementById('aboutModal').classList.add('show'); }
-  function closeAboutModal() { document.getElementById('aboutModal').classList.remove('show'); }
+  function showAboutModal() {
+    menuDropdown.classList.remove('open');
+    document.getElementById('aboutModal').classList.add('show');
+  }
+  function closeAboutModal() {
+    document.getElementById('aboutModal').classList.remove('show');
+  }
 
-  function setTypingStatus(isTyping) {
+  function setTypingStatus(isTyping, customText) {
     if (isTyping) {
-      statusText.innerText = 'يكتب الآن...';
+      statusText.innerText = customText || 'يكتب الآن...';
       statusLine.classList.add('is-typing');
     } else {
       statusText.innerText = 'متصل الان';
@@ -637,71 +767,71 @@
     }
   }
 
-  // V38: تحديث زر المشبك مع animation لأول تفعيل
-  function updateAttachButton(animate = false) {
-    if (!attachBtn) return;
-    if (attachEnabled) {
-      attachBtn.disabled = false;
-      attachBtn.title = 'إرفاق صور العقار (حتى 5 صور)';
-      if (animate) {
-        attachBtn.classList.add('attach-activated');
-        setTimeout(() => attachBtn.classList.remove('attach-activated'), 1100);
-        if (!attachTooltipShown) {
-          attachTooltipShown = true;
-          localStorage.setItem(ATTACH_TOOLTIP_KEY, "true");
-          setTimeout(() => showAttachTooltip('📷 تقدر ترفق صور العقار دلوقتي'), 350);
-        }
-      }
+  // ============================================================
+  // V39: زر الكاميرا
+  // ============================================================
+  function setCameraButtonVisible(visible) {
+    if (visible) {
+      cameraBtn.classList.add('show');
+      isInImagesStep = true;
     } else {
-      attachBtn.disabled = true;
-      attachBtn.title = '🔒 متاح بعد ما تكمّل تفاصيل العقار';
-    }
-    localStorage.setItem(ATTACH_KEY, attachEnabled ? "true" : "false");
-  }
-
-  function showAttachTooltip(customText) {
-    if (customText) attachTooltip.innerText = customText;
-    attachTooltip.classList.add('show');
-    setTimeout(() => {
-      attachTooltip.classList.remove('show');
-      setTimeout(() => { attachTooltip.innerText = '🔒 الإرفاق متاح بعد ما تكمّل تفاصيل العقار'; }, 300);
-    }, 2200);
-  }
-
-  function onInputChanged() {
-    const hasText = input.value.trim().length > 0;
-    if (hasText) {
-      sendBtnIcon.className = 'fas fa-paper-plane';
-      sendBtnIcon.style.transform = 'rotate(180deg)';
-    } else {
-      sendBtnIcon.className = 'fas fa-microphone';
-      sendBtnIcon.style.transform = 'none';
+      cameraBtn.classList.remove('show');
+      isInImagesStep = false;
     }
   }
 
-  function onSendBtnClick() {
-    const hasText = input.value.trim().length > 0;
-    if (hasText || pendingImages.length > 0) {
-      sendMsg();
-    } else {
-      input.focus();
-    }
-  }
-
-  function onEmojiClick() { input.focus(); }
-
-  function onAttachClick() {
-    if (!attachEnabled) {
-      showAttachTooltip();
-      return;
-    }
+  function onCameraClick() {
+    if (!isInImagesStep) return;
     if (pendingImages.length >= MAX_IMAGES) {
-      alert(`الحد الأقصى ${MAX_IMAGES} صور في المرة الواحدة.`);
+      showToast(`الحد الأقصى ${MAX_IMAGES} صور.`);
       return;
     }
     fileInput.click();
   }
 
+  // ============================================================
+  // V39: معاينة الصور المصغّرة
+  // ============================================================
+  function renderImagesPreviewStrip() {
+    if (pendingImages.length === 0) {
+      imagesPreviewStrip.classList.remove('show');
+      imagesPreviewStrip.innerHTML = '';
+      return;
+    }
+    imagesPreviewStrip.classList.add('show');
+    imagesPreviewStrip.innerHTML = '';
+
+    const count = document.createElement('div');
+    count.className = 'strip-count';
+    count.innerText = `${pendingImages.length}/${MAX_IMAGES}`;
+    imagesPreviewStrip.appendChild(count);
+
+    pendingImages.forEach(img => {
+      const thumb = document.createElement('div');
+      thumb.className = 'strip-thumb';
+
+      const imgEl = document.createElement('img');
+      imgEl.src = img.dataUrl;
+      imgEl.onclick = () => openLightbox(img.dataUrl);
+      thumb.appendChild(imgEl);
+
+      const rm = document.createElement('button');
+      rm.className = 'rm-btn';
+      rm.innerText = '✕';
+      rm.onclick = (e) => {
+        e.stopPropagation();
+        pendingImages = pendingImages.filter(x => x.id !== img.id);
+        renderImagesPreviewStrip();
+      };
+      thumb.appendChild(rm);
+
+      imagesPreviewStrip.appendChild(thumb);
+    });
+  }
+
+  // ============================================================
+  // V39: File selection
+  // ============================================================
   function onFilesSelected(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -710,7 +840,7 @@
     const toAdd = files.slice(0, remaining);
 
     if (files.length > remaining) {
-      alert(`الحد الأقصى ${MAX_IMAGES} صور. تم إضافة ${toAdd.length} صورة فقط.`);
+      showToast(`الحد الأقصى ${MAX_IMAGES} صور. تم إضافة ${toAdd.length} فقط.`);
     }
 
     toAdd.forEach(file => {
@@ -724,7 +854,7 @@
           dataUrl,
           base64
         });
-        renderAttachmentPreview();
+        renderImagesPreviewStrip();
       };
       reader.readAsDataURL(file);
     });
@@ -732,42 +862,9 @@
     fileInput.value = '';
   }
 
-  function renderAttachmentPreview() {
-    attachmentPreviewBar.innerHTML = '';
-    if (pendingImages.length === 0) {
-      attachmentPreviewBar.classList.remove('show');
-      return;
-    }
-    attachmentPreviewBar.classList.add('show');
-
-    const count = document.createElement('div');
-    count.className = 'attachment-count';
-    count.innerText = `${pendingImages.length}/${MAX_IMAGES}`;
-    attachmentPreviewBar.appendChild(count);
-
-    pendingImages.forEach(img => {
-      const thumb = document.createElement('div');
-      thumb.className = 'attachment-thumb';
-
-      const imgEl = document.createElement('img');
-      imgEl.src = img.dataUrl;
-      imgEl.onclick = () => openLightbox(img.dataUrl);
-      thumb.appendChild(imgEl);
-
-      const rm = document.createElement('button');
-      rm.className = 'remove-thumb';
-      rm.innerText = '✕';
-      rm.onclick = (e) => {
-        e.stopPropagation();
-        pendingImages = pendingImages.filter(x => x.id !== img.id);
-        renderAttachmentPreview();
-      };
-      thumb.appendChild(rm);
-
-      attachmentPreviewBar.appendChild(thumb);
-    });
-  }
-
+  // ============================================================
+  // Lightbox
+  // ============================================================
   function openLightbox(src) {
     document.getElementById('lightboxImg').src = src;
     document.getElementById('lightbox').classList.add('show');
@@ -777,24 +874,56 @@
     document.getElementById('lightboxImg').src = '';
   }
 
+  // ============================================================
+  // V39: رفع الصور مع Progress
+  // ============================================================
+  function showUploadProgress(current, total) {
+    uploadProgressBar.classList.add('show');
+    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+    uploadProgressFill.style.width = percent + '%';
+    uploadProgressLabel.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> <span>جاري رفع ${current}/${total} صورة (${percent}%)</span>`;
+  }
+
+  function hideUploadProgress() {
+    uploadProgressBar.classList.remove('show');
+    uploadProgressFill.style.width = '0%';
+  }
+
   async function uploadPendingImages() {
     if (pendingImages.length === 0) return { ok: true, urls: [] };
+
+    const total = pendingImages.length;
+    showUploadProgress(0, total);
+    setTypingStatus(true, 'جاري رفع الصور...');
+
     try {
+      // رفع واحد لكل الصور
+      showUploadProgress(1, total);
       const res = await fetch(UPLOAD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: pendingImages.map(p => p.base64) })
       });
+      showUploadProgress(total, total);
+
       const data = await res.json();
+      hideUploadProgress();
+      setTypingStatus(false);
+
       if (!res.ok || !data.urls || !data.urls.length) {
         return { ok: false, error: data.error || 'فشل رفع الصور' };
       }
       return { ok: true, urls: data.urls };
     } catch (err) {
+      hideUploadProgress();
+      setTypingStatus(false);
       return { ok: false, error: 'تعذر الاتصال بالسيرفر' };
     }
   }
 
+  // ============================================================
+  // Reset
+  // ============================================================
   function startNewChat() {
     menuDropdown.classList.remove('open');
     if (!confirm('بدء محادثة جديدة؟')) return;
@@ -808,15 +937,8 @@
   }
 
   function resetAll() {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SCORE_KEY);
-    localStorage.removeItem(WA_KEY);
-    localStorage.removeItem(LEAD_KEY);
-    localStorage.removeItem(FORM_STATE_KEY);
-    localStorage.removeItem(WA_MSG_KEY);
-    localStorage.removeItem(READY_KEY);
-    localStorage.removeItem(ATTACH_KEY);
-    // لا نمسح ATTACH_TOOLTIP_KEY (يفضل يظهر مرة واحدة فقط)
+    [STORAGE_KEY, SCORE_KEY, WA_KEY, LEAD_KEY, FORM_STATE_KEY, WA_MSG_KEY, READY_KEY]
+      .forEach(k => localStorage.removeItem(k));
 
     history = [];
     score = 0;
@@ -825,13 +947,15 @@
     currentFormState = null;
     lastWaMessage = null;
     readyToSend = false;
-    attachEnabled = false;
     pendingImages = [];
+    isInImagesStep = false;
 
     chat.querySelectorAll('.msg').forEach(el => el.remove());
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
-    renderAttachmentPreview();
-    updateAttachButton();
+
+    renderImagesPreviewStrip();
+    setCameraButtonVisible(false);
+    hideUploadProgress();
 
     const welcome = `معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
     renderMsg(welcome, 'bot');
@@ -841,6 +965,9 @@
     saveState();
   }
 
+  // ============================================================
+  // State
+  // ============================================================
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     localStorage.setItem(SCORE_KEY, score.toString());
@@ -848,7 +975,6 @@
     localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
     localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
     localStorage.setItem(READY_KEY, readyToSend ? "true" : "false");
-    localStorage.setItem(ATTACH_KEY, attachEnabled ? "true" : "false");
     if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
   }
 
@@ -862,7 +988,6 @@
       currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
       lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
       readyToSend = localStorage.getItem(READY_KEY) === "true";
-      attachEnabled = localStorage.getItem(ATTACH_KEY) === "true";
       return true;
     } catch { return false; }
   }
@@ -877,7 +1002,9 @@
     saveState();
   }
 
-  // V38: شبكة صور مصغّرة داخل فقاعة البوت
+  // ============================================================
+  // Rendering
+  // ============================================================
   function renderImagesGrid(images) {
     if (!images || !images.length) return null;
     const grid = document.createElement('div');
@@ -892,7 +1019,6 @@
     return grid;
   }
 
-  // V38: كارت معاينة الصور (لرسالة التأهل)
   function renderWaPreviewCard(images) {
     if (!images || !images.length) return null;
     const card = document.createElement('div');
@@ -917,7 +1043,6 @@
     return card;
   }
 
-  // V38: renderMsg مع DOMPurify + marked
   function renderMsg(text, type, time, images) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
@@ -977,6 +1102,20 @@
 
       btn.onclick = function() {
         if (isSending) return;
+
+        // V39: أزرار الصور — معالجة خاصة
+        if (opt.includes('أرفق صور') || opt.includes('إضافة صور')) {
+          wrap.querySelectorAll('.option-btn').forEach(b => {
+            b.classList.add('faded');
+            b.style.pointerEvents = 'none';
+          });
+          btn.classList.remove('faded');
+          btn.classList.add('highlighted');
+          input.value = opt;
+          sendMsg();
+          return;
+        }
+
         wrap.querySelectorAll('.option-btn').forEach(b => {
           b.classList.add('faded');
           b.style.pointerEvents = 'none';
@@ -1000,16 +1139,30 @@
     updateUI();
   }
 
-  // V38: openWhatsApp مع Web Share API
+  // ============================================================
+  // V39: استخراج روابط الصور من نص waMessage
+  // ============================================================
+  function extractImageUrlsFromMessage(text) {
+    if (!text) return [];
+    const urls = [];
+    const re = /\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      urls.push(m[1]);
+    }
+    return urls;
+  }
+
+  // ============================================================
+  // V39: فتح واتساب مع Web Share API
+  // ============================================================
   async function openWhatsApp() {
     const msg = lastWaMessage || "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
 
-    // محاولة استخدام Web Share API (لو مدعوم + فيه صور)
     try {
       const imgs = extractImageUrlsFromMessage(lastWaMessage);
       if (imgs.length > 0 && navigator.canShare) {
-        // نجهز array of files من الصور
-        const files = await Promise.all(imgs.slice(0, 5).map(async (url, idx) => {
+        const files = await Promise.all(imgs.slice(0, MAX_IMAGES).map(async (url, idx) => {
           try {
             const res = await fetch(url, { mode: 'cors' });
             const blob = await res.blob();
@@ -1026,31 +1179,45 @@
           return;
         }
       }
-    } catch (_) {
-      // fallback
-    }
+    } catch (_) {}
 
-    // Fallback: فتح wa.me برسالة نصية
     window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  // V38: استخراج روابط الصور من نص waMessage
-  function extractImageUrlsFromMessage(text) {
-    if (!text) return [];
-    const urls = [];
-    const re = /\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      urls.push(m[1]);
+  // ============================================================
+  // Input
+  // ============================================================
+  function onInputChanged() {
+    const hasText = input.value.trim().length > 0;
+    if (hasText) {
+      sendBtnIcon.className = 'fas fa-paper-plane';
+      sendBtnIcon.style.transform = 'rotate(180deg)';
+    } else {
+      sendBtnIcon.className = 'fas fa-microphone';
+      sendBtnIcon.style.transform = 'none';
     }
-    return urls;
   }
 
+  function onSendBtnClick() {
+    const hasText = input.value.trim().length > 0;
+    if (hasText || pendingImages.length > 0) {
+      sendMsg();
+    } else {
+      input.focus();
+    }
+  }
+
+  function onEmojiClick() { input.focus(); }
+
+  // ============================================================
+  // V39: sendMsg — مع مسار رفع الصور في خطوة الصور
+  // ============================================================
   async function sendMsg() {
     const text = input.value.trim();
-    const hasImages = pendingImages.length > 0;
+    const hasPendingImages = pendingImages.length > 0;
+    const hasText = text.length > 0;
 
-    if ((!text && !hasImages) || isSending) return;
+    if ((!text && !hasPendingImages) || isSending) return;
 
     input.value = '';
     onInputChanged();
@@ -1060,51 +1227,72 @@
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
 
     let uploadedUrls = [];
-    let uploadError = null;
+    let userMessageForApi = text;
+    let userImagesForChat = [];
 
-    if (hasImages) {
+    // --------------------------------------------------------
+    // V39: لو في صور معلّقة → ارفعها الأول
+    // --------------------------------------------------------
+    if (hasPendingImages) {
       const localPreviews = pendingImages.map(p => p.dataUrl);
-      renderMsg(text || '', 'user', null, localPreviews);
-      history.push({ text: text || '', type: 'user', time: getTime(), images: localPreviews });
+      userImagesForChat = localPreviews;
+
+      // عرض رسالة المستخدم مع الصور
+      renderMsg(text || '(صور مرفقة)', 'user', null, localPreviews);
+      history.push({
+        text: text || '(صور مرفقة)',
+        type: 'user',
+        time: getTime(),
+        images: localPreviews
+      });
       saveState();
+      scroll();
+
+      // ارفع الصور
+      const uploadRes = await uploadPendingImages();
+
+      if (!uploadRes.ok) {
+        renderMsg(`⚠️ ${uploadRes.error || 'فشل رفع الصور'}. تقدر تبعت الصور على واتساب مباشرة.`, 'bot');
+        isSending = false;
+        sendBtn.disabled = false;
+        return;
+      }
+
+      uploadedUrls = uploadRes.urls;
+      userMessageForApi = text || '(صور مرفقة)';
+
+      // نظّف الصور المعلّقة
+      pendingImages = [];
+      renderImagesPreviewStrip();
 
       setTypingStatus(true);
       scroll();
-
-      const uploadRes = await uploadPendingImages();
-      setTypingStatus(false);
-
-      if (!uploadRes.ok) {
-        uploadError = uploadRes.error || 'فشل رفع الصور';
-        renderMsg(`⚠️ ${uploadError}. تقدر تبعت الصور على واتساب مباشرة.`, 'bot');
-      } else {
-        uploadedUrls = uploadRes.urls;
-        renderMsg(`✅ تم رفع ${uploadedUrls.length} صورة بنجاح.`, 'bot');
-      }
-
-      pendingImages = [];
-      renderAttachmentPreview();
     } else {
+      // رسالة نصية عادية
       renderMsg(text, 'user');
       history.push({ text, type: 'user', time: getTime() });
       saveState();
-
       setTypingStatus(true);
       scroll();
     }
 
+    // --------------------------------------------------------
+    // إرسال للـWorker
+    // --------------------------------------------------------
     try {
-      const historyForApi = history.slice(-8).map(m => ({
+      // V39: كل المحادثة (مش آخر 8)
+      const historyForApi = history.map(m => ({
         role: m.type === 'bot' ? 'assistant' : 'user',
         message: m.text,
-        hasImages: !!(m.images && m.images.length)
+        hasImages: !!(m.images && m.images.length),
+        imageCount: (m.images && m.images.length) || 0
       }));
 
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: text || (hasImages ? '(تم إرفاق صور)' : ''),
+          message: userMessageForApi,
           history: historyForApi,
           qualificationScore: score,
           canShareWhatsapp: canShare,
@@ -1112,6 +1300,7 @@
           imageUrls: uploadedUrls
         })
       });
+
       const data = await res.json();
       setTypingStatus(false);
 
@@ -1123,28 +1312,37 @@
         if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
         if (data.waMessage) lastWaMessage = data.waMessage;
 
-        // تحديث زر الإرفاق
-        if (data.enableAttach === true && !attachEnabled) {
-          attachEnabled = true;
-          updateAttachButton(true);
-        } else if (data.enableAttach === false && attachEnabled) {
-          attachEnabled = false;
-          updateAttachButton();
-        } else if (data.enableAttach === true) {
-          updateAttachButton();
-        }
-
-        // V38: عرض شبكة صور مصغّرة لو الـWorker رجّع imageUrls في الرد
+        // V39: شبكة صور مصغّرة في رد البوت
         const replyImages = Array.isArray(data.imageUrls) ? data.imageUrls : [];
 
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
         renderMsg(replyText, 'bot', null, replyImages);
-        history.push({ text: replyText, type: 'bot', time: getTime(), images: replyImages });
+        history.push({
+          text: replyText,
+          type: 'bot',
+          time: getTime(),
+          images: replyImages
+        });
+
+        // V39: تفعيل زر الكاميرا لو احنا في خطوة صور
+        if (data.imageStepAction === "open_picker") {
+          setCameraButtonVisible(true);
+          setTimeout(() => fileInput.click(), 400);
+        } else if (data.formState && data.formState.flowType === "owner") {
+          // فحص لو الخطوة الحالية هي images
+          // (بندقق على الأزرار — لو فيها "أرفق صور" يبقى احنا في خطوة الصور)
+          const hasImagesBtn = data.options && data.options.some(o =>
+            typeof o === 'string' && (o.includes('أرفق صور') || o.includes('إضافة صور'))
+          );
+          setCameraButtonVisible(hasImagesBtn);
+        } else {
+          setCameraButtonVisible(false);
+        }
 
         updateUI();
         saveState();
 
-        // V38: عرض كارت معاينة الصور بعد رسالة التأهل
+        // V39: كارت معاينة الصور بعد رسالة التأهل
         if (readyToSend && lastWaMessage) {
           const waImgs = extractImageUrlsFromMessage(lastWaMessage);
           if (waImgs.length > 0) {
@@ -1162,6 +1360,13 @@
 
         if (data.options && data.options.length) {
           renderOptions(data.options, data.highlightButton || null, data.fadedButtons || null);
+        } else {
+          // لو مفيش أزرار، خلّي زر الكاميرا مخفي إلا لو في خطوة صور
+          if (!data.imageStepAction || data.imageStepAction !== "open_picker") {
+            if (!(data.formState && data.formState.flowType === "owner")) {
+              setCameraButtonVisible(false);
+            }
+          }
         }
       }
     } catch (err) {
@@ -1174,9 +1379,13 @@
     }
   }
 
+  // ============================================================
+  // Init
+  // ============================================================
   (function init() {
     document.getElementById('app').classList.add('show');
     loadState();
+
     if (history.length > 0) {
       rehydrate();
     } else {
@@ -1185,12 +1394,17 @@
       history.push({ text: welcome, type: 'bot', time: getTime() });
       saveState();
     }
+
     updateUI();
-    updateAttachButton();
     onInputChanged();
-    renderAttachmentPreview();
+    renderImagesPreviewStrip();
+    setCameraButtonVisible(false);
+    hideUploadProgress();
   })();
 
+  // ============================================================
+  // Expose Globals
+  // ============================================================
   window.sendMsg = sendMsg;
   window.openWhatsApp = openWhatsApp;
   window.toggleMenu = toggleMenu;
@@ -1201,7 +1415,7 @@
   window.onInputChanged = onInputChanged;
   window.onSendBtnClick = onSendBtnClick;
   window.onEmojiClick = onEmojiClick;
-  window.onAttachClick = onAttachClick;
+  window.onCameraClick = onCameraClick;
   window.onFilesSelected = onFilesSelected;
   window.openLightbox = openLightbox;
   window.closeLightbox = closeLightbox;
