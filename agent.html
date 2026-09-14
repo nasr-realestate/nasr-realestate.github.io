@@ -654,10 +654,7 @@
   let readyToSend = localStorage.getItem(READY_KEY) === "true";
   let isSending = false;
 
-  // V39: صور معلّقة (في خطوة الصور)
   let pendingImages = [];
-
-  // V39: هل احنا دلوقتي في خطوة صور؟
   let isInImagesStep = false;
 
   // ============================================================
@@ -1023,6 +1020,9 @@
     return card;
   }
 
+  // ============================================================
+  // V39 FINAL: renderMsg — مع تحويل الأرقام العربية للاتينية
+  // ============================================================
   function renderMsg(text, type, time, images) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
@@ -1030,7 +1030,11 @@
     if (text && text.trim()) {
       const contentDiv = document.createElement('div');
       if (type === 'bot') {
-        const rawHtml = marked.parse(text);
+        // ✅ V39 FINAL: تحويل الأرقام العربية للاتينية قبل العرض
+        const normalizedText = String(text)
+          .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+        const rawHtml = marked.parse(normalizedText);
         contentDiv.innerHTML = (typeof DOMPurify !== 'undefined')
           ? DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target'] })
           : rawHtml;
@@ -1254,7 +1258,6 @@
   async function sendMsg() {
     const text = input.value.trim();
     const hasPendingImages = pendingImages.length > 0;
-    const hasText = text.length > 0;
 
     if ((!text && !hasPendingImages) || isSending) return;
 
@@ -1273,11 +1276,8 @@
     // --------------------------------------------------------
     if (hasPendingImages) {
       const localPreviews = pendingImages.map(p => p.dataUrl);
-
-      // V39 FINAL: النص الافتراضي "✅ تمام، كمّل" لو مفيش نص
       const displayText = text || "✅ تمام، كمّل";
 
-      // عرض رسالة المستخدم مع الصور
       renderMsg(displayText, 'user', null, localPreviews);
       history.push({
         text: displayText,
@@ -1288,7 +1288,6 @@
       saveState();
       scroll();
 
-      // ارفع الصور
       const uploadRes = await uploadPendingImages();
 
       if (!uploadRes.ok) {
@@ -1300,17 +1299,14 @@
       }
 
       uploadedUrls = uploadRes.urls;
-      // V39 FINAL: لو مفيش نص، ابعت "✅ تمام، كمّل" للـWorker
       userMessageForApi = text || "✅ تمام، كمّل";
 
-      // نظّف الصور المعلّقة
       pendingImages = [];
       renderImagesPreviewStrip();
 
       setTypingStatus(true);
       scroll();
     } else {
-      // رسالة نصية عادية
       renderMsg(text, 'user');
       history.push({ text, type: 'user', time: getTime() });
       saveState();
@@ -1353,7 +1349,6 @@
         if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
         if (data.waMessage) lastWaMessage = data.waMessage;
 
-        // شبكة صور مصغّرة في رد البوت
         const replyImages = Array.isArray(data.imageUrls) ? data.imageUrls : [];
 
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
@@ -1366,7 +1361,7 @@
         });
 
         // ============================================================
-        // V39 FINAL: زر الكاميرا يعتمد على options بس (مش imageStepAction)
+        // V39 FINAL: زر الكاميرا يعتمد على options بس
         // ============================================================
         const hasImagesBtn = data.options && data.options.some(o =>
           typeof o === 'string' && (
@@ -1380,7 +1375,6 @@
         updateUI();
         saveState();
 
-        // كارت معاينة الصور بعد رسالة التأهل
         if (readyToSend && lastWaMessage) {
           const waImgs = extractImageUrlsFromMessage(lastWaMessage);
           if (waImgs.length > 0) {
