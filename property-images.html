@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#005c4b">
+  <meta property="og:title" content="صور العقار | سمسار طلبك" />
+  <meta property="og:description" content="شاهد صور العقار المعروض من سمسار طلبك - أ. طارق طنطاوي" />
+  <meta property="og:site_name" content="سمسار طلبك" />
+  <title>صور العقار | سمسار طلبك</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body, html {
+      min-height: 100%;
+      background: #0b141a;
+      font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ============================================================
+       الهيدر
+       ============================================================ */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #005c4b 0%, #00a884 100%);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    .header .logo-box {
+      width: 42px;
+      height: 42px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .header .logo-box img { width: 100%; height: 100%; object-fit: cover; }
+    .header .logo-box i { color: #00a884; font-size: 22px; }
+
+    .header .title-box { flex: 1; min-width: 0; }
+    .header .title-box h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header .title-box p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.85);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .header .title-box p i { font-size: 0.7rem; }
+
+    .header .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .header .back-btn:active { background: rgba(255,255,255,0.3); }
+
+    /* ============================================================
+       الهيرو (معلومات العقار)
+       ============================================================ */
+    .hero-info {
+      background: #111b21;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 16px;
+    }
+
+    .hero-info .property-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e9edef;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      font-family: 'Noto Kufi Arabic', sans-serif;
+    }
+
+    .hero-info .property-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .hero-info .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      background: rgba(0,168,132,0.15);
+      color: #25d366;
+      border-radius: 15px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid rgba(0,168,132,0.3);
+    }
+    .hero-info .meta-chip i { font-size: 0.7rem; }
+
+    .hero-info .meta-chip.price {
+      background: rgba(255,193,7,0.15);
+      color: #ffc107;
+      border-color: rgba(255,193,7,0.3);
+    }
+
+    /* ============================================================
+       شبكة الصور
+       ============================================================ */
+    .images-section {
+      padding: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .images-section .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #8696a0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .images-section .section-label i { color: #00a884; }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .images-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    }
+
+    .image-tile {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #1f2c34;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+      opacity: 0;
+      animation: fadeInUp 0.4s forwards;
+    }
+    .image-tile:active { transform: scale(0.97); }
+    .image-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,168,132,0.4); }
+
+    .image-tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.3s;
+    }
+
+    .image-tile .tile-number {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+
+    .image-tile .tile-expand {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,168,132,0.85);
+      color: #fff;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+      backdrop-filter: blur(6px);
+    }
+    .image-tile:hover .tile-expand { opacity: 1; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       حالة فارغة
+       ============================================================ */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8696a0;
+    }
+    .empty-state i {
+      font-size: 3.5rem;
+      color: #00a884;
+      opacity: 0.4;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .empty-state h2 {
+      font-size: 1.1rem;
+      color: #e9edef;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .empty-state p {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       الفوتر (تواصل واتساب)
+       ============================================================ */
+    .footer-cta {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(180deg, transparent 0%, #0b141a 40%);
+      padding: 20px 16px max(env(safe-area-inset-bottom), 16px) 16px;
+      z-index: 50;
+    }
+
+    .footer-cta .cta-card {
+      background: linear-gradient(135deg, #00a884 0%, #25d366 100%);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 6px 24px rgba(0,168,132,0.4);
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      transition: transform 0.15s;
+    }
+    .footer-cta .cta-card:active { transform: scale(0.98); }
+
+    .footer-cta .cta-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .footer-cta .cta-text { flex: 1; min-width: 0; }
+    .footer-cta .cta-text strong {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .footer-cta .cta-text span {
+      font-size: 0.78rem;
+      opacity: 0.9;
+    }
+
+    .footer-cta .cta-arrow {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+
+    /* ============================================================
+       Lightbox
+       ============================================================ */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.97);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .lightbox.show { display: flex; opacity: 1; }
+
+    .lightbox .lb-img-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 100px 20px;
+    }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 10px 50px rgba(0,0,0,0.7);
+      animation: zoomIn 0.2s ease;
+    }
+
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .lightbox .lb-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: background 0.15s;
+    }
+    .lightbox .lb-close:active { background: rgba(255,255,255,0.25); }
+
+    .lightbox .lb-counter {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 14px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+
+    .lightbox .lb-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: background 0.15s, transform 0.15s;
+    }
+    .lightbox .lb-nav:active { background: rgba(255,255,255,0.25); transform: translateY(-50%) scale(0.92); }
+    .lightbox .lb-prev { right: 16px; }
+    .lightbox .lb-next { left: 16px; }
+
+    .lightbox .lb-actions {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(0,0,0,0.65);
+      border-radius: 30px;
+      backdrop-filter: blur(12px);
+    }
+
+    .lightbox .lb-action-btn {
+      padding: 8px 14px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .lightbox .lb-action-btn:active { background: rgba(255,255,255,0.25); }
+    .lightbox .lb-action-btn.green { background: #00a884; }
+    .lightbox .lb-action-btn.green:active { background: #019474; }
+
+    /* ============================================================
+       Loader / Skeleton
+       ============================================================ */
+    .skeleton {
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #1f2c34 25%, #2a3942 50%, #1f2c34 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ============================================================
+       Toast
+       ============================================================ */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.88);
+      color: #fff;
+      padding: 11px 20px;
+      border-radius: 22px;
+      font-size: 13.5px;
+      z-index: 10001;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+      white-space: nowrap;
+      max-width: 90vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ============================================================
+       Responsive
+       ============================================================ */
+    @media (min-width: 768px) {
+      .images-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+      .hero-info { padding: 20px; }
+      .images-section { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     الهيدر
+     ============================================================ -->
+<header class="header">
+  <button class="back-btn" onclick="goBack()" aria-label="رجوع">
+    <i class="fas fa-arrow-right"></i>
+  </button>
+
+  <div class="logo-box">
+    <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" onerror="this.outerHTML='<i class=\'fas fa-home\'></i>'">
+  </div>
+
+  <div class="title-box">
+    <h1>صور العقار</h1>
+    <p><i class="fas fa-check-circle"></i> معتمد من سمسار طلبك</p>
+  </div>
+</header>
+
+<!-- ============================================================
+     معلومات العقار
+     ============================================================ -->
+<div class="hero-info" id="heroInfo" style="display: none;">
+  <div class="property-title" id="propertyTitle"></div>
+  <div class="property-meta" id="propertyMeta"></div>
+</div>
+
+<!-- ============================================================
+     شبكة الصور
+     ============================================================ -->
+<main class="images-section">
+  <div class="section-label">
+    <i class="fas fa-images"></i>
+    <span id="imagesLabel">جاري تحميل الصور...</span>
+  </div>
+
+  <div class="images-grid" id="imagesGrid">
+    <!-- Skeleton loading -->
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <i class="fas fa-image"></i>
+    <h2>لا توجد صور</h2>
+    <p>الصور هتظهر هنا لما يتم رفعها على الرابط.</p>
+  </div>
+</main>
+
+<!-- ============================================================
+     الفوتر - تواصل واتساب
+     ============================================================ -->
+<div class="footer-cta" id="footerCta" style="display: none;">
+  <a href="#" class="cta-card" id="waContactBtn" target="_blank" rel="noopener">
+    <div class="cta-icon">
+      <i class="fab fa-whatsapp"></i>
+    </div>
+    <div class="cta-text">
+      <strong>كلم أ. طارق طنطاوي</strong>
+      <span>للاستفسار عن العقار والمعاينة</span>
+    </div>
+    <div class="cta-arrow">
+      <i class="fas fa-arrow-left"></i>
+    </div>
+  </a>
+</div>
+
+<!-- ============================================================
+     Lightbox
+     ============================================================ -->
+<div class="lightbox" id="lightbox">
+  <div class="lb-counter" id="lbCounter">1 / 1</div>
+  <button class="lb-close" onclick="closeLightbox()" aria-label="إغلاق">
+    <i class="fas fa-times"></i>
+  </button>
+
+  <button class="lb-nav lb-prev" onclick="prevImage()" aria-label="السابق">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+
+  <div class="lb-img-wrap" onclick="if(event.target===this) closeLightbox()">
+    <img id="lbImage" src="" alt="صورة العقار">
+  </div>
+
+  <button class="lb-nav lb-next" onclick="nextImage()" aria-label="التالي">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+
+  <div class="lb-actions">
+    <button class="lb-action-btn" onclick="downloadCurrent()">
+      <i class="fas fa-download"></i> تحميل
+    </button>
+    <button class="lb-action-btn green" onclick="shareCurrent()">
+      <i class="fas fa-share-alt"></i> مشاركة
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============================================================
+  // الإعدادات
+  // ============================================================
+  const TAREK_PHONE = "201147758857";
+  const FALLBACK_IMG = "https://nasr-realestate.github.io/assets/img/logo.webp";
+
+  // ============================================================
+  // الحالة
+  // ============================================================
+  let imagesList = [];
+  let currentIndex = 0;
+
+  // ============================================================
+  // DOM
+  // ============================================================
+  const imagesGrid = document.getElementById('imagesGrid');
+  const emptyState = document.getElementById('emptyState');
+  const imagesLabel = document.getElementById('imagesLabel');
+  const heroInfo = document.getElementById('heroInfo');
+  const propertyTitle = document.getElementById('propertyTitle');
+  const propertyMeta = document.getElementById('propertyMeta');
+  const footerCta = document.getElementById('footerCta');
+  const waContactBtn = document.getElementById('waContactBtn');
+  const lightbox = document.getElementById('lightbox');
+  const lbImage = document.getElementById('lbImage');
+  const lbCounter = document.getElementById('lbCounter');
+  const toast = document.getElementById('toast');
+
+  // ============================================================
+  // Utilities
+  // ============================================================
+  function showToast(text, duration = 2400) {
+    toast.innerText = text;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  function goBack() {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = '/';
+  }
+
+  function getQueryParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  }
+
+  // ============================================================
+  // Load images from URL parameters
+  // ============================================================
+  function loadImages() {
+    // 1) ?images=url1,url2,url3
+    const imagesParam = getQueryParam('images');
+    if (imagesParam) {
+      return imagesParam.split(',').map(u => u.trim()).filter(Boolean);
+    }
+
+    // 2) ?urls=url1&urls=url2 (multi-value)
+    const urlsParam = new URLSearchParams(window.location.search).getAll('urls');
+    if (urlsParam.length) {
+      return urlsParam.map(u => u.trim()).filter(Boolean);
+    }
+
+    // 3) ?img=single
+    const singleImg = getQueryParam('img');
+    if (singleImg) return [singleImg.trim()];
+
+    return [];
+  }
+
+  // ============================================================
+  // Load property metadata from URL
+  // ============================================================
+  function loadMetadata() {
+    const title = getQueryParam('title');
+    const price = getQueryParam('price');
+    const area = getQueryParam('area');
+    const location = getQueryParam('location');
+    const type = getQueryParam('type');
+
+    if (!title && !price && !area && !location) return;
+
+    if (title) {
+      propertyTitle.innerText = title;
+      heroInfo.style.display = 'block';
+    }
+
+    const chips = [];
+    if (type) chips.push({ icon: 'fa-home', text: type });
+    if (location) chips.push({ icon: 'fa-map-marker-alt', text: location });
+    if (area) chips.push({ icon: 'fa-ruler-combined', text: `${area} م²` });
+    if (price) chips.push({ icon: 'fa-tag', text: price, cls: 'price' });
+
+    propertyMeta.innerHTML = chips.map(c =>
+      `<span class="meta-chip ${c.cls || ''}"><i class="fas ${c.icon}"></i> ${c.text}</span>`
+    ).join('');
+
+    if (chips.length > 0) heroInfo.style.display = 'block';
+  }
+
+  // ============================================================
+  // Render image grid
+  // ============================================================
+  function renderImages() {
+    imagesGrid.innerHTML = '';
+
+    if (imagesList.length === 0) {
+      imagesGrid.style.display = 'none';
+      emptyState.style.display = 'block';
+      imagesLabel.innerText = 'لا توجد صور';
+      return;
+    }
+
+    imagesLabel.innerText = `${imagesList.length} ${imagesList.length === 1 ? 'صورة' : 'صور'} متاحة`;
+
+    imagesList.forEach((url, index) => {
+      const tile = document.createElement('div');
+      tile.className = 'image-tile';
+      tile.style.animationDelay = `${index * 0.04}s`;
+
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = `صورة ${index + 1}`;
+      img.loading = 'lazy';
+      img.onerror = function() {
+        this.src = FALLBACK_IMG;
+        this.style.objectFit = 'contain';
+        this.style.padding = '20px';
+      };
+      tile.appendChild(img);
+
+      const numBadge = document.createElement('div');
+      numBadge.className = 'tile-number';
+      numBadge.innerText = index + 1;
+      tile.appendChild(numBadge);
+
+      const expandIcon = document.createElement('div');
+      expandIcon.className = 'tile-expand';
+      expandIcon.innerHTML = '<i class="fas fa-expand"></i>';
+      tile.appendChild(expandIcon);
+
+      tile.onclick = () => openLightbox(index);
+
+      imagesGrid.appendChild(tile);
+    });
+  }
+
+  // ============================================================
+  // Lightbox
+  // ============================================================
+  function openLightbox(index) {
+    currentIndex = index;
+    updateLightbox();
+    lightbox.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  function updateLightbox() {
+    if (!imagesList[currentIndex]) return;
+    lbImage.src = imagesList[currentIndex];
+    lbCounter.innerText = `${currentIndex + 1} / ${imagesList.length}`;
+
+    // Hide navigation if only one image
+    const showNav = imagesList.length > 1;
+    document.querySelector('.lb-prev').style.display = showNav ? 'flex' : 'none';
+    document.querySelector('.lb-next').style.display = showNav ? 'flex' : 'none';
+  }
+
+  function nextImage() {
+    if (imagesList.length <= 1) return;
+    currentIndex = (currentIndex + 1) % imagesList.length;
+    updateLightbox();
+  }
+
+  function prevImage() {
+    if (imagesList.length <= 1) return;
+    currentIndex = (currentIndex - 1 + imagesList.length) % imagesList.length;
+    updateLightbox();
+  }
+
+  // ============================================================
+  // Download / Share
+  // ============================================================
+  async function downloadCurrent() {
+    const url = imagesList[currentIndex];
+    if (!url) return;
+
+    try {
+      showToast('جاري التحميل...');
+      const res = await fetch(url, { mode: 'cors' });
+      const blob = await res.blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `property_image_${currentIndex + 1}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      showToast('✅ تم التحميل');
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  }
+
+  async function shareCurrent() {
+    const url = imagesList[currentIndex];
+    if (!url) return;
+
+    const shareData = {
+      title: 'صور العقار - سمسار طلبك',
+      text: 'شاهد صور العقار من سمسار طلبك',
+      url: url
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('✅ تم نسخ رابط الصورة');
+    } catch (e) {
+      showToast('تعذر المشاركة');
+    }
+  }
+
+  // ============================================================
+  // Keyboard navigation
+  // ============================================================
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('show')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowRight') prevImage();
+    if (e.key === 'ArrowLeft') nextImage();
+  });
+
+  // Swipe navigation
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  lightbox.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  lightbox.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) nextImage();
+      else prevImage();
+    }
+  }, { passive: true });
+
+  // ============================================================
+  // WhatsApp CTA
+  // ============================================================
+  function setupWhatsAppCTA() {
+    const propertyTitleText = getQueryParam('title') || 'العقار';
+    const waMsg = `السلام عليكم أ. طارق،\nشاهدت صور ${propertyTitleText} على الرابط، وعايز أستفسر عن التفاصيل والمعاينة.`;
+    waContactBtn.href = `https://wa.me/${TAREK_PHONE}?text=${encodeURIComponent(waMsg)}`;
+    footerCta.style.display = 'block';
+  }
+
+  // ============================================================
+  // Init
+  // ============================================================
+  (function init() {
+    loadMetadata();
+    imagesList = loadImages();
+
+    if (imagesList.length > 0) {
+      renderImages();
+      setupWhatsAppCTA();
+    } else {
+      imagesGrid.style.display = 'none';
+      emptyState.style.display = 'block';
+      imagesLabel.innerText = 'لا توجد صور';
+    }
+  })();
+
+  // Expose globals
+  window.openLightbox = openLightbox;
+  window.closeLightbox = closeLightbox;
+  window.nextImage = nextImage;
+  window.prevImage = prevImage;
+  window.downloadCurrent = downloadCurrent;
+  window.shareCurrent = shareCurrent;
+  window.goBack = goBack;
+</script>
+</body>
+</html>
