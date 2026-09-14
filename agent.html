@@ -101,9 +101,6 @@
     .info-modal p { font-size: 0.9rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
-    /* ============================================================ */
-    /* V39: chat-area مع padding-bottom كافي + scroll smooth        */
-    /* ============================================================ */
     .chat-area {
       flex: 1;
       overflow-y: auto;
@@ -205,9 +202,6 @@
       border-color: transparent;
     }
 
-    /* ============================================================ */
-    /* V39: شبكة الصور في الفقاعة                                    */
-    /* ============================================================ */
     .images-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -227,9 +221,6 @@
     .images-grid img:hover { transform: scale(1.03); }
     .msg-user .images-grid { justify-content: flex-end; }
 
-    /* ============================================================ */
-    /* V39: شريط رفع الصور                                           */
-    /* ============================================================ */
     .upload-progress-bar {
       display: none;
       padding: 10px 14px;
@@ -262,9 +253,6 @@
       transition: width 0.3s ease;
     }
 
-    /* ============================================================ */
-    /* V39: معاينة الصور المرفوعة (thumbnails صغيرة)                 */
-    /* ============================================================ */
     .images-preview-strip {
       display: none;
       padding: 8px 12px;
@@ -317,9 +305,6 @@
       font-weight: 700;
     }
 
-    /* ============================================================ */
-    /* V39: كارت معاينة الصور (لرسالة التأهل)                        */
-    /* ============================================================ */
     .wa-preview-card {
       margin-top: 8px;
       background: #f0f8f4;
@@ -407,7 +392,6 @@
     }
     .icon-btn:hover { background: rgba(0,0,0,0.06); }
 
-    /* V39: زر الكاميرا (يظهر في خطوة الصور فقط) */
     .icon-btn#cameraBtn {
       background: #00a884;
       color: #fff;
@@ -507,7 +491,6 @@
       justify-content: center;
     }
 
-    /* V39: toast صغير للتنبيهات */
     .toast {
       position: fixed;
       bottom: 100px;
@@ -576,7 +559,6 @@
 
   <div class="bottom-dock">
 
-    <!-- V39: شريط رفع الصور -->
     <div class="upload-progress-bar" id="uploadProgressBar">
       <div class="progress-label" id="uploadProgressLabel">
         <i class="fas fa-cloud-upload-alt"></i>
@@ -587,7 +569,6 @@
       </div>
     </div>
 
-    <!-- V39: معاينة الصور المصغّرة -->
     <div class="images-preview-strip" id="imagesPreviewStrip"></div>
 
     <div class="deal-wrapper" id="dealWrapper" style="display: none;">
@@ -608,7 +589,6 @@
         <i class="far fa-smile"></i>
       </button>
 
-      <!-- V39: زر الكاميرا (يظهر فقط في خطوة الصور) -->
       <button class="icon-btn" id="cameraBtn" onclick="onCameraClick()" aria-label="إرفاق صور">
         <i class="fas fa-camera"></i>
       </button>
@@ -642,13 +622,15 @@
   <img id="lightboxImg" src="" alt="صورة">
 </div>
 
-<div class="toast" id="toast">رسالة تنبيه</div><script>
+<div class="toast" id="toast">رسالة تنبيه</div>
+
+<script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
 
   // ============================================================
-  // V39: مفاتيح localStorage جديدة (منفصلة عن V38)
+  // V39 FINAL: مفاتيح localStorage (منفصلة عن V38)
   // ============================================================
   const STORAGE_KEY = "tarek_chat_v39";
   const SCORE_KEY = "tarek_score_v39";
@@ -706,9 +688,6 @@
     return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
   }
 
-  /**
-   * V39: scroll ذكي مع انتظار DOM
-   */
   function scroll(options = {}) {
     const { smooth = true, delay = 50 } = options;
     requestAnimationFrame(() => {
@@ -768,7 +747,7 @@
   }
 
   // ============================================================
-  // V39: زر الكاميرا
+  // V39 FINAL: زر الكاميرا
   // ============================================================
   function setCameraButtonVisible(visible) {
     if (visible) {
@@ -790,7 +769,7 @@
   }
 
   // ============================================================
-  // V39: معاينة الصور المصغّرة
+  // V39 FINAL: معاينة الصور المصغّرة
   // ============================================================
   function renderImagesPreviewStrip() {
     if (pendingImages.length === 0) {
@@ -830,7 +809,7 @@
   }
 
   // ============================================================
-  // V39: File selection
+  // V39 FINAL: File selection
   // ============================================================
   function onFilesSelected(event) {
     const files = Array.from(event.target.files || []);
@@ -875,7 +854,7 @@
   }
 
   // ============================================================
-  // V39: رفع الصور مع Progress
+  // V39 FINAL: رفع الصور مع Progress + try/finally
   // ============================================================
   function showUploadProgress(current, total) {
     uploadProgressBar.classList.add('show');
@@ -897,7 +876,6 @@
     setTypingStatus(true, 'جاري رفع الصور...');
 
     try {
-      // رفع واحد لكل الصور
       showUploadProgress(1, total);
       const res = await fetch(UPLOAD_URL, {
         method: 'POST',
@@ -907,17 +885,19 @@
       showUploadProgress(total, total);
 
       const data = await res.json();
-      hideUploadProgress();
-      setTypingStatus(false);
 
       if (!res.ok || !data.urls || !data.urls.length) {
+        console.error("[V39] upload failed:", data);
         return { ok: false, error: data.error || 'فشل رفع الصور' };
       }
+      console.log("[V39] uploadPendingImages: urls =", data.urls.length);
       return { ok: true, urls: data.urls };
     } catch (err) {
+      console.error("[V39] uploadPendingImages error:", err);
+      return { ok: false, error: 'تعذر الاتصال بالسيرفر' };
+    } finally {
       hideUploadProgress();
       setTypingStatus(false);
-      return { ok: false, error: 'تعذر الاتصال بالسيرفر' };
     }
   }
 
@@ -1085,6 +1065,9 @@
     scroll();
   }
 
+  // ============================================================
+  // V39 FINAL: renderOptions — متناغم مع الـWorker
+  // ============================================================
   function renderOptions(options, highlight, faded) {
     chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
     if (!options || options.length === 0) return;
@@ -1103,19 +1086,75 @@
       btn.onclick = function() {
         if (isSending) return;
 
-        // V39: أزرار الصور — معالجة خاصة
-        if (opt.includes('أرفق صور') || opt.includes('إضافة صور')) {
+        const optText = String(opt || '').trim();
+
+        // ============================================================
+        // V39 FINAL: "📷 أرفق صور" / "📷 إضافة صور" → افتح الـPicker محليًا
+        // ============================================================
+        if (optText.includes('أرفق صور') || optText.includes('إضافة صور')) {
           wrap.querySelectorAll('.option-btn').forEach(b => {
             b.classList.add('faded');
             b.style.pointerEvents = 'none';
           });
           btn.classList.remove('faded');
           btn.classList.add('highlighted');
-          input.value = opt;
+
+          if (pendingImages.length >= MAX_IMAGES) {
+            showToast(`الحد الأقصى ${MAX_IMAGES} صور.`);
+            return;
+          }
+          setCameraButtonVisible(true);
+          fileInput.click();
+          return; // ← مفيش sendMsg
+        }
+
+        // ============================================================
+        // V39 FINAL: "🗑️ احذف الكل" → مسح محلي + إرسال للـWorker
+        // ============================================================
+        if (optText.includes('احذف الكل')) {
+          pendingImages = [];
+          renderImagesPreviewStrip();
+          // كمّل عادي — نبعت للـWorker عشان يرد
+        }
+
+        // ============================================================
+        // V39 FINAL: "✅ تمام، كمّل"
+        // ============================================================
+        if (optText.includes('تمام، كمّل') || optText.includes('تمام كمّل')) {
+          if (pendingImages.length > 0) {
+            input.value = "✅ تمام، كمّل";
+            wrap.querySelectorAll('.option-btn').forEach(b => {
+              b.classList.add('faded');
+              b.style.pointerEvents = 'none';
+            });
+            btn.classList.remove('faded');
+            btn.classList.add('highlighted');
+            sendMsg();
+            return;
+          }
+          // لو مفيش صور، ابعت "تخطي" عشان الـWorker يمشي
+          input.value = "⏭ تخطي (بدون صور)";
+          wrap.querySelectorAll('.option-btn').forEach(b => {
+            b.classList.add('faded');
+            b.style.pointerEvents = 'none';
+          });
+          btn.classList.remove('faded');
+          btn.classList.add('highlighted');
           sendMsg();
           return;
         }
 
+        // ============================================================
+        // V39 FINAL: "⏭ تخطي (بدون صور)" → مسح الصور المعلّقة
+        // ============================================================
+        if (optText.includes('تخطي (بدون صور)') || optText.includes('تخطي بدون صور')) {
+          pendingImages = [];
+          renderImagesPreviewStrip();
+        }
+
+        // ============================================================
+        // السلوك الافتراضي
+        // ============================================================
         wrap.querySelectorAll('.option-btn').forEach(b => {
           b.classList.add('faded');
           b.style.pointerEvents = 'none';
@@ -1140,7 +1179,7 @@
   }
 
   // ============================================================
-  // V39: استخراج روابط الصور من نص waMessage
+  // V39 FINAL: استخراج روابط الصور من نص waMessage
   // ============================================================
   function extractImageUrlsFromMessage(text) {
     if (!text) return [];
@@ -1154,7 +1193,7 @@
   }
 
   // ============================================================
-  // V39: فتح واتساب مع Web Share API
+  // V39 FINAL: فتح واتساب مع Web Share API
   // ============================================================
   async function openWhatsApp() {
     const msg = lastWaMessage || "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
@@ -1210,7 +1249,7 @@
   function onEmojiClick() { input.focus(); }
 
   // ============================================================
-  // V39: sendMsg — مع مسار رفع الصور في خطوة الصور
+  // V39 FINAL: sendMsg — متناغم مع الـWorker
   // ============================================================
   async function sendMsg() {
     const text = input.value.trim();
@@ -1228,19 +1267,20 @@
 
     let uploadedUrls = [];
     let userMessageForApi = text;
-    let userImagesForChat = [];
 
     // --------------------------------------------------------
-    // V39: لو في صور معلّقة → ارفعها الأول
+    // V39 FINAL: لو في صور معلّقة → ارفعها الأول
     // --------------------------------------------------------
     if (hasPendingImages) {
       const localPreviews = pendingImages.map(p => p.dataUrl);
-      userImagesForChat = localPreviews;
+
+      // V39 FINAL: النص الافتراضي "✅ تمام، كمّل" لو مفيش نص
+      const displayText = text || "✅ تمام، كمّل";
 
       // عرض رسالة المستخدم مع الصور
-      renderMsg(text || '(صور مرفقة)', 'user', null, localPreviews);
+      renderMsg(displayText, 'user', null, localPreviews);
       history.push({
-        text: text || '(صور مرفقة)',
+        text: displayText,
         type: 'user',
         time: getTime(),
         images: localPreviews
@@ -1255,11 +1295,13 @@
         renderMsg(`⚠️ ${uploadRes.error || 'فشل رفع الصور'}. تقدر تبعت الصور على واتساب مباشرة.`, 'bot');
         isSending = false;
         sendBtn.disabled = false;
+        input.focus();
         return;
       }
 
       uploadedUrls = uploadRes.urls;
-      userMessageForApi = text || '(صور مرفقة)';
+      // V39 FINAL: لو مفيش نص، ابعت "✅ تمام، كمّل" للـWorker
+      userMessageForApi = text || "✅ تمام، كمّل";
 
       // نظّف الصور المعلّقة
       pendingImages = [];
@@ -1280,7 +1322,6 @@
     // إرسال للـWorker
     // --------------------------------------------------------
     try {
-      // V39: كل المحادثة (مش آخر 8)
       const historyForApi = history.map(m => ({
         role: m.type === 'bot' ? 'assistant' : 'user',
         message: m.text,
@@ -1312,7 +1353,7 @@
         if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
         if (data.waMessage) lastWaMessage = data.waMessage;
 
-        // V39: شبكة صور مصغّرة في رد البوت
+        // شبكة صور مصغّرة في رد البوت
         const replyImages = Array.isArray(data.imageUrls) ? data.imageUrls : [];
 
         const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
@@ -1324,25 +1365,22 @@
           images: replyImages
         });
 
-        // V39: تفعيل زر الكاميرا لو احنا في خطوة صور
-        if (data.imageStepAction === "open_picker") {
-          setCameraButtonVisible(true);
-          setTimeout(() => fileInput.click(), 400);
-        } else if (data.formState && data.formState.flowType === "owner") {
-          // فحص لو الخطوة الحالية هي images
-          // (بندقق على الأزرار — لو فيها "أرفق صور" يبقى احنا في خطوة الصور)
-          const hasImagesBtn = data.options && data.options.some(o =>
-            typeof o === 'string' && (o.includes('أرفق صور') || o.includes('إضافة صور'))
-          );
-          setCameraButtonVisible(hasImagesBtn);
-        } else {
-          setCameraButtonVisible(false);
-        }
+        // ============================================================
+        // V39 FINAL: زر الكاميرا يعتمد على options بس (مش imageStepAction)
+        // ============================================================
+        const hasImagesBtn = data.options && data.options.some(o =>
+          typeof o === 'string' && (
+            o.includes('أرفق صور') ||
+            o.includes('إضافة صور') ||
+            o.includes('تخطي (بدون صور)')
+          )
+        );
+        setCameraButtonVisible(hasImagesBtn);
 
         updateUI();
         saveState();
 
-        // V39: كارت معاينة الصور بعد رسالة التأهل
+        // كارت معاينة الصور بعد رسالة التأهل
         if (readyToSend && lastWaMessage) {
           const waImgs = extractImageUrlsFromMessage(lastWaMessage);
           if (waImgs.length > 0) {
@@ -1360,13 +1398,6 @@
 
         if (data.options && data.options.length) {
           renderOptions(data.options, data.highlightButton || null, data.fadedButtons || null);
-        } else {
-          // لو مفيش أزرار، خلّي زر الكاميرا مخفي إلا لو في خطوة صور
-          if (!data.imageStepAction || data.imageStepAction !== "open_picker") {
-            if (!(data.formState && data.formState.flowType === "owner")) {
-              setCameraButtonVisible(false);
-            }
-          }
         }
       }
     } catch (err) {
@@ -1377,6 +1408,18 @@
       sendBtn.disabled = false;
       input.focus();
     }
+  }
+
+  // ============================================================
+  // V39 FINAL: isImagesDoneBtn (موحّدة مع الـWorker)
+  // ============================================================
+  function isImagesDoneBtn(text) {
+    const t = String(text || '').trim();
+    if (!t) return false;
+    if (t === '✅ تمام، كمّل') return true;
+    if (/تمام[\s،,]*كم+ل/i.test(t)) return true;
+    if (/^✅\s*تمام/i.test(t)) return true;
+    return false;
   }
 
   // ============================================================
