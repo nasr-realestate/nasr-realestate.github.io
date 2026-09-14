@@ -627,6 +627,7 @@
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
   const CORRECT_PHONE = "201147758857";
+  const GALLERY_BASE = "https://nasr-realestate.github.io/property-images.html";
 
   const STORAGE_KEY = "tarek_chat_v39";
   const SCORE_KEY = "tarek_score_v39";
@@ -1124,29 +1125,68 @@
     return urls;
   }
 
+  // ============================================================
+  // V39 FINAL: بناء رابط معرض الصور
+  // ============================================================
+  function buildGalleryUrl(waMessage) {
+    const imgs = extractImageUrlsFromMessage(waMessage);
+    if (!imgs || imgs.length === 0) return null;
+
+    const params = new URLSearchParams();
+    params.set('images', imgs.join(','));
+
+    const ld = currentLeadData || {};
+
+    if (ld.title) {
+      params.set('title', ld.title);
+    } else if (ld.propertyType && ld.location) {
+      params.set('title', `${ld.propertyType} في ${ld.location}`);
+    }
+
+    if (ld.priceDisplay) params.set('price', ld.priceDisplay);
+    else if (ld.price) params.set('price', ld.price);
+
+    if (ld.area) params.set('area', ld.area);
+    if (ld.location) params.set('location', ld.location);
+    if (ld.propertyType) params.set('type', ld.propertyType);
+
+    return `${GALLERY_BASE}?${params.toString()}`;
+  }
+
+  // ============================================================
+  // V39 FINAL: استبدال قسم الصور في الرسالة برابط المعرض
+  // ============================================================
+  function replaceImagesWithGalleryLink(waMessage) {
+    const galleryUrl = buildGalleryUrl(waMessage);
+    if (!galleryUrl) return waMessage;
+
+    const galleryLine = `📷 *صور العقار:*\n🔗 [اضغط هنا لمشاهدة الصور](${galleryUrl})\n`;
+
+    const imagesSectionRegex = /📷 \*صور العقار[\s\S]*?(?=\n━|━━━|\n\n📱|\n\n━━|\n📝|$)/;
+
+    if (imagesSectionRegex.test(waMessage)) {
+      return waMessage.replace(imagesSectionRegex, galleryLine);
+    }
+
+    const contactMarker = '━━━━━━━━━━━━━━━━━━\n📱 *بيانات التواصل*';
+    if (waMessage.includes(contactMarker)) {
+      return waMessage.replace(contactMarker, `${galleryLine}\n${contactMarker}`);
+    }
+
+    return waMessage + `\n\n${galleryLine}`;
+  }
+
+  // ============================================================
+  // V39 FINAL: فتح واتساب مباشرة (بدون Web Share API)
+  // ============================================================
   async function openWhatsApp() {
-    const msg = lastWaMessage || "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
+    let msg = lastWaMessage ||
+      "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
 
-    try {
-      const imgs = extractImageUrlsFromMessage(lastWaMessage);
-      if (imgs.length > 0 && navigator.canShare) {
-        const files = await Promise.all(imgs.slice(0, MAX_IMAGES).map(async (url, idx) => {
-          try {
-            const res = await fetch(url, { mode: 'cors' });
-            const blob = await res.blob();
-            const ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
-            return new File([blob], `property_${idx + 1}.${ext}`, { type: blob.type });
-          } catch (_) { return null; }
-        }));
-        const validFiles = files.filter(Boolean);
-        if (validFiles.length > 0 && navigator.canShare({ files: validFiles })) {
-          await navigator.share({ text: msg, files: validFiles });
-          return;
-        }
-      }
-    } catch (_) {}
+    msg = replaceImagesWithGalleryLink(msg);
 
-    window.open(`https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+    const waUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
   }
 
   function onInputChanged() {
