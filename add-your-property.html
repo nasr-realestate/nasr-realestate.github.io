@@ -329,12 +329,17 @@
     </button>
   </div>
 </div>
-
 <script>
+  // ═══════════════════════════════════════════════
+  // ⚙️ الإعدادات
+  // ═══════════════════════════════════════════════
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
   const DRAFT_KEY = "addPropertyDraft_v18";
 
+  // ═══════════════════════════════════════════════
+  // 📊 الحالة
+  // ═══════════════════════════════════════════════
   let currentStep = 1;
   let selectedType = "sale";
   let selectedPropertyType = "شقة";
@@ -346,7 +351,7 @@
   let lastWaUrl = "";
 
   // ═══════════════════════════════════════════════
-  // تحويل الأرقام
+  // 🔢 تحويل الأرقام
   // ═══════════════════════════════════════════════
   function toNumeric(str) {
     if (!str) return 0;
@@ -358,8 +363,31 @@
   }
 
   // ═══════════════════════════════════════════════
-  // تحميل المسودة
+  // 💾 حفظ / تحميل المسودة
   // ═══════════════════════════════════════════════
+  function saveDraft() {
+    try {
+      const data = {
+        type: selectedType,
+        propertyType: selectedPropertyType,
+        finishing: selectedFinishing,
+        furnished: selectedFurnished,
+        furnitureQuality: selectedFurnitureQuality,
+        duration: selectedDuration,
+        propLocation: document.getElementById('propLocation')?.value || '',
+        propArea: document.getElementById('propArea')?.value || '',
+        propPrice: document.getElementById('propPrice')?.value || '',
+        propRooms: document.getElementById('propRooms')?.value || '',
+        propBaths: document.getElementById('propBaths')?.value || '',
+        propFloor: document.getElementById('propFloor')?.value || '',
+        ownerName: document.getElementById('ownerName')?.value || '',
+        ownerPhone: document.getElementById('ownerPhone')?.value || '',
+        propNotes: document.getElementById('propNotes')?.value || ''
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
   function loadSavedData() {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (!saved) return;
@@ -373,63 +401,60 @@
       if (d.duration) selectedDuration = d.duration;
 
       const fields = ['propLocation','propArea','propPrice','ownerName','ownerPhone','propNotes'];
-      fields.forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; });
-      ['propRooms','propBaths','propFloor'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; });
-
-      syncTypeUI();
-      updateSelectedButtons();
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && d[id]) el.value = d[id];
+      });
+      ['propRooms','propBaths','propFloor'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && d[id]) el.value = d[id];
+      });
     } catch (e) {}
   }
 
   // ═══════════════════════════════════════════════
-  // حفظ المسودة
+  // 🎨 مزامنة واجهة الأزرار
   // ═══════════════════════════════════════════════
-  function saveDraft() {
-    const data = {
-      type: selectedType,
-      propertyType: selectedPropertyType,
-      finishing: selectedFinishing,
-      furnished: selectedFurnished,
-      furnitureQuality: selectedFurnitureQuality,
-      duration: selectedDuration,
-      propLocation: document.getElementById('propLocation').value,
-      propArea: document.getElementById('propArea').value,
-      propPrice: document.getElementById('propPrice').value,
-      propRooms: document.getElementById('propRooms').value,
-      propBaths: document.getElementById('propBaths').value,
-      propFloor: document.getElementById('propFloor').value,
-      ownerName: document.getElementById('ownerName').value,
-      ownerPhone: document.getElementById('ownerPhone').value,
-      propNotes: document.getElementById('propNotes').value
+  function updateSelectedButtons() {
+    const setSel = (sel, val) => {
+      document.querySelectorAll(sel).forEach(b => {
+        b.classList.toggle('selected', b.dataset.value === val);
+      });
     };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-  }
-
-  // ═══════════════════════════════════════════════
-  // مزامنة واجهة الأزرار
-  // ═══════════════════════════════════════════════
-      document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedType));
-    document.querySelectorAll('#propertyTypeOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedPropertyType));
-    document.querySelectorAll('#finishingOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedFinishing));
-    document.querySelectorAll('#furnishedOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedFurnished));
-    document.querySelectorAll('#furnitureQualityOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedFurnitureQuality));
-    document.querySelectorAll('#durationOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedDuration));
+    setSel('#typeOptions .option-btn', selectedType);
+    setSel('#propertyTypeOptions .option-btn', selectedPropertyType);
+    setSel('#finishingOptions .option-btn', selectedFinishing);
+    setSel('#furnishedOptions .option-btn', selectedFurnished);
+    setSel('#furnitureQualityOptions .option-btn', selectedFurnitureQuality);
+    setSel('#durationOptions .option-btn', selectedDuration);
     updatePriceHint();
   }
 
-  // ═══════════════════════════════════════════════
-  // إظهار/إخفاء حقول الإيجار
-  // ═══════════════════════════════════════════════
   function syncTypeUI() {
     const isRent = selectedType === 'rent';
-    document.getElementById('rentFurnishedBlock').classList.toggle('visible', isRent);
-    document.getElementById('rentDurationBlock').classList.toggle('visible', isRent && selectedFurnished === 'فاضي (قانون جديد)');
-    document.getElementById('rentQualityBlock').classList.toggle('visible', isRent && selectedFurnished === 'مفروش');
-    document.getElementById('priceLabel').innerText = isRent ? 'الإيجار الشهري (ج.م)' : 'السعر المطلوب (ج.م)';
+    const furnishedBlock = document.getElementById('rentFurnishedBlock');
+    const durationBlock = document.getElementById('rentDurationBlock');
+    const qualityBlock = document.getElementById('rentQualityBlock');
+    const priceLabel = document.getElementById('priceLabel');
+
+    if (furnishedBlock) furnishedBlock.classList.toggle('visible', isRent);
+    if (durationBlock) durationBlock.classList.toggle('visible', isRent && selectedFurnished === 'فاضي (قانون جديد)');
+    if (qualityBlock) qualityBlock.classList.toggle('visible', isRent && selectedFurnished === 'مفروش');
+    if (priceLabel) priceLabel.innerText = isRent ? 'الإيجار الشهري (ج.م)' : 'السعر المطلوب (ج.م)';
+  }
+
+  function updatePriceHint() {
+    const hint = document.getElementById('priceHint');
+    if (!hint) return;
+    if (selectedType === 'rent') {
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للإيجار: 15,000 ج.م شهرياً</span>`;
+    } else {
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م</span>`;
+    }
   }
 
   // ═══════════════════════════════════════════════
-  // اختيارات الأزرار
+  // 🎯 ربط الأزرار
   // ═══════════════════════════════════════════════
   function bindOptions(containerId, callback) {
     document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
@@ -442,27 +467,8 @@
     });
   }
 
-  bindOptions('typeOptions', v => { selectedType = v; syncTypeUI(); });
-  bindOptions('propertyTypeOptions', v => { selectedPropertyType = v; });
-  bindOptions('finishingOptions', v => { selectedFinishing = v; });
-  bindOptions('furnishedOptions', v => { selectedFurnished = v; syncTypeUI(); });
-  bindOptions('furnitureQualityOptions', v => { selectedFurnitureQuality = v; });
-  bindOptions('durationOptions', v => { selectedDuration = v; });
-
   // ═══════════════════════════════════════════════
-  // تلميح السعر
-  // ═══════════════════════════════════════════════
-  function updatePriceHint() {
-    const hint = document.getElementById('priceHint');
-    if (selectedType === 'rent') {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للإيجار: 15,000 ج.م شهرياً</span>`;
-    } else {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م</span>`;
-    }
-  }
-
-  // ═══════════════════════════════════════════════
-  // التحقق من السعر
+  // ✅ التحقق
   // ═══════════════════════════════════════════════
   function validatePrice() {
     const raw = document.getElementById('propPrice').value.replace(/,/g, '').trim();
@@ -473,7 +479,7 @@
   }
 
   // ═══════════════════════════════════════════════
-  // التنقل
+  // 🚶 التنقل بين الخطوات
   // ═══════════════════════════════════════════════
   function nextStep(step) {
     if (step === 2 && !document.getElementById('propLocation').value.trim()) {
@@ -486,12 +492,19 @@
         return;
       }
       const warning = document.getElementById('priceWarning');
-      warning.style.display = validatePrice() ? 'none' : 'block';
+      if (warning) warning.style.display = validatePrice() ? 'none' : 'block';
     }
+
     document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
-    document.getElementById(`step${step}`).classList.add('active');
-    document.getElementById(`node${step}`).classList.add('active');
-    document.getElementById('progressFill').style.width = `${((step - 1) / 2) * 100}%`;
+    const targetStep = document.getElementById(`step${step}`);
+    if (targetStep) targetStep.classList.add('active');
+
+    const targetNode = document.getElementById(`node${step}`);
+    if (targetNode) targetNode.classList.add('active');
+
+    const progressFill = document.getElementById('progressFill');
+    if (progressFill) progressFill.style.width = `${((step - 1) / 2) * 100}%`;
+
     currentStep = step;
     saveDraft();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -499,16 +512,22 @@
 
   function prevStep(step) {
     document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
-    document.getElementById(`step${step}`).classList.add('active');
-    document.getElementById(`node${currentStep}`).classList.remove('active');
-    document.getElementById('progressFill').style.width = `${((step - 1) / 2) * 100}%`;
+    const targetStep = document.getElementById(`step${step}`);
+    if (targetStep) targetStep.classList.add('active');
+
+    const currentNode = document.getElementById(`node${currentStep}`);
+    if (currentNode) currentNode.classList.remove('active');
+
+    const progressFill = document.getElementById('progressFill');
+    if (progressFill) progressFill.style.width = `${((step - 1) / 2) * 100}%`;
+
     currentStep = step;
     saveDraft();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ═══════════════════════════════════════════════
-  // Success Modal
+  // ✅ Success Modal
   // ═══════════════════════════════════════════════
   function showSuccessModal(waMessage) {
     lastWaMessage = waMessage;
@@ -516,156 +535,180 @@
 
     const modal = document.getElementById('successModal');
     const msg = document.getElementById('successMessage');
-    msg.innerText = "اضغط على زر واتساب لإرسال التفاصيل لطارق. الرسالة جاهزة!";
-    modal.classList.add('show');
+    if (msg) msg.innerText = "اضغط على زر واتساب لإرسال التفاصيل لطارق. الرسالة جاهزة!";
+    if (modal) modal.classList.add('show');
 
-    // فتح تلقائي بعد ثانية
     setTimeout(() => {
       window.location.href = lastWaUrl;
     }, 800);
   }
 
   function openWhatsAppFromModal() {
-    if (lastWaUrl) {
-      window.location.href = lastWaUrl;
-    }
+    if (lastWaUrl) window.location.href = lastWaUrl;
   }
 
   function closeSuccessAndReset() {
-    document.getElementById('successModal').classList.remove('show');
+    const modal = document.getElementById('successModal');
+    if (modal) modal.classList.remove('show');
     localStorage.removeItem(DRAFT_KEY);
   }
 
   // ═══════════════════════════════════════════════
-  // الإرسال عبر الـ Worker
+  // 📤 الإرسال للـ Worker
   // ═══════════════════════════════════════════════
-  document.getElementById('interactiveAddForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const ownerName = document.getElementById('ownerName').value.trim();
-    const ownerPhone = document.getElementById('ownerPhone').value.trim();
-    const location = document.getElementById('propLocation').value.trim();
-    const areaRaw = document.getElementById('propArea').value.trim();
-    const priceRaw = document.getElementById('propPrice').value.trim();
-    const rooms = document.getElementById('propRooms').value;
-    const baths = document.getElementById('propBaths').value;
-    const floor = document.getElementById('propFloor').value;
-    const notes = document.getElementById('propNotes').value.trim();
-
-    if (!ownerName || !ownerPhone || !location || !areaRaw || !priceRaw) {
-      alert('برجاء ملء جميع الحقول المطلوبة.');
-      return;
-    }
-    if (!/^01[0-9]{9}$/.test(ownerPhone)) {
-      alert('رقم الموبايل مش صح، اكتبه تاني (11 رقم يبدأ بـ 01)');
+  function setupSubmitHandler() {
+    const form = document.getElementById('interactiveAddForm');
+    if (!form) {
+      console.error('[Form] Form not found!');
       return;
     }
 
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-    // ═══════════════════════════════════════════════
-    // بناء بيانات متوافقة تمامًا مع الـ Worker
-    // ═══════════════════════════════════════════════
-    const propertyData = {
-      // الحقول المطلوبة
-      propertyType: selectedPropertyType,
-      location: location,
-      area: toNumeric(areaRaw),        // رقم مش نص
-      price: String(toNumeric(priceRaw)), // نص رقمي (الـWorker يستخرج منه)
-      ownerName: ownerName,
-      ownerPhone: ownerPhone,
-      // حقول إضافية
-      rooms: rooms,
-      baths: baths,
-      floor: floor,
-      finishing: selectedFinishing,
-      notes: notes
-    };
+      const ownerName = document.getElementById('ownerName').value.trim();
+      const ownerPhone = document.getElementById('ownerPhone').value.trim();
+      const location = document.getElementById('propLocation').value.trim();
+      const areaRaw = document.getElementById('propArea').value.trim();
+      const priceRaw = document.getElementById('propPrice').value.trim();
+      const rooms = document.getElementById('propRooms').value;
+      const baths = document.getElementById('propBaths').value;
+      const floor = document.getElementById('propFloor').value;
+      const notes = document.getElementById('propNotes').value.trim();
 
-    // ═══ حقول الإيجار ═══
-    if (selectedType === "rent") {
-      propertyData.furnished = selectedFurnished;
-
-      if (selectedFurnished === "مفروش") {
-        propertyData.priceMonthly = String(toNumeric(priceRaw));
-        propertyData.furnitureQuality = selectedFurnitureQuality;
-      } else if (selectedFurnished === "فاضي (قانون جديد)") {
-        propertyData.duration = selectedDuration;
+      if (!ownerName || !ownerPhone || !location || !areaRaw || !priceRaw) {
+        alert('برجاء ملء جميع الحقول المطلوبة.');
+        return;
       }
-    }
+      if (!/^01[0-9]{9}$/.test(ownerPhone)) {
+        alert('رقم الموبايل مش صح، اكتبه تاني (11 رقم يبدأ بـ 01)');
+        return;
+      }
 
-    // ═══ حقول المحل ═══
-    if (selectedPropertyType === "محل تجاري") {
-      propertyData.frontage = "شارع رئيسي";
-      propertyData.businessType = "تجاري";
-    }
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
 
-    // ═══ حقول المكتب ═══
-    if (selectedPropertyType === "مكتب إداري") {
-      propertyData.businessType = "إداري";
-    }
+      const propertyData = {
+        propertyType: selectedPropertyType,
+        location: location,
+        area: toNumeric(areaRaw),
+        price: String(toNumeric(priceRaw)),
+        ownerName: ownerName,
+        ownerPhone: ownerPhone,
+        rooms: rooms,
+        baths: baths,
+        floor: floor,
+        finishing: selectedFinishing,
+        notes: notes
+      };
 
-    // ═══ حقول المخزن ═══
-    if (selectedPropertyType === "مخزن") {
-      propertyData.storageType = "عام";
-    }
+      if (selectedType === "rent") {
+        propertyData.furnished = selectedFurnished;
+        if (selectedFurnished === "مفروش") {
+          propertyData.priceMonthly = String(toNumeric(priceRaw));
+          propertyData.furnitureQuality = selectedFurnitureQuality;
+        } else if (selectedFurnished === "فاضي (قانون جديد)") {
+          propertyData.duration = selectedDuration;
+        }
+      }
 
-    const payload = {
-      source: "form-complete",
-      type: selectedType,
-      data: propertyData
-    };
+      if (selectedPropertyType === "محل تجاري") {
+        propertyData.frontage = "شارع رئيسي";
+        propertyData.businessType = "تجاري";
+      }
+      if (selectedPropertyType === "مكتب إداري") {
+        propertyData.businessType = "إداري";
+      }
+      if (selectedPropertyType === "مخزن") {
+        propertyData.storageType = "عام";
+      }
 
-    console.log("[Form] Sending:", JSON.stringify(payload));
+      const payload = {
+        source: "form-complete",
+        type: selectedType,
+        data: propertyData
+      };
 
-    try {
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      console.log("[Form] Sending:", JSON.stringify(payload));
 
-      const result = await res.json();
-      console.log("[Form] Response:", result);
+      try {
+        const res = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      const waMessage = result.waMessage || result.response || "تم استلام بياناتك.";
+        const result = await res.json();
+        console.log("[Form] Response:", result);
 
-      // عرض Success Modal + فتح واتساب
-      showSuccessModal(waMessage);
+        const waMessage = result.waMessage || result.response || "تم استلام بياناتك.";
 
-      // مسح المسودة بعد النجاح
-      localStorage.removeItem(DRAFT_KEY);
+        showSuccessModal(waMessage);
+        localStorage.removeItem(DRAFT_KEY);
 
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
 
-    } catch (err) {
-      console.error("[Form] Error:", err);
-      alert('حصل عطل مؤقت، حاول تاني أو كلمنا على واتساب مباشرة.');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
-    }
-  });
+      } catch (err) {
+        console.error("[Form] Error:", err);
+        alert('حصل عطل مؤقت، حاول تاني أو كلمنا على واتساب مباشرة.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
+      }
+    });
+  }
 
   // ═══════════════════════════════════════════════
-  // التهيئة
+  // 🚀 التشغيل
   // ═══════════════════════════════════════════════
-  document.addEventListener('DOMContentLoaded', () => {
+  function init() {
+    console.log('[Form] Init started');
+
+    // تحميل المسودة
     loadSavedData();
+
+    // ربط الأزرار
+    bindOptions('typeOptions', v => { selectedType = v; syncTypeUI(); });
+    bindOptions('propertyTypeOptions', v => { selectedPropertyType = v; });
+    bindOptions('finishingOptions', v => { selectedFinishing = v; });
+    bindOptions('furnishedOptions', v => { selectedFurnished = v; syncTypeUI(); });
+    bindOptions('furnitureQualityOptions', v => { selectedFurnitureQuality = v; });
+    bindOptions('durationOptions', v => { selectedDuration = v; });
+
+    // تحديث الواجهة
+    updateSelectedButtons();
     syncTypeUI();
+    updatePriceHint();
+
+    // ربط الـSubmit
+    setupSubmitHandler();
+
+    // حفظ تلقائي على الـinput
     document.querySelectorAll('.clean-input').forEach(input => {
       input.addEventListener('input', saveDraft);
       input.addEventListener('change', saveDraft);
     });
-  });
 
-  // expose globals
+    console.log('[Form] Init completed');
+  }
+
+  // ═══════════════════════════════════════════════
+  // Expose globals
+  // ═══════════════════════════════════════════════
   window.nextStep = nextStep;
   window.prevStep = prevStep;
   window.openWhatsAppFromModal = openWhatsAppFromModal;
   window.closeSuccessAndReset = closeSuccessAndReset;
+
+  // ═══════════════════════════════════════════════
+  // ابدأ بعد ما الصفحة تحمّل
+  // ═══════════════════════════════════════════════
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 </script>
 </body>
 </html>
