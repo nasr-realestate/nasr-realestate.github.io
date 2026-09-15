@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>اعرض عقارك بذكاء | سمسار طلبك</title>
-  <meta name="description" content="اعرض عقارك في مدينة نصر، هليوبوليس، والتجمع الخامس خلال ثوانٍ. تقييم فوري وتسويق مباشر عبر أ. طارق طنطاوي.">
+  <meta name="description" content="اعرض عقارك في مدينة نصر خلال ثوانٍ. تقييم فوري وتسويق مباشر عبر أ. طارق طنطاوي.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -38,6 +38,7 @@
     .btn-next, .btn-prev { padding: 14px 24px; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none; transition: 0.2s; font-family: 'Cairo', sans-serif; }
     .btn-next { background: #1e3a8a; color: #fff; flex: 1; }
     .btn-next:hover { background: #1d4ed8; }
+    .btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-prev { background: #e2e8f0; color: #475569; }
     .security-badge { text-align: center; font-size: 0.85rem; color: #64748b; margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .price-hint { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #0369a1; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
@@ -46,6 +47,84 @@
     .price-warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px; color: #856404; font-size: 0.85rem; margin-top: 10px; display: none; }
     .conditional-block { display: none; margin-top: 12px; }
     .conditional-block.visible { display: block; }
+
+    /* ═══ Success Modal ═══ */
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10002;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(4px);
+    }
+    .success-overlay.show { display: flex; opacity: 1; }
+    .success-modal {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 380px;
+      width: 100%;
+      padding: 32px 24px 24px 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      animation: successPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes successPop {
+      0% { opacity: 0; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(37, 211, 102, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px auto;
+      animation: successPulse 2s ease-in-out infinite;
+    }
+    .success-icon i { font-size: 2.4rem; color: #25d366; }
+    @keyframes successPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); }
+      50% { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); }
+    }
+    .success-title { font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+    .success-message { font-size: 0.92rem; color: #475569; line-height: 1.6; margin-bottom: 22px; }
+    .success-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      background: #25d366;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Cairo', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);
+      transition: 0.15s;
+    }
+    .success-btn:active { transform: scale(0.98); }
+    .success-btn:hover { background: #128c7e; }
+    .success-btn.secondary {
+      background: #e2e8f0;
+      color: #475569;
+      box-shadow: none;
+      margin-top: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 10px;
+    }
+    .success-btn.secondary:hover { background: #cbd5e1; }
   </style>
 </head>
 <body>
@@ -79,6 +158,7 @@
           <div class="option-btn selected" data-value="شقة">🏢 شقة</div>
           <div class="option-btn" data-value="مكتب إداري">💼 مكتب إداري</div>
           <div class="option-btn" data-value="محل تجاري">🛍️ محل تجاري</div>
+          <div class="option-btn" data-value="مخزن">📦 مخزن</div>
         </div>
 
         <div id="priceHint" class="price-hint">
@@ -120,8 +200,8 @@
         <div class="conditional-block" id="rentFurnishedBlock">
           <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">حالة التسليم</label>
           <div class="options-grid" id="furnishedOptions">
-            <div class="option-btn selected" data-value="مفروشة">🛋️ مفروشة</div>
-            <div class="option-btn" data-value="فاضية">📦 فاضية</div>
+            <div class="option-btn selected" data-value="مفروش">🛋️ مفروشة</div>
+            <div class="option-btn" data-value="فاضي (قانون جديد)">📦 فاضية</div>
           </div>
         </div>
 
@@ -171,11 +251,11 @@
           <label style="font-size: 0.85rem; color: #334155; font-weight: 600;">الدور</label>
           <select id="propFloor" class="clean-input">
             <option value="أرضي">أرضي</option>
-            <option value="الأول">الأول</option>
-            <option value="الثاني">الثاني</option>
-            <option value="الثالث" selected>الثالث</option>
-            <option value="الرابع">الرابع</option>
-            <option value="الخامس فما فوق">الخامس فما فوق</option>
+            <option value="أول">أول</option>
+            <option value="ثاني">ثاني</option>
+            <option value="ثالث" selected>ثالث</option>
+            <option value="رابع">رابع</option>
+            <option value="خامس+">خامس فما فوق</option>
           </select>
         </div>
 
@@ -230,20 +310,56 @@
   </div>
 </div>
 
+<!-- ═══ Success Modal ═══ -->
+<div class="success-overlay" id="successModal">
+  <div class="success-modal">
+    <div class="success-icon">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <h2 class="success-title">تم استلام بياناتك ✅</h2>
+    <p class="success-message" id="successMessage">
+      جاري فتح واتساب لإرسال التفاصيل لطارق...
+    </p>
+    <button class="success-btn" onclick="openWhatsAppFromModal()">
+      <i class="fab fa-whatsapp"></i>
+      فتح واتساب الآن
+    </button>
+    <button class="success-btn secondary" onclick="closeSuccessAndReset()">
+      إغلاق
+    </button>
+  </div>
+</div>
+
 <script>
   const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
   const CORRECT_PHONE = "201147758857";
-  const DRAFT_KEY = "addPropertyDraft_v17";
+  const DRAFT_KEY = "addPropertyDraft_v18";
 
   let currentStep = 1;
   let selectedType = "sale";
   let selectedPropertyType = "شقة";
   let selectedFinishing = "سوبر لوكس";
-  let selectedFurnished = "مفروشة";
+  let selectedFurnished = "مفروش";
   let selectedFurnitureQuality = "سوبر لوكس";
   let selectedDuration = "سنة";
+  let lastWaMessage = "";
+  let lastWaUrl = "";
 
-  // ============ تحميل المسودة ============
+  // ═══════════════════════════════════════════════
+  // تحويل الأرقام
+  // ═══════════════════════════════════════════════
+  function toNumeric(str) {
+    if (!str) return 0;
+    const cleaned = String(str)
+      .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+      .replace(/,/g, "")
+      .replace(/[^\d.]/g, "");
+    return parseFloat(cleaned) || 0;
+  }
+
+  // ═══════════════════════════════════════════════
+  // تحميل المسودة
+  // ═══════════════════════════════════════════════
   function loadSavedData() {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (!saved) return;
@@ -265,7 +381,9 @@
     } catch (e) {}
   }
 
-  // ============ حفظ المسودة ============
+  // ═══════════════════════════════════════════════
+  // حفظ المسودة
+  // ═══════════════════════════════════════════════
   function saveDraft() {
     const data = {
       type: selectedType,
@@ -287,9 +405,10 @@
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
   }
 
-  // ============ مزامنة واجهة الأزرار ============
-  function updateSelectedButtons() {
-    document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedType));
+  // ═══════════════════════════════════════════════
+  // مزامنة واجهة الأزرار
+  // ═══════════════════════════════════════════════
+      document.querySelectorAll('#typeOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedType));
     document.querySelectorAll('#propertyTypeOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedPropertyType));
     document.querySelectorAll('#finishingOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedFinishing));
     document.querySelectorAll('#furnishedOptions .option-btn').forEach(b => b.classList.toggle('selected', b.dataset.value === selectedFurnished));
@@ -298,16 +417,20 @@
     updatePriceHint();
   }
 
-  // ============ إظهار/إخفاء حقول الإيجار ============
+  // ═══════════════════════════════════════════════
+  // إظهار/إخفاء حقول الإيجار
+  // ═══════════════════════════════════════════════
   function syncTypeUI() {
     const isRent = selectedType === 'rent';
     document.getElementById('rentFurnishedBlock').classList.toggle('visible', isRent);
-    document.getElementById('rentDurationBlock').classList.toggle('visible', isRent);
-    document.getElementById('rentQualityBlock').classList.toggle('visible', isRent && selectedFurnished === 'مفروشة');
+    document.getElementById('rentDurationBlock').classList.toggle('visible', isRent && selectedFurnished === 'فاضي (قانون جديد)');
+    document.getElementById('rentQualityBlock').classList.toggle('visible', isRent && selectedFurnished === 'مفروش');
     document.getElementById('priceLabel').innerText = isRent ? 'الإيجار الشهري (ج.م)' : 'السعر المطلوب (ج.م)';
   }
 
-  // ============ اختيارات الأزرار ============
+  // ═══════════════════════════════════════════════
+  // اختيارات الأزرار
+  // ═══════════════════════════════════════════════
   function bindOptions(containerId, callback) {
     document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
       btn.addEventListener('click', function () {
@@ -326,27 +449,32 @@
   bindOptions('furnitureQualityOptions', v => { selectedFurnitureQuality = v; });
   bindOptions('durationOptions', v => { selectedDuration = v; });
 
-  // ============ تلميح السعر ============
+  // ═══════════════════════════════════════════════
+  // تلميح السعر
+  // ═══════════════════════════════════════════════
   function updatePriceHint() {
     const hint = document.getElementById('priceHint');
     if (selectedType === 'rent') {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للإيجار النخبوي: 15,000 ج.م شهرياً</span>`;
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للإيجار: 15,000 ج.م شهرياً</span>`;
     } else {
-      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م | للإيجار: 15,000 ج.م شهرياً</span>`;
+      hint.innerHTML = `<i class="fas fa-lightbulb"></i> <span>⚠️ الحد الأدنى للبيع: 4 مليون ج.م</span>`;
     }
   }
 
-  // ============ التحقق من السعر ============
+  // ═══════════════════════════════════════════════
+  // التحقق من السعر
+  // ═══════════════════════════════════════════════
   function validatePrice() {
     const raw = document.getElementById('propPrice').value.replace(/,/g, '').trim();
     if (!raw) return false;
-    const num = parseInt(raw);
-    if (isNaN(num)) return false;
+    const num = toNumeric(raw);
     if (selectedType === 'rent') return num >= 15000;
     return num >= 4000000;
   }
 
-  // ============ التنقل ============
+  // ═══════════════════════════════════════════════
+  // التنقل
+  // ═══════════════════════════════════════════════
   function nextStep(step) {
     if (step === 2 && !document.getElementById('propLocation').value.trim()) {
       alert('برجاء كتابة المنطقة أو الشارع أولاً.');
@@ -379,21 +507,52 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ============ الإرسال عبر الـ Worker ============
+  // ═══════════════════════════════════════════════
+  // Success Modal
+  // ═══════════════════════════════════════════════
+  function showSuccessModal(waMessage) {
+    lastWaMessage = waMessage;
+    lastWaUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(waMessage)}`;
+
+    const modal = document.getElementById('successModal');
+    const msg = document.getElementById('successMessage');
+    msg.innerText = "اضغط على زر واتساب لإرسال التفاصيل لطارق. الرسالة جاهزة!";
+    modal.classList.add('show');
+
+    // فتح تلقائي بعد ثانية
+    setTimeout(() => {
+      window.location.href = lastWaUrl;
+    }, 800);
+  }
+
+  function openWhatsAppFromModal() {
+    if (lastWaUrl) {
+      window.location.href = lastWaUrl;
+    }
+  }
+
+  function closeSuccessAndReset() {
+    document.getElementById('successModal').classList.remove('show');
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  // ═══════════════════════════════════════════════
+  // الإرسال عبر الـ Worker
+  // ═══════════════════════════════════════════════
   document.getElementById('interactiveAddForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const ownerName = document.getElementById('ownerName').value.trim();
     const ownerPhone = document.getElementById('ownerPhone').value.trim();
     const location = document.getElementById('propLocation').value.trim();
-    const area = document.getElementById('propArea').value.trim();
-    const price = document.getElementById('propPrice').value.trim();
+    const areaRaw = document.getElementById('propArea').value.trim();
+    const priceRaw = document.getElementById('propPrice').value.trim();
     const rooms = document.getElementById('propRooms').value;
     const baths = document.getElementById('propBaths').value;
     const floor = document.getElementById('propFloor').value;
     const notes = document.getElementById('propNotes').value.trim();
 
-    if (!ownerName || !ownerPhone || !location || !area || !price) {
+    if (!ownerName || !ownerPhone || !location || !areaRaw || !priceRaw) {
       alert('برجاء ملء جميع الحقول المطلوبة.');
       return;
     }
@@ -404,31 +563,62 @@
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
 
-    // بناء البيانات بنفس مفاتيح الـ Worker
+    // ═══════════════════════════════════════════════
+    // بناء بيانات متوافقة تمامًا مع الـ Worker
+    // ═══════════════════════════════════════════════
+    const propertyData = {
+      // الحقول المطلوبة
+      propertyType: selectedPropertyType,
+      location: location,
+      area: toNumeric(areaRaw),        // رقم مش نص
+      price: String(toNumeric(priceRaw)), // نص رقمي (الـWorker يستخرج منه)
+      ownerName: ownerName,
+      ownerPhone: ownerPhone,
+      // حقول إضافية
+      rooms: rooms,
+      baths: baths,
+      floor: floor,
+      finishing: selectedFinishing,
+      notes: notes
+    };
+
+    // ═══ حقول الإيجار ═══
+    if (selectedType === "rent") {
+      propertyData.furnished = selectedFurnished;
+
+      if (selectedFurnished === "مفروش") {
+        propertyData.priceMonthly = String(toNumeric(priceRaw));
+        propertyData.furnitureQuality = selectedFurnitureQuality;
+      } else if (selectedFurnished === "فاضي (قانون جديد)") {
+        propertyData.duration = selectedDuration;
+      }
+    }
+
+    // ═══ حقول المحل ═══
+    if (selectedPropertyType === "محل تجاري") {
+      propertyData.frontage = "شارع رئيسي";
+      propertyData.businessType = "تجاري";
+    }
+
+    // ═══ حقول المكتب ═══
+    if (selectedPropertyType === "مكتب إداري") {
+      propertyData.businessType = "إداري";
+    }
+
+    // ═══ حقول المخزن ═══
+    if (selectedPropertyType === "مخزن") {
+      propertyData.storageType = "عام";
+    }
+
     const payload = {
       source: "form-complete",
-      type: selectedType, // "sale" | "rent"
-      data: {
-        propertyType: selectedPropertyType,
-        location,
-        area,
-        price,
-        rooms,
-        baths,
-        floor,
-        finishing: selectedFinishing,
-        ownerName,
-        ownerPhone,
-        notes
-      }
+      type: selectedType,
+      data: propertyData
     };
-    if (selectedType === "rent") {
-      payload.data.furnished = selectedFurnished;
-      if (selectedFurnished === "مفروشة") payload.data.furnitureQuality = selectedFurnitureQuality;
-      payload.data.duration = selectedDuration;
-    }
+
+    console.log("[Form] Sending:", JSON.stringify(payload));
 
     try {
       const res = await fetch(WORKER_URL, {
@@ -436,27 +626,32 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
+
       const result = await res.json();
-      const waMessage = result.waMessage || "تم استلام بياناتك.";
+      console.log("[Form] Response:", result);
+
+      const waMessage = result.waMessage || result.response || "تم استلام بياناتك.";
+
+      // عرض Success Modal + فتح واتساب
+      showSuccessModal(waMessage);
 
       // مسح المسودة بعد النجاح
       localStorage.removeItem(DRAFT_KEY);
 
-      // التوجيه للواتساب
-      window.location.href = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(waMessage)}`;
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
 
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
-      }, 3000);
     } catch (err) {
+      console.error("[Form] Error:", err);
       alert('حصل عطل مؤقت، حاول تاني أو كلمنا على واتساب مباشرة.');
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
     }
   });
 
-  // ============ التهيئة ============
+  // ═══════════════════════════════════════════════
+  // التهيئة
+  // ═══════════════════════════════════════════════
   document.addEventListener('DOMContentLoaded', () => {
     loadSavedData();
     syncTypeUI();
@@ -465,6 +660,12 @@
       input.addEventListener('change', saveDraft);
     });
   });
+
+  // expose globals
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+  window.openWhatsAppFromModal = openWhatsAppFromModal;
+  window.closeSuccessAndReset = closeSuccessAndReset;
 </script>
 </body>
 </html>
