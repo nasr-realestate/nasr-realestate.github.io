@@ -647,26 +647,23 @@ function normalizePhone(s) {
 }
 
 // ═════════════════════════════════════════════════════════
-// ❓ isLikelyQuestion — V39 FINAL (موسّعة)
+// ❓ isLikelyQuestion — V39 FINAL
 // ═════════════════════════════════════════════════════════
-function isLikelyQuestion(text) {
+function isLikelyQuestion(text, currentOptions) {
   const t = String(text || "").trim();
   if (!t) return false;
 
-  // 1. علامة استفهام
+  // لو الرسالة تطابق خيار من الأزرار → مش سؤال
+  if (currentOptions && currentOptions.length && matchOption(t, currentOptions)) return false;
+
+  // علامة استفهام
   if (/[؟?]/.test(t)) return true;
 
-  // 2. كلمات استفهام مباشرة
-  if (/(هل|امتى|إمتى|بكام|كام|ليه|إزاي|ازاي|فين|مين|يعني|ايه|إيه|ممكن|ينفع|تقدر|اقدر|أقدر|عايز أعرف|عايز افهم|وضحلي|قولي)/i.test(t)) return true;
+  // كلمات استفهام صريحة
+  if (/(هل|امتى|إمتى|بكام|كام|ليه|إزاي|ازاي|فين|مين|يعني ايه|ايه ده|ايه هو|هو ايه|ينفع|ممكن|اقدر|أقدر|تقدر|لو سمحت|من فضلك|ايه رايكم|ايه الفرق)/i.test(t)) return true;
 
-  // 3. طلبات/تعليقات
-  if (/(ملاحظة|ملحوظة|معلش|بس|بصراحة|صراحة|الحقيقة|سؤال|استفسار|خايف|قلقان|محتاج توضيح|مش فاهم|مش واضح|غريب|مش منطقي)/i.test(t)) return true;
-
-  // 4. رسالة طويلة (> 25 حرف)
-  if (t.length > 25) return true;
-
-  // 5. جملة فيها > 4 كلمات
-  if (t.split(/\s+/).length > 4) return true;
+  // كلمات تعليق قوية
+  if (/(معلش|بصراحة|الحقيقة|سؤال|استفسار|مش فاهم|مش واضح)/i.test(t)) return true;
 
   return false;
 }
@@ -804,7 +801,7 @@ async function tryHandleInterrupt(msg, env, currentOptions, formState, currentSt
       isSkipImagesBtn(trimmed) || isAddImagesBtn(trimmed) ||
       isDeleteImagesBtn(trimmed)) return null;
   if (currentOptions && currentOptions.length && matchOption(trimmed, currentOptions)) return null;
-  if (!isLikelyQuestion(trimmed)) return null;
+  if (!isLikelyQuestion(trimmed, currentOptions)) return null;
 
   const canned = matchInterrupt(trimmed);
   if (canned) return { answer: canned, source: "canned" };
@@ -1537,6 +1534,36 @@ async function processOwnerFlow(formState, userMessage, env, history) {
     return await processOwnerImagesStep(formState, msg, env, currentStep, history);
   }
 
+  // ✅ الأول: جرّب الإجابة على السؤال الحالي
+  let answerFilled = false;
+  if (!isSkip(msg)) {
+    const extracted = extractOwnerFields(msg);
+    const merged = mergeExtracted(data, extracted);
+
+    if (hasValue(merged[currentStep.id])) {
+      answerFilled = true;
+      Object.assign(data, merged);
+    } else {
+      const testFill = fillOwnerStep(currentStep, msg, { ...merged });
+      if (testFill.ok) {
+        Object.assign(data, merged);
+        answerFilled = true;
+      }
+    }
+  }
+
+  // ✅ لو الإجابة نجحت → روح للخطوة اللي بعدها
+  if (answerFilled) {
+    const nextIdxAuto = nextStepIndex(steps, data, 0);
+    if (nextIdxAuto === -1 && !formState.isReviewing) {
+      return tryCompleteOwner({ ...formState, data, imageUrls }, data);
+    }
+    const nextIdx = nextStepIndex(steps, data, formState.stepIndex + 1);
+    if (nextIdx === -1) return tryCompleteOwner({ ...formState, data, imageUrls }, data);
+    return askStep(steps, nextIdx, { ...formState, stepIndex: nextIdx, data, imageUrls });
+  }
+
+  // ✅ لو الإجابة فشلت → شوف لو سؤال
   if (!isSkip(msg)) {
     const interruptResult = await tryHandleInterrupt(msg, env, currentOptions, formState, currentStep, history);
     if (interruptResult) {
@@ -1948,6 +1975,30 @@ async function processBuyerFlow(formState, userMessage, env, history) {
     return { response: "حصل خطأ، نبدأ من الأول؟", formState: { ...formState, active: false, lifecycle: LIFECYCLE.CANCELLED, imageUrls }, options: null, done: false, readyToSend: false, canShareWhatsapp: false, imageUrls };
   }
 
+  // ✅ الأول: جرّب الإجابة على السؤال الحالي
+  let answerFilled = false;
+  if (!isSkip(msg)) {
+    const extracted = extractBuyerFields(msg);
+    const merged = mergeExtracted(data, extracted);
+
+    if (hasValue(merged[currentStep.id])) {
+      answerFilled = true;
+      Object.assign(data, merged);
+    }
+  }
+
+  // ✅ لو الإجابة نجحت → روح للخطوة اللي بعدها
+  if (answerFilled) {
+    const nextIdxAuto = nextStepIndex(steps, data, 0);
+    if (nextIdxAuto === -1 && !formState.isReviewing) {
+      return await completeBuyerFlow({ ...formState, imageUrls }, data);
+    }
+    const nextIdx = nextStepIndex(steps, data, formState.stepIndex + 1);
+    if (nextIdx === -1) return await completeBuyerFlow({ ...formState, imageUrls }, data);
+    return await askBuyerStep(steps, nextIdx, { ...formState, stepIndex: nextIdx, data, imageUrls });
+  }
+
+  // ✅ لو الإجابة فشلت → شوف لو سؤال
   if (!isSkip(msg)) {
     const currentOptions = currentStep.type === "buttons" ? (currentStep.options || []) : [];
     const interruptResult = await tryHandleInterrupt(msg, env, currentOptions, formState, currentStep, history);
