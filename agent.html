@@ -17,16 +17,65 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html { height: 100%; background: #0b141a; font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; font-size: 15.5px; }
 
+    /* ═══ Light Mode (الافتراضي) ═══ */
     :root {
-      --wa-header: #00a884;
-      --wa-bg: #efeae2;
-      --wa-msg-in: #ffffff;
-      --wa-msg-out: #d9fdd3;
-      --wa-green: #00a884;
-      --wa-input-bg: #f0f2f5;
+      --bg-main: #efeae2;
+      --bg-header: #005c4b;
+      --bg-input: #f0f2f5;
+      --bg-dock: #f0f2f5;
+      --msg-bot-bg: #ffffff;
+      --msg-bot-color: #111b21;
+      --msg-user-bg: #d9fdd3;
+      --msg-user-color: #111b21;
+      --text-primary: #111b21;
+      --text-secondary: #667781;
+      --border-color: #e2e8f0;
+      --option-bg: #ffffff;
+      --option-border: #d1d7db;
+      --option-text: #00a884;
+      --option-hover-bg: #f0f2f5;
+      --modal-bg: #ffffff;
+      --modal-text: #111111;
+      --preview-bg: #f0f8f4;
+      --preview-border: #d9fdd3;
+      --preview-text: #005c4b;
       --wa-tick-blue: #53bdeb;
+      --chat-bg-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+    }
+
+    /* ═══ Dark Mode ═══ */
+    [data-theme="dark"] {
+      --bg-main: #0b141a;
+      --bg-header: #202c33;
+      --bg-input: #202c33;
+      --bg-dock: #202c33;
+      --msg-bot-bg: #202c33;
+      --msg-bot-color: #e9edef;
+      --msg-user-bg: #005c4b;
+      --msg-user-color: #e9edef;
+      --text-primary: #e9edef;
+      --text-secondary: #8696a0;
+      --border-color: #2a3942;
+      --option-bg: #202c33;
+      --option-border: #2a3942;
+      --option-text: #25d366;
+      --option-hover-bg: #2a3942;
+      --modal-bg: #202c33;
+      --modal-text: #e9edef;
+      --preview-bg: #1f3a35;
+      --preview-border: #005c4b;
+      --preview-text: #25d366;
+      --wa-tick-blue: #53bdeb;
+      --chat-bg-image: none;
+    }
+
+    body, html {
+      height: 100%;
+      background: #0b141a;
+      font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      font-size: 15.5px;
     }
 
     .agent-app {
@@ -34,18 +83,18 @@
       height: 100vh;
       height: 100dvh;
       margin: 0 auto;
-      background: var(--wa-bg);
+      background: var(--bg-main);
       display: flex;
       flex-direction: column;
       box-shadow: 0 0 50px rgba(0,0,0,0.9);
       opacity: 0;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.4s ease, background-color 0.3s ease;
       position: relative;
     }
     .agent-app.show { opacity: 1; }
 
     .agent-header {
-      background: #005c4b;
+      background: var(--bg-header);
       padding: 10px 14px;
       display: flex;
       align-items: center;
@@ -55,6 +104,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       z-index: 10;
       position: relative;
+      transition: background-color 0.3s ease;
     }
     .agent-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .agent-header .info { flex: 1; min-width: 0; cursor: pointer; }
@@ -81,24 +131,72 @@
     .brand-logo:hover { background: rgba(255,255,255,0.2); }
     .brand-logo img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
 
-    .menu-btn { background: transparent; border: none; color: #aebac1; font-size: 1.25rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
+    .menu-btn {
+      background: transparent;
+      border: none;
+      color: #aebac1;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 50%;
+      transition: background 0.15s;
+    }
     .menu-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-    .menu-dropdown { position: absolute; top: 60px; left: 12px; background: #fff; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; padding: 8px 0; z-index: 999; opacity: 0; transform: translateY(-10px); pointer-events: none; transition: all 0.15s ease; }
+    .menu-dropdown {
+      position: absolute;
+      top: 60px;
+      left: 12px;
+      background: var(--modal-bg);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      min-width: 220px;
+      padding: 8px 0;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      transition: all 0.15s ease, background-color 0.3s ease;
+    }
     .menu-dropdown.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #111; font-size: 15px; cursor: pointer; transition: background 0.15s; border: none; background: transparent; width: 100%; text-align: right; font-family: 'IBM Plex Sans Arabic', sans-serif; }
-    .menu-item:hover { background: #f5f6f6; }
-    .menu-item i { font-size: 1.05rem; width: 20px; text-align: center; color: #54656f; }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      color: var(--modal-text);
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: right;
+      font-family: 'IBM Plex Sans Arabic', sans-serif;
+    }
+    .menu-item:hover { background: rgba(0,168,132,0.1); }
+    .menu-item i { font-size: 1.05rem; width: 20px; text-align: center; color: var(--text-secondary); }
     .menu-item.danger { color: #ea0038; }
-    .menu-separator { height: 1px; background: #f0f2f5; margin: 4px 0; }
+    .menu-item.danger i { color: #ea0038; }
+    .menu-separator { height: 1px; background: var(--border-color); margin: 4px 0; }
 
     .info-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
     .info-modal-overlay.show { display: flex; }
-    .info-modal { background: #fff; border-radius: 12px; max-width: 400px; width: 100%; padding: 24px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .info-modal {
+      background: var(--modal-bg);
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transition: background-color 0.3s ease;
+    }
     .info-modal img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #00a884; object-fit: cover; margin-bottom: 12px; }
-    .info-modal h2 { font-size: 1.2rem; color: #111; margin-bottom: 4px; font-weight: 700; }
-    .info-modal .subtitle { font-size: 0.85rem; color: #667781; margin-bottom: 14px; }
-    .info-modal p { font-size: 0.9rem; line-height: 1.6; color: #3b4a54; text-align: right; margin-bottom: 12px; }
+    .info-modal h2 { font-size: 1.2rem; color: var(--modal-text); margin-bottom: 4px; font-weight: 700; }
+    .info-modal .subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px; }
+    .info-modal p { font-size: 0.9rem; line-height: 1.6; color: var(--modal-text); text-align: right; margin-bottom: 12px; }
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
     .chat-area {
@@ -108,12 +206,13 @@
       display: flex;
       flex-direction: column;
       gap: 9px;
-      background-color: var(--wa-bg);
-      background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+      background-color: var(--bg-main);
+      background-image: var(--chat-bg-image);
       background-repeat: repeat;
       background-size: 400px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
+      transition: background-color 0.3s ease;
     }
 
     .msg {
@@ -127,9 +226,10 @@
       font-family: 'IBM Plex Sans Arabic', sans-serif;
       position: relative;
       animation: fadeIn 0.2s ease;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
-    .msg-bot { background: var(--wa-msg-in); align-self: flex-start; border-top-right-radius: 0px; color: #111b21; }
-    .msg-user { background: var(--wa-msg-out); align-self: flex-end; border-top-left-radius: 0px; color: #111b21; }
+    .msg-bot { background: var(--msg-bot-bg); align-self: flex-start; border-top-right-radius: 0px; color: var(--msg-bot-color); }
+    .msg-user { background: var(--msg-user-bg); align-self: flex-end; border-top-left-radius: 0px; color: var(--msg-user-color); }
     .msg a { color: #00a884; font-weight: 600; text-decoration: underline; word-break: break-all; }
     .msg strong { font-weight: 700; }
     .msg em { font-style: italic; }
@@ -143,7 +243,7 @@
       height: 0;
       border-style: solid;
       border-width: 0 0 13px 8px;
-      border-color: transparent transparent transparent var(--wa-msg-in);
+      border-color: transparent transparent transparent var(--msg-bot-bg);
     }
     .msg-user::before {
       content: "";
@@ -154,10 +254,10 @@
       height: 0;
       border-style: solid;
       border-width: 0 8px 13px 0;
-      border-color: transparent var(--wa-msg-out) transparent transparent;
+      border-color: transparent var(--msg-user-bg) transparent transparent;
     }
 
-    .msg-time { font-size: 11px; color: #667781; margin-top: 2px; text-align: left; float: left; margin-left: 8px; transform: translateY(4px); display: flex; align-items: center; gap: 3px; }
+    .msg-time { font-size: 11px; color: var(--text-secondary); margin-top: 2px; text-align: left; float: left; margin-left: 8px; transform: translateY(4px); display: flex; align-items: center; gap: 3px; }
     .msg-time .ticks { color: var(--wa-tick-blue); font-size: 13px; line-height: 1; letter-spacing: -3px; }
 
     .typing { display: none; }
@@ -172,9 +272,9 @@
       animation: fadeIn 0.25s ease;
     }
     .option-btn {
-      background: #fff;
-      border: 1px solid #d1d7db;
-      color: #00a884;
+      background: var(--option-bg);
+      border: 1px solid var(--option-border);
+      color: var(--option-text);
       padding: 9px 16px;
       border-radius: 20px;
       font-family: 'IBM Plex Sans Arabic', sans-serif;
@@ -185,8 +285,8 @@
       transition: all 0.15s ease;
       text-align: center;
     }
-    .option-btn:hover { background: #f0f2f5; transform: translateY(-1px); }
-    .option-btn:active { background: #e2e8f0; transform: scale(0.97); }
+    .option-btn:hover { background: var(--option-hover-bg); transform: translateY(-1px); }
+    .option-btn:active { transform: scale(0.97); }
     .option-btn.highlighted {
       background: #00a884;
       color: #fff;
@@ -196,8 +296,8 @@
     }
     .option-btn.faded {
       opacity: 0.45;
-      background: #f0f2f5;
-      color: #667781;
+      background: var(--option-hover-bg);
+      color: var(--text-secondary);
       pointer-events: none;
       border-color: transparent;
     }
@@ -215,7 +315,7 @@
       object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
-      border: 1px solid rgba(0,0,0,0.08);
+      border: 1px solid var(--border-color);
       transition: transform 0.15s;
     }
     .images-grid img:hover { transform: scale(1.03); }
@@ -224,15 +324,16 @@
     .upload-progress-bar {
       display: none;
       padding: 10px 14px;
-      background: #fff;
-      border-top: 1px solid #e2e8f0;
+      background: var(--modal-bg);
+      border-top: 1px solid var(--border-color);
       flex-direction: column;
       gap: 6px;
+      transition: background-color 0.3s ease;
     }
     .upload-progress-bar.show { display: flex; }
     .upload-progress-bar .progress-label {
       font-size: 13px;
-      color: #005c4b;
+      color: #00a884;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -241,7 +342,7 @@
     .upload-progress-bar .progress-track {
       width: 100%;
       height: 6px;
-      background: #e2e8f0;
+      background: var(--border-color);
       border-radius: 3px;
       overflow: hidden;
     }
@@ -256,16 +357,17 @@
     .images-preview-strip {
       display: none;
       padding: 8px 12px;
-      background: #f0f8f4;
-      border-top: 1px solid #d9fdd3;
+      background: var(--preview-bg);
+      border-top: 1px solid var(--preview-border);
       gap: 6px;
       overflow-x: auto;
       align-items: center;
+      transition: background-color 0.3s ease;
     }
     .images-preview-strip.show { display: flex; }
     .images-preview-strip .strip-count {
       font-size: 12px;
-      color: #005c4b;
+      color: var(--preview-text);
       font-weight: 700;
       white-space: nowrap;
       padding: 0 6px;
@@ -277,7 +379,7 @@
       min-width: 50px;
       border-radius: 8px;
       overflow: hidden;
-      border: 2px solid #fff;
+      border: 2px solid var(--msg-bot-bg);
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
     .images-preview-strip .strip-thumb img {
@@ -295,7 +397,7 @@
       border-radius: 50%;
       background: #ea0038;
       color: #fff;
-      border: 2px solid #fff;
+      border: 2px solid var(--msg-bot-bg);
       font-size: 10px;
       cursor: pointer;
       display: flex;
@@ -307,14 +409,15 @@
 
     .wa-preview-card {
       margin-top: 8px;
-      background: #f0f8f4;
+      background: var(--preview-bg);
       border-radius: 10px;
       padding: 8px;
-      border: 1px solid #d9fdd3;
+      border: 1px solid var(--preview-border);
+      transition: background-color 0.3s ease;
     }
     .wa-preview-card .card-title {
       font-size: 12.5px;
-      color: #005c4b;
+      color: var(--preview-text);
       font-weight: 700;
       margin-bottom: 6px;
       display: flex;
@@ -332,23 +435,24 @@
       object-fit: cover;
       border-radius: 7px;
       cursor: pointer;
-      border: 1px solid rgba(0,168,132,0.2);
+      border: 1px solid var(--preview-border);
     }
 
     .bottom-dock {
       flex-shrink: 0;
-      background: var(--wa-input-bg);
-      border-top: 1px solid #e2e8f0;
+      background: var(--bg-dock);
+      border-top: 1px solid var(--border-color);
       z-index: 100;
       display: flex;
       flex-direction: column;
       padding-bottom: max(env(safe-area-inset-bottom), 8px);
+      transition: background-color 0.3s ease;
     }
 
     .deal-wrapper { padding: 8px 10px 6px 10px; width: 100%; }
     .whatsapp-notification-card {
       width: 100%;
-      background: #fff;
+      background: var(--modal-bg);
       border-right: 4px solid #00a884;
       border-radius: 8px;
       padding: 9px 12px;
@@ -358,11 +462,12 @@
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       animation: slideUpPulse 1.5s infinite alternate;
+      transition: background-color 0.3s ease;
     }
     .whatsapp-notification-card .wa-icon-box { width: 34px; height: 34px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0; }
     .whatsapp-notification-card .wa-text-box { flex: 1; min-width: 0; }
-    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 700; color: #111b21; display: flex; align-items: center; gap: 4px; }
-    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: #667781; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 700; color: var(--modal-text); display: flex; align-items: center; gap: 4px; }
+    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .input-area {
       padding: 8px 10px 8px 10px;
@@ -370,14 +475,15 @@
       gap: 6px;
       width: 100%;
       align-items: center;
-      background: var(--wa-input-bg);
+      background: var(--bg-input);
       min-height: 56px;
+      transition: background-color 0.3s ease;
     }
 
     .icon-btn {
       background: transparent;
       border: none;
-      color: #54656f;
+      color: var(--text-secondary);
       font-size: 1.35rem;
       width: 38px;
       height: 38px;
@@ -390,7 +496,7 @@
       justify-content: center;
       transition: background 0.15s, color 0.2s, opacity 0.2s;
     }
-    .icon-btn:hover { background: rgba(0,0,0,0.06); }
+    .icon-btn:hover { background: rgba(0,168,132,0.1); }
 
     .icon-btn#cameraBtn {
       background: #00a884;
@@ -398,13 +504,9 @@
       display: none;
       animation: pulseCamera 2s infinite;
     }
-    .icon-btn#cameraBtn.show {
-      display: flex;
-    }
-    .icon-btn#cameraBtn:hover {
-      background: #019474;
-      transform: scale(1.05);
-    }
+    .icon-btn#cameraBtn.show { display: flex; }
+    .icon-btn#cameraBtn:hover { background: #019474; transform: scale(1.05); }
+
     @keyframes pulseCamera {
       0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.7); }
       50% { box-shadow: 0 0 0 8px rgba(0,168,132,0); }
@@ -414,12 +516,12 @@
       flex: 1;
       display: flex;
       align-items: center;
-      background: #fff;
+      background: var(--msg-bot-bg);
       border-radius: 24px;
-      box-shadow: inset 0 0 0 1px #e2e8f0;
+      box-shadow: inset 0 0 0 1px var(--border-color);
       padding: 0 6px 0 10px;
       min-width: 0;
-      transition: box-shadow 0.15s;
+      transition: box-shadow 0.15s, background-color 0.3s ease;
     }
     .input-pill:focus-within { box-shadow: inset 0 0 0 1px #00a884; }
 
@@ -431,8 +533,9 @@
       font-family: 'IBM Plex Sans Arabic', sans-serif;
       font-size: 15px;
       outline: none;
-      color: #111b21;
+      color: var(--text-primary);
       min-width: 0;
+      transition: color 0.3s ease;
     }
 
     .input-area .send-btn {
@@ -541,6 +644,10 @@
         <i class="fas fa-user-circle"></i>
         معلومات عن طارق
       </button>
+      <button class="menu-item" id="themeMenuItem" onclick="toggleTheme()">
+        <i class="fas fa-moon" id="themeIcon"></i>
+        <span id="themeLabel">الوضع الداكن</span>
+      </button>
       <div class="menu-separator"></div>
       <button class="menu-item" onclick="startNewChat()">
         <i class="fas fa-redo-alt"></i>
@@ -636,6 +743,7 @@
   const FORM_STATE_KEY = "tarek_form_state_v39";
   const WA_MSG_KEY = "tarek_wa_msg_v39";
   const READY_KEY = "tarek_ready_v39";
+  const THEME_KEY = "tarek_theme_v39";
 
   const MAX_IMAGES = 5;
 
@@ -668,6 +776,49 @@
   const uploadProgressFill = document.getElementById('uploadProgressFill');
   const imagesPreviewStrip = document.getElementById('imagesPreviewStrip');
   const toast = document.getElementById('toast');
+
+  // ═══════════════════════════════════════════════
+  // 🌙 Theme Toggle — الوضع الداكن/الفاتح
+  // ═══════════════════════════════════════════════
+  function getCurrentTheme() {
+    return localStorage.getItem(THEME_KEY) || "light";
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    
+    const icon = document.getElementById("themeIcon");
+    const label = document.getElementById("themeLabel");
+    
+    if (icon && label) {
+      if (theme === "dark") {
+        icon.className = "fas fa-sun";
+        label.innerText = "الوضع الفاتح";
+      } else {
+        icon.className = "fas fa-moon";
+        label.innerText = "الوضع الداكن";
+      }
+    }
+  }
+
+  function setTheme(theme) {
+    localStorage.setItem(THEME_KEY, theme);
+    applyTheme(theme);
+  }
+
+  function toggleTheme() {
+    const current = getCurrentTheme();
+    const newTheme = current === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    menuDropdown.classList.remove("open");
+    
+    // Toast مع إيموجي آمن
+    if (newTheme === "dark") {
+      showToast("الوضع الداكن ✅");
+    } else {
+      showToast("الوضع الفاتح ✅");
+    }
+  }
 
   function getTime() {
     return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
@@ -1125,9 +1276,6 @@
     return urls;
   }
 
-  // ============================================================
-  // V39 FINAL: بناء رابط معرض الصور
-  // ============================================================
   function buildGalleryUrl(waMessage) {
     const imgs = extractImageUrlsFromMessage(waMessage);
     if (!imgs || imgs.length === 0) return null;
@@ -1153,9 +1301,6 @@
     return `${GALLERY_BASE}?${params.toString()}`;
   }
 
-  // ============================================================
-  // V39 FINAL: استبدال قسم الصور في الرسالة برابط المعرض
-  // ============================================================
   function replaceImagesWithGalleryLink(waMessage) {
     const galleryUrl = buildGalleryUrl(waMessage);
     if (!galleryUrl) return waMessage;
@@ -1176,9 +1321,6 @@
     return waMessage + `\n\n${galleryLine}`;
   }
 
-  // ============================================================
-  // V39 FINAL: فتح واتساب مباشرة (بدون Web Share API)
-  // ============================================================
   async function openWhatsApp() {
     let msg = lastWaMessage ||
       "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
@@ -1361,6 +1503,12 @@
   }
 
   (function init() {
+    // ═══════════════════════════════════════════════
+    // 🌙 تطبيق الوضع الداكن قبل عرض الصفحة
+    // ═══════════════════════════════════════════════
+    const savedTheme = getCurrentTheme();
+    applyTheme(savedTheme);
+
     document.getElementById('app').classList.add('show');
     loadState();
 
@@ -1394,6 +1542,7 @@
   window.onFilesSelected = onFilesSelected;
   window.openLightbox = openLightbox;
   window.closeLightbox = closeLightbox;
+  window.toggleTheme = toggleTheme;
 </script>
 </body>
 </html>
