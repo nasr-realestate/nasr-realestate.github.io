@@ -167,6 +167,56 @@
     .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
 
     /* ═══════════════════════════════════════════════
+       Notices Bar — شريط الإشعارات الجديد
+       ═══════════════════════════════════════════════ */
+    .notices-bar {
+      background: linear-gradient(135deg, #005c4b 0%, #00a884 100%);
+      color: #fff;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12.5px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      animation: slideDown 0.4s ease;
+      max-height: 120px;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.4s ease;
+      z-index: 5;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .notice-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.4;
+      opacity: 0.95;
+    }
+
+    .notice-item i {
+      font-size: 14px;
+      flex-shrink: 0;
+      color: #d9fdd3;
+    }
+
+    [data-theme="dark"] .notices-bar {
+      background: linear-gradient(135deg, #202c33 0%, #005c4b 100%);
+    }
+
+    .notices-bar.hidden {
+      max-height: 0;
+      padding: 0 12px;
+      opacity: 0;
+      border-bottom: none;
+    }
+
+    /* ═══════════════════════════════════════════════
        Confirm Modal — نافذة التأكيد
        ═══════════════════════════════════════════════ */
     .confirm-overlay {
@@ -742,7 +792,8 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 12px rgba(0,168,132,0.4); } 50% { box-shadow: 0 0 22px rgba(0,168,132,0.8); } }
   </style>
-</head><body>
+</head>
+<body>
 
 <div class="agent-app" id="app">
 
@@ -780,6 +831,22 @@
         <i class="fas fa-trash"></i>
         حذف المحادثة
       </button>
+    </div>
+  </div>
+
+  <!-- ═══ شريط الإشعارات الجديد ═══ -->
+  <div class="notices-bar" id="noticesBar">
+    <div class="notice-item">
+      <i class="fas fa-info-circle"></i>
+      <span>لا نستقبل شقق للبيع أقل من 4 مليون</span>
+    </div>
+    <div class="notice-item">
+      <i class="fas fa-info-circle"></i>
+      <span>لا نستقبل طلبات إيجار فاضي أقل من 15 ألف</span>
+    </div>
+    <div class="notice-item">
+      <i class="fas fa-lightbulb"></i>
+      <span>احذف المحادثة وابدأ من جديد — لا تشتت انتباه الوكيل</span>
     </div>
   </div>
 
@@ -878,14 +945,15 @@
   const CORRECT_PHONE = "201147758857";
   const GALLERY_BASE = "https://nasr-realestate.github.io/property-images.html";
 
-  const STORAGE_KEY = "tarek_chat_v39";
-  const SCORE_KEY = "tarek_score_v39";
-  const WA_KEY = "tarek_wa_v39";
-  const LEAD_KEY = "tarek_lead_v39";
-  const FORM_STATE_KEY = "tarek_form_state_v39";
-  const WA_MSG_KEY = "tarek_wa_msg_v39";
-  const READY_KEY = "tarek_ready_v39";
-  const THEME_KEY = "tarek_theme_v39";
+  const STORAGE_KEY = "tarek_chat_v40";
+  const SCORE_KEY = "tarek_score_v40";
+  const WA_KEY = "tarek_wa_v40";
+  const LEAD_KEY = "tarek_lead_v40";
+  const FORM_STATE_KEY = "tarek_form_state_v40";
+  const WA_MSG_KEY = "tarek_wa_msg_v40";
+  const READY_KEY = "tarek_ready_v40";
+  const THEME_KEY = "tarek_theme_v40";
+  const NOTICES_KEY = "tarek_notices_v40";
 
   const MAX_IMAGES = 5;
 
@@ -952,6 +1020,29 @@
     setTheme(newTheme);
     menuDropdown.classList.remove("open");
     showToast(newTheme === "dark" ? "🌙 الوضع الداكن" : "☀️ الوضع الفاتح");
+  }
+
+  // ═══════════════════════════════════════════════
+  // 📢 Notices Bar — إخفاء تلقائي بعد 8 ثواني
+  // ═══════════════════════════════════════════════
+  function hideNoticesBar() {
+    const bar = document.getElementById('noticesBar');
+    if (!bar || bar.classList.contains('hidden')) return;
+    bar.classList.add('hidden');
+    localStorage.setItem(NOTICES_KEY, 'hidden');
+  }
+
+  function initNoticesBar() {
+    const bar = document.getElementById('noticesBar');
+    if (!bar) return;
+    
+    const alreadyHidden = localStorage.getItem(NOTICES_KEY) === 'hidden';
+    if (alreadyHidden) {
+      bar.classList.add('hidden');
+      return;
+    }
+
+    setTimeout(hideNoticesBar, 8000);
   }
 
   // ═══════════════════════════════════════════════
@@ -1198,13 +1289,13 @@
       const data = await res.json();
 
       if (!res.ok || !data.urls || !data.urls.length) {
-        console.error("[V39] upload failed:", data);
+        console.error("[V40] upload failed:", data);
         return { ok: false, error: data.error || 'فشل رفع الصور' };
       }
-      console.log("[V39] uploadPendingImages: urls =", data.urls.length);
+      console.log("[V40] uploadPendingImages: urls =", data.urls.length);
       return { ok: true, urls: data.urls };
     } catch (err) {
-      console.error("[V39] uploadPendingImages error:", err);
+      console.error("[V40] uploadPendingImages error:", err);
       return { ok: false, error: 'تعذر الاتصال بالسيرفر' };
     } finally {
       hideUploadProgress();
@@ -1734,6 +1825,7 @@
 
     document.getElementById('app').classList.add('show');
     loadState();
+    initNoticesBar();
 
     if (history.length > 0) {
       rehydrate();
@@ -1767,6 +1859,7 @@
   window.closeLightbox = closeLightbox;
   window.toggleTheme = toggleTheme;
   window.closeConfirm = closeConfirm;
+  window.hideNoticesBar = hideNoticesBar;
 </script>
 </body>
 </html>
