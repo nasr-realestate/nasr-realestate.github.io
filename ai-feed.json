@@ -4,7 +4,7 @@ permalink: /ai-feed.json
 sitemap: false
 ---
 {
-  "schema_version": "2.3",
+  "schema_version": "2.4",
   "brand": "سمسار طلبك",
   "generated_at": {{ site.time | date_to_xmlschema | jsonify }},
   "total_count": {{ site.properties | size }},
@@ -23,6 +23,7 @@ sitemap: false
 
       "category": {{ property.category | default: "apartments" | jsonify }},
       "location": {{ property.location | default: "" | jsonify }},
+      "zone": {{ property.zone | default: property.location | default: "" | jsonify }},
 
       "price": {{ property.price | default: "" | jsonify }},
       "priceNumeric": {{ property.priceNumeric | default: 0 | jsonify }},
