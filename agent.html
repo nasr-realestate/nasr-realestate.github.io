@@ -1,1865 +1,1271 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta property="og:title" content="سمسار طلبك | أ. طارق طنطاوي" />
-  <meta property="og:description" content="تحدث مع طارق طنطاوي، خبير العقارات في مدينة نصر بخبرة من 2014." />
-  <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/Come-here.webp" />
-  <title>سمسار طلبك | أ. طارق طنطاوي</title>
+<meta charset="UTF-8">
+  <!-- ═══ WhatsApp Preview ═══ -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nasr-realestate.github.io/agent.html">
+<meta property="og:title" content="سمسار طلبك — طارق طنطاوي">
+<meta property="og:description" content="خبير العقارات في مدينة نصر من 2014 | Google Local Guide Level 7 | 16.3 مليون مشاهدة">
+<meta property="og:image" content="https://nasr-realestate.github.io/assets/img/Come-here.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="طارق طنطاوي — سمسار مدينة نصر">
+<meta property="og:site_name" content="سمسار طلبك">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="سمسار طلبك — طارق طنطاوي">
+<meta name="twitter:description" content="خبير العقارات في مدينة نصر من 2014 | Google Local Guide Level 7">
+<meta name="twitter:image" content="https://nasr-realestate.github.io/assets/img/Come-here.webp">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#128c7e">
+<title>سمسار طلبك — طارق طنطاوي | Google Local Guide Level 7</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ RESET + TOKENS ═══════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --wa-bg:        #e5ddd5;
+  --chat-bg:      #128c7e;
+  --chat-green:   #25d366;
+  --bubble-in:    #ffffff;
+  --bubble-out:   #dcf8c6;
+  --bubble-out-d: #1f3a2b;
+  --bubble-in-d:  #1e2d3d;
+  --text-main:    #111b21;
+  --text-main-d:  #e9edef;
+  --text-sec:     #667781;
+  --text-sec-d:   #8696a0;
+  --shadow:       0 1px 2px rgba(0,0,0,.13);
+  --shadow-lg:    0 4px 20px rgba(0,0,0,.15);
+  --radius-bubble:12px;
+  --font:         'Cairo', system-ui, sans-serif;
+  --header-h:     64px;
+  --max-w:        780px;
+}
 
-    /* ═══ Light Mode (الافتراضي) ═══ */
-    :root {
-      --bg-main: #efeae2;
-      --bg-header: #005c4b;
-      --bg-input: #f0f2f5;
-      --bg-dock: #f0f2f5;
-      --msg-bot-bg: #ffffff;
-      --msg-bot-color: #111b21;
-      --msg-user-bg: #d9fdd3;
-      --msg-user-color: #111b21;
-      --text-primary: #111b21;
-      --text-secondary: #667781;
-      --border-color: #e2e8f0;
-      --option-bg: #ffffff;
-      --option-border: #d1d7db;
-      --option-text: #00a884;
-      --option-hover-bg: #f0f2f5;
-      --modal-bg: #ffffff;
-      --modal-text: #111111;
-      --preview-bg: #f0f8f4;
-      --preview-border: #d9fdd3;
-      --preview-text: #005c4b;
-      --wa-tick-blue: #53bdeb;
-      --chat-bg-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
-    }
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--wa-bg);
+  color: var(--text-main);
+  overflow: hidden;
+}
 
-    /* ═══ Dark Mode ═══ */
-    [data-theme="dark"] {
-      --bg-main: #0b141a;
-      --bg-header: #202c33;
-      --bg-input: #202c33;
-      --bg-dock: #202c33;
-      --msg-bot-bg: #202c33;
-      --msg-bot-color: #e9edef;
-      --msg-user-bg: #005c4b;
-      --msg-user-color: #e9edef;
-      --text-primary: #e9edef;
-      --text-secondary: #8696a0;
-      --border-color: #2a3942;
-      --option-bg: #202c33;
-      --option-border: #2a3942;
-      --option-text: #25d366;
-      --option-hover-bg: #2a3942;
-      --modal-bg: #202c33;
-      --modal-text: #e9edef;
-      --preview-bg: #1f3a35;
-      --preview-border: #005c4b;
-      --preview-text: #25d366;
-      --wa-tick-blue: #53bdeb;
-      --chat-bg-image: none;
-    }
+/* ═══════════ LAYOUT ═══════════ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  position: relative;
+  background: #f0f2f5;
+}
 
-    body, html {
-      height: 100%;
-      background: #0b141a;
-      font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      font-size: 15.5px;
-    }
+/* ═══════════ HEADER ═══════════ */
+header {
+  background: var(--chat-bg);
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+}
 
-    .agent-app {
-      max-width: 650px;
-      height: 100vh;
-      height: 100dvh;
-      margin: 0 auto;
-      background: var(--bg-main);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 50px rgba(0,0,0,0.9);
-      opacity: 0;
-      transition: opacity 0.4s ease, background-color 0.3s ease;
-      position: relative;
-    }
-    .agent-app.show { opacity: 1; }
+.avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: #ffffff33;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid #ffffff44;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-    .agent-header {
-      background: var(--bg-header);
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: #fff;
-      flex-shrink: 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      z-index: 10;
-      position: relative;
-      transition: background-color 0.3s ease;
-    }
-    .agent-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .agent-header .info { flex: 1; min-width: 0; cursor: pointer; }
-    .agent-header .info h1 { font-size: 1.05rem; font-weight: 600; line-height: 1.2; color: #e9edef; }
-    .agent-header .info p { font-size: 0.8rem; opacity: 0.85; display: flex; align-items: center; gap: 4px; margin-top: 2px; color: #8696a0; transition: color 0.15s; }
-    .agent-header .info p .dot { width: 7px; height: 7px; background: #25d366; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: opacity 0.15s; }
-    .agent-header .info p.is-typing { color: #d9fdd3; font-style: normal; }
-    .agent-header .info p.is-typing .dot { opacity: 0; width: 0; }
+.header-info { flex: 1; min-width: 0; }
+.header-name {
+  color: #fff; font-size: 17px; font-weight: 700; line-height: 1.2;
+  display: flex; align-items: center; gap: 6px;
+}
+.header-name .g-badge {
+  font-size: 10px;
+  background: #fff;
+  color: #128c7e;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.header-status { color: #ffffff99; font-size: 12.5px; font-weight: 400; }
 
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 600;
-      opacity: 0.95;
-      padding: 5px 10px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 20px;
-      text-decoration: none;
-      transition: background 0.2s;
-    }
-    .brand-logo:hover { background: rgba(255,255,255,0.2); }
-    .brand-logo img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+.header-actions { display: flex; gap: 4px; }
+.header-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  transition: background .2s;
+}
+.header-btn:hover { background: #ffffff22; }
 
-    .menu-btn { background: transparent; border: none; color: #aebac1; font-size: 1.25rem; cursor: pointer; padding: 6px 10px; border-radius: 50%; transition: background 0.15s; }
-    .menu-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+/* ═══════════ MENU DROPDOWN ═══════════ */
+.menu-dropdown {
+  position: absolute;
+  top: 60px;
+  left: 12px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  min-width: 220px;
+  padding: 8px 0;
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: all .18s ease;
+}
+.menu-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.menu-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px;
+  color: #111;
+  font-size: 14.5px;
+  cursor: pointer;
+  border: none; background: transparent;
+  width: 100%; text-align: right;
+  font-family: var(--font);
+  transition: background .15s;
+}
+.menu-item:hover { background: #f0f2f5; }
+.menu-item.danger { color: #e53935; }
+.menu-sep { height: 1px; background: #eee; margin: 4px 0; }
 
-    .menu-dropdown {
-      position: absolute;
-      top: 60px;
-      left: 12px;
-      background: var(--modal-bg);
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      min-width: 220px;
-      padding: 8px 0;
-      z-index: 999;
-      opacity: 0;
-      transform: translateY(-10px);
-      pointer-events: none;
-      transition: all 0.15s ease, background-color 0.3s ease;
-    }
-    .menu-dropdown.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: var(--modal-text); font-size: 15px; cursor: pointer; transition: background 0.15s; border: none; background: transparent; width: 100%; text-align: right; font-family: 'IBM Plex Sans Arabic', sans-serif; }
-    .menu-item:hover { background: rgba(0,168,132,0.1); }
-    .menu-item i { font-size: 1.05rem; width: 20px; text-align: center; color: var(--text-secondary); }
-    .menu-item.danger { color: #ea0038; }
-    .menu-item.danger i { color: #ea0038; }
-    .menu-separator { height: 1px; background: var(--border-color); margin: 4px 0; }
+/* ═══════════ NOTICES BAR ═══════════ */
+.notices-bar {
+  background: linear-gradient(135deg, #128c7e 0%, #075e54 100%);
+  color: #fff;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  flex-shrink: 0;
+  animation: slideDown .4s ease;
+  overflow: hidden;
+  transition: max-height .5s ease, padding .5s ease, opacity .5s ease;
+  max-height: 120px;
+  position: relative;
+}
+.notices-bar.hidden {
+  max-height: 0;
+  padding-top: 0; padding-bottom: 0;
+  opacity: 0;
+}
+.notice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.35;
+  opacity: .95;
+}
+.notice-item .dot-icon {
+  width: 5px; height: 5px;
+  background: #d9fdd3;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.notices-close {
+  position: absolute;
+  top: 4px; left: 8px;
+  background: transparent;
+  border: none;
+  color: #ffffffaa;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
 
-    .info-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-    .info-modal-overlay.show { display: flex; }
-    .info-modal { background: var(--modal-bg); border-radius: 12px; max-width: 400px; width: 100%; padding: 24px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: background-color 0.3s ease; }
-    .info-modal img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #00a884; object-fit: cover; margin-bottom: 12px; }
-    .info-modal h2 { font-size: 1.2rem; color: var(--modal-text); margin-bottom: 4px; font-weight: 700; }
-    .info-modal .subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px; }
-    .info-modal p { font-size: 0.9rem; line-height: 1.6; color: var(--modal-text); text-align: right; margin-bottom: 12px; }
-    .info-modal .close-modal-btn { background: #00a884; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; }
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
 
-    /* ═══════════════════════════════════════════════
-       Notices Bar — شريط الإشعارات الجديد
-       ═══════════════════════════════════════════════ */
-    .notices-bar {
-      background: linear-gradient(135deg, #005c4b 0%, #00a884 100%);
-      color: #fff;
-      padding: 8px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 12.5px;
-      flex-shrink: 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      animation: slideDown 0.4s ease;
-      max-height: 120px;
-      overflow: hidden;
-      transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.4s ease;
-      z-index: 5;
-    }
+/* ═══════════ CHAT AREA ═══════════ */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scroll-behavior: smooth;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+}
 
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+/* ═══════════ BUBBLES ═══════════ */
+.msg-row { display: flex; margin-bottom: 2px; }
+.msg-row.out { justify-content: flex-start; }
+.msg-row.in  { justify-content: flex-end; }
 
-    .notice-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      line-height: 1.4;
-      opacity: 0.95;
-    }
+.bubble {
+  max-width: 78%;
+  min-width: 80px;
+  padding: 8px 12px 6px;
+  border-radius: var(--radius-bubble);
+  font-size: 14.5px;
+  line-height: 1.55;
+  box-shadow: var(--shadow);
+  word-break: break-word;
+  white-space: pre-wrap;
+  position: relative;
+  animation: bubbleIn .22s ease;
+}
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-    .notice-item i {
-      font-size: 14px;
-      flex-shrink: 0;
-      color: #d9fdd3;
-    }
+.bubble.bot {
+  background: var(--bubble-in);
+  color: var(--text-main);
+  border-top-right-radius: 2px;
+}
+.bubble.bot::before {
+  content: '';
+  position: absolute;
+  top: 0; right: -8px;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 0 10px 9px;
+  border-color: transparent transparent transparent var(--bubble-in);
+}
 
-    [data-theme="dark"] .notices-bar {
-      background: linear-gradient(135deg, #202c33 0%, #005c4b 100%);
-    }
+.bubble.user {
+  background: var(--bubble-out);
+  color: var(--text-main);
+  border-top-left-radius: 2px;
+}
+.bubble.user::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -8px;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 9px 10px 0;
+  border-color: transparent var(--bubble-out) transparent transparent;
+}
 
-    .notices-bar.hidden {
-      max-height: 0;
-      padding: 0 12px;
-      opacity: 0;
-      border-bottom: none;
-    }
+.bubble-time {
+  font-size: 11px;
+  color: var(--text-sec);
+  text-align: left;
+  margin-top: 2px;
+  display: block;
+  direction: ltr;
+}
+.bubble.user .bubble-time { text-align: right; }
 
-    /* ═══════════════════════════════════════════════
-       Confirm Modal — نافذة التأكيد
-       ═══════════════════════════════════════════════ */
-    .confirm-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10002;
-      padding: 20px;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-    }
-    .confirm-overlay.show {
-      display: flex;
-      opacity: 1;
-    }
+.ticks { display: inline-block; margin-right: 2px; color: #53bdeb; font-size: 13px; }
 
-    .confirm-modal {
-      background: var(--modal-bg);
-      border-radius: 16px;
-      max-width: 380px;
-      width: 100%;
-      padding: 28px 24px 20px 24px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-      animation: confirmPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-      transition: background-color 0.3s ease;
-    }
+.bubble b { font-weight: 700; }
+.bubble a { color: #128c7e; text-decoration: none; word-break: break-all; }
+.bubble a:hover { text-decoration: underline; }
 
-    @keyframes confirmPopIn {
-      0% {
-        opacity: 0;
-        transform: scale(0.85) translateY(20px);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-    }
+/* Trust Bar style داخل bubble */
+.bubble .trust-bar {
+  display: block;
+  text-align: center;
+  padding: 8px 0;
+  border-top: 1px dashed #128c7e55;
+  border-bottom: 1px dashed #128c7e55;
+  margin: 6px 0;
+  color: #128c7e;
+  font-weight: 700;
+}
 
-    .confirm-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px auto;
-      background: rgba(0, 168, 132, 0.12);
-      animation: iconPulseInfo 2s ease-in-out infinite;
-    }
-    .confirm-icon i {
-      font-size: 2rem;
-      color: #00a884;
-    }
-    .confirm-icon.danger {
-      background: rgba(234, 0, 56, 0.12);
-      animation: iconPulseDanger 2s ease-in-out infinite;
-    }
-    .confirm-icon.danger i {
-      color: #ea0038;
-    }
-    .confirm-icon.info {
-      background: rgba(0, 168, 132, 0.12);
-      animation: iconPulseInfo 2s ease-in-out infinite;
-    }
-    .confirm-icon.info i {
-      color: #00a884;
-    }
+/* ═══════════ BUTTONS RACK ═══════════ */
+.btns-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 8px 12px 10px;
+  justify-content: flex-end;
+}
 
-    @keyframes iconPulseInfo {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.4);
-      }
-      50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 12px rgba(0, 168, 132, 0);
-      }
-    }
-    @keyframes iconPulseDanger {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(234, 0, 56, 0.4);
-      }
-      50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 12px rgba(234, 0, 56, 0);
-      }
-    }
+.btn-opt {
+  background: #fff;
+  border: 1.5px solid #25d36666;
+  border-radius: 18px;
+  color: #128c7e;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: all .18s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+.btn-opt:hover, .btn-opt:active {
+  background: #128c7e;
+  color: #fff;
+  border-color: #128c7e;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(18,140,126,.25);
+}
+.btn-opt.primary {
+  background: #128c7e;
+  color: #fff;
+  border-color: #128c7e;
+}
 
-    .confirm-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--modal-text);
-      margin-bottom: 8px;
-      font-family: 'Noto Kufi Arabic', sans-serif;
-    }
+/* ═══════════ TYPING INDICATOR ═══════════ */
+.typing-row { display: flex; align-items: flex-end; gap: 8px; padding: 4px 12px 6px; }
+.typing-bubble {
+  background: var(--bubble-in);
+  border-radius: var(--radius-bubble);
+  border-top-right-radius: 2px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 4px;
+}
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #8696a0;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
 
-    .confirm-message {
-      font-size: 0.92rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-      margin-bottom: 22px;
-      padding: 0 4px;
-    }
+/* ═══════════ PROGRESS BAR ═══════════ */
+.progress-wrap { padding: 6px 12px 2px; }
+.progress-bar-bg {
+  height: 3px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #128c7e, #25d366);
+  border-radius: 2px;
+  transition: width .4s ease;
+}
+.progress-label {
+  font-size: 11px;
+  color: var(--text-sec);
+  text-align: left;
+  margin-top: 3px;
+}
 
-    .confirm-actions {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-    }
+/* ═══════════ INPUT AREA ═══════════ */
+#input-wrap {
+  background: #f0f2f5;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  position: relative;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
 
-    .confirm-btn {
-      flex: 1;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: none;
-      font-family: 'IBM Plex Sans Arabic', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .confirm-btn:active { transform: scale(0.97); }
+.input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 8px 8px 8px 12px;
+  box-shadow: var(--shadow);
+  min-height: 48px;
+}
 
-    .confirm-btn.cancel {
-      background: var(--option-hover-bg);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-    }
-    .confirm-btn.cancel:hover { background: rgba(134, 150, 160, 0.15); }
+#msg-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--text-main);
+  background: transparent;
+  resize: none;
+  max-height: 120px;
+  min-height: 24px;
+  line-height: 1.4;
+  direction: rtl;
+}
+#msg-input::placeholder { color: #8696a0; }
 
-    .confirm-btn.danger {
-      background: #ea0038;
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(234, 0, 56, 0.3);
-    }
-    .confirm-btn.danger:hover { background: #c50030; }
+.input-action-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  transition: all .18s;
+  flex-shrink: 0;
+}
+#send-btn {
+  background: var(--chat-green);
+  color: #fff;
+}
+#send-btn:hover { background: #1ebe57; transform: scale(1.05); }
+#send-btn:disabled { background: #c5c5c5; cursor: not-allowed; transform: none; }
 
-    .confirm-btn.info {
-      background: #00a884;
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
-    }
-    .confirm-btn.info:hover { background: #019474; }
+#attach-btn { background: transparent; color: #8696a0; }
+#attach-btn:hover { color: #128c7e; }
+#file-input { display: none; }
 
-    .chat-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 12px 32px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-      background-color: var(--bg-main);
-      background-image: var(--chat-bg-image);
-      background-repeat: repeat;
-      background-size: 400px;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-      transition: background-color 0.3s ease;
-    }
+/* ═══════════ WHATSAPP BUTTON ═══════════ */
+#wa-btn-wrap { padding: 0 12px 8px; display: none; }
+#wa-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .2s;
+  box-shadow: 0 4px 15px rgba(37,211,102,.3);
+  animation: pulseWA 1.8s infinite;
+}
+#wa-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,211,102,.5); }
+#wa-btn svg { flex-shrink: 0; }
 
-    .msg {
-      max-width: 82%;
-      padding: 6px 10px 8px 10px;
-      border-radius: 7.5px;
-      font-size: 15px;
-      line-height: 1.5;
-      box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
-      word-break: break-word;
-      font-family: 'IBM Plex Sans Arabic', sans-serif;
-      position: relative;
-      animation: fadeIn 0.2s ease;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
-    .msg-bot { background: var(--msg-bot-bg); align-self: flex-start; border-top-right-radius: 0px; color: var(--msg-bot-color); }
-    .msg-user { background: var(--msg-user-bg); align-self: flex-end; border-top-left-radius: 0px; color: var(--msg-user-color); }
-    .msg a { color: #00a884; font-weight: 600; text-decoration: underline; word-break: break-all; }
-    .msg strong { font-weight: 700; }
-    .msg em { font-style: italic; }
+@keyframes pulseWA {
+  0%, 100% { box-shadow: 0 4px 15px rgba(37,211,102,.3); }
+  50%      { box-shadow: 0 4px 25px rgba(37,211,102,.6); }
+}
 
-    .msg-bot::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: -8px;
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 0 0 13px 8px;
-      border-color: transparent transparent transparent var(--msg-bot-bg);
-    }
-    .msg-user::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: -8px;
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 0 8px 13px 0;
-      border-color: transparent var(--msg-user-bg) transparent transparent;
-    }
+/* ═══════════ DATE SEPARATOR ═══════════ */
+.date-sep { text-align: center; margin: 8px 0; }
+.date-sep span {
+  background: #fff;
+  color: var(--text-sec);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
 
-    .msg-time { font-size: 11px; color: var(--text-secondary); margin-top: 2px; text-align: left; float: left; margin-left: 8px; transform: translateY(4px); display: flex; align-items: center; gap: 3px; }
-    .msg-time .ticks { color: var(--wa-tick-blue); font-size: 13px; line-height: 1; letter-spacing: -3px; }
+/* ═══════════ SCROLL TO BOTTOM ═══════════ */
+#scroll-btn {
+  position: absolute;
+  bottom: 90px;
+  left: 16px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  cursor: pointer;
+  font-size: 18px;
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 50;
+  transition: opacity .2s;
+}
+#scroll-btn.show { display: flex; }
 
-    .typing { display: none; }
+/* ═══════════ IMAGE PREVIEW ═══════════ */
+.img-preview-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 12px;
+}
+.img-thumb {
+  width: 64px; height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #25d36640;
+  position: relative;
+}
+.img-thumb-wrap { position: relative; }
+.img-remove {
+  position: absolute;
+  top: -5px; left: -5px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #ff4444;
+  color: #fff;
+  border: 2px solid #fff;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
 
-    .option-buttons-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 4px 0 8px 0;
-      align-self: flex-start;
-      max-width: 90%;
-      animation: fadeIn 0.25s ease;
-    }
-    .option-btn {
-      background: var(--option-bg);
-      border: 1px solid var(--option-border);
-      color: var(--option-text);
-      padding: 9px 16px;
-      border-radius: 20px;
-      font-family: 'IBM Plex Sans Arabic', sans-serif;
-      font-size: 14.5px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      transition: all 0.15s ease;
-      text-align: center;
-    }
-    .option-btn:hover { background: var(--option-hover-bg); transform: translateY(-1px); }
-    .option-btn:active { transform: scale(0.97); }
-    .option-btn.highlighted {
-      background: #00a884;
-      color: #fff;
-      border-color: #00a884;
-      box-shadow: 0 0 15px rgba(0,168,132,0.5);
-      animation: pulseBtn 1.5s infinite;
-    }
-    .option-btn.faded {
-      opacity: 0.45;
-      background: var(--option-hover-bg);
-      color: var(--text-secondary);
-      pointer-events: none;
-      border-color: transparent;
-    }
+/* ═══════════ NOTIFICATION ═══════════ */
+.notif {
+  position: fixed;
+  bottom: 100px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #333;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 22px;
+  font-size: 13.5px;
+  z-index: 9999;
+  opacity: 0;
+  transition: all .3s;
+  pointer-events: none;
+  max-width: 90vw;
+  text-align: center;
+}
+.notif.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    .images-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-      gap: 5px;
-      margin-top: 6px;
-      max-width: 100%;
-    }
-    .images-grid img {
-      width: 100%;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 1px solid var(--border-color);
-      transition: transform 0.15s;
-    }
-    .images-grid img:hover { transform: scale(1.03); }
-    .msg-user .images-grid { justify-content: flex-end; }
+/* ═══════════ INFO MODAL ═══════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 26px 22px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  animation: modalIn .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalIn {
+  from { transform: scale(.9); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+.modal img {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  border: 3px solid #25d366;
+  object-fit: cover;
+  margin-bottom: 12px;
+}
+.modal h2 { font-size: 1.25rem; margin-bottom: 4px; color: #111; }
+.modal .sub { color: #667781; font-size: .85rem; margin-bottom: 16px; }
+.modal .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.modal .stat-box {
+  background: #f0f2f5;
+  padding: 10px 6px;
+  border-radius: 10px;
+}
+.modal .stat-box .num {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #128c7e;
+}
+.modal .stat-box .lbl {
+  display: block;
+  font-size: .7rem;
+  color: #667781;
+  margin-top: 2px;
+}
+.modal .g-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1a73e8, #4285f4);
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 22px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: .9rem;
+  margin-bottom: 12px;
+}
+.modal .close-modal {
+  display: block;
+  width: 100%;
+  background: #f0f2f5;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-family: var(--font);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111;
+}
 
-    .upload-progress-bar {
-      display: none;
-      padding: 10px 14px;
-      background: var(--modal-bg);
-      border-top: 1px solid var(--border-color);
-      flex-direction: column;
-      gap: 6px;
-      transition: background-color 0.3s ease;
-    }
-    .upload-progress-bar.show { display: flex; }
-    .upload-progress-bar .progress-label {
-      font-size: 13px;
-      color: #00a884;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .upload-progress-bar .progress-track {
-      width: 100%;
-      height: 6px;
-      background: var(--border-color);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .upload-progress-bar .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #00a884, #25d366);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
+/* ═══════════ RESPONSIVE ═══════════ */
+@media (max-width: 480px) {
+  .bubble { max-width: 85%; font-size: 14px; }
+  .btn-opt { font-size: 13px; padding: 6px 14px; }
+  .modal .stats { grid-template-columns: repeat(2, 1fr); }
+}
 
-    .images-preview-strip {
-      display: none;
-      padding: 8px 12px;
-      background: var(--preview-bg);
-      border-top: 1px solid var(--preview-border);
-      gap: 6px;
-      overflow-x: auto;
-      align-items: center;
-      transition: background-color 0.3s ease;
-    }
-    .images-preview-strip.show { display: flex; }
-    .images-preview-strip .strip-count {
-      font-size: 12px;
-      color: var(--preview-text);
-      font-weight: 700;
-      white-space: nowrap;
-      padding: 0 6px;
-    }
-    .images-preview-strip .strip-thumb {
-      position: relative;
-      width: 50px;
-      height: 50px;
-      min-width: 50px;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 2px solid var(--msg-bot-bg);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
-    .images-preview-strip .strip-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      cursor: pointer;
-    }
-    .images-preview-strip .strip-thumb .rm-btn {
-      position: absolute;
-      top: -4px;
-      right: -4px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #ea0038;
-      color: #fff;
-      border: 2px solid var(--msg-bot-bg);
-      font-size: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      font-weight: 700;
-    }
-
-    .wa-preview-card {
-      margin-top: 8px;
-      background: var(--preview-bg);
-      border-radius: 10px;
-      padding: 8px;
-      border: 1px solid var(--preview-border);
-      transition: background-color 0.3s ease;
-    }
-    .wa-preview-card .card-title {
-      font-size: 12.5px;
-      color: var(--preview-text);
-      font-weight: 700;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .wa-preview-card .thumbs-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 5px;
-    }
-    .wa-preview-card .thumbs-row img {
-      width: 100%;
-      height: 75px;
-      object-fit: cover;
-      border-radius: 7px;
-      cursor: pointer;
-      border: 1px solid var(--preview-border);
-    }
-
-    .bottom-dock {
-      flex-shrink: 0;
-      background: var(--bg-dock);
-      border-top: 1px solid var(--border-color);
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      padding-bottom: max(env(safe-area-inset-bottom), 8px);
-      transition: background-color 0.3s ease;
-    }
-
-    .deal-wrapper { padding: 8px 10px 6px 10px; width: 100%; }
-    .whatsapp-notification-card {
-      width: 100%;
-      background: var(--modal-bg);
-      border-right: 4px solid #00a884;
-      border-radius: 8px;
-      padding: 9px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      animation: slideUpPulse 1.5s infinite alternate;
-      transition: background-color 0.3s ease;
-    }
-    .whatsapp-notification-card .wa-icon-box { width: 34px; height: 34px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0; }
-    .whatsapp-notification-card .wa-text-box { flex: 1; min-width: 0; }
-    .whatsapp-notification-card .wa-title { font-size: 0.85rem; font-weight: 700; color: var(--modal-text); display: flex; align-items: center; gap: 4px; }
-    .whatsapp-notification-card .wa-subtitle { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .input-area {
-      padding: 8px 10px 8px 10px;
-      display: flex;
-      gap: 6px;
-      width: 100%;
-      align-items: center;
-      background: var(--bg-input);
-      min-height: 56px;
-      transition: background-color 0.3s ease;
-    }
-
-    .icon-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 1.35rem;
-      width: 38px;
-      height: 38px;
-      min-width: 38px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s, color 0.2s, opacity 0.2s;
-    }
-    .icon-btn:hover { background: rgba(0,168,132,0.1); }
-
-    .icon-btn#cameraBtn {
-      background: #00a884;
-      color: #fff;
-      display: none;
-      animation: pulseCamera 2s infinite;
-    }
-    .icon-btn#cameraBtn.show { display: flex; }
-    .icon-btn#cameraBtn:hover { background: #019474; transform: scale(1.05); }
-
-    @keyframes pulseCamera {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.7); }
-      50% { box-shadow: 0 0 0 8px rgba(0,168,132,0); }
-    }
-
-    .input-pill {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      background: var(--msg-bot-bg);
-      border-radius: 24px;
-      box-shadow: inset 0 0 0 1px var(--border-color);
-      padding: 0 6px 0 10px;
-      min-width: 0;
-      transition: box-shadow 0.15s, background-color 0.3s ease;
-    }
-    .input-pill:focus-within { box-shadow: inset 0 0 0 1px #00a884; }
-
-    .input-area input {
-      flex: 1;
-      border: none;
-      padding: 11px 6px;
-      background: transparent;
-      font-family: 'IBM Plex Sans Arabic', sans-serif;
-      font-size: 15px;
-      outline: none;
-      color: var(--text-primary);
-      min-width: 0;
-      transition: color 0.3s ease;
-    }
-
-    .input-area .send-btn {
-      background: #00a884;
-      border: none;
-      border-radius: 50%;
-      width: 46px;
-      height: 46px;
-      min-width: 46px;
-      min-height: 46px;
-      color: #fff;
-      font-size: 17px;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      transition: background 0.15s, transform 0.1s;
-    }
-    .input-area .send-btn:hover { background: #019474; }
-    .input-area .send-btn:active { transform: scale(0.92); }
-    .input-area .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    .lightbox-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.92);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      padding: 20px;
-    }
-    .lightbox-overlay.show { display: flex; }
-    .lightbox-overlay img {
-      max-width: 95%;
-      max-height: 90%;
-      border-radius: 8px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
-    .lightbox-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      border: none;
-      font-size: 22px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .toast {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.85);
-      color: #fff;
-      padding: 10px 18px;
-      border-radius: 22px;
-      font-size: 13.5px;
-      z-index: 10001;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
-      white-space: nowrap;
-      max-width: 90vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .toast.show { opacity: 1; }
-
-    @keyframes slideUpPulse { 0% { box-shadow: 0 2px 6px rgba(0,168,132,0.2); } 100% { box-shadow: 0 4px 15px rgba(0,168,132,0.4); } }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 12px rgba(0,168,132,0.4); } 50% { box-shadow: 0 0 22px rgba(0,168,132,0.8); } }
-  </style>
+/* ═══════════ DARK MODE ═══════════ */
+@media (prefers-color-scheme: dark) {
+  body { background: #111b21; }
+  #app { background: #0b141a; }
+  .bubble.bot { background: var(--bubble-in-d); color: var(--text-main-d); }
+  .bubble.bot::before { border-color: transparent transparent transparent var(--bubble-in-d); }
+  .bubble.user { background: var(--bubble-out-d); color: var(--text-main-d); }
+  .bubble.user::before { border-color: transparent var(--bubble-out-d) transparent transparent; }
+  .typing-bubble { background: var(--bubble-in-d); }
+  .btn-opt { background: #1e2d3d; color: #25d366; border-color: #25d36644; }
+  .btn-opt:hover { background: #25d366; color: #111; }
+  .btn-opt.primary { background: #25d366; color: #111; border-color: #25d366; }
+  .input-row { background: #1e2d3d; }
+  #msg-input { color: var(--text-main-d); }
+  #input-wrap { background: #111b21; }
+  #wa-btn-wrap { background: #111b21; }
+  .progress-bar-bg { background: #1e2d3d; }
+  #scroll-btn { background: #1e2d3d; color: #fff; }
+  .date-sep span { background: #1e2d3d; color: var(--text-sec-d); }
+  .menu-dropdown { background: #1e2d3d; }
+  .menu-item { color: #e9edef; }
+  .menu-item:hover { background: #0b141a; }
+  .modal { background: #1e2d3d; }
+  .modal h2 { color: #e9edef; }
+  .modal .stat-box { background: #0b141a; }
+  .modal .stat-box .num { color: #25d366; }
+  .modal .close-modal { background: #0b141a; color: #e9edef; }
+}
+</style>
 </head>
 <body>
+<div id="app">
 
-<div class="agent-app" id="app">
-
-  <div class="agent-header">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
-    <div class="info" onclick="showAboutModal()">
-      <h1>طارق طنطاوي</h1>
-      <p id="statusLine"><span class="dot"></span> <span id="statusText">متصل الان</span></p>
+  <!-- ═══ HEADER ═══ -->
+  <header>
+    <div class="avatar">
+      <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي"
+           onerror="this.parentElement.textContent='🏠'">
+    </div>
+    <div class="header-info">
+      <div class="header-name">
+        طارق طنطاوي
+        <span class="g-badge">⭐ 7</span>
+      </div>
+      <div class="header-status" id="status-txt">سمسار مدينة نصر • متصل الآن</div>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="toggleMenu(event)" title="القائمة">⋮</button>
     </div>
 
-    <a href="/" class="brand-logo" title="الرئيسية">
-      <img src="https://nasr-realestate.github.io/assets/img/logo.webp" alt="سمسار طلبك" onerror="this.style.display='none'">
-      <span>سمسار طلبك</span>
-    </a>
-
-    <button class="menu-btn" id="menuBtn" onclick="toggleMenu(event)" aria-label="القائمة">
-      <i class="fas fa-ellipsis-v"></i>
-    </button>
-
-    <div class="menu-dropdown" id="menuDropdown">
-      <button class="menu-item" onclick="showAboutModal()">
-        <i class="fas fa-user-circle"></i>
-        معلومات عن طارق
+    <!-- MENU DROPDOWN -->
+    <div class="menu-dropdown" id="menu-dropdown">
+      <button class="menu-item" onclick="showAbout()">
+        <span>👤</span> معلومات عن طارق
       </button>
-      <button class="menu-item" id="themeMenuItem" onclick="toggleTheme()">
-        <i class="fas fa-moon" id="themeIcon"></i>
-        <span id="themeLabel">الوضع الداكن</span>
+      <button class="menu-item" onclick="showGoogleProfile()">
+        <span>🏆</span> بروفايلي على Google
       </button>
-      <div class="menu-separator"></div>
-      <button class="menu-item" onclick="startNewChat()">
-        <i class="fas fa-redo-alt"></i>
-        محادثة جديدة
+      <div class="menu-sep"></div>
+      <button class="menu-item" onclick="resetChat()">
+        <span>🔄</span> محادثة جديدة
       </button>
       <button class="menu-item danger" onclick="deleteChat()">
-        <i class="fas fa-trash"></i>
-        حذف المحادثة
+        <span>🗑️</span> حذف المحادثة
       </button>
     </div>
-  </div>
+  </header>
 
-  <!-- ═══ شريط الإشعارات الجديد ═══ -->
-  <div class="notices-bar" id="noticesBar">
+  <!-- ═══ NOTICES BAR ═══ -->
+  <div class="notices-bar" id="notices-bar">
+    <button class="notices-close" onclick="hideNotices()">✕</button>
     <div class="notice-item">
-      <i class="fas fa-info-circle"></i>
-      <span>لا نستقبل شقق للبيع أقل من 4 مليون</span>
+      <span class="dot-icon"></span>
+      <span>لا نستقبل شقق للبيع أقل من 4 مليون جنيه</span>
     </div>
     <div class="notice-item">
-      <i class="fas fa-info-circle"></i>
-      <span>لا نستقبل طلبات إيجار فاضي أقل من 15 ألف</span>
+      <span class="dot-icon"></span>
+      <span>لا نستقبل طلبات إيجار فاضي أقل من 15 ألف جنيه</span>
     </div>
     <div class="notice-item">
-      <i class="fas fa-lightbulb"></i>
+      <span class="dot-icon"></span>
       <span>احذف المحادثة وابدأ من جديد — لا تشتت انتباه الوكيل</span>
     </div>
   </div>
 
-  <div class="chat-area" id="chatMessages">
-    <div class="typing" id="typingIndicator">طارق يكتب الآن...</div>
+  <!-- ═══ CHAT ═══ -->
+  <div id="chat">
+    <div class="date-sep"><span id="date-label">اليوم</span></div>
   </div>
 
-  <div class="bottom-dock">
+  <!-- ═══ PROGRESS ═══ -->
+  <div id="progress-wrap" class="progress-wrap" style="display:none">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label"></div>
+  </div>
 
-    <div class="upload-progress-bar" id="uploadProgressBar">
-      <div class="progress-label" id="uploadProgressLabel">
-        <i class="fas fa-cloud-upload-alt"></i>
-        <span>جاري رفع الصور...</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="uploadProgressFill"></div>
-      </div>
-    </div>
+  <!-- ═══ BUTTONS RACK ═══ -->
+  <div id="btns-rack" class="btns-rack"></div>
 
-    <div class="images-preview-strip" id="imagesPreviewStrip"></div>
+  <!-- ═══ IMAGE PREVIEWS ═══ -->
+  <div id="img-previews" class="img-preview-row" style="display:none"></div>
 
-    <div class="deal-wrapper" id="dealWrapper" style="display: none;">
-      <div class="whatsapp-notification-card" id="waCard" onclick="openWhatsApp()">
-        <div class="wa-icon-box"><i class="fab fa-whatsapp"></i></div>
-        <div class="wa-text-box">
-          <div class="wa-title">
-            اضغط هنا للتواصل المباشر مع أ. طارق
-            <span style="font-size: 9px; background: #25d366; color: #fff; padding: 1px 5px; border-radius: 4px;">جاهز</span>
-          </div>
-          <div class="wa-subtitle">تم تأهيل طلبك، انتقل لواتساب لاستكمال المعاينة</div>
-        </div>
-      </div>
-    </div>
+  <!-- ═══ WA BUTTON ═══ -->
+  <div id="wa-btn-wrap">
+    <a id="wa-btn" href="#" target="_blank" rel="noopener">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.85L0 24l6.327-1.51A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.8a9.8 9.8 0 0 1-5.013-1.374l-.36-.214-3.755.896.937-3.655-.234-.376A9.8 9.8 0 0 1 2.2 12 9.8 9.8 0 0 1 12 2.2 9.8 9.8 0 0 1 21.8 12 9.8 9.8 0 0 1 12 21.8z"/>
+      </svg>
+      ابعت الطلب على واتساب
+    </a>
+  </div>
 
-    <div class="input-area">
-      <button class="icon-btn" id="emojiBtn" onclick="onEmojiClick()" aria-label="إيموجي">
-        <i class="far fa-smile"></i>
-      </button>
-
-      <button class="icon-btn" id="cameraBtn" onclick="onCameraClick()" aria-label="إرفاق صور">
-        <i class="fas fa-camera"></i>
-      </button>
-
-      <div class="input-pill">
-        <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter' && !isSending) sendMsg()" oninput="onInputChanged()">
-        <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
-      </div>
-
-      <button class="send-btn" id="sendBtn" onclick="onSendBtnClick()">
-        <i class="fas fa-microphone" id="sendBtnIcon"></i>
+  <!-- ═══ INPUT ═══ -->
+  <div id="input-wrap">
+    <div class="input-row">
+      <button id="attach-btn" class="input-action-btn" onclick="document.getElementById('file-input').click()" title="إرفق صور">📷</button>
+      <input type="file" id="file-input" accept="image/*" multiple>
+      <textarea id="msg-input" rows="1" placeholder="اكتب رسالة..." dir="rtl"></textarea>
+      <button id="send-btn" class="input-action-btn" onclick="sendMsg()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
       </button>
     </div>
   </div>
 
+  <button id="scroll-btn" onclick="scrollToBottom()">↓</button>
 </div>
 
-<!-- ═══ Confirm Modal ═══ -->
-<div class="confirm-overlay" id="confirmModal">
-  <div class="confirm-modal">
-    <div class="confirm-icon" id="confirmIcon">
-      <i class="fas fa-question-circle"></i>
+<!-- ═══ INFO MODAL ═══ -->
+<div class="modal-overlay" id="about-modal" onclick="if(event.target===this) closeAbout()">
+  <div class="modal">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق">
+    <h2>طارق طنطاوي</h2>
+    <div class="sub">Real Estate Agent in Nasr City</div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <span class="num">16.3M</span>
+        <span class="lbl">مشاهدة</span>
+      </div>
+      <div class="stat-box">
+        <span class="num">468</span>
+        <span class="lbl">صورة</span>
+      </div>
+      <div class="stat-box">
+        <span class="num">195</span>
+        <span class="lbl">مراجعة</span>
+      </div>
     </div>
-    <h2 class="confirm-title" id="confirmTitle">تأكيد</h2>
-    <p class="confirm-message" id="confirmMessage">هل أنت متأكد؟</p>
-    <div class="confirm-actions">
-      <button class="confirm-btn cancel" id="confirmCancelBtn" onclick="closeConfirm(false)">
-        إلغاء
-      </button>
-      <button class="confirm-btn info" id="confirmOkBtn" onclick="closeConfirm(true)">
-        تأكيد
-      </button>
-    </div>
+
+    <a class="g-btn" href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener">
+      🗺️ شوف بروفايلي على Google Maps
+    </a>
+    <button class="close-modal" onclick="closeAbout()">إغلاق</button>
   </div>
 </div>
 
-<div class="info-modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAboutModal()">
-  <div class="info-modal">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي">
-    <h2>أ. طارق طنطاوي</h2>
-    <div class="subtitle">سمسار عقارات — مدينة نصر</div>
-    <p>خبير عقاري في مدينة نصر منذ 2014. متخصص في بيع وشراء وتأجير الشقق السكنية والمحلات والمكاتب الإدارية.</p>
-    <button class="close-modal-btn" onclick="closeAboutModal()">إغلاق</button>
-  </div>
-</div>
-
-<div class="lightbox-overlay" id="lightbox" onclick="if(event.target===this) closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightboxImg" src="" alt="صورة">
-</div>
-
-<div class="toast" id="toast">رسالة تنبيه</div>
+<!-- ═══ NOTIFICATION ═══ -->
+<div id="notif" class="notif"></div>
 
 <script>
-  const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-  const UPLOAD_URL = WORKER_URL.replace(/\/$/, "") + "/upload-images";
-  const CORRECT_PHONE = "201147758857";
-  const GALLERY_BASE = "https://nasr-realestate.github.io/property-images.html";
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+const STORAGE_KEY = "simsar_chat_v70";
+const TAREK_WA   = "201147758857";
+const GOOGLE_PROFILE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 
-  const STORAGE_KEY = "tarek_chat_v40";
-  const SCORE_KEY = "tarek_score_v40";
-  const WA_KEY = "tarek_wa_v40";
-  const LEAD_KEY = "tarek_lead_v40";
-  const FORM_STATE_KEY = "tarek_form_state_v40";
-  const WA_MSG_KEY = "tarek_wa_msg_v40";
-  const READY_KEY = "tarek_ready_v40";
-  const THEME_KEY = "tarek_theme_v40";
-  const NOTICES_KEY = "tarek_notices_v40";
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let state = {
+  formState: { _version: "v70" },
+  history: [],
+  imageUrls: [],
+  pendingImages: [],
+  waMessage: null,
+  whatsappUrl: null,
+  noticesHidden: false,
+};
 
-  const MAX_IMAGES = 5;
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
+}
 
-  let history = [];
-  let score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
-  let canShare = localStorage.getItem(WA_KEY) === "true";
-  let currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
-  let currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
-  let lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
-  let readyToSend = localStorage.getItem(READY_KEY) === "true";
-  let isSending = false;
-
-  let pendingImages = [];
-  let isInImagesStep = false;
-
-  const chat = document.getElementById('chatMessages');
-  const input = document.getElementById('userInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const sendBtnIcon = document.getElementById('sendBtnIcon');
-  const typing = document.getElementById('typingIndicator');
-  const dealWrapper = document.getElementById('dealWrapper');
-  const menuBtn = document.getElementById('menuBtn');
-  const menuDropdown = document.getElementById('menuDropdown');
-  const statusLine = document.getElementById('statusLine');
-  const statusText = document.getElementById('statusText');
-  const fileInput = document.getElementById('fileInput');
-  const cameraBtn = document.getElementById('cameraBtn');
-  const uploadProgressBar = document.getElementById('uploadProgressBar');
-  const uploadProgressLabel = document.getElementById('uploadProgressLabel');
-  const uploadProgressFill = document.getElementById('uploadProgressFill');
-  const imagesPreviewStrip = document.getElementById('imagesPreviewStrip');
-  const toast = document.getElementById('toast');
-
-  // ═══════════════════════════════════════════════
-  // 🌙 Theme Toggle
-  // ═══════════════════════════════════════════════
-  function getCurrentTheme() {
-    return localStorage.getItem(THEME_KEY) || "light";
-  }
-
-  function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    const icon = document.getElementById("themeIcon");
-    const label = document.getElementById("themeLabel");
-    if (icon && label) {
-      if (theme === "dark") {
-        icon.className = "fas fa-sun";
-        label.innerText = "الوضع الفاتح";
-      } else {
-        icon.className = "fas fa-moon";
-        label.innerText = "الوضع الداكن";
-      }
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (s) {
+      state = { ...state, ...s };
+      state.pendingImages = [];
     }
+  } catch {}
+}
+
+// ═══════════════════════════════════════
+// UI REFS
+// ═══════════════════════════════════════
+const chat        = document.getElementById("chat");
+const btnsRack    = document.getElementById("btns-rack");
+const waWrap      = document.getElementById("wa-btn-wrap");
+const waBtn       = document.getElementById("wa-btn");
+const input       = document.getElementById("msg-input");
+const sendBtn     = document.getElementById("send-btn");
+const progressW   = document.getElementById("progress-wrap");
+const progressF   = document.getElementById("progress-fill");
+const progressL   = document.getElementById("progress-label");
+const imgPreviews = document.getElementById("img-previews");
+const scrollBtn   = document.getElementById("scroll-btn");
+const noticesBar  = document.getElementById("notices-bar");
+const menuDrop    = document.getElementById("menu-dropdown");
+
+// ═══════════════════════════════════════
+// NOTICES BAR
+// ═══════════════════════════════════════
+function hideNotices() {
+  noticesBar.classList.add("hidden");
+  state.noticesHidden = true;
+  saveState();
+}
+
+function initNotices() {
+  if (state.noticesHidden) {
+    noticesBar.classList.add("hidden");
+    return;
   }
+  // تختفي تلقائياً بعد 15 ثانية
+  setTimeout(() => {
+    if (!state.noticesHidden) hideNotices();
+  }, 15000);
+}
 
-  function setTheme(theme) {
-    localStorage.setItem(THEME_KEY, theme);
-    applyTheme(theme);
+// ═══════════════════════════════════════
+// MENU
+// ═══════════════════════════════════════
+function toggleMenu(e) {
+  if (e) e.stopPropagation();
+  menuDrop.classList.toggle("open");
+}
+
+document.addEventListener("click", (e) => {
+  if (!menuDrop.contains(e.target) && !e.target.closest('[onclick*="toggleMenu"]')) {
+    menuDrop.classList.remove("open");
   }
+});
 
-  function toggleTheme() {
-    const current = getCurrentTheme();
-    const newTheme = current === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    menuDropdown.classList.remove("open");
-    showToast(newTheme === "dark" ? "🌙 الوضع الداكن" : "☀️ الوضع الفاتح");
-  }
+function showAbout() {
+  menuDrop.classList.remove("open");
+  document.getElementById("about-modal").classList.add("show");
+}
 
-  // ═══════════════════════════════════════════════
-  // 📢 Notices Bar — إخفاء تلقائي بعد 8 ثواني
-  // ═══════════════════════════════════════════════
-  function hideNoticesBar() {
-    const bar = document.getElementById('noticesBar');
-    if (!bar || bar.classList.contains('hidden')) return;
-    bar.classList.add('hidden');
-    localStorage.setItem(NOTICES_KEY, 'hidden');
-  }
+function closeAbout() {
+  document.getElementById("about-modal").classList.remove("show");
+}
 
-  function initNoticesBar() {
-    const bar = document.getElementById('noticesBar');
-    if (!bar) return;
-    
-    const alreadyHidden = localStorage.getItem(NOTICES_KEY) === 'hidden';
-    if (alreadyHidden) {
-      bar.classList.add('hidden');
-      return;
-    }
+function showGoogleProfile() {
+  menuDrop.classList.remove("open");
+  window.open(GOOGLE_PROFILE_URL, "_blank");
+}
 
-    setTimeout(hideNoticesBar, 8000);
-  }
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function formatTime() {
+  return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+}
 
-  // ═══════════════════════════════════════════════
-  // 🎨 Confirm Modal
-  // ═══════════════════════════════════════════════
-  let confirmCallback = null;
+function formatText(txt) {
+  return String(txt || "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\*([^*\n]+)\*/g, "<b>$1</b>")
+    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/(━━━+)/g, '<span class="trust-bar">$1</span>');
+}
 
-  function showConfirm(options) {
-    const {
-      title = "تأكيد",
-      message = "هل أنت متأكد؟",
-      okText = "✅ تأكيد",
-      cancelText = "❌ إلغاء",
-      icon = "fa-question-circle",
-      iconType = "info",
-      onOk = null
-    } = options || {};
+function addMsg(text, type = "bot") {
+  const row = document.createElement("div");
+  row.className = `msg-row ${type === "user" ? "in" : "out"}`;
+  const tick = type === "user" ? `<span class="ticks">✓✓</span>` : "";
+  row.innerHTML = `
+    <div class="bubble ${type}">
+      ${formatText(text)}
+      <span class="bubble-time">${tick}${formatTime()}</span>
+    </div>`;
+  chat.appendChild(row);
+  scrollToBottom();
+}
 
-    const modal = document.getElementById("confirmModal");
-    const iconEl = document.getElementById("confirmIcon");
-    const titleEl = document.getElementById("confirmTitle");
-    const messageEl = document.getElementById("confirmMessage");
-    const okBtn = document.getElementById("confirmOkBtn");
-    const cancelBtn = document.getElementById("confirmCancelBtn");
+function showTyping() {
+  if (document.getElementById("typing-row")) return;
+  const row = document.createElement("div");
+  row.className = "typing-row";
+  row.id = "typing-row";
+  row.innerHTML = `<div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  chat.appendChild(row);
+  scrollToBottom();
+}
 
-    if (!modal) return;
+function hideTyping() {
+  const r = document.getElementById("typing-row");
+  if (r) r.remove();
+}
 
-    iconEl.className = "confirm-icon";
-    if (iconType === "danger") iconEl.classList.add("danger");
-    else iconEl.classList.add("info");
-    iconEl.innerHTML = `<i class="fas ${icon}"></i>`;
+function setStatus(txt) {
+  document.getElementById("status-txt").textContent = txt;
+}
 
-    titleEl.innerText = title;
-    messageEl.innerText = message;
-    okBtn.innerText = okText;
-    cancelBtn.innerText = cancelText;
-
-    okBtn.className = "confirm-btn";
-    if (iconType === "danger") okBtn.classList.add("danger");
-    else okBtn.classList.add("info");
-
-    confirmCallback = onOk;
-    modal.classList.add("show");
-    setTimeout(() => okBtn.focus(), 100);
-  }
-
-  function closeConfirm(confirmed) {
-    const modal = document.getElementById("confirmModal");
-    if (!modal) return;
-    modal.classList.remove("show");
-
-    const callback = confirmCallback;
-    confirmCallback = null;
-
-    if (confirmed && typeof callback === "function") {
-      setTimeout(() => callback(), 150);
-    }
-  }
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      const modal = document.getElementById("confirmModal");
-      if (modal && modal.classList.contains("show")) closeConfirm(false);
-    }
+function renderButtons(opts) {
+  btnsRack.innerHTML = "";
+  if (!opts?.length) return;
+  const primary = ["✅ ابعت على واتساب", "📅 احجز معاينة"];
+  opts.forEach(o => {
+    const btn = document.createElement("button");
+    btn.className = `btn-opt${primary.includes(o) ? " primary" : ""}`;
+    btn.textContent = o;
+    btn.onclick = () => sendMsg(o);
+    btnsRack.appendChild(btn);
   });
+}
 
-  function getTime() {
-    return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-  }
+function updateProgress(p) {
+  if (!p || !p.total) { progressW.style.display = "none"; return; }
+  progressW.style.display = "block";
+  const pct = Math.round((p.current / p.total) * 100);
+  progressF.style.width = pct + "%";
+  progressL.textContent = `(${p.current}/${p.total}) — ${p.remaining} سؤال متبقي`;
+}
 
-  function scroll(options = {}) {
-    const { smooth = true, delay = 50 } = options;
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const lastChild = chat.lastElementChild;
-        if (lastChild && lastChild.classList.contains('option-buttons-wrap')) {
-          lastChild.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
-        } else {
-          chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
-        }
-      }, delay);
-    });
-  }
+function showWA(url, msg) {
+  if (!url) return;
+  waWrap.style.display = "block";
+  waBtn.href = url;
+  state.whatsappUrl = url;
+  state.waMessage = msg;
+}
 
-  function showToast(text, duration = 2400) {
-    toast.innerText = text;
-    toast.classList.add('show');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => { toast.classList.remove('show'); }, duration);
-  }
+function hideWA() {
+  waWrap.style.display = "none";
+  waBtn.href = "#";
+}
 
-  function toggleMenu(e) {
-    if (e) e.stopPropagation();
-    menuDropdown.classList.toggle('open');
-  }
-
-  document.addEventListener('click', function(e) {
-    if (!menuDropdown.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
-      menuDropdown.classList.remove('open');
-    }
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop = chat.scrollHeight;
   });
+}
 
-  function showAboutModal() {
-    menuDropdown.classList.remove('open');
-    document.getElementById('aboutModal').classList.add('show');
+chat.addEventListener("scroll", () => {
+  const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 80;
+  scrollBtn.classList.toggle("show", !atBottom);
+});
+
+// ═══════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════
+function notify(msg, dur = 2500) {
+  const n = document.getElementById("notif");
+  n.textContent = msg;
+  n.classList.add("show");
+  clearTimeout(notify._t);
+  notify._t = setTimeout(() => n.classList.remove("show"), dur);
+}
+
+// ═══════════════════════════════════════
+// IMAGES
+// ═══════════════════════════════════════
+document.getElementById("file-input").addEventListener("change", e => {
+  const files = [...(e.target.files || [])];
+  if (!files.length) return;
+  if (state.pendingImages.length + files.length > 5) {
+    notify("لحد 5 صور بس");
+    return;
   }
-  function closeAboutModal() {
-    document.getElementById('aboutModal').classList.remove('show');
+  files.forEach(f => {
+    if (!f.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const base64 = ev.target.result.split(",")[1];
+      state.pendingImages.push({ file: f, base64, preview: ev.target.result });
+      renderImgPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+  e.target.value = "";
+});
+
+function renderImgPreviews() {
+  if (!state.pendingImages.length) {
+    imgPreviews.style.display = "none";
+    return;
+  }
+  imgPreviews.style.display = "flex";
+  imgPreviews.innerHTML = "";
+  state.pendingImages.forEach((img, i) => {
+    const w = document.createElement("div");
+    w.className = "img-thumb-wrap";
+    w.innerHTML = `<img src="${img.preview}" class="img-thumb"><button class="img-remove" onclick="removeImg(${i})">×</button>`;
+    imgPreviews.appendChild(w);
+  });
+}
+
+function removeImg(i) {
+  state.pendingImages.splice(i, 1);
+  renderImgPreviews();
+}
+
+async function uploadPendingImages() {
+  if (!state.pendingImages.length) return [];
+  const base64s = state.pendingImages.map(x => x.base64);
+  try {
+    const r = await fetch(WORKER_URL.replace(/\/$/, "") + "/upload-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: base64s })
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j.urls || [];
+  } catch { return []; }
+}
+
+// ═══════════════════════════════════════
+// SEND MESSAGE
+// ═══════════════════════════════════════
+let isLoading = false;
+
+async function sendMsg(override) {
+  if (isLoading) return;
+  const txt = (override || input.value).trim();
+  if (!txt) return;
+
+  if (!override) input.value = "";
+  input.style.height = "auto";
+  renderButtons([]);
+  hideWA();
+
+  addMsg(txt, "user");
+  state.history.push({ role: "user", message: txt });
+
+  // Upload images if any
+  let imgUrls = [];
+  if (state.pendingImages.length) {
+    setStatus("جاري رفع الصور...");
+    imgUrls = await uploadPendingImages();
+    state.pendingImages = [];
+    renderImgPreviews();
   }
 
-  function setTypingStatus(isTyping, customText) {
-    if (isTyping) {
-      statusText.innerText = customText || 'يكتب الآن...';
-      statusLine.classList.add('is-typing');
-    } else {
-      statusText.innerText = 'متصل الان';
-      statusLine.classList.remove('is-typing');
-    }
-  }
+  isLoading = true;
+  sendBtn.disabled = true;
+  setStatus("يكتب...");
+  showTyping();
 
-  function setCameraButtonVisible(visible) {
-    if (visible) {
-      cameraBtn.classList.add('show');
-      isInImagesStep = true;
-    } else {
-      cameraBtn.classList.remove('show');
-      isInImagesStep = false;
-    }
-  }
+  try {
+    const payload = {
+      message: txt,
+      formState: state.formState || { _version: "v70" },
+      history: state.history.slice(-20),
+      imageUrls: imgUrls
+    };
 
-  function onCameraClick() {
-    if (!isInImagesStep) return;
-    if (pendingImages.length >= MAX_IMAGES) {
-      showToast(`الحد الأقصى ${MAX_IMAGES} صور.`);
+    const r = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    hideTyping();
+    setStatus("سمسار مدينة نصر • متصل الآن");
+
+    if (!r.ok) {
+      addMsg("حصل خطأ مؤقت. جرّب تاني.", "bot");
       return;
     }
-    fileInput.click();
-  }
 
-  function renderImagesPreviewStrip() {
-    if (pendingImages.length === 0) {
-      imagesPreviewStrip.classList.remove('show');
-      imagesPreviewStrip.innerHTML = '';
-      return;
-    }
-    imagesPreviewStrip.classList.add('show');
-    imagesPreviewStrip.innerHTML = '';
+    const data = await r.json();
+    const reply = data.response || "";
 
-    const count = document.createElement('div');
-    count.className = 'strip-count';
-    count.innerText = `${pendingImages.length}/${MAX_IMAGES}`;
-    imagesPreviewStrip.appendChild(count);
-
-    pendingImages.forEach(img => {
-      const thumb = document.createElement('div');
-      thumb.className = 'strip-thumb';
-
-      const imgEl = document.createElement('img');
-      imgEl.src = img.dataUrl;
-      imgEl.onclick = () => openLightbox(img.dataUrl);
-      thumb.appendChild(imgEl);
-
-      const rm = document.createElement('button');
-      rm.className = 'rm-btn';
-      rm.innerText = '✕';
-      rm.onclick = (e) => {
-        e.stopPropagation();
-        pendingImages = pendingImages.filter(x => x.id !== img.id);
-        renderImagesPreviewStrip();
-      };
-      thumb.appendChild(rm);
-
-      imagesPreviewStrip.appendChild(thumb);
-    });
-  }
-
-  function onFilesSelected(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    const remaining = MAX_IMAGES - pendingImages.length;
-    const toAdd = files.slice(0, remaining);
-
-    if (files.length > remaining) {
-      showToast(`الحد الأقصى ${MAX_IMAGES} صور. تم إضافة ${toAdd.length} فقط.`);
+    if (reply) {
+      addMsg(reply, "bot");
+      state.history.push({ role: "assistant", message: reply });
     }
 
-    toAdd.forEach(file => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const dataUrl = e.target.result;
-        const base64 = dataUrl.split(',')[1];
-        pendingImages.push({
-          id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-          dataUrl,
-          base64
-        });
-        renderImagesPreviewStrip();
-      };
-      reader.readAsDataURL(file);
-    });
+    if (data.formState) state.formState = data.formState;
+    if (data.waMessage) state.waMessage = data.waMessage;
 
-    fileInput.value = '';
-  }
-
-  function openLightbox(src) {
-    document.getElementById('lightboxImg').src = src;
-    document.getElementById('lightbox').classList.add('show');
-  }
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('show');
-    document.getElementById('lightboxImg').src = '';
-  }
-
-  function showUploadProgress(current, total) {
-    uploadProgressBar.classList.add('show');
-    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
-    uploadProgressFill.style.width = percent + '%';
-    uploadProgressLabel.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> <span>جاري رفع ${current}/${total} صورة (${percent}%)</span>`;
-  }
-
-  function hideUploadProgress() {
-    uploadProgressBar.classList.remove('show');
-    uploadProgressFill.style.width = '0%';
-  }
-
-  async function uploadPendingImages() {
-    if (pendingImages.length === 0) return { ok: true, urls: [] };
-
-    const total = pendingImages.length;
-    showUploadProgress(0, total);
-    setTypingStatus(true, 'جاري رفع الصور...');
-
-    try {
-      showUploadProgress(1, total);
-      const res = await fetch(UPLOAD_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: pendingImages.map(p => p.base64) })
-      });
-      showUploadProgress(total, total);
-
-      const data = await res.json();
-
-      if (!res.ok || !data.urls || !data.urls.length) {
-        console.error("[V40] upload failed:", data);
-        return { ok: false, error: data.error || 'فشل رفع الصور' };
-      }
-      console.log("[V40] uploadPendingImages: urls =", data.urls.length);
-      return { ok: true, urls: data.urls };
-    } catch (err) {
-      console.error("[V40] uploadPendingImages error:", err);
-      return { ok: false, error: 'تعذر الاتصال بالسيرفر' };
-    } finally {
-      hideUploadProgress();
-      setTypingStatus(false);
+    if (data.whatsappUrl) showWA(data.whatsappUrl, data.waMessage);
+    else if (data.canShareWhatsapp && data.waMessage) {
+      const url = `https://wa.me/${TAREK_WA}?text=${encodeURIComponent(data.waMessage)}`;
+      showWA(url, data.waMessage);
     }
-  }
 
-  // ═══════════════════════════════════════════════
-  // 🆕 محادثة جديدة — مع Confirm Modal
-  // ═══════════════════════════════════════════════
-  function startNewChat() {
-    menuDropdown.classList.remove('open');
+    if (data.options?.length) renderButtons(data.options);
+    updateProgress(data.progress);
 
-    showConfirm({
-      title: "محادثة جديدة؟",
-      message: "هتبدأ محادثة جديدة من الأول. الرسائل والبيانات الحالية هتتمسح.",
-      okText: "🆕 ابدأ",
-      cancelText: "❌ إلغاء",
-      icon: "fa-redo-alt",
-      iconType: "info",
-      onOk: () => {
-        resetAll();
-        showToast("✅ محادثة جديدة");
-      }
-    });
-  }
+    if (data.imageUrls?.length) {
+      state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls];
+    }
 
-  // ═══════════════════════════════════════════════
-  // 🗑️ حذف المحادثة — مع Confirm Modal
-  // ═══════════════════════════════════════════════
-  function deleteChat() {
-    menuDropdown.classList.remove('open');
-
-    showConfirm({
-      title: "حذف المحادثة؟",
-      message: "كل الرسائل والبيانات هتتمسح نهائيًا، ومش هتقدر ترجعها تاني.",
-      okText: "🗑️ احذف",
-      cancelText: "❌ إلغاء",
-      icon: "fa-trash",
-      iconType: "danger",
-      onOk: () => {
-        resetAll();
-        showToast("✅ تم الحذف");
-      }
-    });
-  }
-
-  function resetAll() {
-    [STORAGE_KEY, SCORE_KEY, WA_KEY, LEAD_KEY, FORM_STATE_KEY, WA_MSG_KEY, READY_KEY]
-      .forEach(k => localStorage.removeItem(k));
-
-    history = [];
-    score = 0;
-    canShare = false;
-    currentLeadData = {};
-    currentFormState = null;
-    lastWaMessage = null;
-    readyToSend = false;
-    pendingImages = [];
-    isInImagesStep = false;
-
-    chat.querySelectorAll('.msg').forEach(el => el.remove());
-    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
-
-    renderImagesPreviewStrip();
-    setCameraButtonVisible(false);
-    hideUploadProgress();
-
-    const welcome = `معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
-    renderMsg(welcome, 'bot');
-    history.push({ text: welcome, type: 'bot', time: getTime() });
-
-    updateUI();
     saveState();
+
+  } catch (err) {
+    hideTyping();
+    setStatus("تعذّر الاتصال");
+    addMsg("تعذّر الاتصال بالخادم. تحقق من الإنترنت وجرّب تاني.", "bot");
+  } finally {
+    isLoading = false;
+    sendBtn.disabled = false;
   }
+}
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    localStorage.setItem(SCORE_KEY, score.toString());
-    localStorage.setItem(WA_KEY, canShare ? "true" : "false");
-    localStorage.setItem(LEAD_KEY, JSON.stringify(currentLeadData));
-    localStorage.setItem(FORM_STATE_KEY, JSON.stringify(currentFormState));
-    localStorage.setItem(READY_KEY, readyToSend ? "true" : "false");
-    if (lastWaMessage) localStorage.setItem(WA_MSG_KEY, lastWaMessage);
+// ═══════════════════════════════════════
+// INPUT HANDLERS
+// ═══════════════════════════════════════
+input.addEventListener("input", () => {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 120) + "px";
+});
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMsg();
   }
+});
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) history = JSON.parse(raw);
-      score = parseInt(localStorage.getItem(SCORE_KEY) || "0");
-      canShare = localStorage.getItem(WA_KEY) === "true";
-      currentLeadData = JSON.parse(localStorage.getItem(LEAD_KEY) || "{}");
-      currentFormState = JSON.parse(localStorage.getItem(FORM_STATE_KEY) || "null");
-      lastWaMessage = localStorage.getItem(WA_MSG_KEY) || null;
-      readyToSend = localStorage.getItem(READY_KEY) === "true";
-      return true;
-    } catch { return false; }
+// ═══════════════════════════════════════
+// RESET / DELETE
+// ═══════════════════════════════════════
+function resetChat() {
+  menuDrop.classList.remove("open");
+  if (!confirm("تبدأ محادثة جديدة؟")) return;
+  state = {
+    formState: { _version: "v70" },
+    history: [],
+    imageUrls: [],
+    pendingImages: [],
+    waMessage: null,
+    whatsappUrl: null,
+    noticesHidden: state.noticesHidden,
+  };
+  saveState();
+  chat.innerHTML = `<div class="date-sep"><span id="date-label">اليوم</span></div>`;
+  btnsRack.innerHTML = "";
+  hideWA();
+  progressW.style.display = "none";
+  imgPreviews.style.display = "none";
+  renderImgPreviews();
+  startConversation();
+  notify("✅ محادثة جديدة");
+}
+
+function deleteChat() {
+  menuDrop.classList.remove("open");
+  if (!confirm("تأكيد حذف المحادثة؟")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = {
+    formState: { _version: "v70" },
+    history: [],
+    imageUrls: [],
+    pendingImages: [],
+    waMessage: null,
+    whatsappUrl: null,
+    noticesHidden: false,
+  };
+  chat.innerHTML = `<div class="date-sep"><span>اليوم</span></div>`;
+  btnsRack.innerHTML = "";
+  hideWA();
+  progressW.style.display = "none";
+  imgPreviews.style.display = "none";
+  renderImgPreviews();
+  noticesBar.classList.remove("hidden");
+  startConversation();
+  notify("🗑️ تم الحذف");
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+function startConversation() {
+  const trustBar = `━━━━━━━━━━━━━━━━━━━
+🏆 *Google Local Guide Level 7*
+⭐ 195 مراجعة | 👁️ 16.3 مليون مشاهدة
+━━━━━━━━━━━━━━━━━━━
+
+أهلاً وسهلاً! أنا طارق طنطاوي 🏠
+سمسار مدينة نصر من 2014.
+
+ازّاي أقدر أساعدك؟`;
+
+  addMsg(trustBar, "bot");
+  renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
+}
+
+// Load persisted state
+loadState();
+initNotices();
+
+if (state.history?.length) {
+  // رندر المحادثة السابقة
+  state.history.forEach(m => {
+    if (m.role === "user") addMsg(m.message, "user");
+    else addMsg(m.message, "bot");
+  });
+  // إعادة عرض العناصر النشطة
+  if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
+    showWA(state.whatsappUrl, state.waMessage);
   }
-
-  function renderWhatsAppButton() {
-    if (readyToSend && (canShare || score >= 5)) dealWrapper.style.display = 'block';
-    else dealWrapper.style.display = 'none';
-  }
-
-  function updateUI() {
-    renderWhatsAppButton();
-    saveState();
-  }
-
-  function renderImagesGrid(images) {
-    if (!images || !images.length) return null;
-    const grid = document.createElement('div');
-    grid.className = 'images-grid';
-    images.forEach(src => {
-      const img = document.createElement('img');
-      img.src = src;
-      img.loading = 'lazy';
-      img.onclick = () => openLightbox(src);
-      grid.appendChild(img);
-    });
-    return grid;
-  }
-
-  function renderWaPreviewCard(images) {
-    if (!images || !images.length) return null;
-    const card = document.createElement('div');
-    card.className = 'wa-preview-card';
-
-    const title = document.createElement('div');
-    title.className = 'card-title';
-    title.innerHTML = `<i class="fas fa-images"></i> صور العقار (${images.length})`;
-    card.appendChild(title);
-
-    const row = document.createElement('div');
-    row.className = 'thumbs-row';
-    images.slice(0, 6).forEach(src => {
-      const img = document.createElement('img');
-      img.src = src;
-      img.loading = 'lazy';
-      img.onclick = () => openLightbox(src);
-      row.appendChild(img);
-    });
-    card.appendChild(row);
-
-    return card;
-  }
-
-  function renderMsg(text, type, time, images) {
-    const div = document.createElement('div');
-    div.className = `msg msg-${type}`;
-
-    if (text && text.trim()) {
-      const contentDiv = document.createElement('div');
-      if (type === 'bot') {
-        const normalizedText = String(text)
-          .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-
-        const rawHtml = marked.parse(normalizedText);
-        contentDiv.innerHTML = (typeof DOMPurify !== 'undefined')
-          ? DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target'] })
-          : rawHtml;
-        contentDiv.querySelectorAll('a').forEach(a => {
-          a.setAttribute('target', '_blank');
-          a.setAttribute('rel', 'noopener noreferrer');
-        });
-      } else {
-        contentDiv.innerText = text;
-      }
-      div.appendChild(contentDiv);
-    }
-
-    if (images && images.length) {
-      const grid = renderImagesGrid(images);
-      if (grid) div.appendChild(grid);
-    }
-
-    const t = document.createElement('div');
-    t.className = 'msg-time';
-    if (type === 'user') {
-      const ticks = document.createElement('span');
-      ticks.className = 'ticks';
-      ticks.innerText = '✓✓';
-      t.appendChild(document.createTextNode(time || getTime()));
-      t.appendChild(ticks);
-    } else {
-      t.innerText = time || getTime();
-    }
-    div.appendChild(t);
-    chat.insertBefore(div, typing);
-    scroll();
-  }
-
-  function renderOptions(options, highlight, faded) {
-    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
-    if (!options || options.length === 0) return;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'option-buttons-wrap';
-
-    options.forEach(opt => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'option-btn';
-      btn.innerText = opt;
-      if (highlight && opt === highlight) btn.classList.add('highlighted');
-      if (faded && Array.isArray(faded) && faded.includes(opt)) btn.classList.add('faded');
-
-      btn.onclick = function() {
-        if (isSending) return;
-
-        const optText = String(opt || '').trim();
-
-        if (optText.includes('أرفق صور') || optText.includes('إضافة صور')) {
-          wrap.querySelectorAll('.option-btn').forEach(b => {
-            b.classList.add('faded');
-            b.style.pointerEvents = 'none';
-          });
-          btn.classList.remove('faded');
-          btn.classList.add('highlighted');
-
-          if (pendingImages.length >= MAX_IMAGES) {
-            showToast(`الحد الأقصى ${MAX_IMAGES} صور.`);
-            return;
-          }
-          setCameraButtonVisible(true);
-          fileInput.click();
-          return;
-        }
-
-        if (optText.includes('احذف الكل')) {
-          pendingImages = [];
-          renderImagesPreviewStrip();
-        }
-
-        if (optText.includes('تمام، كمّل') || optText.includes('تمام كمّل')) {
-          if (pendingImages.length > 0) {
-            input.value = "✅ تمام، كمّل";
-            wrap.querySelectorAll('.option-btn').forEach(b => {
-              b.classList.add('faded');
-              b.style.pointerEvents = 'none';
-            });
-            btn.classList.remove('faded');
-            btn.classList.add('highlighted');
-            sendMsg();
-            return;
-          }
-          input.value = "⏭ تخطي (بدون صور)";
-          wrap.querySelectorAll('.option-btn').forEach(b => {
-            b.classList.add('faded');
-            b.style.pointerEvents = 'none';
-          });
-          btn.classList.remove('faded');
-          btn.classList.add('highlighted');
-          sendMsg();
-          return;
-        }
-
-        if (optText.includes('تخطي (بدون صور)') || optText.includes('تخطي بدون صور')) {
-          pendingImages = [];
-          renderImagesPreviewStrip();
-        }
-
-        wrap.querySelectorAll('.option-btn').forEach(b => {
-          b.classList.add('faded');
-          b.style.pointerEvents = 'none';
-        });
-        btn.classList.remove('faded');
-        btn.classList.add('highlighted');
-        input.value = opt;
-        sendMsg();
-      };
-      wrap.appendChild(btn);
-    });
-
-    chat.insertBefore(wrap, typing);
-    scroll();
-  }
-
-  function rehydrate() {
-    chat.querySelectorAll('.msg').forEach(el => el.remove());
-    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
-    history.forEach(m => renderMsg(m.text, m.type, m.time, m.images));
-    updateUI();
-  }
-
-  function extractImageUrlsFromMessage(text) {
-    if (!text) return [];
-    const urls = [];
-    const re = /\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      urls.push(m[1]);
-    }
-    return urls;
-  }
-
-  function buildGalleryUrl(waMessage) {
-    const imgs = extractImageUrlsFromMessage(waMessage);
-    if (!imgs || imgs.length === 0) return null;
-
-    const params = new URLSearchParams();
-    params.set('images', imgs.join(','));
-
-    const ld = currentLeadData || {};
-
-    if (ld.title) {
-      params.set('title', ld.title);
-    } else if (ld.propertyType && ld.location) {
-      params.set('title', `${ld.propertyType} في ${ld.location}`);
-    }
-
-    if (ld.priceDisplay) params.set('price', ld.priceDisplay);
-    else if (ld.price) params.set('price', ld.price);
-
-    if (ld.area) params.set('area', ld.area);
-    if (ld.location) params.set('location', ld.location);
-    if (ld.propertyType) params.set('type', ld.propertyType);
-
-    return `${GALLERY_BASE}?${params.toString()}`;
-  }
-
-  function replaceImagesWithGalleryLink(waMessage) {
-    const galleryUrl = buildGalleryUrl(waMessage);
-    if (!galleryUrl) return waMessage;
-
-    const galleryLine = `📷 *صور العقار:*\n🔗 [اضغط هنا لمشاهدة الصور](${galleryUrl})\n`;
-
-    const imagesSectionRegex = /📷 \*صور العقار[\s\S]*?(?=\n━|━━━|\n\n📱|\n\n━━|\n📝|$)/;
-
-    if (imagesSectionRegex.test(waMessage)) {
-      return waMessage.replace(imagesSectionRegex, galleryLine);
-    }
-
-    const contactMarker = '━━━━━━━━━━━━━━━━━━\n📱 *بيانات التواصل*';
-    if (waMessage.includes(contactMarker)) {
-      return waMessage.replace(contactMarker, `${galleryLine}\n${contactMarker}`);
-    }
-
-    return waMessage + `\n\n${galleryLine}`;
-  }
-
-  async function openWhatsApp() {
-    let msg = lastWaMessage ||
-      "أهلاً طارق، تحدثت معك عبر سمسار طلبك وأرغب في استكمال تفاصيل عقاري.";
-
-    msg = replaceImagesWithGalleryLink(msg);
-
-    const waUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
-  }
-
-  function onInputChanged() {
-    const hasText = input.value.trim().length > 0;
-    if (hasText) {
-      sendBtnIcon.className = 'fas fa-paper-plane';
-      sendBtnIcon.style.transform = 'rotate(180deg)';
-    } else {
-      sendBtnIcon.className = 'fas fa-microphone';
-      sendBtnIcon.style.transform = 'none';
-    }
-  }
-
-  function onSendBtnClick() {
-    const hasText = input.value.trim().length > 0;
-    if (hasText || pendingImages.length > 0) {
-      sendMsg();
-    } else {
-      input.focus();
-    }
-  }
-
-  function onEmojiClick() { input.focus(); }
-
-  async function sendMsg() {
-    const text = input.value.trim();
-    const hasPendingImages = pendingImages.length > 0;
-
-    if ((!text && !hasPendingImages) || isSending) return;
-
-    input.value = '';
-    onInputChanged();
-    isSending = true;
-    sendBtn.disabled = true;
-
-    chat.querySelectorAll('.option-buttons-wrap').forEach(el => el.remove());
-
-    let uploadedUrls = [];
-    let userMessageForApi = text;
-
-    if (hasPendingImages) {
-      const localPreviews = pendingImages.map(p => p.dataUrl);
-      const displayText = text || "✅ تمام، كمّل";
-
-      renderMsg(displayText, 'user', null, localPreviews);
-      history.push({
-        text: displayText,
-        type: 'user',
-        time: getTime(),
-        images: localPreviews
-      });
-      saveState();
-      scroll();
-
-      const uploadRes = await uploadPendingImages();
-
-      if (!uploadRes.ok) {
-        renderMsg(`⚠️ ${uploadRes.error || 'فشل رفع الصور'}. تقدر تبعت الصور على واتساب مباشرة.`, 'bot');
-        isSending = false;
-        sendBtn.disabled = false;
-        input.focus();
-        return;
-      }
-
-      uploadedUrls = uploadRes.urls;
-      userMessageForApi = text || "✅ تمام، كمّل";
-
-      pendingImages = [];
-      renderImagesPreviewStrip();
-
-      setTypingStatus(true);
-      scroll();
-    } else {
-      renderMsg(text, 'user');
-      history.push({ text, type: 'user', time: getTime() });
-      saveState();
-      setTypingStatus(true);
-      scroll();
-    }
-
-    try {
-      const historyForApi = history.map(m => ({
-        role: m.type === 'bot' ? 'assistant' : 'user',
-        message: m.text,
-        hasImages: !!(m.images && m.images.length),
-        imageCount: (m.images && m.images.length) || 0
-      }));
-
-      const res = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessageForApi,
-          history: historyForApi,
-          qualificationScore: score,
-          canShareWhatsapp: canShare,
-          formState: currentFormState,
-          imageUrls: uploadedUrls
-        })
-      });
-
-      const data = await res.json();
-      setTypingStatus(false);
-
-      if (data) {
-        if (data.qualificationScore !== undefined) score = data.qualificationScore;
-        if (data.canShareWhatsapp !== undefined) canShare = data.canShareWhatsapp;
-        if (data.leadData) currentLeadData = data.leadData;
-        if (data.formState !== undefined) currentFormState = data.formState;
-        if (data.readyToSend !== undefined) readyToSend = data.readyToSend;
-        if (data.waMessage) lastWaMessage = data.waMessage;
-
-        const replyImages = Array.isArray(data.imageUrls) ? data.imageUrls : [];
-
-        const replyText = data.response || data.reply || 'معاك طارق، إزاي أقدر أساعدك؟';
-        renderMsg(replyText, 'bot', null, replyImages);
-        history.push({
-          text: replyText,
-          type: 'bot',
-          time: getTime(),
-          images: replyImages
-        });
-
-        const hasImagesBtn = data.options && data.options.some(o =>
-          typeof o === 'string' && (
-            o.includes('أرفق صور') ||
-            o.includes('إضافة صور') ||
-            o.includes('تخطي (بدون صور)')
-          )
-        );
-        setCameraButtonVisible(hasImagesBtn);
-
-        updateUI();
-        saveState();
-
-        if (readyToSend && lastWaMessage) {
-          const waImgs = extractImageUrlsFromMessage(lastWaMessage);
-          if (waImgs.length > 0) {
-            const card = renderWaPreviewCard(waImgs);
-            if (card) {
-              const wrapper = document.createElement('div');
-              wrapper.className = 'msg msg-bot';
-              wrapper.style.maxWidth = '82%';
-              wrapper.appendChild(card);
-              chat.insertBefore(wrapper, typing);
-              scroll();
-            }
-          }
-        }
-
-        if (data.options && data.options.length) {
-          renderOptions(data.options, data.highlightButton || null, data.fadedButtons || null);
-        }
-      }
-    } catch (err) {
-      setTypingStatus(false);
-      renderMsg('عذراً، حدث عطل مؤقت. حاول مرة أخرى أو تواصل عبر واتساب.', 'bot');
-    } finally {
-      isSending = false;
-      sendBtn.disabled = false;
-      input.focus();
-    }
-  }
-
-  function isImagesDoneBtn(text) {
-    const t = String(text || '').trim();
-    if (!t) return false;
-    if (t === '✅ تمام، كمّل') return true;
-    if (/تمام[\s،,]*كم+ل/i.test(t)) return true;
-    if (/^✅\s*تمام/i.test(t)) return true;
-    return false;
-  }
-
-  (function init() {
-    const savedTheme = getCurrentTheme();
-    applyTheme(savedTheme);
-
-    document.getElementById('app').classList.add('show');
-    loadState();
-    initNoticesBar();
-
-    if (history.length > 0) {
-      rehydrate();
-    } else {
-      const welcome = `معاك طارق طنطاوي. بتدور على إيه، شراء ولا إيجار؟ وفي أي منطقة؟`;
-      renderMsg(welcome, 'bot');
-      history.push({ text: welcome, type: 'bot', time: getTime() });
-      saveState();
-    }
-
-    updateUI();
-    onInputChanged();
-    renderImagesPreviewStrip();
-    setCameraButtonVisible(false);
-    hideUploadProgress();
-  })();
-
-  window.sendMsg = sendMsg;
-  window.openWhatsApp = openWhatsApp;
-  window.toggleMenu = toggleMenu;
-  window.showAboutModal = showAboutModal;
-  window.closeAboutModal = closeAboutModal;
-  window.startNewChat = startNewChat;
-  window.deleteChat = deleteChat;
-  window.onInputChanged = onInputChanged;
-  window.onSendBtnClick = onSendBtnClick;
-  window.onEmojiClick = onEmojiClick;
-  window.onCameraClick = onCameraClick;
-  window.onFilesSelected = onFilesSelected;
-  window.openLightbox = openLightbox;
-  window.closeLightbox = closeLightbox;
-  window.toggleTheme = toggleTheme;
-  window.closeConfirm = closeConfirm;
-  window.hideNoticesBar = hideNoticesBar;
+} else {
+  startConversation();
+}
+
+// Service Worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// Expose functions globally
+window.sendMsg = sendMsg;
+window.resetChat = resetChat;
+window.deleteChat = deleteChat;
+window.toggleMenu = toggleMenu;
+window.showAbout = showAbout;
+window.closeAbout = closeAbout;
+window.showGoogleProfile = showGoogleProfile;
+window.hideNotices = hideNotices;
+window.removeImg = removeImg;
+window.scrollToBottom = scrollToBottom;
 </script>
 </body>
 </html>
