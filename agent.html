@@ -15,55 +15,63 @@
 <meta property="og:title" content="سمسار طلبك — طارق طنطاوي">
 <meta property="og:description" content="خبير العقارات في مدينة نصر من 2014 | Google Local Guide Level 7 | 16.3 مليون مشاهدة">
 <meta property="og:image" content="https://nasr-realestate.github.io/assets/img/Come-here.webp">
+<meta property="og:image:secure_url" content="https://nasr-realestate.github.io/assets/img/Come-here.webp">
+<meta property="og:image:type" content="image/webp">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="طارق طنطاوي — سمسار مدينة نصر">
+<meta property="og:site_name" content="سمسار طلبك">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="سمسار طلبك — طارق طنطاوي">
+<meta name="twitter:description" content="خبير العقارات في مدينة نصر من 2014 | Google Local Guide Level 7">
+<meta name="twitter:image" content="https://nasr-realestate.github.io/assets/img/Come-here.webp">
 
 <style>
 /* ═══════════════════════════════════════════════
-   WHATSAPP LIQUID GLASS — 2026 Modern Design
+   WHATSAPP LIQUID GLASS — v8.1 PERFECT
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ═══ Light Mode — Liquid Glass ═══ */
+  /* ═══ Light Mode ═══ */
   --bg-app:           #efeae2;
   --bg-glass:         rgba(255, 255, 255, 0.72);
   --bg-glass-strong:  rgba(255, 255, 255, 0.88);
   --bg-glass-light:   rgba(255, 255, 255, 0.55);
   --border-glass:     rgba(255, 255, 255, 0.6);
   --border-subtle:    rgba(0, 0, 0, 0.06);
-  
+
   --header-bg:        rgba(255, 255, 255, 0.78);
   --header-text:      #111b21;
   --header-sub:       #667781;
-  
+
   --bubble-in:        rgba(255, 255, 255, 0.95);
   --bubble-out:       #d9fdd3;
-  --bubble-out-solid: #d9fdd3;
-  
+
   --text-primary:     #111b21;
   --text-secondary:   #667781;
   --text-tertiary:    #8696a0;
-  
+
   --accent:           #00a884;
   --accent-dark:      #008069;
   --tick-blue:        #53bdeb;
+  --danger:           #ea0038;
+
   --shadow-sm:        0 1px 2px rgba(11,20,26,0.08);
   --shadow-md:        0 4px 12px rgba(11,20,26,0.08);
   --shadow-lg:        0 8px 32px rgba(11,20,26,0.12);
-  
+
   --radius-bubble:    18px;
   --radius-input:     28px;
   --radius-glass:     16px;
-  
+
   --font: 'Cairo', system-ui, -apple-system, sans-serif;
   --max-w: 780px;
   --header-h: 64px;
 }
 
-/* ═══════════════════════════════════════════════
-   DARK MODE — Liquid Glass Dark
-   ═══════════════════════════════════════════════ */
+/* ═══ Dark Mode ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-app:           #0b141a;
@@ -72,22 +80,22 @@
     --bg-glass-light:   rgba(30, 45, 61, 0.45);
     --border-glass:     rgba(255, 255, 255, 0.08);
     --border-subtle:    rgba(255, 255, 255, 0.05);
-    
+
     --header-bg:        rgba(30, 45, 61, 0.72);
     --header-text:      #e9edef;
     --header-sub:       #8696a0;
-    
+
     --bubble-in:        rgba(30, 45, 61, 0.92);
     --bubble-out:       #005c4b;
-    --bubble-out-solid: #005c4b;
-    
+
     --text-primary:     #e9edef;
     --text-secondary:   #8696a0;
     --text-tertiary:    #667781;
-    
+
     --accent:           #25d366;
     --accent-dark:      #00a884;
     --tick-blue:        #53bdeb;
+    --danger:           #ff4d6d;
   }
 }
 
@@ -102,6 +110,7 @@ html, body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -124,7 +133,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   HEADER — Liquid Glass
+   HEADER
    ═══════════════════════════════════════════════ */
 .header {
   position: relative;
@@ -153,8 +162,10 @@ body {
   transition: background .18s ease;
   font-size: 18px;
   flex-shrink: 0;
+  border: none;
+  background: transparent;
 }
-.header-back:hover { background: rgba(0, 0, 0, 0.06); }
+.header-back:hover { background: rgba(0, 0, 0, 0.06); color: var(--text-primary); }
 @media (prefers-color-scheme: dark) {
   .header-back:hover { background: rgba(255, 255, 255, 0.08); }
 }
@@ -167,6 +178,7 @@ body {
   flex-shrink: 0;
   border: 1.5px solid var(--border-glass);
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
 }
 
 .header-info {
@@ -194,6 +206,12 @@ body {
   padding: 2px 7px;
   border-radius: 8px;
   letter-spacing: 0;
+  animation: badgeShine 3s infinite;
+}
+
+@keyframes badgeShine {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); }
+  50% { box-shadow: 0 0 12px 2px rgba(37, 211, 102, 0.6); }
 }
 
 .header-status {
@@ -204,6 +222,7 @@ body {
   gap: 5px;
   margin-top: 1px;
   font-weight: 500;
+  transition: color .2s ease;
 }
 
 .status-dot {
@@ -261,7 +280,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   MENU DROPDOWN — Liquid Glass
+   MENU DROPDOWN
    ═══════════════════════════════════════════════ */
 .menu-overlay {
   position: fixed;
@@ -332,7 +351,7 @@ body {
   flex-shrink: 0;
 }
 .menu-glass-item.danger {
-  color: #ea0038;
+  color: var(--danger);
 }
 .menu-glass-item.danger:hover {
   background: rgba(234, 0, 56, 0.08);
@@ -357,6 +376,8 @@ body {
   gap: 3px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overflow-anchor: auto;
+  scrollbar-width: thin;
 }
 
 .chat-area::-webkit-scrollbar { width: 6px; }
@@ -369,7 +390,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   MESSAGES — Liquid Glass Bubbles
+   MESSAGES
    ═══════════════════════════════════════════════ */
 .msg {
   max-width: 80%;
@@ -395,7 +416,6 @@ body {
   }
 }
 
-/* Bot — Left side, glass */
 .msg-bot {
   align-self: flex-start;
   background: var(--bubble-in);
@@ -407,7 +427,6 @@ body {
   border: 1px solid var(--border-subtle);
 }
 
-/* User — Right side, green */
 .msg-user {
   align-self: flex-end;
   background: var(--bubble-out);
@@ -432,13 +451,11 @@ body {
 }
 .msg a:hover { text-decoration: underline; }
 
-/* Message content wrapper */
 .msg-content {
   display: block;
   padding-bottom: 14px;
 }
 
-/* Time inside bubble */
 .msg-time {
   position: absolute;
   bottom: 4px;
@@ -466,7 +483,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   BUTTONS RACK — Liquid Glass Pills
+   BUTTONS RACK
    ═══════════════════════════════════════════════ */
 .btns-rack {
   display: flex;
@@ -570,7 +587,7 @@ body {
 .msg-imgs img:hover { transform: scale(1.04); }
 
 /* ═══════════════════════════════════════════════
-   BOTTOM DOCK — Liquid Glass
+   BOTTOM DOCK
    ═══════════════════════════════════════════════ */
 .bottom-dock {
   flex-shrink: 0;
@@ -582,7 +599,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   WHATSAPP BUTTON — Liquid Glass
+   WHATSAPP BUTTON
    ═══════════════════════════════════════════════ */
 .wa-wrapper {
   display: none;
@@ -670,7 +687,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   INPUT BAR — Liquid Glass
+   INPUT BAR
    ═══════════════════════════════════════════════ */
 .input-glass {
   display: flex;
@@ -684,10 +701,11 @@ body {
   border-radius: var(--radius-input);
   box-shadow: var(--shadow-md);
   min-height: 52px;
-  transition: box-shadow .2s ease;
+  transition: box-shadow .2s ease, border-color .2s ease;
 }
 .input-glass:focus-within {
   box-shadow: 0 6px 20px rgba(0, 168, 132, 0.15), var(--shadow-md);
+  border-color: rgba(0, 168, 132, 0.3);
 }
 
 .input-icon-btn {
@@ -764,6 +782,11 @@ body {
   box-shadow: none;
 }
 
+/* Icon swap animation */
+.send-btn-glass .icon-swap {
+  transition: transform .2s ease, opacity .2s ease;
+}
+
 /* ═══════════════════════════════════════════════
    IMAGE PREVIEW STRIP
    ═══════════════════════════════════════════════ */
@@ -797,7 +820,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ea0038;
+  background: var(--danger);
   color: #fff;
   border: 2px solid var(--bg-glass-strong);
   font-size: 11px;
@@ -811,7 +834,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   ABOUT MODAL — Liquid Glass
+   ABOUT MODAL
    ═══════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed;
@@ -945,7 +968,7 @@ body {
 .modal-close:hover { background: var(--bg-glass); }
 
 /* ═══════════════════════════════════════════════
-   NOTIFICATION TOAST — Liquid Glass
+   TOAST
    ═══════════════════════════════════════════════ */
 .toast {
   position: fixed;
@@ -965,7 +988,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9998;
+  z-index: 10000;
   max-width: 90vw;
   text-align: center;
 }
@@ -975,7 +998,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   SCROLL TO BOTTOM — Liquid Glass
+   SCROLL BUTTON
    ═══════════════════════════════════════════════ */
 .scroll-btn {
   position: absolute;
@@ -1014,7 +1037,14 @@ body {
   .modal-stat:last-child { grid-column: span 2; }
 }
 
-.chat-area { scrollbar-width: thin; }
+/* ═══ Reduced motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -1023,13 +1053,14 @@ body {
 
   <!-- ═══ HEADER ═══ -->
   <header class="header">
-    <div class="header-back" onclick="resetChat()" title="محادثة جديدة">
+    <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
       <i class="fas fa-arrow-right"></i>
-    </div>
+    </button>
 
     <img class="header-avatar"
          src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
          alt="طارق طنطاوي"
+         onclick="openAbout()"
          onerror="this.style.display='none'">
 
     <div class="header-info" onclick="openAbout()">
@@ -1044,7 +1075,10 @@ body {
     </div>
 
     <div class="header-actions">
-      <button class="header-btn" onclick="openMenu(event)" title="القائمة">
+      <button class="header-btn" onclick="resetChat()" title="محادثة جديدة" aria-label="محادثة جديدة">
+        <i class="fas fa-redo-alt"></i>
+      </button>
+      <button class="header-btn" onclick="openMenu(event)" title="القائمة" aria-label="القائمة">
         <i class="fas fa-ellipsis-v"></i>
       </button>
     </div>
@@ -1104,23 +1138,22 @@ body {
     <div class="img-strip" id="imgStrip"></div>
 
     <div class="input-glass">
-      <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور">
+      <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
         <i class="fas fa-camera"></i>
       </button>
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
 
       <input type="text" class="input-field" id="msgInput" placeholder="اكتب رسالة..."
-             onkeypress="if(event.key==='Enter' && !isSending) sendMsg()"
-             autocomplete="off">
+             autocomplete="off" inputmode="text">
 
-      <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()">
-        <i class="fas fa-paper-plane" id="sendIcon" style="transform:rotate(180deg)"></i>
+      <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()" aria-label="إرسال">
+        <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
       </button>
     </div>
   </div>
 
-  <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()">
+  <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()" aria-label="للأسفل">
     <i class="fas fa-arrow-down"></i>
   </button>
 </div>
@@ -1167,7 +1200,7 @@ body {
 // CONFIG
 // ═══════════════════════════════════════════
 const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY = "simsar_glass_v80";
+const STORAGE_KEY = "simsar_glass_v81";
 const TAREK_WA = "201147758857";
 const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const MAX_IMAGES = 5;
@@ -1261,6 +1294,20 @@ function showToast(msg, dur = 2400) {
   showToast._t = setTimeout(() => t.classList.remove("show"), dur);
 }
 
+// ═══ Icon Swap (mic ↔ send) ═══
+function updateSendIcon() {
+  const hasText = msgInput.value.trim().length > 0;
+  const hasImgs = state.pendingImages.length > 0;
+
+  if (hasText || hasImgs) {
+    sendIcon.className = "fas fa-paper-plane icon-swap";
+    sendIcon.style.transform = "rotate(180deg)";
+  } else {
+    sendIcon.className = "fas fa-microphone icon-swap";
+    sendIcon.style.transform = "none";
+  }
+}
+
 // ═══════════════════════════════════════════
 // MESSAGE RENDERING
 // ═══════════════════════════════════════════
@@ -1312,6 +1359,7 @@ function renderButtons(opts) {
         b.style.opacity = "0.5";
       });
       msgInput.value = o;
+      updateSendIcon();
       sendMsg();
     };
     wrap.appendChild(btn);
@@ -1353,6 +1401,7 @@ function onFilesSelected(e) {
       const base64 = ev.target.result.split(",")[1];
       state.pendingImages.push({ base64, preview: ev.target.result });
       renderImgStrip();
+      updateSendIcon();
     };
     reader.readAsDataURL(f);
   });
@@ -1382,6 +1431,7 @@ function renderImgStrip() {
 function removeImg(i) {
   state.pendingImages.splice(i, 1);
   renderImgStrip();
+  updateSendIcon();
 }
 
 async function uploadPendingImages() {
@@ -1411,6 +1461,7 @@ async function sendMsg() {
   if (!txt && !hasImgs) return;
 
   msgInput.value = "";
+  updateSendIcon();
   chatArea.querySelectorAll(".btns-rack").forEach(el => el.remove());
   hideWA();
 
@@ -1474,7 +1525,10 @@ async function sendMsg() {
     if (data.options?.length) renderButtons(data.options);
 
     if (data.imageUrls?.length) {
-      state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls];
+      state.imageUrls = [
+        ...(state.imageUrls || []),
+        ...data.imageUrls
+      ].slice(-MAX_IMAGES);
     }
 
     saveState();
@@ -1487,6 +1541,17 @@ async function sendMsg() {
     isSending = false;
     sendBtn.disabled = false;
     msgInput.focus();
+  }
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function goBack() {
+  if (history.length > 1) {
+    history.back();
+  } else {
+    window.location.href = "/";
   }
 }
 
@@ -1540,6 +1605,7 @@ function resetChat() {
   hideWA();
   imgStrip.classList.remove("show");
   imgStrip.innerHTML = "";
+  updateSendIcon();
   startConversation();
   showToast("✅ محادثة جديدة");
 }
@@ -1556,11 +1622,11 @@ function deleteChat() {
     waMessage: null,
     whatsappUrl: null,
   };
-
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
   hideWA();
   imgStrip.classList.remove("show");
   imgStrip.innerHTML = "";
+  updateSendIcon();
   startConversation();
   showToast("🗑️ تم الحذف");
 }
@@ -1571,6 +1637,18 @@ function deleteChat() {
 chatArea.addEventListener("scroll", () => {
   const atBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
   scrollBtn.classList.toggle("show", !atBottom);
+});
+
+// ═══════════════════════════════════════════
+// INPUT HANDLERS
+// ═══════════════════════════════════════════
+msgInput.addEventListener("input", updateSendIcon);
+
+msgInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMsg();
+  }
 });
 
 // ═══════════════════════════════════════════
@@ -1596,6 +1674,7 @@ if (state.history && state.history.length) {
   startConversation();
 }
 
+updateSendIcon();
 msgInput.focus();
 
 // ═══════════════════════════════════════════
@@ -1607,6 +1686,7 @@ window.removeImg = removeImg;
 window.scrollToBottom = scrollToBottom;
 window.resetChat = resetChat;
 window.deleteChat = deleteChat;
+window.goBack = goBack;
 window.openMenu = openMenu;
 window.closeMenu = closeMenu;
 window.openAbout = openAbout;
