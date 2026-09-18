@@ -8,7 +8,7 @@ body_class: "homepage"
 
 <script type="application/ld+json">
 {
-  "@context": "https://schema.org",
+  "@context": "https://schema.org/",
   "@graph": [
     {
       "@type": "Person",
@@ -56,18 +56,9 @@ body_class: "homepage"
         "longitude": 31.311
       },
       "areaServed": [
-        {
-          "@type": "AdministrativeArea",
-          "name": "Nasr City"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "New Cairo"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "Heliopolis"
-        }
+        { "@type": "AdministrativeArea", "name": "Nasr City" },
+        { "@type": "AdministrativeArea", "name": "New Cairo" },
+        { "@type": "AdministrativeArea", "name": "Heliopolis" }
       ],
       "sameAs": [
         "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
@@ -138,7 +129,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     3. أحدث العروض — يستخدم property_card.html مباشرة
+     3. أحدث العروض
      ========================================================= -->
 <section id="latest-opportunities" style="padding: 4rem 2rem; background: var(--color-surface-1); border-top: 1px solid #222; position: relative; z-index: 2;">
   <div style="max-width: 1200px; margin: 0 auto;">
@@ -170,7 +161,7 @@ body_class: "homepage"
 </section>
 
 <!-- =========================================================
-     4. تصفح حسب المنطقة (النسخة الديناميكية الموثوقة)
+     4. تصفح حسب المنطقة
      ========================================================= -->
 <section style="padding: 3rem 2rem; background: #111; border-top: 1px solid #222;">
   <div style="max-width: 1200px; margin: 0 auto;">
@@ -179,28 +170,24 @@ body_class: "homepage"
     </h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
 
-      <!-- المنطقة العاشرة -->
       {% assign p_zone10 = site.properties | where: "slug", "شقة-للبيع-محور-شينزو-ابي-مدينة-نصر-262م" | first %}
       <a href="{{ p_zone10.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة العاشرة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة العاشرة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 262م واجهة رئيسية تصلح سكني وإداري</p>
       </a>
 
-      <!-- المنطقة التاسعة -->
       {% assign p_zone9 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-وهبي-المنطقة-التاسعة-مدينة-نصر-160م" | first %}
       <a href="{{ p_zone9.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة التاسعة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة التاسعة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة 160م إكسترا سوبر لوكس تطل على حديقتين</p>
       </a>
 
-      <!-- المنطقة السادسة -->
       {% assign p_zone6 = site.properties | where: "slug", "شقة-أرضي-بحديقة-للبيع-مدينة-نصر-المربع-الذهبي" | first %}
       <a href="{{ p_zone6.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة السادسة">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة السادسة</h3>
         <p style="font-size: 0.9rem; color: #aaa;">شاهد: شقة أرضي بحديقة خاصة في المربع الذهبي</p>
       </a>
 
-      <!-- المنطقة الأولى -->
       {% assign p_zone1 = site.properties | where: "slug", "شقة-للبيع-شارع-اسماعيل-القباني-مدينة-نصر-186م" | first %}
       <a href="{{ p_zone1.url | relative_url }}" class="area-link" aria-label="عرض عقارات المنطقة الأولى">
         <h3 style="color: var(--color-primary); margin-bottom: 5px; font-size: 1.2rem;">المنطقة الأولى</h3>
