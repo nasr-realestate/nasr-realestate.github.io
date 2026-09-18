@@ -3,14 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-
-<!-- ═══ Theme Color — Light + Dark ═══ -->
-<meta name="theme-color" content="#075e54" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#054d44" media="(prefers-color-scheme: dark)">
-
+<meta name="theme-color" content="#075e54">
 <title>سمسار طلبك — طارق طنطاوي</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
-
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <!-- ═══ WhatsApp Preview ═══ -->
@@ -24,119 +20,92 @@
 
 <style>
 /* ═══════════════════════════════════════════════
-   WHATSAPP 2.26.36.73 — LIQUID GLASS EDITION
-   Official font stack + Checkmarks SVG + Green Header
+   WHATSAPP LIQUID GLASS — v8.4
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ═══ WhatsApp Official Font Stack ═══ */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  
-  /* ═══ WHATSAPP GREEN — ثوابت الألوان ═══ */
-  --wa-green-header:  #075e54;   /* أخضر الهيدر الرسمي */
-  --wa-green-dark:    #054d44;   /* أخضر داكن (Dark Mode) */
-  --wa-green-mid:     #128c7e;   /* أخضر وسط */
-  --wa-green-light:   #25d366;   /* أخضر فاتح (أزرار) */
-  
-  /* ═══ LIGHT MODE ═══ */
-  --bg-wallpaper:     #efeae2;
-  --bg-glass-thin:    rgba(255, 255, 255, 0.55);
-  --bg-glass-regular: rgba(255, 255, 255, 0.72);
-  --bg-glass-thick:   rgba(255, 255, 255, 0.88);
-  --bg-glass-ultra:   rgba(255, 255, 255, 0.96);
-  
-  --glass-border:     rgba(255, 255, 255, 0.7);
-  --glass-border-inner: rgba(0, 0, 0, 0.05);
-  --glass-highlight:  rgba(255, 255, 255, 0.9);
-  
-  --header-bg:        var(--wa-green-header);   /* ✅ أخضر */
-  --header-text:      #ffffff;                   /* ✅ أبيض */
-  --header-sub:       rgba(255, 255, 255, 0.85); /* ✅ أبيض شفاف */
-  
-  --bubble-in-bg:     #ffffff;
-  --bubble-in-text:   #000000;
-  --bubble-out-bg:    #d9fdd3;
-  --bubble-out-text:  #000000;
-  
-  --text-primary:     #000000;
-  --text-secondary:   #8e8e93;
-  --text-tertiary:    #c7c7cc;
-  
-  --accent:           #34c759;
-  --accent-dark:      #007aff;
-  --tick-blue:        #34b7f1;
-  --danger:           #ff3b30;
-  
-  --shadow-soft:      0 2px 12px rgba(0, 0, 0, 0.08);
-  --shadow-glass:     0 8px 32px rgba(0, 0, 0, 0.12);
-  --shadow-float:     0 12px 48px rgba(0, 0, 0, 0.18);
-  
-  --radius-pill:      999px;
-  --radius-bubble:    20px;
-  --radius-glass:     22px;
-  
-  --blur-thin:        blur(20px) saturate(180%);
-  --blur-regular:     blur(30px) saturate(180%);
-  --blur-thick:       blur(40px) saturate(200%);
-  
+  --bg-app:           #efeae2;
+  --bg-glass:         rgba(255, 255, 255, 0.72);
+  --bg-glass-strong:  rgba(255, 255, 255, 0.88);
+  --bg-glass-light:   rgba(255, 255, 255, 0.55);
+  --border-glass:     rgba(255, 255, 255, 0.6);
+  --border-subtle:    rgba(0, 0, 0, 0.06);
+
+  --header-bg:        #075e54;
+  --header-text:      #ffffff;
+  --header-sub:       rgba(255, 255, 255, 0.85);
+
+  --bubble-in:        rgba(255, 255, 255, 0.95);
+  --bubble-out:       #d9fdd3;
+
+  --text-primary:     #111b21;
+  --text-secondary:   #667781;
+  --text-tertiary:    #8696a0;
+
+  --accent:           #00a884;
+  --accent-dark:      #008069;
+  --tick-blue:        #53bdeb;
+  --danger:           #ea0038;
+
+  --shadow-sm:        0 1px 2px rgba(11,20,26,0.08);
+  --shadow-md:        0 4px 12px rgba(11,20,26,0.08);
+  --shadow-lg:        0 8px 32px rgba(11,20,26,0.12);
+
+  --radius-bubble:    18px;
+  --radius-input:     28px;
+  --radius-glass:     16px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif;
   --max-w: 780px;
-  --header-h: 56px;
+  --header-h: 64px;
 }
 
-/* ═══ DARK MODE ═══ */
+/* ═══ Dark Mode ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-wallpaper:     #0b141a;
-    --bg-glass-thin:    rgba(32, 44, 51, 0.55);
-    --bg-glass-regular: rgba(32, 44, 51, 0.72);
-    --bg-glass-thick:   rgba(32, 44, 51, 0.88);
-    --bg-glass-ultra:   rgba(32, 44, 51, 0.96);
-    
-    --glass-border:     rgba(255, 255, 255, 0.08);
-    --glass-border-inner: rgba(255, 255, 255, 0.05);
-    --glass-highlight:  rgba(255, 255, 255, 0.12);
-    
-    --header-bg:        var(--wa-green-dark);      /* ✅ أخضر داكن */
-    --header-text:      #ffffff;                    /* ✅ أبيض */
-    --header-sub:       rgba(255, 255, 255, 0.75);  /* ✅ أبيض شفاف */
-    
-    --bubble-in-bg:     #202c33;
-    --bubble-in-text:   #e9edef;
-    --bubble-out-bg:    #005c4b;
-    --bubble-out-text:  #e9edef;
-    
+    --bg-app:           #0b141a;
+    --bg-glass:         rgba(30, 45, 61, 0.65);
+    --bg-glass-strong:  rgba(30, 45, 61, 0.85);
+    --bg-glass-light:   rgba(30, 45, 61, 0.45);
+    --border-glass:     rgba(255, 255, 255, 0.08);
+    --border-subtle:    rgba(255, 255, 255, 0.05);
+
+    --header-bg:        #202c33;
+    --header-text:      #e9edef;
+    --header-sub:       #8696a0;
+
+    --bubble-in:        rgba(30, 45, 61, 0.92);
+    --bubble-out:       #005c4b;
+
     --text-primary:     #e9edef;
     --text-secondary:   #8696a0;
     --text-tertiary:    #667781;
-    
+
     --accent:           #25d366;
     --accent-dark:      #00a884;
     --tick-blue:        #53bdeb;
-    --danger:           #ff453a;
+    --danger:           #ff4d6d;
   }
 }
 
-/* ═══════════════════════════════════════════════
-   BASE
-   ═══════════════════════════════════════════════ */
+/* ═══ BASE ═══ */
 html, body {
   height: 100%;
   font-family: var(--font);
-  background: #000;
+  background: var(--bg-app);
   color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
-  text-rendering: optimizeLegibility;
-  overscroll-behavior: none;
 }
 
 body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background:
+    radial-gradient(ellipse at top left, rgba(0,168,132,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(18,140,126,0.05) 0%, transparent 50%),
+    var(--bg-app);
+  background-attachment: fixed;
 }
 
 #app {
@@ -144,95 +113,54 @@ body {
   flex-direction: column;
   height: 100dvh;
   max-width: var(--max-w);
-  width: 100%;
   margin: 0 auto;
   position: relative;
   overflow: hidden;
-  
-  background:
-    radial-gradient(ellipse 800px 600px at 20% 0%, rgba(52, 199, 89, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 600px 800px at 80% 100%, rgba(0, 122, 255, 0.05) 0%, transparent 60%),
-    var(--bg-wallpaper);
-  background-attachment: fixed;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
 }
 
-#app::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='.015'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ═══════════════════════════════════════════════
-   HEADER — ✅ أخضر واتساب في الوضعين
-   ═══════════════════════════════════════════════ */
+/* ═══ HEADER ═══ */
 .header {
   position: relative;
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 16px;
   min-height: var(--header-h);
   background: var(--header-bg);
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
-  transition: background-color .3s ease;
-}
-
-/* ═══ في Dark Mode — أخضر داكن ═══ */
-@media (prefers-color-scheme: dark) {
-  .header {
-    background: var(--wa-green-dark);
-    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  }
-}
-
-.header::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25) 50%, transparent);
-  opacity: 0.5;
 }
 
 .header-back {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   color: #ffffff;
   cursor: pointer;
-  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 17px;
+  transition: background .18s ease;
+  font-size: 18px;
   flex-shrink: 0;
   border: none;
   background: transparent;
 }
 .header-back:hover { background: rgba(255, 255, 255, 0.15); }
-.header-back:active { transform: scale(0.92); }
 
 .header-avatar {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: transform .2s ease;
 }
-.header-avatar:active { transform: scale(0.94); }
 
 .header-info {
   flex: 1;
@@ -241,64 +169,59 @@ body {
 }
 
 .header-name {
-  font-size: 15.5px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: #ffffff;
   line-height: 1.2;
   display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .header-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--wa-green-header);
+  color: #075e54;
   background: #ffffff;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 8px;
   letter-spacing: 0;
 }
 
 .header-status {
-  font-size: 12px;
+  font-size: 12.5px;
   color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   gap: 5px;
   margin-top: 1px;
-  font-weight: 400;
-  transition: color .2s ease;
+  font-weight: 500;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #25d366;
   display: inline-block;
   flex-shrink: 0;
-  box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+  box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5);
   animation: pulseDot 2s infinite;
 }
 
 @keyframes pulseDot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
-  50% { box-shadow: 0 0 0 5px rgba(37, 211, 102, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(37, 211, 102, 0); }
 }
 
 .header-status.typing {
   color: #d9fdd3;
-  font-weight: 500;
+  font-weight: 600;
 }
 .header-status.typing .status-dot {
-  animation: typingPulse 1s infinite;
-}
-
-@keyframes typingPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  animation: none;
+  opacity: 0.4;
 }
 
 .header-actions {
@@ -308,8 +231,8 @@ body {
 }
 
 .header-btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -318,53 +241,47 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 17px;
+  transition: all .18s ease;
   flex-shrink: 0;
 }
-.header-btn:hover { background: rgba(255, 255, 255, 0.15); }
-.header-btn:active { transform: scale(0.9); }
+.header-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
 
-/* ═══════════════════════════════════════════════
-   MENU
-   ═══════════════════════════════════════════════ */
+/* ═══ MENU DROPDOWN ═══ */
 .menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .25s ease;
+  transition: opacity .2s ease;
   z-index: 998;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
 }
 .menu-overlay.open {
   opacity: 1;
   pointer-events: auto;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 .menu-glass {
   position: absolute;
   top: calc(var(--header-h) + 4px);
   left: 12px;
-  min-width: 250px;
-  background: var(--bg-glass-thick);
-  backdrop-filter: var(--blur-thick);
-  -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--glass-border);
+  min-width: 240px;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--border-glass);
   border-radius: 14px;
-  box-shadow: var(--shadow-float);
-  padding: 4px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
   z-index: 999;
   opacity: 0;
-  transform: translateY(-8px) scale(0.95);
+  transform: translateY(-8px) scale(0.98);
   pointer-events: none;
-  transition: all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: top left;
-  overflow: hidden;
 }
 .menu-glass.open {
   opacity: 1;
@@ -375,9 +292,9 @@ body {
 .menu-glass-item {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -387,98 +304,100 @@ body {
   font-weight: 500;
   text-align: right;
   cursor: pointer;
-  transition: background .12s ease;
+  transition: background .14s ease;
   direction: rtl;
 }
-.menu-glass-item:active {
-  background: rgba(120, 120, 128, 0.16);
+.menu-glass-item:hover {
+  background: rgba(0, 168, 132, 0.1);
 }
 .menu-glass-item .mi-icon {
   font-size: 17px;
-  width: 22px;
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 .menu-glass-item.danger {
   color: var(--danger);
 }
-
-.menu-glass-sep {
-  height: 0.5px;
-  background: var(--glass-border-inner);
-  margin: 3px 10px;
+.menu-glass-item.danger:hover {
+  background: rgba(234, 0, 56, 0.08);
 }
 
-/* ═══════════════════════════════════════════════
-   CHAT AREA
-   ═══════════════════════════════════════════════ */
+.menu-glass-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 8px;
+}
+
+/* ═══ CHAT AREA ═══ */
 .chat-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px 12px 16px;
+  padding: 16px 14px 20px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overflow-anchor: auto;
-  scrollbar-width: none;
-  position: relative;
-  z-index: 1;
+  scrollbar-width: thin;
 }
 
-.chat-area::-webkit-scrollbar { display: none; }
+.chat-area::-webkit-scrollbar { width: 6px; }
+.chat-area::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+}
 
-/* ═══════════════════════════════════════════════
-   MESSAGES
-   ═══════════════════════════════════════════════ */
+/* ═══ MESSAGES ═══ */
 .msg {
-  max-width: 78%;
-  padding: 7px 13px 6px;
+  max-width: 80%;
+  padding: 8px 14px 7px;
   border-radius: var(--radius-bubble);
   font-size: 15px;
-  line-height: 1.42;
+  line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
   position: relative;
-  animation: msgIn .32s cubic-bezier(0.34, 1.2, 0.64, 1);
+  animation: msgIn .25s cubic-bezier(0.4, 0, 0.2, 1);
   direction: rtl;
-  letter-spacing: -0.2px;
-  font-weight: 400;
 }
 
 @keyframes msgIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .msg-bot {
   align-self: flex-start;
-  background: var(--bubble-in-bg);
-  color: var(--bubble-in-text);
+  background: var(--bubble-in);
+  color: var(--text-primary);
   border-bottom-left-radius: 6px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-subtle);
 }
 
 .msg-user {
   align-self: flex-end;
-  background: var(--bubble-out-bg);
-  color: var(--bubble-out-text);
+  background: var(--bubble-out);
+  color: var(--text-primary);
   border-bottom-right-radius: 6px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
+}
+@media (prefers-color-scheme: dark) {
+  .msg-user { background: var(--bubble-out); color: #e9edef; }
 }
 
 .msg strong { font-weight: 700; }
 .msg em { font-style: italic; opacity: 0.9; }
 .msg a {
-  color: var(--accent-dark);
+  color: var(--accent);
   text-decoration: none;
   font-weight: 600;
   word-break: break-all;
@@ -487,111 +406,101 @@ body {
 
 .msg-content {
   display: block;
-  padding-bottom: 13px;
+  padding-bottom: 14px;
 }
 
 .msg-time {
   position: absolute;
-  bottom: 3px;
-  left: 11px;
+  bottom: 4px;
+  left: 12px;
   font-size: 10.5px;
   color: var(--text-tertiary);
   display: flex;
   align-items: center;
   gap: 3px;
   direction: ltr;
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 .msg-user .msg-time {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--text-tertiary);
   left: auto;
-  right: 11px;
-}
-@media (prefers-color-scheme: dark) {
-  .msg-user .msg-time { color: rgba(233, 237, 239, 0.6); }
+  right: 12px;
 }
 
-/* ═══════════════════════════════════════════════
-   WHATSAPP CHECKMARKS ✓✓ — Official SVG
-   ═══════════════════════════════════════════════ */
+/* ═══ WHATSAPP TICKS (SVG) ═══ */
 .msg-ticks {
   display: inline-flex;
   align-items: center;
+  margin-left: 3px;
+  color: var(--tick-blue);
   width: 16px;
-  height: 11px;
-  flex-shrink: 0;
+  height: 12px;
 }
 .msg-ticks svg {
-  width: 16px;
-  height: 11px;
-  display: block;
-}
-.msg-ticks svg path {
-  fill: var(--tick-blue);
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
 }
 
-/* ═══════════════════════════════════════════════
-   BUTTONS RACK
-   ═══════════════════════════════════════════════ */
+/* ═══ BUTTONS RACK ═══ */
 .btns-rack {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  padding: 5px 12px 10px;
+  gap: 8px;
+  padding: 6px 14px 12px;
   align-self: flex-start;
   max-width: 92%;
-  animation: msgIn .3s ease;
+  animation: msgIn .25s ease;
 }
 
 .btn-glass {
-  background: var(--bg-glass-regular);
-  backdrop-filter: var(--blur-thin);
-  -webkit-backdrop-filter: var(--blur-thin);
-  border: 0.5px solid var(--glass-border);
-  color: var(--accent-dark);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  color: var(--accent);
   font-family: var(--font);
   font-size: 14px;
   font-weight: 600;
-  padding: 9px 17px;
-  border-radius: var(--radius-pill);
+  padding: 9px 18px;
+  border-radius: 22px;
   cursor: pointer;
   transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   -webkit-tap-highlight-color: transparent;
-  letter-spacing: -0.2px;
 }
 .btn-glass:hover {
-  background: var(--bg-glass-thick);
+  background: var(--bg-glass-strong);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-md);
 }
-.btn-glass:active {
-  transform: scale(0.95);
-}
+.btn-glass:active { transform: scale(0.96); }
+
 .btn-glass.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.35);
 }
 .btn-glass.primary:hover {
-  box-shadow: 0 6px 18px rgba(0, 168, 132, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 168, 132, 0.5);
 }
 
-/* ═══════════════════════════════════════════════
-   TYPING INDICATOR
-   ═══════════════════════════════════════════════ */
+/* ═══ TYPING INDICATOR ═══ */
 .typing-bubble {
   display: none;
   align-self: flex-start;
-  background: var(--bubble-in-bg);
+  background: var(--bubble-in);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-bubble);
   border-bottom-left-radius: 6px;
-  padding: 13px 16px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
-  max-width: 70px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow-sm);
+  max-width: 80px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 .typing-bubble.active {
   display: flex;
@@ -603,25 +512,23 @@ body {
   height: 8px;
   background: var(--text-tertiary);
   border-radius: 50%;
-  animation: typingBounce 1.4s infinite ease-in-out;
+  animation: typingBounce 1.3s infinite ease-in-out;
 }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+.typing-dot:nth-child(2) { animation-delay: 0.18s; }
+.typing-dot:nth-child(3) { animation-delay: 0.36s; }
 
 @keyframes typingBounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
   30% { transform: translateY(-5px); opacity: 1; }
 }
 
-/* ═══════════════════════════════════════════════
-   IMAGES GRID
-   ═══════════════════════════════════════════════ */
+/* ═══ IMAGES GRID ═══ */
 .msg-imgs {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 3px;
-  margin-top: 5px;
-  border-radius: 14px;
+  gap: 4px;
+  margin-top: 6px;
+  border-radius: 12px;
   overflow: hidden;
 }
 .msg-imgs img {
@@ -629,28 +536,24 @@ body {
   height: 100px;
   object-fit: cover;
   cursor: pointer;
-  transition: transform .25s ease;
+  transition: transform .2s ease;
 }
-.msg-imgs img:hover { transform: scale(1.05); }
+.msg-imgs img:hover { transform: scale(1.04); }
 
-/* ═══════════════════════════════════════════════
-   BOTTOM DOCK
-   ═══════════════════════════════════════════════ */
+/* ═══ BOTTOM DOCK ═══ */
 .bottom-dock {
   flex-shrink: 0;
-  padding: 6px 12px;
-  padding-bottom: max(6px, env(safe-area-inset-bottom, 6px));
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
   background: transparent;
   position: relative;
   z-index: 50;
 }
 
-/* ═══════════════════════════════════════════════
-   WHATSAPP BUTTON
-   ═══════════════════════════════════════════════ */
+/* ═══ WHATSAPP BUTTON ═══ */
 .wa-wrapper {
   display: none;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .wa-wrapper.show { display: block; }
 
@@ -660,16 +563,16 @@ body {
   gap: 12px;
   width: 100%;
   padding: 12px 16px;
-  background: var(--bg-glass-thick);
-  backdrop-filter: var(--blur-thick);
-  -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--glass-border);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-glass);
-  box-shadow: var(--shadow-glass);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: all .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
@@ -677,33 +580,33 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), transparent 60%);
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), transparent 60%);
   pointer-events: none;
 }
 .wa-glass-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-float);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
-.wa-glass-card:active { transform: scale(0.97); }
+.wa-glass-card:active { transform: scale(0.98); }
 
 .wa-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: linear-gradient(135deg, #25d366, #128c7e);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 20px;
+  font-size: 22px;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
-  animation: waPulse 2.5s infinite;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+  animation: waPulse 2s infinite;
 }
 
 @keyframes waPulse {
-  0%, 100% { box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35); }
-  50% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.6); }
+  0%, 100% { box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4); }
+  50% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.65); }
 }
 
 .wa-text { flex: 1; min-width: 0; }
@@ -715,7 +618,6 @@ body {
   align-items: center;
   gap: 6px;
   margin-bottom: 2px;
-  letter-spacing: -0.2px;
 }
 .wa-title-tag {
   font-size: 9px;
@@ -734,31 +636,29 @@ body {
   text-overflow: ellipsis;
 }
 
-/* ═══════════════════════════════════════════════
-   INPUT BAR
-   ═══════════════════════════════════════════════ */
+/* ═══ INPUT BAR ═══ */
 .input-glass {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  padding: 5px;
-  background: var(--bg-glass-thick);
-  backdrop-filter: var(--blur-thick);
-  -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--glass-border);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-glass);
-  min-height: 46px;
-  transition: box-shadow .25s ease, border-color .25s ease;
+  gap: 8px;
+  padding: 6px;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-input);
+  box-shadow: var(--shadow-md);
+  min-height: 52px;
+  transition: box-shadow .2s ease, border-color .2s ease;
 }
 .input-glass:focus-within {
-  box-shadow: 0 8px 32px rgba(0, 168, 132, 0.2), var(--shadow-glass);
-  border-color: rgba(52, 199, 89, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 168, 132, 0.15), var(--shadow-md);
+  border-color: rgba(0, 168, 132, 0.3);
 }
 
 .input-icon-btn {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -767,15 +667,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 19px;
   transition: all .18s ease;
   flex-shrink: 0;
 }
 .input-icon-btn:hover {
-  background: rgba(120, 120, 128, 0.12);
-  color: var(--text-primary);
+  background: rgba(0, 168, 132, 0.1);
+  color: var(--accent);
 }
-.input-icon-btn:active { transform: scale(0.92); }
+.input-icon-btn.active {
+  color: var(--accent);
+  background: rgba(0, 168, 132, 0.12);
+}
 
 .input-field {
   flex: 1;
@@ -788,10 +691,9 @@ body {
   padding: 10px 4px;
   resize: none;
   max-height: 120px;
-  min-height: 22px;
+  min-height: 24px;
   line-height: 1.4;
   direction: rtl;
-  letter-spacing: -0.2px;
 }
 .input-field::placeholder {
   color: var(--text-tertiary);
@@ -799,8 +701,8 @@ body {
 }
 
 .send-btn-glass {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
@@ -809,51 +711,42 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(0, 168, 132, 0.3);
-  transition: all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.35);
+  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .send-btn-glass:hover {
-  transform: scale(1.06);
-  box-shadow: 0 5px 16px rgba(0, 168, 132, 0.45);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 6px 18px rgba(0, 168, 132, 0.5);
 }
-.send-btn-glass:active {
-  transform: scale(0.92);
-}
+.send-btn-glass:active { transform: scale(0.94); }
 .send-btn-glass:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
+.icon-swap { transition: transform .2s ease, opacity .2s ease; }
 
-.icon-swap {
-  transition: transform .25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* ═══════════════════════════════════════════════
-   IMAGE PREVIEW STRIP
-   ═══════════════════════════════════════════════ */
+/* ═══ IMAGE PREVIEW STRIP ═══ */
 .img-strip {
   display: none;
   gap: 6px;
-  padding: 0 4px 6px;
+  padding: 0 8px 6px;
   overflow-x: auto;
-  animation: msgIn .25s ease;
-  scrollbar-width: none;
+  animation: msgIn .2s ease;
 }
-.img-strip::-webkit-scrollbar { display: none; }
 .img-strip.show { display: flex; }
 .img-strip-item {
   position: relative;
-  width: 54px;
-  height: 54px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--shadow-soft);
+  border: 1.5px solid var(--border-glass);
+  box-shadow: var(--shadow-sm);
 }
 .img-strip-item img {
   width: 100%;
@@ -862,15 +755,15 @@ body {
 }
 .img-strip-rm {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -4px;
+  right: -4px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: var(--danger);
   color: #fff;
-  border: 2px solid var(--bg-glass-ultra);
-  font-size: 10px;
+  border: 2px solid var(--bg-glass-strong);
+  font-size: 11px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -878,220 +771,178 @@ body {
   font-weight: 700;
   padding: 0;
   line-height: 1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ═══════════════════════════════════════════════
-   ABOUT MODAL
+   WHATSAPP DIALOG — حوار واتساب الرسمي
    ═══════════════════════════════════════════════ */
-.modal-overlay {
+.wa-dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.5);
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  z-index: 9999;
-  animation: fadeIn .25s ease;
+  padding: 24px;
+  z-index: 99999;
+  animation: dialogOverlayIn .2s ease;
 }
-.modal-overlay.show { display: flex; }
-
-@keyframes fadeIn {
+.wa-dialog-overlay.show {
+  display: flex;
+}
+@keyframes dialogOverlayIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
-.modal-glass {
-  max-width: 380px;
+.wa-dialog {
+  max-width: 340px;
   width: 100%;
-  background: var(--bg-glass-ultra);
-  backdrop-filter: var(--blur-thick);
-  -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--glass-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow-float);
-  padding: 28px 22px 20px;
-  text-align: center;
-  animation: modalIn .35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px 20px 16px;
+  text-align: right;
+  animation: dialogIn .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
+  direction: rtl;
+  font-family: var(--font);
 }
-
-@keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+@media (prefers-color-scheme: dark) {
+  .wa-dialog {
+    background: #202c33;
   }
 }
-
-.modal-avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--accent);
-  box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.15);
-  margin-bottom: 12px;
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-  letter-spacing: -0.4px;
-}
-
-.modal-sub {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 18px;
-}
-
-.modal-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-  margin-bottom: 18px;
-}
-.modal-stat {
-  background: var(--bg-glass-thin);
-  border: 0.5px solid var(--glass-border);
-  border-radius: 14px;
-  padding: 11px 5px;
-  backdrop-filter: var(--blur-thin);
-}
-.modal-stat-num {
-  display: block;
+.wa-dialog-title {
   font-size: 17px;
-  font-weight: 700;
-  color: var(--accent-dark);
-  margin-bottom: 1px;
-  letter-spacing: -0.3px;
+  font-weight: 600;
+  color: #111b21;
+  margin-bottom: 8px;
+  line-height: 1.3;
 }
-.modal-stat-lbl {
-  display: block;
-  font-size: 10.5px;
-  color: var(--text-secondary);
-  font-weight: 500;
+@media (prefers-color-scheme: dark) {
+  .wa-dialog-title { color: #e9edef; }
 }
 
-.modal-google-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: linear-gradient(135deg, #1a73e8, #4285f4);
-  color: #fff;
-  text-decoration: none;
-  padding: 11px 20px;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  font-size: 13.5px;
-  margin-bottom: 10px;
-  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35);
-  transition: all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+.wa-dialog-message {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #667781;
+  margin-bottom: 20px;
 }
-.modal-google-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(26, 115, 232, 0.5);
+@media (prefers-color-scheme: dark) {
+  .wa-dialog-message { color: #8696a0; }
 }
-.modal-google-btn:active { transform: scale(0.96); }
 
-.modal-close {
-  display: block;
-  width: 100%;
-  background: var(--bg-glass-thin);
-  border: 0.5px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: 12px;
-  border-radius: 14px;
+.wa-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  flex-direction: row-reverse;
+}
+
+.wa-dialog-btn {
+  padding: 9px 18px;
+  border-radius: 6px;
+  border: none;
   font-family: var(--font);
   font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .18s ease;
-  letter-spacing: -0.2px;
+  transition: background .15s ease, transform .1s ease;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  text-transform: none;
 }
-.modal-close:hover { background: var(--bg-glass-regular); }
-.modal-close:active { transform: scale(0.98); }
+.wa-dialog-btn:active { transform: scale(0.97); }
 
-/* ═══════════════════════════════════════════════
-   TOAST
-   ═══════════════════════════════════════════════ */
+.wa-dialog-btn.cancel {
+  background: transparent;
+  color: #00a884;
+}
+.wa-dialog-btn.cancel:hover {
+  background: rgba(0, 168, 132, 0.08);
+}
+
+.wa-dialog-btn.danger {
+  background: transparent;
+  color: #ea0038;
+}
+.wa-dialog-btn.danger:hover {
+  background: rgba(234, 0, 56, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  .wa-dialog-btn.danger { color: #ff4d6d; }
+  .wa-dialog-btn.danger:hover { background: rgba(255, 77, 109, 0.1); }
+}
+
+/* ═══ TOAST ═══ */
 .toast {
   position: fixed;
   bottom: 90px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--bg-glass-ultra);
-  backdrop-filter: var(--blur-thick);
-  -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--glass-border);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glass);
   color: var(--text-primary);
-  padding: 10px 20px;
-  border-radius: var(--radius-pill);
+  padding: 11px 22px;
+  border-radius: 24px;
   font-size: 13.5px;
   font-weight: 600;
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   pointer-events: none;
-  transition: all .35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 10000;
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100000;
   max-width: 90vw;
   text-align: center;
-  letter-spacing: -0.2px;
 }
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
 
-/* ═══════════════════════════════════════════════
-   SCROLL BUTTON
-   ═══════════════════════════════════════════════ */
+/* ═══ SCROLL BTN ═══ */
 .scroll-btn {
   position: absolute;
-  bottom: 82px;
-  left: 16px;
-  width: 40px;
-  height: 40px;
+  bottom: 90px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--bg-glass-thick);
-  backdrop-filter: var(--blur-regular);
-  -webkit-backdrop-filter: var(--blur-regular);
-  border: 0.5px solid var(--glass-border);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   display: none;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-glass);
-  transition: all .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--shadow-md);
+  transition: all .2s ease;
   z-index: 60;
 }
 .scroll-btn.show { display: flex; }
 .scroll-btn:hover {
-  color: var(--accent-dark);
+  color: var(--accent);
   transform: translateY(-2px);
 }
-.scroll-btn:active { transform: scale(0.9); }
 
-/* ═══════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════ */
+/* ═══ RESPONSIVE ═══ */
 @media (max-width: 480px) {
-  .msg { max-width: 84%; font-size: 14.5px; }
-  .header-avatar { width: 36px; height: 36px; }
-  .modal-stats { grid-template-columns: repeat(2, 1fr); }
-  .modal-stat:last-child { grid-column: span 2; }
+  .msg { max-width: 85%; font-size: 14.5px; }
+  .header-avatar { width: 40px; height: 40px; }
 }
 
+/* ═══ REDUCED MOTION ═══ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -1108,7 +959,7 @@ body {
   <!-- ═══ HEADER ═══ -->
   <header class="header">
     <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
-      <i class="fas fa-chevron-right"></i>
+      <i class="fas fa-arrow-right"></i>
     </button>
 
     <img class="header-avatar"
@@ -1129,18 +980,16 @@ body {
     </div>
 
     <div class="header-actions">
-      <button class="header-btn" onclick="resetChat()" title="محادثة جديدة" aria-label="محادثة جديدة">
-        <i class="fas fa-redo-alt"></i>
-      </button>
-      <button class="header-btn" onclick="openMenu(event)" title="المزيد" aria-label="المزيد">
-        <i class="fas fa-ellipsis-h"></i>
+      <button class="header-btn" onclick="openMenu(event)" title="القائمة" aria-label="القائمة">
+        <i class="fas fa-ellipsis-v"></i>
       </button>
     </div>
   </header>
 
-  <!-- ═══ MENU ═══ -->
+  <!-- ═══ MENU OVERLAY ═══ -->
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
+  <!-- ═══ MENU GLASS ═══ -->
   <div class="menu-glass" id="menuGlass">
     <button class="menu-glass-item" onclick="openAbout()">
       <span class="mi-icon">👤</span>
@@ -1151,11 +1000,11 @@ body {
       بروفايلي على Google
     </button>
     <div class="menu-glass-sep"></div>
-    <button class="menu-glass-item" onclick="resetChat()">
+    <button class="menu-glass-item" onclick="showNewChatDialog()">
       <span class="mi-icon">🔄</span>
       محادثة جديدة
     </button>
-    <button class="menu-glass-item danger" onclick="deleteChat()">
+    <button class="menu-glass-item danger" onclick="showDeleteDialog()">
       <span class="mi-icon">🗑️</span>
       حذف المحادثة
     </button>
@@ -1197,8 +1046,7 @@ body {
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
 
-      <input type="text" class="input-field" id="msgInput" placeholder="رسالة..."
-             autocomplete="off" inputmode="text">
+      <input type="text" class="input-field" id="msgInput" placeholder="رسالة..." autocomplete="off" inputmode="text">
 
       <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()" aria-label="إرسال">
         <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
@@ -1211,37 +1059,49 @@ body {
   </button>
 </div>
 
-<!-- ═══ ABOUT MODAL ═══ -->
-<div class="modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
-  <div class="modal-glass">
-    <img class="modal-avatar"
-         src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
-         alt="طارق طنطاوي"
-         onerror="this.style.display='none'">
-    <div class="modal-title">طارق طنطاوي</div>
-    <div class="modal-sub">سمسار مدينة نصر — منذ 2014</div>
+<!-- ═══════════════════════════════════════════════
+     WhatsApp Dialog — حوار واتساب
+     ═══════════════════════════════════════════════ -->
+<div class="wa-dialog-overlay" id="waDialog" onclick="if(event.target===this) closeWaDialog(false)">
+  <div class="wa-dialog">
+    <div class="wa-dialog-title" id="waDialogTitle">تأكيد</div>
+    <div class="wa-dialog-message" id="waDialogMessage">هل أنت متأكد؟</div>
+    <div class="wa-dialog-actions">
+      <button class="wa-dialog-btn cancel" id="waDialogCancel" onclick="closeWaDialog(false)">إلغاء</button>
+      <button class="wa-dialog-btn danger" id="waDialogOk" onclick="closeWaDialog(true)">تأكيد</button>
+    </div>
+  </div>
+</div>
 
-    <div class="modal-stats">
-      <div class="modal-stat">
-        <span class="modal-stat-num">16.3M</span>
-        <span class="modal-stat-lbl">مشاهدة</span>
+<!-- ═══ ABOUT MODAL ═══ -->
+<div class="wa-dialog-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
+  <div class="wa-dialog" style="max-width:380px;text-align:center;">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
+         alt="طارق طنطاوي"
+         style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid #00a884;margin-bottom:12px;"
+         onerror="this.style.display='none'">
+    <div style="font-size:20px;font-weight:700;color:#111b21;margin-bottom:2px;">طارق طنطاوي</div>
+    <div style="font-size:13px;color:#667781;margin-bottom:18px;">سمسار مدينة نصر — منذ 2014</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;">
+      <div style="background:rgba(0,168,132,0.08);border-radius:12px;padding:12px 6px;">
+        <span style="display:block;font-size:17px;font-weight:700;color:#00a884;">16.3M</span>
+        <span style="display:block;font-size:11px;color:#667781;font-weight:500;">مشاهدة</span>
       </div>
-      <div class="modal-stat">
-        <span class="modal-stat-num">468</span>
-        <span class="modal-stat-lbl">صورة</span>
+      <div style="background:rgba(0,168,132,0.08);border-radius:12px;padding:12px 6px;">
+        <span style="display:block;font-size:17px;font-weight:700;color:#00a884;">468</span>
+        <span style="display:block;font-size:11px;color:#667781;font-weight:500;">صورة</span>
       </div>
-      <div class="modal-stat">
-        <span class="modal-stat-num">195</span>
-        <span class="modal-stat-lbl">مراجعة</span>
+      <div style="background:rgba(0,168,132,0.08);border-radius:12px;padding:12px 6px;">
+        <span style="display:block;font-size:17px;font-weight:700;color:#00a884;">195</span>
+        <span style="display:block;font-size:11px;color:#667781;font-weight:500;">مراجعة</span>
       </div>
     </div>
-
-    <a class="modal-google-btn" href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener">
+    <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener"
+       style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#4285f4);color:#fff;text-decoration:none;padding:11px 22px;border-radius:24px;font-weight:700;font-size:13.5px;margin-bottom:12px;">
       <i class="fas fa-map-marked-alt"></i>
       شوف بروفايلي على Google Maps
     </a>
-
-    <button class="modal-close" onclick="closeAbout()">إغلاق</button>
+    <button onclick="closeAbout()" style="display:block;width:100%;background:rgba(0,0,0,0.05);border:none;color:#111b21;padding:12px;border-radius:10px;font-family:var(--font);font-size:14.5px;font-weight:600;cursor:pointer;">إغلاق</button>
   </div>
 </div>
 
@@ -1253,19 +1113,15 @@ body {
 // CONFIG
 // ═══════════════════════════════════════════
 const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY = "simsar_wa_2263673";
+const STORAGE_KEY = "simsar_wa_v84";
 const TAREK_WA = "201147758857";
 const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const MAX_IMAGES = 5;
 
-// ═══════════════════════════════════════════
-// WHATSAPP OFFICIAL CHECKMARKS SVG
-// ═══════════════════════════════════════════
-const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.102-.318L11.07.653zM8.68.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-2.34 2.885-2.34-2.885a.493.493 0 0 0-.381-.178.457.457 0 0 0-.304.102L1.85 1.87a.441.441 0 0 0-.102.318c0 .108.036.207.108.299l2.996 3.79-2.996 3.79a.497.497 0 0 0-.108.299.441.441 0 0 0 .102.318l.792.792a.457.457 0 0 0 .304.102.493.493 0 0 0 .381-.178l2.34-2.885 2.34 2.885a.493.493 0 0 0 .381.178.457.457 0 0 0 .304-.102l.792-.792a.441.441 0 0 0 .102-.318.497.497 0 0 0-.108-.299L5.669 6.277l2.996-3.79a.497.497 0 0 0 .108-.299.441.441 0 0 0-.102-.318L7.879 1.87z"/></svg>`;
+// ═══ WhatsApp Ticks SVG (طبق الأصل) ═══
+const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/><path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-.996-.94-1.085 1.32 1.775 1.775a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.663-.728z"/></svg>`;
 
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
+// ═══ STATE ═══
 let state = {
   formState: { _version: "v70" },
   history: [],
@@ -1279,7 +1135,6 @@ let isSending = false;
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
 }
-
 function loadState() {
   try {
     const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -1287,9 +1142,7 @@ function loadState() {
   } catch {}
 }
 
-// ═══════════════════════════════════════════
-// DOM REFS
-// ═══════════════════════════════════════════
+// ═══ DOM REFS ═══
 const chatArea    = document.getElementById("chatArea");
 const msgInput    = document.getElementById("msgInput");
 const sendBtn     = document.getElementById("sendBtn");
@@ -1304,9 +1157,78 @@ const scrollBtn   = document.getElementById("scrollBtn");
 const menuGlass   = document.getElementById("menuGlass");
 const menuOverlay = document.getElementById("menuOverlay");
 
-// ═══════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════
+// ═══ WhatsApp Dialog System ═══
+let waDialogCallback = null;
+
+function showWaDialog(options) {
+  const {
+    title = "تأكيد",
+    message = "هل أنت متأكد؟",
+    okText = "تأكيد",
+    cancelText = "إلغاء",
+    okStyle = "danger",
+    onOk = null
+  } = options || {};
+
+  const dialog = document.getElementById("waDialog");
+  const titleEl = document.getElementById("waDialogTitle");
+  const msgEl = document.getElementById("waDialogMessage");
+  const okBtn = document.getElementById("waDialogOk");
+  const cancelBtn = document.getElementById("waDialogCancel");
+
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+  okBtn.textContent = okText;
+  cancelBtn.textContent = cancelText;
+  okBtn.className = "wa-dialog-btn " + (okStyle === "danger" ? "danger" : "cancel");
+
+  waDialogCallback = onOk;
+  dialog.classList.add("show");
+}
+
+function closeWaDialog(confirmed) {
+  const dialog = document.getElementById("waDialog");
+  dialog.classList.remove("show");
+  const cb = waDialogCallback;
+  waDialogCallback = null;
+  if (confirmed && typeof cb === "function") {
+    setTimeout(() => cb(), 100);
+  }
+}
+
+// ✅ حوار محادثة جديدة — على شكل واتساب
+function showNewChatDialog() {
+  closeMenu();
+  showWaDialog({
+    title: "محادثة جديدة؟",
+    message: "هتبدأ محادثة جديدة من الأول. الرسائل والبيانات الحالية هتتمسح.",
+    okText: "ابدأ",
+    cancelText: "إلغاء",
+    okStyle: "danger",
+    onOk: () => {
+      resetChat();
+      showToast("✅ محادثة جديدة");
+    }
+  });
+}
+
+// ✅ حوار حذف المحادثة — على شكل واتساب
+function showDeleteDialog() {
+  closeMenu();
+  showWaDialog({
+    title: "حذف المحادثة؟",
+    message: "كل الرسائل والبيانات هتتمسح نهائيًا، ومش هتقدر ترجعها تاني.",
+    okText: "حذف",
+    cancelText: "إلغاء",
+    okStyle: "danger",
+    onOk: () => {
+      deleteChat();
+      showToast("🗑️ تم الحذف");
+    }
+  });
+}
+
+// ═══ HELPERS ═══
 function getTime() {
   return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
 }
@@ -1355,7 +1277,6 @@ function showToast(msg, dur = 2400) {
 function updateSendIcon() {
   const hasText = msgInput.value.trim().length > 0;
   const hasImgs = state.pendingImages.length > 0;
-
   if (hasText || hasImgs) {
     sendIcon.className = "fas fa-arrow-up icon-swap";
     sendIcon.style.transform = "none";
@@ -1365,9 +1286,7 @@ function updateSendIcon() {
   }
 }
 
-// ═══════════════════════════════════════════
-// MESSAGE RENDERING
-// ═══════════════════════════════════════════
+// ═══ MESSAGE RENDERING ═══
 function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
   div.className = `msg msg-${type}`;
@@ -1402,7 +1321,6 @@ function renderButtons(opts) {
 
   const wrap = document.createElement("div");
   wrap.className = "btns-rack";
-
   const primary = ["✅ ابعت على واتساب", "📅 احجز معاينة"];
 
   opts.forEach(o => {
@@ -1439,9 +1357,7 @@ function hideWA() {
   waBtn.href = "#";
 }
 
-// ═══════════════════════════════════════════
-// IMAGES
-// ═══════════════════════════════════════════
+// ═══ IMAGES ═══
 function onFilesSelected(e) {
   const files = [...(e.target.files || [])];
   if (!files.length) return;
@@ -1506,15 +1422,12 @@ async function uploadPendingImages() {
   } catch { return []; }
 }
 
-// ═══════════════════════════════════════════
-// SEND MESSAGE
-// ═══════════════════════════════════════════
+// ═══ SEND MESSAGE ═══
 async function sendMsg() {
   if (isSending) return;
 
   const txt = msgInput.value.trim();
   const hasImgs = state.pendingImages.length > 0;
-
   if (!txt && !hasImgs) return;
 
   msgInput.value = "";
@@ -1601,54 +1514,38 @@ async function sendMsg() {
   }
 }
 
-// ═══════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════
+// ═══ NAVIGATION ═══
 function goBack() {
-  if (history.length > 1) {
-    history.back();
-  } else {
-    window.location.href = "https://nasr-realestate.github.io/";
-  }
+  if (history.length > 1) history.back();
+  else window.location.href = "/";
 }
 
-// ═══════════════════════════════════════════
-// MENU
-// ═══════════════════════════════════════════
+// ═══ MENU ═══
 function openMenu(e) {
   if (e) e.stopPropagation();
   menuGlass.classList.add("open");
   menuOverlay.classList.add("open");
 }
-
 function closeMenu() {
   menuGlass.classList.remove("open");
   menuOverlay.classList.remove("open");
 }
 
-// ═══════════════════════════════════════════
-// MODAL
-// ═══════════════════════════════════════════
+// ═══ MODAL ═══
 function openAbout() {
   closeMenu();
   document.getElementById("aboutModal").classList.add("show");
 }
-
 function closeAbout() {
   document.getElementById("aboutModal").classList.remove("show");
 }
-
 function openGoogle() {
   closeMenu();
   window.open(GOOGLE_URL, "_blank");
 }
 
-// ═══════════════════════════════════════════
-// RESET / DELETE
-// ═══════════════════════════════════════════
+// ═══ RESET / DELETE ═══
 function resetChat() {
-  closeMenu();
-  if (!confirm("تبدأ محادثة جديدة؟")) return;
   state = {
     formState: { _version: "v70" },
     history: [],
@@ -1664,12 +1561,9 @@ function resetChat() {
   imgStrip.innerHTML = "";
   updateSendIcon();
   startConversation();
-  showToast("✅ محادثة جديدة");
 }
 
 function deleteChat() {
-  closeMenu();
-  if (!confirm("تأكيد حذف المحادثة؟")) return;
   localStorage.removeItem(STORAGE_KEY);
   state = {
     formState: { _version: "v70" },
@@ -1685,22 +1579,16 @@ function deleteChat() {
   imgStrip.innerHTML = "";
   updateSendIcon();
   startConversation();
-  showToast("🗑️ تم الحذف");
 }
 
-// ═══════════════════════════════════════════
-// SCROLL BUTTON
-// ═══════════════════════════════════════════
+// ═══ SCROLL BTN ═══
 chatArea.addEventListener("scroll", () => {
   const atBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
   scrollBtn.classList.toggle("show", !atBottom);
 });
 
-// ═══════════════════════════════════════════
-// INPUT HANDLERS
-// ═══════════════════════════════════════════
+// ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
-
 msgInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -1708,9 +1596,7 @@ msgInput.addEventListener("keydown", (e) => {
   }
 });
 
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
+// ═══ INIT ═══
 function startConversation() {
   renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — سمسار مدينة نصر.\n\n🏆 Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
@@ -1733,9 +1619,7 @@ if (state.history && state.history.length) {
 updateSendIcon();
 msgInput.focus();
 
-// ═══════════════════════════════════════════
-// GLOBAL EXPOSE
-// ═══════════════════════════════════════════
+// ═══ GLOBAL EXPOSE ═══
 window.sendMsg = sendMsg;
 window.onFilesSelected = onFilesSelected;
 window.removeImg = removeImg;
@@ -1748,6 +1632,9 @@ window.closeMenu = closeMenu;
 window.openAbout = openAbout;
 window.closeAbout = closeAbout;
 window.openGoogle = openGoogle;
+window.showNewChatDialog = showNewChatDialog;
+window.showDeleteDialog = showDeleteDialog;
+window.closeWaDialog = closeWaDialog;
 </script>
 </body>
 </html>
