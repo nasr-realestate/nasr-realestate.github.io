@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0e14">
+
+<!-- ═══ Theme Color — Light + Dark ═══ -->
+<meta name="theme-color" content="#075e54" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#054d44" media="(prefers-color-scheme: dark)">
+
 <title>سمسار طلبك — طارق طنطاوي</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 
-<!-- ═══ Font Awesome (لازم — عشان الأيقونات تظهر) ═══ -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <!-- ═══ WhatsApp Preview ═══ -->
@@ -22,13 +25,19 @@
 <style>
 /* ═══════════════════════════════════════════════
    WHATSAPP 2.26.36.73 — LIQUID GLASS EDITION
-   Official font stack + Checkmarks SVG
+   Official font stack + Checkmarks SVG + Green Header
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   /* ═══ WhatsApp Official Font Stack ═══ */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  
+  /* ═══ WHATSAPP GREEN — ثوابت الألوان ═══ */
+  --wa-green-header:  #075e54;   /* أخضر الهيدر الرسمي */
+  --wa-green-dark:    #054d44;   /* أخضر داكن (Dark Mode) */
+  --wa-green-mid:     #128c7e;   /* أخضر وسط */
+  --wa-green-light:   #25d366;   /* أخضر فاتح (أزرار) */
   
   /* ═══ LIGHT MODE ═══ */
   --bg-wallpaper:     #efeae2;
@@ -41,9 +50,9 @@
   --glass-border-inner: rgba(0, 0, 0, 0.05);
   --glass-highlight:  rgba(255, 255, 255, 0.9);
   
-  --header-bg:        rgba(255, 255, 255, 0.78);
-  --header-text:      #000000;
-  --header-sub:       #8e8e93;
+  --header-bg:        var(--wa-green-header);   /* ✅ أخضر */
+  --header-text:      #ffffff;                   /* ✅ أبيض */
+  --header-sub:       rgba(255, 255, 255, 0.85); /* ✅ أبيض شفاف */
   
   --bubble-in-bg:     #ffffff;
   --bubble-in-text:   #000000;
@@ -88,9 +97,9 @@
     --glass-border-inner: rgba(255, 255, 255, 0.05);
     --glass-highlight:  rgba(255, 255, 255, 0.12);
     
-    --header-bg:        rgba(32, 44, 51, 0.78);
-    --header-text:      #ffffff;
-    --header-sub:       #8696a0;
+    --header-bg:        var(--wa-green-dark);      /* ✅ أخضر داكن */
+    --header-text:      #ffffff;                    /* ✅ أبيض */
+    --header-sub:       rgba(255, 255, 255, 0.75);  /* ✅ أبيض شفاف */
     
     --bubble-in-bg:     #202c33;
     --bubble-in-text:   #e9edef;
@@ -157,7 +166,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   HEADER
+   HEADER — ✅ أخضر واتساب في الوضعين
    ═══════════════════════════════════════════════ */
 .header {
   position: relative;
@@ -168,10 +177,19 @@ body {
   padding: 8px 12px;
   min-height: var(--header-h);
   background: var(--header-bg);
-  backdrop-filter: var(--blur-regular);
-  -webkit-backdrop-filter: var(--blur-regular);
-  border-bottom: 0.5px solid var(--glass-border-inner);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
+  transition: background-color .3s ease;
+}
+
+/* ═══ في Dark Mode — أخضر داكن ═══ */
+@media (prefers-color-scheme: dark) {
+  .header {
+    background: var(--wa-green-dark);
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
 }
 
 .header::after {
@@ -181,8 +199,8 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glass-highlight) 50%, transparent);
-  opacity: 0.3;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25) 50%, transparent);
+  opacity: 0.5;
 }
 
 .header-back {
@@ -192,7 +210,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: var(--header-text);
+  color: #ffffff;
   cursor: pointer;
   transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 17px;
@@ -200,7 +218,7 @@ body {
   border: none;
   background: transparent;
 }
-.header-back:hover { background: rgba(120, 120, 128, 0.12); }
+.header-back:hover { background: rgba(255, 255, 255, 0.15); }
 .header-back:active { transform: scale(0.92); }
 
 .header-avatar {
@@ -209,8 +227,8 @@ body {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 0.5px solid var(--glass-border);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -225,7 +243,7 @@ body {
 .header-name {
   font-size: 15.5px;
   font-weight: 600;
-  color: var(--header-text);
+  color: #ffffff;
   line-height: 1.2;
   display: flex;
   align-items: center;
@@ -236,8 +254,8 @@ body {
 .header-badge {
   font-size: 9px;
   font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #34c759, #25d366);
+  color: var(--wa-green-header);
+  background: #ffffff;
   padding: 2px 6px;
   border-radius: 6px;
   letter-spacing: 0;
@@ -245,7 +263,7 @@ body {
 
 .header-status {
   font-size: 12px;
-  color: var(--header-sub);
+  color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -258,13 +276,20 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #34c759;
+  background: #25d366;
   display: inline-block;
   flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+  50% { box-shadow: 0 0 0 5px rgba(37, 211, 102, 0); }
 }
 
 .header-status.typing {
-  color: var(--accent);
+  color: #d9fdd3;
   font-weight: 500;
 }
 .header-status.typing .status-dot {
@@ -288,7 +313,7 @@ body {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--header-text);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -297,7 +322,7 @@ body {
   transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
-.header-btn:hover { background: rgba(120, 120, 128, 0.12); }
+.header-btn:hover { background: rgba(255, 255, 255, 0.15); }
 .header-btn:active { transform: scale(0.9); }
 
 /* ═══════════════════════════════════════════════
@@ -406,7 +431,7 @@ body {
 .chat-area::-webkit-scrollbar { display: none; }
 
 /* ═══════════════════════════════════════════════
-   MESSAGES — WhatsApp Official
+   MESSAGES
    ═══════════════════════════════════════════════ */
 .msg {
   max-width: 78%;
