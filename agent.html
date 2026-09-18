@@ -6,8 +6,6 @@
 <meta name="theme-color" content="#0a0e14">
 <title>سمسار طلبك — طارق طنطاوي</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <!-- ═══ WhatsApp Preview ═══ -->
 <meta property="og:type" content="website">
@@ -20,13 +18,17 @@
 
 <style>
 /* ═══════════════════════════════════════════════
-   WHATSAPP 2.26.36.73 — LIQUID GLASS EDITION
-   Design Reference: WhatsApp Messenger iOS 26
+   WHATSAPP 2.26.36.73 — OFFICIAL FONT STACK
+   Line-height, size, and checkmarks matched
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ═══ LIGHT MODE — iOS 26 Liquid Glass ═══ */
+  /* ═══ WhatsApp Official Font Stack ═══ */
+  /* iOS: San Francisco (system default) | Android: Roboto (system default) */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  
+  /* ═══ LIGHT MODE — WhatsApp Official Colors ═══ */
   --bg-wallpaper:     #efeae2;
   --bg-glass-thin:    rgba(255, 255, 255, 0.55);
   --bg-glass-regular: rgba(255, 255, 255, 0.72);
@@ -67,12 +69,11 @@
   --blur-regular:     blur(30px) saturate(180%);
   --blur-thick:       blur(40px) saturate(200%);
   
-  --font: 'Cairo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --max-w: 780px;
   --header-h: 56px;
 }
 
-/* ═══ DARK MODE — iOS 26 Liquid Glass ═══ */
+/* ═══ DARK MODE — WhatsApp Official Colors ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-wallpaper:     #0b141a;
@@ -115,6 +116,7 @@ html, body {
   color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   text-rendering: optimizeLegibility;
   overscroll-behavior: none;
@@ -126,7 +128,6 @@ body {
   justify-content: center;
 }
 
-/* ═══ Wallpaper (dynamic gradient) ═══ */
 #app {
   display: flex;
   flex-direction: column;
@@ -137,7 +138,6 @@ body {
   position: relative;
   overflow: hidden;
   
-  /* Gradient wallpaper matching WhatsApp 2.26 */
   background:
     radial-gradient(ellipse 800px 600px at 20% 0%, rgba(52, 199, 89, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse 600px 800px at 80% 100%, rgba(0, 122, 255, 0.05) 0%, transparent 60%),
@@ -155,7 +155,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   HEADER — Floating Glass
+   HEADER
    ═══════════════════════════════════════════════ */
 .header {
   position: relative;
@@ -172,7 +172,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Inner highlight */
 .header::after {
   content: "";
   position: absolute;
@@ -300,7 +299,7 @@ body {
 .header-btn:active { transform: scale(0.9); }
 
 /* ═══════════════════════════════════════════════
-   MENU — iOS Context Menu
+   MENU
    ═══════════════════════════════════════════════ */
 .menu-overlay {
   position: fixed;
@@ -405,12 +404,15 @@ body {
 .chat-area::-webkit-scrollbar { display: none; }
 
 /* ═══════════════════════════════════════════════
-   MESSAGES — iOS 26 Style
+   MESSAGES — WhatsApp Official (Size + Line-height)
    ═══════════════════════════════════════════════ */
 .msg {
   max-width: 78%;
   padding: 7px 13px 6px;
   border-radius: var(--radius-bubble);
+  /* ═══ WhatsApp Official Font Size ═══ */
+  /* iOS: 17pt | Android: 16sp | WhatsApp Web: 14.2px */
+  /* Here: 15px — Medium readable size */
   font-size: 15px;
   line-height: 1.42;
   word-break: break-word;
@@ -419,6 +421,8 @@ body {
   animation: msgIn .32s cubic-bezier(0.34, 1.2, 0.64, 1);
   direction: rtl;
   letter-spacing: -0.2px;
+  /* WhatsApp uses default weight 400 for messages */
+  font-weight: 400;
 }
 
 @keyframes msgIn {
@@ -487,12 +491,24 @@ body {
   .msg-user .msg-time { color: rgba(233, 237, 239, 0.6); }
 }
 
+/* ═══════════════════════════════════════════════
+   WHATSAPP CHECKMARKS ✓✓ — Official SVG
+   ═══════════════════════════════════════════════ */
 .msg-ticks {
-  font-size: 12px;
-  color: var(--tick-blue);
-  letter-spacing: -3px;
-  font-weight: 600;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  width: 16px;
+  height: 11px;
+  flex-shrink: 0;
+}
+.msg-ticks svg {
+  width: 16px;
+  height: 11px;
+  display: block;
+}
+/* Tick Blue — WhatsApp Official #34B7F1 */
+.msg-ticks svg path {
+  fill: var(--tick-blue);
 }
 
 /* ═══════════════════════════════════════════════
@@ -598,7 +614,7 @@ body {
 .msg-imgs img:hover { transform: scale(1.05); }
 
 /* ═══════════════════════════════════════════════
-   BOTTOM DOCK — Floating Glass
+   BOTTOM DOCK
    ═══════════════════════════════════════════════ */
 .bottom-dock {
   flex-shrink: 0;
@@ -610,7 +626,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   WHATSAPP BUTTON — Floating
+   WHATSAPP BUTTON
    ═══════════════════════════════════════════════ */
 .wa-wrapper {
   display: none;
@@ -699,7 +715,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   INPUT BAR — Floating Pill
+   INPUT BAR
    ═══════════════════════════════════════════════ */
 .input-glass {
   display: flex;
@@ -846,7 +862,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   ABOUT MODAL — iOS Sheet
+   ABOUT MODAL
    ═══════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed;
@@ -1223,6 +1239,11 @@ const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const MAX_IMAGES = 5;
 
 // ═══════════════════════════════════════════
+// WHATSAPP OFFICIAL CHECKMARKS SVG
+// ═══════════════════════════════════════════
+const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.102-.318L11.07.653zm-2.39 0a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-2.34 2.885-2.34-2.885a.493.493 0 0 0-.381-.178.457.457 0 0 0-.304.102L.242 1.87a.441.441 0 0 0-.102.318c0 .108.036.207.108.299l2.996 3.79-2.996 3.79a.497.497 0 0 0-.108.299.441.441 0 0 0 .102.318l.792.792a.457.457 0 0 0 .304.102.493.493 0 0 0 .381-.178l2.34-2.885 2.34 2.885a.493.493 0 0 0 .381.178.457.457 0 0 0 .304-.102l.792-.792a.441.441 0 0 0 .102-.318.497.497 0 0 0-.108-.299L4.335 6.277l2.996-3.79a.497.497 0 0 0 .108-.299.441.441 0 0 0-.102-.318L6.545 1.87z"/></svg>`;
+
+// ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
 let state = {
@@ -1325,7 +1346,7 @@ function updateSendIcon() {
 }
 
 // ═══════════════════════════════════════════
-// MESSAGE RENDERING
+// MESSAGE RENDERING — WhatsApp Official Style
 // ═══════════════════════════════════════════
 function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
@@ -1344,8 +1365,9 @@ function renderMsg(text, type = "bot", images) {
     html += `</div>`;
   }
 
+  // ✅ WhatsApp Official Checkmarks SVG
   const ticks = type === "user"
-    ? `<span class="msg-ticks">✓✓</span>`
+    ? `<span class="msg-ticks">${TICKS_SVG}</span>`
     : "";
 
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
