@@ -6,9 +6,8 @@
 <meta name="theme-color" content="#0a0e14">
 <title>سمسار طلبك — طارق طنطاوي</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <!-- ═══ WhatsApp Preview ═══ -->
 <meta property="og:type" content="website">
@@ -21,58 +20,59 @@
 
 <style>
 /* ═══════════════════════════════════════════════
-   LIQUID GLASS EDITION
+   WHATSAPP 2.26.36.73 — LIQUID GLASS EDITION
+   Design Reference: WhatsApp Messenger iOS 26
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ═══ LIGHT MODE ═══ */
+  /* ═══ LIGHT MODE — iOS 26 Liquid Glass ═══ */
   --bg-wallpaper:     #efeae2;
   --bg-glass-thin:    rgba(255, 255, 255, 0.55);
   --bg-glass-regular: rgba(255, 255, 255, 0.72);
   --bg-glass-thick:   rgba(255, 255, 255, 0.88);
   --bg-glass-ultra:   rgba(255, 255, 255, 0.96);
-
-  --glass-border:       rgba(255, 255, 255, 0.7);
+  
+  --glass-border:     rgba(255, 255, 255, 0.7);
   --glass-border-inner: rgba(0, 0, 0, 0.05);
-  --glass-highlight:    rgba(255, 255, 255, 0.9);
-
-  --header-bg:   rgba(255, 255, 255, 0.78);
-  --header-text: #000000;
-  --header-sub:  #8e8e93;
-
-  --bubble-in-bg:    #ffffff;
-  --bubble-in-text:  #000000;
-  --bubble-out-bg:   #d9fdd3;
-  --bubble-out-text: #000000;
-
-  --text-primary:   #000000;
-  --text-secondary: #8e8e93;
-  --text-tertiary:  #c7c7cc;
-
-  --accent:      #34c759;
-  --accent-dark: #007aff;
-  --tick-blue:   #34b7f1;
-  --danger:      #ff3b30;
-
-  --shadow-soft:  0 2px 12px rgba(0, 0, 0, 0.08);
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.12);
-  --shadow-float: 0 12px 48px rgba(0, 0, 0, 0.18);
-
-  --radius-pill:   999px;
-  --radius-bubble: 20px;
-  --radius-glass:  22px;
-
-  --blur-thin:    blur(20px) saturate(180%);
-  --blur-regular: blur(30px) saturate(180%);
-  --blur-thick:   blur(40px) saturate(200%);
-
+  --glass-highlight:  rgba(255, 255, 255, 0.9);
+  
+  --header-bg:        rgba(255, 255, 255, 0.78);
+  --header-text:      #000000;
+  --header-sub:       #8e8e93;
+  
+  --bubble-in-bg:     #ffffff;
+  --bubble-in-text:   #000000;
+  --bubble-out-bg:    #d9fdd3;
+  --bubble-out-text:  #000000;
+  
+  --text-primary:     #000000;
+  --text-secondary:   #8e8e93;
+  --text-tertiary:    #c7c7cc;
+  
+  --accent:           #34c759;
+  --accent-dark:      #007aff;
+  --tick-blue:        #34b7f1;
+  --danger:           #ff3b30;
+  
+  --shadow-soft:      0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glass:     0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-float:     0 12px 48px rgba(0, 0, 0, 0.18);
+  
+  --radius-pill:      999px;
+  --radius-bubble:    20px;
+  --radius-glass:     22px;
+  
+  --blur-thin:        blur(20px) saturate(180%);
+  --blur-regular:     blur(30px) saturate(180%);
+  --blur-thick:       blur(40px) saturate(200%);
+  
   --font: 'Cairo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --max-w: 780px;
   --header-h: 56px;
 }
 
-/* ═══ DARK MODE ═══ */
+/* ═══ DARK MODE — iOS 26 Liquid Glass ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-wallpaper:     #0b141a;
@@ -80,28 +80,28 @@
     --bg-glass-regular: rgba(32, 44, 51, 0.72);
     --bg-glass-thick:   rgba(32, 44, 51, 0.88);
     --bg-glass-ultra:   rgba(32, 44, 51, 0.96);
-
-    --glass-border:       rgba(255, 255, 255, 0.08);
+    
+    --glass-border:     rgba(255, 255, 255, 0.08);
     --glass-border-inner: rgba(255, 255, 255, 0.05);
-    --glass-highlight:    rgba(255, 255, 255, 0.12);
-
-    --header-bg:   rgba(32, 44, 51, 0.78);
-    --header-text: #ffffff;
-    --header-sub:  #8696a0;
-
-    --bubble-in-bg:    #202c33;
-    --bubble-in-text:  #e9edef;
-    --bubble-out-bg:   #005c4b;
-    --bubble-out-text: #e9edef;
-
-    --text-primary:   #e9edef;
-    --text-secondary: #8696a0;
-    --text-tertiary:  #667781;
-
-    --accent:      #25d366;
-    --accent-dark: #00a884;
-    --tick-blue:   #53bdeb;
-    --danger:      #ff453a;
+    --glass-highlight:  rgba(255, 255, 255, 0.12);
+    
+    --header-bg:        rgba(32, 44, 51, 0.78);
+    --header-text:      #ffffff;
+    --header-sub:       #8696a0;
+    
+    --bubble-in-bg:     #202c33;
+    --bubble-in-text:   #e9edef;
+    --bubble-out-bg:    #005c4b;
+    --bubble-out-text:  #e9edef;
+    
+    --text-primary:     #e9edef;
+    --text-secondary:   #8696a0;
+    --text-tertiary:    #667781;
+    
+    --accent:           #25d366;
+    --accent-dark:      #00a884;
+    --tick-blue:        #53bdeb;
+    --danger:           #ff453a;
   }
 }
 
@@ -110,7 +110,6 @@
    ═══════════════════════════════════════════════ */
 html, body {
   height: 100%;
-  height: 100dvh;
   font-family: var(--font);
   background: #000;
   color: var(--text-primary);
@@ -127,16 +126,18 @@ body {
   justify-content: center;
 }
 
+/* ═══ Wallpaper (dynamic gradient) ═══ */
 #app {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  min-height: 100vh;
   max-width: var(--max-w);
   width: 100%;
   margin: 0 auto;
   position: relative;
   overflow: hidden;
+  
+  /* Gradient wallpaper matching WhatsApp 2.26 */
   background:
     radial-gradient(ellipse 800px 600px at 20% 0%, rgba(52, 199, 89, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse 600px 800px at 80% 100%, rgba(0, 122, 255, 0.05) 0%, transparent 60%),
@@ -154,19 +155,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   ICONS (inline SVG)
-   ═══════════════════════════════════════════════ */
-.icon {
-  width: 1em;
-  height: 1em;
-  display: inline-block;
-  vertical-align: middle;
-  fill: currentColor;
-  flex-shrink: 0;
-}
-
-/* ═══════════════════════════════════════════════
-   HEADER
+   HEADER — Floating Glass
    ═══════════════════════════════════════════════ */
 .header {
   position: relative;
@@ -183,6 +172,7 @@ body {
   flex-shrink: 0;
 }
 
+/* Inner highlight */
 .header::after {
   content: "";
   position: absolute;
@@ -222,7 +212,6 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: transform .2s ease;
-  background: var(--bg-glass-thin);
 }
 .header-avatar:active { transform: scale(0.94); }
 
@@ -311,7 +300,7 @@ body {
 .header-btn:active { transform: scale(0.9); }
 
 /* ═══════════════════════════════════════════════
-   MENU
+   MENU — iOS Context Menu
    ═══════════════════════════════════════════════ */
 .menu-overlay {
   position: fixed;
@@ -416,7 +405,7 @@ body {
 .chat-area::-webkit-scrollbar { display: none; }
 
 /* ═══════════════════════════════════════════════
-   MESSAGES
+   MESSAGES — iOS 26 Style
    ═══════════════════════════════════════════════ */
 .msg {
   max-width: 78%;
@@ -433,10 +422,17 @@ body {
 }
 
 @keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.94); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
+/* Bot message — Left, white in light, dark gray in dark */
 .msg-bot {
   align-self: flex-start;
   background: var(--bubble-in-bg);
@@ -445,6 +441,7 @@ body {
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
 }
 
+/* User message — Right, green */
 .msg-user {
   align-self: flex-end;
   background: var(--bubble-out-bg);
@@ -534,7 +531,9 @@ body {
   transform: translateY(-1px);
   box-shadow: var(--shadow-soft);
 }
-.btn-glass:active { transform: scale(0.95); }
+.btn-glass:active {
+  transform: scale(0.95);
+}
 .btn-glass.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   color: #fff;
@@ -599,7 +598,7 @@ body {
 .msg-imgs img:hover { transform: scale(1.05); }
 
 /* ═══════════════════════════════════════════════
-   BOTTOM DOCK
+   BOTTOM DOCK — Floating Glass
    ═══════════════════════════════════════════════ */
 .bottom-dock {
   flex-shrink: 0;
@@ -611,7 +610,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   WHATSAPP BUTTON
+   WHATSAPP BUTTON — Floating
    ═══════════════════════════════════════════════ */
 .wa-wrapper {
   display: none;
@@ -660,7 +659,7 @@ body {
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 22px;
+  font-size: 20px;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
   animation: waPulse 2.5s infinite;
@@ -668,7 +667,7 @@ body {
 
 @keyframes waPulse {
   0%, 100% { box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35); }
-  50%      { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.6); }
+  50% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.6); }
 }
 
 .wa-text { flex: 1; min-width: 0; }
@@ -700,7 +699,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   INPUT BAR
+   INPUT BAR — Floating Pill
    ═══════════════════════════════════════════════ */
 .input-glass {
   display: flex;
@@ -783,7 +782,9 @@ body {
   transform: scale(1.06);
   box-shadow: 0 5px 16px rgba(0, 168, 132, 0.45);
 }
-.send-btn-glass:active { transform: scale(0.92); }
+.send-btn-glass:active {
+  transform: scale(0.92);
+}
 .send-btn-glass:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -845,7 +846,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   ABOUT MODAL
+   ABOUT MODAL — iOS Sheet
    ═══════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed;
@@ -864,7 +865,7 @@ body {
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
 
 .modal-glass {
@@ -882,8 +883,14 @@ body {
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.9) translateY(30px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal-avatar {
@@ -894,7 +901,6 @@ body {
   border: 2px solid var(--accent);
   box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.15);
   margin-bottom: 12px;
-  background: var(--bg-glass-thin);
 }
 
 .modal-title {
@@ -923,7 +929,6 @@ body {
   border-radius: 14px;
   padding: 11px 5px;
   backdrop-filter: var(--blur-thin);
-  -webkit-backdrop-filter: var(--blur-thin);
 }
 .modal-stat-num {
   display: block;
@@ -1042,16 +1047,6 @@ body {
 .scroll-btn:active { transform: scale(0.9); }
 
 /* ═══════════════════════════════════════════════
-   FOCUS VISIBLE
-   ═══════════════════════════════════════════════ */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--accent-dark);
-  outline-offset: 2px;
-}
-
-/* ═══════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════ */
 @media (max-width: 480px) {
@@ -1072,47 +1067,12 @@ input:focus-visible {
 </head>
 <body>
 
-<!-- ═══ SVG ICON SPRITE ═══ -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="i-chevron-right" viewBox="0 0 24 24">
-      <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="i-redo" viewBox="0 0 24 24">
-      <path d="M4 12a8 8 0 0 1 8-8 8 8 0 0 1 6.9 4M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 12a8 8 0 0 1-8 8 8 8 0 0 1-6.9-4M4 20v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="i-more" viewBox="0 0 24 24">
-      <circle cx="5" cy="12" r="1.8" fill="currentColor"/>
-      <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
-      <circle cx="19" cy="12" r="1.8" fill="currentColor"/>
-    </symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24">
-      <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="i-send" viewBox="0 0 24 24">
-      <path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="i-mic" viewBox="0 0 24 24">
-      <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="i-arrow-down" viewBox="0 0 24 24">
-      <path d="M12 5v14M5 12l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="i-whatsapp" viewBox="0 0 24 24">
-      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" fill="currentColor"/>
-      <path d="M9.5 8.2c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1.1.5-.4.4-1.4 1.4-1.4 3.3 0 2 1.4 3.9 1.6 4.1.2.3 2.8 4.2 6.8 5.8 3.3 1.3 4 1 4.7 1 .7-.1 2.3-.9 2.6-1.8.3-.9.3-1.7.2-1.8-.1-.2-.3-.2-.6-.4-.3-.2-2-1-2.3-1.1-.3-.1-.5-.1-.7.1-.2.3-.8 1.1-1 1.3-.2.2-.3.2-.6.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.8-1-2.4z" fill="#fff"/>
-    </symbol>
-  </defs>
-</svg>
-
 <div id="app">
 
   <!-- ═══ HEADER ═══ -->
   <header class="header">
     <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
-      <svg class="icon" width="18" height="18"><use href="#i-chevron-right"/></svg>
+      <i class="fas fa-chevron-right"></i>
     </button>
 
     <img class="header-avatar"
@@ -1134,10 +1094,10 @@ input:focus-visible {
 
     <div class="header-actions">
       <button class="header-btn" onclick="resetChat()" title="محادثة جديدة" aria-label="محادثة جديدة">
-        <svg class="icon" width="16" height="16"><use href="#i-redo"/></svg>
+        <i class="fas fa-redo-alt"></i>
       </button>
       <button class="header-btn" onclick="openMenu(event)" title="المزيد" aria-label="المزيد">
-        <svg class="icon" width="18" height="18"><use href="#i-more"/></svg>
+        <i class="fas fa-ellipsis-h"></i>
       </button>
     </div>
   </header>
@@ -1145,28 +1105,28 @@ input:focus-visible {
   <!-- ═══ MENU ═══ -->
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
-  <div class="menu-glass" id="menuGlass" role="menu">
-    <button class="menu-glass-item" onclick="openAbout()" role="menuitem">
+  <div class="menu-glass" id="menuGlass">
+    <button class="menu-glass-item" onclick="openAbout()">
       <span class="mi-icon">👤</span>
       معلومات عن طارق
     </button>
-    <button class="menu-glass-item" onclick="openGoogle()" role="menuitem">
+    <button class="menu-glass-item" onclick="openGoogle()">
       <span class="mi-icon">🏆</span>
       بروفايلي على Google
     </button>
     <div class="menu-glass-sep"></div>
-    <button class="menu-glass-item" onclick="resetChat()" role="menuitem">
+    <button class="menu-glass-item" onclick="resetChat()">
       <span class="mi-icon">🔄</span>
       محادثة جديدة
     </button>
-    <button class="menu-glass-item danger" onclick="deleteChat()" role="menuitem">
+    <button class="menu-glass-item danger" onclick="deleteChat()">
       <span class="mi-icon">🗑️</span>
       حذف المحادثة
     </button>
   </div>
 
   <!-- ═══ CHAT AREA ═══ -->
-  <div class="chat-area" id="chatArea" aria-live="polite" aria-label="منطقة المحادثة">
+  <div class="chat-area" id="chatArea">
     <div class="typing-bubble" id="typingBubble">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
@@ -1180,7 +1140,7 @@ input:focus-visible {
     <div class="wa-wrapper" id="waWrapper">
       <a class="wa-glass-card" id="waBtn" href="#" target="_blank" rel="noopener">
         <div class="wa-icon">
-          <svg class="icon" width="22" height="22"><use href="#i-whatsapp"/></svg>
+          <i class="fab fa-whatsapp"></i>
         </div>
         <div class="wa-text">
           <div class="wa-title">
@@ -1195,30 +1155,28 @@ input:focus-visible {
     <div class="img-strip" id="imgStrip"></div>
 
     <div class="input-glass">
-      <button class="input-icon-btn"
-              onclick="document.getElementById('fileInput').click()"
-              title="إرفاق صور" aria-label="إرفاق صور">
-        <svg class="icon" width="20" height="20"><use href="#i-plus"/></svg>
+      <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
+        <i class="fas fa-plus"></i>
       </button>
 
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
 
       <input type="text" class="input-field" id="msgInput" placeholder="رسالة..."
-             autocomplete="off" inputmode="text" aria-label="حقل كتابة الرسالة">
+             autocomplete="off" inputmode="text">
 
       <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()" aria-label="إرسال">
-        <svg class="icon icon-swap" id="sendIcon" width="18" height="18"><use href="#i-mic"/></svg>
+        <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
       </button>
     </div>
   </div>
 
   <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()" aria-label="للأسفل">
-    <svg class="icon" width="18" height="18"><use href="#i-arrow-down"/></svg>
+    <i class="fas fa-arrow-down"></i>
   </button>
 </div>
 
 <!-- ═══ ABOUT MODAL ═══ -->
-<div class="modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()" role="dialog" aria-modal="true" aria-label="معلومات عن طارق">
+<div class="modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
   <div class="modal-glass">
     <img class="modal-avatar"
          src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
@@ -1243,9 +1201,7 @@ input:focus-visible {
     </div>
 
     <a class="modal-google-btn" href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener">
-      <svg class="icon" width="16" height="16" viewBox="0 0 24 24">
-        <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/>
-      </svg>
+      <i class="fas fa-map-marked-alt"></i>
       شوف بروفايلي على Google Maps
     </a>
 
@@ -1254,17 +1210,17 @@ input:focus-visible {
 </div>
 
 <!-- ═══ TOAST ═══ -->
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
-const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY  = "simsar_wa_2263673";
-const TAREK_WA     = "201147758857";
-const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
-const MAX_IMAGES   = 5;
+const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
+const STORAGE_KEY = "simsar_wa_2263673";
+const TAREK_WA = "201147758857";
+const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
+const MAX_IMAGES = 5;
 
 // ═══════════════════════════════════════════
 // STATE
@@ -1280,42 +1236,32 @@ let state = {
 let isSending = false;
 
 function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, pendingImages: [] }));
-  } catch (e) {
-    console.warn("تعذّر حفظ الحالة:", e);
-  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
 }
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const s = raw ? JSON.parse(raw) : null;
-    if (s && typeof s === "object") {
-      state = { ...state, ...s, pendingImages: [] };
-    }
-  } catch (e) {
-    console.warn("تعذّر استرجاع الحالة:", e);
-  }
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (s) { state = { ...state, ...s }; state.pendingImages = []; }
+  } catch {}
 }
 
 // ═══════════════════════════════════════════
 // DOM REFS
 // ═══════════════════════════════════════════
-const chatArea     = document.getElementById("chatArea");
-const msgInput     = document.getElementById("msgInput");
-const sendBtn      = document.getElementById("sendBtn");
-const sendIcon     = document.getElementById("sendIcon");
-const sendIconUse  = sendIcon.querySelector("use");
-const typingBubble = document.getElementById("typingBubble");
-const statusText   = document.getElementById("statusText");
-const statusLine   = document.getElementById("statusLine");
-const waWrapper    = document.getElementById("waWrapper");
-const waBtn        = document.getElementById("waBtn");
-const imgStrip     = document.getElementById("imgStrip");
-const scrollBtn    = document.getElementById("scrollBtn");
-const menuGlass    = document.getElementById("menuGlass");
-const menuOverlay  = document.getElementById("menuOverlay");
+const chatArea    = document.getElementById("chatArea");
+const msgInput    = document.getElementById("msgInput");
+const sendBtn     = document.getElementById("sendBtn");
+const sendIcon    = document.getElementById("sendIcon");
+const typingBubble= document.getElementById("typingBubble");
+const statusText  = document.getElementById("statusText");
+const statusLine  = document.getElementById("statusLine");
+const waWrapper   = document.getElementById("waWrapper");
+const waBtn       = document.getElementById("waBtn");
+const imgStrip    = document.getElementById("imgStrip");
+const scrollBtn   = document.getElementById("scrollBtn");
+const menuGlass   = document.getElementById("menuGlass");
+const menuOverlay = document.getElementById("menuOverlay");
 
 // ═══════════════════════════════════════════
 // HELPERS
@@ -1325,25 +1271,16 @@ function getTime() {
 }
 
 function escapeHtml(text) {
-  return String(text ?? "")
+  return String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function safeUrl(url) {
-  const s = String(url || "");
-  // السماح فقط بـ http/https و data:image
-  if (/^(https?:|data:image\/)/i.test(s)) return s;
-  return "";
+    .replace(/>/g, "&gt;");
 }
 
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 }
 
 function scrollToBottom() {
@@ -1377,8 +1314,14 @@ function showToast(msg, dur = 2400) {
 function updateSendIcon() {
   const hasText = msgInput.value.trim().length > 0;
   const hasImgs = state.pendingImages.length > 0;
-  const useMic  = !hasText && !hasImgs;
-  sendIconUse.setAttribute("href", useMic ? "#i-mic" : "#i-send");
+
+  if (hasText || hasImgs) {
+    sendIcon.className = "fas fa-arrow-up icon-swap";
+    sendIcon.style.transform = "none";
+  } else {
+    sendIcon.className = "fas fa-microphone icon-swap";
+    sendIcon.style.transform = "none";
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1389,21 +1332,22 @@ function renderMsg(text, type = "bot", images) {
   div.className = `msg msg-${type}`;
 
   let html = "";
-  if (text && String(text).trim()) {
+  if (text && text.trim()) {
     html += `<span class="msg-content">${formatMsg(text)}</span>`;
   }
 
-  if (Array.isArray(images) && images.length) {
+  if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
-      const u = safeUrl(src);
-      if (!u) return;
-      html += `<img src="${u}" alt="صورة مرفقة" loading="lazy" decoding="async" onclick="window.open('${u}','_blank','noopener')">`;
+      html += `<img src="${src}" loading="lazy" onclick="window.open('${src}','_blank')">`;
     });
     html += `</div>`;
   }
 
-  const ticks = type === "user" ? `<span class="msg-ticks">✓✓</span>` : "";
+  const ticks = type === "user"
+    ? `<span class="msg-ticks">✓✓</span>`
+    : "";
+
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
 
   div.innerHTML = html;
@@ -1463,7 +1407,6 @@ function onFilesSelected(e) {
 
   if (state.pendingImages.length + files.length > MAX_IMAGES) {
     showToast(`الحد الأقصى ${MAX_IMAGES} صور`);
-    e.target.value = "";
     return;
   }
 
@@ -1471,13 +1414,11 @@ function onFilesSelected(e) {
     if (!f.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const full = ev.target.result;
-      const base64 = full.split(",")[1] || "";
-      state.pendingImages.push({ base64, preview: full });
+      const base64 = ev.target.result.split(",")[1];
+      state.pendingImages.push({ base64, preview: ev.target.result });
       renderImgStrip();
       updateSendIcon();
     };
-    reader.onerror = () => showToast("تعذّر قراءة الصورة");
     reader.readAsDataURL(f);
   });
 
@@ -1496,8 +1437,8 @@ function renderImgStrip() {
     const el = document.createElement("div");
     el.className = "img-strip-item";
     el.innerHTML = `
-      <img src="${safeUrl(img.preview)}" alt="معاينة صورة">
-      <button class="img-strip-rm" onclick="removeImg(${i})" aria-label="حذف الصورة" title="حذف">✕</button>
+      <img src="${img.preview}">
+      <button class="img-strip-rm" onclick="removeImg(${i})">✕</button>
     `;
     imgStrip.appendChild(el);
   });
@@ -1520,11 +1461,8 @@ async function uploadPendingImages() {
     });
     if (!r.ok) return [];
     const j = await r.json();
-    return Array.isArray(j.urls) ? j.urls : [];
-  } catch (err) {
-    console.warn("فشل رفع الصور:", err);
-    return [];
-  }
+    return j.urls || [];
+  } catch { return []; }
 }
 
 // ═══════════════════════════════════════════
@@ -1594,19 +1532,19 @@ async function sendMsg() {
     if (data.formState) state.formState = data.formState;
     if (data.waMessage) state.waMessage = data.waMessage;
 
-    if (data.whatsappUrl) {
-      showWA(data.whatsappUrl, data.waMessage);
-    } else if (data.canShareWhatsapp && data.waMessage) {
+    if (data.whatsappUrl) showWA(data.whatsappUrl, data.waMessage);
+    else if (data.canShareWhatsapp && data.waMessage) {
       const url = `https://wa.me/${TAREK_WA}?text=${encodeURIComponent(data.waMessage)}`;
       showWA(url, data.waMessage);
     }
 
-    if (Array.isArray(data.options) && data.options.length) {
-      renderButtons(data.options);
-    }
+    if (data.options?.length) renderButtons(data.options);
 
-    if (Array.isArray(data.imageUrls) && data.imageUrls.length) {
-      state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls].slice(-MAX_IMAGES);
+    if (data.imageUrls?.length) {
+      state.imageUrls = [
+        ...(state.imageUrls || []),
+        ...data.imageUrls
+      ].slice(-MAX_IMAGES);
     }
 
     saveState();
@@ -1614,7 +1552,6 @@ async function sendMsg() {
   } catch (err) {
     toggleTypingBubble(false);
     setTyping(false);
-    console.error("خطأ في الإرسال:", err);
     renderMsg("تعذّر الاتصال بالخادم. جرّب تاني.", "bot");
   } finally {
     isSending = false;
@@ -1662,13 +1599,15 @@ function closeAbout() {
 
 function openGoogle() {
   closeMenu();
-  window.open(GOOGLE_URL, "_blank", "noopener");
+  window.open(GOOGLE_URL, "_blank");
 }
 
 // ═══════════════════════════════════════════
 // RESET / DELETE
 // ═══════════════════════════════════════════
-function resetState() {
+function resetChat() {
+  closeMenu();
+  if (!confirm("تبدأ محادثة جديدة؟")) return;
   state = {
     formState: { _version: "v70" },
     history: [],
@@ -1683,12 +1622,6 @@ function resetState() {
   imgStrip.classList.remove("show");
   imgStrip.innerHTML = "";
   updateSendIcon();
-}
-
-function resetChat() {
-  closeMenu();
-  if (!confirm("تبدأ محادثة جديدة؟")) return;
-  resetState();
   startConversation();
   showToast("✅ محادثة جديدة");
 }
@@ -1696,8 +1629,20 @@ function resetChat() {
 function deleteChat() {
   closeMenu();
   if (!confirm("تأكيد حذف المحادثة؟")) return;
-  try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  resetState();
+  localStorage.removeItem(STORAGE_KEY);
+  state = {
+    formState: { _version: "v70" },
+    history: [],
+    imageUrls: [],
+    pendingImages: [],
+    waMessage: null,
+    whatsappUrl: null,
+  };
+  chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
+  hideWA();
+  imgStrip.classList.remove("show");
+  imgStrip.innerHTML = "";
+  updateSendIcon();
   startConversation();
   showToast("🗑️ تم الحذف");
 }
@@ -1708,7 +1653,7 @@ function deleteChat() {
 chatArea.addEventListener("scroll", () => {
   const atBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
   scrollBtn.classList.toggle("show", !atBottom);
-}, { passive: true });
+});
 
 // ═══════════════════════════════════════════
 // INPUT HANDLERS
@@ -1722,41 +1667,20 @@ msgInput.addEventListener("keydown", (e) => {
   }
 });
 
-// إغلاق القائمة بالنقر في أي مكان
-document.addEventListener("click", (e) => {
-  if (!menuGlass.classList.contains("open")) return;
-  if (menuGlass.contains(e.target)) return;
-  if (e.target.closest('[onclick*="openMenu"]')) return;
-  closeMenu();
-});
-
-// إغلاق المودال بـ Escape
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    closeMenu();
-    closeAbout();
-  }
-});
-
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 function startConversation() {
-  renderMsg(
-    "أهلاً بيك 👋\nأنا طارق طنطاوي — سمسار مدينة نصر.\n\n🏆 Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟",
-    "bot"
-  );
+  renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — سمسار مدينة نصر.\n\n🏆 Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
-  saveState();
 }
 
 loadState();
-
 if (state.history && state.history.length) {
   state.history.forEach(m => {
-    if (!m || !m.message) return;
-    renderMsg(m.message, m.role === "user" ? "user" : "bot");
+    if (m.role === "user") renderMsg(m.message, "user");
+    else renderMsg(m.message, "bot");
   });
   if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
     showWA(state.whatsappUrl, state.waMessage);
@@ -1771,18 +1695,18 @@ msgInput.focus();
 // ═══════════════════════════════════════════
 // GLOBAL EXPOSE
 // ═══════════════════════════════════════════
-window.sendMsg         = sendMsg;
+window.sendMsg = sendMsg;
 window.onFilesSelected = onFilesSelected;
-window.removeImg       = removeImg;
-window.scrollToBottom  = scrollToBottom;
-window.resetChat       = resetChat;
-window.deleteChat      = deleteChat;
-window.goBack          = goBack;
-window.openMenu        = openMenu;
-window.closeMenu       = closeMenu;
-window.openAbout       = openAbout;
-window.closeAbout      = closeAbout;
-window.openGoogle      = openGoogle;
+window.removeImg = removeImg;
+window.scrollToBottom = scrollToBottom;
+window.resetChat = resetChat;
+window.deleteChat = deleteChat;
+window.goBack = goBack;
+window.openMenu = openMenu;
+window.closeMenu = closeMenu;
+window.openAbout = openAbout;
+window.closeAbout = closeAbout;
+window.openGoogle = openGoogle;
 </script>
 </body>
 </html>
