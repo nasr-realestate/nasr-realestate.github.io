@@ -7,7 +7,7 @@
 <title>سمسار طلبك — طارق طنطاوي</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 
-<!-- ═══ Font Awesome ═══ -->
+<!-- ═══ Font Awesome (لازم — عشان الأيقونات تظهر) ═══ -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <!-- ═══ WhatsApp Preview ═══ -->
@@ -21,8 +21,8 @@
 
 <style>
 /* ═══════════════════════════════════════════════
-   سمسار طلبك — WhatsApp Gold Hybrid Edition
-   ذهبي + واتساب = هوية فريدة
+   WHATSAPP 2.26.36.73 — LIQUID GLASS EDITION
+   Official font stack + Checkmarks SVG
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,36 +30,20 @@
   /* ═══ WhatsApp Official Font Stack ═══ */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
   
-  /* ═══ 🏆 GOLD IDENTITY (سمسار طلبك) ═══ */
-  --gold:             #d4af37;
-  --gold-light:       #fce205;
-  --gold-dark:        #b38f1d;
-  --gold-glow:        rgba(212, 175, 55, 0.3);
-  --gold-soft:        rgba(212, 175, 55, 0.08);
-  --gold-border:      rgba(212, 175, 55, 0.25);
-  
-  /* ═══ 💬 WhatsApp Colors ═══ */
-  --wa-green:         #25d366;
-  --wa-green-dark:    #128c7e;
-  --wa-green-teal:    #00a884;
-  --wa-bubble-out:    #d9fdd3;
-  --wa-bubble-out-d:  #005c4b;
-  --wa-tick-blue:     #53bdeb;
-  
-  /* ═══ 🎨 LIGHT MODE ═══ */
+  /* ═══ LIGHT MODE ═══ */
   --bg-wallpaper:     #efeae2;
   --bg-glass-thin:    rgba(255, 255, 255, 0.55);
   --bg-glass-regular: rgba(255, 255, 255, 0.72);
   --bg-glass-thick:   rgba(255, 255, 255, 0.88);
   --bg-glass-ultra:   rgba(255, 255, 255, 0.96);
   
-  --glass-border:     rgba(212, 175, 55, 0.25);
-  --glass-border-inner: rgba(212, 175, 55, 0.15);
+  --glass-border:     rgba(255, 255, 255, 0.7);
+  --glass-border-inner: rgba(0, 0, 0, 0.05);
   --glass-highlight:  rgba(255, 255, 255, 0.9);
   
-  --header-bg:        rgba(20, 20, 20, 0.85);
-  --header-text:      #ffffff;
-  --header-sub:       rgba(212, 175, 55, 0.85);
+  --header-bg:        rgba(255, 255, 255, 0.78);
+  --header-text:      #000000;
+  --header-sub:       #8e8e93;
   
   --bubble-in-bg:     #ffffff;
   --bubble-in-text:   #000000;
@@ -70,15 +54,14 @@
   --text-secondary:   #8e8e93;
   --text-tertiary:    #c7c7cc;
   
-  --accent:           #d4af37;
-  --accent-dark:      #b38f1d;
+  --accent:           #34c759;
+  --accent-dark:      #007aff;
   --tick-blue:        #34b7f1;
   --danger:           #ff3b30;
   
   --shadow-soft:      0 2px 12px rgba(0, 0, 0, 0.08);
   --shadow-glass:     0 8px 32px rgba(0, 0, 0, 0.12);
   --shadow-float:     0 12px 48px rgba(0, 0, 0, 0.18);
-  --shadow-gold:      0 4px 20px rgba(212, 175, 55, 0.25);
   
   --radius-pill:      999px;
   --radius-bubble:    20px;
@@ -92,7 +75,7 @@
   --header-h: 56px;
 }
 
-/* ═══ 🌙 DARK MODE ═══ */
+/* ═══ DARK MODE ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-wallpaper:     #0b141a;
@@ -101,13 +84,13 @@
     --bg-glass-thick:   rgba(32, 44, 51, 0.88);
     --bg-glass-ultra:   rgba(32, 44, 51, 0.96);
     
-    --glass-border:     rgba(212, 175, 55, 0.18);
-    --glass-border-inner: rgba(212, 175, 55, 0.08);
+    --glass-border:     rgba(255, 255, 255, 0.08);
+    --glass-border-inner: rgba(255, 255, 255, 0.05);
     --glass-highlight:  rgba(255, 255, 255, 0.12);
     
-    --header-bg:        rgba(20, 20, 20, 0.92);
+    --header-bg:        rgba(32, 44, 51, 0.78);
     --header-text:      #ffffff;
-    --header-sub:       rgba(212, 175, 55, 0.85);
+    --header-sub:       #8696a0;
     
     --bubble-in-bg:     #202c33;
     --bubble-in-text:   #e9edef;
@@ -118,8 +101,8 @@
     --text-secondary:   #8696a0;
     --text-tertiary:    #667781;
     
-    --accent:           #d4af37;
-    --accent-dark:      #b38f1d;
+    --accent:           #25d366;
+    --accent-dark:      #00a884;
     --tick-blue:        #53bdeb;
     --danger:           #ff453a;
   }
@@ -158,8 +141,8 @@ body {
   overflow: hidden;
   
   background:
-    radial-gradient(ellipse 800px 600px at 20% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 600px 800px at 80% 100%, rgba(212, 175, 55, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 800px 600px at 20% 0%, rgba(52, 199, 89, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 800px at 80% 100%, rgba(0, 122, 255, 0.05) 0%, transparent 60%),
     var(--bg-wallpaper);
   background-attachment: fixed;
 }
@@ -174,7 +157,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   HEADER — Gold + WhatsApp
+   HEADER
    ═══════════════════════════════════════════════ */
 .header {
   position: relative;
@@ -187,7 +170,7 @@ body {
   background: var(--header-bg);
   backdrop-filter: var(--blur-regular);
   -webkit-backdrop-filter: var(--blur-regular);
-  border-bottom: 0.5px solid var(--glass-border);
+  border-bottom: 0.5px solid var(--glass-border-inner);
   flex-shrink: 0;
 }
 
@@ -198,8 +181,8 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold) 50%, transparent);
-  opacity: 0.4;
+  background: linear-gradient(90deg, transparent, var(--glass-highlight) 50%, transparent);
+  opacity: 0.3;
 }
 
 .header-back {
@@ -217,7 +200,7 @@ body {
   border: none;
   background: transparent;
 }
-.header-back:hover { background: rgba(212, 175, 55, 0.15); }
+.header-back:hover { background: rgba(120, 120, 128, 0.12); }
 .header-back:active { transform: scale(0.92); }
 
 .header-avatar {
@@ -226,8 +209,8 @@ body {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1.5px solid var(--gold);
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -253,12 +236,11 @@ body {
 .header-badge {
   font-size: 9px;
   font-weight: 700;
-  color: #000;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #fff;
+  background: linear-gradient(135deg, #34c759, #25d366);
   padding: 2px 6px;
   border-radius: 6px;
   letter-spacing: 0;
-  box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
 }
 
 .header-status {
@@ -276,14 +258,13 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--gold);
+  background: #34c759;
   display: inline-block;
   flex-shrink: 0;
-  box-shadow: 0 0 6px var(--gold);
 }
 
 .header-status.typing {
-  color: var(--gold);
+  color: var(--accent);
   font-weight: 500;
 }
 .header-status.typing .status-dot {
@@ -307,7 +288,7 @@ body {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--gold);
+  color: var(--header-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -316,7 +297,7 @@ body {
   transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
-.header-btn:hover { background: rgba(212, 175, 55, 0.15); }
+.header-btn:hover { background: rgba(120, 120, 128, 0.12); }
 .header-btn:active { transform: scale(0.9); }
 
 /* ═══════════════════════════════════════════════
@@ -350,7 +331,7 @@ body {
   -webkit-backdrop-filter: var(--blur-thick);
   border: 0.5px solid var(--glass-border);
   border-radius: 14px;
-  box-shadow: var(--shadow-float), var(--shadow-gold);
+  box-shadow: var(--shadow-float);
   padding: 4px;
   z-index: 999;
   opacity: 0;
@@ -385,7 +366,7 @@ body {
   direction: rtl;
 }
 .menu-glass-item:active {
-  background: rgba(212, 175, 55, 0.15);
+  background: rgba(120, 120, 128, 0.16);
 }
 .menu-glass-item .mi-icon {
   font-size: 17px;
@@ -425,7 +406,7 @@ body {
 .chat-area::-webkit-scrollbar { display: none; }
 
 /* ═══════════════════════════════════════════════
-   MESSAGES
+   MESSAGES — WhatsApp Official
    ═══════════════════════════════════════════════ */
 .msg {
   max-width: 78%;
@@ -459,7 +440,6 @@ body {
   color: var(--bubble-in-text);
   border-bottom-left-radius: 6px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
-  border: 0.5px solid var(--glass-border-inner);
 }
 
 .msg-user {
@@ -473,7 +453,7 @@ body {
 .msg strong { font-weight: 700; }
 .msg em { font-style: italic; opacity: 0.9; }
 .msg a {
-  color: var(--gold-dark);
+  color: var(--accent-dark);
   text-decoration: none;
   font-weight: 600;
   word-break: break-all;
@@ -508,7 +488,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   WHATSAPP CHECKMARKS ✓✓
+   WHATSAPP CHECKMARKS ✓✓ — Official SVG
    ═══════════════════════════════════════════════ */
 .msg-ticks {
   display: inline-flex;
@@ -527,7 +507,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   BUTTONS RACK — Gold Pills
+   BUTTONS RACK
    ═══════════════════════════════════════════════ */
 .btns-rack {
   display: flex;
@@ -543,8 +523,8 @@ body {
   background: var(--bg-glass-regular);
   backdrop-filter: var(--blur-thin);
   -webkit-backdrop-filter: var(--blur-thin);
-  border: 0.5px solid var(--gold-border);
-  color: var(--gold-dark);
+  border: 0.5px solid var(--glass-border);
+  color: var(--accent-dark);
   font-family: var(--font);
   font-size: 14px;
   font-weight: 600;
@@ -553,29 +533,26 @@ body {
   cursor: pointer;
   transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(212, 175, 55, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   -webkit-tap-highlight-color: transparent;
   letter-spacing: -0.2px;
 }
 .btn-glass:hover {
   background: var(--bg-glass-thick);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-gold);
-  border-color: var(--gold);
+  box-shadow: var(--shadow-soft);
 }
 .btn-glass:active {
   transform: scale(0.95);
 }
 .btn-glass.primary {
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #000;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.35);
-  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
 }
 .btn-glass.primary:hover {
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.55);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(0, 168, 132, 0.45);
 }
 
 /* ═══════════════════════════════════════════════
@@ -590,7 +567,6 @@ body {
   padding: 13px 16px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
   max-width: 70px;
-  border: 0.5px solid var(--glass-border-inner);
 }
 .typing-bubble.active {
   display: flex;
@@ -600,10 +576,9 @@ body {
 .typing-dot {
   width: 8px;
   height: 8px;
-  background: var(--gold);
+  background: var(--text-tertiary);
   border-radius: 50%;
   animation: typingBounce 1.4s infinite ease-in-out;
-  opacity: 0.7;
 }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
@@ -663,9 +638,9 @@ body {
   background: var(--bg-glass-thick);
   backdrop-filter: var(--blur-thick);
   -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   border-radius: var(--radius-glass);
-  box-shadow: var(--shadow-glass), var(--shadow-gold);
+  box-shadow: var(--shadow-glass);
   cursor: pointer;
   text-decoration: none;
   color: inherit;
@@ -677,13 +652,12 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(212, 175, 55, 0.05) 60%);
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), transparent 60%);
   pointer-events: none;
 }
 .wa-glass-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-float), var(--shadow-gold);
-  border-color: var(--gold);
+  box-shadow: var(--shadow-float);
 }
 .wa-glass-card:active { transform: scale(0.97); }
 
@@ -691,7 +665,7 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--wa-green), var(--wa-green-dark));
+  background: linear-gradient(135deg, #25d366, #128c7e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -720,8 +694,8 @@ body {
 }
 .wa-title-tag {
   font-size: 9px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #000;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
   padding: 2px 6px;
   border-radius: 5px;
   font-weight: 700;
@@ -736,7 +710,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   INPUT BAR — Gold Focus
+   INPUT BAR
    ═══════════════════════════════════════════════ */
 .input-glass {
   display: flex;
@@ -746,15 +720,15 @@ body {
   background: var(--bg-glass-thick);
   backdrop-filter: var(--blur-thick);
   -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-glass);
   min-height: 46px;
   transition: box-shadow .25s ease, border-color .25s ease;
 }
 .input-glass:focus-within {
-  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.25), var(--shadow-glass);
-  border-color: var(--gold);
+  box-shadow: 0 8px 32px rgba(0, 168, 132, 0.2), var(--shadow-glass);
+  border-color: rgba(52, 199, 89, 0.35);
 }
 
 .input-icon-btn {
@@ -763,7 +737,7 @@ body {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--gold-dark);
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -773,8 +747,8 @@ body {
   flex-shrink: 0;
 }
 .input-icon-btn:hover {
-  background: rgba(212, 175, 55, 0.15);
-  color: var(--gold);
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--text-primary);
 }
 .input-icon-btn:active { transform: scale(0.92); }
 
@@ -804,21 +778,20 @@ body {
   height: 40px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #000;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 3px 10px rgba(0, 168, 132, 0.3);
   transition: all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .send-btn-glass:hover {
   transform: scale(1.06);
-  box-shadow: 0 5px 16px rgba(212, 175, 55, 0.55);
-  filter: brightness(1.1);
+  box-shadow: 0 5px 16px rgba(0, 168, 132, 0.45);
 }
 .send-btn-glass:active {
   transform: scale(0.92);
@@ -854,7 +827,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   flex-shrink: 0;
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   box-shadow: var(--shadow-soft);
 }
 .img-strip-item img {
@@ -884,7 +857,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   ABOUT MODAL — Gold Edition
+   ABOUT MODAL
    ═══════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed;
@@ -912,9 +885,9 @@ body {
   background: var(--bg-glass-ultra);
   backdrop-filter: var(--blur-thick);
   -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   border-radius: 24px;
-  box-shadow: var(--shadow-float), var(--shadow-gold);
+  box-shadow: var(--shadow-float);
   padding: 28px 22px 20px;
   text-align: center;
   animation: modalIn .35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -936,8 +909,8 @@ body {
   height: 88px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--gold);
-  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15), var(--shadow-gold);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.15);
   margin-bottom: 12px;
 }
 
@@ -963,7 +936,7 @@ body {
 }
 .modal-stat {
   background: var(--bg-glass-thin);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   border-radius: 14px;
   padding: 11px 5px;
   backdrop-filter: var(--blur-thin);
@@ -972,7 +945,7 @@ body {
   display: block;
   font-size: 17px;
   font-weight: 700;
-  color: var(--gold-dark);
+  color: var(--accent-dark);
   margin-bottom: 1px;
   letter-spacing: -0.3px;
 }
@@ -987,21 +960,20 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #000;
+  background: linear-gradient(135deg, #1a73e8, #4285f4);
+  color: #fff;
   text-decoration: none;
   padding: 11px 20px;
   border-radius: var(--radius-pill);
   font-weight: 700;
   font-size: 13.5px;
   margin-bottom: 10px;
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35);
   transition: all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .modal-google-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.55);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(26, 115, 232, 0.5);
 }
 .modal-google-btn:active { transform: scale(0.96); }
 
@@ -1009,7 +981,7 @@ body {
   display: block;
   width: 100%;
   background: var(--bg-glass-thin);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   color: var(--text-primary);
   padding: 12px;
   border-radius: 14px;
@@ -1034,13 +1006,13 @@ body {
   background: var(--bg-glass-ultra);
   backdrop-filter: var(--blur-thick);
   -webkit-backdrop-filter: var(--blur-thick);
-  border: 0.5px solid var(--gold-border);
+  border: 0.5px solid var(--glass-border);
   color: var(--text-primary);
   padding: 10px 20px;
   border-radius: var(--radius-pill);
   font-size: 13.5px;
   font-weight: 600;
-  box-shadow: var(--shadow-float), var(--shadow-gold);
+  box-shadow: var(--shadow-float);
   opacity: 0;
   pointer-events: none;
   transition: all .35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1067,8 +1039,8 @@ body {
   background: var(--bg-glass-thick);
   backdrop-filter: var(--blur-regular);
   -webkit-backdrop-filter: var(--blur-regular);
-  border: 0.5px solid var(--gold-border);
-  color: var(--gold-dark);
+  border: 0.5px solid var(--glass-border);
+  color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
   display: none;
@@ -1080,9 +1052,8 @@ body {
 }
 .scroll-btn.show { display: flex; }
 .scroll-btn:hover {
-  color: var(--gold);
+  color: var(--accent-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-gold);
 }
 .scroll-btn:active { transform: scale(0.9); }
 
@@ -1257,7 +1228,7 @@ body {
 // CONFIG
 // ═══════════════════════════════════════════
 const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY = "simsar_gold_wa_v1";
+const STORAGE_KEY = "simsar_wa_2263673";
 const TAREK_WA = "201147758857";
 const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const MAX_IMAGES = 5;
