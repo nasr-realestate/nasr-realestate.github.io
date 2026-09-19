@@ -28,6 +28,7 @@
   <!-- Font Awesome is needed for controls below the fold, not for the first paint. -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
+  <link rel="preload" as="image" href="{{ '/assets/img/logo.webp' | relative_url }}" fetchpriority="high">
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
 
   <!-- Analytics is intentionally idle-loaded so third-party JavaScript cannot delay LCP/FCP. -->
@@ -41,11 +42,7 @@
         script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP';
         document.head.appendChild(script);
       };
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(loadGtm, { timeout: 5000 });
-      } else {
-        window.setTimeout(loadGtm, 2500);
-      }
+      window.setTimeout(loadGtm, 10000);
     }, { once: true });
   </script>
 
