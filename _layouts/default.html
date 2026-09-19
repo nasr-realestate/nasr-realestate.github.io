@@ -29,7 +29,20 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
   <link rel="preload" as="image" href="{{ '/assets/img/logo.webp' | relative_url }}" fetchpriority="high">
-  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <style>
+    :root { --color-primary: #d4af37; --color-text-primary: #f5f5f5; --color-border-light: #333; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; background: #000; color: var(--color-text-primary); }
+    body { font-family: Arial, sans-serif; }
+    .navbar { background: rgba(5,5,5,.9); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid var(--color-border-light); }
+    .navbar-logo img { max-height: 50px; width: auto; display: block; }
+    .navbar-links { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-link { display: flex; align-items: center; color: var(--color-text-primary); text-decoration: none; font-weight: 700; }
+    @media (max-width: 768px) { .navbar { padding: 1rem; flex-wrap: wrap; justify-content: center; } }
+    @media (max-width: 420px) { .navbar-links { gap: .75rem; justify-content: center; width: 100%; margin-top: .75rem; } .navbar-logo { width: 100%; text-align: center; margin-bottom: .5rem; } }
+  </style>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}"></noscript>
 
   <!-- Analytics is intentionally idle-loaded so third-party JavaScript cannot delay LCP/FCP. -->
   <script>
