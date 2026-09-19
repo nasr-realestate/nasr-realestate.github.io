@@ -1,39 +1,56 @@
 <nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
 
+  <!-- الشعار -->
   <div class="navbar-logo">
-    <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
+    <a href="{{ '/' | relative_url }}" aria-label="الصفحة الرئيسية">
       <img src="{{ '/assets/img/logo.webp' | relative_url }}"
-           alt="{{ site.title }} - شقق للبيع في مدينة نصر"
-           width="120"
-           height="120"
-           loading="eager"
-           fetchpriority="high">
+           alt="{{ site.title }}"
+           width="120" height="120"
+           loading="eager" fetchpriority="high">
     </a>
   </div>
 
+  <!-- روابط أساسية -->
   <div class="navbar-links">
 
+    <a href="{{ '/' | relative_url }}"
+       class="nav-link"
+       aria-label="الصفحة الرئيسية">
+      <i class="fas fa-house" aria-hidden="true"></i>
+      <span>الرئيسية</span>
+    </a>
+
     <a href="{{ '/properties/' | relative_url }}"
-       class="nav-link properties"
-       aria-label="تصفح جميع العقارات المتاحة">
-      <i class="fas fa-home" aria-hidden="true"></i>
+       class="nav-link"
+       aria-label="تصفح العقارات">
+      <i class="fas fa-building" aria-hidden="true"></i>
       <span>عقارات</span>
     </a>
 
     <a href="{{ '/requests/' | relative_url }}"
-       class="nav-link requests"
-       aria-label="اطلع على طلبات العملاء">
+       class="nav-link"
+       aria-label="طلبات العملاء">
       <i class="fas fa-clipboard-list" aria-hidden="true"></i>
       <span>طلبات</span>
     </a>
 
-    <a href="{{ '/assets/tools/valuation.html' | relative_url }}"
-       class="nav-link add-property"
-       style="border: 1px solid var(--color-primary); background: rgba(212, 175, 55, 0.05);"
-       aria-label="قيم عقارك مجاناً بالذكاء الاصطناعي">
-      <i class="fas fa-magic" style="color: var(--color-primary);" aria-hidden="true"></i>
-      <span style="font-weight: bold;">قيم عقارك (AI)</span>
+    <!-- زر بارز: اعرض عقارك -->
+    <a href="{{ '/add-your-property.html' | relative_url }}"
+       class="nav-link nav-cta"
+       aria-label="اعرض عقارك">
+      <i class="fas fa-plus-circle" aria-hidden="true"></i>
+      <span>اعرض عقارك</span>
+    </a>
+
+    <!-- واتساب -->
+    <a href="https://wa.me/201147758857"
+       class="nav-link nav-wa"
+       target="_blank"
+       rel="noopener"
+       aria-label="تواصل عبر واتساب">
+      <i class="fab fa-whatsapp" aria-hidden="true"></i>
+      <span class="nav-wa-text">تواصل</span>
     </a>
 
   </div>
-</nav>
+</nav>https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css
