@@ -753,7 +753,7 @@ image: "/assets/img/social-home.webp"
       <!-- ================= الخطوة 3 ================= -->
       <div class="form-step" id="step3">
         <h3>3. بيانات التواصل</h3>
-        <p>بياناتك محمية بالكامل وتصل مباشرة إلى أ. طارق طنطاوي.</p>
+        <p>راجع بياناتك أولًا، ثم تُرسلها إلى طارق عبر واتساب بعد ضغط زر الإرسال.</p>
 
         <div style="margin-top: 14px;">
           <label>👤 اسم المالك الثلاثي</label>
@@ -780,7 +780,7 @@ image: "/assets/img/social-home.webp"
       </div>
 
       <div class="security-badge">
-        <i class="fas fa-user-shield"></i> بياناتك آمنة ولا تظهر للعلن. نتواصل معك خلال 24 ساعة.
+        <i class="fas fa-user-shield"></i> لا تُحفظ بياناتك في هذا المتصفح بعد مغادرة الصفحة. نتواصل معك خلال 24 ساعة.
       </div>
     </form>
   </div>
@@ -870,53 +870,13 @@ image: "/assets/img/social-home.webp"
   function isOffice(pt) { return pt === "مكتب إداري"; }
   function isWarehouse(pt) { return pt === "مخزن"; }
 
-  function saveDraft() {
-    try {
-      const data = {
-        type: selectedType, propertyType: selectedPropertyType,
-        finishing: selectedFinishing, furnished: selectedFurnished,
-        furnitureQuality: selectedFurnitureQuality, duration: selectedDuration,
-        frontage: selectedFrontage,
-        propLocation: document.getElementById('propLocation')?.value || '',
-        propArea: document.getElementById('propArea')?.value || '',
-        propPrice: document.getElementById('propPrice')?.value || '',
-        propRooms: document.getElementById('propRooms')?.value || '',
-        propBaths: document.getElementById('propBaths')?.value || '',
-        propFloor: document.getElementById('propFloor')?.value || '',
-        businessType: document.getElementById('businessType')?.value || '',
-        officeActivity: document.getElementById('officeActivity')?.value || '',
-        storageType: document.getElementById('storageType')?.value || '',
-        ownerName: document.getElementById('ownerName')?.value || '',
-        ownerPhone: document.getElementById('ownerPhone')?.value || '',
-        propNotes: document.getElementById('propNotes')?.value || ''
-      };
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-    } catch (e) {}
-  }
+  // لا نحفظ الاسم أو الهاتف أو تفاصيل العقار في المتصفح.
+  // تبقى البيانات داخل الجلسة الحالية فقط، ثم تُرسل إلى واتساب بعد مراجعة المستخدم.
+  function saveDraft() {}
 
   function loadSavedData() {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (!saved) return;
-    try {
-      const d = JSON.parse(saved);
-      if (d.type) selectedType = d.type;
-      if (d.propertyType) selectedPropertyType = d.propertyType;
-      if (d.finishing) selectedFinishing = d.finishing;
-      if (d.furnished) selectedFurnished = d.furnished;
-      if (d.furnitureQuality) selectedFurnitureQuality = d.furnitureQuality;
-      if (d.duration) selectedDuration = d.duration;
-      if (d.frontage) selectedFrontage = d.frontage;
-
-      const fields = ['propLocation','propArea','propPrice','ownerName','ownerPhone','propNotes','businessType','officeActivity','storageType'];
-      fields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && d[id]) el.value = d[id];
-      });
-      ['propRooms','propBaths','propFloor'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && d[id]) el.value = d[id];
-      });
-    } catch (e) {}
+    // امسح أي مسودة قديمة أنشأتها الإصدارات السابقة من الموقع.
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
   }
 
   function setSelected(containerId, value) {

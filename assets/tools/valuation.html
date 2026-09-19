@@ -341,8 +341,8 @@
       <i class="fas fa-crown"></i>
       سمسار طلبك | مدينة نصر
     </div>
-    <h1>قيّم عقارك بالذكاء الاصطناعي</h1>
-    <p>الصق رسالة الواتساب كما هي — والنظام يستخرج التفاصيل ويحللها فوراً</p>
+    <h1>قيّم عقارك بخصوصية</h1>
+    <p>الصق رسالة الواتساب كما هي — التحليل الأولي يتم داخل جهازك ولا تُرسل الرسالة إلى خدمة خارجية</p>
   </div>
 
   <!-- بطاقة الإدخال -->
@@ -446,56 +446,41 @@
     document.getElementById('report-section').style.display = 'none';
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: [{
-            role: 'user',
-            content: `رسالة العميل الخام:\n"""\n${msg}\n"""\n\nقم بالتحليل والتقييم.`
-          }]
-        })
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const fullText = data.content?.[0]?.text?.trim() || '';
+      // تحليل أولي محلي: لا نرسل رسالة العميل أو أرقامه إلى مزود خارجي.
+      const normalized = msg.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      const areaMatch = normalized.match(/(\d+(?:[.,]\d+)?)\s*(?:متر|م²|م2)/i);
+      const moneyMatches = [...normalized.matchAll(/(?:\d[\d,،.]*\d|\d+)\s*(?:ج|جنيه|الف|ألف|مليون)?/gi)]
+        .map(m => m[0].trim()).filter(v => /ج|جنيه|الف|ألف|مليون|,|،/.test(v));
+      const locationTerms = ['مدينة نصر','المنطقة السادسة','المنطقة السابعة','المنطقة الثامنة','المنطقة التاسعة','المنطقة العاشرة','مكرم عبيد','عباس العقاد','مصطفى النحاس','الطيران','السفارات','مصر الجديدة','التجمع الخامس'];
+      const foundLocations = locationTerms.filter(term => normalized.includes(term));
+      const transaction = /إيجار|للايجار|للإيجار|شهري|سنوي/.test(normalized) ? 'إيجار' : /بيع|للبيع/.test(normalized) ? 'بيع' : 'غير محدد';
+      const lines = [
+        'NEUTRAL', '',
+        '📊 ملخص البيانات المستخرجة',
+        `📍 الموقع: ${foundLocations.length ? foundLocations.join('، ') : 'لم يتم تحديده بوضوح'}`,
+        `📐 المساحة: ${areaMatch ? areaMatch[1] + ' متر مربع' : 'لم يتم تحديدها بوضوح'}`,
+        `💼 نوع العملية: ${transaction}`,
+        `💰 أرقام محتملة للسعر: ${moneyMatches.length ? moneyMatches.join('، ') : 'لم يتم تحديدها بوضوح'}`, '',
+        '⚖️ النتيجة',
+        'هذا تقييم أولي محلي لمساعدة التفاوض، وليس تسعيرًا رسميًا. راجع السعر مع مختص وبحسب حالة العقار والموقع الدقيق.'
+      ];
+      const fullText = lines.join('\n');
 
       // استخراج الحكم والتقرير
-      const lines = fullText.split('\n');
-      const firstLine = lines[0].trim().toUpperCase();
+      const parsedLines = fullText.split('\n');
+      const firstLine = parsedLines[0].trim().toUpperCase();
       let verdict = '';
       let reportText = fullText;
 
       if (['GOOD','BAD','NEUTRAL'].includes(firstLine)) {
         verdict = firstLine;
-        reportText = lines.slice(2).join('\n').trim(); // تخطي السطر الأول والفارغ
+        reportText = parsedLines.slice(2).join('\n').trim();
       }
 
-      // عرض الحكم
       const verdictEl = document.getElementById('verdict');
-      if (verdict === 'GOOD') {
-        verdictEl.className = 'verdict-bar good';
-        verdictEl.innerHTML = '<i class="fas fa-circle-check"></i> فرصة ذهبية — السعر مناسب أو أقل من السوق';
-        verdictEl.style.display = 'flex';
-      } else if (verdict === 'BAD') {
-        verdictEl.className = 'verdict-bar bad';
-        verdictEl.innerHTML = '<i class="fas fa-triangle-exclamation"></i> السعر مبالغ فيه — مطلوب تفاوض أو إعادة تموضع';
-        verdictEl.style.display = 'flex';
-      } else {
-        verdictEl.style.display = 'none';
-      }
-
+      verdictEl.style.display = 'none';
       document.getElementById('report-text').textContent = reportText;
       lastReport = reportText;
-
       document.getElementById('loading').style.display = 'none';
       document.getElementById('report-section').style.display = 'block';
 

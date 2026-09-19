@@ -1133,11 +1133,11 @@ let state = {
 let isSending = false;
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
 }
 function loadState() {
   try {
-    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const s = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
     if (s) { state = { ...state, ...s }; state.pendingImages = []; }
   } catch {}
 }
@@ -1564,7 +1564,7 @@ function resetChat() {
 }
 
 function deleteChat() {
-  localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(STORAGE_KEY);
   state = {
     formState: { _version: "v70" },
     history: [],
