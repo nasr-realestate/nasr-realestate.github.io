@@ -20,6 +20,10 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
 
+  <!-- ⬇️⬇️⬇️ السطر الجديد — Schema Global في كل الصفحات ⬇️⬇️⬇️ -->
+  {% include schema-global.html %}
+  <!-- ⬆️⬆️⬆️ نهاية السطر الجديد ⬆️⬆️⬆️ -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Load the font without blocking first paint; the fallback stack preserves layout while it loads. -->
@@ -29,6 +33,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
   <link rel="preload" as="image" href="{{ '/assets/img/logo.webp' | relative_url }}" fetchpriority="high">
+  
   <style>
     :root { --color-primary: #d4af37; --color-text-primary: #f5f5f5; --color-border-light: #333; }
     *, *::before, *::after { box-sizing: border-box; }
@@ -41,6 +46,7 @@
     @media (max-width: 768px) { .navbar { padding: 1rem; flex-wrap: wrap; justify-content: center; } }
     @media (max-width: 420px) { .navbar-links { gap: .75rem; justify-content: center; width: 100%; margin-top: .75rem; } .navbar-logo { width: 100%; text-align: center; margin-bottom: .5rem; } }
   </style>
+  
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}"></noscript>
 
@@ -111,7 +117,6 @@
       display: block;
     }
 
-    /* ═══ شارة Level 7 ═══ */
     .agent-float-btn .badge-level {
       position: absolute;
       top: -2px;
@@ -132,7 +137,6 @@
       line-height: 1;
     }
 
-    /* ═══ شارة واتساب ═══ */
     .agent-float-btn .badge-wa {
       position: absolute;
       top: -2px;
@@ -150,7 +154,6 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
-    /* ═══ شارة "متصل" ═══ */
     .agent-float-btn .status-badge {
       position: absolute;
       bottom: -4px;
@@ -186,7 +189,6 @@
       50% { opacity: 0.6; transform: scale(1.2); }
     }
 
-    /* ═══ Tooltip ═══ */
     .agent-float-btn .tooltip {
       position: absolute;
       bottom: calc(100% + 12px);
@@ -224,7 +226,6 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* ═══ Dark Mode ═══ */
     @media (prefers-color-scheme: dark) {
       .agent-float-btn {
         background: linear-gradient(135deg, #25d366 0%, #054d44 100%);
@@ -240,7 +241,6 @@
       }
     }
 
-    /* ═══ Responsive ═══ */
     @media (max-width: 480px) {
       .agent-float-btn {
         width: 56px;
@@ -267,7 +267,6 @@
       }
     }
 
-    /* ═══ Reduced Motion ═══ */
     @media (prefers-reduced-motion: reduce) {
       .agent-float-btn {
         animation: none;
@@ -280,45 +279,30 @@
 </head>
 
 <body>
-  <!-- شريط التنقل -->
-  {% include navbar.html %}
+  {{ content }}
 
-  <!-- المحتوى الرئيسي -->
-  <main>{{ content }}</main>
-
-  <!-- التذييل -->
-  {% include footer.html %}
-
-  <!-- ═══════════════════════════════════════════════
-       زر الوكيل الذكي — يظهر في كل الصفحات
-       ═══════════════════════════════════════════════ -->
-  <a href="{{ '/agent.html' | relative_url }}"
+  <!-- ═══ زر الوكيل الذكي ═══ -->
+  <a href="/agent.html"
      class="agent-float-btn"
      aria-label="تواصل مع طارق طنطاوي — الوكيل الذكي"
      title="تحدث مع طارق طنطاوي الآن">
 
-    <!-- صورة طارق -->
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
+    <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
          alt="طارق طنطاوي"
          loading="lazy">
 
-    <!-- شارة Level 7 -->
     <span class="badge-level">7</span>
 
-    <!-- شارة واتساب -->
     <span class="badge-wa">
       <i class="fab fa-whatsapp"></i>
     </span>
 
-    <!-- شارة "متصل" -->
     <span class="status-badge">
       <span class="status-dot"></span>
       متصل
     </span>
 
-    <!-- Tooltip -->
     <span class="tooltip">تحدث مع طارق 👋</span>
   </a>
-
 </body>
 </html>
