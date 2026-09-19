@@ -1,0 +1,62 @@
+{%- comment -%} استخراج السعر الرقمي {%- endcomment -%}
+{%- assign price_clean = page.price | remove: "," | remove: " ج.م شهرياً" | remove: " ج.م" | remove: "جنيه" | remove: " " | strip -%}
+{%- assign price_num = price_clean | plus: 0 -%}
+
+{%- comment -%} استخراج المساحة الرقمية {%- endcomment -%}
+{%- assign area_clean = page.area | split: " " | first | remove: "," | strip -%}
+{%- assign area_num = area_clean | plus: 0 -%}
+
+{%- comment -%} تحديد نوع المعاملة {%- endcomment -%}
+{%- assign transaction_type = "https://schema.org/ForSale" -%}
+{%- if page.category == "rent" or page.price contains "شهرياً" or page.title contains "إيجار" or page.title contains "للايجار" -%}
+  {%- assign transaction_type = "https://schema.org/ForRent" -%}
+{%- endif -%}
+
+{%- comment -%} تحديد نوع العقار {%- endcomment -%}
+{%- assign property_subtype = "Apartment" -%}
+{%- if page.category == "commercial" -%}
+  {%- if page.title contains "محل" -%}{%- assign property_subtype = "Store" -%}
+  {%- elsif page.title contains "مكتب" -%}{%- assign property_subtype = "Office" -%}
+  {%- elsif page.title contains "مخزن" -%}{%- assign property_subtype = "Warehouse" -%}
+  {%- else -%}{%- assign property_subtype = "CommercialProperty" -%}
+  {%- endif -%}
+{%- elsif page.title contains "فيلا" -%}{%- assign property_subtype = "SingleFamilyResidence" -%}
+{%- elsif page.title contains "دوبلكس" -%}{%- assign property_subtype = "SingleFamilyResidence" -%}
+{%- elsif page.title contains "روف" -%}{%- assign property_subtype = "Apartment" -%}
+{%- endif -%}
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "RealEstateListing",
+  "@id": "{{ site.url }}{{ page.url }}#listing",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.meta_description | default: page.title | jsonify }},
+  "image": ["{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"],
+  "datePosted": "{{ page.date | date_to_xmlschema }}",
+  "dateModified": "{{ page.date | date_to_xmlschema }}",
+  "inLanguage": "ar-EG",
+  "broker": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"},
+  "provider": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"},
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ site.url }}{{ page.url }}",
+    "priceCurrency": "EGP",
+    "price": "{{ price_num }}",
+    "availability": "https://schema.org/InStock",
+    "businessFunction": "{{ transaction_type }}",
+    "seller": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"}
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": {{ page.location | jsonify }},
+    "addressLocality": "مدينة نصر",
+    "addressRegion": "القاهرة",
+    "addressCountry": "EG"
+  },
+  "geo": {"@type": "GeoCoordinates", "latitude": 30.0635, "longitude": 31.311},
+  "floorSize": {"@type": "QuantitativeValue", "value": {{ area_num }}, "unitCode": "MTK"},
+  "additionalType": "https://schema.org/{{ property_subtype }}"
+}
+</script>
