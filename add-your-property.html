@@ -27,11 +27,7 @@ extra_head: |
     font-family: 'Cairo', sans-serif;
   }
 
-  .clean-wrapper {
-    max-width: 650px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-  }
+  .clean-wrapper { max-width: 650px; margin: 2rem auto; padding: 0 1rem; }
 
   .clean-card {
     background: #fff;
@@ -51,9 +47,7 @@ extra_head: |
   .step-progress-bar::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
+    top: 50%; left: 0; right: 0;
     height: 3px;
     background: #e9ecef;
     z-index: 1;
@@ -62,8 +56,7 @@ extra_head: |
 
   .progress-fill {
     position: absolute;
-    top: 50%;
-    right: 0;
+    top: 50%; right: 0;
     height: 3px;
     background: #1e3a8a;
     z-index: 1;
@@ -73,8 +66,7 @@ extra_head: |
   }
 
   .step-node {
-    width: 38px;
-    height: 38px;
+    width: 38px; height: 38px;
     border-radius: 50%;
     background: #e9ecef;
     color: #6c757d;
@@ -86,17 +78,10 @@ extra_head: |
     transition: 0.3s;
   }
 
-  .step-node.active {
-    background: #1e3a8a;
-    color: #fff;
-  }
+  .step-node.active { background: #1e3a8a; color: #fff; }
 
   .form-step { display: none; }
-
-  .form-step.active {
-    display: block;
-    animation: fadeIn 0.3s ease-in-out;
-  }
+  .form-step.active { display: block; animation: fadeIn 0.3s ease-in-out; }
 
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -150,11 +135,7 @@ extra_head: |
     box-shadow: 0 0 0 3px rgba(30,58,138,0.1);
   }
 
-  .input-hint {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin-top: 4px;
-  }
+  .input-hint { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
 
   .step-actions {
     display: flex;
@@ -163,8 +144,7 @@ extra_head: |
     gap: 10px;
   }
 
-  .btn-next,
-  .btn-prev {
+  .btn-next, .btn-prev {
     padding: 14px 24px;
     border-radius: 10px;
     font-weight: bold;
@@ -175,20 +155,10 @@ extra_head: |
     font-family: 'Cairo', sans-serif;
   }
 
-  .btn-next {
-    background: #1e3a8a;
-    color: #fff;
-    flex: 1;
-  }
-
+  .btn-next { background: #1e3a8a; color: #fff; flex: 1; }
   .btn-next:hover { background: #1d4ed8; }
   .btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .btn-prev {
-    background: #e2e8f0;
-    color: #475569;
-  }
-
+  .btn-prev { background: #e2e8f0; color: #475569; }
   .btn-prev:hover { background: #cbd5e1; }
 
   .security-badge {
@@ -215,13 +185,8 @@ extra_head: |
     gap: 6px;
   }
 
-  .wa-btn-submit {
-    background: #25d366 !important;
-  }
-
-  .wa-btn-submit:hover {
-    background: #128c7e !important;
-  }
+  .wa-btn-submit { background: #25d366 !important; }
+  .wa-btn-submit:hover { background: #128c7e !important; }
 
   .price-warning {
     background: #fff3cd;
@@ -234,16 +199,9 @@ extra_head: |
     display: none;
   }
 
-  .conditional-block {
-    display: none;
-    margin-top: 12px;
-  }
+  .conditional-block { display: none; margin-top: 12px; }
+  .conditional-block.visible { display: block; }
 
-  .conditional-block.visible {
-    display: block;
-  }
-
-  /* ═══ رفع الصور ═══ */
   .img-upload-zone {
     border: 2px dashed #cbd5e1;
     border-radius: 12px;
@@ -255,11 +213,7 @@ extra_head: |
     margin-top: 8px;
   }
 
-  .img-upload-zone:hover {
-    border-color: #1e3a8a;
-    background: #eff6ff;
-  }
-
+  .img-upload-zone:hover { border-color: #1e3a8a; background: #eff6ff; }
   .img-upload-zone input { display: none; }
 
   .img-preview-grid {
@@ -277,22 +231,16 @@ extra_head: |
     border: 1px solid #e2e8f0;
   }
 
-  .img-preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .img-preview-item img { width: 100%; height: 100%; object-fit: cover; }
 
   .img-preview-remove {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 4px; right: 4px;
     background: #ef4444;
     color: #fff;
     border: none;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
+    width: 22px; height: 22px;
     font-size: 12px;
     cursor: pointer;
     display: flex;
@@ -317,10 +265,7 @@ extra_head: |
     backdrop-filter: blur(4px);
   }
 
-  .success-overlay.show {
-    display: flex;
-    opacity: 1;
-  }
+  .success-overlay.show { display: flex; opacity: 1; }
 
   .success-modal {
     background: #fff;
@@ -339,8 +284,7 @@ extra_head: |
   }
 
   .success-icon {
-    width: 80px;
-    height: 80px;
+    width: 80px; height: 80px;
     border-radius: 50%;
     background: rgba(37, 211, 102, 0.12);
     display: flex;
@@ -350,10 +294,7 @@ extra_head: |
     animation: successPulse 2s ease-in-out infinite;
   }
 
-  .success-icon i {
-    font-size: 2.4rem;
-    color: #25d366;
-  }
+  .success-icon i { font-size: 2.4rem; color: #25d366; }
 
   @keyframes successPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); }
@@ -487,7 +428,6 @@ extra_head: |
           ⚠️ السعر المدخل أقل من الحد الأدنى المعتاد لدينا. قد لا يتم قبول العقار، لكن يمكنك الإرسال وسنوافيك بالرأي.
         </div>
 
-        <!-- شقة / فيلا / دوبلكس / روف -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;" id="residentialFields">
           <div>
             <label style="font-size:.85rem;color:#334155;font-weight:600;">عدد الغرف</label>
@@ -532,7 +472,6 @@ extra_head: |
           </div>
         </div>
 
-        <!-- إيجار: مفروش / فاضي -->
         <div class="conditional-block" id="rentFurnishedBlock">
           <label style="font-size:.85rem;color:#334155;font-weight:600;">حالة التسليم</label>
           <div class="options-grid" id="furnishedOptions">
@@ -562,7 +501,6 @@ extra_head: |
           </div>
         </div>
 
-        <!-- محل / مكتب / مخزن -->
         <div class="conditional-block" id="commercialBlock">
           <label style="font-size:.85rem;color:#334155;font-weight:600;">النشاط الحالي</label>
           <input type="text" id="businessType" class="clean-input" placeholder="مثال: مطعم، صيدلية، شركة محاماة...">
@@ -673,10 +611,19 @@ extra_head: |
 // ═══════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════
-const WORKER_URL     = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const CORRECT_PHONE  = "201147758857";
-const DRAFT_KEY      = "addPropertyDraft_v19";
-const MAX_IMAGES     = 5;
+const WORKER_URL    = "https://royal-snow-ea32.footcai-555.workers.dev/";
+const CORRECT_PHONE = "201147758857";
+const DRAFT_KEY     = "addPropertyDraft_v20";
+const MAX_IMAGES    = 5;
+
+// ═══ GOOGLE PROFILE (طبق الأصل من الـ Worker) ═══
+const GOOGLE_PROFILE = {
+  url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
+  badge: "Google Local Guide Level 7",
+  photosCount: 468,
+  reviewsCount: 195,
+  formattedViews: "16.3 مليون",
+};
 
 // ═══ STATE ═══
 let currentStep              = 1;
@@ -687,37 +634,185 @@ let selectedFurnished        = "مفروش";
 let selectedFurnitureQuality = "فاخر";
 let selectedDuration         = "سنة";
 let selectedFrontage         = "ناصية";
-let pendingImages            = []; // { base64, preview }
+let pendingImages            = [];
 let lastWaMessage            = "";
 let lastWaUrl                = "";
 
-// ═══ HELPERS ═══
-function toNumeric(str) {
-  if (!str) return 0;
-  const cleaned = String(str)
-    .replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
-    .replace(/,/g, "")
-    .replace(/[^\d.]/g, "");
-  return parseFloat(cleaned) || 0;
+// ═══════════════════════════════════════════════
+// ✅ نفس دوال الـ Worker — طبق الأصل
+// ═══════════════════════════════════════════════
+
+function toEnNum(s) {
+  return String(s||"").replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 }
 
-function isResidential(pt) {
-  return ["شقة","فيلا","دوبلكس","روف"].includes(pt);
-}
-function isCommercial(pt) {
-  return ["محل تجاري","مكتب إداري","مخزن"].includes(pt);
+function parseNum(v) {
+  if (typeof v === "number") return v;
+  if (!v) return 0;
+  const c = toEnNum(String(v)).replace(/,/g,"").replace(/[^\d.]/g,"");
+  const n = parseFloat(c);
+  return isNaN(n) ? 0 : n;
 }
 
-// ═══ DRAFT ═══
+function fmtNum(v) {
+  if (!v && v !== 0) return "0";
+  const n = parseNum(v);
+  return toEnNum(n < 100000 ? String(n) : n.toLocaleString("en-US"));
+}
+
+function hasVal(v) {
+  return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "—";
+}
+
+function fmtVal(v) { return hasVal(v) ? toEnNum(String(v).trim()) : "—"; }
+
+function isResidential(pt) { return ["شقة","فيلا","دوبلكس","روف"].includes(pt); }
+function isCommercial(pt)  { return ["محل تجاري","مكتب إداري","مخزن"].includes(pt); }
+function isShop(pt)        { return pt === "محل تجاري"; }
+function isOffice(pt)      { return pt === "مكتب إداري"; }
+function isWarehouse(pt)   { return pt === "مخزن"; }
+function isVilla(pt)       { return pt === "فيلا"; }
+function isDuplex(pt)      { return pt === "دوبلكس"; }
+
+// ═══ getRequestLabel — نفس الـ Worker طبق الأصل ═══
+function getRequestLabel(type, propertyType, furnished, isOwner = false) {
+  const isRent = type === "rent" || type === "owner_rent" || type === "tenant" || type === "buyer_rent";
+  const pt = propertyType || "عقار";
+  
+  let emoji = "📋";
+  if (isRent && pt === "شقة" && furnished === "مفروش") emoji = "🛏️";
+  else if (isRent && pt === "شقة" && (furnished === "فاضي (قانون جديد)" || furnished === "فاضي")) emoji = "🏚️";
+  else {
+    const emojiMap = {
+      "شقة": "🏠", "فيلا": "🏡", "دوبلكس": "🏡", "روف": "🌅",
+      "محل تجاري": "🏪", "مكتب إداري": "🏢", "مخزن": "🏭"
+    };
+    emoji = emojiMap[pt] || (isRent ? "🔑" : "🏠");
+  }
+
+  const action = isOwner ? (isRent ? "تأجير" : "بيع") : (isRent ? "إيجار" : "شراء");
+  const prefix = isOwner ? "عرض" : "طلب";
+
+  if (isRent && (pt === "شقة" || pt === "فيلا" || pt === "دوبلكس" || pt === "روف")) {
+    if (furnished === "مفروش") return `${emoji} ${prefix} ${action} ${pt} مفروش`;
+    if (furnished === "فاضي (قانون جديد)" || furnished === "فاضي") return `${emoji} ${prefix} ${action} ${pt} فاضي (قانون جديد)`;
+  }
+
+  return `${emoji} ${prefix} ${action} ${pt}`;
+}
+
+// ═══════════════════════════════════════════════
+// ✅ buildWAMsg — نسخة مطابقة تماماً لدالة الـ Worker
+// ═══════════════════════════════════════════════
+function buildWAMsg(ctx, data, imgUrls = []) {
+  const isOwner = ctx === "owner_sale" || ctx === "owner_rent";
+  const isSale  = ctx === "owner_sale" || ctx === "buyer";
+  const isRent  = ctx === "owner_rent" || ctx === "tenant";
+  const pt      = data.propertyType || "عقار";
+
+  const requestLabel = getRequestLabel(isRent ? "rent" : "sale", pt, data.furnished, isOwner);
+
+  const lines = [
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `*${requestLabel}*`,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `السلام عليكم أ. طارق،`,
+    `أنا عميل من موقع "سمسار طلبك".`,
+    ``,
+    `📋 *المواصفات المطلوبة:*`,
+    `┌───────────────────`,
+    `│ 🏷️ النوع: ${pt}`
+  ];
+
+  if (isOwner) {
+    if (hasVal(data.location)) lines.push(`│ 📍 الموقع: ${data.location}`);
+    if (hasVal(data.area))     lines.push(`│ 📐 المساحة: ${fmtVal(data.area)} م²`);
+
+    if (isShop(pt)) {
+      if (hasVal(data.shopType))     lines.push(`│ 🏪 الموقع: ${data.shopType}`);
+      if (hasVal(data.businessType)) lines.push(`│ 💼 النشاط: ${data.businessType}`);
+      if (hasVal(data.frontage))     lines.push(`│ 🚪 الواجهة: ${data.frontage}`);
+    }
+    if (isOffice(pt)) {
+      if (hasVal(data.officeType))   lines.push(`│ 🏢 النوع: ${data.officeType}`);
+      if (hasVal(data.businessType)) lines.push(`│ 💼 النشاط: ${data.businessType}`);
+      if (hasVal(data.officesCount)) lines.push(`│ 🚪 عدد المكاتب: ${fmtVal(data.officesCount)}`);
+    }
+    if (isWarehouse(pt)) {
+      if (hasVal(data.storageType))   lines.push(`│ 🏭 الموقع: ${data.storageType}`);
+      if (hasVal(data.warehouseType)) lines.push(`│ 📦 التخزين: ${data.warehouseType}`);
+    }
+    if (isVilla(pt) && hasVal(data.villaType))   lines.push(`│ 🏡 النوع: ${data.villaType}`);
+    if (isDuplex(pt) && hasVal(data.duplexType)) lines.push(`│ 🏡 نوع الدوبلكس: ${data.duplexType}`);
+    if (pt === "روف" && hasVal(data.roofType))   lines.push(`│ 🌅 طبيعة الروف: ${data.roofType}`);
+
+    if (isRent && data.furnished === "مفروش") {
+      lines.push(`│ 🛋️ نوع الإيجار: مفروش`);
+      if (hasVal(data.rentPeriods))      lines.push(`│ 📅 المدة: ${data.rentPeriods}`);
+      if (hasVal(data.furnitureQuality)) lines.push(`│ 🪑 الأثاث: ${data.furnitureQuality}`);
+      if (hasVal(data.priceWeekly))      lines.push(`│ 💰 الإيجار الأسبوعي: ${fmtNum(data.priceWeekly)} ج.م`);
+      if (hasVal(data.priceMonthly))     lines.push(`│ 💰 الإيجار الشهري: ${fmtNum(data.priceMonthly)} ج.م`);
+      if (hasVal(data.priceYearly))      lines.push(`│ 💰 الإيجار السنوي: ${fmtNum(data.priceYearly)} ج.م`);
+      if (!hasVal(data.priceWeekly) && !hasVal(data.priceMonthly) && !hasVal(data.priceYearly) && hasVal(data.price))
+        lines.push(`│ 💰 السعر: ${fmtNum(data.price)} ج.م`);
+    } else if (isRent && data.furnished === "فاضي (قانون جديد)") {
+      lines.push(`│ 🛋️ نوع الإيجار: فاضي (قانون جديد)`);
+      if (hasVal(data.duration)) lines.push(`│ 📅 مدة العقد: ${data.duration}`);
+      if (hasVal(data.price))    lines.push(`│ 💰 الإيجار الشهري: ${fmtNum(data.price)} ج.م`);
+    } else if (isRent && hasVal(data.price)) {
+      lines.push(`│ 💰 الإيجار الشهري: ${fmtNum(data.price)} ج.م`);
+    } else if (isSale && hasVal(data.price)) {
+      lines.push(`│ 💰 السعر المطلوب: ${fmtNum(data.price)} ج.م`);
+    }
+
+    if (isResidential(pt) && !isVilla(pt)) {
+      if (hasVal(data.rooms)) lines.push(`│ 🛏️ الغرف: ${fmtVal(data.rooms)}`);
+      if (hasVal(data.baths)) lines.push(`│ 🛁 الحمامات: ${fmtVal(data.baths)}`);
+    }
+    if (isVilla(pt) && hasVal(data.baths)) lines.push(`│ 🛁 الحمامات: ${fmtVal(data.baths)}`);
+    if (hasVal(data.floor))     lines.push(`│ 🏢 الدور: ${data.floor}`);
+    if (hasVal(data.finishing)) lines.push(`│ ✨ التشطيب: ${data.finishing}`);
+    if (hasVal(data.notes) && data.notes !== "لا") lines.push(`│ 📝 ملاحظات: ${data.notes}`);
+  }
+
+  lines.push(`└───────────────────`);
+
+  // بيانات العميل
+  const hasAnyContact = hasVal(data.ownerName) || hasVal(data.ownerPhone);
+  if (hasAnyContact) {
+    lines.push("", `👤 *بيانات العميل:*`);
+    if (hasVal(data.ownerName))  lines.push(`• الاسم: ${data.ownerName}`);
+    if (hasVal(data.ownerPhone)) lines.push(`• الرقم: ${data.ownerPhone}`);
+  }
+
+  // الصور
+  if (imgUrls?.length) {
+    lines.push("", `📷 *الصور المرفقة:* ${imgUrls.length} صورة`);
+    imgUrls.forEach((u, i) => lines.push(`${i+1}. ${u}`));
+  }
+
+  // Footer — Google Authority (طبق الأصل)
+  lines.push("", `━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(`🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}`);
+  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة`);
+  lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
+  lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
+  lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+
+  return lines.join("\n");
+}
+
+// ═══════════════════════════════════════════════
+// UI LOGIC
+// ═══════════════════════════════════════════════
+
 function saveDraft() {
   try {
     const data = {
-      type: selectedType,
-      propertyType: selectedPropertyType,
-      finishing: selectedFinishing,
-      furnished: selectedFurnished,
-      furnitureQuality: selectedFurnitureQuality,
-      duration: selectedDuration,
+      type: selectedType, propertyType: selectedPropertyType,
+      finishing: selectedFinishing, furnished: selectedFurnished,
+      furnitureQuality: selectedFurnitureQuality, duration: selectedDuration,
       frontage: selectedFrontage,
       propLocation:  document.getElementById('propLocation')?.value  || '',
       propArea:      document.getElementById('propArea')?.value      || '',
@@ -760,7 +855,6 @@ function loadSavedData() {
   } catch (e) {}
 }
 
-// ═══ UI SYNC ═══
 function updateSelectedButtons() {
   const setSel = (sel, val) => {
     document.querySelectorAll(sel).forEach(b => {
@@ -777,14 +871,10 @@ function updateSelectedButtons() {
 }
 
 function syncPropertyTypeUI() {
-  const isRent  = selectedType === 'rent';
-  const pt      = selectedPropertyType;
-  const isRes   = isResidential(pt);
-  const isShop  = pt === 'محل تجاري';
-  const isOff   = pt === 'مكتب إداري';
-  const isWh    = pt === 'مخزن';
+  const isRent = selectedType === 'rent';
+  const pt     = selectedPropertyType;
+  const isRes  = isResidential(pt);
 
-  // حقول سكنية
   const resFields = document.getElementById('residentialFields');
   if (resFields) resFields.style.display = isRes ? 'grid' : 'none';
 
@@ -794,30 +884,27 @@ function syncPropertyTypeUI() {
   const finishingField = document.getElementById('finishingField');
   if (finishingField) finishingField.style.display = isRes ? 'block' : 'none';
 
-  // بلوك الإيجار
   const furnBlock = document.getElementById('rentFurnishedBlock');
   if (furnBlock) furnBlock.classList.toggle('visible', isRent && isRes);
 
   const qualBlock = document.getElementById('rentFurnishedQualityBlock');
   if (qualBlock) qualBlock.classList.toggle('visible', isRent && isRes && selectedFurnished === 'مفروش');
 
-  const durBlock  = document.getElementById('rentDurationBlock');
+  const durBlock = document.getElementById('rentDurationBlock');
   if (durBlock) durBlock.classList.toggle('visible', isRent && isRes && selectedFurnished === 'فاضي (قانون جديد)');
 
-  // بلوكات تجارية
   const commBlock = document.getElementById('commercialBlock');
   if (commBlock) commBlock.classList.toggle('visible', isCommercial(pt));
 
   const frontBlock = document.getElementById('shopFrontageBlock');
-  if (frontBlock) frontBlock.classList.toggle('visible', isShop);
+  if (frontBlock) frontBlock.classList.toggle('visible', isShop(pt));
 
   const offBlock = document.getElementById('officeCountBlock');
-  if (offBlock) offBlock.classList.toggle('visible', isOff);
+  if (offBlock) offBlock.classList.toggle('visible', isOffice(pt));
 
   const whBlock = document.getElementById('warehouseTypeBlock');
-  if (whBlock) whBlock.classList.toggle('visible', isWh);
+  if (whBlock) whBlock.classList.toggle('visible', isWarehouse(pt));
 
-  // label السعر
   const priceLabel = document.getElementById('priceLabel');
   if (priceLabel) priceLabel.innerText = isRent ? 'الإيجار الشهري (ج.م)' : 'السعر المطلوب (ج.م)';
 
@@ -834,7 +921,6 @@ function updatePriceHint() {
   }
 }
 
-// ═══ BIND OPTIONS ═══
 function bindOptions(containerId, callback) {
   document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
     btn.addEventListener('click', function() {
@@ -846,7 +932,6 @@ function bindOptions(containerId, callback) {
   });
 }
 
-// ═══ PRICE VALIDATION ═══
 function validatePrice() {
   const raw = document.getElementById('propPrice').value.replace(/,/g, '').trim();
   if (!raw) return false;
@@ -854,7 +939,15 @@ function validatePrice() {
   return selectedType === 'rent' ? num >= 15000 : num >= 4000000;
 }
 
-// ═══ STEP NAVIGATION ═══
+function toNumeric(str) {
+  if (!str) return 0;
+  const cleaned = String(str)
+    .replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/,/g, "")
+    .replace(/[^\d.]/g, "");
+  return parseFloat(cleaned) || 0;
+}
+
 function nextStep(step) {
   if (step === 2 && !document.getElementById('propLocation').value.trim()) {
     alert('برجاء كتابة المنطقة أو الشارع أولاً.');
@@ -871,9 +964,7 @@ function nextStep(step) {
   showStep(step);
 }
 
-function prevStep(step) {
-  showStep(step);
-}
+function prevStep(step) { showStep(step); }
 
 function showStep(step) {
   document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
@@ -958,7 +1049,7 @@ function showSuccessModal(waMessage) {
   lastWaUrl = `https://wa.me/${CORRECT_PHONE}?text=${encodeURIComponent(waMessage)}`;
 
   const modal = document.getElementById('successModal');
-  const msg   = document.getElementById('successMessage');
+  const msg = document.getElementById('successMessage');
   if (msg) msg.innerText = 'اضغط على زر واتساب لإرسال التفاصيل لطارق. الرسالة جاهزة!';
   if (modal) modal.classList.add('show');
 
@@ -975,7 +1066,9 @@ function closeSuccessAndReset() {
   localStorage.removeItem(DRAFT_KEY);
 }
 
-// ═══ SUBMIT ═══
+// ═══════════════════════════════════════════════
+// ✅ SUBMIT — يبني الرسالة كاملة داخل الصفحة
+// ═══════════════════════════════════════════════
 function setupSubmitHandler() {
   const form = document.getElementById('interactiveAddForm');
   if (!form) return;
@@ -1015,7 +1108,6 @@ function setupSubmitHandler() {
       notes
     };
 
-    // حقول سكنية
     if (isResidential(selectedPropertyType)) {
       propertyData.rooms     = document.getElementById('propRooms').value;
       propertyData.baths     = document.getElementById('propBaths').value;
@@ -1025,7 +1117,6 @@ function setupSubmitHandler() {
       }
     }
 
-    // إيجار
     if (selectedType === 'rent' && isResidential(selectedPropertyType)) {
       propertyData.furnished = selectedFurnished;
 
@@ -1038,21 +1129,18 @@ function setupSubmitHandler() {
       }
     }
 
-    // محل تجاري
     if (selectedPropertyType === 'محل تجاري') {
       propertyData.businessType = document.getElementById('businessType').value.trim() || 'تجاري';
       propertyData.frontage     = selectedFrontage;
       propertyData.shopType     = selectedFrontage === 'ناصية' ? 'ناصية' : 'واجهة على شارع رئيسي';
     }
 
-    // مكتب إداري
     if (selectedPropertyType === 'مكتب إداري') {
       propertyData.businessType = document.getElementById('businessType').value.trim() || 'إداري';
       propertyData.officesCount = document.getElementById('officesCount').value;
       propertyData.officeType   = 'مبنى إداري مرخص';
     }
 
-    // مخزن
     if (selectedPropertyType === 'مخزن') {
       propertyData.warehouseType = document.getElementById('warehouseType').value.trim() || 'عام';
       propertyData.storageType   = 'مستقل / جمالون';
@@ -1065,36 +1153,33 @@ function setupSubmitHandler() {
       imageUrls = await uploadImages();
     }
 
-    // ═══ إرسال للـ Worker ═══
-    const payload = {
-      source:    'form-complete',
-      type:      selectedType,
-      data:      propertyData,
-      imageUrls: imageUrls
-    };
+    // ═══ ✅ بناء الرسالة المؤهلة كاملة داخل الصفحة ═══
+    const ctx = selectedType === 'rent' ? 'owner_rent' : 'owner_sale';
+    const waMessage = buildWAMsg(ctx, propertyData, imageUrls);
 
+    // ═══ إرسال للـ Worker (اختياري — للتسجيل) ═══
     try {
-      const res = await fetch(WORKER_URL, {
+      await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          source: 'form-complete',
+          type: selectedType,
+          data: propertyData,
+          imageUrls: imageUrls
+        })
       });
-
-      const result = await res.json();
-
-      // ✅ الـ Worker يرجّع waMessage المؤهلة كاملة
-      const waMessage = result.waMessage || result.response || 'تم استلام بياناتك.';
-
-      showSuccessModal(waMessage);
-      localStorage.removeItem(DRAFT_KEY);
-
     } catch (err) {
-      console.error('[Form] Error:', err);
-      alert('حصل عطل مؤقت، حاول تاني أو كلمنا على واتساب مباشرة.');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
+      console.warn('[Form] Worker log failed:', err);
+      // نكمل على أي حال — الرسالة جاهزة
     }
+
+    // ═══ إظهار Modal + فتح واتساب بالرسالة الكاملة ═══
+    showSuccessModal(waMessage);
+    localStorage.removeItem(DRAFT_KEY);
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> إرسال للواتساب مباشرة';
   });
 }
 
@@ -1114,7 +1199,6 @@ function init() {
 
   updateSelectedButtons();
   syncPropertyTypeUI();
-
   setupSubmitHandler();
 
   document.querySelectorAll('.clean-input').forEach(input => {
@@ -1124,9 +1208,9 @@ function init() {
 }
 
 // ═══ GLOBAL EXPOSE ═══
-window.nextStep            = nextStep;
-window.prevStep            = prevStep;
-window.removeImg           = removeImg;
+window.nextStep              = nextStep;
+window.prevStep              = prevStep;
+window.removeImg             = removeImg;
 window.openWhatsAppFromModal = openWhatsAppFromModal;
 window.closeSuccessAndReset  = closeSuccessAndReset;
 
