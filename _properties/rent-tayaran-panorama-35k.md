@@ -18,37 +18,6 @@ meta_title: "شقة فندقية بانوراما للإيجار في شارع �
 meta_description: "شقة فندقية فاخرة للإيجار بشارع الطيران الرئيسي بمدينة نصر. 3 غرف (واحدة ماستر)، ريسبشن 4 قطع، فيو بانوراما غير مجروح. إقامة فندقية راقية بجوار فندق سونستا."
 ---
 
-<!-- 1. كود الـ Schema التقني (محسن لمحركات البحث - فئة الإيجار) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع الطيران الرئيسي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "35000",
-    "priceCurrency": "EGP",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "referenceQuantity": {
-        "@type": "QuantitativeValue",
-        "value": "1",
-        "unitCode": "MON"
-      }
-    }
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

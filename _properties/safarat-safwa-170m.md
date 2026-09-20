@@ -18,31 +18,6 @@ meta_title: "شقة 170م للبيع في حي السفارات مدينة نص�
 meta_description: "شقة 170م للبيع في حي السفارات (برج الصفوة) مدينة نصر. 3 غرف، 3 حمام، ريسبشن مستويين فخم، بلكونة بحري بتهوية ممتازة. حصة في الأرض وتشطيب لوكس."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع والمواصفات في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع أحباب الرسول - برج الصفوة",
-    "addressLocality": "حي السفارات",
-    "addressRegion": "مدينة نصر",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

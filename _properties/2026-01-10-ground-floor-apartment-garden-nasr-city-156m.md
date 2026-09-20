@@ -18,31 +18,6 @@ meta_title: "شقة أرضي بحديقة للبيع في المربع الذه�
 meta_description: "شقة أرضي 156م صافي بحديقة 120م للبيع في المربع الذهبي بمدينة نصر. تشطيب حديث، حصة في الأرض، خلف مطعم جاد عباس العقاد. موقع نادر وراقي."
 ---
 
-<!-- 1. كود الـ Schema التقني لظهور السعر والمساحة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع نبيل خليل - المربع الذهبي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

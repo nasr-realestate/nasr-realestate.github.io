@@ -18,31 +18,6 @@ meta_title: "شقة للبيع في عمارات التعاونيات حسن ا�
 meta_description: "شقة 2 غرفة وصالة للبيع في عمارات التعاونيات آخر حسن المأمون بمدينة نصر. موقع حيوي، سعر ممتاز للشباب 1,650,000 ج.م، شاملة خط أرضي وإنترنت."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "1650000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات التعاونيات - حسن المأمون",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -18,30 +18,6 @@ meta_title: "شقة 180م الترا سوبر لوكس للبيع في المن�
 meta_description: "شقة 180م للبيع في المنطقة العاشرة مدينة نصر. تشطيب فاخر، حصة بالأرض والجراج، استلام فوري كاش. موقع استراتيجي قرب محور شينزو آبي."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3700000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "المنطقة العاشرة - محور شينزو آبي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

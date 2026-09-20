@@ -18,31 +18,6 @@ meta_title: "بنتهاوس 218م للبيع في مدينة السلام | في
 meta_description: "شقة 218م (بنتهاوس) للبيع في مدينة السلام ناصية شارع السادات. فيو مفتوح على المطار، مصعد، عداد كهرباء، مرخصة. سعر لقطة لسرعة البيع."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والفيو في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "1100000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "ناصية شارع السادات ونور محمود",
-    "addressLocality": "مدينة السلام",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

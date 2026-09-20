@@ -17,32 +17,6 @@ meta_title: "محل للايجار بشارع النزهة 190م | ميدان ا
 meta_description: "محل تجاري للإيجار بشارع النزهة قرب دار الدفاع الجوي. مساحة 190م (110م أرضي + 80م علوي بسلم داخلي). يصلح لكافة الأنشطة الكبرى، جيم، مطعم، أو بلايستيشن. الإيجار 60 ألف."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "600000",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع النزهة - ميدان الساعة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

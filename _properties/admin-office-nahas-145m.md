@@ -18,31 +18,6 @@ meta_title: "مقر إداري 145م للبيع في عمارات عثمان م�
 meta_description: "مقر إداري 145م للبيع في شارع مصطفى النحاس الرئيسي (عمارات عثمان). واجهة بحرية، 3 غرف، ريسبشن واسع. موقع استراتيجي للعيادات والشركات بقلب مدينة نصر."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور المقر كفرصة إدارية/طبية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات عثمان - شارع مصطفى النحاس",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -18,31 +18,6 @@ meta_title: "شقة 4 غرف للبيع في رابعة الاستثماري ع�
 meta_description: "شقة 160م للبيع في عمارات رابعة الاستثماري مدينة نصر. تقسيم نادر 4 غرف نوم، ريسبشن واسع، بلكونات متعددة. موقع استراتيجي قرب عباس العقاد وسعر لقطة."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات رابعة الاستثماري - متفرع من عباس العقاد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -18,31 +18,6 @@ meta_title: "شقة 260م للبيع في شارع المقريفي مدينة �
 meta_description: "شقة 260م الترا سوبر لوكس للبيع في شارع المقريفي الرئيسي مدينة نصر. 3 غرف، ليفينج، ماستر بدريسنج، شاملة التكييفات والمطبخ. مسجلة شهر عقاري وحصة بالأرض."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمساحة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع د. محمد المقريفي - المنطقة السادسة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

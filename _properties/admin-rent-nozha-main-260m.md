@@ -17,29 +17,6 @@ meta_title: "مقر إداري 260م للإيجار في شارع النزهة �
 meta_description: "للإيجار الإداري للشركات: مقر فخم 260م واجهة على شارع النزهة الرئيسي بمدينة نصر. 4 غرف، تكييفات، مطبخ، باركينج خاص بالعقد. تشطيب سوبر لوكس."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع النزهة الرئيسي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "70000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

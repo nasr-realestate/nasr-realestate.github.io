@@ -18,31 +18,6 @@ meta_title: "محل تجاري للبيع في عباس العقاد | عائد 
 meta_description: "فرصة استثمارية: محل 212م للبيع ثاني نمرة من عباس العقاد. مؤجر لبراند معروف بعائد 160 ألف ج.م شهرياً، واجهة 12 متر، عقد 6 سنوات. متاح تسهيلات في السداد."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كفرصة استثمارية بعائد مادي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "30000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "ثاني نمرة من شارع عباس العقاد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

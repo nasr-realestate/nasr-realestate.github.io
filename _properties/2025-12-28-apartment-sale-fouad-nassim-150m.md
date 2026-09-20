@@ -18,31 +18,6 @@ meta_title: "شقة 150م للبيع خلف فندق سونستا مدينة ن�
 meta_description: "شقة 150م للبيع في شارع أحمد فؤاد نسيم خلف فندق سونستا. فيو مفتوح أمام مدرسة طيبة، 3 بلكونات، دور ثالث، حصة في الأرض. موقع راقٍ وهادئ جداً."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع المتميز في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع أحمد فؤاد نسيم - خلف سونستا",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

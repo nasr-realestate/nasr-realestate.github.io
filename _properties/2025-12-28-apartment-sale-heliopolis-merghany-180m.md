@@ -18,31 +18,6 @@ meta_title: "شقة 180م للبيع في الميرغني مصر الجديدة
 meta_description: "شقة 180م (178م صافي) للبيع خلف ماكدونالدز الميرغني بمصر الجديدة. تشطيب باركيه زان، 3 غرف كبار، عقد أخضر مسجل، حصة في الأرض. سعر لقطة لسرعة البيع."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع العريق في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4750000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع البادية - خلف الميرغني",
-    "addressLocality": "مصر الجديدة",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

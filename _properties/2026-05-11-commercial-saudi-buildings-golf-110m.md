@@ -17,31 +17,6 @@ meta_title: "مقر تجاري 110م للبيع بعمارات السعودية 
 meta_description: "مقر تجاري للبيع 110م صافي بعمارات السعودية أرض الجولف أمام دار البنك الأهلي. ريسبشن 17 متر بدون أعمدة، يصلح لكافة الأنشطة التجارية والإدارية. حصة بالأرض."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "description": "السعر يحدد بعد المعاينة",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات السعودية - متفرع من شارع النزهة",
-    "addressLocality": "أرض الجولف",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

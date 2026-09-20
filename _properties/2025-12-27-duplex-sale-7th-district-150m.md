@@ -18,31 +18,6 @@ meta_title: "دوبلكس 150م للبيع في الحي السابع مدينة
 meta_description: "دوبلكس فاخر 150م للبيع في الحي السابع مدينة نصر شارع ابن قتيبة. مسجلة شهر عقاري، حصة في الأرض، مصعد جديد، واجهة على الشارع. السعر 3.8 مليون ج.م."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والحالة القانونية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3800000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع ابن قتيبة - الحي السابع",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

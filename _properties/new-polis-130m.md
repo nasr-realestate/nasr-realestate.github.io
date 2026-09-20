@@ -18,31 +18,6 @@ meta_title: "شقة 130م للبيع في كمبوند نيوبوليس وادي
 meta_description: "شقة 130م للبيع في كمبوند نيوبوليس (New Polis) بجوار مدينتي. مؤسسة كهرباء وسباكة ومحارة وألوميتال، 2 غرفة، جراج خاص. استثمار مضمون في مستقبل سيتي."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الاستراتيجي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "كمبوند نيوبوليس - وادي دجلة",
-    "addressLocality": "مستقبل سيتي / بجوار مدينتي",
-    "addressRegion": "القاهرة الجديدة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

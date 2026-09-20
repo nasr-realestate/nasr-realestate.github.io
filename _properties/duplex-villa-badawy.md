@@ -18,31 +18,6 @@ meta_title: "فيلا دوبلكس بحديقة للبيع أو الإيجار �
 meta_description: "فيلا دوبلكس 170م بحديقة 180م أمام نادي الشمس. موقع تجاري وسكني فخم بجوار كونكورد السلام. تصلح عيادة، مقر شركة، أو سكن راقٍ. متاح تمويل عقاري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والفرصة التجارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "8500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الحميد بدوي - أمام بوابة 1 نادي الشمس",
-    "addressLocality": "مصر الجديدة / مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

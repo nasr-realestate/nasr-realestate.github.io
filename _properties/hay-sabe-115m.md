@@ -18,31 +18,6 @@ meta_title: "شقة 115م للبيع في الحي السابع مدينة نص�
 meta_description: "شقة 115م الترا مودرن للبيع في الحي السابع مدينة نصر. تشطيب حديث بالكامل 2023، ريسبشن 3 قطع، عمارة عائلية راقية، حصة في الأرض والروف."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات الحديثة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3250000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "الحي السابع - مدينة نصر",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -17,31 +17,6 @@ meta_title: "شقة 150م للبيع خلف مصطفى السلاب – مكرم
 meta_description: "شقة تمليك 150م للبيع خلف مصطفى السلاب من مكرم عبيد، 3 غرف، 2 حمام، أسانسير، غاز طبيعي، حصة في الأرض، سعر 4 مليون قابل للتفاوض."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع صقلية – خلف مصطفى السلاب",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

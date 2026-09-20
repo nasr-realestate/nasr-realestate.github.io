@@ -17,31 +17,6 @@ meta_title: "شقة 177م صافي 3 غرف للبيع في آخر مكرم عب
 meta_description: "شقة 177م صافي للبيع في آخر شارع مكرم عبيد بعد كلية الألسن. 3 غرف نوم، 2 حمام، الدور التاسع، عمارة 10 أدوار، عقد أخضر مسجل، ماتور خاص، الشقة المقابلة غير مسكونة. مطلوب 6 مليون قابل للتفاوض."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "آخر شارع مكرم عبيد - بعد كلية الألسن",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

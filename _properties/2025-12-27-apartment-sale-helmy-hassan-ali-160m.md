@@ -17,30 +17,6 @@ meta_title: "شقة 160م للبيع في شارع حلمي حسن علي مدي
 meta_description: "شقة 160م صافي للبيع في شارع حلمي حسن علي موازي لمصطفى النحاس. مسجلة، حصة في الأرض، خيارات بالفرش أو بدونه. موقع استراتيجي قرب السراج مول."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع حلمي حسن علي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

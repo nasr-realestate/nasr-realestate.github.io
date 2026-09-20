@@ -18,31 +18,6 @@ meta_title: "شقة أرضي مرخصة إداري للبيع خلف السرا�
 meta_description: "شقة بالدور الأرضي للبيع بشارع شريف سامي الحي الثامن خلف السراج مول ومدرسة الصديق. بترخيص إداري رسمي. تصلح مقر شركة، عيادة طبية، أو سكن. مطلوب 4.5 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والترخيص في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع شريف سامي - الحي الثامن",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

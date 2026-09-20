@@ -18,32 +18,6 @@ meta_title: "معرض تجاري 600م للبيع في المنطقة الساد
 meta_description: "معرض تجاري (Showroom) مساحة 600م للبيع في المنطقة السادسة متفرع من أحمد فخري. أرضي وميزانين، ركن لـ 6 سيارات، مسجل شهر عقاري. يصلح لجميع الأنشطة التجارية."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كفرصة تجارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "0",
-    "availability": "https://schema.org/InStock",
-    "description": "السعر متاح عند التواصل المباشر"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "المنطقة السادسة - خلف حديقة الطفل",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

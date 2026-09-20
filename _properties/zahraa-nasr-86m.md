@@ -18,31 +18,6 @@ meta_title: "شقة 86م للبيع في زهراء مدينة نصر | فيو �
 meta_description: "شقة 86م للبيع في زهراء مدينة نصر الدور الثالث. فيو مفتوح غير مجروحة، تقسيم 2 غرفة وصالة. موقع حيوي وسعر استثماري ممتاز 1,650,000 ج.م كاش."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "1650000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "زهراء مدينة نصر",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

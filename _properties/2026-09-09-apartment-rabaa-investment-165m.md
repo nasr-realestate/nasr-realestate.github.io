@@ -17,31 +17,6 @@ meta_title: "شقة 165م للبيع رابعة الاستثماري مدينة 
 meta_description: "شقة 165م للبيع بعمارات رابعة الاستثماري مدينة نصر. 3 غرف، 2 حمام، ريسبشن 3 قطع، و3 بلكونات بفيو دار الدفاع وأول عباس العقاد. مدخل رخام و2 أسانسير. السعر 5 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات رابعة الاستثماري",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

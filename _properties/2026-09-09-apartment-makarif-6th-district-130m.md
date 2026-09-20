@@ -17,31 +17,6 @@ meta_title: "شقة 130م للبيع بالمنطقة السادسة مدينة 
 meta_description: "شقة 130م للبيع في المنطقة السادسة مدينة نصر، متفرع من محمد المقريف وقرب حديقة الطفل. واجهة بحري، الدور الثاني، حصة كبيرة بالأرض (عمارة 3 أدوار). السعر 4.2 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4200000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "متفرع من محمد المقريف",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

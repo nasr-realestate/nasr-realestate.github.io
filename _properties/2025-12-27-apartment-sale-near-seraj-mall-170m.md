@@ -18,31 +18,6 @@ meta_title: "شقة 170م للبيع بجوار السراج مول مدينة �
 meta_description: "شقة 170م للبيع بجوار السراج مول مدينة نصر. 3 غرف، ريسبشن 3 قطع، حصة في الأرض، فيو بحري وقبلي، عمارة 2 أسانسير. استلام فوري بسعر لقطة 4.2 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الاستراتيجي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4200000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "بجوار السراج مول",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -17,23 +17,6 @@ meta_title: "فيلا دوبلكس 285م للبيع في حي الأندلس ا�
 meta_description: "دوبلكس فاخر 285م سوبر لوكس للبيع في الأندلس 1 التجمع الخامس. حديقة 65م، مدخل مستقل، تشطيب رخام. موقع استراتيجي أمام ماونتن فيو."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "حي الأندلس 1",
-    "addressLocality": "التجمع الخامس",
-    "addressRegion": "القاهرة الجديدة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

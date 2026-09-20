@@ -18,31 +18,6 @@ meta_title: "شقة 197م للبيع في عمارات الحرس الجمهور
 meta_description: "شقة 197م للبيع في عمارات الحرس الجمهوري بمدينة نصر. تقاطع عباس العقاد مع طريق النصر، حصة في الأرض والجراج، نصف تشطيب، أمان تام وموقع استراتيجي."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الاستراتيجي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات الحرس الجمهوري - تقاطع عباس العقاد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

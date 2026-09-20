@@ -18,31 +18,6 @@ meta_title: "شقة بحديقة خاصة ومدخل مستقل للبيع في 
 meta_description: "شقة 155م بحديقة 40م ومدخل خاص للبيع في المنطقة التاسعة شارع الطوخي. 3 غرف، 2 حمام، مسجلة شهر عقاري، تصلح سكني أو مقر إداري. استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والحديقة الخاصة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع الطوخي - المنطقة التاسعة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

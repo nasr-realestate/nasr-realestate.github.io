@@ -17,32 +17,6 @@ meta_title: "محل للايجار 67م في المربع الذهبي مدين�
 meta_description: "محل تجاري 67م للإيجار موازي لمكرم عبيد. تشطيب فاخر أرضيات رخام وواجهة سيكوريت. عداد تجاري وحمام. يصلح لكافة الأنشطة الراقية. الإيجار 16 ألف."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "16000",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري - شهرين تأمين"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "موازي لشارع مكرم عبيد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

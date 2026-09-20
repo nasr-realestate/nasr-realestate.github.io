@@ -18,30 +18,6 @@ meta_description: "فيلا نموذج H بالرحاب للبيع عند بوا
 ---
 
 <!-- Schema.org RealEstateListing -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "SingleFamilyResidence",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "25000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "مجموعة 13 - بوابة 9",
-    "addressLocality": "مدينة الرحاب",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- Hero Image -->

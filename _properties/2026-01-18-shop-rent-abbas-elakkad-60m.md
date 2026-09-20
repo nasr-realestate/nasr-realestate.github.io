@@ -17,32 +17,6 @@ meta_title: "محل للايجار 60م في عباس العقاد شارع مح
 meta_description: "محل 60م للإيجار في المربع الذهبي مدينة نصر، متفرع من أول عباس العقاد. تشطيب كامل، به حمام. موقع مثالي لأنشطة كماليات السيارات وخدماتها. الإيجار 12 ألف."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "12000",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع محمد حسن الجمل",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

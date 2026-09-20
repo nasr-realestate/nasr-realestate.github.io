@@ -18,31 +18,6 @@ meta_title: "شقة 250م للبيع في عبد الرزاق السنهوري �
 meta_description: "شقة 250م للبيع في شارع عبد الرزاق السنهوري (المنطقة الأولى). مبنى حديث فخم، 3 غرف ماستر، 2 باكية جراج، مسجلة شهر عقاري. عنوان النخبة في مدينة نصر."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات الفاخرة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "12000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الرزاق السنهوري - بجوار بنك مصر",
-    "addressLocality": "المنطقة الأولى - مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

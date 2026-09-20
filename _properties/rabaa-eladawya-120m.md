@@ -18,31 +18,6 @@ meta_title: "شقة 120م للبيع في رابعة العدوية شارع ا�
 meta_description: "شقة 120م للبيع في قلب رابعة العدوية مدينة نصر. فيو مفتوح على شارع النصر وحديقة، دور ثاني، تصلح مكتب أو عيادة بجوار نادي الزهور ومستشفى تبارك."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الاستراتيجي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "بجوار نادي الزهور - رابعة العدوية",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

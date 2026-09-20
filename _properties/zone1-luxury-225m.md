@@ -18,31 +18,6 @@ meta_title: "شقة 225م تشطيب فاخر للبيع في المنطقة ا�
 meta_description: "شقة 225م الترا سوبر لوكس للبيع في المنطقة الأولى بمدينة نصر. تشطيب أرو مسمار، 4 غرف، شامل الجراج والتكييفات. عمارة مبنية بكود الزلازل بموقع راقٍ."
 ---
 
-<!-- 1. كود الـ Schema التقني: لإظهار السعر والمواصفات الفاخرة في نتائج جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "7500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع زهير صبري - المنطقة الأولى",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

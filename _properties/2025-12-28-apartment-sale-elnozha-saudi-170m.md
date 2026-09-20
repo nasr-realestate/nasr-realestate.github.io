@@ -18,31 +18,6 @@ meta_title: "شقة 170م للبيع في شارع النزهة مدينة نص�
 meta_description: "شقة 170م للبيع في شارع النزهة الرئيسي أمام الرقابة الإدارية. واجهة بحري صريحة، فيو مفتوح، تشطيب راقٍ. تصلح سكن فاخر أو مقر إداري لشركة."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع المرموق في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع النزهة - أمام الرقابة الإدارية",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

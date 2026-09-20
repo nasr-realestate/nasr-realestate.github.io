@@ -18,31 +18,6 @@ meta_title: "شقة مفروشة للإيجار في شارع البطراوي �
 meta_description: "شقة مفروشة فاخرة للإيجار في شارع البطراوي خطوات من جنينة مول وعباس العقاد. 3 غرف، 2 حمام، مكيفة بالكامل، فيو بحري، عمارة راقية بـ 2 أسانسير."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والجاهزية في نتائج بحث جوجل (فئة الإيجار) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "نهاية شارع البطراوي - بجوار جنينة مول",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "30000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري مفروش"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

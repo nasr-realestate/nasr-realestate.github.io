@@ -18,31 +18,6 @@ meta_title: "شقة 130م مفروشة للبيع في زهراء مدينة ن�
 meta_description: "فرصة استثمارية: شقة 130م للبيع في زهراء مدينة نصر بالفرش والأجهزة. مؤجرة حالياً بـ 12 ألف ج.م شهرياً، ناصية مميزة، تشطيب سوبر لوكس، 2 أسانسير."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والفرصة الاستثمارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "1900000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "ناصية شارع الوفاء - زهراء مدينة نصر",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

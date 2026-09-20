@@ -18,31 +18,6 @@ meta_title: "شقة 240م تشطيب فاخر للبيع في شارع علي ع
 meta_description: "شقة 240م الترا سوبر لوكس للبيع في شارع الفريق علي عامر متفرع من مكرم عبيد. تشطيب رخام كرارة وباركي مسمار، 3 حمام، مسجلة شهر عقاري، حصة في الأرض."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات الكلاسيكية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "7000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع الفريق علي عامر - متفرع من مكرم عبيد",
-    "addressLocality": "المنطقة السادسة - مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

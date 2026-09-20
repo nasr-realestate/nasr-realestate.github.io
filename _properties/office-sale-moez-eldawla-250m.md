@@ -18,31 +18,6 @@ meta_title: "مكتب إداري 250م للبيع في معز الدولة مك�
 meta_description: "مكتب إداري فخم 250م للبيع في شارع معز الدولة متفرع من مكرم عبيد. دور أول، تشطيب سوبر لوكس، 3 غرف وريسبشن ضخم. موقع استراتيجي للشركات خلف حديقة الطفل."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور المكتب كفرصة إدارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع معز الدولة - متفرع من مكرم عبيد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

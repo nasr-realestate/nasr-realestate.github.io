@@ -17,31 +17,6 @@ meta_title: "شقة 220م للبيع في عباس العقاد الرئيسي |
 meta_description: "شقة 220م للبيع بعباس العقاد مباشرة فوق بنك الإمارات دبي. تشطيب مهندس ديكور، مسجلة شهر عقاري، تصلح سكني وإداري. فيو مفتوح، حصة بالأرض. استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لتأكيد تاريخ العرض والسعر لمحركات البحث -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "8200000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عباس العقاد الرئيسي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

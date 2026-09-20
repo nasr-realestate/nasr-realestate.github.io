@@ -18,31 +18,6 @@ meta_title: "شقة 190م للبيع في أبراج جرين هيلز مدين�
 meta_description: "شقة 190م نصف تشطيب للبيع في أبراج جرين هيلز بطريق الأوتوستراد. موقع هادئ صف ثاني، ريسبشن واسع، 2 أسانسير، متاح جراج بالتقسيط. استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع والمواصفات في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4100000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "طريق الأوتوستراد - أبراج جرين هيلز",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

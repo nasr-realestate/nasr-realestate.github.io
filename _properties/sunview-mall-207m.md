@@ -18,31 +18,6 @@ meta_title: "شقة 207م للبيع في مول صن فيو مدينة نصر |
 meta_description: "شقة واسعة 207م للبيع في مول صن فيو (شارع مصر للتعمير) بمدينة نصر. 3 غرف، ريسبشن واسع، تشطيب راقٍ، خدمات أمنية ومداخل فندقية. استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع مصر للتعمير - مول صن فيو",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

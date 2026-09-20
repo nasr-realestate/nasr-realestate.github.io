@@ -17,31 +17,6 @@ meta_title: "شقة 175م للبيع في شارع إبراهيم نواره م�
 meta_description: "شقة 175م للبيع في شارع إبراهيم نواره خلف أحمد فخري مدينة نصر. 3 غرف، 2 حمام، مسجلة شهر عقاري، حصة في الجراج، دور 3 بأسانسير على الشارع الرئيسي. سعر نهائي."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع إبراهيم نواره - خلف أحمد فخري",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

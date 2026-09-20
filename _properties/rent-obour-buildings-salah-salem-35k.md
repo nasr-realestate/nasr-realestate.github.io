@@ -18,31 +18,6 @@ meta_title: "شقة للإيجار في عمارات العبور صلاح سا�
 meta_description: "شقة فاخرة للإيجار في عمارات العبور (عمارة 2) بمدينة نصر. فيو مباشر على صلاح سالم، تشطيب سوبر لوكس جديد بالكامل (أول سكن)، الدور الرابع، استلام فوري."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كنتيجة بحث غنية (إيجار سكني فاخر) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "عمارات العبور - عمارة رقم 2",
-    "addressLocality": "صلاح سالم / مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "35000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري نهائي"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

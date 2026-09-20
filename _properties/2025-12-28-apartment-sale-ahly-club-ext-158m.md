@@ -18,31 +18,6 @@ meta_title: "شقة 158م للبيع في امتداد النادي الأهلي
 meta_description: "شقة 158م للبيع في امتداد النادي الأهلي بمدينة نصر. تشطيب سوبر لوكس مودرن، مطبخ أمريكي، 3 غرف، موقع استراتيجي أمام شارع المدارس والجامعة الصينية."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الاستراتيجي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4800000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "امتداد النادي الأهلي - أمام شارع المدارس",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

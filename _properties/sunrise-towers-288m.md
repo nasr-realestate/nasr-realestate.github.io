@@ -18,31 +18,6 @@ meta_title: "شقة 288م للبيع في أبراج صن رايز حي السف
 meta_description: "شقة 288م فاخرة للبيع في أبراج صن رايز حي السفارات. تشطيب مودرن، ريسبشن 4 قطع، فيو مفتوح بحري 100%، شامل الجراج وحصة الأرض. أمن وحراسة 24 ساعة."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والتقييم الفاخر في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "7000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "أبراج صن رايز - حي السفارات",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

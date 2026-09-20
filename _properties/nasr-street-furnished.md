@@ -18,31 +18,6 @@ meta_title: "شقة مفروشة فاخرة للبيع شارع النصر مد�
 meta_description: "شقة مفروشة فاخرة للبيع في شارع النصر الرئيسي بمدينة نصر. أمام المخابرات العامة، تشطيب فندقي، 2 غرفة، 2 حمام، 3 مصاعد. موقع استراتيجي بجوار طيبة مول."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع والمواصفات الفندقية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4200000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع النصر الرئيسي - أمام المخابرات العامة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

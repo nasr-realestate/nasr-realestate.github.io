@@ -17,32 +17,6 @@ meta_title: "شقق للايجار في كمبوند لافيدا هليوبول
 meta_description: "فرصة للإيجار في كمبوند لافيدا هليوبوليس الجديدة. متاح شقتين (135م فيو حمام سباحة - 128م فيو البارون). تشطيب سوبر لوكس، جراج خاص. الإيجار 9000 ج."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "9000",
-    "availability": "https://schema.org/InStock",
-    "description": "سعر الإيجار الشهري للوحدة"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "كمبوند لافيدا",
-    "addressLocality": "هليوبوليس الجديدة",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

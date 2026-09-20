@@ -19,30 +19,6 @@ meta_title: "شقة 150م قانون جديد للإيجار في شارع ال�
 meta_description: "شقة 150م قانون جديد للإيجار في ناصية عبد الحميد لطفي وتقاطع الطيران بمدينة نصر. 3 غرف نوم، ريسبشن بحري، موقع استراتيجي. الإيجار 13,000 ج.م شهرياً."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "13000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الحميد لطفي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
     <div class="property-main-hero">
         <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}" alt="{{ page.title }}" title="{{ page.title }}">

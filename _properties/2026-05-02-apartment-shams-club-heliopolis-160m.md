@@ -17,31 +17,6 @@ meta_title: "شقة 160م للبيع أمام نادي الشمس مصر الج�
 meta_description: "شقة 160م للبيع في مصر الجديدة أمام نادي الشمس مباشرة على شارع رئيسي. الدور الأول علوي، 3 غرف، 2 حمام، عقد مسجل. السعر 6.5 مليون قابل للتفاوض."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "أمام نادي الشمس",
-    "addressLocality": "مصر الجديدة",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

@@ -18,31 +18,6 @@ meta_title: "شقة 175م للبيع في الحي الثامن مدينة نص�
 meta_description: "شقة 175م سوبر لوكس للبيع في الحي الثامن مدينة نصر. 3 غرف، ليفينج مستقل، ريسبشن 3 قطع. موقع استراتيجي بين حسن المأمون ومصطفى النحاس."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع الجغرافي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "الحي الثامن - المنطقة السادسة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -18,31 +18,6 @@ meta_title: "شقة 250م للبيع في شارع مكرم عبيد الرئي�
 meta_description: "شقة 250م سوبر لوكس للبيع في شارع مكرم عبيد الرئيسي بمدينة نصر. مسجلة شهر عقاري، حصة في الأرض، دور سادس، 2 بلكونة. موقع استراتيجي للسكن أو الشركات الكبرى."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والموقع والمكانة التجارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "8000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع مكرم عبيد الرئيسي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

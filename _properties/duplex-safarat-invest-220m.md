@@ -18,31 +18,6 @@ meta_title: "دوبلكس 220م للبيع في حي السفارات مدينة
 meta_description: "دوبلكس 220م سوبر لوكس للبيع في حي السفارات مدينة نصر. عائد استثماري فوري (مؤجر)، فيو بانوراما غير مجروح، مسجل صحة توقيع. فرصة للمستثمرين."
 ---
 
-<!-- 1. كود الـ Schema التقني: لإظهار السعر والتقييم الاستثماري في جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4850000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "حي السفارات - الحي السابع",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -18,31 +18,6 @@ meta_title: "شقة 165م للإيجار في شيراتون النزهة | سك
 meta_description: "شقة واسعة 165م للإيجار في مساكن شيراتون النزهة قرب فلوريدا مول. 3 غرف كبار، ريسبشن واسع، تشطيب سوبر لوكس، شاملة جراج. تصلح سكني أو مقر شركة."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كنتيجة بحث غنية (إيجار سكني/إداري) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "بالقرب من فلوريدا مول - شيراتون النزهة",
-    "addressLocality": "النزهة / شيراتون",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "25000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري قابل للتفاوض"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

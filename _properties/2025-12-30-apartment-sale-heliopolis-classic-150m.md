@@ -18,31 +18,6 @@ meta_title: "شقة 150م للبيع في مصر الجديدة | طراز كل�
 meta_description: "شقة 150م للبيع في مصر الجديدة بمواصفات الزمن الجميل. أسقف عالية، ريسبشن ضخم، بلكونة على شارع مشجر. عمارة 1971 متينة جداً. سعر 4.5 مليون قابل للتفاوض."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والطابع المعماري في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "مصر الجديدة",
-    "addressLocality": "القاهرة",
-    "addressRegion": "مصر الجديدة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

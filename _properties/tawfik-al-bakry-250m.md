@@ -18,31 +18,6 @@ meta_title: "شقة 250م ناصية بحري للبيع في شارع توفي�
 meta_description: "شقة 250م ناصية بحري للبيع في شارع توفيق البكري خلف مستشفى حسبو. مسجلة شهر عقاري، حصة في الأرض، ليفينج روم 30م، وفراندة كبيرة. موقع راقٍ وهادئ."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات والمساحة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع توفيق البكري",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

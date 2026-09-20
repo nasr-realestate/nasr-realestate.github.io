@@ -18,32 +18,6 @@ meta_title: "صيدلية للبيع 32م في الحي العاشر مدينة 
 meta_description: "صيدلية للبيع 32م في مدينة نصر صقر قريش. موقع متميز أمام مركز طبي وعيادات بمسجد، منطقة كثافة سكانية عالية جداً. السعر 1.85 مليون ج.م كاش."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور الصيدلية كفرصة تجارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "1850000",
-    "availability": "https://schema.org/InStock",
-    "description": "صيدلية للبيع بتراخيص تجارية"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "صقر قريش - الحي العاشر",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

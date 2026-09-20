@@ -17,31 +17,6 @@ meta_title: "شقة 215م للبيع بفيو الحديقة الدولية مد
 meta_description: "شقة VIP مساحة 215م (206م صافي) للبيع بشارع إبراهيم بن المهدي. تراس 75م بفيو مباشر على الحديقة الدولية. 3 غرف، 3 حمامات، أسانسير خاص بالشقة. السعر 5.75 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5750000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع إبراهيم بن المهدي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

@@ -17,23 +17,6 @@ meta_title: "شقة 135م للبيع في رابعة العدوية طريق ا�
 meta_description: "شقة 135م الترا سوبر لوكس للبيع في ميدان رابعة العدوية بمدينة نصر. تشطيب حديث، شامل المطبخ و3 تكييفات."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "ميدان رابعة العدوية",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

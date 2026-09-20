@@ -17,30 +17,6 @@ meta_title: "شقة للبيع في مربع نور الدين بهجت المن
 meta_description: "شقة فاخرة للبيع في مربع نور الدين بهجت بالمنطقة الأولى بمدينة نصر. تشطيب هاي لوكس جاهز للسكن الفوري، موقع استراتيجي بالقرب من شارع الطيران ومحاور مدينة نصر."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "مربع نور الدين بهجت - المنطقة الأولى",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

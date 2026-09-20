@@ -18,32 +18,6 @@ meta_title: "بيزمنت تجاري 340م للبيع في البنفسج 2 ال
 meta_description: "بيزمنت تجاري 340م للبيع في حي البنفسج 2 التجمع الأول. يصلح معرض سيارات أو مقر شركة، مدخل خاص، حديقة 140م، مصالحة نموذج 10. استثمار بعائد 50 ألف شهرياً."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كفرصة استثمارية وتجارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6750000",
-    "availability": "https://schema.org/InStock",
-    "description": "يصلح كمعرض أو مقر إداري"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "حي البنفسج 2 - التجمع الأول",
-    "addressLocality": "القاهرة الجديدة",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

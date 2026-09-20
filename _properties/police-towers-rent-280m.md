@@ -18,31 +18,6 @@ meta_title: "شقة 280م للإيجار في حي السفارات مدينة �
 meta_description: "شقة سكنية فخمة 280م للإيجار في أبراج الشرطة بحي السفارات. 3 غرف نوم واسعة، ريسبشن ضخم، أمام مستشفى الأندلس. موقع راقٍ وهادئ للعائلات."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كعرض إيجار سكني في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "حي السفارات - أبراج الشرطة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "25000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري سكني للعائلات"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -17,31 +17,6 @@ meta_title: "شقة 200م للبيع تطل على عباس العقاد | مس�
 meta_description: "فرصة استثمارية: شقة 200م للبيع بشارع عبد الحكيم الرفاعي تطل مباشرة على عباس العقاد. مسجلة شهر عقاري، مؤجرة بـ 35 ألف جنيه شهرياً (العقد ينتهي خلال شهر)."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "7000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الحكيم الرفاعي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

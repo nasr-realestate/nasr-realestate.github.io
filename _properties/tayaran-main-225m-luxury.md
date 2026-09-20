@@ -18,31 +18,6 @@ meta_title: "شقة 225م للبيع شارع الطيران مدينة نصر |
 meta_description: "شقة 225م الترا سوبر لوكس للبيع في شارع الطيران الرئيسي مدينة نصر. مباني حديثة 2014، فيو بانوراما غير مجروح، شامل الجراج وحصة الأرض. خيارات بالفرش أو بدونه."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والمواصفات الحديثة في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "8000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع الطيران الرئيسي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

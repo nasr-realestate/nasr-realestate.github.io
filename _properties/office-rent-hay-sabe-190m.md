@@ -18,31 +18,6 @@ meta_title: "مقر إداري 190م للإيجار في شارع عبد الل�
 meta_description: "مقر إداري فخم 190م للإيجار في شارع عبد الله العربي الرئيسي بالحي السابع. 3 غرف مغلقة، ريسبشن واسع، تشطيب مكتبي جاهز، واجهة ناصية مميزة."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور المكتب كفرصة إدارية للإيجار في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الله العربي - الحي السابع",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "26000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري إداري"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

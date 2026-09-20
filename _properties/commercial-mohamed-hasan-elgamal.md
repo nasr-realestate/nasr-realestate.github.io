@@ -17,30 +17,6 @@ meta_title: "مقر إداري وتجاري للبيع في شارع محمد ح
 meta_description: "فرصة استثمارية نادرة. مقر إداري وتجاري مرخص رسمي للبيع بموقع حيوي في شارع محمد حسن الجمل المربع الذهبي بمدينة نصر. جاهز للتشغيل الفوري لجميع الأغراض."
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "6000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع محمد حسن الجمل - المربع الذهبي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">

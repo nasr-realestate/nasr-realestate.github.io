@@ -17,31 +17,6 @@ meta_title: "شقة 195م للبيع شارع عبد الحليم عبدالله
 meta_description: "شقة 195م للبيع بالدور الأول في المربع الذهبي بين عباس ومكرم (شارع عبد الحليم عبد الله). 3 غرف، ريسبشن 3 قطع، بلكونة بحري. السعر 5.5 مليون قابل للتفاوض."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع عبد الحليم عبد الله",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

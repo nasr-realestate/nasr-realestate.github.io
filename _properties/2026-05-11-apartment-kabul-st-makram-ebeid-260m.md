@@ -17,31 +17,6 @@ meta_title: "شقة 260م للبيع بشارع كابول مكرم عبيد | �
 meta_description: "شقة 260م فاخرة للبيع بمدينة نصر شارع كابول خلف السلاب. تصميم مستويين، 3 غرف وليفينج، 3 حمامات. عمارة حديثة بمدخل رخام و2 أسانسير. مسجلة بسعر 8 مليون."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "8000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع كابول - مكرم عبيد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

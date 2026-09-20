@@ -18,31 +18,6 @@ meta_title: "شقة فندقية للإيجار في دجلة لاند مارك 
 meta_description: "شقة 122م مفروشة بالكامل للإيجار في كمبوند دجلة لاند مارك مدينة نصر. 3 غرف نوم بفيو حمام سباحة، تشطيب فندقي، شامل الجراج. عرض حصري للأجانب."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كنتيجة بحث غنية (إيجار فندقي) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Accommodation",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "كمبوند دجلة لاند مارك - معمار المرشدي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "30000",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري شامل الجراج"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

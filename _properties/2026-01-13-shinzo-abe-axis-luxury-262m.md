@@ -17,30 +17,6 @@ meta_title: "شقة 262م للبيع بمحور شينزو آبي مدينة ن�
 meta_description: "شقة فخمة 262م للبيع على محور شينزو آبي الرئيسي. 4 غرف، 3 حمام، ريسبشن 3 قطع. عمارة شيك بمدخل فندقي وأمن. تصلح سكن راقي أو مقر إداري لشركة."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "محور شينزو آبي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

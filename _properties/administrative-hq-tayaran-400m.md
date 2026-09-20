@@ -18,31 +18,6 @@ meta_title: "مقر إداري 400م للبيع في شارع الطيران م�
 meta_description: "مقر إداري فخم 400م للبيع في شارع الطيران الرئيسي. مرخص إداري، تشطيب الترا سوبر لوكس، مفروش بالكامل. عمارة حديثة تضم كبرى البنوك، موقع استراتيجي."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور العقار كمقر إداري رسمي في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "35000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع الطيران - عمارة البنوك",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

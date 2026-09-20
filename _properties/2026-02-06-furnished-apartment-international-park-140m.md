@@ -18,31 +18,6 @@ meta_description: "شقة 140م للبيع بمدينة نصر بجوار الح
 ---
 
 <!-- Schema.org -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "3400000",
-    "availability": "https://schema.org/InStock",
-    "itemCondition": "https://schema.org/UsedCondition"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "بجوار الحديقة الدولية",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- Hero Image -->

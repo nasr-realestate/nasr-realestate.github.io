@@ -17,31 +17,6 @@ meta_title: "شقة 108م للبيع في كمبوند ترو جيت الواح�
 meta_description: "شقة للبيع 108م بكمبوند ترو جيت حي الواحة، امتداد حسن المأمون. نصف تشطيب، 3 غرف، 2 حمام. جراج خاص وحصة بالأرض. السعر 2.6 مليون متاح تقسيط على سنة."
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "2600000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "حي الواحة - امتداد حسن المأمون",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

@@ -18,31 +18,6 @@ meta_title: "شقة 220م بحري للبيع في شارع حلمي حسن عل
 meta_description: "شقة 220م بحري صريح للبيع في شارع حلمي حسن علي موازي لمصطفى النحاس. مساحة رحبة، 3 غرف كبار، تشطيب لوكس، حصة في الأرض. موقع هادئ وراقي بقلب مدينة نصر."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والاتجاه البحري في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5500000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع حلمي حسن علي",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

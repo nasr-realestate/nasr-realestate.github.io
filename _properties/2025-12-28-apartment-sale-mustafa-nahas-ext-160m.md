@@ -18,31 +18,6 @@ meta_title: "شقة 160م للبيع في امتداد مصطفى النحاس �
 meta_description: "شقة 160م للبيع في امتداد مصطفى النحاس (شارع السوق التجاري). 3 غرف، 2 حمام، دور تاسع، فيو مفتوح، عمارة حديثة 2005 بمداخل فندقية. سعر لقطة لسرعة البيع."
 ---
 
-<!-- 1. كود الـ Schema التقني: لظهور السعر والفرصة الاستثمارية في نتائج بحث جوجل -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "2600000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع السوق التجاري - امتداد مصطفى النحاس",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->
