@@ -1,0 +1,623 @@
+---
+layout: default
+title: معرض العقارات | سمسار طلبك
+description: تصفح جميع العقارات المعروضة من سمسار طلبك - شقق، فيلات، محلات، مكاتب
+permalink: /property-images.html
+---
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>معرض العقارات | سمسار طلبك</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0b141a;
+      color: #e9edef;
+      font-family: 'Cairo', -apple-system, sans-serif;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ═══ Header ═══ */
+    .pg-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #075e54 0%, #00a884 100%);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    .pg-back {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .pg-back:active { background: rgba(255,255,255,0.3); }
+
+    .pg-title {
+      flex: 1;
+      min-width: 0;
+    }
+    .pg-title h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .pg-title p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.85);
+      margin-top: 3px;
+    }
+
+    .pg-count {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* ═══ Search & Filters ═══ */
+    .pg-toolbar {
+      background: #111b21;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      position: sticky;
+      top: 68px;
+      z-index: 90;
+    }
+
+    .pg-search {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .pg-search input {
+      width: 100%;
+      padding: 12px 42px 12px 16px;
+      background: #1f2c34;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: #e9edef;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .pg-search input:focus {
+      border-color: #00a884;
+    }
+    .pg-search input::placeholder { color: #8696a0; }
+    .pg-search i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8696a0;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .pg-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .pg-chips::-webkit-scrollbar { display: none; }
+
+    .pg-chip {
+      padding: 8px 16px;
+      background: #1f2c34;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      color: #8696a0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .pg-chip.active {
+      background: #00a884;
+      color: #fff;
+      border-color: #00a884;
+    }
+    .pg-chip:active { transform: scale(0.96); }
+
+    /* ═══ Grid ═══ */
+    .pg-container {
+      padding: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 480px) {
+      .pg-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+
+    /* ═══ Card ═══ */
+    .pg-card {
+      background: #111b21;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      animation: cardIn 0.4s ease both;
+    }
+    .pg-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 28px rgba(0,168,132,0.25);
+      border-color: rgba(0,168,132,0.3);
+    }
+    .pg-card:active { transform: scale(0.99); }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .pg-card-img {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      background: #1f2c34;
+    }
+    .pg-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+    .pg-card:hover .pg-card-img img { transform: scale(1.05); }
+
+    .pg-card-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      backdrop-filter: blur(8px);
+      background: rgba(0,168,132,0.9);
+      color: #fff;
+    }
+    .pg-card-badge.rent {
+      background: rgba(255,193,7,0.9);
+      color: #000;
+    }
+
+    .pg-card-body {
+      padding: 14px 16px 16px;
+    }
+
+    .pg-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e9edef;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.8em;
+    }
+
+    .pg-card-location {
+      font-size: 0.82rem;
+      color: #8696a0;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .pg-card-location i {
+      color: #00a884;
+      flex-shrink: 0;
+    }
+
+    .pg-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .pg-card-price {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #25d366;
+    }
+
+    .pg-card-arrow {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(0,168,132,0.15);
+      color: #00a884;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .pg-card:hover .pg-card-arrow {
+      background: #00a884;
+      color: #fff;
+      transform: translateX(-4px);
+    }
+
+    /* ═══ Loading / Empty ═══ */
+    .pg-loading,
+    .pg-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8696a0;
+    }
+    .pg-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(0,168,132,0.2);
+      border-top-color: #00a884;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pg-empty i {
+      font-size: 3rem;
+      color: #00a884;
+      opacity: 0.4;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    /* ═══ Skeleton ═══ */
+    .pg-skel {
+      background: #111b21;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .pg-skel-img {
+      aspect-ratio: 4/3;
+      background: linear-gradient(90deg, #1f2c34 25%, #2a3942 50%, #1f2c34 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    .pg-skel-line {
+      height: 12px;
+      border-radius: 6px;
+      margin: 12px 16px;
+      background: linear-gradient(90deg, #1f2c34 25%, #2a3942 50%, #1f2c34 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    .pg-skel-line.short { width: 40%; }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ═══ Back to top ═══ */
+    .pg-top {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00a884, #25d366);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 6px 20px rgba(0,168,132,0.4);
+      transition: transform 0.2s;
+      z-index: 50;
+    }
+    .pg-top.show { display: flex; }
+    .pg-top:active { transform: scale(0.92); }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Header ═══ -->
+<header class="pg-header">
+  <button class="pg-back" onclick="goBackSmart()" aria-label="رجوع">
+    <i class="fas fa-arrow-right"></i>
+  </button>
+  <div class="pg-title">
+    <h1>🏠 معرض العقارات</h1>
+    <p>تصفح جميع العروض المتاحة</p>
+  </div>
+  <div class="pg-count" id="pgCount">...</div>
+</header>
+
+<!-- ═══ Toolbar ═══ -->
+<div class="pg-toolbar">
+  <div class="pg-search">
+    <i class="fas fa-search"></i>
+    <input type="text" id="pgSearch" placeholder="ابحث بالعنوان أو المنطقة..." autocomplete="off">
+  </div>
+  <div class="pg-chips" id="pgChips">
+    <button class="pg-chip active" data-filter="all">الكل</button>
+    <button class="pg-chip" data-filter="sale">🏠 للبيع</button>
+    <button class="pg-chip" data-filter="rent">🔑 للإيجار</button>
+    <button class="pg-chip" data-filter="apartment">🏢 شقق</button>
+    <button class="pg-chip" data-filter="villa">🏡 فيلات</button>
+    <button class="pg-chip" data-filter="shop">🏪 محلات</button>
+    <button class="pg-chip" data-filter="office">💼 مكاتب</button>
+    <button class="pg-chip" data-filter="storage">📦 مخازن</button>
+  </div>
+</div>
+
+<!-- ═══ Container ═══ -->
+<main class="pg-container">
+  <div class="pg-loading" id="pgLoading">
+    <div class="pg-spinner"></div>
+    <div>جاري تحميل العقارات...</div>
+  </div>
+
+  <div class="pg-grid" id="pgGrid" style="display:none;"></div>
+
+  <div class="pg-empty" id="pgEmpty" style="display:none;">
+    <i class="fas fa-home"></i>
+    <h2>لا توجد عقارات</h2>
+    <p id="pgEmptyMsg">لم يتم العثور على نتائج مطابقة</p>
+  </div>
+</main>
+
+<!-- ═══ Back to top ═══ -->
+<button class="pg-top" id="pgTop" onclick="scrollToTop()" aria-label="للأعلى">
+  <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
+const FALLBACK_IMG = "https://nasr-realestate.github.io/assets/img/logo.webp";
+const SITE_URL = "https://nasr-realestate.github.io";
+
+// ═══ STATE ═══
+let allProperties = [];
+let filteredProperties = [];
+let currentFilter = "all";
+let searchQuery = "";
+
+// ═══ SMART BACK ═══
+function goBackSmart() {
+  // نحاول الرجوع للصفحة السابقة
+  const referrer = document.referrer;
+  const currentHost = window.location.host;
+
+  // إذا كان هناك تاريخ تصفح وجاء من نفس الموقع → ارجع للخلف
+  if (document.referrer && referrer.includes(currentHost) && window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+
+  // وإلا → اذهب للصفحة الرئيسية
+  window.location.href = "/";
+}
+
+// ═══ LOAD DATA ═══
+async function loadProperties() {
+  try {
+    const res = await fetch(AI_FEED_URL + "?_=" + Date.now(), { cache: "no-cache" });
+    if (!res.ok) throw new Error("فشل تحميل البيانات");
+    const feed = await res.json();
+    allProperties = (feed.properties || []).filter(p => p && p.image);
+
+    if (!allProperties.length) {
+      showEmpty("لا توجد عقارات متاحة حالياً");
+      return;
+    }
+
+    document.getElementById("pgCount").textContent = allProperties.length + " عقار";
+    applyFilters();
+
+  } catch (err) {
+    console.error("[Feed Error]:", err);
+    showEmpty("تعذّر تحميل العقارات — تحقق من الاتصال");
+  }
+}
+
+// ═══ FILTERS ═══
+function applyFilters() {
+  filteredProperties = allProperties.filter(p => {
+    // فلتر النوع
+    if (currentFilter !== "all") {
+      if (currentFilter === "sale" && p.transaction !== "sale") return false;
+      if (currentFilter === "rent" && p.transaction !== "rent") return false;
+      if (["apartment","villa","shop","office","storage"].includes(currentFilter)) {
+        if (p.propertyType !== currentFilter) return false;
+      }
+    }
+
+    // فلتر البحث
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const searchable = [p.title, p.location, p.zone, p.slug].filter(Boolean).join(" ").toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+
+    return true;
+  });
+
+  renderCards();
+}
+
+// ═══ RENDER ═══
+function renderCards() {
+  const grid = document.getElementById("pgGrid");
+  const loading = document.getElementById("pgLoading");
+  const empty = document.getElementById("pgEmpty");
+
+  loading.style.display = "none";
+
+  if (!filteredProperties.length) {
+    grid.style.display = "none";
+    empty.style.display = "block";
+    document.getElementById("pgEmptyMsg").textContent =
+      searchQuery ? `لا نتائج لـ "${searchQuery}"` : "لا توجد عقارات مطابقة للفلتر";
+    return;
+  }
+
+  empty.style.display = "none";
+  grid.style.display = "grid";
+  grid.innerHTML = "";
+
+  filteredProperties.forEach((p, idx) => {
+    const card = createCard(p, idx);
+    grid.appendChild(card);
+  });
+}
+
+function createCard(p, idx) {
+  const card = document.createElement("a");
+  card.className = "pg-card";
+  card.href = p.url || `/properties/${p.slug}/`;
+  card.style.animationDelay = (idx * 0.03) + "s";
+
+  // بادج بيع/إيجار
+  const isRent = p.transaction === "rent";
+  const badgeClass = isRent ? "pg-card-badge rent" : "pg-card-badge";
+  const badgeText = isRent ? "🔑 للإيجار" : "🏠 للبيع";
+
+  // السعر
+  let priceDisplay = p.price || "";
+  if (p.priceNumeric && p.priceNumeric > 0) {
+    priceDisplay = Number(p.priceNumeric).toLocaleString("en-US") + " ج.م";
+  } else if (p.price) {
+    priceDisplay = p.price;
+  }
+
+  card.innerHTML = `
+    <div class="pg-card-img">
+      <img src="${escapeAttr(p.image)}" 
+           alt="${escapeAttr(p.title)}" 
+           loading="lazy"
+           onerror="this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';">
+      <span class="${badgeClass}">${badgeText}</span>
+    </div>
+    <div class="pg-card-body">
+      <h3 class="pg-card-title">${escapeHtml(p.title || "عقار")}</h3>
+      <p class="pg-card-location">
+        <i class="fas fa-map-marker-alt"></i>
+        ${escapeHtml(p.location || p.zone || "مدينة نصر")}
+      </p>
+      <div class="pg-card-footer">
+        <span class="pg-card-price">${escapeHtml(priceDisplay)}</span>
+        <span class="pg-card-arrow"><i class="fas fa-arrow-left"></i></span>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+function escapeHtml(str) {
+  return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function escapeAttr(str) {
+  return String(str || "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// ═══ EMPTY ═══
+function showEmpty(msg) {
+  document.getElementById("pgLoading").style.display = "none";
+  document.getElementById("pgGrid").style.display = "none";
+  document.getElementById("pgEmpty").style.display = "block";
+  if (msg) document.getElementById("pgEmptyMsg").textContent = msg;
+}
+
+// ═══ SEARCH ═══
+let searchTimeout;
+document.getElementById("pgSearch").addEventListener("input", (e) => {
+  clearTimeout(searchTimeout);
+  searchQuery = e.target.value.trim();
+  searchTimeout = setTimeout(applyFilters, 250);
+});
+
+// ═══ CHIPS ═══
+document.querySelectorAll(".pg-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".pg-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    currentFilter = chip.dataset.filter;
+    applyFilters();
+  });
+});
+
+// ═══ BACK TO TOP ═══
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+window.addEventListener("scroll", () => {
+  const btn = document.getElementById("pgTop");
+  if (window.scrollY > 500) btn.classList.add("show");
+  else btn.classList.remove("show");
+});
+
+// ═══ INIT ═══
+loadProperties();
+
+// Expose
+window.goBackSmart = goBackSmart;
+window.scrollToTop = scrollToTop;
+</script>
+</body>
+</html>
