@@ -149,6 +149,7 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   cursor: pointer;
 }
+
 .header-info { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
 
 .header-name {
@@ -777,6 +778,191 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════
+   GALLERY MODAL — معرض العقارات
+   ═══════════════════════════════════════════════ */
+.gallery-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 99980;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.gallery-overlay.show {
+  opacity: 1; pointer-events: auto;
+}
+
+.gallery-sheet {
+  width: 100%; max-width: var(--max-w);
+  background: var(--bg-app);
+  border-top-left-radius: 22px; border-top-right-radius: 22px;
+  border-top: 1px solid var(--border-glass);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column;
+  max-height: 88dvh;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(0.34,1.2,0.64,1);
+  overflow: hidden;
+}
+.gallery-overlay.show .gallery-sheet {
+  transform: translateY(0);
+}
+
+.gallery-handle {
+  width: 44px; height: 4px; border-radius: 2px;
+  background: var(--border-subtle);
+  margin: 14px auto 0;
+  flex-shrink: 0;
+}
+
+.gallery-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  direction: rtl;
+}
+.gallery-header-title {
+  font-size: 15px; font-weight: 700;
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: 8px;
+}
+.gallery-header-count {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--accent);
+  background: rgba(0,168,132,0.1);
+  padding: 2px 8px; border-radius: 10px;
+}
+.gallery-close-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: var(--border-subtle);
+  color: var(--text-secondary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  transition: background .15s;
+}
+.gallery-close-btn:hover { background: rgba(0,168,132,0.12); color: var(--accent); }
+
+.gallery-body {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 12px;
+  scrollbar-width: thin;
+}
+.gallery-body::-webkit-scrollbar { width: 4px; }
+.gallery-body::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 480px) {
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.gallery-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  transition: transform .18s ease, box-shadow .18s ease;
+  animation: cardIn .3s ease both;
+}
+.gallery-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,168,132,0.25);
+}
+.gallery-card:active { transform: scale(0.97); }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.gallery-card-img {
+  width: 100%; aspect-ratio: 4/3;
+  object-fit: cover; display: block;
+  background: var(--bg-glass-light);
+  transition: opacity .2s;
+}
+
+.gallery-card-body {
+  padding: 8px 10px 10px;
+  direction: rtl;
+}
+.gallery-card-title {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gallery-card-arrow {
+  position: absolute;
+  bottom: 38px; left: 8px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(0,168,132,0.85);
+  color: #fff; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s;
+}
+.gallery-card:hover .gallery-card-arrow { opacity: 1; }
+
+.gallery-loading {
+  text-align: center; padding: 48px 20px;
+  color: var(--text-secondary);
+}
+.gallery-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(0,168,132,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: gallerySpin .7s linear infinite;
+  margin: 0 auto 14px;
+}
+@keyframes gallerySpin { to { transform: rotate(360deg); } }
+
+.gallery-empty {
+  text-align: center; padding: 48px 20px;
+  color: var(--text-secondary); font-size: 14px;
+}
+.gallery-empty i { font-size: 2.5rem; color: var(--accent); opacity: 0.35; display: block; margin-bottom: 12px; }
+
+.gallery-skel {
+  border-radius: 14px; overflow: hidden;
+  background: var(--bg-glass); border: 1px solid var(--border-subtle);
+}
+.gallery-skel-img {
+  aspect-ratio: 4/3;
+  background: linear-gradient(90deg, var(--bg-glass) 25%, var(--bg-glass-strong) 50%, var(--bg-glass) 75%);
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s infinite;
+}
+.gallery-skel-line {
+  height: 11px; border-radius: 6px; margin: 10px 10px 6px;
+  background: linear-gradient(90deg, var(--bg-glass) 25%, var(--bg-glass-strong) 50%, var(--bg-glass) 75%);
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s infinite;
+}
+.gallery-skel-line.short { width: 60%; margin-bottom: 10px; }
+@keyframes skelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 </style>
 
 <div id="app">
@@ -823,6 +1009,10 @@ body {
     <button class="menu-glass-item" onclick="openGoogle()">
       <span class="mi-icon">🏆</span>
       بروفايلي على Google
+    </button>
+    <button class="menu-glass-item" onclick="openGallery()">
+      <span class="mi-icon">🏠</span>
+      معرض العقارات
     </button>
     <div class="menu-glass-sep"></div>
     <button class="menu-glass-item" onclick="showNewChatDialog()">
@@ -955,6 +1145,37 @@ body {
       <button class="wa-dialog-btn cancel" id="waDialogCancel" onclick="closeWaDialog(false)">إلغاء</button>
       <button class="wa-dialog-btn danger" id="waDialogOk" onclick="closeWaDialog(true)">تأكيد</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ GALLERY MODAL — معرض العقارات ═══ -->
+<div class="gallery-overlay" id="galleryOverlay" onclick="if(event.target===this) closeGallery()">
+  <div class="gallery-sheet" role="dialog" aria-modal="true" aria-label="معرض العقارات">
+
+    <div class="gallery-handle"></div>
+
+    <div class="gallery-header">
+      <div class="gallery-header-title">
+        🏠 معرض العقارات
+        <span class="gallery-header-count" id="galleryCount"></span>
+      </div>
+      <button class="gallery-close-btn" onclick="closeGallery()" aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="gallery-body">
+      <div class="gallery-loading" id="galleryLoading">
+        <div class="gallery-spinner"></div>
+        <div>جاري تحميل العقارات...</div>
+      </div>
+      <div class="gallery-grid" id="galleryGrid" style="display:none;"></div>
+      <div class="gallery-empty" id="galleryEmpty" style="display:none;">
+        <i class="fas fa-home"></i>
+        لا توجد عقارات متاحة حالياً
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1506,6 +1727,114 @@ if (!hasSeenPrivacy()) {
   // زيارة عائدة — لا حاجة لأي إشعار تلقائي
 }
 
+
+// ═══════════════════════════════════════════
+// GALLERY MODAL
+// ═══════════════════════════════════════════
+const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
+const GALLERY_URL_BASE = "https://nasr-realestate.github.io/gallery.html";
+let _galleryLoaded = false;
+let _galleryProperties = [];
+
+function openGallery() {
+  closeMenu();
+  const overlay = document.getElementById("galleryOverlay");
+  overlay.classList.add("show");
+  if (!_galleryLoaded) fetchGalleryFeed();
+}
+
+function closeGallery() {
+  document.getElementById("galleryOverlay").classList.remove("show");
+}
+
+async function fetchGalleryFeed() {
+  const loading = document.getElementById("galleryLoading");
+  const grid    = document.getElementById("galleryGrid");
+  const empty   = document.getElementById("galleryEmpty");
+  const count   = document.getElementById("galleryCount");
+
+  loading.style.display = "block";
+  grid.style.display    = "none";
+  empty.style.display   = "none";
+
+  // عرض skeletons أثناء التحميل
+  grid.innerHTML = Array(6).fill(0).map(() =>
+    `<div class="gallery-skel">
+       <div class="gallery-skel-img"></div>
+       <div class="gallery-skel-line"></div>
+       <div class="gallery-skel-line short"></div>
+     </div>`
+  ).join("");
+  grid.style.display = "grid";
+  loading.style.display = "none";
+
+  try {
+    const res = await fetch(AI_FEED_URL + "?_=" + Date.now());
+    if (!res.ok) throw new Error("feed error");
+    const feed = await res.json();
+    _galleryProperties = (feed.properties || []).filter(p => p.image);
+
+    if (!_galleryProperties.length) {
+      grid.style.display = "none";
+      empty.style.display = "block";
+      return;
+    }
+
+    count.textContent = _galleryProperties.length + " عقار";
+    renderGalleryCards(_galleryProperties);
+    _galleryLoaded = true;
+
+  } catch (e) {
+    grid.innerHTML = "";
+    grid.style.display = "none";
+    empty.style.display = "block";
+    empty.innerHTML = '<i class="fas fa-wifi" style="opacity:.3;font-size:2rem;display:block;margin-bottom:10px;"></i>تعذّر تحميل العقارات — تحقق من الاتصال';
+  }
+}
+
+function renderGalleryCards(properties) {
+  const grid = document.getElementById("galleryGrid");
+  grid.innerHTML = "";
+  grid.style.display = "grid";
+
+  properties.forEach((prop, i) => {
+    const slug = prop.slug || prop.id || "";
+    const href = slug
+      ? `${GALLERY_URL_BASE}?s=${encodeURIComponent(slug)}`
+      : (prop.url || "#");
+
+    const card = document.createElement("a");
+    card.className = "gallery-card";
+    card.href = href;
+    card.target = "_blank";
+    card.rel = "noopener";
+    card.style.animationDelay = `${i * 0.04}s`;
+
+    const imgSrc = prop.image || "";
+    const title  = prop.title || "عقار";
+
+    card.innerHTML = `
+      <img class="gallery-card-img"
+           src="${escHtml(imgSrc)}"
+           alt="${escHtml(title)}"
+           loading="lazy"
+           onerror="this.style.opacity='0.3'">
+      <div class="gallery-card-body">
+        <div class="gallery-card-title">${escHtml(title)}</div>
+      </div>
+      <div class="gallery-card-arrow"><i class="fas fa-arrow-left"></i></div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  return String(str || "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
 // ═══ GLOBAL EXPOSE ═══
 window.sendMsg           = sendMsg;
 window.onFilesSelected   = onFilesSelected;
@@ -1524,4 +1853,6 @@ window.showDeleteDialog  = showDeleteDialog;
 window.closeWaDialog     = closeWaDialog;
 window.acceptPrivacy     = acceptPrivacy;
 window.hideInappNotif    = hideInappNotif;
+window.openGallery       = openGallery;
+window.closeGallery      = closeGallery;
 </script>
