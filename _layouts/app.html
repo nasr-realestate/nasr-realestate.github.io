@@ -6,6 +6,13 @@
   <meta name="theme-color" content="#075e54">
   <title>{{ page.title | default: site.title }}</title>
   {% seo %}
+
+  <!-- ═══ Favicons — أيقونة الموقع ═══ -->
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
+  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
+  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
+  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
+
   {% include schema-global.html %}
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
