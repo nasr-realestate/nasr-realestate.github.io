@@ -18,7 +18,7 @@ extra_head: |
 
 <style>
 /* ═══════════════════════════════════════════════
-   WHATSAPP LIQUID GLASS — v8.4
+   WHATSAPP LIQUID GLASS — v9.0
    ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -54,12 +54,11 @@ extra_head: |
   --radius-input:     28px;
   --radius-glass:     16px;
 
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif;
+  --font: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --max-w: 780px;
   --header-h: 64px;
 }
 
-/* ═══ Dark Mode ═══ */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-app:           #0b141a;
@@ -68,18 +67,14 @@ extra_head: |
     --bg-glass-light:   rgba(30, 45, 61, 0.45);
     --border-glass:     rgba(255, 255, 255, 0.08);
     --border-subtle:    rgba(255, 255, 255, 0.05);
-
     --header-bg:        #202c33;
     --header-text:      #e9edef;
     --header-sub:       #8696a0;
-
     --bubble-in:        rgba(30, 45, 61, 0.92);
     --bubble-out:       #005c4b;
-
     --text-primary:     #e9edef;
     --text-secondary:   #8696a0;
     --text-tertiary:    #667781;
-
     --accent:           #25d366;
     --accent-dark:      #00a884;
     --tick-blue:        #53bdeb;
@@ -87,7 +82,6 @@ extra_head: |
   }
 }
 
-/* ═══ BASE ═══ */
 html, body {
   height: 100%;
   font-family: var(--font);
@@ -127,19 +121,16 @@ body {
   padding: 10px 16px;
   min-height: var(--header-h);
   background: var(--header-bg);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   flex-shrink: 0;
 }
 
 .header-back {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  color: #ffffff;
+  color: #fff;
   cursor: pointer;
   transition: background .18s ease;
   font-size: 18px;
@@ -147,120 +138,71 @@ body {
   border: none;
   background: transparent;
 }
-.header-back:hover { background: rgba(255, 255, 255, 0.15); }
+.header-back:hover { background: rgba(255,255,255,0.15); }
 
 .header-avatar {
-  width: 42px;
-  height: 42px;
+  width: 42px; height: 42px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   cursor: pointer;
 }
 
-.header-info {
-  flex: 1;
-  min-width: 0;
-  cursor: pointer;
-}
+.header-info { flex: 1; min-width: 0; cursor: pointer; }
 
 .header-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 16px; font-weight: 700; color: #fff;
   line-height: 1.2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: flex; align-items: center; gap: 6px;
   letter-spacing: -0.2px;
 }
 
 .header-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: #075e54;
-  background: #ffffff;
-  padding: 2px 7px;
-  border-radius: 8px;
-  letter-spacing: 0;
+  font-size: 10px; font-weight: 700;
+  color: #075e54; background: #fff;
+  padding: 2px 7px; border-radius: 8px;
 }
 
 .header-status {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.85);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 1px;
-  font-weight: 500;
+  font-size: 12.5px; color: rgba(255,255,255,0.85);
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 1px; font-weight: 500;
 }
 
 .status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #25d366;
-  display: inline-block;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5);
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #25d366; display: inline-block; flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(37,211,102,0.5);
   animation: pulseDot 2s infinite;
 }
-
 @keyframes pulseDot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(37, 211, 102, 0); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(37,211,102,0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(37,211,102,0); }
 }
 
-.header-status.typing {
-  color: #d9fdd3;
-  font-weight: 600;
-}
-.header-status.typing .status-dot {
-  animation: none;
-  opacity: 0.4;
-}
+.header-status.typing { color: #d9fdd3; font-weight: 600; }
+.header-status.typing .status-dot { animation: none; opacity: 0.4; }
 
-.header-actions {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-}
+.header-actions { display: flex; gap: 2px; align-items: center; }
 
 .header-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  transition: all .18s ease;
-  flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; background: transparent; color: #fff;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: all .18s ease; flex-shrink: 0;
 }
-.header-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
+.header-btn:hover { background: rgba(255,255,255,0.15); }
 
-/* ═══ MENU DROPDOWN ═══ */
+/* ═══ MENU ═══ */
 .menu-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 998;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.15);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease; z-index: 998;
 }
-.menu-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+.menu-overlay.open { opacity: 1; pointer-events: auto; }
 
 .menu-glass {
   position: absolute;
@@ -273,98 +215,58 @@ body {
   border: 1px solid var(--border-glass);
   border-radius: 14px;
   box-shadow: var(--shadow-lg);
-  padding: 6px;
-  z-index: 999;
-  opacity: 0;
-  transform: translateY(-8px) scale(0.98);
+  padding: 6px; z-index: 999;
+  opacity: 0; transform: translateY(-8px) scale(0.98);
   pointer-events: none;
-  transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all .18s cubic-bezier(0.4,0,0.2,1);
   transform-origin: top left;
 }
 .menu-glass.open {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  opacity: 1; transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
 .menu-glass-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 14px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-family: var(--font);
-  font-size: 14.5px;
-  font-weight: 500;
-  text-align: right;
-  cursor: pointer;
-  transition: background .14s ease;
-  direction: rtl;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 11px 14px; border-radius: 10px;
+  border: none; background: transparent;
+  color: var(--text-primary); font-family: var(--font);
+  font-size: 14.5px; font-weight: 500;
+  text-align: right; cursor: pointer;
+  transition: background .14s ease; direction: rtl;
 }
-.menu-glass-item:hover {
-  background: rgba(0, 168, 132, 0.1);
-}
-.menu-glass-item .mi-icon {
-  font-size: 17px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.menu-glass-item.danger {
-  color: var(--danger);
-}
-.menu-glass-item.danger:hover {
-  background: rgba(234, 0, 56, 0.08);
-}
+.menu-glass-item:hover { background: rgba(0,168,132,0.1); }
+.menu-glass-item .mi-icon { font-size: 17px; width: 20px; text-align: center; flex-shrink: 0; }
+.menu-glass-item.danger { color: var(--danger); }
+.menu-glass-item.danger:hover { background: rgba(234,0,56,0.08); }
 
-.menu-glass-sep {
-  height: 1px;
-  background: var(--border-subtle);
-  margin: 4px 8px;
-}
+.menu-glass-sep { height: 1px; background: var(--border-subtle); margin: 4px 8px; }
 
 /* ═══ CHAT AREA ═══ */
 .chat-area {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
   padding: 16px 14px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: flex; flex-direction: column; gap: 3px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  overflow-anchor: auto;
   scrollbar-width: thin;
 }
-
 .chat-area::-webkit-scrollbar { width: 6px; }
-.chat-area::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.15);
-  border-radius: 3px;
-}
+.chat-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
 @media (prefers-color-scheme: dark) {
   .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 }
 
 /* ═══ MESSAGES ═══ */
 .msg {
-  max-width: 80%;
-  padding: 8px 14px 7px;
+  max-width: 80%; padding: 8px 14px 7px;
   border-radius: var(--radius-bubble);
-  font-size: 15px;
-  line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
+  font-size: 15px; line-height: 1.5;
+  word-break: break-word; white-space: pre-wrap;
   position: relative;
-  animation: msgIn .25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: msgIn .25s cubic-bezier(0.4,0,0.2,1);
   direction: rtl;
 }
-
 @keyframes msgIn {
   from { opacity: 0; transform: translateY(6px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -372,21 +274,17 @@ body {
 
 .msg-bot {
   align-self: flex-start;
-  background: var(--bubble-in);
-  color: var(--text-primary);
+  background: var(--bubble-in); color: var(--text-primary);
   border-bottom-left-radius: 6px;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm); border: 1px solid var(--border-subtle);
 }
 
 .msg-user {
   align-self: flex-end;
-  background: var(--bubble-out);
-  color: var(--text-primary);
-  border-bottom-right-radius: 6px;
-  box-shadow: var(--shadow-sm);
+  background: var(--bubble-out); color: var(--text-primary);
+  border-bottom-right-radius: 6px; box-shadow: var(--shadow-sm);
 }
 @media (prefers-color-scheme: dark) {
   .msg-user { background: var(--bubble-out); color: #e9edef; }
@@ -394,61 +292,31 @@ body {
 
 .msg strong { font-weight: 700; }
 .msg em { font-style: italic; opacity: 0.9; }
-.msg a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-  word-break: break-all;
-}
+.msg a { color: var(--accent); text-decoration: none; font-weight: 600; word-break: break-all; }
 .msg a:hover { text-decoration: underline; }
 
-.msg-content {
-  display: block;
-  padding-bottom: 14px;
-}
+.msg-content { display: block; padding-bottom: 14px; }
 
 .msg-time {
-  position: absolute;
-  bottom: 4px;
-  left: 12px;
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  direction: ltr;
-  font-weight: 500;
-  letter-spacing: 0.2px;
+  position: absolute; bottom: 4px; left: 12px;
+  font-size: 10.5px; color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 3px;
+  direction: ltr; font-weight: 500; letter-spacing: 0.2px;
 }
-.msg-user .msg-time {
-  color: var(--text-tertiary);
-  left: auto;
-  right: 12px;
-}
+.msg-user .msg-time { color: var(--text-tertiary); left: auto; right: 12px; }
 
-/* ═══ WHATSAPP TICKS (SVG) ═══ */
 .msg-ticks {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 3px;
-  color: var(--tick-blue);
-  width: 16px;
-  height: 12px;
+  display: inline-flex; align-items: center;
+  margin-left: 3px; color: var(--tick-blue);
+  width: 16px; height: 12px;
 }
-.msg-ticks svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
-}
+.msg-ticks svg { width: 100%; height: 100%; fill: currentColor; }
 
 /* ═══ BUTTONS RACK ═══ */
 .btns-rack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px;
   padding: 6px 14px 12px;
-  align-self: flex-start;
-  max-width: 92%;
+  align-self: flex-start; max-width: 92%;
   animation: msgIn .25s ease;
 }
 
@@ -457,84 +325,53 @@ body {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--border-glass);
-  color: var(--accent);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 9px 18px;
-  border-radius: 22px;
-  cursor: pointer;
-  transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
+  color: var(--accent); font-family: var(--font);
+  font-size: 14px; font-weight: 600;
+  padding: 9px 18px; border-radius: 22px; cursor: pointer;
+  transition: all .18s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap; box-shadow: var(--shadow-sm);
   -webkit-tap-highlight-color: transparent;
 }
-.btn-glass:hover {
-  background: var(--bg-glass-strong);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
+.btn-glass:hover { background: var(--bg-glass-strong); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .btn-glass:active { transform: scale(0.96); }
-
 .btn-glass.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.35);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.35);
 }
-.btn-glass.primary:hover {
-  box-shadow: 0 6px 20px rgba(0, 168, 132, 0.5);
-}
+.btn-glass.primary:hover { box-shadow: 0 6px 20px rgba(0,168,132,0.5); }
 
-/* ═══ TYPING INDICATOR ═══ */
+/* ═══ TYPING ═══ */
 .typing-bubble {
-  display: none;
-  align-self: flex-start;
-  background: var(--bubble-in);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-bubble);
-  border-bottom-left-radius: 6px;
-  padding: 14px 18px;
-  box-shadow: var(--shadow-sm);
+  display: none; align-self: flex-start;
+  background: var(--bubble-in); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-bubble); border-bottom-left-radius: 6px;
+  padding: 14px 18px; box-shadow: var(--shadow-sm);
   max-width: 80px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
 }
-.typing-bubble.active {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
+.typing-bubble.active { display: flex; gap: 5px; align-items: center; }
+
 .typing-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--text-tertiary);
-  border-radius: 50%;
+  width: 8px; height: 8px;
+  background: var(--text-tertiary); border-radius: 50%;
   animation: typingBounce 1.3s infinite ease-in-out;
 }
 .typing-dot:nth-child(2) { animation-delay: 0.18s; }
 .typing-dot:nth-child(3) { animation-delay: 0.36s; }
-
 @keyframes typingBounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  0%,60%,100% { transform: translateY(0); opacity: 0.5; }
   30% { transform: translateY(-5px); opacity: 1; }
 }
 
-/* ═══ IMAGES GRID ═══ */
+/* ═══ IMAGES ═══ */
 .msg-imgs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 4px;
-  margin-top: 6px;
-  border-radius: 12px;
-  overflow: hidden;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 4px; margin-top: 6px; border-radius: 12px; overflow: hidden;
 }
 .msg-imgs img {
-  width: 100%;
-  height: 100px;
-  object-fit: cover;
-  cursor: pointer;
-  transition: transform .2s ease;
+  width: 100%; height: 100px; object-fit: cover;
+  cursor: pointer; transition: transform .2s ease;
 }
 .msg-imgs img:hover { transform: scale(1.04); }
 
@@ -543,404 +380,397 @@ body {
   flex-shrink: 0;
   padding: 8px 12px;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
-  background: transparent;
-  position: relative;
-  z-index: 50;
+  background: transparent; position: relative; z-index: 50;
 }
 
-/* ═══ WHATSAPP BUTTON ═══ */
-.wa-wrapper {
-  display: none;
-  margin-bottom: 8px;
-}
+/* ═══ WA BUTTON ═══ */
+.wa-wrapper { display: none; margin-bottom: 8px; }
 .wa-wrapper.show { display: block; }
 
 .wa-glass-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 12px 16px;
   background: var(--bg-glass-strong);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-glass);
-  box-shadow: var(--shadow-md);
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  border: 1px solid var(--border-glass); border-radius: var(--radius-glass);
+  box-shadow: var(--shadow-md); cursor: pointer;
+  text-decoration: none; color: inherit;
+  transition: all .2s cubic-bezier(0.4,0,0.2,1);
+  position: relative; overflow: hidden;
 }
 .wa-glass-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), transparent 60%);
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(37,211,102,0.08), transparent 60%);
   pointer-events: none;
 }
-.wa-glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
+.wa-glass-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 .wa-glass-card:active { transform: scale(0.98); }
 
 .wa-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   background: linear-gradient(135deg, #25d366, #128c7e);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 22px;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 22px; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37,211,102,0.4);
   animation: waPulse 2s infinite;
 }
-
 @keyframes waPulse {
-  0%, 100% { box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4); }
-  50% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.65); }
+  0%,100% { box-shadow: 0 4px 12px rgba(37,211,102,0.4); }
+  50% { box-shadow: 0 4px 20px rgba(37,211,102,0.65); }
 }
 
 .wa-text { flex: 1; min-width: 0; }
 .wa-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
+  font-size: 14.5px; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
 }
 .wa-title-tag {
   font-size: 9px;
   background: linear-gradient(135deg, #25d366, #128c7e);
-  color: #fff;
-  padding: 2px 6px;
-  border-radius: 5px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  color: #fff; padding: 2px 6px; border-radius: 5px;
+  font-weight: 700; letter-spacing: 0.3px;
 }
-.wa-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.wa-sub { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ═══ INPUT BAR ═══ */
 .input-glass {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 6px;
+  display: flex; align-items: flex-end; gap: 8px; padding: 6px;
   background: var(--bg-glass-strong);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-input);
-  box-shadow: var(--shadow-md);
-  min-height: 52px;
+  border: 1px solid var(--border-glass); border-radius: var(--radius-input);
+  box-shadow: var(--shadow-md); min-height: 52px;
   transition: box-shadow .2s ease, border-color .2s ease;
 }
 .input-glass:focus-within {
-  box-shadow: 0 6px 20px rgba(0, 168, 132, 0.15), var(--shadow-md);
-  border-color: rgba(0, 168, 132, 0.3);
+  box-shadow: 0 6px 20px rgba(0,168,132,0.15), var(--shadow-md);
+  border-color: rgba(0,168,132,0.3);
 }
 
 .input-icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
-  transition: all .18s ease;
-  flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; transition: all .18s ease; flex-shrink: 0;
 }
-.input-icon-btn:hover {
-  background: rgba(0, 168, 132, 0.1);
-  color: var(--accent);
-}
-.input-icon-btn.active {
-  color: var(--accent);
-  background: rgba(0, 168, 132, 0.12);
-}
+.input-icon-btn:hover { background: rgba(0,168,132,0.1); color: var(--accent); }
+.input-icon-btn.active { color: var(--accent); background: rgba(0,168,132,0.12); }
 
 .input-field {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-family: var(--font);
-  font-size: 15.5px;
-  color: var(--text-primary);
-  padding: 10px 4px;
-  resize: none;
-  max-height: 120px;
-  min-height: 24px;
-  line-height: 1.4;
-  direction: rtl;
+  flex: 1; border: none; background: transparent; outline: none;
+  font-family: var(--font); font-size: 15.5px; color: var(--text-primary);
+  padding: 10px 4px; resize: none; max-height: 120px; min-height: 24px;
+  line-height: 1.4; direction: rtl;
 }
-.input-field::placeholder {
-  color: var(--text-tertiary);
-  font-weight: 400;
-}
+.input-field::placeholder { color: var(--text-tertiary); font-weight: 400; }
 
 .send-btn-glass {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
+  width: 44px; height: 44px; border-radius: 50%; border: none;
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.35);
-  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,168,132,0.35);
+  transition: all .2s cubic-bezier(0.4,0,0.2,1);
 }
-.send-btn-glass:hover {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 6px 18px rgba(0, 168, 132, 0.5);
-}
+.send-btn-glass:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 6px 18px rgba(0,168,132,0.5); }
 .send-btn-glass:active { transform: scale(0.94); }
-.send-btn-glass:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
+.send-btn-glass:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 .icon-swap { transition: transform .2s ease, opacity .2s ease; }
 
-/* ═══ IMAGE PREVIEW STRIP ═══ */
+/* ═══ IMAGE STRIP ═══ */
 .img-strip {
-  display: none;
-  gap: 6px;
-  padding: 0 8px 6px;
-  overflow-x: auto;
-  animation: msgIn .2s ease;
+  display: none; gap: 6px; padding: 0 8px 6px;
+  overflow-x: auto; animation: msgIn .2s ease;
 }
 .img-strip.show { display: flex; }
 .img-strip-item {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 1.5px solid var(--border-glass);
-  box-shadow: var(--shadow-sm);
+  position: relative; width: 56px; height: 56px;
+  border-radius: 10px; overflow: hidden; flex-shrink: 0;
+  border: 1.5px solid var(--border-glass); box-shadow: var(--shadow-sm);
 }
-.img-strip-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.img-strip-item img { width: 100%; height: 100%; object-fit: cover; }
 .img-strip-rm {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--danger);
-  color: #fff;
+  position: absolute; top: -4px; right: -4px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--danger); color: #fff;
   border: 2px solid var(--bg-glass-strong);
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  padding: 0;
-  line-height: 1;
+  font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; padding: 0; line-height: 1;
 }
 
 /* ═══════════════════════════════════════════════
-   WHATSAPP DIALOG — حوار واتساب الرسمي
+   PRIVACY NOTICE — نافذة الخصوصية
    ═══════════════════════════════════════════════ */
-.wa-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 99999;
-  animation: dialogOverlayIn .2s ease;
+.privacy-overlay {
+  position: fixed; inset: 0;
+  background: rgba(7, 94, 84, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0; z-index: 99990;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease;
 }
-.wa-dialog-overlay.show {
-  display: flex;
+.privacy-overlay.show {
+  opacity: 1; pointer-events: auto;
 }
-@keyframes dialogOverlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.privacy-overlay.hiding {
+  opacity: 0; pointer-events: none;
 }
 
-.wa-dialog {
-  max-width: 340px;
-  width: 100%;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 24px 20px 16px;
-  text-align: right;
-  animation: dialogIn .25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
+.privacy-sheet {
+  width: 100%; max-width: var(--max-w);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border-top-left-radius: 24px; border-top-right-radius: 24px;
+  border: 1px solid var(--border-glass);
+  border-bottom: none;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+  padding: 20px 20px 28px;
   direction: rtl;
-  font-family: var(--font);
+  transform: translateY(60px);
+  transition: transform .4s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
+.privacy-overlay.show .privacy-sheet {
+  transform: translateY(0);
+}
+
+.privacy-handle {
+  width: 44px; height: 4px; border-radius: 2px;
+  background: var(--border-subtle);
+  margin: 0 auto 18px;
+}
+
+.privacy-icon {
+  width: 52px; height: 52px; border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin-bottom: 14px;
+  box-shadow: 0 6px 18px rgba(0,168,132,0.35);
+}
+
+.privacy-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0,168,132,0.1);
+  border: 1px solid rgba(0,168,132,0.2);
+  color: var(--accent); font-size: 11.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px; margin-bottom: 10px;
+  letter-spacing: 0.2px;
+}
+
+.privacy-title {
+  font-size: 18px; font-weight: 700;
+  color: var(--text-primary); line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+.privacy-desc {
+  font-size: 13.5px; line-height: 1.65;
+  color: var(--text-secondary); margin-bottom: 16px;
+}
+
+.privacy-rules {
+  list-style: none; margin-bottom: 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.privacy-rules li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--text-primary); line-height: 1.5;
+}
+.privacy-rules .rule-icon {
+  font-size: 15px; flex-shrink: 0; margin-top: 1px;
+  width: 22px; text-align: center;
+}
+
+.privacy-warn {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(234,0,56,0.06);
+  border: 1px solid rgba(234,0,56,0.15);
+  border-radius: 12px; padding: 11px 14px;
+  margin-bottom: 18px; font-size: 12.5px;
+  color: var(--text-secondary); line-height: 1.5;
+}
+.privacy-warn-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 @media (prefers-color-scheme: dark) {
-  .wa-dialog {
-    background: #202c33;
-  }
+  .privacy-warn { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.2); }
 }
+
+.privacy-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff; border: none; border-radius: 14px;
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  cursor: pointer; letter-spacing: -0.2px;
+  box-shadow: 0 6px 20px rgba(0,168,132,0.4);
+  transition: all .2s ease; margin-bottom: 10px;
+}
+.privacy-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 26px rgba(0,168,132,0.5); }
+.privacy-btn:active { transform: scale(0.98); }
+
+.privacy-skip {
+  width: 100%; padding: 10px;
+  background: transparent; border: none;
+  font-family: var(--font); font-size: 13px;
+  color: var(--text-tertiary); cursor: pointer;
+  transition: color .15s ease;
+}
+.privacy-skip:hover { color: var(--text-secondary); }
+
+/* ═══ IN-APP NOTIFICATION ═══ */
+.inapp-notif {
+  position: fixed;
+  top: calc(var(--header-h) + 10px);
+  left: 50%; transform: translateX(-50%) translateY(-12px);
+  max-width: calc(var(--max-w) - 32px); width: calc(100% - 32px);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px; box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+  z-index: 9000;
+  opacity: 0; pointer-events: none;
+  transition: all .3s cubic-bezier(0.4,0,0.2,1);
+  direction: rtl;
+}
+.inapp-notif.show {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.inapp-notif.hiding {
+  opacity: 0; transform: translateX(-50%) translateY(-12px);
+}
+
+.notif-icon-wrap {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.notif-icon-wrap.green { background: rgba(37,211,102,0.15); }
+.notif-icon-wrap.red { background: rgba(234,0,56,0.1); }
+
+.notif-body { flex: 1; min-width: 0; }
+.notif-title {
+  font-size: 13.5px; font-weight: 700;
+  color: var(--text-primary); margin-bottom: 1px;
+}
+.notif-sub {
+  font-size: 12px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.notif-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent;
+  color: var(--text-tertiary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  transition: background .15s ease;
+}
+.notif-close:hover { background: var(--border-subtle); }
+
+/* ═══ WA DIALOG ═══ */
+.wa-dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px; z-index: 99999;
+  animation: dialogOverlayIn .2s ease;
+}
+.wa-dialog-overlay.show { display: flex; }
+@keyframes dialogOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.wa-dialog {
+  max-width: 340px; width: 100%;
+  background: #ffffff; border-radius: 12px;
+  padding: 24px 20px 16px; text-align: right;
+  animation: dialogIn .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.35);
+  direction: rtl; font-family: var(--font);
+}
+@media (prefers-color-scheme: dark) { .wa-dialog { background: #202c33; } }
 @keyframes dialogIn {
   from { opacity: 0; transform: scale(0.92) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .wa-dialog-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #111b21;
-  margin-bottom: 8px;
-  line-height: 1.3;
+  font-size: 17px; font-weight: 600; color: #111b21;
+  margin-bottom: 8px; line-height: 1.3;
 }
-@media (prefers-color-scheme: dark) {
-  .wa-dialog-title { color: #e9edef; }
-}
+@media (prefers-color-scheme: dark) { .wa-dialog-title { color: #e9edef; } }
 
 .wa-dialog-message {
-  font-size: 14.5px;
-  line-height: 1.5;
-  color: #667781;
-  margin-bottom: 20px;
+  font-size: 14.5px; line-height: 1.5;
+  color: #667781; margin-bottom: 20px;
 }
-@media (prefers-color-scheme: dark) {
-  .wa-dialog-message { color: #8696a0; }
-}
+@media (prefers-color-scheme: dark) { .wa-dialog-message { color: #8696a0; } }
 
 .wa-dialog-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-start;
-  flex-direction: row-reverse;
+  display: flex; gap: 8px;
+  justify-content: flex-start; flex-direction: row-reverse;
 }
 
 .wa-dialog-btn {
-  padding: 9px 18px;
-  border-radius: 6px;
-  border: none;
-  font-family: var(--font);
-  font-size: 14.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s ease, transform .1s ease;
+  padding: 9px 18px; border-radius: 6px; border: none;
+  font-family: var(--font); font-size: 14.5px; font-weight: 600;
+  cursor: pointer; transition: background .15s ease, transform .1s ease;
   white-space: nowrap;
-  letter-spacing: 0.3px;
-  text-transform: none;
 }
 .wa-dialog-btn:active { transform: scale(0.97); }
-
-.wa-dialog-btn.cancel {
-  background: transparent;
-  color: #00a884;
-}
-.wa-dialog-btn.cancel:hover {
-  background: rgba(0, 168, 132, 0.08);
-}
-
-.wa-dialog-btn.danger {
-  background: transparent;
-  color: #ea0038;
-}
-.wa-dialog-btn.danger:hover {
-  background: rgba(234, 0, 56, 0.08);
-}
+.wa-dialog-btn.cancel { background: transparent; color: #00a884; }
+.wa-dialog-btn.cancel:hover { background: rgba(0,168,132,0.08); }
+.wa-dialog-btn.danger { background: transparent; color: #ea0038; }
+.wa-dialog-btn.danger:hover { background: rgba(234,0,56,0.08); }
 @media (prefers-color-scheme: dark) {
   .wa-dialog-btn.danger { color: #ff4d6d; }
-  .wa-dialog-btn.danger:hover { background: rgba(255, 77, 109, 0.1); }
+  .wa-dialog-btn.danger:hover { background: rgba(255,77,109,0.1); }
 }
 
 /* ═══ TOAST ═══ */
 .toast {
-  position: fixed;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
+  position: fixed; bottom: 90px;
+  left: 50%; transform: translateX(-50%) translateY(20px);
   background: var(--bg-glass-strong);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--border-glass);
-  color: var(--text-primary);
-  padding: 11px 22px;
-  border-radius: 24px;
-  font-size: 13.5px;
-  font-weight: 600;
-  box-shadow: var(--shadow-lg);
-  opacity: 0;
-  pointer-events: none;
-  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 100000;
-  max-width: 90vw;
-  text-align: center;
+  color: var(--text-primary); padding: 11px 22px;
+  border-radius: 24px; font-size: 13.5px; font-weight: 600;
+  box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+  transition: all .3s cubic-bezier(0.4,0,0.2,1);
+  z-index: 100000; max-width: 90vw; text-align: center;
 }
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ═══ SCROLL BTN ═══ */
 .scroll-btn {
-  position: absolute;
-  bottom: 90px;
-  left: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--bg-glass-strong);
-  backdrop-filter: blur(20px);
+  position: absolute; bottom: 90px; left: 20px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--bg-glass-strong); backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-glass);
-  color: var(--text-secondary);
-  font-size: 18px;
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-md);
-  transition: all .2s ease;
-  z-index: 60;
+  border: 1px solid var(--border-glass); color: var(--text-secondary);
+  font-size: 18px; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+  box-shadow: var(--shadow-md); transition: all .2s ease; z-index: 60;
 }
 .scroll-btn.show { display: flex; }
-.scroll-btn:hover {
-  color: var(--accent);
-  transform: translateY(-2px);
-}
+.scroll-btn:hover { color: var(--accent); transform: translateY(-2px); }
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 480px) {
   .msg { max-width: 85%; font-size: 14.5px; }
   .header-avatar { width: 40px; height: 40px; }
+  .privacy-sheet { padding: 16px 16px 24px; }
 }
 
-/* ═══ REDUCED MOTION ═══ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -1020,9 +850,7 @@ body {
 
     <div class="wa-wrapper" id="waWrapper">
       <a class="wa-glass-card" id="waBtn" href="#" target="_blank" rel="noopener">
-        <div class="wa-icon">
-          <i class="fab fa-whatsapp"></i>
-        </div>
+        <div class="wa-icon"><i class="fab fa-whatsapp"></i></div>
         <div class="wa-text">
           <div class="wa-title">
             تواصل مع طارق على واتساب
@@ -1039,15 +867,13 @@ body {
       <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
         <i class="fas fa-plus"></i>
       </button>
-
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
-
       <input type="text" class="input-field" id="msgInput" placeholder="رسالة..." autocomplete="off" inputmode="text">
-
       <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()" aria-label="إرسال">
         <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
       </button>
     </div>
+
   </div>
 
   <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()" aria-label="للأسفل">
@@ -1056,8 +882,72 @@ body {
 </div>
 
 <!-- ═══════════════════════════════════════════════
-     WhatsApp Dialog — حوار واتساب
+     PRIVACY NOTICE SHEET — نافذة الخصوصية
      ═══════════════════════════════════════════════ -->
+<div class="privacy-overlay" id="privacyOverlay">
+  <div class="privacy-sheet" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+
+    <div class="privacy-handle"></div>
+
+    <div class="privacy-icon">🤖</div>
+
+    <div class="privacy-badge">
+      <i class="fas fa-robot" style="font-size:11px;"></i>
+      وكيل ذكي — ليس واتساب
+    </div>
+
+    <h2 class="privacy-title" id="privacyTitle">
+      قبل ما تبدأ، خليك عارف
+    </h2>
+
+    <p class="privacy-desc">
+      هذه الواجهة وكيل ذكي مخصص لـ <strong>سمسار طلبك</strong>، مش محادثة واتساب عادية.<br>
+      الهدف بسيط: نفهم طلبك بسرعة ونوفر وقتك ووقت طارق.
+    </p>
+
+    <ul class="privacy-rules">
+      <li>
+        <span class="rule-icon">✅</span>
+        <span>المحادثة مشفرة ومش بتتخزن على أجهزتنا بعد انتهاء الجلسة.</span>
+      </li>
+      <li>
+        <span class="rule-icon">✅</span>
+        <span>ردود الوكيل للتأهيل الأولي فقط — القرار النهائي دايمًا مع طارق شخصيًا.</span>
+      </li>
+      <li>
+        <span class="rule-icon">✅</span>
+        <span>لو مش عاجبك الأسلوب، في أي وقت تقدر تتواصل مباشرة على واتساب.</span>
+      </li>
+    </ul>
+
+    <div class="privacy-warn">
+      <span class="privacy-warn-icon">⚠️</span>
+      <span>متبعتش بيانات حساسة: رقم قومي، بيانات بنكية، أرقام بطاقات، أو كلمات مرور.</span>
+    </div>
+
+    <button class="privacy-btn" onclick="acceptPrivacy()">
+      فهمت — ابدأ المحادثة
+    </button>
+    <button class="privacy-skip" onclick="acceptPrivacy()">
+      إغلاق
+    </button>
+
+  </div>
+</div>
+
+<!-- ═══ IN-APP NOTIFICATION ═══ -->
+<div class="inapp-notif" id="inappNotif" role="status" aria-live="polite">
+  <div class="notif-icon-wrap green" id="notifIcon">💬</div>
+  <div class="notif-body">
+    <div class="notif-title" id="notifTitle">محادثة جديدة</div>
+    <div class="notif-sub" id="notifSub">الوكيل الذكي جاهز للمساعدة</div>
+  </div>
+  <button class="notif-close" onclick="hideInappNotif()" aria-label="إغلاق">
+    <i class="fas fa-times"></i>
+  </button>
+</div>
+
+<!-- ═══ WA DIALOG ═══ -->
 <div class="wa-dialog-overlay" id="waDialog" onclick="if(event.target===this) closeWaDialog(false)">
   <div class="wa-dialog">
     <div class="wa-dialog-title" id="waDialogTitle">تأكيد</div>
@@ -1108,13 +998,13 @@ body {
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
-const WORKER_URL = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY = "simsar_wa_v84";
-const TAREK_WA = "201147758857";
-const GOOGLE_URL = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
-const MAX_IMAGES = 5;
+const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
+const STORAGE_KEY  = "simsar_wa_v90";
+const PRIVACY_KEY  = "simsar_privacy_v1";
+const TAREK_WA     = "201147758857";
+const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
+const MAX_IMAGES   = 5;
 
-// ═══ WhatsApp Ticks SVG (طبق الأصل) ═══
 const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/><path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-.996-.94-1.085 1.32 1.775 1.775a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.663-.728z"/></svg>`;
 
 // ═══ STATE ═══
@@ -1139,87 +1029,138 @@ function loadState() {
 }
 
 // ═══ DOM REFS ═══
-const chatArea    = document.getElementById("chatArea");
-const msgInput    = document.getElementById("msgInput");
-const sendBtn     = document.getElementById("sendBtn");
-const sendIcon    = document.getElementById("sendIcon");
-const typingBubble= document.getElementById("typingBubble");
-const statusText  = document.getElementById("statusText");
-const statusLine  = document.getElementById("statusLine");
-const waWrapper   = document.getElementById("waWrapper");
-const waBtn       = document.getElementById("waBtn");
-const imgStrip    = document.getElementById("imgStrip");
-const scrollBtn   = document.getElementById("scrollBtn");
-const menuGlass   = document.getElementById("menuGlass");
-const menuOverlay = document.getElementById("menuOverlay");
+const chatArea     = document.getElementById("chatArea");
+const msgInput     = document.getElementById("msgInput");
+const sendBtn      = document.getElementById("sendBtn");
+const sendIcon     = document.getElementById("sendIcon");
+const typingBubble = document.getElementById("typingBubble");
+const statusText   = document.getElementById("statusText");
+const statusLine   = document.getElementById("statusLine");
+const waWrapper    = document.getElementById("waWrapper");
+const waBtn        = document.getElementById("waBtn");
+const imgStrip     = document.getElementById("imgStrip");
+const scrollBtn    = document.getElementById("scrollBtn");
+const menuGlass    = document.getElementById("menuGlass");
+const menuOverlay  = document.getElementById("menuOverlay");
 
-// ═══ WhatsApp Dialog System ═══
-let waDialogCallback = null;
-
-function showWaDialog(options) {
-  const {
-    title = "تأكيد",
-    message = "هل أنت متأكد؟",
-    okText = "تأكيد",
-    cancelText = "إلغاء",
-    okStyle = "danger",
-    onOk = null
-  } = options || {};
-
-  const dialog = document.getElementById("waDialog");
-  const titleEl = document.getElementById("waDialogTitle");
-  const msgEl = document.getElementById("waDialogMessage");
-  const okBtn = document.getElementById("waDialogOk");
-  const cancelBtn = document.getElementById("waDialogCancel");
-
-  titleEl.textContent = title;
-  msgEl.textContent = message;
-  okBtn.textContent = okText;
-  cancelBtn.textContent = cancelText;
-  okBtn.className = "wa-dialog-btn " + (okStyle === "danger" ? "danger" : "cancel");
-
-  waDialogCallback = onOk;
-  dialog.classList.add("show");
+// ═══════════════════════════════════════════
+// PRIVACY NOTICE
+// ═══════════════════════════════════════════
+function hasSeenPrivacy() {
+  try { return !!localStorage.getItem(PRIVACY_KEY); } catch { return true; }
 }
 
-function closeWaDialog(confirmed) {
-  const dialog = document.getElementById("waDialog");
-  dialog.classList.remove("show");
-  const cb = waDialogCallback;
-  waDialogCallback = null;
-  if (confirmed && typeof cb === "function") {
-    setTimeout(() => cb(), 100);
+function markPrivacySeen() {
+  try { localStorage.setItem(PRIVACY_KEY, "1"); } catch {}
+}
+
+function showPrivacy() {
+  const overlay = document.getElementById("privacyOverlay");
+  overlay.classList.add("show");
+}
+
+function acceptPrivacy() {
+  markPrivacySeen();
+  const overlay = document.getElementById("privacyOverlay");
+  overlay.classList.add("hiding");
+  overlay.classList.remove("show");
+  setTimeout(() => {
+    overlay.style.display = "none";
+    // أظهر إشعار "محادثة جديدة" بعد إغلاق نافذة الخصوصية
+    showInappNotif({
+      icon: "💬",
+      iconClass: "green",
+      title: "الوكيل الذكي جاهز",
+      sub: "اكتب طلبك وهنساعدك في ثواني"
+    });
+  }, 350);
+}
+
+// ═══════════════════════════════════════════
+// IN-APP NOTIFICATION
+// ═══════════════════════════════════════════
+let _notifTimer = null;
+
+function showInappNotif({ icon = "💬", iconClass = "green", title = "", sub = "" }, autoDismiss = 4000) {
+  const notif    = document.getElementById("inappNotif");
+  const iconEl   = document.getElementById("notifIcon");
+  const titleEl  = document.getElementById("notifTitle");
+  const subEl    = document.getElementById("notifSub");
+
+  iconEl.textContent   = icon;
+  iconEl.className     = `notif-icon-wrap ${iconClass}`;
+  titleEl.textContent  = title;
+  subEl.textContent    = sub;
+
+  notif.classList.remove("hiding");
+  notif.classList.add("show");
+
+  clearTimeout(_notifTimer);
+  if (autoDismiss > 0) {
+    _notifTimer = setTimeout(() => hideInappNotif(), autoDismiss);
   }
 }
 
-// ✅ حوار محادثة جديدة — على شكل واتساب
+function hideInappNotif() {
+  const notif = document.getElementById("inappNotif");
+  notif.classList.add("hiding");
+  clearTimeout(_notifTimer);
+  setTimeout(() => notif.classList.remove("show", "hiding"), 350);
+}
+
+// ═══ WA DIALOG ═══
+let waDialogCallback = null;
+
+function showWaDialog(options) {
+  const { title = "تأكيد", message = "هل أنت متأكد؟", okText = "تأكيد", cancelText = "إلغاء", okStyle = "danger", onOk = null } = options || {};
+  document.getElementById("waDialogTitle").textContent   = title;
+  document.getElementById("waDialogMessage").textContent = message;
+  document.getElementById("waDialogOk").textContent      = okText;
+  document.getElementById("waDialogCancel").textContent  = cancelText;
+  document.getElementById("waDialogOk").className        = "wa-dialog-btn " + (okStyle === "danger" ? "danger" : "cancel");
+  waDialogCallback = onOk;
+  document.getElementById("waDialog").classList.add("show");
+}
+
+function closeWaDialog(confirmed) {
+  document.getElementById("waDialog").classList.remove("show");
+  const cb = waDialogCallback;
+  waDialogCallback = null;
+  if (confirmed && typeof cb === "function") setTimeout(() => cb(), 100);
+}
+
 function showNewChatDialog() {
   closeMenu();
   showWaDialog({
     title: "محادثة جديدة؟",
     message: "هتبدأ محادثة جديدة من الأول. الرسائل والبيانات الحالية هتتمسح.",
-    okText: "ابدأ",
-    cancelText: "إلغاء",
-    okStyle: "danger",
+    okText: "ابدأ", cancelText: "إلغاء", okStyle: "danger",
     onOk: () => {
       resetChat();
-      showToast("✅ محادثة جديدة");
+      showInappNotif({
+        icon: "🔄",
+        iconClass: "green",
+        title: "محادثة جديدة",
+        sub: "الوكيل الذكي جاهز من الأول"
+      });
     }
   });
 }
 
-// ✅ حوار حذف المحادثة — على شكل واتساب
 function showDeleteDialog() {
   closeMenu();
   showWaDialog({
     title: "حذف المحادثة؟",
     message: "كل الرسائل والبيانات هتتمسح نهائيًا، ومش هتقدر ترجعها تاني.",
-    okText: "حذف",
-    cancelText: "إلغاء",
-    okStyle: "danger",
+    okText: "حذف", cancelText: "إلغاء", okStyle: "danger",
     onOk: () => {
       deleteChat();
-      showToast("🗑️ تم الحذف");
+      showInappNotif({
+        icon: "🗑️",
+        iconClass: "red",
+        title: "تم الحذف",
+        sub: "المحادثة والبيانات اتمسحت"
+      });
     }
   });
 }
@@ -1228,26 +1169,17 @@ function showDeleteDialog() {
 function getTime() {
   return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
 }
-
 function escapeHtml(text) {
-  return String(text || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
-
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 }
-
 function scrollToBottom() {
-  requestAnimationFrame(() => {
-    chatArea.scrollTop = chatArea.scrollHeight;
-  });
+  requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; });
 }
-
 function setTyping(on, customText) {
   if (on) {
     statusText.textContent = customText || "يكتب...";
@@ -1257,11 +1189,9 @@ function setTyping(on, customText) {
     statusLine.classList.remove("typing");
   }
 }
-
 function toggleTypingBubble(on) {
   typingBubble.classList.toggle("active", !!on);
 }
-
 function showToast(msg, dur = 2400) {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -1269,29 +1199,20 @@ function showToast(msg, dur = 2400) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => t.classList.remove("show"), dur);
 }
-
 function updateSendIcon() {
   const hasText = msgInput.value.trim().length > 0;
   const hasImgs = state.pendingImages.length > 0;
-  if (hasText || hasImgs) {
-    sendIcon.className = "fas fa-arrow-up icon-swap";
-    sendIcon.style.transform = "none";
-  } else {
-    sendIcon.className = "fas fa-microphone icon-swap";
-    sendIcon.style.transform = "none";
-  }
+  sendIcon.className = (hasText || hasImgs) ? "fas fa-arrow-up icon-swap" : "fas fa-microphone icon-swap";
 }
 
 // ═══ MESSAGE RENDERING ═══
 function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
   div.className = `msg msg-${type}`;
-
   let html = "";
   if (text && text.trim()) {
     html += `<span class="msg-content">${formatMsg(text)}</span>`;
   }
-
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
@@ -1299,13 +1220,8 @@ function renderMsg(text, type = "bot", images) {
     });
     html += `</div>`;
   }
-
-  const ticks = type === "user"
-    ? `<span class="msg-ticks">${TICKS_SVG}</span>`
-    : "";
-
+  const ticks = type === "user" ? `<span class="msg-ticks">${TICKS_SVG}</span>` : "";
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
-
   div.innerHTML = html;
   chatArea.insertBefore(div, typingBubble);
   scrollToBottom();
@@ -1314,28 +1230,22 @@ function renderMsg(text, type = "bot", images) {
 function renderButtons(opts) {
   chatArea.querySelectorAll(".btns-rack").forEach(el => el.remove());
   if (!opts || !opts.length) return;
-
   const wrap = document.createElement("div");
   wrap.className = "btns-rack";
   const primary = ["✅ ابعت على واتساب", "📅 احجز معاينة"];
-
   opts.forEach(o => {
     const btn = document.createElement("button");
     btn.className = "btn-glass" + (primary.includes(o) ? " primary" : "");
     btn.textContent = o;
     btn.onclick = () => {
       if (isSending) return;
-      wrap.querySelectorAll(".btn-glass").forEach(b => {
-        b.style.pointerEvents = "none";
-        b.style.opacity = "0.5";
-      });
+      wrap.querySelectorAll(".btn-glass").forEach(b => { b.style.pointerEvents = "none"; b.style.opacity = "0.5"; });
       msgInput.value = o;
       updateSendIcon();
       sendMsg();
     };
     wrap.appendChild(btn);
   });
-
   chatArea.insertBefore(wrap, typingBubble);
   scrollToBottom();
 }
@@ -1347,7 +1257,6 @@ function showWA(url, msg) {
   state.whatsappUrl = url;
   state.waMessage = msg;
 }
-
 function hideWA() {
   waWrapper.classList.remove("show");
   waBtn.href = "#";
@@ -1357,12 +1266,10 @@ function hideWA() {
 function onFilesSelected(e) {
   const files = [...(e.target.files || [])];
   if (!files.length) return;
-
   if (state.pendingImages.length + files.length > MAX_IMAGES) {
     showToast(`الحد الأقصى ${MAX_IMAGES} صور`);
     return;
   }
-
   files.forEach(f => {
     if (!f.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -1374,33 +1281,25 @@ function onFilesSelected(e) {
     };
     reader.readAsDataURL(f);
   });
-
   e.target.value = "";
 }
 
 function renderImgStrip() {
   if (!state.pendingImages.length) {
-    imgStrip.classList.remove("show");
-    imgStrip.innerHTML = "";
-    return;
+    imgStrip.classList.remove("show"); imgStrip.innerHTML = ""; return;
   }
-  imgStrip.classList.add("show");
-  imgStrip.innerHTML = "";
+  imgStrip.classList.add("show"); imgStrip.innerHTML = "";
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
     el.className = "img-strip-item";
-    el.innerHTML = `
-      <img src="${img.preview}">
-      <button class="img-strip-rm" onclick="removeImg(${i})">✕</button>
-    `;
+    el.innerHTML = `<img src="${img.preview}"><button class="img-strip-rm" onclick="removeImg(${i})">✕</button>`;
     imgStrip.appendChild(el);
   });
 }
 
 function removeImg(i) {
   state.pendingImages.splice(i, 1);
-  renderImgStrip();
-  updateSendIcon();
+  renderImgStrip(); updateSendIcon();
 }
 
 async function uploadPendingImages() {
@@ -1421,7 +1320,6 @@ async function uploadPendingImages() {
 // ═══ SEND MESSAGE ═══
 async function sendMsg() {
   if (isSending) return;
-
   const txt = msgInput.value.trim();
   const hasImgs = state.pendingImages.length > 0;
   if (!txt && !hasImgs) return;
@@ -1430,6 +1328,7 @@ async function sendMsg() {
   updateSendIcon();
   chatArea.querySelectorAll(".btns-rack").forEach(el => el.remove());
   hideWA();
+  hideInappNotif();
 
   const localPreviews = state.pendingImages.map(p => p.preview);
   renderMsg(txt || "📷 صور", "user", localPreviews.length ? localPreviews : undefined);
@@ -1466,10 +1365,7 @@ async function sendMsg() {
     toggleTypingBubble(false);
     setTyping(false);
 
-    if (!r.ok) {
-      renderMsg("حصل خطأ مؤقت. جرّب تاني.", "bot");
-      return;
-    }
+    if (!r.ok) { renderMsg("حصل خطأ مؤقت. جرّب تاني.", "bot"); return; }
 
     const data = await r.json();
     const reply = data.response || "";
@@ -1491,10 +1387,7 @@ async function sendMsg() {
     if (data.options?.length) renderButtons(data.options);
 
     if (data.imageUrls?.length) {
-      state.imageUrls = [
-        ...(state.imageUrls || []),
-        ...data.imageUrls
-      ].slice(-MAX_IMAGES);
+      state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls].slice(-MAX_IMAGES);
     }
 
     saveState();
@@ -1527,7 +1420,7 @@ function closeMenu() {
   menuOverlay.classList.remove("open");
 }
 
-// ═══ MODAL ═══
+// ═══ MODALS ═══
 function openAbout() {
   closeMenu();
   document.getElementById("aboutModal").classList.add("show");
@@ -1544,17 +1437,13 @@ function openGoogle() {
 function resetChat() {
   state = {
     formState: { _version: "v70" },
-    history: [],
-    imageUrls: [],
-    pendingImages: [],
-    waMessage: null,
-    whatsappUrl: null,
+    history: [], imageUrls: [], pendingImages: [],
+    waMessage: null, whatsappUrl: null,
   };
   saveState();
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
   hideWA();
-  imgStrip.classList.remove("show");
-  imgStrip.innerHTML = "";
+  imgStrip.classList.remove("show"); imgStrip.innerHTML = "";
   updateSendIcon();
   startConversation();
 }
@@ -1563,16 +1452,12 @@ function deleteChat() {
   sessionStorage.removeItem(STORAGE_KEY);
   state = {
     formState: { _version: "v70" },
-    history: [],
-    imageUrls: [],
-    pendingImages: [],
-    waMessage: null,
-    whatsappUrl: null,
+    history: [], imageUrls: [], pendingImages: [],
+    waMessage: null, whatsappUrl: null,
   };
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
   hideWA();
-  imgStrip.classList.remove("show");
-  imgStrip.innerHTML = "";
+  imgStrip.classList.remove("show"); imgStrip.innerHTML = "";
   updateSendIcon();
   startConversation();
 }
@@ -1586,10 +1471,7 @@ chatArea.addEventListener("scroll", () => {
 // ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
 msgInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMsg();
-  }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 });
 
 // ═══ INIT ═══
@@ -1600,7 +1482,9 @@ function startConversation() {
 }
 
 loadState();
+
 if (state.history && state.history.length) {
+  // استعادة محادثة سابقة
   state.history.forEach(m => {
     if (m.role === "user") renderMsg(m.message, "user");
     else renderMsg(m.message, "bot");
@@ -1615,20 +1499,30 @@ if (state.history && state.history.length) {
 updateSendIcon();
 msgInput.focus();
 
+// ═══ PRIVACY ON FIRST VISIT ═══
+if (!hasSeenPrivacy()) {
+  // تأخير بسيط عشان الصفحة تخلص تحمل
+  setTimeout(() => showPrivacy(), 400);
+} else {
+  // زيارة عائدة — لا حاجة لأي إشعار تلقائي
+}
+
 // ═══ GLOBAL EXPOSE ═══
-window.sendMsg = sendMsg;
-window.onFilesSelected = onFilesSelected;
-window.removeImg = removeImg;
-window.scrollToBottom = scrollToBottom;
-window.resetChat = resetChat;
-window.deleteChat = deleteChat;
-window.goBack = goBack;
-window.openMenu = openMenu;
-window.closeMenu = closeMenu;
-window.openAbout = openAbout;
-window.closeAbout = closeAbout;
-window.openGoogle = openGoogle;
+window.sendMsg           = sendMsg;
+window.onFilesSelected   = onFilesSelected;
+window.removeImg         = removeImg;
+window.scrollToBottom    = scrollToBottom;
+window.resetChat         = resetChat;
+window.deleteChat        = deleteChat;
+window.goBack            = goBack;
+window.openMenu          = openMenu;
+window.closeMenu         = closeMenu;
+window.openAbout         = openAbout;
+window.closeAbout        = closeAbout;
+window.openGoogle        = openGoogle;
 window.showNewChatDialog = showNewChatDialog;
-window.showDeleteDialog = showDeleteDialog;
-window.closeWaDialog = closeWaDialog;
+window.showDeleteDialog  = showDeleteDialog;
+window.closeWaDialog     = closeWaDialog;
+window.acceptPrivacy     = acceptPrivacy;
+window.hideInappNotif    = hideInappNotif;
 </script>
