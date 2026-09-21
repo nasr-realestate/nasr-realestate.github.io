@@ -3,177 +3,590 @@ layout: default
 title: "من نحن | سمسار طلبك - خبراء عقارات مدينة نصر"
 description: "تعرف على فريق سمسار طلبك، نخبة الخبراء العقاريين في مدينة نصر منذ 2014. شفافية، أمان، وسرعة في التنفيذ."
 permalink: /about-us.html
-image: "/assets/img/social-home.webp"
+image: "/assets/img/social-home.png"
 ---
 
+{%- comment -%}
+═══════════════════════════════════════════════════════
+  Schema — AboutPage فقط
+  (Person + RealEstateAgent موجودة في schema-global.html)
+═══════════════════════════════════════════════════════
+{%- endcomment -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Person",
-      "@id": "https://nasr-realestate.github.io/#tarek-tantawy",
-      "name": "طارق طنطاوي",
-      "jobTitle": "Strategic Real Estate Consultant",
-      "url": "https://nasr-realestate.github.io",
-      "description": "مستشار عقاري إستراتيجي وخبير مرشد محلي من المستوى السابع، متخصص في إدارة وتوجيه الاستثمارات العقارية في مدينة نصر، هليوبوليس، والقاهرة الجديدة منذ عام 2014.",
-      "knowsAbout": [
-        "Real Estate Investment",
-        "Property Valuation",
-        "Nasr City Real Estate Market",
-        "New Cairo Premium Properties",
-        "Heliopolis Real Estate"
-      ],
-      "sameAs": [
-        "https://www.facebook.com/Tarekonly",
-        "https://www.linkedin.com/in/tarek-tantawy-444269162",
-        "https://maps.app.goo.gl/JxMtUtn95R4xYtMS9"
-      ]
-    },
-    {
-      "@type": "RealEstateAgent",
-      "@id": "https://nasr-realestate.github.io/#semsar-talabk",
-      "name": "سمسار طلبك",
-      "url": "https://nasr-realestate.github.io",
-      "logo": "https://nasr-realestate.github.io/assets/img/logo.webp",
-      "image": "https://nasr-realestate.github.io/assets/img/social-home.webp",
-      "description": "بوابتك العقارية الاستشارية الأولى لإدارة وتأمين الصفقات العقارية الحصرية ببيانات موثقة بالكامل.",
-      "founder": {
-        "@type": "Person",
-        "@id": "https://nasr-realestate.github.io/#tarek-tantawy"
-      },
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "16 Mohammed Hasan El-Gamal, Al Mintaqah as Sādisah",
-        "addressLocality": "Nasr City",
-        "addressRegion": "Cairo",
-        "postalCode": "11371",
-        "addressCountry": "EG"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 30.0635,
-        "longitude": 31.311
-      },
-      "areaServed": [
-        {
-          "@type": "AdministrativeArea",
-          "name": "Nasr City"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "New Cairo"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "Heliopolis"
-        }
-      ],
-      "sameAs": [
-        "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
-      ],
-      "priceRange": "$$$"
-    }
-  ]
+  "@type": "AboutPage",
+  "@id": "{{ site.url }}{{ page.url }}#about",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" }
 }
 </script>
 
+<style>
+  /* ═══════════════════════════════════════════════
+     صفحة من نحن — هوية ذهبية داكنة موحدة
+     ═══════════════════════════════════════════════ */
+  .ab-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 1rem 4rem;
+    color: #f5f5f5;
+    direction: rtl;
+  }
 
-<div class="about-page-wrapper">
+  /* ═══ Breadcrumb ═══ */
+  .ab-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    margin-bottom: 2rem;
+  }
+  .ab-breadcrumb a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .ab-breadcrumb a:hover { opacity: 0.8; }
+  .ab-breadcrumb .sep { color: #555; }
+  .ab-breadcrumb .current { color: #888; }
 
-  <header class="about-header">
-    <div class="header-content">
-      <h1 class="gold-text">قصة نجاح بدأت في مدينة نصر</h1>
-      <p>أكثر من مجرد وسيط عقاري.. نحن شركاء رحلتك نحو عقار الأحلام</p>
+  /* ═══ Hero ═══ */
+  .ab-hero {
+    position: relative;
+    padding: 4rem 1.5rem;
+    margin-bottom: 3rem;
+    text-align: center;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    overflow: hidden;
+  }
+  .ab-hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ab-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 24px;
+    color: #d4af37;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+  .ab-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #d4af37 0%, #fce205 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+    line-height: 1.25;
+    position: relative;
+    z-index: 1;
+  }
+  .ab-hero p {
+    font-size: 1.1rem;
+    color: #b0b0b0;
+    line-height: 1.75;
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══ Stats Strip ═══ */
+  .ab-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 3rem;
+    padding: 1.75rem;
+    background: #1a1a1a;
+    border-radius: 18px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+  }
+  .ab-stat {
+    text-align: center;
+    padding: 8px;
+  }
+  .ab-stat-icon {
+    font-size: 1.8rem;
+    color: #d4af37;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .ab-stat-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #f5f5f5;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .ab-stat-label {
+    font-size: 0.82rem;
+    color: #888;
+    font-weight: 600;
+  }
+
+  /* ═══ Section ═══ */
+  .ab-section {
+    margin-bottom: 3.5rem;
+  }
+  .ab-section-title {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #d4af37;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+  }
+  .ab-section-title i {
+    font-size: 1.4rem;
+  }
+
+  /* ═══ Mission Card ═══ */
+  .ab-mission {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .ab-mission::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ab-mission-quote {
+    font-size: 2.5rem;
+    color: #d4af37;
+    opacity: 0.4;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .ab-mission p {
+    font-size: 1rem;
+    line-height: 1.9;
+    color: #ddd;
+    position: relative;
+    z-index: 1;
+  }
+  .ab-mission strong {
+    color: #d4af37;
+  }
+
+  /* ═══ Team Grid ═══ */
+  .ab-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .ab-team-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .ab-team-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(212, 175, 55, 0.5);
+    box-shadow: 0 15px 40px rgba(212, 175, 55, 0.2);
+  }
+  .ab-team-card.featured {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  }
+  .ab-team-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #111;
+    position: relative;
+  }
+  .ab-team-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s;
+  }
+  .ab-team-card:hover .ab-team-img img {
+    transform: scale(1.06);
+  }
+  .ab-team-img::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to top, #1a1a1a, transparent);
+    pointer-events: none;
+  }
+  .ab-team-body {
+    padding: 1.25rem 1.25rem 1.5rem;
+    text-align: center;
+  }
+  .ab-team-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #d4af37;
+    margin-bottom: 6px;
+  }
+  .ab-team-role {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 14px;
+    color: #d4af37;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .ab-team-desc {
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+  }
+
+  /* ═══ Values Grid ═══ */
+  .ab-values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .ab-value {
+    padding: 1.75rem;
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    transition: all 0.25s;
+    text-align: center;
+  }
+  .ab-value:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-4px);
+  }
+  .ab-value-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d4af37;
+    font-size: 1.5rem;
+    margin: 0 auto 16px;
+  }
+  .ab-value h3 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #f5f5f5;
+    margin-bottom: 10px;
+  }
+  .ab-value p {
+    font-size: 0.88rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+  }
+
+  /* ═══ Final CTA ═══ */
+  .ab-cta {
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.03) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 24px;
+    text-align: center;
+  }
+  .ab-cta h2 {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #f5f5f5;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .ab-cta h2 span {
+    background: linear-gradient(135deg, #d4af37, #fce205);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .ab-cta p {
+    color: #b0b0b0;
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    line-height: 1.7;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .ab-cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ab-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 26px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .ab-cta-btn.primary {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #050505;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  }
+  .ab-cta-btn.primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(212, 175, 55, 0.5);
+  }
+  .ab-cta-btn.secondary {
+    background: transparent;
+    color: #d4af37;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+  }
+  .ab-cta-btn.secondary:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: #d4af37;
+    transform: translateY(-3px);
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 640px) {
+    .ab-hero { padding: 2.5rem 1rem; }
+    .ab-hero h1 { font-size: 1.7rem; }
+    .ab-hero p { font-size: 0.95rem; }
+    .ab-stats { padding: 1.25rem; gap: 10px; }
+    .ab-stat-value { font-size: 1.35rem; }
+    .ab-stat-icon { font-size: 1.5rem; }
+    .ab-section-title { font-size: 1.3rem; }
+    .ab-team-grid { grid-template-columns: 1fr; }
+    .ab-mission { padding: 1.5rem; }
+    .ab-cta { padding: 2rem 1.25rem; }
+    .ab-cta h2 { font-size: 1.3rem; }
+    .ab-cta-btn { width: 100%; justify-content: center; }
+  }
+</style>
+
+<div class="ab-container">
+
+  <!-- ═══ Breadcrumb ═══ -->
+  <nav class="ab-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home"></i> الرئيسية</a>
+    <span class="sep">›</span>
+    <span class="current">من نحن</span>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <header class="ab-hero">
+    <div class="ab-hero-badge">
+      <i class="fas fa-award"></i>
+      خبراء عقارات مدينة نصر منذ 2014
     </div>
+    <h1>قصة نجاح بدأت في مدينة نصر</h1>
+    <p>
+      أكثر من مجرد وسيط عقاري — نحن <strong style="color:#d4af37;">شركاء رحلتك</strong> نحو عقار الأحلام. خبرة ممتدة لأكثر من عقد، وشفافية مطلقة، ونتائج موثقة.
+    </p>
   </header>
 
-  <main class="about-main-content">
+  <!-- ═══ Stats Strip ═══ -->
+  <section class="ab-stats" aria-label="أرقام الشركة">
+    <div class="ab-stat">
+      <i class="fas fa-calendar-check ab-stat-icon"></i>
+      <div class="ab-stat-value">2014</div>
+      <div class="ab-stat-label">سنة التأسيس</div>
+    </div>
+    <div class="ab-stat">
+      <i class="fas fa-medal ab-stat-icon" style="color:#fce205;"></i>
+      <div class="ab-stat-value">Level 7</div>
+      <div class="ab-stat-label">Google Local Guide</div>
+    </div>
+    <div class="ab-stat">
+      <i class="fas fa-eye ab-stat-icon"></i>
+      <div class="ab-stat-value">16.3M</div>
+      <div class="ab-stat-label">مشاهدة على Google</div>
+    </div>
+    <div class="ab-stat">
+      <i class="fas fa-star ab-stat-icon"></i>
+      <div class="ab-stat-value">4.7</div>
+      <div class="ab-stat-label">من 195 مراجعة</div>
+    </div>
+  </section>
 
-    <section class="mission-vision-card">
-      <div class="mission-icon"><i class="fas fa-quote-right"></i></div>
-      <h2>رسالتنا وقيمنا</h2>
-      <p>نسعى لتقديم تجربة عقارية فريدة وآمنة، مبنية على <strong>الشفافية المطلقة</strong> وسرعة الإنجاز. في سوق مليء بالتحديات، نهدف لأن نكون "الجسر الآمن" الذي تعبرون به نحو عقار أحلامكم، سواء كان سكناً راقياً أو استثماراً تجارياً ناجحاً. نحن نضع خبرتنا التي بدأت منذ عام 2014 بين أيديكم لضمان استثمار آمن وقانوني 100%.</p>
-    </section>
+  <!-- ═══ Mission ═══ -->
+  <section class="ab-section">
+    <h2 class="ab-section-title">
+      <i class="fas fa-quote-right"></i>
+      رسالتنا وقيمنا
+    </h2>
+    <div class="ab-mission">
+      <div class="ab-mission-quote">❝</div>
+      <p>
+        نسعى لتقديم تجربة عقارية فريدة وآمنة، مبنية على <strong>الشفافية المطلقة</strong> وسرعة الإنجاز.
+        في سوق مليء بالتحديات، نهدف لأن نكون <strong>"الجسر الآمن"</strong> الذي تعبرون به نحو عقار أحلامكم —
+        سواء كان سكناً راقياً أو استثماراً تجارياً ناجحاً.
+        خبرتنا التي بدأت منذ 2014 بين أيديكم لضمان استثمار آمن وقانوني 100%.
+      </p>
+    </div>
+  </section>
 
-    <section class="team-section">
-      <h2 class="section-title-about">نخبة الخبراء في خدمتك</h2>
-      <div class="team-grid">
+  <!-- ═══ Team ═══ -->
+  <section class="ab-section">
+    <h2 class="ab-section-title">
+      <i class="fas fa-users"></i>
+      نخبة الخبراء في خدمتك
+    </h2>
+    <div class="ab-team-grid">
 
-        <div class="expert-card highlight-expert">
-          <div class="expert-img">
-            <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="طارق طنطاوي">
-            <div class="img-gradient"></div>
-          </div>
-          <div class="expert-details">
-            <h3>أ/ طارق طنطاوي</h3>
-            <span class="expert-role">المؤسس والرؤية الاستراتيجية</span>
-            <p>خبير متخصص في العقارات الفاخرة، الشقق المفروشة، وإدارة المحافظ الاستثمارية العقارية بمدينة نصر.</p>
-          </div>
+      <div class="ab-team-card featured">
+        <div class="ab-team-img">
+          <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="أ/ طارق طنطاوي — المؤسس" loading="lazy">
         </div>
-
-        <div class="expert-card">
-          <div class="expert-img">
-            <img src="{{ '/assets/img/team/walid.webp' | relative_url }}" alt="وليد فيصل">
-          </div>
-          <div class="expert-details">
-            <h3>أ/ وليد فيصل</h3>
-            <span class="expert-role">خبير البيع المباشر</span>
-            <p>متخصص في التفاوض وإتمام الصفقات السكنية الكبرى بالمنطقة الأولى والسادسة.</p>
-          </div>
+        <div class="ab-team-body">
+          <div class="ab-team-name">أ/ طارق طنطاوي</div>
+          <span class="ab-team-role">المؤسس والرؤية الاستراتيجية</span>
+          <p class="ab-team-desc">
+            خبير متخصص في العقارات الفاخرة، الشقق المفروشة، وإدارة المحافظ الاستثمارية العقارية بمدينة نصر.
+          </p>
         </div>
-
-        <div class="expert-card">
-          <div class="expert-img">
-            <img src="{{ '/assets/img/team/alaa.webp' | relative_url }}" alt="اميره يحي">
-          </div>
-          <div class="expert-details">
-            <h3>أ/اميره يحي</h3>
-            <span class="expert-role">مسؤولة التسويق والإيجارات</span>
-            <p>خبيرة في تسويق المقرات الإدارية والمحلات التجارية واستقطاب التوكيلات العالمية.</p>
-          </div>
-        </div>
-
-        <div class="expert-card">
-          <div class="expert-img">
-            <img src="{{ '/assets/img/team/mohamed.webp' | relative_url }}" alt="محمد عادل">
-          </div>
-          <div class="expert-details">
-            <h3>أ/ محمد عادل</h3>
-            <span class="expert-role">خبير المتابعة والتقييم</span>
-            <p>متخصص في دراسات السوق وتقييم أسعار الوحدات لضمان أفضل قيمة مقابل سعر لعملائنا.</p>
-          </div>
-        </div>
-
       </div>
-    </section>
 
-    <section class="values-section">
-      <div class="value-item">
-        <i class="fas fa-handshake"></i>
+      <div class="ab-team-card">
+        <div class="ab-team-img">
+          <img src="{{ '/assets/img/team/walid.webp' | relative_url }}" alt="أ/ وليد فيصل — خبير البيع المباشر" loading="lazy">
+        </div>
+        <div class="ab-team-body">
+          <div class="ab-team-name">أ/ وليد فيصل</div>
+          <span class="ab-team-role">خبير البيع المباشر</span>
+          <p class="ab-team-desc">
+            متخصص في التفاوض وإتمام الصفقات السكنية الكبرى بالمنطقة الأولى والسادسة.
+          </p>
+        </div>
+      </div>
+
+      <div class="ab-team-card">
+        <div class="ab-team-img">
+          <img src="{{ '/assets/img/team/alaa.webp' | relative_url }}" alt="أ/ اميره يحي — مسؤولة التسويق والإيجارات" loading="lazy">
+        </div>
+        <div class="ab-team-body">
+          <div class="ab-team-name">أ/ اميره يحي</div>
+          <span class="ab-team-role">مسؤولة التسويق والإيجارات</span>
+          <p class="ab-team-desc">
+            خبيرة في تسويق المقرات الإدارية والمحلات التجارية واستقطاب التوكيلات العالمية.
+          </p>
+        </div>
+      </div>
+
+      <div class="ab-team-card">
+        <div class="ab-team-img">
+          <img src="{{ '/assets/img/team/mohamed.webp' | relative_url }}" alt="أ/ محمد عادل — خبير المتابعة والتقييم" loading="lazy">
+        </div>
+        <div class="ab-team-body">
+          <div class="ab-team-name">أ/ محمد عادل</div>
+          <span class="ab-team-role">خبير المتابعة والتقييم</span>
+          <p class="ab-team-desc">
+            متخصص في دراسات السوق وتقييم أسعار الوحدات لضمان أفضل قيمة مقابل سعر لعملائنا.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Values ═══ -->
+  <section class="ab-section">
+    <h2 class="ab-section-title">
+      <i class="fas fa-gem"></i>
+      قيمنا التي نبني عليها
+    </h2>
+    <div class="ab-values-grid">
+
+      <div class="ab-value">
+        <div class="ab-value-icon"><i class="fas fa-handshake"></i></div>
         <h3>ثقة وأمانة</h3>
         <p>شفافية تامة في عرض المواصفات والأسعار الحقيقية للسوق دون مبالغة.</p>
       </div>
-      <div class="value-item">
-        <i class="fas fa-shield-alt"></i>
+
+      <div class="ab-value">
+        <div class="ab-value-icon"><i class="fas fa-shield-alt"></i></div>
         <h3>أمان قانوني</h3>
         <p>لا نعرض إلا العقارات التي تم التحقق من سلامة أوراقها وحصتها في الأرض.</p>
       </div>
-      <div class="value-item">
-        <i class="fas fa-bolt"></i>
+
+      <div class="ab-value">
+        <div class="ab-value-icon"><i class="fas fa-bolt"></i></div>
         <h3>إنجاز قياسي</h3>
         <p>نقدر قيمة وقتك، لذا نوفر لك الجهد في البحث ونصل بك لهدفك في أسرع وقت.</p>
       </div>
-    </section>
 
-    <section class="about-cta">
-      <h2>هل أنت جاهز لاتخاذ خطوتك القادمة؟</h2>
-      <p>سواء كنت تبحث عن سكن العمر أو فرصة استثمارية، نحن هنا لنرشدك.</p>
-      <div class="cta-btns">
-        <a href="{{ '/properties/' | relative_url }}" class="gold-btn">تصفح أحدث العروض</a>
-        <a href="tel:+201147758857" class="outline-btn">اتصل بنا مباشرة</a>
-      </div>
-    </section>
+    </div>
+  </section>
 
-  </main>
+  <!-- ═══ Final CTA ═══ -->
+  <section class="ab-cta">
+    <h2>هل أنت جاهز لاتخاذ <span>خطوتك القادمة؟</span></h2>
+    <p>
+      سواء كنت تبحث عن سكن العمر أو فرصة استثمارية — نحن هنا لنرشدك.
+    </p>
+    <div class="ab-cta-buttons">
+      <a href="{{ '/properties/' | relative_url }}" class="ab-cta-btn primary">
+        <i class="fas fa-building"></i>
+        تصفح أحدث العروض
+      </a>
+      <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، عايز أستشيرك في عقار' | url_encode }}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="ab-cta-btn secondary">
+        <i class="fab fa-whatsapp"></i>
+        تواصل معنا مباشرة
+      </a>
+    </div>
+  </section>
+
 </div>
