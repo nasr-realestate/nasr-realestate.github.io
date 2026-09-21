@@ -255,8 +255,10 @@
   <!-- ═══ القائمة الموحدة (نفسها في كل الصفحات) ═══ -->
   {% include floating-menu.html %}
 
-  <!-- شريط التنقل -->
-  {% include navbar.html %}
+  <!-- شريط التنقل (يظهر إلا إذا أُخفي بـ hide_navbar) -->
+  {% unless page.hide_navbar %}
+    {% include navbar.html %}
+  {% endunless %}
 
   <!-- المحتوى الرئيسي -->
   <main>{{ content }}</main>
