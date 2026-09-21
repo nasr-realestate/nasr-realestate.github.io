@@ -1,121 +1,327 @@
-<footer class="site-footer" style="padding-bottom: 6rem;">
-  <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
+{%- comment -%}
+═══════════════════════════════════════════════════════
+  Footer الذكي — Collapsible Footer
+  ─────────────────────────────────────────────────────
+  - مطوي افتراضياً: سطر واحد فقط
+  - عند الضغط: يتوسع ويعرض كل التفاصيل
+  - SEO آمن: كل المحتوى في HTML (مخفي بـ CSS فقط)
+  - الحالة تُحفظ في sessionStorage
+═══════════════════════════════════════════════════════
+{%- endcomment -%}
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
+<footer class="site-footer" id="siteFooter">
 
-      <!-- العمود الأول: الشعار والوصف -->
-      <div>
-        <div class="footer-logo" style="margin-bottom: 1.5rem;">
-          <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
-            <img src="{{ '/assets/img/logo.webp' | relative_url }}"
-                 alt="{{ site.title }}"
-                 width="130"
-                 height="130"
-                 style="filter: grayscale(100%) brightness(200%); opacity: 0.9;"
-                 loading="lazy">
-          </a>
-        </div>
-        <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;">
-          بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، تقييم) مبنية على الثقة والذكاء الاصطناعي والخبرة الطويلة.
-        </p>
-      </div>
+  <!-- ═══ السطر المختصر (دائماً ظاهر) ═══ -->
+  <div class="footer-mini-bar" onclick="toggleFooter()" role="button" tabindex="0" aria-expanded="false" aria-controls="footerExpanded" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFooter();}">
+    <div class="footer-mini-content">
+      <span class="footer-mini-brand">
+        <i class="fas fa-building" aria-hidden="true"></i>
+        سمسار طلبك
+      </span>
+      <span class="footer-mini-year">
+        © {{ 'now' | date: "%Y" }}
+      </span>
+    </div>
+    <button class="footer-toggle-btn" aria-label="توسيع الفوتر" type="button">
+      <i class="fas fa-chevron-down footer-toggle-icon" aria-hidden="true"></i>
+    </button>
+  </div>
 
-      <!-- العمود الثاني: روابط التنقل -->
-      <div>
-        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          بوابة الملاك الذكية
-        </h3>
-        <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
-          <li>
-            <a href="{{ '/about-us.html' | relative_url }}"
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-info-circle" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
-              من نحن (قصتنا ورؤيتنا)
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/assets/tools/valuation.html' | relative_url }}"
-               style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem; font-weight: bold;">
-              <i class="fas fa-magic" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
-              تثمين العقار (AI Reality Check)
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/properties/' | relative_url }}"
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
-              تصفح خريطة الأسعار
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/requests/' | relative_url }}"
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
-              طلبات العملاء العاجلة
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/add-your-property.html' | relative_url }}"
-               style="text-decoration: none; color: #888; transition: 0.3s; font-size: 0.85rem;">
-              <i class="fas fa-plus-circle" style="margin-left: 8px;" aria-hidden="true"></i>
-              إضافة عقار (الطريقة التقليدية)
-            </a>
-          </li>
-          <li>
-            <a href="{{ '/contact-us.html' | relative_url }}"
-               style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
-              <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
-              استشارة خبير مباشر
-            </a>
-          </li>
-        </ul>
-      </div>
+  <!-- ═══ المحتوى الكامل (مخفي بـ CSS) ═══ -->
+  <div class="footer-expanded" id="footerExpanded">
+    <div class="footer-content" style="max-width: 1200px; margin: 0 auto;">
 
-      <!-- العمود الثالث: التواصل والشبكات -->
-      <div>
-        <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
-          تواصل استراتيجي
-        </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; text-align: right; margin-bottom: 3rem;">
 
-        <div class="social-icons-grid" style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <a href="https://www.facebook.com/Tarekonly" target="_blank" rel="noopener noreferrer" class="social-btn facebook" aria-label="فيسبوك">
-            <i class="fab fa-facebook-f" aria-hidden="true"></i>
-          </a>
-          <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" target="_blank" rel="noopener noreferrer" class="social-btn linkedin" aria-label="لينكدإن">
-            <i class="fab fa-linkedin-in" aria-hidden="true"></i>
-          </a>
-          <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" target="_blank" rel="noopener noreferrer" class="social-btn maps" aria-label="موقعنا على الخريطة">
-            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
-          </a>
-          <a href="https://pin.it/4tCl3jl6r" target="_blank" rel="noopener noreferrer" class="social-btn pinterest" aria-label="Pinterest">
-            <i class="fab fa-pinterest" aria-hidden="true"></i>
-          </a>
-        </div>
-
-        <div style="margin-top: 25px; border: 1px solid #222; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
-          <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);" aria-hidden="true"></i>
-          <div>
-            <div style="font-size: 0.8rem; color: #ccc;">تحتاج قراراً فورياً؟</div>
-            <a href="tel:+201147758857" style="font-size: 1rem; color: #fff; direction: ltr; text-decoration: none; font-weight: bold;">
-              +20 114 775 8857
+        <!-- العمود الأول: الشعار والوصف -->
+        <div>
+          <div class="footer-logo" style="margin-bottom: 1.5rem;">
+            <a href="{{ '/' | relative_url }}" aria-label="العودة إلى الصفحة الرئيسية">
+              <img src="{{ '/assets/img/logo.webp' | relative_url }}"
+                   alt="{{ site.title }}"
+                   width="130"
+                   height="130"
+                   style="filter: grayscale(100%) brightness(200%); opacity: 0.9;"
+                   loading="lazy">
             </a>
           </div>
+          <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.9rem; max-width: 300px;">
+            بوابتك العقارية الأولى في مدينة نصر. نقدم حلولاً عقارية متكاملة (بيع، شراء، تقييم) مبنية على الثقة والذكاء الاصطناعي والخبرة الطويلة.
+          </p>
+        </div>
+
+        <!-- العمود الثاني: روابط التنقل -->
+        <div>
+          <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
+            بوابة الملاك الذكية
+          </h3>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px;">
+            <li>
+              <a href="{{ '/about-us.html' | relative_url }}"
+                 style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
+                <i class="fas fa-info-circle" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+                من نحن (قصتنا ورؤيتنا)
+              </a>
+            </li>
+            <li>
+              <a href="{{ '/assets/tools/valuation.html' | relative_url }}"
+                 style="text-decoration: none; color: #fff; transition: 0.3s; font-size: 0.95rem; font-weight: bold;">
+                <i class="fas fa-magic" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+                تثمين العقار (AI Reality Check)
+              </a>
+            </li>
+            <li>
+              <a href="{{ '/properties/' | relative_url }}"
+                 style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
+                <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+                تصفح خريطة الأسعار
+              </a>
+            </li>
+            <li>
+              <a href="{{ '/requests/' | relative_url }}"
+                 style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
+                <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+                طلبات العملاء العاجلة
+              </a>
+            </li>
+            <li>
+              <a href="{{ '/add-your-property.html' | relative_url }}"
+                 style="text-decoration: none; color: #888; transition: 0.3s; font-size: 0.85rem;">
+                <i class="fas fa-plus-circle" style="margin-left: 8px;" aria-hidden="true"></i>
+                إضافة عقار (الطريقة التقليدية)
+              </a>
+            </li>
+            <li>
+              <a href="{{ '/contact-us.html' | relative_url }}"
+                 style="text-decoration: none; color: #ccc; transition: 0.3s; font-size: 0.95rem;">
+                <i class="fas fa-angle-right" style="color: var(--color-primary); margin-left: 8px;" aria-hidden="true"></i>
+                استشارة خبير مباشر
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- العمود الثالث: التواصل والشبكات -->
+        <div>
+          <h3 style="color: var(--color-primary); font-size: 1.1rem; margin-bottom: 1.5rem; display: inline-block; border-bottom: 2px solid #333; padding-bottom: 8px;">
+            تواصل استراتيجي
+          </h3>
+
+          <div class="social-icons-grid" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="https://www.facebook.com/Tarekonly" target="_blank" rel="noopener noreferrer" class="social-btn facebook" aria-label="فيسبوك">
+              <i class="fab fa-facebook-f" aria-hidden="true"></i>
+            </a>
+            <a href="https://www.linkedin.com/company/smsar-talabk-madinat-nasr/" target="_blank" rel="noopener noreferrer" class="social-btn linkedin" aria-label="لينكدإن">
+              <i class="fab fa-linkedin-in" aria-hidden="true"></i>
+            </a>
+            <a href="https://maps.app.goo.gl/hr3dndj1dwMvXaNz5?g_st=ac" target="_blank" rel="noopener noreferrer" class="social-btn maps" aria-label="موقعنا على الخريطة">
+              <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+            </a>
+            <a href="https://pin.it/4tCl3jl6r" target="_blank" rel="noopener noreferrer" class="social-btn pinterest" aria-label="Pinterest">
+              <i class="fab fa-pinterest" aria-hidden="true"></i>
+            </a>
+          </div>
+
+          <div style="margin-top: 25px; border: 1px solid #222; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-headset" style="font-size: 1.5rem; color: var(--color-primary);" aria-hidden="true"></i>
+            <div>
+              <div style="font-size: 0.8rem; color: #ccc;">تحتاج قراراً فورياً؟</div>
+              <a href="tel:+201147758857" style="font-size: 1rem; color: #fff; direction: ltr; text-decoration: none; font-weight: bold;">
+                +20 114 775 8857
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- شريط الحقوق السفلي -->
+      <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; margin-top: 2rem; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+        <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
+          جميع الحقوق محفوظة © {{ 'now' | date: "%Y" }}
+          <span style="color: var(--color-primary);">سمسار طلبك</span>
+        </p>
+        <div style="display: flex; gap: 20px;">
+          <a href="{{ '/about-us.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">من نحن</a>
+          <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">سياسة الخصوصية</a>
         </div>
       </div>
 
     </div>
-
-    <!-- شريط الحقوق السفلي -->
-    <div class="copyright-bar" style="border-top: 1px solid #1a1a1a; margin-top: 2rem; padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
-      <p style="margin: 0; color: #b0b0b0; font-size: 0.85rem;">
-        جميع الحقوق محفوظة © {{ 'now' | date: "%Y" }}
-        <span style="color: var(--color-primary);">سمسار طلبك</span>
-      </p>
-      <div style="display: flex; gap: 20px;">
-        <a href="{{ '/about-us.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">من نحن</a>
-        <a href="{{ '/privacy-policy.html' | relative_url }}" style="color: #b0b0b0; text-decoration: none; font-size: 0.85rem;">سياسة الخصوصية</a>
-      </div>
-    </div>
-
   </div>
+
 </footer>
+
+<style>
+  /* ═══ الفوتر الذكي — CSS ═══ */
+  .site-footer {
+    position: relative;
+    padding: 0 !important;
+    margin-top: 3rem;
+    background: #050505;
+    border-top: 1px solid #1a1a1a;
+    overflow: hidden;
+  }
+
+  /* شريط مختصر دائماً ظاهر */
+  .footer-mini-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+    min-height: 52px;
+    direction: rtl;
+  }
+  .footer-mini-bar:hover {
+    background: rgba(212, 175, 55, 0.04);
+  }
+  .footer-mini-bar:focus {
+    outline: 2px solid rgba(212, 175, 55, 0.4);
+    outline-offset: -2px;
+  }
+
+  .footer-mini-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .footer-mini-brand {
+    color: var(--color-primary, #d4af37);
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Cairo', sans-serif;
+  }
+  .footer-mini-brand i {
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+
+  .footer-mini-year {
+    color: #b0b0b0;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .footer-toggle-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    color: var(--color-primary, #d4af37);
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .footer-toggle-btn:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+  .footer-toggle-btn:active {
+    transform: scale(0.94);
+  }
+
+  .footer-toggle-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+  }
+
+  /* المحتوى الكامل — مخفي افتراضياً بـ CSS */
+  .footer-expanded {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease;
+    opacity: 0;
+    padding: 0 1.5rem;
+  }
+
+  /* عند الفتح */
+  .site-footer.expanded .footer-expanded {
+    max-height: 1200px;
+    opacity: 1;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .site-footer.expanded .footer-toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .footer-mini-bar {
+      padding: 12px 16px;
+      min-height: 48px;
+    }
+    .footer-mini-brand {
+      font-size: 0.88rem;
+    }
+    .footer-mini-year {
+      font-size: 0.78rem;
+    }
+    .footer-toggle-btn {
+      width: 30px;
+      height: 30px;
+      font-size: 0.78rem;
+    }
+    .footer-expanded {
+      padding: 0 1rem;
+    }
+    .site-footer.expanded .footer-expanded {
+      padding: 1.5rem 1rem 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .footer-expanded,
+    .footer-toggle-icon {
+      transition: none !important;
+    }
+  }
+</style>
+
+<script>
+  (function() {
+    const footer = document.getElementById('siteFooter');
+    const miniBar = footer ? footer.querySelector('.footer-mini-bar') : null;
+    const STORAGE_KEY = 'siteFooterState';
+
+    if (!footer || !miniBar) return;
+
+    // استرجاع الحالة من sessionStorage
+    let isExpanded = false;
+    try {
+      isExpanded = sessionStorage.getItem(STORAGE_KEY) === 'expanded';
+    } catch (e) { /* ignore */ }
+
+    // تطبيق الحالة الأولية
+    if (isExpanded) {
+      footer.classList.add('expanded');
+      miniBar.setAttribute('aria-expanded', 'true');
+    }
+
+    // دالة التبديل
+    window.toggleFooter = function() {
+      const nowExpanded = footer.classList.toggle('expanded');
+      miniBar.setAttribute('aria-expanded', nowExpanded ? 'true' : 'false');
+
+      // حفظ الحالة
+      try {
+        sessionStorage.setItem(STORAGE_KEY, nowExpanded ? 'expanded' : 'collapsed');
+      } catch (e) { /* ignore */ }
+    };
+  })();
+</script>
