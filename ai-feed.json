@@ -11,6 +11,42 @@ sitemap: false
   "last_updated": "{{ site.time | date: '%Y-%m-%d' }}",
   "properties": [
     {% for property in site.properties %}
+    {%- comment -%} استخراج الرقم من نص السعر (لا يمس الحقول الأخرى) {%- endcomment -%}
+    {%- assign price_num = property.priceNumeric | default: 0 -%}
+    {%- if price_num == 0 and property.price -%}
+      {%- assign price_clean = property.price | remove: "," | remove: "،" -%}
+      {%- assign price_clean = price_clean | remove: " ج.م" | remove: " ج.م." | remove: "ج.م" -%}
+      {%- assign price_clean = price_clean | remove: " جنيه" | remove: "جنيه" -%}
+      {%- assign price_clean = price_clean | remove: " شهرياً" | remove: "شهرياً" -%}
+      {%- assign price_clean = price_clean | remove: " شهريا" | remove: "شهريا" -%}
+      {%- assign price_clean = price_clean | remove: "(قابل للتفاوض)" | remove: "قابل للتفاوض" -%}
+      {%- assign price_clean = price_clean | remove: "(شامل العفش)" | remove: "شامل العفش" -%}
+      {%- assign price_clean = price_clean | remove: "(سعر لقطة)" | remove: "سعر لقطة" -%}
+      {%- assign price_clean = price_clean | remove: "(أو إيجار 100 ألف)" -%}
+      {%- assign price_num = price_clean | plus: 0 -%}
+    {%- endif -%}
+
+    {%- comment -%} استخراج الرقم من نص المساحة (لا يمس الحقول الأخرى) {%- endcomment -%}
+    {%- assign area_num = property.areaNumeric | default: 0 -%}
+    {%- if area_num == 0 and property.area -%}
+      {%- assign area_num = property.area | plus: 0 -%}
+    {%- endif -%}
+
+    {%- comment -%} استخراج رقم الغرف (لا يمس الحقول الأخرى) {%- endcomment -%}
+    {%- assign rooms_num = property.roomsNumeric | default: 0 -%}
+    {%- if rooms_num == 0 and property.rooms -%}
+      {%- assign rooms_num = property.rooms | plus: 0 -%}
+    {%- endif -%}
+
+    {%- comment -%} استخراج رقم الحمامات (لا يمس الحقول الأخرى) {%- endcomment -%}
+    {%- assign baths_num = property.bathsNumeric | default: 0 -%}
+    {%- if baths_num == 0 -%}
+      {%- assign baths_src = property.bathrooms | default: property.baths | default: "" -%}
+      {%- if baths_src != "" -%}
+        {%- assign baths_num = baths_src | plus: 0 -%}
+      {%- endif -%}
+    {%- endif -%}
+
     {
       "id": {{ property.id | default: property.slug | default: property.url | jsonify }},
       "title": {{ property.title | jsonify }},
@@ -26,16 +62,16 @@ sitemap: false
       "zone": {{ property.zone | default: property.location | default: "" | jsonify }},
 
       "price": {{ property.price | default: "" | jsonify }},
-      "priceNumeric": {{ property.priceNumeric | default: 0 | jsonify }},
+      "priceNumeric": {{ price_num }},
 
       "area": {{ property.area | default: "" | jsonify }},
-      "areaNumeric": {{ property.areaNumeric | default: 0 | jsonify }},
+      "areaNumeric": {{ area_num }},
 
       "rooms": {{ property.rooms | default: "" | jsonify }},
-      "roomsNumeric": {{ property.roomsNumeric | default: 0 | jsonify }},
+      "roomsNumeric": {{ rooms_num }},
 
       "baths": {{ property.bathrooms | default: property.baths | default: "" | jsonify }},
-      "bathsNumeric": {{ property.bathsNumeric | default: 0 | jsonify }},
+      "bathsNumeric": {{ baths_num }},
 
       "floor": {{ property.floor | default: "" | jsonify }},
 
