@@ -352,8 +352,8 @@ hide_navbar: true
 
   .pp-agent-btn {
     padding: 12px 20px;
-    background: linear-gradient(135deg, #d4af37, #b8941f);
-    color: #050505;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: #fff;
     border-radius: 12px;
     text-decoration: none;
     font-weight: 700;
@@ -363,10 +363,11 @@ hide_navbar: true
     gap: 8px;
     transition: all 0.2s;
     flex-shrink: 0;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
   }
   .pp-agent-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4);
+    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.5);
   }
 
   /* ═══ Related Properties ═══ */
@@ -574,6 +575,32 @@ hide_navbar: true
 {%- assign main_img = page.image_file | default: "" -%}
 {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: main_img -%}
 
+{%- comment -%} ═══════════════════════════════════════════════════
+   رسالة واتساب مؤهلة كاملة — تحتوي كل تفاصيل العقار
+   ═══════════════════════════════════════════════════ {%- endcomment -%}
+{%- capture wa_text -%}
+السلام عليكم أ. طارق،
+أنا مهتم بهذا العقار من موقع سمسار طلبك:
+
+🏢 {{ page.title }}
+
+📋 التفاصيل:
+━━━━━━━━━━━━━━━━━━
+{% if page.category contains "rent" %}💰 الإيجار الشهري: {{ page.price }}{% else %}💰 السعر: {{ page.price }}{% endif %}
+{% if page.location %}📍 الموقع: {{ page.location }}{% endif %}
+{% if page.area %}📐 المساحة: {{ page.area }}{% endif %}
+{% if page.rooms %}🛏️ الغرف: {{ page.rooms }}{% endif %}
+{% if page.bathrooms %}🛁 الحمامات: {{ page.bathrooms }}{% elsif page.baths %}🛁 الحمامات: {{ page.baths }}{% endif %}
+{% if page.floor %}🏢 الدور: {{ page.floor }}{% endif %}
+{% if page.finish %}✨ التشطيب: {{ page.finish }}{% endif %}
+━━━━━━━━━━━━━━━━━━
+
+🔗 رابط العقار:
+{{ site.url }}{{ page.url }}
+
+من فضلك أرسل لي تفاصيل المعاينة. شكراً.
+{%- endcapture -%}
+
 <div class="pp-container">
 
   <!-- ═══ Breadcrumb ═══ -->
@@ -714,7 +741,6 @@ hide_navbar: true
   {% endif %}
 
   <!-- ═══ Action Buttons ═══ -->
-  {%- assign wa_text = "أرغب في الاستفسار عن: " | append: page.title | append: " — رابط العقار: " | append: site.url | append: page.url -%}
   <div class="pp-actions">
     <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"
        target="_blank"
@@ -769,17 +795,16 @@ hide_navbar: true
       </div>
     </div>
 
-    <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
+    <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"
        target="_blank"
-       rel="noopener"
+       rel="noopener noreferrer"
        class="pp-agent-btn">
-      <i class="fas fa-external-link-alt"></i> الملف الشخصي
+      <i class="fab fa-whatsapp"></i> تواصل مع طارق
     </a>
   </div>
 
   <!-- ═══ Related Properties ═══ -->
   {%- assign related = site.properties | where_exp: "item", "item.url != page.url" -%}
-  {%- assign current_type = page.property_type | default: page.category -%}
   {%- assign related_filtered = related | where: "category", page.category | sample: 3 -%}
   {% if related_filtered.size == 0 %}
     {%- assign related_filtered = related | sample: 3 -%}
