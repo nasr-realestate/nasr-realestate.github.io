@@ -25,10 +25,7 @@
   <!-- ═══ القائمة الموحدة (مشتركة مع default.html) ═══ -->
   {% include floating-menu.html %}
 
-  <!-- شريط التنقل (يظهر إلا إذا أُخفي بـ hide_navbar) -->
-  {% unless page.hide_navbar %}
-    {% include navbar.html %}
-  {% endunless %}
+  <!-- شريط التنقل — مُزال (القائمة ☰ تكفي) -->
 
   <!-- ═══ المحتوى ═══ -->
   {{ content }}
