@@ -111,91 +111,28 @@ body {
   overflow: hidden;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
 }
+  
+<header class="header">
+    <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
+      <i class="fas fa-arrow-right"></i>
+    </button>
 
-/* ═══ HEADER ═══ */
-.header {
-  position: relative;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  min-height: var(--header-h);
-  background: var(--header-bg);
-  border-bottom: 1px solid rgba(0,0,0,0.15);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  flex-shrink: 0;
-}
+    <div class="header-info" onclick="openAbout()">
+      <div class="header-name">
+        طارق طنطاوي
+      </div>
+      <div class="header-status" id="statusLine">
+        <span class="status-dot"></span>
+        <span id="statusText">متصل الآن</span>
+      </div>
+    </div>
 
-.header-back {
-  width: 40px; height: 40px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  transition: background .18s ease;
-  font-size: 18px;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-}
-.header-back:hover { background: rgba(255,255,255,0.15); }
-
-.header-avatar {
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 1.5px solid rgba(255,255,255,0.3);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  cursor: pointer;
-}
-
-.header-info { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
-
-.header-name {
-  font-size: 16px; font-weight: 700; color: #fff;
-  line-height: 1.2;
-  display: flex; align-items: center; gap: 6px;
-  letter-spacing: -0.2px;
-}
-
-.header-badge {
-  font-size: 10px; font-weight: 700;
-  color: #075e54; background: #fff;
-  padding: 2px 7px; border-radius: 8px;
-}
-
-.header-status {
-  font-size: 12.5px; color: rgba(255,255,255,0.85);
-  display: flex; align-items: center; gap: 5px;
-  margin-top: 1px; font-weight: 500;
-}
-
-.status-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #25d366; display: inline-block; flex-shrink: 0;
-  box-shadow: 0 0 0 0 rgba(37,211,102,0.5);
-  animation: pulseDot 2s infinite;
-}
-@keyframes pulseDot {
-  0%,100% { box-shadow: 0 0 0 0 rgba(37,211,102,0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(37,211,102,0); }
-}
-
-.header-status.typing { color: #d9fdd3; font-weight: 600; }
-.header-status.typing .status-dot { animation: none; opacity: 0.4; }
-
-.header-actions { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
-
-.header-btn {
-  width: 40px; height: 40px; border-radius: 50%;
-  border: none; background: transparent; color: #fff;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 17px; transition: all .18s ease; flex-shrink: 0;
-}
-.header-btn:hover { background: rgba(255,255,255,0.15); }
-
+    <div class="header-actions">
+      <button class="header-btn" onclick="openMenu(event)" title="القائمة" aria-label="القائمة">
+        <i class="fas fa-ellipsis-v"></i>
+      </button>
+    </div>
+  </header>
 /* ═══ MENU ═══ */
 .menu-overlay {
   position: fixed; inset: 0;
