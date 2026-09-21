@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
-    <radialGradient id="bgGlow" cx="50%" cy="30%" r="65%">
-      <stop offset="0%" stop-color="#d4af37" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+    <linearGradient id="waBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#075e54"/>
+      <stop offset="100%" stop-color="#00a884"/>
+    </linearGradient>
+    <radialGradient id="waGlow" cx="50%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#00a884" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0b141a" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="goldText" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fce205"/>
@@ -10,46 +14,85 @@
     </linearGradient>
   </defs>
 
-  <!-- الخلفية -->
-  <rect width="1200" height="630" fill="#050505"/>
-  <rect width="1200" height="630" fill="url(#bgGlow)"/>
+  <!-- ═══ الخلفية الداكنة (WhatsApp Dark Mode) ═══ -->
+  <rect width="1200" height="630" fill="#0b141a"/>
+  <rect width="1200" height="630" fill="url(#waGlow)"/>
 
-  <!-- توهج محيطي -->
-  <circle cx="1050" cy="120" r="260" fill="#d4af37" opacity="0.04"/>
-  <circle cx="150" cy="520" r="280" fill="#d4af37" opacity="0.03"/>
+  <!-- ═══ توهج محيطي أخضر ═══ -->
+  <circle cx="1000" cy="100" r="280" fill="#00a884" opacity="0.05"/>
+  <circle cx="200" cy="540" r="300" fill="#25d366" opacity="0.03"/>
 
-  <!-- إطار ذهبي -->
+  <!-- ═══ إطار ذهبي رفيع (يربط بهوية الموقع) ═══ -->
   <rect x="40" y="40" width="1120" height="550" rx="18" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-opacity="0.3"/>
 
-  <!-- شارة السلطة -->
+  <!-- ═══ شارة السلطة العلوية ═══ -->
   <g transform="translate(600, 85)">
-    <rect x="-215" y="-22" width="430" height="44" rx="22" fill="#d4af37" fill-opacity="0.12" stroke="#d4af37" stroke-width="1" stroke-opacity="0.45"/>
+    <rect x="-215" y="-22" width="430" height="44" rx="22" fill="#d4af37" fill-opacity="0.15" stroke="#d4af37" stroke-width="1" stroke-opacity="0.5"/>
     <path d="M -190 -2 l 2.6 5.3 5.9 0.9 -4.3 4.1 1 5.8 -5.2 -2.7 -5.2 2.7 1 -5.8 -4.3 -4.1 5.9 -0.9 z" fill="#d4af37"/>
-    <text x="5" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#d4af37" font-size="20" font-weight="700">عملاء جادون · متابعة مباشرة · لا رسوم مبدئية</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#d4af37" font-size="20" font-weight="700">متاح 24 ساعة · رد فوري · بدون تسجيل</text>
   </g>
 
-  <!-- اسم الماركة -->
-  <text x="600" y="185" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#b0b0b0" font-size="21" font-weight="600" letter-spacing="3">سـمـسـار طـلـبـك — SEMSAR TALABK</text>
-
-  <!-- العنوان الرئيسي -->
-  <text x="600" y="285" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="url(#goldText)" font-size="82" font-weight="900">طلبات العملاء</text>
-
-  <!-- العنوان الفرعي -->
-  <text x="600" y="365" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#f5f5f5" font-size="26" font-weight="600">اعرض عقارك لعميل جاهز للتعاقد — فرصتك اليوم</text>
-
-  <!-- شريط الموثوقية -->
-  <g transform="translate(600, 450)">
-    <rect x="-370" y="-30" width="740" height="60" rx="14" fill="#111111" stroke="#d4af37" stroke-width="1" stroke-opacity="0.25"/>
-    <text x="-235" y="8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#d4af37" font-size="19" font-weight="800">طلبات محدثة</text>
-    <text x="-75" y="8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#f5f5f5" font-size="19" font-weight="800">متابعة 24/7</text>
-    <text x="95" y="8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#d4af37" font-size="19" font-weight="800">16.3M مشاهدة</text>
-    <text x="260" y="8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#f5f5f5" font-size="19" font-weight="800">4.7 تقييم</text>
+  <!-- ═══ فقاعات محادثة (WhatsApp Style) — يمين ═══ -->
+  <!-- فقاعة 1 (المستخدم - يمين) -->
+  <g transform="translate(880, 200)">
+    <path d="M -140 -25 q 0 -8 8 -8 l 130 0 q 8 0 8 8 l 0 36 q 0 8 -8 8 l -110 0 l -10 12 l 0 -12 l -10 0 q -8 0 -8 -8 z"
+          fill="#005c4b" stroke="#005c4b" stroke-width="1"/>
+    <text x="-15" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#e9edef" font-size="16" font-weight="600">عايز شقة في العاشرة</text>
+    <!-- علامة صح -->
+    <path d="M 95 2 l 4 4 l 8 -8" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 105 2 l 4 4 l 8 -8" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round"/>
   </g>
 
-  <!-- زر التواصل السفلي -->
+  <!-- ═══ فقاعات محادثة — يسار ═══ -->
+  <!-- فقاعة 2 (الوكيل - يسار) -->
+  <g transform="translate(320, 260)">
+    <path d="M -160 -25 q 0 -8 8 -8 l 150 0 q 8 0 8 8 l 0 36 q 0 8 -8 8 l -140 0 l -10 12 l 0 -12 l -8 0 q -8 0 -8 -8 z"
+          fill="#1f2c34" stroke="#1f2c34" stroke-width="1"/>
+    <text x="5" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#e9edef" font-size="16" font-weight="600">عندنا 3 عروض ممتازة</text>
+  </g>
+
+  <!-- فقاعة 3 (المستخدم - يمين) -->
+  <g transform="translate(880, 320)">
+    <path d="M -140 -25 q 0 -8 8 -8 l 130 0 q 8 0 8 8 l 0 36 q 0 8 -8 8 l -110 0 l -10 12 l 0 -12 l -10 0 q -8 0 -8 -8 z"
+          fill="#005c4b" stroke="#005c4b" stroke-width="1"/>
+    <text x="-15" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#e9edef" font-size="16" font-weight="600">ابعتلي التفاصيل</text>
+    <path d="M 95 2 l 4 4 l 8 -8" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 105 2 l 4 4 l 8 -8" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- ═══ أيقونة الروبوت (وسط يسار) ═══ -->
+  <g transform="translate(160, 400)">
+    <circle cx="0" cy="0" r="55" fill="#00a884" opacity="0.15"/>
+    <circle cx="0" cy="0" r="45" fill="#00a884" opacity="0.3"/>
+    <circle cx="0" cy="0" r="35" fill="#25d366"/>
+    <!-- رأس الروبوت -->
+    <rect x="-18" y="-15" width="36" height="28" rx="6" fill="#0b141a"/>
+    <!-- عيون -->
+    <circle cx="-8" cy="-2" r="3" fill="#25d366"/>
+    <circle cx="8" cy="-2" r="3" fill="#25d366"/>
+    <!-- فم -->
+    <rect x="-8" y="5" width="16" height="3" rx="1.5" fill="#25d366"/>
+    <!-- هوائي -->
+    <line x1="0" y1="-15" x2="0" y2="-25" stroke="#0b141a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="0" cy="-27" r="3" fill="#d4af37"/>
+  </g>
+
+  <!-- ═══ العنوان الرئيسي ═══ -->
+  <text x="600" y="310" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="url(#goldText)" font-size="68" font-weight="900">الوكيل الذكي</text>
+
+  <!-- ═══ العنوان الفرعي ═══ -->
+  <text x="600" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#e9edef" font-size="22" font-weight="700">محادثة فورية مع طارق طنطاوي</text>
+  <text x="600" y="395" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#8696a0" font-size="18" font-weight="600">اسأل · اطلب · احجز معاينة — في ثواني</text>
+
+  <!-- ═══ اسم الماركة (أسفل) ═══ -->
+  <text x="600" y="460" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#8696a0" font-size="16" font-weight="600" letter-spacing="4">سـمـسـار طـلـبـك — SEMSAR TALABK</text>
+
+  <!-- ═══ زر WhatsApp السفلي ═══ -->
   <g transform="translate(600, 545)">
-    <rect x="-205" y="-23" width="410" height="46" rx="23" fill="#050505" stroke="#d4af37" stroke-width="2"/>
-    <path d="M -155 -8 q 0 -3 3 -3 l 4 0 q 2 0 3 2 l 2 5 q 1 2 -1 3 l -2 2 q 3 5 7 9 q 4 4 9 7 l 2 -2 q 1 -2 3 -1 l 5 2 q 2 1 2 3 l 0 4 q 0 3 -3 3 q -15 0 -24 -9 q -9 -9 -9 -24 z" fill="#fce205"/>
-    <text x="15" y="6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#fce205" font-size="23" font-weight="800">01147758857 — واتساب مباشر</text>
+    <rect x="-230" y="-26" width="460" height="52" rx="26" fill="#25d366"/>
+    <!-- أيقونة واتساب -->
+    <circle cx="-180" cy="0" r="16" fill="#ffffff"/>
+    <path d="M -186 -3 q 0 -5 6 -5 q 6 0 6 5 q 0 3 -2 5 l 1 3 l -3 -1 q -2 1 -4 1 q -6 0 -6 -5 z" fill="#25d366"/>
+    <text x="15" y="7" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#ffffff" font-size="22" font-weight="800">تحدث مع طارق الآن — مجاناً</text>
   </g>
 </svg>
