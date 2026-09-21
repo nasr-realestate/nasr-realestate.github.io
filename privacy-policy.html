@@ -3,60 +3,442 @@ layout: default
 title: "سياسة الخصوصية | سمسار طلبك"
 description: "تعرف على كيفية حماية بياناتك وخصوصيتك عند استخدام موقع سمسار طلبك. نحن نلتزم بأعلى معايير الأمان والشفافية."
 permalink: /privacy-policy.html
-image: "/assets/img/social-home.webp"
+image: "/assets/img/social-home.png"
 ---
 
-<header class="page-header">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <h1 class="page-title">سياسة الخصوصية</h1>
-    <p style="opacity: 0.8; margin-top: 10px;">بياناتك أمانة.. وخصوصيتك خط أحمر</p>
-  </div>
-</header>
+{%- comment -%}
+═══════════════════════════════════════════════════════
+  Schema — WebPage للصفحة القانونية
+═══════════════════════════════════════════════════════
+{%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "{{ site.url }}{{ page.url }}#webpage",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" }
+}
+</script>
 
-<main>
-  <div class="content-wrapper" style="max-width: 900px; margin: 0 auto; padding: 2rem;">
+<style>
+  /* ═══════════════════════════════════════════════
+     صفحة سياسة الخصوصية — هوية ذهبية داكنة
+     ═══════════════════════════════════════════════ */
+  .pp-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem 1rem 4rem;
+    color: #f5f5f5;
+    direction: rtl;
+  }
 
-    <div class="content-section" style="background: var(--color-surface-2); padding: 3rem; border-radius: 20px; border: 1px solid var(--color-border-light); color: #ccc; line-height: 1.8; text-align: justify;">
+  /* ═══ Breadcrumb ═══ */
+  .pp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    margin-bottom: 2rem;
+  }
+  .pp-breadcrumb a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .pp-breadcrumb a:hover { opacity: 0.8; }
+  .pp-breadcrumb .sep { color: #555; }
+  .pp-breadcrumb .current { color: #888; }
 
-      <p style="font-size: 1.1rem; margin-bottom: 2rem;">
-        في <strong>"سمسار طلبك"</strong>، ندرك أن العقارات مجال يقوم على الثقة. لذلك، نلتزم بحماية خصوصية عملائنا وزوار موقعنا، ونوضح هنا بشفافية تامة كيف نتعامل مع بياناتك.
-      </p>
+  /* ═══ Hero ═══ */
+  .pp-hero {
+    text-align: center;
+    padding: 3rem 1.5rem 2.5rem;
+    margin-bottom: 2.5rem;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .pp-hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .pp-hero-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-size: 1.8rem;
+    color: #d4af37;
+    position: relative;
+    z-index: 1;
+  }
+  .pp-hero h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #d4af37 0%, #fce205 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+  }
+  .pp-hero p {
+    font-size: 1rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">1. البيانات التي نقوم بجمعها</h3>
-      <p>نحن لا نطلب بيانات شخصية بمجرد تصفح الموقع. البيانات التي تقدمها طواعية قد تصل إلينا عند:</p>
-      <ul style="list-style: none; padding-right: 15px; margin-top: 10px;">
-        <li style="margin-bottom: 8px;"><i class="fas fa-check" style="color: var(--color-primary); margin-left: 10px;"></i> ملء نموذج "أضف عقارك" (الاسم، الهاتف، تفاصيل العقار).</li>
-        <li style="margin-bottom: 8px;"><i class="fas fa-check" style="color: var(--color-primary); margin-left: 10px;"></i> التواصل معنا عبر واتساب (يظهر لنا رقم هاتفك واسمك المسجل في التطبيق).</li>
-        <li style="margin-bottom: 8px;"><i class="fas fa-check" style="color: var(--color-primary); margin-left: 10px;"></i> استخدام المحادثة أو رفع صور العقار؛ قد تُرسل الرسائل والصور إلى خدمة Worker مخصصة لتشغيل المحادثة والرفع.</li>
-      </ul>
+  /* ═══ Content Card ═══ */
+  .pp-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    line-height: 1.85;
+    color: #ccc;
+    font-size: 0.98rem;
+  }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">2. كيف نستخدم بياناتك؟</h3>
-      <p>الغرض الوحيد من جمع البيانات هو <strong>إتمام الخدمة العقارية</strong>. نستخدم رقم هاتفك للتواصل معك بخصوص العقار الذي تود بيعه أو شرائه.<br>
-      <strong style="color: #fff;">تعهد صارم:</strong> نحن لا نقوم ببيع، تأجير، أو مشاركة أرقام هواتف عملائنا مع أي شركات تسويق أو أطراف خارجية.</p>
+  .pp-intro {
+    font-size: 1.05rem;
+    color: #ddd;
+    margin-bottom: 2rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 14px;
+    border-right: 4px solid #d4af37;
+    line-height: 1.8;
+  }
+  .pp-intro strong { color: #d4af37; }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">3. إخلاء المسؤولية بخصوص واتساب</h3>
-      <p>موقعنا يعتمد بشكل كبير على التواصل المباشر عبر تطبيق <strong>WhatsApp</strong>. عند الضغط على أزرار التواصل، يتم توجيهك إلى خوادم شركة Meta (المالكة لواتساب). تنطبق سياسة خصوصية واتساب على المحادثات التي تجريها هناك.</p>
+  /* ═══ Section Headers ═══ */
+  .pp-section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #d4af37;
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    line-height: 1.4;
+  }
+  .pp-section-title .pp-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(212, 175, 55, 0.08));
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #d4af37;
+    flex-shrink: 0;
+  }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">4. ملفات تعريف الارتباط (Cookies) والتحليلات</h3>
-      <p>نستخدم Google Tag Manager/Google Analytics، عند تفعيلهما، لفهم عدد الزيارات والصفحات الأكثر استخدامًا وتحسين الموقع. قد يحتفظ المتصفح بسجل المحادثة مؤقتًا داخل <code>sessionStorage</code> حتى نهاية جلسة التبويب، ولا يحفظ نموذج إضافة العقار الاسم أو الهاتف أو تفاصيل العقار في <code>localStorage</code>. عند استخدام أداة التقييم، يتم تنفيذ التقييم داخل المتصفح ولا تُرسل الرسالة إلى مزود ذكاء اصطناعي خارجي.</p>
+  .pp-text {
+    color: #ccc;
+    margin-bottom: 1rem;
+  }
+  .pp-text strong {
+    color: #f5f5f5;
+    font-weight: 700;
+  }
+  .pp-text code {
+    background: rgba(212, 175, 55, 0.12);
+    color: #d4af37;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.88em;
+    font-family: 'Courier New', monospace;
+    direction: ltr;
+    display: inline-block;
+  }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">5. مدة الاحتفاظ والحذف</h3>
-      <p>تُستخدم بيانات التواصل لإتمام الطلب والرد عليك. يمكنك طلب تعديل أو حذف أي بيانات أرسلتها عبر التواصل معنا على واتساب أو عبر بيانات الاتصال المنشورة في الموقع. لا نحتفظ ببيانات أكثر مما يلزم لتقديم الخدمة، مع مراعاة سجلات واتساب والخدمات الخارجية التي تخضع لسياساتها الخاصة.</p>
+  /* ═══ List ═══ */
+  .pp-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+  .pp-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(212, 175, 55, 0.04);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    color: #ddd;
+    line-height: 1.6;
+    transition: all 0.2s;
+  }
+  .pp-list li:hover {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.25);
+  }
+  .pp-list li i {
+    color: #d4af37;
+    font-size: 0.95rem;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
 
-      <h3 style="color: var(--color-primary); margin-top: 2rem; margin-bottom: 10px; font-size: 1.4rem;">6. حقوقك</h3>
-      <p>يحق لك في أي وقت طلب حذف بيانات عقارك من موقعنا، أو طلب تعديلها. يمكنك فعل ذلك بسهولة عبر التواصل معنا مباشرة.</p>
+  /* ═══ Commitment Box ═══ */
+  .pp-commitment {
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(37, 211, 102, 0.02));
+    border: 1px solid rgba(37, 211, 102, 0.3);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .pp-commitment-icon {
+    font-size: 1.5rem;
+    color: #25d366;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .pp-commitment-text {
+    flex: 1;
+    color: #ddd;
+    line-height: 1.7;
+  }
+  .pp-commitment-text strong {
+    color: #25d366;
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
 
-      <div style="margin-top: 4rem; padding-top: 2rem; border-top: 1px dashed #444; font-size: 0.9rem; color: #666; display: flex; justify-content: space-between; flex-wrap: wrap;">
-        <span>آخر تحديث: {{ 'now' | date: "%Y" }}</span>
-        <span>إدارة موقع سمسار طلبك</span>
+  /* ═══ Update Footer ═══ */
+  .pp-update-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed rgba(212, 175, 55, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: #888;
+  }
+  .pp-update-footer .pp-update-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pp-update-footer .pp-update-date i {
+    color: #d4af37;
+  }
+  .pp-update-footer .pp-brand {
+    color: #d4af37;
+    font-weight: 700;
+  }
+
+  /* ═══ Back Button ═══ */
+  .pp-back-wrap {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+  .pp-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px;
+    background: transparent;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    color: #d4af37;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+  .pp-back-btn:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: #d4af37;
+    transform: translateY(-2px);
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 640px) {
+    .pp-hero { padding: 2.5rem 1rem 2rem; }
+    .pp-hero h1 { font-size: 1.6rem; }
+    .pp-hero-icon { width: 60px; height: 60px; font-size: 1.5rem; }
+    .pp-card { padding: 1.75rem 1.25rem; font-size: 0.94rem; }
+    .pp-section-title { font-size: 1.02rem; }
+    .pp-section-title .pp-num { width: 28px; height: 28px; font-size: 0.82rem; }
+    .pp-intro { padding: 1rem 1.25rem; font-size: 0.98rem; }
+    .pp-update-footer { flex-direction: column; text-align: center; }
+  }
+</style>
+
+<div class="pp-container">
+
+  <!-- ═══ Breadcrumb ═══ -->
+  <nav class="pp-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home"></i> الرئيسية</a>
+    <span class="sep">›</span>
+    <span class="current">سياسة الخصوصية</span>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <header class="pp-hero">
+    <div class="pp-hero-icon">
+      <i class="fas fa-user-shield"></i>
+    </div>
+    <h1>سياسة الخصوصية</h1>
+    <p>بياناتك أمانة — وخصوصيتك خط أحمر. تعرف على كيفية حمايتنا لبياناتك.</p>
+  </header>
+
+  <!-- ═══ Content ═══ -->
+  <article class="pp-card">
+
+    <div class="pp-intro">
+      في <strong>سمسار طلبك</strong>، ندرك أن العقارات مجال يقوم على الثقة. لذلك نلتزم بحماية خصوصية عملائنا وزوار موقعنا، ونوضح هنا بشفافية تامة كيف نتعامل مع بياناتك.
+    </div>
+
+    <!-- ═══ Section 1 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">1</span>
+      البيانات التي نقوم بجمعها
+    </h2>
+    <p class="pp-text">
+      نحن <strong>لا نطلب بيانات شخصية بمجرد تصفح الموقع</strong>. البيانات التي تقدمها طواعية قد تصل إلينا عند:
+    </p>
+    <ul class="pp-list">
+      <li>
+        <i class="fas fa-check-circle"></i>
+        <span>ملء نموذج "<strong>أضف عقارك</strong>" (الاسم، الهاتف، تفاصيل العقار).</span>
+      </li>
+      <li>
+        <i class="fas fa-check-circle"></i>
+        <span>التواصل معنا عبر <strong>واتساب</strong> (يظهر لنا رقم هاتفك واسمك المسجل في التطبيق).</span>
+      </li>
+      <li>
+        <i class="fas fa-check-circle"></i>
+        <span>استخدام <strong>المحادثة</strong> أو رفع صور العقار — قد تُرسل الرسائل والصور إلى خدمة Worker مخصصة لتشغيل المحادثة والرفع.</span>
+      </li>
+    </ul>
+
+    <!-- ═══ Section 2 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">2</span>
+      كيف نستخدم بياناتك؟
+    </h2>
+    <p class="pp-text">
+      الغرض الوحيد من جمع البيانات هو <strong>إتمام الخدمة العقارية</strong>. نستخدم رقم هاتفك للتواصل معك بخصوص العقار الذي تود بيعه أو شرائه.
+    </p>
+
+    <div class="pp-commitment">
+      <i class="fas fa-shield-alt pp-commitment-icon"></i>
+      <div class="pp-commitment-text">
+        <strong>تعهد صارم</strong>
+        نحن لا نقوم ببيع، تأجير، أو مشاركة أرقام هواتف عملائنا مع أي شركات تسويق أو أطراف خارجية.
       </div>
     </div>
 
-    <div style="text-align: center; margin-top: 3rem;">
-      <a href="{{ '/' | relative_url }}" class="back-btn" style="text-decoration: none;">
-        العودة للصفحة الرئيسية
-      </a>
+    <!-- ═══ Section 3 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">3</span>
+      إخلاء المسؤولية بخصوص واتساب
+    </h2>
+    <p class="pp-text">
+      موقعنا يعتمد بشكل كبير على التواصل المباشر عبر تطبيق <strong>WhatsApp</strong>. عند الضغط على أزرار التواصل، يتم توجيهك إلى خوادم شركة <strong>Meta</strong> (المالكة لواتساب). تنطبق سياسة خصوصية واتساب على المحادثات التي تجريها هناك.
+    </p>
+
+    <!-- ═══ Section 4 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">4</span>
+      ملفات تعريف الارتباط (Cookies) والتحليلات
+    </h2>
+    <p class="pp-text">
+      نستخدم <strong>Google Tag Manager / Google Analytics</strong>، عند تفعيلهما، لفهم عدد الزيارات والصفحات الأكثر استخدامًا وتحسين الموقع.
+    </p>
+    <p class="pp-text">
+      قد يحتفظ المتصفح بسجل المحادثة مؤقتًا داخل <code>sessionStorage</code> حتى نهاية جلسة التبويب، ولا يحفظ نموذج إضافة العقار الاسم أو الهاتف أو تفاصيل العقار في <code>localStorage</code>.
+    </p>
+    <p class="pp-text">
+      عند استخدام <strong>أداة التقييم</strong>، يتم تنفيذ التقييم داخل المتصفح ولا تُرسل الرسالة إلى مزود ذكاء اصطناعي خارجي.
+    </p>
+
+    <!-- ═══ Section 5 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">5</span>
+      مدة الاحتفاظ والحذف
+    </h2>
+    <p class="pp-text">
+      تُستخدم بيانات التواصل لإتمام الطلب والرد عليك. يمكنك <strong>طلب تعديل أو حذف أي بيانات</strong> أرسلتها عبر التواصل معنا على واتساب أو عبر بيانات الاتصال المنشورة في الموقع.
+    </p>
+    <p class="pp-text">
+      لا نحتفظ ببيانات أكثر مما يلزم لتقديم الخدمة، مع مراعاة سجلات واتساب والخدمات الخارجية التي تخضع لسياساتها الخاصة.
+    </p>
+
+    <!-- ═══ Section 6 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">6</span>
+      حقوقك
+    </h2>
+    <p class="pp-text">
+      يحق لك في أي وقت <strong>طلب حذف بيانات عقارك من موقعنا، أو طلب تعديلها</strong>. يمكنك فعل ذلك بسهولة عبر التواصل معنا مباشرة.
+    </p>
+
+    <!-- ═══ Update Footer ═══ -->
+    <div class="pp-update-footer">
+      <span class="pp-update-date">
+        <i class="fas fa-calendar-check"></i>
+        آخر تحديث: {{ 'now' | date: "%Y" }}
+      </span>
+      <span class="pp-brand">إدارة موقع سمسار طلبك</span>
     </div>
 
+  </article>
+
+  <!-- ═══ Back to Home ═══ -->
+  <div class="pp-back-wrap">
+    <a href="{{ '/' | relative_url }}" class="pp-back-btn">
+      <i class="fas fa-arrow-right"></i>
+      العودة للصفحة الرئيسية
+    </a>
   </div>
-</main>
+
+</div>
