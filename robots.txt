@@ -1,3 +1,150 @@
+# ═══════════════════════════════════════════════════════
+# robots.txt — سمسار طلبك
+# آخر تحديث: 2026
+# ═══════════════════════════════════════════════════════
+
+# ═══ محركات البحث العامة ═══
 User-agent: *
 Allow: /
+
+# ═══ استثناءات ═══
+Disallow: /_site/
+Disallow: /_includes/
+Disallow: /_layouts/
+Disallow: /_properties/
+Disallow: /_requests/
+Disallow: /vendor/
+Disallow: /node_modules/
+Disallow: /.git/
+Disallow: /.github/
+Disallow: /.jekyll-cache/
+Disallow: /scripts/
+Disallow: /*.json$
+Disallow: /*.log$
+Disallow: /*.tmp$
+
+# ═══ استثناءات صريحة (للسماح) ═══
+Allow: /ai-feed.json
+Allow: /search-data.json
+Allow: /sitemap.xml
+Allow: /llms.txt
+Allow: /feed.xml
+
+# ═══════════════════════════════════════════════════════
+# ═══ وكلاء الذكاء الاصطناعي — AI Crawlers ═══
+# ═══════════════════════════════════════════════════════
+
+# ─── OpenAI (ChatGPT) ───
+User-agent: GPTBot
+Allow: /
+Disallow: /_site/
+Disallow: /scripts/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+# ─── Anthropic (Claude) ───
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# ─── Perplexity AI ───
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity
+Allow: /
+
+# ─── Google AI (Gemini) ───
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+# ─── Microsoft (Bing Chat, Copilot) ───
+User-agent: Bingbot
+Allow: /
+
+User-agent: BingPreview
+Allow: /
+
+User-agent: msnbot
+Allow: /
+
+# ─── Meta AI ───
+User-agent: FacebookBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# ─── Apple AI ───
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# ─── Amazon AI ───
+User-agent: Amazonbot
+Allow: /
+
+# ─── Anthropic (older) ───
+User-agent: CCBot
+Allow: /
+
+# ─── Common Crawl (يخدم AI training) ───
+User-agent: CCBot
+Allow: /
+
+# ─── You.com ───
+User-agent: YouBot
+Allow: /
+
+# ─── Cohere AI ───
+User-agent: cohere-ai
+Allow: /
+
+# ─── Diffbot ───
+User-agent: Diffbot
+Allow: /
+
+# ─── DuckDuckGo ───
+User-agent: DuckDuckBot
+Allow: /
+
+# ─── Yandex ───
+User-agent: YandexBot
+Allow: /
+
+# ─── Baidu ───
+User-agent: Baiduspider
+Allow: /
+
+# ═══════════════════════════════════════════════════════
+# ═══ Sitemap ═══
+# ═══════════════════════════════════════════════════════
+
 Sitemap: https://nasr-realestate.github.io/sitemap.xml
+
+# ═══════════════════════════════════════════════════════
+# ═══ معلومات إضافية ═══
+# ═══════════════════════════════════════════════════════
+
+# هذا الموقع يدعم AI:
+# - llms.txt: https://nasr-realestate.github.io/llms.txt
+# - ai-feed.json: https://nasr-realestate.github.io/ai-feed.json
+# - Schema.org Markup: في كل صفحة
+# - RSS Feed: https://nasr-realestate.github.io/feed.xml
