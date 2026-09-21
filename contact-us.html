@@ -1,171 +1,698 @@
 ---
 layout: default
 title: "تواصل معنا | سمسار طلبك"
-description: "تواصل مباشرة مع فريق خبراء سمسار طلبك في مدينة نصر عبر واتساب أو الهاتف لمساعدتك في كافة احتياجاتك العقارية."
+description: "تواصل مباشرة مع أ. طارق طنطاوي وفريق سمسار طلبك في مدينة نصر عبر واتساب أو الهاتف لمساعدتك في كافة احتياجاتك العقارية."
 permalink: /contact-us.html
-image: "/assets/img/social-home.webp"
+image: "/assets/img/social-home.png"
 ---
 
+{%- comment -%}
+═══════════════════════════════════════════════════════
+  Schema — ContactPage فقط
+  (Person + RealEstateAgent موجودة في schema-global.html)
+═══════════════════════════════════════════════════════
+{%- endcomment -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Person",
-      "@id": "https://nasr-realestate.github.io/#tarek-tantawy",
-      "name": "طارق طنطاوي",
-      "jobTitle": "Strategic Real Estate Consultant",
-      "url": "https://nasr-realestate.github.io",
-      "description": "مستشار عقاري إستراتيجي وخبير مرشد محلي من المستوى السابع، متخصص في إدارة وتوجيه الاستثمارات العقارية في مدينة نصر، هليوبوليس، والقاهرة الجديدة منذ عام 2014.",
-      "knowsAbout": [
-        "Real Estate Investment",
-        "Property Valuation",
-        "Nasr City Real Estate Market",
-        "New Cairo Premium Properties",
-        "Heliopolis Real Estate"
-      ],
-      "sameAs": [
-        "https://www.facebook.com/Tarekonly",
-        "https://www.linkedin.com/in/tarek-tantawy-444269162",
-        "https://maps.app.goo.gl/JxMtUtn95R4xYtMS9"
-      ]
-    },
-    {
-      "@type": "RealEstateAgent",
-      "@id": "https://nasr-realestate.github.io/#semsar-talabk",
-      "name": "سمسار طلبك",
-      "url": "https://nasr-realestate.github.io",
-      "logo": "https://nasr-realestate.github.io/assets/img/logo.webp",
-      "image": "https://nasr-realestate.github.io/assets/img/social-home.webp",
-      "description": "بوابتك العقارية الاستشارية الأولى لإدارة وتأمين الصفقات العقارية الحصرية ببيانات موثقة بالكامل.",
-      "founder": {
-        "@type": "Person",
-        "@id": "https://nasr-realestate.github.io/#tarek-tantawy"
-      },
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "16 Mohammed Hasan El-Gamal, Al Mintaqah as Sādisah",
-        "addressLocality": "Nasr City",
-        "addressRegion": "Cairo",
-        "postalCode": "11371",
-        "addressCountry": "EG"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 30.0635,
-        "longitude": 31.311
-      },
-      "areaServed": [
-        {
-          "@type": "AdministrativeArea",
-          "name": "Nasr City"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "New Cairo"
-        },
-        {
-          "@type": "AdministrativeArea",
-          "name": "Heliopolis"
-        }
-      ],
-      "sameAs": [
-        "https://www.linkedin.com/company/smsar-talabk-madinat-nasr/"
-      ],
-      "priceRange": "$$$"
+  "@type": "ContactPage",
+  "@id": "{{ site.url }}{{ page.url }}#contact",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "mainEntity": {
+    "@type": "RealEstateAgent",
+    "@id": "{{ site.url }}/#semsar-talabk",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+201147758857",
+      "contactType": "customer service",
+      "availableLanguage": ["ar", "en"],
+      "areaServed": "EG"
     }
-  ]
+  }
 }
 </script>
 
+<style>
+  /* ═══════════════════════════════════════════════
+     صفحة تواصل معنا — هوية ذهبية داكنة موحدة
+     ═══════════════════════════════════════════════ */
+  .ct-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 1rem 1rem 4rem;
+    color: #f5f5f5;
+    direction: rtl;
+  }
 
-<header class="page-header">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <h1 class="page-title">نحن هنا لخدمتك</h1>
-    <p style="opacity: 0.8; margin-top: 10px;">تواصل مباشرة مع الشخص المختص بطلبك لضمان أسرع خدمة</p>
-  </div>
-</header>
+  /* ═══ Breadcrumb ═══ */
+  .ct-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    margin-bottom: 2rem;
+  }
+  .ct-breadcrumb a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .ct-breadcrumb a:hover { opacity: 0.8; }
+  .ct-breadcrumb .sep { color: #555; }
+  .ct-breadcrumb .current { color: #888; }
 
-<main>
-  <div class="content-wrapper" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+  /* ═══ Hero ═══ */
+  .ct-hero {
+    text-align: center;
+    padding: 3rem 1rem 2.5rem;
+    margin-bottom: 2.5rem;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .ct-hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ct-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 24px;
+    color: #d4af37;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    position: relative;
+    z-index: 1;
+  }
+  .ct-hero h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #d4af37 0%, #fce205 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+  }
+  .ct-hero p {
+    font-size: 1rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
 
-    <div style="display: flex; flex-direction: column; gap: 20px;">
+  /* ═══ Section Title ═══ */
+  .ct-section-title {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #d4af37;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+  }
+  .ct-section-title i { font-size: 1.15rem; }
 
-      <!-- طارق -->
-      <div class="contact-card" style="display: flex; align-items: center; background: var(--color-surface-2); padding: 20px; border-radius: 15px; border: 1px solid var(--color-border-light); flex-wrap: wrap; gap: 20px;">
-        <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="طارق طنطاوي" width="70" height="70" style="border-radius: 50%; border: 2px solid var(--color-primary); object-fit: cover;" loading="lazy">
-        <div style="flex: 1; min-width: 200px;">
-          <h3 style="color: #fff; margin: 0 0 5px 0;">أ/ طارق طنطاوي</h3>
-          <p style="color: var(--color-primary); font-size: 0.9rem; margin: 0;">شقق مفروشة وإدارة</p>
+  /* ═══ Main Contact Card (طارق) ═══ */
+  .ct-main-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 20px;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    position: relative;
+    overflow: hidden;
+  }
+  .ct-main-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ct-main-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: 3px solid #d4af37;
+    object-fit: cover;
+    box-shadow: 0 6px 24px rgba(212, 175, 55, 0.35);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .ct-main-info {
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+    z-index: 1;
+  }
+  .ct-main-name {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #d4af37;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ct-main-badge {
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #d4af37, #fce205);
+    color: #050505;
+    border-radius: 12px;
+    font-weight: 800;
+  }
+  .ct-main-role {
+    font-size: 0.88rem;
+    color: #b0b0b0;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+  .ct-main-stats {
+    font-size: 0.82rem;
+    color: #888;
+    line-height: 1.7;
+  }
+  .ct-main-stats strong { color: #d4af37; }
+
+  .ct-main-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+  }
+  .ct-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .ct-action-btn i { font-size: 1.1rem; }
+
+  .ct-action-btn.wa {
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
+  }
+  .ct-action-btn.wa:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(37, 211, 102, 0.5);
+  }
+
+  .ct-action-btn.call {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #050505;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  }
+  .ct-action-btn.call:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(212, 175, 55, 0.5);
+  }
+
+  /* ═══ Info Grid ═══ */
+  .ct-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 2.5rem;
+  }
+  .ct-info-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.25s;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .ct-info-card:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-3px);
+  }
+  .ct-info-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d4af37;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .ct-info-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .ct-info-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .ct-info-value {
+    font-size: 1rem;
+    color: #f5f5f5;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .ct-info-value a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .ct-info-value a:hover { opacity: 0.8; }
+  .ct-info-sub {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  /* ═══ Team Section ═══ */
+  .ct-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 2.5rem;
+  }
+  .ct-team-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.25s;
+  }
+  .ct-team-card:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(212, 175, 55, 0.15);
+  }
+  .ct-team-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 2.5px solid #d4af37;
+    object-fit: cover;
+    margin: 0 auto 14px;
+    display: block;
+    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25);
+  }
+  .ct-team-name {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f5f5f5;
+    margin-bottom: 6px;
+  }
+  .ct-team-role {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 4px 12px;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    color: #d4af37;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .ct-team-desc {
+    font-size: 0.82rem;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .ct-team-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .ct-team-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37, 211, 102, 0.4);
+  }
+
+  /* ═══ Working Hours Notice ═══ */
+  .ct-hours {
+    padding: 1.5rem 1.75rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .ct-hours-icon {
+    font-size: 2rem;
+    color: #d4af37;
+    flex-shrink: 0;
+  }
+  .ct-hours-content { flex: 1; min-width: 200px; }
+  .ct-hours-title {
+    font-size: 1rem;
+    color: #d4af37;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .ct-hours-text {
+    font-size: 0.88rem;
+    color: #b0b0b0;
+    line-height: 1.6;
+  }
+  .ct-hours-text strong { color: #f5f5f5; }
+
+  /* ═══ Final CTA ═══ */
+  .ct-cta {
+    padding: 2.5rem 1.75rem;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+  }
+  .ct-cta h2 {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #f5f5f5;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .ct-cta h2 span {
+    background: linear-gradient(135deg, #d4af37, #fce205);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .ct-cta p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .ct-cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 640px) {
+    .ct-hero { padding: 2.5rem 1rem 2rem; }
+    .ct-hero h1 { font-size: 1.6rem; }
+    .ct-main-card { padding: 1.5rem; gap: 14px; }
+    .ct-main-avatar { width: 70px; height: 70px; }
+    .ct-main-name { font-size: 1.15rem; }
+    .ct-main-actions { width: 100%; }
+    .ct-action-btn { flex: 1; justify-content: center; padding: 12px 16px; font-size: 0.88rem; }
+    .ct-info-card { padding: 1.25rem; }
+    .ct-hours { padding: 1.25rem; }
+    .ct-cta-buttons { flex-direction: column; }
+    .ct-cta-buttons .ct-action-btn { width: 100%; }
+  }
+</style>
+
+<div class="ct-container">
+
+  <!-- ═══ Breadcrumb ═══ -->
+  <nav class="ct-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home"></i> الرئيسية</a>
+    <span class="sep">›</span>
+    <span class="current">تواصل معنا</span>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <header class="ct-hero">
+    <div class="ct-hero-badge">
+      <i class="fas fa-headset"></i>
+      رد فوري · خدمة 24/7
+    </div>
+    <h1>نحن هنا لخدمتك</h1>
+    <p>
+      تواصل مباشرة مع <strong style="color:#d4af37;">أ. طارق طنطاوي</strong> وفريقه — استشارة مجانية لأي احتياج عقاري.
+    </p>
+  </header>
+
+  <!-- ═══ Main Contact (طارق) ═══ -->
+  <section>
+    <h2 class="ct-section-title">
+      <i class="fas fa-user-tie"></i>
+      التواصل المباشر
+    </h2>
+
+    <div class="ct-main-card">
+      <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
+           alt="أ/ طارق طنطاوي"
+           class="ct-main-avatar"
+           loading="lazy">
+
+      <div class="ct-main-info">
+        <div class="ct-main-name">
+          أ/ طارق طنطاوي
+          <span class="ct-main-badge">⭐ Local Guide 7</span>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="https://wa.me/201147758857" target="_blank" rel="noopener" class="nav-btn" style="background: #25D366; color: #fff; border: none; padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fab fa-whatsapp"></i> واتساب
-          </a>
-          <a href="tel:+201147758857" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fas fa-phone"></i> اتصال
-          </a>
+        <div class="ct-main-role">
+          المؤسس والمستشار العقاري الاستراتيجي
+        </div>
+        <div class="ct-main-stats">
+          🏆 <strong>16.3 مليون</strong> مشاهدة على Google Maps<br>
+          ⭐ <strong>4.7</strong> من <strong>195</strong> مراجعة · خبير منذ <strong>2014</strong>
         </div>
       </div>
 
-      <!-- وليد -->
-      <div class="contact-card" style="display: flex; align-items: center; background: var(--color-surface-2); padding: 20px; border-radius: 15px; border: 1px solid var(--color-border-light); flex-wrap: wrap; gap: 20px;">
-        <img src="{{ '/assets/img/team/walid.webp' | relative_url }}" alt="وليد فيصل" width="70" height="70" style="border-radius: 50%; border: 2px solid var(--color-primary); object-fit: cover;" loading="lazy">
-        <div style="flex: 1; min-width: 200px;">
-          <h3 style="color: #fff; margin: 0 0 5px 0;">أ/ وليد فيصل</h3>
-          <p style="color: var(--color-primary); font-size: 0.9rem; margin: 0;">بيع شقق وعقارات سكنية</p>
+      <div class="ct-main-actions">
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، عايز أستشيرك في موضوع عقاري' | url_encode }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="ct-action-btn wa">
+          <i class="fab fa-whatsapp"></i>
+          واتساب
+        </a>
+        <a href="tel:+201147758857" class="ct-action-btn call">
+          <i class="fas fa-phone-alt"></i>
+          اتصل الآن
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Info Grid ═══ -->
+  <section>
+    <h2 class="ct-section-title">
+      <i class="fas fa-address-card"></i>
+      معلومات الاتصال
+    </h2>
+
+    <div class="ct-info-grid">
+
+      <div class="ct-info-card">
+        <div class="ct-info-icon">
+          <i class="fab fa-whatsapp"></i>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="https://wa.me/201147758857" target="_blank" rel="noopener" class="nav-btn" style="background: #25D366; color: #fff; border: none; padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fab fa-whatsapp"></i> واتساب
-          </a>
-          <a href="tel:+201147758857" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fas fa-phone"></i> اتصال
-          </a>
+        <div class="ct-info-body">
+          <div class="ct-info-label">واتساب</div>
+          <div class="ct-info-value">
+            <a href="https://wa.me/201147758857" target="_blank" rel="noopener noreferrer">01147758857</a>
+          </div>
+          <div class="ct-info-sub">الطريقة الأسرع للرد</div>
         </div>
       </div>
 
-      <!-- آميرهء -->
-      <div class="contact-card" style="display: flex; align-items: center; background: var(--color-surface-2); padding: 20px; border-radius: 15px; border: 1px solid var(--color-border-light); flex-wrap: wrap; gap: 20px;">
-        <img src="{{ '/assets/img/team/alaa.webp' | relative_url }}" alt="آلاء السيد" width="70" height="70" style="border-radius: 50%; border: 2px solid var(--color-primary); object-fit: cover;" loading="lazy">
-        <div style="flex: 1; min-width: 200px;">
-          <h3 style="color: #fff; margin: 0 0 5px 0;">أ/ اميره يحي</h3>
-          <p style="color: var(--color-primary); font-size: 0.9rem; margin: 0;">محلات ومقرات إدارية</p>
+      <div class="ct-info-card">
+        <div class="ct-info-icon">
+          <i class="fas fa-phone-alt"></i>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="https://wa.me/201147758857" target="_blank" rel="noopener" class="nav-btn" style="background: #25D366; color: #fff; border: none; padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fab fa-whatsapp"></i> واتساب
-          </a>
-          <a href="tel:+201147758857" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fas fa-phone"></i> اتصال
-          </a>
+        <div class="ct-info-body">
+          <div class="ct-info-label">اتصال هاتفي</div>
+          <div class="ct-info-value">
+            <a href="tel:+201147758857">01147758857</a>
+          </div>
+          <div class="ct-info-sub">للحالات المستعجلة</div>
         </div>
       </div>
 
-      <!-- محمد -->
-      <div class="contact-card" style="display: flex; align-items: center; background: var(--color-surface-2); padding: 20px; border-radius: 15px; border: 1px solid var(--color-border-light); flex-wrap: wrap; gap: 20px;">
-        <img src="{{ '/assets/img/team/mohamed.webp' | relative_url }}" alt="محمد عادل" width="70" height="70" style="border-radius: 50%; border: 2px solid var(--color-primary); object-fit: cover;" loading="lazy">
-        <div style="flex: 1; min-width: 200px;">
-          <h3 style="color: #fff; margin: 0 0 5px 0;">أ/ محمد عادل</h3>
-          <p style="color: var(--color-primary); font-size: 0.9rem; margin: 0;">تقييم عقارات واتجاهات السوق</p>
+      <div class="ct-info-card">
+        <div class="ct-info-icon">
+          <i class="fas fa-map-marker-alt"></i>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="https://wa.me/201147758857" target="_blank" rel="noopener" class="nav-btn" style="background: #25D366; color: #fff; border: none; padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fab fa-whatsapp"></i> واتساب
-          </a>
-          <a href="tel:+201147758857" class="nav-btn" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 20px; font-size: 0.9rem;">
-            <i class="fas fa-phone"></i> اتصال
-          </a>
+        <div class="ct-info-body">
+          <div class="ct-info-label">العنوان</div>
+          <div class="ct-info-value">16 ش. محمد حسن الجمل</div>
+          <div class="ct-info-sub">المنطقة السادسة · مدينة نصر · القاهرة</div>
+        </div>
+      </div>
+
+      <div class="ct-info-card">
+        <div class="ct-info-icon">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div class="ct-info-body">
+          <div class="ct-info-label">البريد الإلكتروني</div>
+          <div class="ct-info-value">
+            <a href="mailto:samsar.talabak@mailo.com" style="font-size:0.9rem;">samsar.talabak@mailo.com</a>
+          </div>
+          <div class="ct-info-sub">للاستفسارات الرسمية</div>
         </div>
       </div>
 
     </div>
+  </section>
 
-    <div style="margin-top: 3rem; text-align: center; color: #888;">
-      <p>مواعيد العمل: يومياً من 10 صباحاً حتى 10 مساءً</p>
-      <p style="font-size: 0.9rem; margin-top: 10px;">لأي استفسارات أخرى، يمكنكم مراسلتنا عبر صفحتنا على فيسبوك</p>
-      <a href="https://www.facebook.com/Tarekonly" target="_blank" rel="noopener" style="color: #1877F2; text-decoration: none; font-weight: bold;">زيارة صفحة فيسبوك</a>
+  <!-- ═══ Working Hours ═══ -->
+  <div class="ct-hours">
+    <i class="fas fa-clock ct-hours-icon"></i>
+    <div class="ct-hours-content">
+      <div class="ct-hours-title">مواعيد العمل</div>
+      <div class="ct-hours-text">
+        <strong>السبت – الخميس:</strong> 12:00 ظهراً — 9:00 مساءً &nbsp;|&nbsp; <strong>الجمعة:</strong> مغلق
+      </div>
     </div>
-
   </div>
-</main>
+
+  <!-- ═══ Team ═══ -->
+  <section>
+    <h2 class="ct-section-title">
+      <i class="fas fa-users"></i>
+      فريق الخبراء
+    </h2>
+
+    <div class="ct-team-grid">
+
+      <div class="ct-team-card">
+        <img src="{{ '/assets/img/team/walid.webp' | relative_url }}"
+             alt="أ/ وليد فيصل"
+             class="ct-team-avatar"
+             loading="lazy">
+        <div class="ct-team-name">أ/ وليد فيصل</div>
+        <span class="ct-team-role">خبير البيع المباشر</span>
+        <p class="ct-team-desc">متخصص في التفاوض وإتمام الصفقات السكنية الكبرى.</p>
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم، عايز أتواصل مع أ. وليد فيصل' | url_encode }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="ct-team-btn">
+          <i class="fab fa-whatsapp"></i>
+          تواصل مع وليد
+        </a>
+      </div>
+
+      <div class="ct-team-card">
+        <img src="{{ '/assets/img/team/alaa.webp' | relative_url }}"
+             alt="أ/ اميره يحي"
+             class="ct-team-avatar"
+             loading="lazy">
+        <div class="ct-team-name">أ/ اميره يحي</div>
+        <span class="ct-team-role">تسويق وإيجارات</span>
+        <p class="ct-team-desc">خبيرة تسويق المقرات الإدارية والمحلات التجارية.</p>
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم، عايز أتواصل مع أ. اميره يحي' | url_encode }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="ct-team-btn">
+          <i class="fab fa-whatsapp"></i>
+          تواصل مع اميره
+        </a>
+      </div>
+
+      <div class="ct-team-card">
+        <img src="{{ '/assets/img/team/mohamed.webp' | relative_url }}"
+             alt="أ/ محمد عادل"
+             class="ct-team-avatar"
+             loading="lazy">
+        <div class="ct-team-name">أ/ محمد عادل</div>
+        <span class="ct-team-role">تقييم ومتابعة</span>
+        <p class="ct-team-desc">متخصص دراسات السوق وتقييم أسعار الوحدات.</p>
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم، عايز أتواصل مع أ. محمد عادل' | url_encode }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="ct-team-btn">
+          <i class="fab fa-whatsapp"></i>
+          تواصل مع محمد
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Final CTA ═══ -->
+  <section class="ct-cta">
+    <h2>جاهز تبدأ <span>رحلتك العقارية؟</span></h2>
+    <p>سواء تبحث عن شقة، تريد البيع، أو تحتاج استشارة — فريقنا في خدمتك.</p>
+    <div class="ct-cta-buttons">
+      <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، عايز أستشيرك في عقار' | url_encode }}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="ct-action-btn wa">
+        <i class="fab fa-whatsapp"></i>
+        تواصل عبر واتساب
+      </a>
+      <a href="tel:+201147758857" class="ct-action-btn call">
+        <i class="fas fa-phone-alt"></i>
+        اتصل الآن
+      </a>
+    </div>
+  </section>
+
+</div>
