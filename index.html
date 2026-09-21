@@ -705,7 +705,83 @@ body_class: "homepage"
     background: linear-gradient(135deg, #d4af37, #fce205);
     color: #050505;
   }
-
+/* ═══ Cinematic Gallery Section ═══ */
+.hp-cinematic-gallery {
+  position: relative;
+  padding: 4rem 2rem;
+  border-radius: 24px;
+  background-image: url('/assets/img/properties/apartment-180m-nasr-city.webp');
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hp-cinematic-gallery::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.92), rgba(0,0,0,0.65), rgba(0,0,0,0.92));
+  z-index: 0;
+}
+.hp-cinematic-content {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+}
+.hp-cinematic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  color: #d4af37;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.hp-cinematic-content h2 {
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin-bottom: 16px;
+  line-height: 1.3;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.hp-cinematic-content p {
+  color: #ccc;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+.hp-cinematic-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #d4af37, #fce205);
+  color: #050505;
+  padding: 16px 36px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4);
+}
+.hp-cinematic-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.6);
+  animation: none;
+}
+.hp-cinematic-btn i {
+  font-size: 1.15rem;
+  }  
   @media (max-width: 640px) {
     .hp-hero { padding: 3rem 0.5rem; }
     .hp-hero-title { font-size: 2rem; }
@@ -855,7 +931,29 @@ body_class: "homepage"
     </div>
   </div>
 </section>
-
+<!-- ═══════════════════════════════════════════════
+     قسم المعرض السينمائي — عرض النخبة
+     ═══════════════════════════════════════════════ -->
+<section class="hp-section">
+  <div class="hp-container">
+    <div class="hp-cinematic-gallery">
+      <div class="hp-cinematic-content">
+        <div class="hp-cinematic-badge">
+          <i class="fas fa-crown"></i> عرض النخبة
+        </div>
+        <h2>استكشف أفخم وحدات مدينة نصر</h2>
+        <p>
+          تجربة سينمائية فريدة لأرقى الشقق والوحدات الإدارية —
+          مختارة بعناية لتناسب ذوقك الرفيع.
+        </p>
+        <a href="{{ '/luxury-gallery.html' | relative_url }}" class="hp-cinematic-btn">
+          <i class="fas fa-play-circle"></i>
+          فتح المعرض السينمائي
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
 <!-- ═══ 3. تصفح حسب المنطقة ═══ -->
 <section class="hp-section">
   <div class="hp-container">
