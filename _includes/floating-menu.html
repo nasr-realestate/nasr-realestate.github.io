@@ -1,9 +1,9 @@
 {%- comment -%}
 ═══════════════════════════════════════════════════════
-  Floating Menu — قائمة موحدة في كل الصفحات
-  يُستدعى من:
-    - _layouts/app.html
-    - _layouts/default.html
+  Floating Menu + Floating Logo
+  - القائمة ☰ على اليسار
+  - اللوجو العائم على اليمين
+  - يظهران في كل الصفحات
 ═══════════════════════════════════════════════════════
 {%- endcomment -%}
 
@@ -37,6 +37,64 @@
   }
   .floating-menu-btn:active {
     transform: scale(0.95);
+  }
+
+  /* ═══ Floating Logo (يمين الصفحة) ═══ */
+  .floating-logo {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    max-width: 220px;
+  }
+  .floating-logo:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+    background: rgba(255, 255, 255, 0.98);
+  }
+  .floating-logo:active {
+    transform: scale(0.98);
+  }
+
+  .floating-logo img {
+    height: 36px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+  }
+
+  .floating-logo .floating-logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    color: #111b21;
+    font-family: 'Cairo', sans-serif;
+  }
+
+  .floating-logo .floating-logo-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #075e54;
+    letter-spacing: -0.2px;
+  }
+
+  .floating-logo .floating-logo-tag {
+    font-size: 10px;
+    color: #667781;
+    font-weight: 500;
+    margin-top: 1px;
   }
 
   /* ═══ Menu Dropdown ═══ */
@@ -133,6 +191,36 @@
     .floating-menu-sep {
       background: rgba(255, 255, 255, 0.08);
     }
+    .floating-logo {
+      background: rgba(30, 45, 61, 0.92);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .floating-logo:hover {
+      background: rgba(30, 45, 61, 0.98);
+    }
+    .floating-logo .floating-logo-text {
+      color: #e9edef;
+    }
+    .floating-logo .floating-logo-name {
+      color: #d4af37;
+    }
+    .floating-logo .floating-logo-tag {
+      color: #8696a0;
+    }
+  }
+
+  /* Responsive — إخفاء النص على الشاشات الصغيرة */
+  @media (max-width: 480px) {
+    .floating-logo {
+      padding: 6px 12px;
+      gap: 0;
+    }
+    .floating-logo img {
+      height: 30px;
+    }
+    .floating-logo .floating-logo-text {
+      display: none;
+    }
   }
 </style>
 
@@ -140,6 +228,15 @@
 <button class="floating-menu-btn" id="floatingMenuBtn" onclick="toggleFloatingMenu(event)" aria-label="القائمة">
   <i class="fas fa-bars" id="floatingMenuIcon"></i>
 </button>
+
+<!-- ═══ Floating Logo (يمين) ═══ -->
+<a class="floating-logo" href="{{ '/' | relative_url }}" aria-label="سمسار طلبك - الصفحة الرئيسية">
+  <img src="{{ '/assets/img/logo.webp' | relative_url }}" alt="سمسار طلبك" loading="lazy">
+  <div class="floating-logo-text">
+    <span class="floating-logo-name">سمسار طلبك</span>
+    <span class="floating-logo-tag">منذ 2014</span>
+  </div>
+</a>
 
 <!-- ═══ Overlay ═══ -->
 <div class="floating-menu-overlay" id="floatingMenuOverlay" onclick="closeFloatingMenu()"></div>
@@ -209,4 +306,4 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeFloatingMenu();
   });
-  </script>
+</script>
