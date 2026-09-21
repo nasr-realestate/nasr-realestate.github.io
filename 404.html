@@ -3,36 +3,251 @@ layout: default
 title: "خطأ 404 - عذراً لم نجد هذا العقار | سمسار طلبك"
 description: "يبدو أن الرابط الذي اتبعته قديم أو تم نقل العقار. يمكنك العودة للرئيسية وتصفح أحدث شقق وعقارات مدينة نصر المتاحة الآن."
 permalink: /404.html
-image: "/assets/img/social-home.webp"
+image: "/assets/img/social-home.png"
+sitemap: false
 ---
 
-<main class="content-wrapper error-page-wrapper">
-  <div class="error-container">
+{%- comment -%}
+═══════════════════════════════════════════════════════
+  Schema — WebPage (404)
+  sitemap: false — لا يظهر في Sitemap
+═══════════════════════════════════════════════════════
+{%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "{{ site.url }}{{ page.url }}#webpage",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" }
+}
+</script>
 
-    <div class="error-icon">
+<style>
+  /* ═══════════════════════════════════════════════
+     صفحة 404 — هوية ذهبية داكنة
+     ═══════════════════════════════════════════════ */
+  .e404-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem 4rem;
+    direction: rtl;
+  }
+
+  .e404-container {
+    max-width: 650px;
+    width: 100%;
+    padding: 3rem 2rem;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .e404-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ═══ Icon ═══ */
+  .e404-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2.2rem;
+    color: #d4af37;
+    position: relative;
+    z-index: 1;
+    animation: e404pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes e404pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 0 18px rgba(212, 175, 55, 0);
+      transform: scale(1.03);
+    }
+  }
+
+  /* ═══ Code 404 ═══ */
+  .e404-code {
+    font-size: 6rem;
+    font-weight: 900;
+    line-height: 1;
+    margin: 0 0 1rem;
+    background: linear-gradient(135deg, #d4af37 0%, #fce205 50%, #d4af37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -3px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══ Title ═══ */
+  .e404-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #f5f5f5;
+    margin: 0 0 1rem;
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══ Message ═══ */
+  .e404-message {
+    font-size: 0.98rem;
+    color: #b0b0b0;
+    line-height: 1.8;
+    margin: 0 0 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══ Actions ═══ */
+  .e404-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .e404-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+  }
+
+  .e404-btn.primary {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #050505;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  }
+  .e404-btn.primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(212, 175, 55, 0.5);
+  }
+
+  .e404-btn.secondary {
+    background: transparent;
+    color: #d4af37;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+  }
+  .e404-btn.secondary:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: #d4af37;
+    transform: translateY(-3px);
+  }
+
+  /* ═══ Footer ═══ */
+  .e404-footer {
+    padding-top: 1.5rem;
+    border-top: 1px dashed rgba(212, 175, 55, 0.2);
+    font-size: 0.88rem;
+    color: #888;
+    position: relative;
+    z-index: 1;
+  }
+
+  .e404-footer a {
+    color: #25d366;
+    text-decoration: none;
+    font-weight: 700;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .e404-footer a:hover {
+    opacity: 0.85;
+    text-decoration: underline;
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 640px) {
+    .e404-wrapper { padding: 1.5rem 0.75rem 3rem; }
+    .e404-container { padding: 2rem 1.25rem; border-radius: 22px; }
+    .e404-code { font-size: 4rem; }
+    .e404-icon { width: 72px; height: 72px; font-size: 1.8rem; }
+    .e404-title { font-size: 1.15rem; }
+    .e404-message { font-size: 0.92rem; }
+    .e404-actions { flex-direction: column; }
+    .e404-btn { width: 100%; justify-content: center; }
+  }
+</style>
+
+<main class="e404-wrapper">
+  <div class="e404-container">
+
+    <div class="e404-icon">
       <i class="fas fa-map-marked-alt"></i>
     </div>
 
-    <h1 class="error-code">404</h1>
-    <h2 class="error-title">عذراً، ضللنا الطريق إلى هذا العقار!</h2>
+    <h1 class="e404-code">404</h1>
 
-    <p class="error-message">
+    <h2 class="e404-title">عذراً، ضللنا الطريق إلى هذا العقار</h2>
+
+    <p class="e404-message">
       يبدو أن الرابط الذي اتبعته قديم أو تم نقل العقار لمكان آخر.<br>
-      لا تدع رحلتك تتوقف هنا، فلدينا عروض أخرى بانتظارك في مدينة نصر.
+      لا تدع رحلتك تتوقف هنا — لدينا عروض أخرى بانتظارك في مدينة نصر.
     </p>
 
-    <div class="error-actions">
-      <a href="{{ '/' | relative_url }}" class="gold-btn-main">
-        <i class="fas fa-home"></i> العودة للرئيسية
+    <div class="e404-actions">
+      <a href="{{ '/' | relative_url }}" class="e404-btn primary">
+        <i class="fas fa-home"></i>
+        العودة للرئيسية
       </a>
-      <a href="{{ '/properties/' | relative_url }}" class="gold-btn-outline">
+      <a href="{{ '/properties/' | relative_url }}" class="e404-btn secondary">
+        <i class="fas fa-building"></i>
         تصفح العقارات المتاحة
       </a>
     </div>
 
-    <div class="error-footer">
-      هل تواجه مشكلة？
-      <a href="https://wa.me/201147758857" target="_blank" rel="noopener">راسلنا عبر واتساب للمساعدة</a>
+    <div class="e404-footer">
+      هل تواجه مشكلة؟
+      <a href="https://wa.me/201147758857?text={{ 'السلام عليكم، عندي مشكلة في تصفح الموقع' | url_encode }}"
+         target="_blank"
+         rel="noopener noreferrer">
+        <i class="fab fa-whatsapp"></i>
+        راسلنا عبر واتساب للمساعدة
+      </a>
     </div>
 
   </div>
@@ -40,54 +255,75 @@ image: "/assets/img/social-home.webp"
 
 <script>
   (function() {
-    // 1. التقاط الرابط الحالي الذي دخله الزائر أو الروبوت
+    'use strict';
+
+    // ═══ محرك إعادة التوجيه الذكي للروابط القديمة ═══
+    // يحوّل الروابط العربية القديمة إلى الروابط الإنجليزية الجديدة
+    // ═══════════════════════════════════════════════════
+
     var currentPath = window.location.pathname;
-    
+
+    // تجاهل الصفحات التي لا تحتاج معالجة
+    if (!currentPath || currentPath === '/404.html' || currentPath === '/') return;
+
     try {
-      // 2. فك تشفير الرموز القبيحة وتحويلها لنصوص عربية مقروءة داخل الكود
       var decodedPath = decodeURIComponent(currentPath);
-      
-      // إذا كان الرابط القديم يحتوي على حروف عربية أو علامات تضارب
-      if (/[\u0600-\u06FF]/.test(decodedPath) || currentPath.includes('%')) {
-        
-        // خريطة تحويل ذكية مبدئية لأشهر الكلمات والمناطق التي قمت بتغييرها
-        // يمكنك إضافة الكلمة العربية القديمة وما يقابلها بالإنجليزية هنا
-        var urlMap = {
-          'المنطقة-العاشرة': 'area-10',
-          'المنطقة_العاشرة': 'area-10',
-          'فيلا-بدوي': 'villa-badawy',
-          'المربع-الذهبي': 'golden-square',
-          'رابعة': 'rabaa',
-          'مدينة-نصر': 'nasr-city',
-          'مصر-الجديدة': 'heliopolis',
-          'القاهرة-الجديدة': 'new-cairo',
-          'شقة': 'apartment',
-          'عقار': 'property'
-        };
 
-        var newPath = decodedPath;
+      // فقط إذا كان الرابط يحتوي حروف عربية أو رموز مشفرة
+      var hasArabic = /[\u0600-\u06FF]/.test(decodedPath);
+      var hasEncoded = currentPath.indexOf('%') > -1;
 
-        // 3. استبدال الكلمات العربية بالإنجليزية النظيفة تلقائياً
-        Object.keys(urlMap).forEach(function(key) {
-          var regex = new RegExp(key, 'g');
-          newPath = newPath.replace(regex, urlMap[key]);
-        });
+      if (!hasArabic && !hasEncoded) return;
 
-        // 4. تنظيف الرابط الجديد وتحويله بالكامل إلى حروف إنجليزية صغيرة متناسقة تليق بـ 2026
-        newPath = newPath.toLowerCase()
-                         .replace(/[^a-z0-9\/\.\-_]/g, '-') // إزالة أي رموز غريبة متبقية
-                         .replace(/-+/g, '-')              // تنظيف الشرطات المتكررة
-                         .replace(/-\./g, '.');            // ضبط الامتداد النهائي (.html)
+      // ═══ خريطة التحويل — أضف الكلمات القديمة هنا ═══
+      var urlMap = {
+        'المنطقة-العاشرة': 'area-10',
+        'المنطقة_العاشرة': 'area-10',
+        'المنطقة-التاسعة': 'area-9',
+        'المنطقة-السادسة': 'area-6',
+        'المنطقة-الأولى': 'area-1',
+        'فيلا-بدوي': 'villa-badawy',
+        'المربع-الذهبي': 'golden-square',
+        'رابعة': 'rabaa',
+        'مدينة-نصر': 'nasr-city',
+        'مصر-الجديدة': 'heliopolis',
+        'القاهرة-الجديدة': 'new-cairo',
+        'شقة': 'apartment',
+        'فيلا': 'villa',
+        'محل': 'shop',
+        'مكتب': 'office',
+        'عقار': 'property'
+      };
 
-        // تأمين عدم حدوث حلقة تكرار لا نهائية والتأكد أن الرابط اختلف فعلياً
-        if (newPath !== currentPath && newPath !== '/404.html') {
-          // التوجيه الفوري الصامت الذكي
-          window.location.replace(window.location.origin + newPath);
-        }
-      }
+      var newPath = decodedPath;
+
+      // استبدال الكلمات العربية
+      Object.keys(urlMap).forEach(function(key) {
+        var regex = new RegExp(key, 'g');
+        newPath = newPath.replace(regex, urlMap[key]);
+      });
+
+      // تنظيف الرابط
+      newPath = newPath
+        .toLowerCase()
+        .replace(/[^a-z0-9\/\.\-_]/g, '-')   // إزالة أي رموز غريبة
+        .replace(/-+/g, '-')                  // شرطة واحدة بدل متعددة
+        .replace(/-\./g, '.')                 // إصلاح `-.html` → `.html`
+        .replace(/-\//g, '/');                // إصلاح `-/` → `/`
+
+      // ═══ حماية من الحلقة اللانهائية ═══
+      if (newPath === currentPath) return;
+      if (newPath === '/404.html') return;
+      if (newPath.indexOf('404') > -1) return;
+
+      // ═══ التوجيه بعد 300ms (يسمح للمتصفح بعرض الصفحة أولاً) ═══
+      setTimeout(function() {
+        window.location.replace(window.location.origin + newPath);
+      }, 300);
+
     } catch (e) {
-      console.error("SEO Redirect Engine Error:", e);
+      // في حالة أي خطأ، لا نفعل شيئاً — نعرض صفحة 404
+      console.warn('[404] Redirect engine:', e.message);
     }
   })();
-                                  </script>
-                                  
+</script>
