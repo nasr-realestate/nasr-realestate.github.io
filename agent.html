@@ -1622,11 +1622,19 @@ async function sendMsg() {
     msgInput.focus();
   }
 }
-
 // ═══ NAVIGATION ═══
 function goBack() {
-  if (history.length > 1) history.back();
-  else window.location.href = "/";
+  const ref = document.referrer;
+  const host = window.location.host;
+  
+  // إذا جاء الزائر من نفس الموقع → ارجع للخلف
+  if (ref && ref.includes(host) && window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  
+  // وإلا → اذهب للرئيسية
+  window.location.href = "/";
 }
 
 // ═══ MENU ═══
