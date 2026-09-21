@@ -250,7 +250,7 @@
   </style>
 </head>
 
-<body>
+<body class="{{ page.body_class | default: 'default-page' }}">
 
   <!-- ═══ القائمة الموحدة (نفسها في كل الصفحات) ═══ -->
   {% include floating-menu.html %}
