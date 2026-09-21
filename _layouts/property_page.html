@@ -2,172 +2,965 @@
 layout: default
 hide_navbar: true
 ---
-<div class="property-container">
-  <!-- =========================================================
-       1. شريط العودة والمسار (محسّن)
-       ========================================================= -->
-  <nav class="property-nav">
-    <a href="{{ '/properties/' | relative_url }}" class="back-link">
-      <i class="fas fa-arrow-right" aria-hidden="true"></i> العودة لقائمة العقارات
-    </a>
-    <div class="property-breadcrumb">
-      <a href="{{ '/' | relative_url }}">الرئيسية</a> ›
-      <a href="{{ '/properties/' | relative_url }}">عقارات للبيع</a> ›
-      <span>{{ page.title | truncate: 30 }}</span>
-    </div>
+
+{% include schema-property.html %}
+
+<style>
+  /* ═══════════════════════════════════════════════
+     صفحة العقار الاحترافية — هوية ذهبية موحدة
+     ═══════════════════════════════════════════════ */
+  .pp-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 1rem 4rem;
+    color: #f5f5f5;
+    direction: rtl;
+  }
+
+  /* ═══ Breadcrumb ═══ */
+  .pp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    margin-bottom: 1.5rem;
+  }
+  .pp-breadcrumb a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .pp-breadcrumb a:hover { opacity: 0.8; }
+  .pp-breadcrumb .sep { color: #555; }
+  .pp-breadcrumb .current { color: #888; }
+
+  /* ═══ Gallery ═══ */
+  .pp-gallery {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    margin-bottom: 2rem;
+  }
+  .pp-gallery-main {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/10;
+    overflow: hidden;
+    background: #111;
+  }
+  .pp-gallery-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 0.5s;
+  }
+  .pp-gallery-main:hover img { transform: scale(1.03); }
+
+  .pp-gallery-tag {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    padding: 8px 16px;
+    background: rgba(212, 175, 55, 0.95);
+    color: #050505;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .pp-gallery-tag i { margin-left: 6px; }
+
+  .pp-gallery-thumbs {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    background: #0a0a0a;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .pp-gallery-thumbs::-webkit-scrollbar { height: 6px; }
+  .pp-gallery-thumbs::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.3);
+    border-radius: 3px;
+  }
+  .pp-thumb {
+    flex-shrink: 0;
+    width: 90px;
+    height: 70px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    opacity: 0.6;
+  }
+  .pp-thumb.active,
+  .pp-thumb:hover {
+    border-color: #d4af37;
+    opacity: 1;
+  }
+  .pp-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ═══ Header ═══ */
+  .pp-header {
+    margin-bottom: 1.5rem;
+  }
+  .pp-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #f5f5f5;
+    line-height: 1.35;
+    margin-bottom: 12px;
+  }
+  .pp-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .pp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .pp-chip.location {
+    background: rgba(212, 175, 55, 0.1);
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .pp-chip.date {
+    background: rgba(255, 255, 255, 0.05);
+    color: #b0b0b0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .pp-price-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(252, 226, 5, 0.05) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .pp-price-label {
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    margin-bottom: 4px;
+  }
+  .pp-price-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #d4af37;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+  }
+  .pp-price-negotiable {
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #d4af37;
+    font-weight: 600;
+  }
+
+  /* ═══ Specs Grid ═══ */
+  .pp-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .pp-spec {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .pp-spec:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-2px);
+  }
+  .pp-spec-icon {
+    font-size: 1.4rem;
+    color: #d4af37;
+    margin-bottom: 8px;
+  }
+  .pp-spec-label {
+    font-size: 0.72rem;
+    color: #888;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pp-spec-value {
+    font-size: 0.95rem;
+    color: #f5f5f5;
+    font-weight: 700;
+  }
+
+  /* ═══ Action Buttons ═══ */
+  .pp-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+  .pp-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+  }
+  .pp-action-btn i { font-size: 1.1rem; }
+
+  .pp-action-btn.wa {
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
+  }
+  .pp-action-btn.wa:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.5);
+  }
+
+  .pp-action-btn.call {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #050505;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  }
+  .pp-action-btn.call:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5);
+  }
+
+  .pp-action-btn.share,
+  .pp-action-btn.print {
+    background: #1a1a1a;
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .pp-action-btn.share:hover,
+  .pp-action-btn.print:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: #d4af37;
+  }
+
+  /* ═══ Description ═══ */
+  .pp-description {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    color: #ccc;
+    line-height: 1.85;
+    font-size: 0.98rem;
+  }
+  .pp-description h2,
+  .pp-description h3 {
+    color: #d4af37;
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
+  }
+  .pp-description p { margin-bottom: 1rem; }
+  .pp-description strong { color: #f5f5f5; }
+  .pp-description ul { padding-right: 1.5rem; }
+  .pp-description li { margin-bottom: 0.5rem; }
+
+  /* ═══ Agent Card ═══ */
+  .pp-agent-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .pp-agent-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 3px solid #d4af37;
+    object-fit: cover;
+    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+    flex-shrink: 0;
+  }
+  .pp-agent-info { flex: 1; min-width: 200px; }
+  .pp-agent-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #d4af37;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pp-agent-badge {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    background: linear-gradient(135deg, #d4af37, #fce205);
+    color: #050505;
+    border-radius: 12px;
+    font-weight: 800;
+  }
+  .pp-agent-stats {
+    font-size: 0.82rem;
+    color: #b0b0b0;
+    line-height: 1.6;
+  }
+  .pp-agent-stats strong { color: #f5f5f5; }
+
+  .pp-agent-btn {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #050505;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .pp-agent-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4);
+  }
+
+  /* ═══ Related Properties ═══ */
+  .pp-related {
+    margin-bottom: 2rem;
+  }
+  .pp-section-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #d4af37;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+  }
+  .pp-related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .pp-related-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 14px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.25s;
+    display: block;
+  }
+  .pp-related-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(212, 175, 55, 0.5);
+    box-shadow: 0 12px 32px rgba(212, 175, 55, 0.2);
+  }
+  .pp-related-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    background: #111;
+  }
+  .pp-related-body {
+    padding: 12px 14px 14px;
+  }
+  .pp-related-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #f5f5f5;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+  }
+  .pp-related-meta {
+    font-size: 0.78rem;
+    color: #888;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pp-related-meta i { color: #d4af37; }
+  .pp-related-price {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #d4af37;
+  }
+
+  /* ═══ FAQ ═══ */
+  .pp-faq {
+    margin-bottom: 2rem;
+  }
+  .pp-faq-item {
+    background: #1a1a1a;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .pp-faq-item[open] {
+    border-color: rgba(212, 175, 55, 0.4);
+  }
+  .pp-faq-item summary {
+    padding: 14px 18px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #f5f5f5;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+  }
+  .pp-faq-item summary::-webkit-details-marker { display: none; }
+  .pp-faq-item summary::after {
+    content: '＋';
+    color: #d4af37;
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+  }
+  .pp-faq-item[open] summary::after {
+    content: '−';
+    transform: rotate(180deg);
+  }
+  .pp-faq-item summary:hover {
+    background: rgba(212, 175, 55, 0.05);
+  }
+  .pp-faq-answer {
+    padding: 0 18px 16px;
+    color: #b0b0b0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* ═══ Floating WhatsApp ═══ */
+  .pp-floating-wa {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5);
+    text-decoration: none;
+    z-index: 9999;
+    animation: ppWaPulse 2.5s infinite;
+    transition: transform 0.2s;
+  }
+  .pp-floating-wa:hover {
+    transform: scale(1.1);
+  }
+  @keyframes ppWaPulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5); }
+    50% { box-shadow: 0 8px 32px rgba(37, 211, 102, 0.8); }
+  }
+
+  /* ═══ Lightbox ═══ */
+  .pp-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.96);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    padding: 20px;
+    cursor: zoom-out;
+  }
+  .pp-lightbox.show { display: flex; }
+  .pp-lightbox img {
+    max-width: 95%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  .pp-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 640px) {
+    .pp-container { padding: 0.75rem 0.75rem 3rem; }
+    .pp-title { font-size: 1.3rem; }
+    .pp-price-value { font-size: 1.5rem; }
+    .pp-specs { grid-template-columns: repeat(2, 1fr); }
+    .pp-actions { grid-template-columns: 1fr 1fr; }
+    .pp-action-btn { padding: 12px 10px; font-size: 0.85rem; }
+    .pp-agent-card { padding: 1.25rem; gap: 12px; }
+    .pp-agent-avatar { width: 60px; height: 60px; }
+    .pp-agent-btn { width: 100%; justify-content: center; }
+    .pp-floating-wa { width: 54px; height: 54px; font-size: 1.4rem; bottom: 20px; left: 20px; }
+  }
+</style>
+
+{%- comment -%} تحديد أول صورة للعرض {%- endcomment -%}
+{%- assign main_img = page.image_file | default: "" -%}
+{%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: main_img -%}
+
+<div class="pp-container">
+
+  <!-- ═══ Breadcrumb ═══ -->
+  <nav class="pp-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home"></i> الرئيسية</a>
+    <span class="sep">›</span>
+    <a href="{{ '/properties/' | relative_url }}">العقارات</a>
+    <span class="sep">›</span>
+    <span class="current">{{ page.title | truncate: 45 }}</span>
   </nav>
 
-  <!-- =========================================================
-       2. العنوان الرئيسي وتفاصيل سريعة (محسّن)
-       ========================================================= -->
-  <header class="property-header">
-    <h1>{{ page.title }}</h1>
-    <div class="property-meta">
-      <span class="location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ page.location }}</span>
-      {% if page.price_num %}
-        <span class="price"><i class="fas fa-tag" aria-hidden="true"></i> {{ page.price_num | number_with_delimiter }} ج.م</span>
-      {% else %}
-        <span class="price"><i class="fas fa-tag" aria-hidden="true"></i> {{ page.price }}</span>
-      {% endif %}
-      <span class="date"><i class="far fa-calendar" aria-hidden="true"></i> {{ page.date | date: "%Y/%m/%d" }}</span>
+  <!-- ═══ Gallery ═══ -->
+  {% if main_img != "" %}
+  <section class="pp-gallery">
+    <div class="pp-gallery-main">
+      <img src="{{ img_url }}"
+           alt="{{ page.title }}"
+           id="ppMainImage"
+           onclick="ppOpenLightbox(this.src)">
+      <span class="pp-gallery-tag">
+        {% if page.category contains "rent" %}<i class="fas fa-key"></i> للإيجار
+        {% elsif page.category contains "commercial" %}<i class="fas fa-store"></i> تجاري
+        {% elsif page.category contains "office" or page.category contains "admin" %}<i class="fas fa-briefcase"></i> إداري
+        {% else %}<i class="fas fa-home"></i> للبيع{% endif %}
+      </span>
     </div>
+
+    {%- comment -%} صور إضافية إن وجدت {%- endcomment -%}
+    {%- assign additional_imgs = "" | split: "" -%}
+    {%- if page.image_2 and page.image_2 != "" -%}
+      {%- assign additional_imgs = additional_imgs | push: page.image_2 -%}
+    {%- endif -%}
+    {%- if page.image_3 and page.image_3 != "" -%}
+      {%- assign additional_imgs = additional_imgs | push: page.image_3 -%}
+    {%- endif -%}
+    {%- if page.image_4 and page.image_4 != "" -%}
+      {%- assign additional_imgs = additional_imgs | push: page.image_4 -%}
+    {%- endif -%}
+    {%- if page.image_5 and page.image_5 != "" -%}
+      {%- assign additional_imgs = additional_imgs | push: page.image_5 -%}
+    {%- endif -%}
+
+    {% if additional_imgs.size > 0 %}
+    <div class="pp-gallery-thumbs">
+      <div class="pp-thumb active"
+           onclick="ppSwitchImage('{{ img_url }}', this)">
+        <img src="{{ img_url }}" alt="صورة رئيسية" loading="lazy">
+      </div>
+      {% for extra in additional_imgs %}
+      {% assign extra_url = site.baseurl | append: "/assets/img/properties/" | append: extra %}
+      <div class="pp-thumb"
+           onclick="ppSwitchImage('{{ extra_url }}', this)">
+        <img src="{{ extra_url }}" alt="صورة إضافية" loading="lazy">
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- ═══ Header + Price ═══ -->
+  <header class="pp-header">
+    <h1 class="pp-title">{{ page.title }}</h1>
+
+    <div class="pp-meta-row">
+      {% if page.location %}
+      <span class="pp-chip location">
+        <i class="fas fa-map-marker-alt"></i> {{ page.location }}
+      </span>
+      {% endif %}
+      {% if page.date %}
+      <span class="pp-chip date">
+        <i class="far fa-calendar"></i> {{ page.date | date: "%d/%m/%Y" }}
+      </span>
+      {% endif %}
+    </div>
+
+    {% if page.price %}
+    <div class="pp-price-banner">
+      <div>
+        <div class="pp-price-label">
+          {% if page.category contains "rent" %}الإيجار الشهري{% else %}السعر المطلوب{% endif %}
+        </div>
+        <div class="pp-price-value">{{ page.price }}</div>
+      </div>
+      {% if page.price contains "قابل للتفاوض" or page.price contains "لقطة" %}
+      <span class="pp-price-negotiable">
+        <i class="fas fa-handshake"></i> قابل للتفاوض
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
   </header>
 
-  <!-- =========================================================
-       3. المحتوى الرئيسي
-       ========================================================= -->
-  <main class="property-content">
-
-    <!-- المواصفات الرئيسية (محسّن، لا يعرض قسمًا فارغًا) -->
-    <section class="property-specs">
-      <h2><i class="fas fa-list-alt" aria-hidden="true"></i> مواصفات العقار</h2>
-      <div class="specs-grid">
-        {% if page.area %}
-          <div class="spec-item">
-            <span class="spec-label">المساحة</span>
-            <span class="spec-value">{{ page.area }}</span>
-          </div>
-        {% endif %}
-        {% if page.rooms %}
-          <div class="spec-item">
-            <span class="spec-label">الغرف</span>
-            <span class="spec-value">{{ page.rooms }}</span>
-          </div>
-        {% endif %}
-        {% if page.bathrooms %}
-          <div class="spec-item">
-            <span class="spec-label">الحمامات</span>
-            <span class="spec-value">{{ page.bathrooms }}</span>
-          </div>
-        {% endif %}
-        {% if page.floor %}
-          <div class="spec-item">
-            <span class="spec-label">الدور</span>
-            <span class="spec-value">{{ page.floor }}</span>
-          </div>
-        {% endif %}
-        {% if page.finish %}
-          <div class="spec-item">
-            <span class="spec-label">التشطيب</span>
-            <span class="spec-value">{{ page.finish }}</span>
-          </div>
-        {% endif %}
-        {% if page.property_type %}
-          <div class="spec-item">
-            <span class="spec-label">النوع</span>
-            <span class="spec-value">
-              {% if page.property_type == 'apartment' %}شقة سكنية
-              {% elsif page.property_type == 'office' %}مكتب/إداري
-              {% elsif page.property_type == 'commercial' %}تجاري
-              {% else %}{{ page.property_type }}{% endif %}
-            </span>
-          </div>
-        {% endif %}
-      </div>
-    </section>
-
-    <!-- التفاصيل الإضافية (محسّن) -->
-    {% if page.extra_details %}
-    <section style="background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; margin-bottom: 30px;">
-      <h2 style="color: var(--color-primary); margin-bottom: 15px;">
-        <i class="fas fa-info-circle" aria-hidden="true"></i> تفاصيل إضافية
-      </h2>
-      <div style="color: #ddd; line-height: 1.8;">{{ page.extra_details }}</div>
-    </section>
+  <!-- ═══ Specs ═══ -->
+  {% if page.area or page.rooms or page.bathrooms or page.baths or page.floor or page.finish %}
+  <div class="pp-specs">
+    {% if page.area %}
+    <div class="pp-spec">
+      <div class="pp-spec-icon"><i class="fas fa-ruler-combined"></i></div>
+      <div class="pp-spec-label">المساحة</div>
+      <div class="pp-spec-value">{{ page.area }}</div>
+    </div>
     {% endif %}
 
-    <!-- الوصف الكامل للعقار (لا تغيير) -->
-    <section style="margin-bottom: 30px; color: #ddd; line-height: 1.8;">
-      {{ content }}
-    </section>
+    {% if page.rooms %}
+    <div class="pp-spec">
+      <div class="pp-spec-icon"><i class="fas fa-bed"></i></div>
+      <div class="pp-spec-label">الغرف</div>
+      <div class="pp-spec-value">{{ page.rooms }}</div>
+    </div>
+    {% endif %}
 
-    <!-- =========================================================
-         4. زر الواتساب المحسّن (هذا هو التغيير الرئيسي)
-         ========================================================= -->
-    <div class="property-call-action">
-      <a id="whatsapp-inquiry-btn"
-         href="https://wa.me/201147758857?text={{ 'أرغب في الاستفسار عن: ' | append: page.title | append: ' — رابط العقار: ' | append: site.url | append: page.url | url_encode }}"
-         class="call-button"
-         target="_blank"
-         rel="noopener noreferrer"
-         aria-label="استفسر عن هذا العقار عبر واتساب">
-        <i class="fab fa-whatsapp"></i>
-        <span>استفسر الآن عبر واتساب</span>
-        <small>سيتم إرسال رابط الشقة تلقائياً</small>
-      </a>
+    {% if page.bathrooms or page.baths %}
+    <div class="pp-spec">
+      <div class="pp-spec-icon"><i class="fas fa-bath"></i></div>
+      <div class="pp-spec-label">الحمامات</div>
+      <div class="pp-spec-value">{{ page.bathrooms | default: page.baths }}</div>
+    </div>
+    {% endif %}
+
+    {% if page.floor %}
+    <div class="pp-spec">
+      <div class="pp-spec-icon"><i class="fas fa-layer-group"></i></div>
+      <div class="pp-spec-label">الدور</div>
+      <div class="pp-spec-value">{{ page.floor }}</div>
+    </div>
+    {% endif %}
+
+    {% if page.finish %}
+    <div class="pp-spec">
+      <div class="pp-spec-icon"><i class="fas fa-paint-roller"></i></div>
+      <div class="pp-spec-label">التشطيب</div>
+      <div class="pp-spec-value">{{ page.finish }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ Action Buttons ═══ -->
+  {%- assign wa_text = "أرغب في الاستفسار عن: " | append: page.title | append: " — رابط العقار: " | append: site.url | append: page.url -%}
+  <div class="pp-actions">
+    <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"
+       target="_blank"
+       rel="noopener noreferrer"
+       class="pp-action-btn wa"
+       id="ppWaBtn">
+      <i class="fab fa-whatsapp"></i> استفسار واتساب
+    </a>
+
+    <a href="tel:+201147758857"
+       class="pp-action-btn call"
+       onclick="ppTrackCall()">
+      <i class="fas fa-phone-alt"></i> اتصل الآن
+    </a>
+
+    <button type="button"
+            class="pp-action-btn share"
+            onclick="ppShare()">
+      <i class="fas fa-share-alt"></i> مشاركة
+    </button>
+
+    <button type="button"
+            class="pp-action-btn print"
+            onclick="window.print()">
+      <i class="fas fa-print"></i> طباعة
+    </button>
+  </div>
+
+  <!-- ═══ Content (الوصف من ملف العقار) ═══ -->
+  {% if content and content != "" %}
+  <div class="pp-description">
+    {{ content }}
+  </div>
+  {% endif %}
+
+  <!-- ═══ Agent Card ═══ -->
+  <div class="pp-agent-card">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
+         alt="طارق طنطاوي"
+         class="pp-agent-avatar"
+         onerror="this.style.display='none'">
+
+    <div class="pp-agent-info">
+      <div class="pp-agent-name">
+        طارق طنطاوي
+        <span class="pp-agent-badge">⭐ Local Guide 7</span>
+      </div>
+      <div class="pp-agent-stats">
+        🏆 <strong>16.3 مليون</strong> مشاهدة على Google Maps<br>
+        ⭐ <strong>4.7</strong> من <strong>195</strong> مراجعة<br>
+        📍 خبير عقارات مدينة نصر منذ <strong>2014</strong>
+      </div>
     </div>
 
-    <!-- =========================================================
-         5. عقارات مشابهة (محسّن، لا يعرض العقار الحالي)
-         ========================================================= -->
-    <section class="related-properties">
-      <h2><i class="fas fa-home" aria-hidden="true"></i> شقق مشابهة للبيع في مدينة نصر</h2>
-      <div class="related-grid">
-        {% assign similar_properties = site.properties | where_exp: "item", "item.id != page.id" | sample: 3 %}
-        {% for prop in similar_properties %}
-          <a href="{{ prop.url | relative_url }}" class="related-card">
-            <div class="related-card-img">
-              {% if prop.image_file %}
-                <img src="{{ site.baseurl }}/assets/img/properties/{{ prop.image_file }}"
-                     alt="{{ prop.title }}"
-                     loading="lazy">
-              {% else %}
-                <div class="img-placeholder"><i class="fas fa-building" aria-hidden="true"></i></div>
-              {% endif %}
-            </div>
-            <div class="related-card-content">
-              <h3>{{ prop.title | truncate: 45 }}</h3>
-              <p class="related-location">
-                <i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ prop.location | truncate: 35 }}
-              </p>
-              {% if prop.price_num %}
-                <p class="related-price">{{ prop.price_num | number_with_delimiter }} ج.م</p>
-              {% else %}
-                <p class="related-price">{{ prop.price }}</p>
-              {% endif %}
-            </div>
-          </a>
-        {% endfor %}
-      </div>
-    </section>
+    <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
+       target="_blank"
+       rel="noopener"
+       class="pp-agent-btn">
+      <i class="fas fa-external-link-alt"></i> الملف الشخصي
+    </a>
+  </div>
 
-  </main>
+  <!-- ═══ Related Properties ═══ -->
+  {%- assign related = site.properties | where_exp: "item", "item.url != page.url" -%}
+  {%- assign current_type = page.property_type | default: page.category -%}
+  {%- assign related_filtered = related | where: "category", page.category | sample: 3 -%}
+  {% if related_filtered.size == 0 %}
+    {%- assign related_filtered = related | sample: 3 -%}
+  {% endif %}
+
+  {% if related_filtered.size > 0 %}
+  <section class="pp-related">
+    <h2 class="pp-section-title">
+      <i class="fas fa-home"></i>
+      عقارات مشابهة
+    </h2>
+    <div class="pp-related-grid">
+      {% for prop in related_filtered %}
+        {%- assign rel_img = site.baseurl | append: "/assets/img/properties/" | append: prop.image_file -%}
+        <a href="{{ prop.url | relative_url }}" class="pp-related-card">
+          {% if prop.image_file %}
+          <img src="{{ rel_img }}"
+               alt="{{ prop.title }}"
+               class="pp-related-img"
+               loading="lazy">
+          {% else %}
+          <div class="pp-related-img" style="display:flex;align-items:center;justify-content:center;color:#444;">
+            <i class="fas fa-building" style="font-size:3rem;"></i>
+          </div>
+          {% endif %}
+          <div class="pp-related-body">
+            <h3 class="pp-related-title">{{ prop.title | truncate: 50 }}</h3>
+            <div class="pp-related-meta">
+              <i class="fas fa-map-marker-alt"></i>
+              {{ prop.location | truncate: 35 }}
+            </div>
+            <div class="pp-related-price">{{ prop.price }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══ FAQ ═══ -->
+  <section class="pp-faq">
+    <h2 class="pp-section-title">
+      <i class="fas fa-question-circle"></i>
+      أسئلة شائعة
+    </h2>
+
+    <details class="pp-faq-item">
+      <summary>هل السعر قابل للتفاوض؟</summary>
+      <div class="pp-faq-answer">
+        يمكن مناقشة السعر مع المالك مباشرة. بعض العقارات عليها هامش تفاوض، وبعضها بسعر نهائي. تواصل مع طارق على واتساب لمعرفة التفاصيل.
+      </div>
+    </details>
+
+    <details class="pp-faq-item">
+      <summary>كيف أحجز معاينة للعقار؟</summary>
+      <div class="pp-faq-answer">
+        اضغط على زر "استفسار واتساب" أو "اتصل الآن" — وسيتم تحديد موعد المعاينة في أقرب وقت. المعاينات متاحة أيام السبت–الخميس، من 12 ظهراً حتى 9 مساءً.
+      </div>
+    </details>
+
+    <details class="pp-faq-item">
+      <summary>هل العقار مسجل؟ وما وضعه القانوني؟</summary>
+      <div class="pp-faq-answer">
+        الوضع القانوني يختلف من عقار لآخر (شهر عقاري، عقد أخضر، تنازل حكومي، إلخ). تواصل مع طارق لمعرفة التفاصيل الدقيقة لكل حالة.
+      </div>
+    </details>
+
+    <details class="pp-faq-item">
+      <summary>ما هي عمولة سمسار طلبك؟</summary>
+      <div class="pp-faq-answer">
+        العمولة 2.5% من قيمة البيع — تُحدد بعد المعاينة والتقييم. لا توجد رسوم مبدئية، والعمولة تُدفع فقط بعد إتمام البيع/الإيجار.
+      </div>
+    </details>
+
+    <details class="pp-faq-item">
+      <summary>هل يمكن توفير عقارات مشابهة؟</summary>
+      <div class="pp-faq-answer">
+        نعم — نمتلك قاعدة بيانات ضخمة من العقارات في مدينة نصر والقاهرة الجديدة ومصر الجديدة. أخبر طارق بمواصفاتك، وسيوفّر لك أفضل البدائل المتاحة.
+      </div>
+    </details>
+  </section>
+
 </div>
 
-<!-- =========================================================
-     6. سكربت تتبع الواتساب (بديل لـ trackPhoneCall)
-     ========================================================= -->
+<!-- ═══ Floating WhatsApp ═══ -->
+<a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="pp-floating-wa"
+   aria-label="تواصل واتساب">
+  <i class="fab fa-whatsapp"></i>
+</a>
+
+<!-- ═══ Lightbox ═══ -->
+<div class="pp-lightbox" id="ppLightbox" onclick="ppCloseLightbox()">
+  <button class="pp-lightbox-close" onclick="ppCloseLightbox()" aria-label="إغلاق">
+    <i class="fas fa-times"></i>
+  </button>
+  <img src="" alt="صورة مكبرة" id="ppLightboxImg">
+</div>
+
 <script>
+  // ═══ Gallery ═══
+  function ppSwitchImage(src, thumbEl) {
+    const main = document.getElementById('ppMainImage');
+    if (main) main.src = src;
+    document.querySelectorAll('.pp-thumb').forEach(t => t.classList.remove('active'));
+    if (thumbEl) thumbEl.classList.add('active');
+  }
+
+  function ppOpenLightbox(src) {
+    const lb = document.getElementById('ppLightbox');
+    const img = document.getElementById('ppLightboxImg');
+    if (lb && img) {
+      img.src = src;
+      lb.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function ppCloseLightbox() {
+    const lb = document.getElementById('ppLightbox');
+    if (lb) {
+      lb.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Escape يغلق الـ lightbox
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') ppCloseLightbox();
+  });
+
+  // ═══ Share ═══
+  async function ppShare() {
+    const shareData = {
+      title: document.title,
+      text: "شاهد هذا العقار المميز من سمسار طلبك",
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('✅ تم نسخ رابط العقار');
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          alert('✅ تم نسخ رابط العقار');
+        } catch (err) {
+          alert('تعذر المشاركة');
+        }
+      }
+    }
+  }
+
+  // ═══ Track Call / WhatsApp (GTM) ═══
+  function ppTrackCall() {
+    if (typeof dataLayer !== 'undefined') {
+      dataLayer.push({
+        event: 'phone_call_click',
+        event_category: 'Property Engagement',
+        event_label: document.title,
+        call_source: 'property_page_call'
+      });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
-    const whatsappBtn = document.getElementById('whatsapp-inquiry-btn');
-    if (whatsappBtn) {
-      whatsappBtn.addEventListener('click', function() {
+    const waBtn = document.getElementById('ppWaBtn');
+    if (waBtn) {
+      waBtn.addEventListener('click', function() {
         if (typeof dataLayer !== 'undefined') {
           dataLayer.push({
             event: 'whatsapp_inquiry',
             event_category: 'Property Engagement',
-            event_label: {{ page.title | jsonify }},
-            property_url: {{ page.url | relative_url | jsonify }},
+            event_label: document.title,
+            property_url: window.location.pathname,
             call_source: 'property_page_whatsapp'
           });
         }
