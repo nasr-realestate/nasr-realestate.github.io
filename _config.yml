@@ -22,32 +22,54 @@ author:
   name: "طارق طنطاوي"
   phone: "+201147758857"
   twitter: "tarekproptech"
-  url: "https://nasr-realestate.github.io/about/"
-  avatar: "/assets/img/tarek-tantawy.webp"
+  url: "https://nasr-realestate.github.io/about-us.html"
+  avatar: "/assets/img/team/tareq.webp"
 
 # --- التواصل (محدّث ليتوافق مع Worker) ---
 contact:
   whatsapp: "+201147758857"
   whatsapp_url: "https://wa.me/201147758857"
-  email: "tarek@nasr-realestate.com"
-  # 🆕 أرقام إضافية
+  email: "samsar.talabak@mailo.com"
   alaa_phone: "+201022171667"
   alaa_whatsapp_url: "https://wa.me/201022171667"
 
-# 🆕 المكتب (محدّث ليتوافق مع Worker)
+# --- المكتب ---
 office:
   address: "16 شارع محمد حسن الجمل - المنطقة السادسة - مدينة نصر"
   map_url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
   hours: "من 12 الضهر لحد 9 بالليل، ما عدا الجمعة"
   hours_exception: "الجمعة إجازة"
 
+# --- Twitter & Social (Jekyll SEO Tag) ---
+twitter:
+  username: tarekproptech
+  card: summary_large_image
+
+social:
+  name: سمسار طلبك
+  links:
+    - https://www.facebook.com/Tarekonly
+    - https://www.linkedin.com/company/smsar-talabk-madinat-nasr/
+    - https://www.pinterest.com/smsar_talbk
+    - https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7
+
+facebook:
+  publisher: https://www.facebook.com/Tarekonly
+
 # --- الربط التقني والأرشفة ---
 webmaster_verifications:
   google: "ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA"
 
-google_analytics: "G-CDT8Q9YSJ0"
+# ⚠️ ملاحظة: GTM-5BTRF7NP موجود في layouts — لا حاجة لـ GA هنا
+# (لو أضفت google_analytics، سيتتبع الزيارات مرتين)
 
 markdown: kramdown
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  hard_wrap: false
+
 permalink: pretty
 
 plugins:
@@ -89,6 +111,12 @@ defaults:
 sass:
   style: compressed
 
+compress_html:
+  clippings: all
+  comments: ["<!-- ", " -->"]
+  endings: all
+  blanklines: false
+
 keep_files:
   - search-data.json
   - assets/js/firebase-messaging-sw.js
@@ -104,3 +132,7 @@ exclude:
   - node_modules
   - package.json
   - package-lock.json
+  - .gitignore
+  - .vscode
+  - .DS_Store
+  - scripts
