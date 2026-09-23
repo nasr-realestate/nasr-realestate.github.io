@@ -63,11 +63,11 @@ extra_head: |
   --shadow-md:        0 4px 12px rgba(11,20,26,0.08);
   --shadow-lg:        0 8px 32px rgba(11,20,26,0.12);
 
-  --radius-bubble:    18px;
+  --radius-bubble:    7.5px;
   --radius-input:     28px;
   --radius-glass:     16px;
 
-  --font: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font: 'Segoe UI', 'Helvetica Neue', 'Cairo', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
   --max-w: 780px;
   --header-h: 64px;
 }
@@ -263,18 +263,26 @@ body {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  /* خلفية الواتساب المنقوشة — SVG مضمّن عشان تشتغل من غير إنترنت */
+  background-color: #efeae2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23d9d2c7' stroke-width='1.1' opacity='0.5'%3E%3Cpath d='M30 20c4-6 10-6 14 0M52 44c5 3 5 9 0 12M18 60c6 2 8 8 4 12M78 28c-4 5-1 11 4 12M104 52c6-3 12 1 12 7M130 22c-5 4-5 10 0 14M156 48c4-6 11-5 14 1M182 26c-6 2-8 9-3 13M208 54c5-4 12-1 13 5M234 28c-4 5-2 12 4 13M22 96c5-5 12-3 14 3M48 120c-5 3-6 10-1 13M74 100c6 1 9 8 5 13M100 124c-4-6 0-13 7-13M126 98c5 4 5 11 0 14M152 122c-6-2-8-9-3-13M178 100c4 5 2 12-3 13M204 126c6-3 12 2 11 8M230 98c-5 5-4 12 2 14M26 168c6-4 13 0 13 6M52 192c-5-4-4-11 2-13M78 170c4 6 1 12-5 13M104 194c6 2 8 9 3 13M130 168c-5-4-11-1-12 5M156 192c4-5 11-4 14 2M182 170c-6 3-7 10-2 13M208 194c5-5 12-3 14 3M234 168c-4 6-1 12 5 13M30 240c5-3 11 0 12 6M56 218c-4 5-2 12 4 13M82 242c6-2 8-9 4-13M108 220c-5 5-4 12 2 14M134 244c4-6 11-5 14 1M160 218c-6 3-7 10-2 14M186 242c5-4 12-2 13 4M212 220c-4 5-1 12 5 13M238 244c6-3 11 1 11 7'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 260px 260px;
 }
 .chat-area::-webkit-scrollbar { width: 6px; }
 .chat-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
 @media (prefers-color-scheme: dark) {
   .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+  /* خلفية الوضع الليلي في واتساب */
+  .chat-area { background-color: #0b141a; }
+  .chat-area::after { content: none; }
 }
 
 /* ═══ MESSAGES ═══ */
 .msg {
-  max-width: 80%; padding: 8px 14px 7px;
+  max-width: 80%; padding: 6px 9px 8px 9px;
   border-radius: var(--radius-bubble);
-  font-size: 15px; line-height: 1.5;
+  font-size: 14.2px; line-height: 19px;
   word-break: break-word; white-space: pre-wrap;
   position: relative;
   animation: msgIn .25s cubic-bezier(0.4,0,0.2,1);
@@ -302,6 +310,26 @@ body {
 @media (prefers-color-scheme: dark) {
   .msg-user { background: var(--bubble-out); color: #e9edef; }
 }
+
+/* ذيل الفقاعة — المثلث الصغير المميز في واتساب */
+.msg-bot::before, .msg-user::before {
+  content: ""; position: absolute; top: 0; width: 8px; height: 13px;
+}
+.msg-bot::before {
+  right: -8px;
+  background: var(--bubble-in);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.msg-user::before {
+  left: -8px;
+  background: var(--bubble-out);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+/* الفقاعات المتتالية لنفس المتحدث من غير ذيل */
+.msg-bot + .msg-bot::before, .msg-user + .msg-user::before { display: none; }
+.msg-bot + .msg-bot { border-top-right-radius: 7.5px; }
+.msg-user + .msg-user { border-top-left-radius: 7.5px; }
+
 
 .msg strong { font-weight: 700; }
 .msg em { font-style: italic; opacity: 0.9; }
