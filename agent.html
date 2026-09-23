@@ -1599,13 +1599,23 @@ async function sendMsg() {
       body: JSON.stringify(payload)
     });
 
-    toggleTypingBubble(false);
-    setTyping(false);
-
-    if (!r.ok) { renderMsg("حصل خطأ مؤقت. جرّب تاني.", "bot"); return; }
+    if (!r.ok) {
+      toggleTypingBubble(false);
+      setTyping(false);
+      renderMsg("حصل خطأ مؤقت. جرّب تاني.", "bot");
+      return;
+    }
 
     const data = await r.json();
     const reply = data.response || "";
+
+    // تأخير الكتابة: الـ Worker بيحسب المدة حسب طول الرد وبيبعتها في typingDelay
+    // بنسيب فقاعة الكتابة شغالة طول المدة دي عشان يبان إن طارق بيكتب فعلاً
+    const delay = Number(data.typingDelay) || 0;
+    if (delay > 0) await new Promise(res => setTimeout(res, Math.min(delay, 1500)));
+
+    toggleTypingBubble(false);
+    setTyping(false);
 
     if (reply) {
       renderMsg(reply, "bot");
