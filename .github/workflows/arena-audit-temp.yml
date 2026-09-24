@@ -1,95 +1,38 @@
-# ⚠️ مؤقت — أداة فحص فقط (لا تنشر أي شيء). يُحذف قبل التسليم النهائي.
 name: "Arena Audit Temp"
-
 on:
   push:
     branches: ["arena/**"]
-
 permissions:
   contents: write
-
 jobs:
-  shots:
+  probe:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.head_commit.message, '[audit-results]') }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
         with:
-          node-version: '20'
-
-      - name: Install Playwright Chromium
+          ruby-version: '3.1'
+          bundler-cache: true
+      - name: Inspect jekyll-seo-tag
         run: |
-          npm init -y >/dev/null 2>&1
-          npm i -D playwright@1.48 >/dev/null 2>&1
-          npx playwright install chromium
-          npx playwright install-deps chromium || true
-
-      - name: Capture screenshots + responsive metrics
-        run: |
-          mkdir -p audit/shots
-          cat > shot.mjs <<'JS'
-          import { chromium } from 'playwright';
-          const BASE='https://nasr-realestate.github.io';
-          const pages=[
-            ['home','/'],
-            ['properties','/properties/'],
-            ['property','/properties/10th-district-180m/'],
-            ['add','/add-your-property.html'],
-            ['agent','/agent.html'],
-            ['requests','/requests/'],
-          ];
-          const widths=[320,375,768,1440];
-          const out=[];
-          const browser=await chromium.launch();
-          for(const [name,path] of pages){
-            for(const w of widths){
-              const ctx=await browser.newContext({viewport:{width:w,height:900},deviceScaleFactor:1,isMobile:w<768,hasTouch:w<768});
-              const page=await ctx.newPage();
-              try{
-                await page.goto(BASE+path,{waitUntil:'load',timeout:60000});
-                await page.waitForTimeout(2500);
-                const m=await page.evaluate(()=>{
-                  const de=document.documentElement;
-                  const overflow=[...document.querySelectorAll('body *')].filter(el=>{
-                    const r=el.getBoundingClientRect();
-                    return r.width>0 && (r.right > window.innerWidth+2 || r.left < -2);
-                  }).slice(0,8).map(el=>({t:el.tagName,c:(el.className&&el.className.toString?el.className.toString():'').slice(0,40),r:Math.round(el.getBoundingClientRect().right)}));
-                  const small=[...document.querySelectorAll('a,button,select,input')].filter(el=>{
-                    const r=el.getBoundingClientRect();
-                    return r.width>0&&r.height>0&&(r.height<24||r.width<24);
-                  }).length;
-                  return {
-                    scrollW:de.scrollWidth, innerW:window.innerWidth,
-                    hOverflow: de.scrollWidth > window.innerWidth+2,
-                    overflowers: overflow,
-                    tinyTargets: small,
-                    title: document.title,
-                    h1: [...document.querySelectorAll('h1')].map(e=>e.textContent.trim().slice(0,80)),
-                    docHeight: de.scrollHeight
-                  };
-                });
-                out.push({page:name,path,width:w,...m});
-                await page.screenshot({path:`audit/shots/${name}-${w}.jpg`,type:'jpeg',quality:55});
-              }catch(e){ out.push({page:name,path,width:w,error:String(e).slice(0,200)}); }
-              await ctx.close();
-            }
-          }
-          await browser.close();
-          console.log(JSON.stringify(out,null,1));
-          JS
-          node shot.mjs > audit/out/responsive.json 2> audit/out/responsive.err || true
-          cat audit/out/responsive.json
-          tail -5 audit/out/responsive.err || true
-          ls -la audit/shots | head -30
-
+          mkdir -p audit/out
+          : > audit/out/seotag.txt
+          echo "=== gem version ===" >> audit/out/seotag.txt
+          gem list jekyll-seo-tag >> audit/out/seotag.txt
+          echo "=== contents ===" >> audit/out/seotag.txt
+          gem contents jekyll-seo-tag >> audit/out/seotag.txt 2>&1
+          echo "=== seo.html template ===" >> audit/out/seotag.txt
+          cat "$(gem contents jekyll-seo-tag | grep 'seo.html' | head -1)" >> audit/out/seotag.txt 2>&1
+          echo "=== seo_tag.rb ===" >> audit/out/seotag.txt
+          cat "$(gem contents jekyll-seo-tag | grep 'seo_tag.rb' | head -1)" >> audit/out/seotag.txt 2>&1
+          echo "=== jekyll version ===" >> audit/out/seotag.txt
+          bundle exec jekyll -v >> audit/out/seotag.txt 2>&1
+          gzip -c audit/out/seotag.txt | base64 -w0 > audit/out/seotag.txt.b64
       - name: Commit
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "chore(audit): screenshots + responsive metrics [audit-results]" || echo "nothing"
+          git commit -m "probe seo tag [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}
