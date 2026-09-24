@@ -1,3 +1,11 @@
+<!--
+  ═══ إصلاحات مُوثّقة (2026-09-24) ═══
+  1) image: كان الملفان social-home.webp و Come-here.webp غير موجودين (404) → صورة واحدة موجودة فعلاً.
+  2) geo: الإحداثيات القديمة 30.0635/31.311 تبعد ~2.8 كم عن دبوس Google Maps الحقيقي
+     → الصحيح 30.067317 / 31.339143 (من رابط Google Maps المنشور في الموقع).
+  3) aggregateRating.reviewCount: كان 195 بينما Google Maps يُظهر 102 مراجعة (تحقق 2026-09-24).
+  ⚠️ ملاحظة: لا تضع تعليقات HTML داخل <script type="application/ld+json"> — تُبطل الـ JSON.
+-->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org/",
@@ -55,7 +63,6 @@
         "width": 512,
         "height": 512
       },
-      <!-- ⚠️ إصلاح: كان الملفان social-home.webp و Come-here.webp غير موجودين (404) -->
       "image": [
         "https://nasr-realestate.github.io/assets/img/social-home.png"
       ],
@@ -73,7 +80,6 @@
         "postalCode": "11371",
         "addressCountry": "EG"
       },
-      <!-- ⚠️ إصلاح: الإحداثيات القديمة 30.0635/31.311 تبعد ~2.8 كم عن دبوس Google Maps الحقيقي -->
       "geo": {
         "@type": "GeoCoordinates",
         "latitude": 30.067317,
@@ -136,7 +142,6 @@
           }
         }
       ],
-      <!-- ⚠️ إصلاح: reviewCount كان 195 بينما Google Maps يُظهر 102 مراجعة (تحقق 2026-09-24) -->
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.7",
