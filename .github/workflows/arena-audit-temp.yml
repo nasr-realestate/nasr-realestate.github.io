@@ -13,25 +13,24 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-      - name: Install gems and dump jekyll-seo-tag sources
+      - name: Install gems and dump template.html + drop.rb
         run: |
           set +e
           mkdir -p audit/out
-          : > audit/out/seotag2.txt
+          : > audit/out/seotag3.txt
           bundle install --jobs 4 >/dev/null 2>&1
-          G=$(dirname "$(bundle exec gem which jekyll-seo-tag 2>/dev/null)")
-          echo "GEM=$G" >> audit/out/seotag2.txt
-          echo "=========== FILE LIST ===========" >> audit/out/seotag2.txt
-          find "$G" -type f | sed "s|$G/||" >> audit/out/seotag2.txt
-          for f in $(find "$G/lib" "$G/docs" -type f | sort); do
-            echo "=========== FILE: ${f#$G/} ===========" >> audit/out/seotag2.txt
-            cat "$f" >> audit/out/seotag2.txt
-          done
+          G="/opt/hostedtoolcache/Ruby/3.1.7/x64/lib/ruby/gems/3.1.0/gems/jekyll-seo-tag-2.8.0"
+          G=$(find /opt -maxdepth 8 -type d -name "jekyll-seo-tag-*" 2>/dev/null | head -1)
+          echo "GEM=$G" >> audit/out/seotag3.txt
+          echo "=========== template.html ===========" >> audit/out/seotag3.txt
+          cat "$G/lib/template.html" >> audit/out/seotag3.txt 2>&1
+          echo "=========== drop.rb ===========" >> audit/out/seotag3.txt
+          cat "$G/lib/jekyll-seo-tag/drop.rb" >> audit/out/seotag3.txt 2>&1
           exit 0
       - name: Commit
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "probe seo tag sources [audit-results]" || echo "nothing"
+          git commit -m "probe seo template [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}
