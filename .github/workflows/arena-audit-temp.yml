@@ -13,22 +13,21 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-          bundler-cache: true
-      - name: Inspect jekyll-seo-tag
+      - name: Install gems and inspect jekyll-seo-tag
         run: |
+          set +e
           mkdir -p audit/out
           : > audit/out/seotag.txt
-          echo "=== gem version ===" >> audit/out/seotag.txt
-          gem list jekyll-seo-tag >> audit/out/seotag.txt
+          bundle install --jobs 4 >> audit/out/seotag.txt 2>&1
+          echo "=== gem which ===" >> audit/out/seotag.txt
+          bundle exec gem which jekyll-seo-tag >> audit/out/seotag.txt 2>&1
           echo "=== contents ===" >> audit/out/seotag.txt
-          gem contents jekyll-seo-tag >> audit/out/seotag.txt 2>&1
+          bundle exec gem contents jekyll-seo-tag >> audit/out/seotag.txt 2>&1
           echo "=== seo.html template ===" >> audit/out/seotag.txt
-          cat "$(gem contents jekyll-seo-tag | grep 'seo.html' | head -1)" >> audit/out/seotag.txt 2>&1
-          echo "=== seo_tag.rb ===" >> audit/out/seotag.txt
-          cat "$(gem contents jekyll-seo-tag | grep 'seo_tag.rb' | head -1)" >> audit/out/seotag.txt 2>&1
+          cat "$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'seo.html' | head -1)" >> audit/out/seotag.txt 2>&1
           echo "=== jekyll version ===" >> audit/out/seotag.txt
           bundle exec jekyll -v >> audit/out/seotag.txt 2>&1
-          gzip -c audit/out/seotag.txt | base64 -w0 > audit/out/seotag.txt.b64
+          exit 0
       - name: Commit
         run: |
           git config user.name "Arena Audit Bot"

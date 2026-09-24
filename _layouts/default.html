@@ -10,23 +10,42 @@
 
   {% include schema-global.html %}
 
-  {% if page.image_file %}
-    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
-    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}">
-  {% else %}
-    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.png">
-    <meta name="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/img/social-home.png">
-  {% endif %}
+  <!-- ═══════════════════════════════════════════════
+       ملاحظة إصلاح (2026-09-24):
+       كان هذا المكان يُكرّر og:image / twitter:image / og:type / twitter:card
+       بعد ما يُصدِره قالب {% seo %} — والنتيجة وسمان لكل خاصية،
+       والأول (من seo) كان يشير في صفحات العقارات إلى social-home.webp (404).
+       الآن {% seo %} هو المصدر الوحيد، ويُغذّى من page.image في Front Matter.
+       ═══════════════════════════════════════════════ -->
 
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
+
+  <!-- ═══ Favicons — تمنع طلب /favicon.ico الذي كان يرجع 404 في كل صفحة ═══ -->
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
+  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
+  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
+  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+  <!-- CSS المحلي أولاً (غير محجوب لجهة خارجية) -->
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
+  <!-- ═══════════════════════════════════════════════
+       الخطوط وأيقونات Font Awesome — تحميل غير محجوب للعرض
+       (كانا يحجبان العرض ~1.8 ثانية على الجوال حسب Lighthouse)
+       ═══════════════════════════════════════════════ -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"
+        media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"></noscript>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 
@@ -272,9 +291,12 @@
      title="تحدث مع طارق طنطاوي الآن">
 
     <!-- صورة طارق -->
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
+    <!-- ⚠️ إصلاح: كان loading="lazy" على عنصر ثابت (fixed) ظاهر فوراً → يؤخر ظهور الزر.
+         وأضيف width/height لمنع أي CLS. -->
+    <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
          alt="طارق طنطاوي"
-         loading="lazy">
+         width="54" height="54"
+         loading="eager" decoding="async">
 
     <!-- شارة Level 7 -->
     <span class="badge-level">7</span>
