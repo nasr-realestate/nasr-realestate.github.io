@@ -13,25 +13,25 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-      - name: Install gems and inspect jekyll-seo-tag
+      - name: Install gems and dump jekyll-seo-tag sources
         run: |
           set +e
           mkdir -p audit/out
-          : > audit/out/seotag.txt
-          bundle install --jobs 4 >> audit/out/seotag.txt 2>&1
-          echo "=== gem which ===" >> audit/out/seotag.txt
-          bundle exec gem which jekyll-seo-tag >> audit/out/seotag.txt 2>&1
-          echo "=== contents ===" >> audit/out/seotag.txt
-          bundle exec gem contents jekyll-seo-tag >> audit/out/seotag.txt 2>&1
-          echo "=== seo.html template ===" >> audit/out/seotag.txt
-          cat "$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'seo.html' | head -1)" >> audit/out/seotag.txt 2>&1
-          echo "=== jekyll version ===" >> audit/out/seotag.txt
-          bundle exec jekyll -v >> audit/out/seotag.txt 2>&1
+          : > audit/out/seotag2.txt
+          bundle install --jobs 4 >/dev/null 2>&1
+          G=$(dirname "$(bundle exec gem which jekyll-seo-tag 2>/dev/null)")
+          echo "GEM=$G" >> audit/out/seotag2.txt
+          echo "=========== FILE LIST ===========" >> audit/out/seotag2.txt
+          find "$G" -type f | sed "s|$G/||" >> audit/out/seotag2.txt
+          for f in $(find "$G/lib" "$G/docs" -type f | sort); do
+            echo "=========== FILE: ${f#$G/} ===========" >> audit/out/seotag2.txt
+            cat "$f" >> audit/out/seotag2.txt
+          done
           exit 0
       - name: Commit
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "probe seo tag [audit-results]" || echo "nothing"
+          git commit -m "probe seo tag sources [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}
