@@ -25,17 +25,21 @@ const RATE_MAX           = 15;
 const MAX_VISIBLE_LM     = 8;
 
 // ═══ GOOGLE AUTHORITY ═══
+// إحصائيات ملف طارق كمرشد محلي (Local Guide) — وليست تقييم النشاط.
+// تحقق 2026-09-24 من: https://www.google.com/maps/contrib/100792782130997747487/
+//   تبويب Reviews: 151 مراجعة + 28 تقييم · تبويب Photos: 430 صورة · 16,305,265 مشاهدة
+// ⚠️ تقييم النشاط «سمسار طلبك» (4.7 من 102 مراجعة عملاء) رقم مختلف — مكانه aggregateRating في _includes/schema-global.html
 const GOOGLE_PROFILE = {
   url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
   level: 7,
   badge: "Google Local Guide Level 7",
   points: 7741,
   maxPoints: 15000,
-  photosCount: 468,
-  totalViews: 16273294,
+  photosCount: 430,
+  totalViews: 16305265,
   formattedViews: "16.3 مليون",
-  reviewsCount: 102,
-  ratingsCount: 39,
+  reviewsCount: 151,
+  ratingsCount: 28,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",
 };
@@ -217,7 +221,7 @@ function buildGoogleAuthorityMsg() {
 📊 *الأرقام الرسمية على Google Maps:*
 • 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
 • 📸 ${GOOGLE_PROFILE.photosCount} صورة
-• ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم
+• ✍️ كتب ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم
 • 🎯 ${GOOGLE_PROFILE.points.toLocaleString("en-US")} / ${GOOGLE_PROFILE.maxPoints.toLocaleString("en-US")} نقطة
 
 📍 ${GOOGLE_PROFILE.description}
@@ -227,14 +231,14 @@ function buildGoogleAuthorityMsg() {
 function buildGoogleAuthorityShort() {
   return `🏆 ${GOOGLE_PROFILE.badge}
 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps
-⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة
+✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها
 🗺️ ${GOOGLE_PROFILE.url}`;
 }
 
 function buildTrustBar() {
   return `━━━━━━━━━━━━━━━━━━━
 🏆 Google Local Guide Level 7
-⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
+✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
 ━━━━━━━━━━━━━━━━━━━`;
 }
 
@@ -761,7 +765,7 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
 
   lines.push("", `━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}`);
-  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة`);
+  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها`);
   lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
   lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);

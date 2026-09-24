@@ -722,11 +722,13 @@ const CORRECT_PHONE = "201147758857";
 const DRAFT_KEY     = "addPropertyDraft_v20";
 const MAX_IMAGES    = 5;
 
+// إحصائيات Local Guide — تحقق 2026-09-24 من https://www.google.com/maps/contrib/100792782130997747487/
+// ⚠️ ليست تقييم النشاط (4.7 من 102 مراجعة عملاء) — ذلك في _includes/schema-global.html
 const GOOGLE_PROFILE = {
   url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
   badge: "Google Local Guide Level 7",
-  photosCount: 468,
-  reviewsCount: 102,
+  photosCount: 430,
+  reviewsCount: 151,
   formattedViews: "16.3 مليون",
 };
 
@@ -871,7 +873,7 @@ function buildWAMsg(ctx, data, imgUrls = []) {
 
   lines.push("", `━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}`);
-  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة`);
+  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها`);
   lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
   lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);

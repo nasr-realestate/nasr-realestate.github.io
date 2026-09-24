@@ -3,9 +3,17 @@
   1) image: كان الملفان social-home.webp و Come-here.webp غير موجودين (404) → صورة واحدة موجودة فعلاً.
   2) geo: الإحداثيات القديمة 30.0635/31.311 تبعد ~2.8 كم عن دبوس Google Maps الحقيقي
      → الصحيح 30.067317 / 31.339143 (من رابط Google Maps المنشور في الموقع).
-  3) aggregateRating.reviewCount: كان 195 بينما Google Maps يُظهر 102 مراجعة (تحقق 2026-09-24).
+  3) aggregateRating.reviewCount: كان 195 بينما صفحة النشاط على Google Maps تُظهر 102 مراجعة (تحقق 2026-09-24).
   ⚠️ ملاحظة: لا تضع تعليقات HTML داخل <script type="application/ld+json"> — تُبطل الـ JSON.
 -->
+<!-- Verified from: https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7 (2026-09-24)
+     صفحة النشاط «سمسار طلبك»: 4.7 من 102 مراجعة ← المصدر الوحيد لـ aggregateRating أدناه.
+     aggregateRating = مراجعات العملاء عن النشاط نفسه فقط. لا تضع فيه مراجعات Local Guide التي كتبها طارق عن أماكن أخرى
+     (الخلط بينهما = بيانات منظمة مضللة ← خطر عقوبة يدوية من Google وفقدان نجوم التقييم في نتائج البحث). -->
+<!-- Verified from: https://www.google.com/maps/contrib/100792782130997747487/photos/ (2026-09-24)
+     ملف المرشد المحلي «Tarek Tantawy (Only)»: Local Guide Level 7 · 7,741 نقطة
+     تبويب Reviews: 151 مراجعة + 28 تقييم ← agentInteractionStatistic في كيان Person
+     تبويب Photos: 430 صورة · 16,305,265 مشاهدة للصور -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org/",
@@ -45,9 +53,20 @@
         "تأجير الشقق والمكاتب والمحلات"
       ],
       "award": ["Google Local Guide Level 7"],
+      "agentInteractionStatistic": {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/WriteAction",
+        "userInteractionCount": 151,
+        "interactionService": {
+          "@type": "WebSite",
+          "name": "Google Maps",
+          "url": "https://www.google.com/maps"
+        }
+      },
       "sameAs": [
         "https://www.facebook.com/Tarekonly",
         "https://www.linkedin.com/in/tarek-tantawy-444269162",
+        "https://www.google.com/maps/contrib/100792782130997747487",
         "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
       ]
     },
