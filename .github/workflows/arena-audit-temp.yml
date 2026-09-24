@@ -13,24 +13,20 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-      - name: Dump template.html + drop.rb
+      - name: Dump main drop.rb
         run: |
           set +e
           mkdir -p audit/out
-          : > audit/out/seotag4.txt
+          : > audit/out/seotag5.txt
           bundle install --jobs 4 >/dev/null 2>&1
-          TPL=$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'template.html' | head -1)
-          DROP=$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'drop.rb' | head -1)
-          echo "TPL=$TPL" >> audit/out/seotag4.txt
-          echo "=========== template.html ===========" >> audit/out/seotag4.txt
-          cat "$TPL" >> audit/out/seotag4.txt 2>&1
-          echo "=========== drop.rb ===========" >> audit/out/seotag4.txt
-          cat "$DROP" >> audit/out/seotag4.txt 2>&1
+          DROP=$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'jekyll-seo-tag/drop.rb' | head -1)
+          echo "DROP=$DROP" >> audit/out/seotag5.txt
+          cat "$DROP" >> audit/out/seotag5.txt 2>&1
           exit 0
       - name: Commit
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "probe seo template 4 [audit-results]" || echo "nothing"
+          git commit -m "probe drop [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}
