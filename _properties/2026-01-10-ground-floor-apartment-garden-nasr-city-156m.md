@@ -15,7 +15,13 @@ bathrooms: "حمام + مطبخ كبير"
 floor: "أرضي مرتفع (بجنينة خاصة)"
 finish: "تشطيب حديث (مودرن)"
 meta_title: "شقة أرضي بحديقة للبيع في المربع الذهبي مدينة نصر | 156م"
-meta_description: "شقة أرضي 156م صافي بحديقة 120م للبيع في المربع الذهبي بمدينة نصر. تشطيب حديث، حصة في الأرض، خلف مطعم جاد عباس العقاد. موقع نادر وراقي."
+description: "شقة أرضي 156م صافي بحديقة 120م للبيع في المربع الذهبي بمدينة نصر. تشطيب حديث، حصة في الأرض، خلف مطعم جاد عباس العقاد. موقع نادر وراقي."
+image: "/assets/img/properties/apartment-garden-golden-square-nasr-city.webp"
+priceNumeric: 5500000
+areaNumeric: 156
+roomsNumeric: 3
+bathsNumeric: 0
+status: available
 ---
 
 <div class="property-detail-wrapper">

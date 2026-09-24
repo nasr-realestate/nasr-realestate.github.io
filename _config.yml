@@ -93,7 +93,8 @@ defaults:
     values:
       layout: "default"
       lang: "ar"
-      image: "/assets/img/social-home.webp"
+      # ⚠️ كان "/assets/img/social-home.webp" (ملف غير موجود → og:image يعطي 404 على كل الصفحات)
+      image: "/assets/img/social-home.png"
 
   - scope:
       path: ""

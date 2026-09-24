@@ -14,7 +14,13 @@ finish: "سوبر لوكس (رخام وشاتر)"
 slug: "andalus1-duplex-285m"
 image_file: "duplex-andalus.webp"
 meta_title: "فيلا دوبلكس 285م للبيع في حي الأندلس التجمع الخامس | مدخل خاص"
-meta_description: "دوبلكس فاخر 285م سوبر لوكس للبيع في الأندلس 1 التجمع الخامس. حديقة 65م، مدخل مستقل، تشطيب رخام. موقع استراتيجي أمام ماونتن فيو."
+description: "دوبلكس فاخر 285م سوبر لوكس للبيع في الأندلس 1 التجمع الخامس. حديقة 65م، مدخل مستقل، تشطيب رخام. موقع استراتيجي أمام ماونتن فيو."
+image: "/assets/img/properties/duplex-andalus.webp"
+priceNumeric: 55000
+areaNumeric: 285
+roomsNumeric: 3
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

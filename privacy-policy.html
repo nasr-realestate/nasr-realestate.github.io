@@ -356,7 +356,11 @@ image: "/assets/img/social-home.png"
       </li>
       <li>
         <i class="fas fa-check-circle"></i>
-        <span>استخدام <strong>المحادثة</strong> أو رفع صور العقار — قد تُرسل الرسائل والصور إلى خدمة Worker مخصصة لتشغيل المحادثة والرفع.</span>
+        <span>استخدام <strong>المحادثة</strong> داخل صفحة «الوكيل الذكي» — تُرسل نصوص رسائلك إلى خدمة سحابية لتشغيل الرد الآلي.</span>
+      </li>
+      <li>
+        <i class="fas fa-check-circle"></i>
+        <span><strong>رفع صور العقار</strong> — تُرفع الصور التي تختارها إلى خدمة استضافة صور خارجية حتى نتمكن من مشاهدتها.</span>
       </li>
     </ul>
 
@@ -386,9 +390,51 @@ image: "/assets/img/social-home.png"
       موقعنا يعتمد بشكل كبير على التواصل المباشر عبر تطبيق <strong>WhatsApp</strong>. عند الضغط على أزرار التواصل، يتم توجيهك إلى خوادم شركة <strong>Meta</strong> (المالكة لواتساب). تنطبق سياسة خصوصية واتساب على المحادثات التي تجريها هناك.
     </p>
 
-    <!-- ═══ Section 4 ═══ -->
+    <!-- ═══ Section 4 — جديد ═══ -->
     <h2 class="pp-section-title">
       <span class="pp-num">4</span>
+      الجهات الخارجية التي قد تصل إليها بياناتك
+    </h2>
+    <p class="pp-text">
+      شفافيةً معك، هذه هي قائمة الجهات الخارجية التي قد تُرسل إليها بياناتك عند استخدام الموقع، والغرض من كل منها:
+    </p>
+    <ul class="pp-list">
+      <li>
+        <i class="fas fa-server"></i>
+        <span><strong>Cloudflare Workers</strong> — خدمة سحابية تُشغّل المحادثة الآلية في صفحة «الوكيل الذكي» وتستقبل بيانات نموذج «اعرض عقارك». تُعالَج البيانات على خوادم Cloudflare.</span>
+      </li>
+      <li>
+        <i class="fas fa-robot"></i>
+        <span><strong>Google Gemini API</strong> — عند استخدام المحادثة، قد تُرسل <strong>نصوص رسائلك</strong> إلى نموذج ذكاء اصطناعي من Google لتوليد الرد. لا تُرسل بياناتك الشخصية إلا إذا كتبتها أنت داخل المحادثة.</span>
+      </li>
+      <li>
+        <i class="fas fa-images"></i>
+        <span><strong>ImgBB</strong> — خدمة استضافة صور. الصور التي ترفقها تُخزَّن على خوادمها ويُنشأ لها رابط يُرسل إلينا عبر واتساب. تخضع الصور لسياسة خصوصية ImgBB.</span>
+      </li>
+      <li>
+        <i class="fab fa-whatsapp"></i>
+        <span><strong>Meta / WhatsApp</strong> — عند الضغط على أزرار التواصل تُفتح محادثة خارج موقعنا، وتنطبق سياسة خصوصية واتساب على ما يحدث هناك.</span>
+      </li>
+      <li>
+        <i class="fas fa-chart-line"></i>
+        <span><strong>Google Tag Manager / Google Analytics</strong> — لقياس عدد الزيارات والصفحات الأكثر استخداماً.</span>
+      </li>
+      <li>
+        <i class="fas fa-font"></i>
+        <span><strong>Google Fonts و cdnjs</strong> — لتحميل الخطوط والأيقونات. تستقبل هذه الخدمات عنوان IP الخاص بك كجزء من أي طلب ويب عادي.</span>
+      </li>
+    </ul>
+    <div class="pp-commitment">
+      <i class="fas fa-user-secret pp-commitment-icon"></i>
+      <div class="pp-commitment-text">
+        <strong>ما لا نفعله</strong>
+        لا نبيع بياناتك، ولا نرسل رسائل تسويقية جماعية، ولا نمرّر رقم هاتفك لأي وسيط أو شركة تسويق عقاري أخرى.
+      </div>
+    </div>
+
+    <!-- ═══ Section 5 ═══ -->
+    <h2 class="pp-section-title">
+      <span class="pp-num">5</span>
       ملفات تعريف الارتباط (Cookies) والتحليلات
     </h2>
     <p class="pp-text">
@@ -401,21 +447,29 @@ image: "/assets/img/social-home.png"
       عند استخدام <strong>أداة التقييم</strong>، يتم تنفيذ التقييم داخل المتصفح ولا تُرسل الرسالة إلى مزود ذكاء اصطناعي خارجي.
     </p>
 
-    <!-- ═══ Section 5 ═══ -->
+    <!-- ═══ Section 6 ═══ -->
     <h2 class="pp-section-title">
-      <span class="pp-num">5</span>
+      <span class="pp-num">6</span>
       مدة الاحتفاظ والحذف
     </h2>
     <p class="pp-text">
       تُستخدم بيانات التواصل لإتمام الطلب والرد عليك. يمكنك <strong>طلب تعديل أو حذف أي بيانات</strong> أرسلتها عبر التواصل معنا على واتساب أو عبر بيانات الاتصال المنشورة في الموقع.
     </p>
     <p class="pp-text">
-      لا نحتفظ ببيانات أكثر مما يلزم لتقديم الخدمة، مع مراعاة سجلات واتساب والخدمات الخارجية التي تخضع لسياساتها الخاصة.
+      لا نحتفظ ببيانات أكثر مما يلزم لتقديم الخدمة. عملياً:
+    </p>
+    <ul class="pp-list">
+      <li><i class="fas fa-comment-dots"></i><span>نصوص المحادثة: تُستخدم لتوليد الرد وتُخزَّن مؤقتاً لأغراض تحسين الردود، ولا تُنشر.</span></li>
+      <li><i class="fas fa-images"></i><span>الصور المرفوعة: تبقى على خدمة الاستضافة الخارجية حتى تطلب حذفها.</span></li>
+      <li><i class="fas fa-file-contract"></i><span>بيانات العقار المنشور: تبقى على الموقع حتى إتمام الصفقة أو طلبك إزالتها.</span></li>
+    </ul>
+    <p class="pp-text">
+      يرجى ملاحظة أن سجلات واتساب والخدمات الخارجية المذكورة أعلاه تخضع لسياسات الاحتفاظ الخاصة بها.
     </p>
 
-    <!-- ═══ Section 6 ═══ -->
+    <!-- ═══ Section 7 ═══ -->
     <h2 class="pp-section-title">
-      <span class="pp-num">6</span>
+      <span class="pp-num">7</span>
       حقوقك
     </h2>
     <p class="pp-text">
@@ -426,7 +480,7 @@ image: "/assets/img/social-home.png"
     <div class="pp-update-footer">
       <span class="pp-update-date">
         <i class="fas fa-calendar-check"></i>
-        آخر تحديث: {{ 'now' | date: "%Y" }}
+        آخر تحديث: 24 سبتمبر 2026
       </span>
       <span class="pp-brand">إدارة موقع سمسار طلبك</span>
     </div>

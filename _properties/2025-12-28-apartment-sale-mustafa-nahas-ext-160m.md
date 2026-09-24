@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور التاسع (2 أسانسير)"
 finish: "تشطيب جيد جداً"
 meta_title: "شقة 160م للبيع في امتداد مصطفى النحاس مدينة نصر | سعر لقطة"
-meta_description: "شقة 160م للبيع في امتداد مصطفى النحاس (شارع السوق التجاري). 3 غرف، 2 حمام، دور تاسع، فيو مفتوح، عمارة حديثة 2005 بمداخل فندقية. سعر لقطة لسرعة البيع."
+description: "شقة 160م للبيع في امتداد مصطفى النحاس (شارع السوق التجاري). 3 غرف، 2 حمام، دور تاسع، فيو مفتوح، عمارة حديثة 2005 بمداخل فندقية. سعر لقطة لسرعة البيع."
+image: "/assets/img/properties/mustafa-nahas-extension-160m.webp"
+priceNumeric: 2600000
+areaNumeric: 160
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

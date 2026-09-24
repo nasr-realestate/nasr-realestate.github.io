@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "أرضي + أول (مدخل خاص)"
 finish: "سوبر لوكس / تجاري"
 meta_title: "فيلا دوبلكس بحديقة للبيع أو الإيجار في شارع عبد الحميد بدوي"
-meta_description: "فيلا دوبلكس 170م بحديقة 180م أمام نادي الشمس. موقع تجاري وسكني فخم بجوار كونكورد السلام. تصلح عيادة، مقر شركة، أو سكن راقٍ. متاح تمويل عقاري."
+description: "فيلا دوبلكس 170م بحديقة 180م أمام نادي الشمس. موقع تجاري وسكني فخم بجوار كونكورد السلام. تصلح عيادة، مقر شركة، أو سكن راقٍ. متاح تمويل عقاري."
+image: "/assets/img/properties/vila-nsftshtib.webp"
+priceNumeric: 8500000
+areaNumeric: 170
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

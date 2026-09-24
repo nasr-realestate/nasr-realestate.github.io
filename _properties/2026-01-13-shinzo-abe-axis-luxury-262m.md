@@ -14,7 +14,13 @@ bathrooms: "3 حمام"
 floor: "الدور الرابع (يوجد 2 أسانسير)"
 finish: "على المحارة (حرية التشطيب)"
 meta_title: "شقة 262م للبيع بمحور شينزو آبي مدينة نصر | واجهة رئيسية"
-meta_description: "شقة فخمة 262م للبيع على محور شينزو آبي الرئيسي. 4 غرف، 3 حمام، ريسبشن 3 قطع. عمارة شيك بمدخل فندقي وأمن. تصلح سكن راقي أو مقر إداري لشركة."
+description: "شقة فخمة 262م للبيع على محور شينزو آبي الرئيسي. 4 غرف، 3 حمام، ريسبشن 3 قطع. عمارة شيك بمدخل فندقي وأمن. تصلح سكن راقي أو مقر إداري لشركة."
+image: "/assets/img/properties/Shinzo-Abe-Main-View-262m.webp"
+priceNumeric: 0
+areaNumeric: 262
+roomsNumeric: 4
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

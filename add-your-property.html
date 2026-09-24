@@ -191,6 +191,24 @@ extra_head: |
   }
   .btn-prev:hover { background: #333; border-color: #444; }
 
+  .consent-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 12px; padding: 14px 16px; margin: 4px 0 10px;
+    cursor: pointer; line-height: 1.7;
+  }
+  .consent-row input[type="checkbox"] {
+    width: 20px; height: 20px; margin-top: 3px; flex-shrink: 0; accent-color: #d4af37;
+  }
+  .consent-text { font-size: 0.88rem; color: #ccc; }
+  .consent-text a { color: #d4af37; text-decoration: underline; }
+  .consent-error {
+    display: flex; align-items: center; gap: 8px;
+    color: #ff6b6b; font-size: 0.85rem; margin-bottom: 10px;
+  }
+  .success-countdown { font-size: 0.85rem; color: #b0b0b0; margin-top: 6px; }
+
   .security-badge {
     text-align: center;
     font-size: 0.85rem;
@@ -645,6 +663,21 @@ extra_head: |
           <div class="img-preview-grid" id="imgPreviewGrid"></div>
         </div>
 
+        <!-- ⚠️ إصلاح (2026-09-24): النموذج كان يجمع الاسم ورقم الهاتف وصور العقار
+             بدون أي إشعار أو موافقة. أُضيفت موافقة صريحة + رابط سياسة الخصوصية. -->
+        <label class="consent-row" for="privacyConsent">
+          <input type="checkbox" id="privacyConsent" name="privacyConsent" required>
+          <span class="consent-text">
+            أوافق على إرسال بياناتي وصور العقار إلى <strong>سمسار طلبك</strong> لأغراض
+            التقييم والتواصل العقاري، وفق
+            <a href="/privacy-policy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>.
+          </span>
+        </label>
+        <div class="consent-error" id="consentError" style="display:none;">
+          <i class="fas fa-exclamation-circle"></i>
+          يجب الموافقة على سياسة الخصوصية قبل الإرسال.
+        </div>
+
         <div class="step-actions">
           <button type="button" class="btn-prev" onclick="prevStep(2)">سابق</button>
           <button type="submit" id="submitBtn" class="btn-next wa-btn-submit">
@@ -672,6 +705,7 @@ extra_head: |
     <p class="success-message" id="successMessage">
       جاري فتح واتساب لإرسال التفاصيل لطارق...
     </p>
+    <p class="success-countdown" id="successCountdown"></p>
     <button class="success-btn" onclick="openWhatsAppFromModal()">
       <i class="fab fa-whatsapp"></i>
       فتح واتساب الآن
@@ -692,7 +726,7 @@ const GOOGLE_PROFILE = {
   url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
   badge: "Google Local Guide Level 7",
   photosCount: 468,
-  reviewsCount: 195,
+  reviewsCount: 102,
   formattedViews: "16.3 مليون",
 };
 
@@ -1083,7 +1117,16 @@ function showSuccessModal(waMessage) {
   const msg = document.getElementById('successMessage');
   if (msg) msg.innerText = 'اضغط على زر واتساب لإرسال التفاصيل لطارق. الرسالة جاهزة!';
   if (modal) modal.classList.add('show');
-  setTimeout(() => { window.location.href = lastWaUrl; }, 900);
+  // ⚠️ إصلاح: كان التحويل يتم بعد 0.9 ثانية فقط — لا تتيح للمستخدم قراءة الرسالة أو الإلغاء.
+  let countdown = 3;
+  const hint = document.getElementById('successCountdown');
+  const tick = () => {
+    if (hint) hint.textContent = 'جاري فتح واتساب تلقائياً خلال ' + countdown + ' ثانية...';
+    countdown -= 1;
+    if (countdown < 0) { window.location.href = lastWaUrl; }
+    else { setTimeout(tick, 1000); }
+  };
+  tick();
 }
 
 function openWhatsAppFromModal() {
@@ -1118,6 +1161,19 @@ function setupSubmitHandler() {
       alert('رقم الموبايل مش صح، اكتبه تاني (11 رقم يبدأ بـ 01)');
       return;
     }
+
+    // ⚠️ تحقق من الموافقة على سياسة الخصوصية قبل إرسال أي بيانات
+    const consentBox = document.getElementById('privacyConsent');
+    const consentErr = document.getElementById('consentError');
+    if (consentBox && !consentBox.checked) {
+      if (consentErr) consentErr.style.display = 'block';
+      if (consentBox.parentElement) {
+        consentBox.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      consentBox.focus();
+      return;
+    }
+    if (consentErr) consentErr.style.display = 'none';
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;

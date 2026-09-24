@@ -65,6 +65,13 @@ hide_navbar: true
   .rl-empty { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #888; border: 1px dashed rgba(212,175,55,0.25); border-radius: 20px; background: rgba(212,175,55,0.02); }
   .rl-empty i { font-size: 3.5rem; color: #d4af37; opacity: 0.3; display: block; margin-bottom: 16px; }
   .rl-empty h2 { color: #f5f5f5; font-size: 1.2rem; margin-bottom: 8px; }
+  .rl-empty-cta {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
+    padding: 12px 22px; border-radius: 12px; text-decoration: none;
+    background: linear-gradient(135deg, #25d366, #128c7e); color: #fff;
+    font-weight: 700; font-size: 0.92rem; box-shadow: 0 6px 20px rgba(37,211,102,0.35);
+  }
+  .rl-empty-cta:hover { transform: translateY(-2px); }
   .rl-empty p { font-size: 0.9rem; color: #888; max-width: 500px; margin: 0 auto; line-height: 1.7; }
   .rl-cta-section { margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02)); border: 1px solid rgba(212,175,55,0.25); border-radius: 20px; text-align: center; }
   .rl-cta-title { font-size: 1.2rem; font-weight: 800; color: #d4af37; margin-bottom: 10px; }
@@ -166,10 +173,17 @@ hide_navbar: true
     </div>
 
     {% if active_count == 0 %}
-    <div class="rl-empty">
+    <div class="rl-empty" id="rlNoRequests">
       <i class="fas fa-clipboard-check"></i>
       <h2>لا توجد طلبات نشطة حالياً</h2>
-      <p>جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها.</p>
+      <p>
+        جميع الطلبات السابقة تم تلبيتها أو انتهت صلاحيتها.
+        بدل الانتظار — أرسل مواصفاتك لطارق وسيبحث لك في قاعدة عقارات مدينة نصر.
+      </p>
+      <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، أبحث عن عقار في مدينة نصر بالمواصفات التالية:' | url_encode }}"
+         target="_blank" rel="noopener noreferrer" class="rl-empty-cta">
+        <i class="fab fa-whatsapp"></i> أرسل مواصفاتك على واتساب
+      </a>
     </div>
     {% endif %}
   </section>
@@ -218,7 +232,11 @@ hide_navbar: true
       return (parseInt(b.dataset.date)||0) - (parseInt(a.dataset.date)||0);
     });
     visibleCards.forEach(function(c){ grid.appendChild(c); });
-    emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+    // ⚠️ إصلاح: كانت تظهر معاً رسالتا "لا توجد نتائج مطابقة" و"لا توجد طلبات نشطة"
+    // لأن الشرط لم يكن يتحقق من أن القائمة فارغة أصلاً.
+    if (emptyState) {
+      emptyState.style.display = (totalCount > 0 && visibleCount === 0) ? 'block' : 'none';
+    }
     if (countBadge) countBadge.textContent = visibleCount + ' طلب نشط';
   }
 

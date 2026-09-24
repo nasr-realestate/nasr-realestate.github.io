@@ -14,7 +14,13 @@ bathrooms: "1 حمام خاص"
 floor: "أرضي تجاري"
 finish: "ألترا سوبر لوكس (رخام)"
 meta_title: "محل للايجار 67م في المربع الذهبي مدينة نصر | تشطيب كامل"
-meta_description: "محل تجاري 67م للإيجار موازي لمكرم عبيد. تشطيب فاخر أرضيات رخام وواجهة سيكوريت. عداد تجاري وحمام. يصلح لكافة الأنشطة الراقية. الإيجار 16 ألف."
+description: "محل تجاري 67م للإيجار موازي لمكرم عبيد. تشطيب فاخر أرضيات رخام وواجهة سيكوريت. عداد تجاري وحمام. يصلح لكافة الأنشطة الراقية. الإيجار 16 ألف."
+image: "/assets/img/properties/Luxury-Shop-Makram-Ebeid-67m.webp"
+priceNumeric: 16000
+areaNumeric: 67
+roomsNumeric: 0
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

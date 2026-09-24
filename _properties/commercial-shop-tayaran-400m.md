@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "أرضي + أول"
 finish: "على الطوب الأحمر (مرونة في التصميم)"
 meta_title: "محل تجاري 400م للبيع في شارع الطيران مدينة نصر | واجهة بنوك"
-meta_description: "محل تجاري بمساحة 400م للبيع في شارع الطيران الرئيسي بجوار بنك CIB. دور أرضي وأول، واجهة تجارية ضخمة، على الطوب الأحمر. فرصة للبنوك والتوكيلات."
+description: "محل تجاري بمساحة 400م للبيع في شارع الطيران الرئيسي بجوار بنك CIB. دور أرضي وأول، واجهة تجارية ضخمة، على الطوب الأحمر. فرصة للبنوك والتوكيلات."
+image: "/assets/img/properties/togari-400m.webp"
+priceNumeric: 45000000
+areaNumeric: 400
+roomsNumeric: 0
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

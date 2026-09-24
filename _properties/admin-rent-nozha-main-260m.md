@@ -14,7 +14,13 @@ bathrooms: "2 حمام (بورسلين إسباني)"
 floor: "الدور الثامن (2 أسانسير)"
 finish: "سوبر لوكس (مكيف بالكامل)"
 meta_title: "مقر إداري 260م للإيجار في شارع النزهة مدينة نصر | واجهة"
-meta_description: "للإيجار الإداري للشركات: مقر فخم 260م واجهة على شارع النزهة الرئيسي بمدينة نصر. 4 غرف، تكييفات، مطبخ، باركينج خاص بالعقد. تشطيب سوبر لوكس."
+description: "للإيجار الإداري للشركات: مقر فخم 260م واجهة على شارع النزهة الرئيسي بمدينة نصر. 4 غرف، تكييفات، مطبخ، باركينج خاص بالعقد. تشطيب سوبر لوكس."
+image: "/assets/img/properties/nozha-main-street-administrative-hq.webp"
+priceNumeric: 70000
+areaNumeric: 260
+roomsNumeric: 4
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

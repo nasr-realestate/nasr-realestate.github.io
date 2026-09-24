@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "دور متكرر (موقع مميز)"
 finish: "نصف تشطيب (تأسيس كامل)"
 meta_title: "شقة 130م للبيع في كمبوند نيوبوليس وادي دجلة | بجوار مدينتي"
-meta_description: "شقة 130م للبيع في كمبوند نيوبوليس (New Polis) بجوار مدينتي. مؤسسة كهرباء وسباكة ومحارة وألوميتال، 2 غرفة، جراج خاص. استثمار مضمون في مستقبل سيتي."
+description: "شقة 130م للبيع في كمبوند نيوبوليس (New Polis) بجوار مدينتي. مؤسسة كهرباء وسباكة ومحارة وألوميتال، 2 غرفة، جراج خاص. استثمار مضمون في مستقبل سيتي."
+image: "/assets/img/properties/new-plus-compound.webp"
+priceNumeric: 4000000
+areaNumeric: 130
+roomsNumeric: 2
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

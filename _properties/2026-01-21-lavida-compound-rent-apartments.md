@@ -14,7 +14,13 @@ bathrooms: "1 حمام + مطבח"
 floor: "أدوار مميزة (الثاني والثالث)"
 finish: "سوبر لوكس"
 meta_title: "شقق للايجار في كمبوند لافيدا هليوبوليس | فيو حمام سباحة"
-meta_description: "فرصة للإيجار في كمبوند لافيدا هليوبوليس الجديدة. متاح شقتين (135م فيو حمام سباحة - 128م فيو البارون). تشطيب سوبر لوكس، جراج خاص. الإيجار 9000 ج."
+description: "فرصة للإيجار في كمبوند لافيدا هليوبوليس الجديدة. متاح شقتين (135م فيو حمام سباحة - 128م فيو البارون). تشطيب سوبر لوكس، جراج خاص. الإيجار 9000 ج."
+image: "/assets/img/properties/Lavida-Compound-Pool-View.webp"
+priceNumeric: 9000
+areaNumeric: 135
+roomsNumeric: 3
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

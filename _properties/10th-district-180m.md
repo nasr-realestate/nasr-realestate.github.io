@@ -1,6 +1,6 @@
 ---
 layout: property_page
-title: "شقة 180م الترا سوبر لوكس للبيع - المنطقة العاشرة"
+title: "شقة 180م الترا سوبر لوكس للبيع - المنطقة العاشرة - مدينة نصر"
 date: 2025-11-28
 location: "المنطقة العاشرة - مدينة نصر (أول محور شينزو آبي)"
 price: "3,700,000 ج.م"
@@ -15,7 +15,13 @@ finish: "الترا سوبر لوكس"
 slug: "10th-district-180m"
 image_file: "apartment-180m-nasr-city.webp"
 meta_title: "شقة 180م الترا سوبر لوكس للبيع في المنطقة العاشرة مدينة نصر"
-meta_description: "شقة 180م للبيع في المنطقة العاشرة مدينة نصر. تشطيب فاخر، حصة بالأرض والجراج، استلام فوري كاش. موقع استراتيجي قرب محور شينزو آبي."
+description: "شقة 180م للبيع في المنطقة العاشرة مدينة نصر. تشطيب فاخر، حصة بالأرض والجراج، استلام فوري كاش. موقع استراتيجي قرب محور شينزو آبي."
+image: "/assets/img/properties/apartment-180m-nasr-city.webp"
+priceNumeric: 3700000
+areaNumeric: 180
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

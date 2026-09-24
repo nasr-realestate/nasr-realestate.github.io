@@ -15,7 +15,13 @@ bathrooms: "3 حمام"
 floor: "أرضي منخفض (مدخل خاص)"
 finish: "سوبر لوكس (معرض سيارات)"
 meta_title: "بيزمنت تجاري 340م للبيع في البنفسج 2 التجمع الأول"
-meta_description: "بيزمنت تجاري 340م للبيع في حي البنفسج 2 التجمع الأول. يصلح معرض سيارات أو مقر شركة، مدخل خاص، حديقة 140م، مصالحة نموذج 10. استثمار بعائد 50 ألف شهرياً."
+description: "بيزمنت تجاري 340م للبيع في حي البنفسج 2 التجمع الأول. يصلح معرض سيارات أو مقر شركة، مدخل خاص، حديقة 140م، مصالحة نموذج 10. استثمار بعائد 50 ألف شهرياً."
+image: "/assets/img/properties/bethment-banfseg.webp"
+priceNumeric: 6750000
+areaNumeric: 340
+roomsNumeric: 4
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

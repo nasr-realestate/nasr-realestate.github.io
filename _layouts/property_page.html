@@ -33,6 +33,11 @@ hide_navbar: true
     color: #d4af37;
     text-decoration: none;
     transition: opacity 0.2s;
+    /* ⚠️ إصلاح: هدف لمس ≥ 44px (Lighthouse target-size) */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 6px;
   }
   .pp-breadcrumb a:hover { opacity: 0.8; }
   .pp-breadcrumb .sep { color: #555; }
@@ -299,6 +304,11 @@ hide_navbar: true
     font-size: 1.15rem;
   }
   .pp-description p { margin-bottom: 1rem; }
+
+  /* ⚠️ إصلاح (2026-09-24): كل ملف عقار يحتوي على صورة هيرو داخل المحتوى،
+     ومعرض الصور في أعلى الصفحة يعرض نفس الصورة → ظهورها مرتين متتاليتين.
+     نُخفي النسخة المكرّرة داخل الوصف ونُبقي النسخة الرئيسية في المعرض. */
+  .pp-description .property-main-hero { display: none; }
   .pp-description strong { color: #f5f5f5; }
   .pp-description ul { padding-right: 1.5rem; }
   .pp-description li { margin-bottom: 0.5rem; }
@@ -458,6 +468,8 @@ hide_navbar: true
     border-color: rgba(212, 175, 55, 0.4);
   }
   .pp-faq-item summary {
+    /* ⚠️ إصلاح: min-height 48px لهدف لمس مريح (Lighthouse target-size) */
+    min-height: 48px;
     padding: 14px 18px;
     cursor: pointer;
     font-weight: 700;
@@ -616,9 +628,14 @@ hide_navbar: true
   {% if main_img != "" %}
   <section class="pp-gallery">
     <div class="pp-gallery-main">
+      <!-- ⚠️ إصلاح (2026-09-24): صورة LCP لم تكن تحمل width/height/fetchpriority/decoding.
+           كانت أكبر عنصر ظاهر يكتمل بعد 8.0 ثانية على الجوال. -->
       <img src="{{ img_url }}"
            alt="{{ page.title }}"
            id="ppMainImage"
+           width="1200" height="750"
+           fetchpriority="high"
+           decoding="async"
            onclick="ppOpenLightbox(this.src)">
       <span class="pp-gallery-tag">
         {% if page.category contains "rent" %}<i class="fas fa-key"></i> للإيجار
@@ -790,7 +807,7 @@ hide_navbar: true
       </div>
       <div class="pp-agent-stats">
         🏆 <strong>16.3 مليون</strong> مشاهدة على Google Maps<br>
-        ⭐ <strong>4.7</strong> من <strong>195</strong> مراجعة<br>
+        ⭐ <strong>4.7</strong> من <strong>102</strong> مراجعة<br>
         📍 خبير عقارات مدينة نصر منذ <strong>2014</strong>
       </div>
     </div>

@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الرابع (مميز جداً)"
 finish: "تشطيب نظيف (جاهزة للسكن)"
 meta_title: "شقة 280م للإيجار في حي السفارات مدينة نصر | أبراج الشرطة"
-meta_description: "شقة سكنية فخمة 280م للإيجار في أبراج الشرطة بحي السفارات. 3 غرف نوم واسعة، ريسبشن ضخم، أمام مستشفى الأندلس. موقع راقٍ وهادئ للعائلات."
+description: "شقة سكنية فخمة 280م للإيجار في أبراج الشرطة بحي السفارات. 3 غرف نوم واسعة، ريسبشن ضخم، أمام مستشفى الأندلس. موقع راقٍ وهادئ للعائلات."
+image: "/assets/img/properties/rent-diplomatic-quarter.webp"
+priceNumeric: 25000
+areaNumeric: 280
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

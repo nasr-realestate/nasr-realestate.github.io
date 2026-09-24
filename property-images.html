@@ -5,17 +5,7 @@ description: تصفح جميع العقارات المعروضة من سمسار
 permalink: /property-images.html
 hide_navbar: true
 ---
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>معرض العقارات | سمسار طلبك</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- ⚠️ إصلاح (2026-09-24): كان هذا الملف يحتوي على مستند HTML كامل (DOCTYPE + html + head + body) داخل قالب default → وثيقتان متداخلتان، 3 وسوم <head> و2 وسوم <body> ووسم <title> مكرّر. تمت إزالة الغلاف الداخلي. -->
 <style>
   /* ═══════════════════════════════════════════════
      هوية داكنة ذهبية موحدة — سمسار طلبك
@@ -380,8 +370,6 @@ hide_navbar: true
   .pg-top:active { transform: scale(0.92); }
 </style>
   
-</head>
-<body>
 
 <!-- ═══ Header ═══ -->
 <header class="pg-header">
@@ -630,5 +618,3 @@ loadProperties();
 window.goBackSmart = goBackSmart;
 window.scrollToTop = scrollToTop;
 </script>
-</body>
-</html>

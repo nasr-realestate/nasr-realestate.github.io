@@ -48,7 +48,7 @@ hide_navbar: true
   "@type": "Demand",
   "@id": "{{ site.url }}{{ page.url }}#demand",
   "name": {{ page.title | jsonify }},
-  "description": {{ page.meta_description | default: page.title | jsonify }},
+  "description": {{ page.description | default: page.title | jsonify }},
   "url": "{{ site.url }}{{ page.url }}",
   "datePosted": "{{ page.date | date_to_xmlschema }}",
   "validThrough": "{{ page.date | date: '%s' | plus: 604800 | date_to_xmlschema }}",
@@ -772,7 +772,7 @@ hide_navbar: true
       </div>
       <div class="rq-agent-stats">
         🏆 <strong>16.3 مليون</strong> مشاهدة على Google Maps<br>
-        ⭐ <strong>4.7</strong> من <strong>195</strong> مراجعة<br>
+        ⭐ <strong>4.7</strong> من <strong>102</strong> مراجعة<br>
         📍 خبير عقارات مدينة نصر منذ <strong>2014</strong>
       </div>
     </div>

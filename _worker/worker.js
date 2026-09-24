@@ -34,7 +34,7 @@ const GOOGLE_PROFILE = {
   photosCount: 468,
   totalViews: 16273294,
   formattedViews: "16.3 مليون",
-  reviewsCount: 195,
+  reviewsCount: 102,
   ratingsCount: 39,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",

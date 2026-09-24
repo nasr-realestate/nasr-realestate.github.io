@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الأول (فوق الميزانين)"
 finish: "كلاسيك فاخر (باركيه زان)"
 meta_title: "شقة 180م للبيع في الميرغني مصر الجديدة | تشطيب كلاسيك"
-meta_description: "شقة 180م (178م صافي) للبيع خلف ماكدونالدز الميرغني بمصر الجديدة. تشطيب باركيه زان، 3 غرف كبار، عقد أخضر مسجل، حصة في الأرض. سعر لقطة لسرعة البيع."
+description: "شقة 180م (178م صافي) للبيع خلف ماكدونالدز الميرغني بمصر الجديدة. تشطيب باركيه زان، 3 غرف كبار، عقد أخضر مسجل، حصة في الأرض. سعر لقطة لسرعة البيع."
+image: "/assets/img/properties/heliopolis-merghany-classic-180m.webp"
+priceNumeric: 4750000
+areaNumeric: 180
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الثالث (الذهبي)"
 finish: "تشطيب جيد جداً"
 meta_title: "شقة 150م للبيع خلف فندق سونستا مدينة نصر | سمسار طلبك"
-meta_description: "شقة 150م للبيع في شارع أحمد فؤاد نسيم خلف فندق سونستا. فيو مفتوح أمام مدرسة طيبة، 3 بلكونات، دور ثالث، حصة في الأرض. موقع راقٍ وهادئ جداً."
+description: "شقة 150م للبيع في شارع أحمد فؤاد نسيم خلف فندق سونستا. فيو مفتوح أمام مدرسة طيبة، 3 بلكونات، دور ثالث، حصة في الأرض. موقع راقٍ وهادئ جداً."
+image: "/assets/img/properties/fouad-nassim-sonesta-nasr-city.webp"
+priceNumeric: 4000000
+areaNumeric: 150
+roomsNumeric: 2
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -14,7 +14,13 @@ bathrooms: "1 حمام"
 floor: "أرضي تجاري"
 finish: "تشطيب جاهز للعمل"
 meta_title: "محل للايجار 60م في عباس العقاد شارع محمد حسن الجمل | سعر لقطة"
-meta_description: "محل 60م للإيجار في المربع الذهبي مدينة نصر، متفرع من أول عباس العقاد. تشطيب كامل، به حمام. موقع مثالي لأنشطة كماليات السيارات وخدماتها. الإيجار 12 ألف."
+description: "محل 60م للإيجار في المربع الذهبي مدينة نصر، متفرع من أول عباس العقاد. تشطيب كامل، به حمام. موقع مثالي لأنشطة كماليات السيارات وخدماتها. الإيجار 12 ألف."
+image: "/assets/img/properties/Abbas-Elakkad-Shop-60m.webp"
+priceNumeric: 12000
+areaNumeric: 60
+roomsNumeric: 0
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

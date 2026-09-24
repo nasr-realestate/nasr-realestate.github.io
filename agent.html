@@ -1004,9 +1004,19 @@ body {
   100% { background-position: -200% 0; }
 }
 
+  /* ⚠️ عنصر مخفي بصرياً لكنه متاح لقارئات الشاشة ومحركات البحث */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
 </style>
 
 <div id="app">
+
+  <!-- ⚠️ إصلاح (2026-09-24): هذه الصفحة (الوكيل الذكي — من أهم صفحات الموقع)
+       لم تكن تحتوي على أي <h1> لا للمستخدمين ولا لمحركات البحث. -->
+  <h1 class="sr-only">الوكيل العقاري الذكي — تحدث مع طارق طنطاوي، خبير عقارات مدينة نصر</h1>
 
   <!-- ═══ HEADER ═══ -->
   <header class="header">
@@ -1244,7 +1254,7 @@ body {
         <span style="display:block;font-size:11px;color:#667781;font-weight:500;">صورة</span>
       </div>
       <div style="background:rgba(0,168,132,0.08);border-radius:12px;padding:12px 6px;">
-        <span style="display:block;font-size:17px;font-weight:700;color:#00a884;">195</span>
+        <span style="display:block;font-size:17px;font-weight:700;color:#00a884;">102</span>
         <span style="display:block;font-size:11px;color:#667781;font-weight:500;">مراجعة</span>
       </div>
     </div>
@@ -1492,7 +1502,7 @@ function renderMsg(text, type = "bot", images) {
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
-      html += `<img src="${src}" loading="lazy" onclick="window.open('${src}','_blank')">`;
+      html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة عقارية أرسلها المستخدم في محادثة الوكيل العقاري" onclick="window.open('${src}','_blank')">`;
     });
     html += `</div>`;
   }
@@ -1568,7 +1578,7 @@ function renderImgStrip() {
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
     el.className = "img-strip-item";
-    el.innerHTML = `<img src="${img.preview}"><button class="img-strip-rm" onclick="removeImg(${i})">✕</button>`;
+    el.innerHTML = `<img src="${img.preview}" alt="معاينة الصورة المرفقة ${i+1}"><button class="img-strip-rm" aria-label="إزالة الصورة ${i+1}" onclick="removeImg(${i})">✕</button>`;
     imgStrip.appendChild(el);
   });
 }

@@ -14,7 +14,13 @@ bathrooms: "2 حمام"
 floor: "الدور الثالث (أسانسير)"
 finish: "تشطيب عادي (جيد)"
 meta_title: "شقة 175م للبيع في شارع إبراهيم نواره مدينة نصر | مسجلة وحصة جراج"
-meta_description: "شقة 175م للبيع في شارع إبراهيم نواره خلف أحمد فخري مدينة نصر. 3 غرف، 2 حمام، مسجلة شهر عقاري، حصة في الجراج، دور 3 بأسانسير على الشارع الرئيسي. سعر نهائي."
+description: "شقة 175م للبيع في شارع إبراهيم نواره خلف أحمد فخري مدينة نصر. 3 غرف، 2 حمام، مسجلة شهر عقاري، حصة في الجراج، دور 3 بأسانسير على الشارع الرئيسي. سعر نهائي."
+image: "/assets/img/properties/ibrahim-nawara-street-nasr-city.webp"
+priceNumeric: 5000000
+areaNumeric: 175
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

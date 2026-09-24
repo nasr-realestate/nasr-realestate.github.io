@@ -15,7 +15,13 @@ bathrooms: "مجهز"
 floor: "الدور الأرضي"
 finish: "جاهزة للفرش والتشغيل"
 meta_title: "شقة أرضي مرخصة إداري للبيع خلف السراج مول | استثمار وعيادات"
-meta_description: "شقة بالدور الأرضي للبيع بشارع شريف سامي الحي الثامن خلف السراج مول ومدرسة الصديق. بترخيص إداري رسمي. تصلح مقر شركة، عيادة طبية، أو سكن. مطلوب 4.5 مليون."
+description: "شقة بالدور الأرضي للبيع بشارع شريف سامي الحي الثامن خلف السراج مول ومدرسة الصديق. بترخيص إداري رسمي. تصلح مقر شركة، عيادة طبية، أو سكن. مطلوب 4.5 مليون."
+image: "/assets/img/properties/Ground-Floor-Admin-Seraj-Mall.webp"
+priceNumeric: 4500000
+areaNumeric: 0
+roomsNumeric: 0
+bathsNumeric: 0
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -14,7 +14,13 @@ bathrooms: "2 حمام"
 floor: "الدور الثالث (2 أسانسير)"
 finish: "تشطيب إداري (واجهات زجاجية)"
 meta_title: "شقة 186م للبيع شارع اسماعيل القباني مدينة نصر | مسجلة شهر عقاري"
-meta_description: "شقة 186م صافي للبيع بجوار جنينة مول. عمارة حديثة 2010، مسجلة شهر عقاري، حصة بالجراج. مؤجرة حالياً لشركة (استثمار مضمون) وتصلح للسكن."
+description: "شقة 186م صافي للبيع بجوار جنينة مول. عمارة حديثة 2010، مسجلة شهر عقاري، حصة بالجراج. مؤجرة حالياً لشركة (استثمار مضمون) وتصلح للسكن."
+image: "/assets/img/properties/Ismail-Qabbani-Street-Genena-Mall.webp"
+priceNumeric: 6000000
+areaNumeric: 186
+roomsNumeric: 0
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

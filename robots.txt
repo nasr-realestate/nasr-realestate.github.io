@@ -19,6 +19,7 @@ Disallow: /.git/
 Disallow: /.github/
 Disallow: /.jekyll-cache/
 Disallow: /scripts/
+Disallow: /tools/
 Disallow: /*.json$
 Disallow: /*.log$
 Disallow: /*.tmp$
@@ -101,11 +102,8 @@ Allow: /
 User-agent: Amazonbot
 Allow: /
 
-# ─── Anthropic (older) ───
-User-agent: CCBot
-Allow: /
-
 # ─── Common Crawl (يخدم AI training) ───
+# ⚠️ إصلاح: كانت هناك كتلتان مكرّرتان باسم CCBot
 User-agent: CCBot
 Allow: /
 
