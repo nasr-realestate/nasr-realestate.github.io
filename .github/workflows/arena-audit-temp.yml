@@ -2,16 +2,16 @@
 name: "Arena Audit Temp"
 
 on:
-  workflow_dispatch:
   push:
     branches: ["arena/**"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[audit-results]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,40 +23,59 @@ jobs:
 
       - name: Fetch raw HTML of key pages
         run: |
-          mkdir -p audit/raw
+          mkdir -p audit/raw audit/heads audit/out
           BASE="https://nasr-realestate.github.io"
-          i=0
-          for p in "/" "/properties/" "/properties/10th-district-180m/" "/requests/" "/agent.html" "/add-your-property.html" "/privacy-policy.html" "/about-us.html" "/contact-us.html" "/ai-feed.json" "/llms.txt" "/feed.xml" "/luxury-gallery.html" "/property-images.html" "/404.html"; do
-            i=$((i+1))
-            fn=$(echo "$p" | tr '/' '_')
-            [ "$fn" = "_" ] && fn="home"
-            code=$(curl -sS -L -A "Mozilla/5.0 (compatible; ArenaAudit/1.0)" -o "audit/raw/${fn}.html" -w "%{http_code}" "$BASE$p")
-            echo "$p -> $code" | tee -a audit/http-status.txt
+          for p in "/" "/properties/" "/properties/10th-district-180m/" "/requests/" "/agent.html" "/add-your-property.html" "/privacy-policy.html" "/about-us.html" "/contact-us.html" "/ai-feed.json" "/llms.txt" "/feed.xml" "/luxury-gallery.html" "/property-images.html" "/404.html" "/assets/img/social-home.webp" "/assets/img/social-home.png" "/floating-menu.html" "/tools/generator.html" "/assets/tools/valuation.html" "/ARENA-TEST/" "/sitemap.xml"; do
+            fn=$(echo "$p" | tr '/' '_'); [ "$fn" = "_" ] && fn="home"
+            code=$(curl -sS -L -A "Mozilla/5.0 (compatible; ArenaAudit/1.0)" -o "audit/raw/${fn}" -w "%{http_code}" "$BASE$p")
+            echo "$p -> $code" >> audit/out/http-status.txt
           done
-          echo "--- headers ---" > audit/headers.txt
-          curl -sS -I -L "$BASE/" >> audit/headers.txt 2>&1
-          curl -sS -I -L "$BASE/assets/css/style.css" >> audit/headers.txt 2>&1
+          echo "=== HEADERS / ===" > audit/out/headers.txt
+          curl -sSI -L "$BASE/" >> audit/out/headers.txt
+          echo "=== HEADERS css ===" >> audit/out/headers.txt
+          curl -sSI -L "$BASE/assets/css/style.css" >> audit/out/headers.txt
+          echo "=== HEADERS img ===" >> audit/out/headers.txt
+          curl -sSI -L "$BASE/assets/img/properties/apartment-180m-nasr-city.webp" >> audit/out/headers.txt
 
-      - name: Extract head/meta for every page
+      - name: Extract <head> for every page
         run: |
-          mkdir -p audit/heads
-          for f in audit/raw/*.html; do
+          for f in audit/raw/*; do
             b=$(basename "$f")
-            # grab everything up to </head>
-            python3 - "$f" "audit/heads/$b" <<'PY'
+            python3 - "$f" "audit/heads/$b.txt" <<'PY'
           import sys,re
           src,dst=sys.argv[1],sys.argv[2]
-          html=open(src,encoding='utf-8',errors='replace').read()
+          try: html=open(src,encoding='utf-8',errors='replace').read()
+          except Exception as e: open(dst,'w').write(str(e)); raise SystemExit
           m=re.search(r'(?is)<head.*?</head>',html)
-          out=m.group(0) if m else html[:6000]
+          out=m.group(0) if m else html[:8000]
           open(dst,'w',encoding='utf-8').write(out)
           PY
           done
 
+      - name: Crawl sitemap for broken links
+        run: |
+          curl -sS https://nasr-realestate.github.io/sitemap.xml -o audit/out/sitemap.xml
+          python3 - <<'PY' > audit/out/link-status.txt
+          import re,urllib.request,concurrent.futures
+          xml=open('audit/out/sitemap.xml',encoding='utf-8').read()
+          urls=re.findall(r'<loc>(.*?)</loc>',xml)
+          print("TOTAL URLS IN SITEMAP:",len(urls))
+          def chk(u):
+            try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0 ArenaAudit'})
+              with urllib.request.urlopen(req,timeout=30) as r: return (u,r.status,len(r.read()))
+            except Exception as e: return (u,getattr(e,'code',str(e)),0)
+          with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
+            for u,st,sz in ex.map(chk,urls):
+              print(f"{st}\t{sz}\t{u}")
+          PY
+          grep -c "^200" audit/out/link-status.txt > audit/out/ok-count.txt || true
+          echo "--- NON-200 ---" >> audit/out/http-status.txt
+          awk -F'\t' '$1!=200' audit/out/link-status.txt >> audit/out/http-status.txt || true
+
       - name: Install Lighthouse + Chrome
         run: |
-          npm install -g lighthouse@12 chrome-launcher
-          which google-chrome || true
+          npm install -g lighthouse@12
           npx --yes @puppeteer/browsers install chrome@stable
 
       - name: Locate Chrome
@@ -65,51 +84,56 @@ jobs:
           CH=$(ls -d $PWD/chrome/*/chrome-linux64/chrome 2>/dev/null | head -1)
           if [ -z "$CH" ]; then CH=$(which google-chrome || true); fi
           echo "path=$CH" >> $GITHUB_OUTPUT
-          echo "chrome=$CH"
+          echo "CHROME=$CH"
 
       - name: Run Lighthouse (mobile) — home
         run: |
           export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output=html --output-path=./audit/lh-home-mobile --preset=desktop --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate --only-categories=performance,seo,accessibility,best-practices || true
+          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-home-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
 
       - name: Run Lighthouse (mobile) — properties
         run: |
           export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/properties/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/lh-properties-mobile --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate --only-categories=performance,seo,accessibility,best-practices || true
+          lighthouse "https://nasr-realestate.github.io/properties/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-properties-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
 
       - name: Run Lighthouse (mobile) — property detail
         run: |
           export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/properties/10th-district-180m/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/lh-property-mobile --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate --only-categories=performance,seo,accessibility,best-practices || true
+          lighthouse "https://nasr-realestate.github.io/properties/10th-district-180m/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-property-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
 
       - name: Run Lighthouse (desktop) — home
         run: |
           export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/lh-home-desktop --preset=desktop --only-categories=performance,seo,accessibility,best-practices || true
+          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-home-desktop.json --preset=desktop || true
 
-      - name: Summarize Lighthouse scores
+      - name: Summarize Lighthouse
         run: |
-          mkdir -p audit/summaries
-          for f in audit/*.report.json; do
+          for f in audit/out/lh-*.json; do
             b=$(basename "$f")
             node -e "
               const r=require('./$f');
-              const c=r.categories; const a=r.audits;
+              const a=r.audits;
+              const score=(id)=>a[id]&&a[id].score!==null?Math.round(a[id].score*100):'-';
               const g=(id)=>a[id]&&a[id].displayValue?a[id].displayValue:'-';
-              const row=(id)=>a[id]?Math.round(a[id].score*100):'-';
-              console.log('FILE: $b');
-              console.log('  perf='+row('performance')+' seo='+row('seo')+' a11y='+row('accessibility')+' bp='+row('best-practices'));
-              console.log('  FCP='+g('first-contentful-paint')+' LCP='+g('largest-contentful-paint')+' TBT='+g('total-blocking-time')+' CLS='+g('cumulative-layout-shift')+' SI='+g('speed-index')+' TTI='+g('interactive'));
-              const fails=Object.values(a).filter(x=>x.score!==null&&x.score<0.9&&x.scoreDisplayMode!=='informative'&&x.scoreDisplayMode!=='notApplicable').map(x=>x.id+':'+x.title);
-              console.log('  LOW SCORE AUDITS: '+fails.length);
-              fails.slice(0,60).forEach(x=>console.log('   - '+x));
-            " >> audit/summaries/$b.txt || true
-            cat audit/summaries/$b.txt
+              console.log('=== $b ===');
+              console.log('  perf='+score('performance')+' seo='+score('seo')+' a11y='+score('accessibility')+' bp='+score('best-practices'));
+              console.log('  FCP='+g('first-contentful-paint')+' | LCP='+g('largest-contentful-paint')+' | TBT='+g('total-blocking-time')+' | CLS='+g('cumulative-layout-shift')+' | SI='+g('speed-index')+' | TTFB='+g('server-response-time'));
+              const lcpEl=a['largest-contentful-paint-element']?JSON.stringify(a['largest-contentful-paint-element'].details&&a['largest-contentful-paint-element'].details.items?a['largest-contentful-paint-element'].details.items[0].items[0].node:null):'-';
+              console.log('  LCP element: '+lcpEl);
+              const groups=['diagnostics','load-opportunities','seo-mobile','seo-content','a11y-color-contrast','best-practices-trust-safety','best-practices-browser-compat','a11y-names-labels','a11y-aria','a11y-contrast','a11y-navigation','a11y-descriptions','a11y-language','a11y-tables','a11y-forms','a11y-audio-video','a11y-visual-order','seo-crawl','seo-meta'];
+              const fails=Object.values(a).filter(x=>x.score!==null&&x.score<0.9&&x.scoreDisplayMode!=='informative'&&x.scoreDisplayMode!=='notApplicable').map(x=>x.id+' | '+x.title+' | '+(x.displayValue||''));
+              console.log('  --- audits scoring <0.9 ('+fails.length+') ---');
+              fails.forEach(x=>console.log('   - '+x));
+              const na=Object.values(a).filter(x=>x.scoreDisplayMode==='manual'||x.scoreDisplayMode==='notApplicable').length;
+              console.log('  manual/NA audits: '+na);
+            " >> audit/out/lighthouse-summary.txt 2>&1 || true
           done
+          cat audit/out/lighthouse-summary.txt
 
-      - name: Upload audit artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: arena-audit-output
-          path: audit/
-          retention-days: 3
+      - name: Commit audit results to branch
+        run: |
+          git config user.name "Arena Audit Bot"
+          git config user.email "audit@arena.local"
+          git add -f audit
+          git commit -m "chore(audit): audit results [audit-results]" || echo "nothing to commit"
+          git push origin HEAD:${{ github.ref_name }}
