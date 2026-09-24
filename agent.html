@@ -1502,7 +1502,7 @@ function renderMsg(text, type = "bot", images) {
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
-      html += `<img src="${src}" loading="lazy" onclick="window.open('${src}','_blank')">`;
+      html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة عقارية أرسلها المستخدم في محادثة الوكيل العقاري" onclick="window.open('${src}','_blank')">`;
     });
     html += `</div>`;
   }
@@ -1578,7 +1578,7 @@ function renderImgStrip() {
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
     el.className = "img-strip-item";
-    el.innerHTML = `<img src="${img.preview}"><button class="img-strip-rm" onclick="removeImg(${i})">✕</button>`;
+    el.innerHTML = `<img src="${img.preview}" alt="معاينة الصورة المرفقة ${i+1}"><button class="img-strip-rm" aria-label="إزالة الصورة ${i+1}" onclick="removeImg(${i})">✕</button>`;
     imgStrip.appendChild(el);
   });
 }
