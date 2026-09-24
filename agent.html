@@ -1812,7 +1812,11 @@ if (!hasSeenPrivacy()) {
 // GALLERY MODAL
 // ═══════════════════════════════════════════
 const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
-const GALLERY_URL_BASE = "https://nasr-realestate.github.io/gallery.html";
+// ✅ إصلاح (2026-09-24): تم استبدال GALLERY_URL_BASE القديم الذي كان يشير
+// إلى gallery.html (صفحة غير موجودة/قديمة). الآن نستخدم مسار العقارات الفعلي
+// + صورة بديلة احتياطية عند فشل تحميل صورة العقار.
+const PROPERTY_LIST_URL  = "https://nasr-realestate.github.io/properties/";
+const FALLBACK_CARD_IMG  = "https://nasr-realestate.github.io/assets/img/logo.webp";
 let _galleryLoaded = false;
 let _galleryProperties = [];
 
@@ -1877,10 +1881,14 @@ function renderGalleryCards(properties) {
   grid.style.display = "grid";
 
   properties.forEach((prop, i) => {
-    const slug = prop.slug || prop.id || "";
-    const href = slug
-      ? `${GALLERY_URL_BASE}?s=${encodeURIComponent(slug)}`
-      : (prop.url || "#");
+    // ✅ إصلاح (2026-09-24): منطق slug نظيف + سلسلة fallback للروابط.
+    // الأولوية: URL خارجي كامل → مسار /properties/slug/ → بحث بالعنوان → أرشيف العقارات.
+    const slug = String(prop.slug || prop.id || "").replace(/^\/+|\/+$/g, "");
+    const href =
+      (typeof prop.url === "string" && /^https?:\/\//.test(prop.url) ? prop.url : "") ||
+      (slug ? `${PROPERTY_LIST_URL}${encodeURIComponent(slug)}/` : "") ||
+      (prop.title ? `${PROPERTY_LIST_URL}?q=${encodeURIComponent(prop.title)}` : "") ||
+      PROPERTY_LIST_URL;
 
     const card = document.createElement("a");
     card.className = "gallery-card";
@@ -1892,12 +1900,13 @@ function renderGalleryCards(properties) {
     const imgSrc = prop.image || "";
     const title  = prop.title || "عقار";
 
+    // ✅ إصلاح (2026-09-24): onerror يستبدل الصورة بالشعار + decoding=async للأداء
     card.innerHTML = `
       <img class="gallery-card-img"
            src="${escHtml(imgSrc)}"
            alt="${escHtml(title)}"
-           loading="lazy"
-           onerror="this.style.opacity='0.3'">
+           loading="lazy" decoding="async"
+           onerror="this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';">
       <div class="gallery-card-body">
         <div class="gallery-card-title">${escHtml(title)}</div>
       </div>
