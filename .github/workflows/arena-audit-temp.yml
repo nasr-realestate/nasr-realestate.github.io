@@ -105,6 +105,11 @@ jobs:
                 fails.slice(0,25).forEach(x=>console.log("    "+x.id+" | "+x.title+" | "+(x.displayValue||"")));
                 const tbt=a["total-blocking-time"];
                 if(tbt&&tbt.details&&tbt.details.items){console.log("  TBT items:");tbt.details.items.slice(0,6).forEach(i=>console.log("    "+JSON.stringify({url:(i.url||"").slice(0,90),dur:i.duration,start:i.startTime})));}
+                const ec=a["errors-in-console"];
+                if(ec&&ec.details&&ec.details.items){console.log("  console errors:");ec.details.items.slice(0,5).forEach(i=>console.log("    "+JSON.stringify(i).slice(0,220)));}
+                const lt=a["long-tasks"];
+                if(lt&&lt.details&&lt.details.items){console.log("  long tasks: "+lt.details.items.length);lt.details.items.slice(0,5).forEach(i=>console.log("    "+JSON.stringify({url:(i.url||"").slice(0,80),dur:i.duration,start:Math.round(i.startTime)})));}
+                console.log("  TTI="+(a["interactive"]&&a["interactive"].displayValue||"-")+" mainthread="+(a["mainthread-work-breakdown"]&&a["mainthread-work-breakdown"].displayValue||"-"));
                 const lcp=a["largest-contentful-paint-element"];
                 if(lcp&&lcp.details&&lcp.details.items&&lcp.details.items[0]){console.log("  LCP el: "+JSON.stringify(lcp.details.items[0].items&&lcp.details.items[0].items[0]?lcp.details.items[0].items[0].node:{}) .slice(0,220));}
               }catch(e){}

@@ -37,6 +37,9 @@
        الخطوط وأيقونات Font Awesome — تحميل غير محجوب للعرض
        (كانا يحجبان العرض ~1.8 ثانية على الجوال حسب Lighthouse)
        ═══════════════════════════════════════════════ -->
+  <!-- preload يخفّف زمن التبديل (font swap) وبالتالي يقلّل الـ CLS -->
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap">
   <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"
         media="print" onload="this.media='all'">
