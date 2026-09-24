@@ -621,16 +621,19 @@ hide_navbar: true
         <div class="pl-card-img-wrap">
           {% if prop.image_file %}
           {%- comment -%}
-            أول بطاقتان فقط تُحمّلان فوراً (فوق الطية على الجوال).
-            تجربة 6 بطاقات بـ fetchpriority=high رفعت TBT من 270ms إلى 780ms
-            بسبب فك ترميز 6 صور كبيرة في نفس الوقت.
+            ⚠️ قرار موثّق (2026-09-24):
+            جُرِّب تحميل 6 ثم بطاقتين بـ loading="eager" + fetchpriority="high"،
+            فارتفع TBT من ~260ms إلى 600–780ms وLCP من ~4.0s إلى 6.2s
+            (قياس Lighthouse 12 على نفس الـ runner قبل/بعد).
+            السبب: الصور تُحمَّل كلها دفعة واحدة على اتصال مُخنَّق وتزاحم الموارد الحرجة،
+            وفك ترميزها يضيف مهام طويلة على الخيط الرئيسي.
+            الحل المُعتمد: نُبقي التحميل الكسول + نضيف width/height لمنع CLS فقط.
           {%- endcomment -%}
           <img src="{{ img_url }}"
                alt="{{ prop.title | escape }}"
                class="pl-card-img"
-               width="400" height="260"
-               sizes="(max-width: 480px) 92vw, (max-width: 900px) 45vw, 30vw"
-               {%- if forloop.index <= 2 %}loading="eager"{% if forloop.index == 1 %} fetchpriority="high"{% endif %}{% else %}loading="lazy"{% endif %}
+               width="400" height="300"
+               loading="lazy"
                decoding="async"
                onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp';this.style.objectFit='contain';this.style.padding='30px';">
           {% else %}
