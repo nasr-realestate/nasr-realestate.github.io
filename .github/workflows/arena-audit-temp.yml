@@ -97,6 +97,17 @@ jobs:
                 out.push(`${side}: perf=${s("performance")} seo=${s("seo")} a11y=${s("accessibility")} bp=${s("best-practices")} | FCP=${g("first-contentful-paint")} LCP=${g("largest-contentful-paint")} TBT=${g("total-blocking-time")} CLS=${g("cumulative-layout-shift")} SI=${g("speed-index")}`);
               }
               console.log("### "+slug+"\n  "+out.join("\n  "));
+              try{
+                const r=JSON.parse(fs.readFileSync(`/tmp/out/lh-after-${slug}.json`,"utf8"));
+                const a=r.audits;
+                const fails=Object.values(a).filter(x=>x.score!==null&&x.score<0.9&&x.scoreDisplayMode!=="informative"&&x.scoreDisplayMode!=="notApplicable"&&x.scoreDisplayMode!=="manual");
+                console.log("  --- after: "+fails.length+" audits <0.9 ---");
+                fails.slice(0,25).forEach(x=>console.log("    "+x.id+" | "+x.title+" | "+(x.displayValue||"")));
+                const tbt=a["total-blocking-time"];
+                if(tbt&&tbt.details&&tbt.details.items){console.log("  TBT items:");tbt.details.items.slice(0,6).forEach(i=>console.log("    "+JSON.stringify({url:(i.url||"").slice(0,90),dur:i.duration,start:i.startTime})));}
+                const lcp=a["largest-contentful-paint-element"];
+                if(lcp&&lcp.details&&lcp.details.items&&lcp.details.items[0]){console.log("  LCP el: "+JSON.stringify(lcp.details.items[0].items&&lcp.details.items[0].items[0]?lcp.details.items[0].items[0].node:{}) .slice(0,220));}
+              }catch(e){}
             ' "$slug" >> /tmp/out/ab.txt
           done
           cat /tmp/out/ab.txt

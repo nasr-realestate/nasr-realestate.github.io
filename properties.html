@@ -620,12 +620,17 @@ hide_navbar: true
 
         <div class="pl-card-img-wrap">
           {% if prop.image_file %}
-          {%- comment -%} أول 6 بطاقات فوق الطية: تحميل فوري + أولوية عالية (صورة LCP كانت lazy) {%- endcomment -%}
+          {%- comment -%}
+            أول بطاقتان فقط تُحمّلان فوراً (فوق الطية على الجوال).
+            تجربة 6 بطاقات بـ fetchpriority=high رفعت TBT من 270ms إلى 780ms
+            بسبب فك ترميز 6 صور كبيرة في نفس الوقت.
+          {%- endcomment -%}
           <img src="{{ img_url }}"
                alt="{{ prop.title | escape }}"
                class="pl-card-img"
                width="400" height="260"
-               {%- if forloop.index <= 6 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+               sizes="(max-width: 480px) 92vw, (max-width: 900px) 45vw, 30vw"
+               {%- if forloop.index <= 2 %}loading="eager"{% if forloop.index == 1 %} fetchpriority="high"{% endif %}{% else %}loading="lazy"{% endif %}
                decoding="async"
                onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp';this.style.objectFit='contain';this.style.padding='30px';">
           {% else %}
