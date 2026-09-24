@@ -9,98 +9,87 @@ permissions:
   contents: write
 
 jobs:
-  audit:
+  shots:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.head_commit.message, '[audit-results]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Lighthouse category scores from committed JSONs
-        run: |
-          mkdir -p audit/out
-          : > audit/out/scores.txt
-          for f in audit/out/lh-*.json; do
-            [ -f "$f" ] || continue
-            node -e "
-              const fs=require('fs');
-              const r=JSON.parse(fs.readFileSync('$f','utf8'));
-              const c=r.categories,a=r.audits;
-              const s=k=>c[k]?Math.round(c[k].score*100):'-';
-              const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:'-';
-              console.log('=== $f ===');
-              console.log('  Performance='+s('performance')+' SEO='+s('seo')+' Accessibility='+s('accessibility')+' BestPractices='+s('best-practices'));
-              console.log('  FCP='+g('first-contentful-paint')+' LCP='+g('largest-contentful-paint')+' TBT='+g('total-blocking-time')+' CLS='+g('cumulative-layout-shift')+' SI='+g('speed-index')+' TTI='+g('interactive'));
-              const keys=Object.keys(a).filter(k=>a[k].score!==null&&a[k].score<1&&a[k].scoreDisplayMode!=='informative'&&a[k].scoreDisplayMode!=='notApplicable'&&a[k].scoreDisplayMode!=='manual');
-              console.log('  failing audits: '+keys.join(', '));
-              console.log('  SEo group detail:');
-              ['is-crawlable','robots-txt','http-status-code','link-text','crawlable-anchors','document-title','meta-description','hreflang','canonical','font-size','tap-targets','image-alt','heading-order','structured-data'].forEach(k=>{ if(a[k]) console.log('    '+k+'='+(a[k].score===null?'n/a':a[k].score)+(a[k].displayValue?' ('+a[k].displayValue+')':'')); });
-              console.log('  top opportunities:');
-              Object.values(a).filter(x=>x.details&&x.details.overallSavingsMs>50).sort((x,y)=>y.details.overallSavingsMs-x.details.overallSavingsMs).slice(0,10).forEach(x=>console.log('    '+x.id+' saves '+Math.round(x.details.overallSavingsMs)+'ms'));
-              const items=x=>x&&x.details&&x.details.items?x.details.items:[];
-              console.log('  --- render-blocking-resources ---');
-              items(a['render-blocking-resources']).forEach(i=>console.log('    '+i.url+' ('+Math.round(i.wastedMs)+'ms, '+i.totalBytes+'B)'));
-              console.log('  --- third-party-summary ---');
-              items(a['third-party-summary']).forEach(i=>console.log('    '+i.entity+' blocking='+i.blockingTime+'ms bytes='+i.transferSize));
-              console.log('  --- errors-in-console ---');
-              items(a['errors-in-console']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,300)));
-              console.log('  --- uses-responsive-images ---');
-              items(a['uses-responsive-images']).slice(0,6).forEach(i=>console.log('    '+i.url+' '+(i.totalBytes-i.wastedBytes)+'/'+i.totalBytes));
-              console.log('  --- image-alt failures ---');
-              items(a['image-alt']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,200)));
-              console.log('  --- heading-order ---');
-              items(a['heading-order']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,300)));
-              console.log('  --- structured-data (errors) ---');
-              const sd=a['structured-data'];
-              if(sd&&sd.details&&sd.details.items){sd.details.items.forEach(i=>console.log('    '+JSON.stringify(i).slice(0,500)));}              
-            " >> audit/out/scores.txt 2>&1
-          done
-          cat audit/out/scores.txt
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Probe Cloudflare Worker backend
+      - name: Install Playwright Chromium
         run: |
-          : > audit/out/worker-probe.txt
-          W="https://royal-snow-ea32.footcai-555.workers.dev/"
-          echo "=== OPTIONS ===" >> audit/out/worker-probe.txt
-          curl -sS -i -X OPTIONS "$W" -H "Origin: https://nasr-realestate.github.io" -m 30 >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
-          echo "" >> audit/out/worker-probe.txt
-          echo "=== POST / (chat ping) ===" >> audit/out/worker-probe.txt
-          curl -sS -i -X POST "$W" -H "Content-Type: application/json" -H "Origin: https://nasr-realestate.github.io" -m 40 \
-            -d '{"source":"arena-audit","message":"ping","history":[]}' >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
-          echo "" >> audit/out/worker-probe.txt
-          echo "=== POST /upload-images (empty) ===" >> audit/out/worker-probe.txt
-          curl -sS -i -X POST "${W}upload-images" -H "Content-Type: application/json" -m 30 -d '{"images":[]}' >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
-          cat audit/out/worker-probe.txt
+          npm init -y >/dev/null 2>&1
+          npm i -D playwright@1.48 >/dev/null 2>&1
+          npx playwright install chromium
+          npx playwright install-deps chromium || true
 
-      - name: PageSpeed Insights API (mobile)
+      - name: Capture screenshots + responsive metrics
         run: |
-          : > audit/out/psi.txt
-          for u in "https://nasr-realestate.github.io/" "https://nasr-realestate.github.io/properties/" "https://nasr-realestate.github.io/properties/10th-district-180m/"; do
-            echo "=== $u ===" >> audit/out/psi.txt
-            curl -sS -m 180 "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")&strategy=mobile&category=performance&category=seo&category=accessibility&category=best-practices" -o psi_tmp.json || echo "PSI FAILED" >> audit/out/psi.txt
-            if [ -f psi_tmp.json ]; then
-              node -e "
-                try{
-                  const r=require('./psi_tmp.json');
-                  const lr=r.lighthouseResult;
-                  if(!lr){console.log('no lighthouseResult', Object.keys(r));process.exit(0)}
-                  const c=lr.categories,a=lr.audits;
-                  const s=k=>c[k]?Math.round(c[k].score*100):'-';
-                  const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:'-';
-                  console.log('  perf='+s('performance')+' seo='+s('seo')+' a11y='+s('accessibility')+' bp='+s('best-practices'));
-                  console.log('  FCP='+g('first-contentful-paint')+' LCP='+g('largest-contentful-paint')+' TBT='+g('total-blocking-time')+' CLS='+g('cumulative-layout-shift')+' SI='+g('speed-index'));
-                  console.log('  env: '+JSON.stringify(lr.configSettings.formFactor)+' '+(lr.configSettings.throttling||''));
-                }catch(e){console.log('parse error: '+e.message)}
-              " >> audit/out/psi.txt
-              rm -f psi_tmp.json
-            fi
-          done
-          cat audit/out/psi.txt
+          mkdir -p audit/shots
+          cat > shot.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const BASE='https://nasr-realestate.github.io';
+          const pages=[
+            ['home','/'],
+            ['properties','/properties/'],
+            ['property','/properties/10th-district-180m/'],
+            ['add','/add-your-property.html'],
+            ['agent','/agent.html'],
+            ['requests','/requests/'],
+          ];
+          const widths=[320,375,768,1440];
+          const out=[];
+          const browser=await chromium.launch();
+          for(const [name,path] of pages){
+            for(const w of widths){
+              const ctx=await browser.newContext({viewport:{width:w,height:900},deviceScaleFactor:1,isMobile:w<768,hasTouch:w<768});
+              const page=await ctx.newPage();
+              try{
+                await page.goto(BASE+path,{waitUntil:'load',timeout:60000});
+                await page.waitForTimeout(2500);
+                const m=await page.evaluate(()=>{
+                  const de=document.documentElement;
+                  const overflow=[...document.querySelectorAll('body *')].filter(el=>{
+                    const r=el.getBoundingClientRect();
+                    return r.width>0 && (r.right > window.innerWidth+2 || r.left < -2);
+                  }).slice(0,8).map(el=>({t:el.tagName,c:(el.className&&el.className.toString?el.className.toString():'').slice(0,40),r:Math.round(el.getBoundingClientRect().right)}));
+                  const small=[...document.querySelectorAll('a,button,select,input')].filter(el=>{
+                    const r=el.getBoundingClientRect();
+                    return r.width>0&&r.height>0&&(r.height<24||r.width<24);
+                  }).length;
+                  return {
+                    scrollW:de.scrollWidth, innerW:window.innerWidth,
+                    hOverflow: de.scrollWidth > window.innerWidth+2,
+                    overflowers: overflow,
+                    tinyTargets: small,
+                    title: document.title,
+                    h1: [...document.querySelectorAll('h1')].map(e=>e.textContent.trim().slice(0,80)),
+                    docHeight: de.scrollHeight
+                  };
+                });
+                out.push({page:name,path,width:w,...m});
+                await page.screenshot({path:`audit/shots/${name}-${w}.jpg`,type:'jpeg',quality:55});
+              }catch(e){ out.push({page:name,path,width:w,error:String(e).slice(0,200)}); }
+              await ctx.close();
+            }
+          }
+          await browser.close();
+          console.log(JSON.stringify(out,null,1));
+          JS
+          node shot.mjs > audit/out/responsive.json 2> audit/out/responsive.err || true
+          cat audit/out/responsive.json
+          tail -5 audit/out/responsive.err || true
+          ls -la audit/shots | head -30
 
-      - name: Commit results
+      - name: Commit
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "chore(audit): scores + worker probe + psi [audit-results]" || echo "nothing to commit"
+          git commit -m "chore(audit): screenshots + responsive metrics [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}
