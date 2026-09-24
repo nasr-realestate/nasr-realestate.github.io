@@ -38,11 +38,11 @@ jobs:
       - name: Build BOTH versions
         run: |
           set +e
-          cd site
+          cd "$GITHUB_WORKSPACE/site"
           bundle install --jobs 4 >/dev/null 2>&1
           mkdir -p /tmp/out
           echo "=== BUILD BRANCH (after) ===" > /tmp/out/build.log
-          (cd site && JEKYLL_ENV=production bundle exec jekyll build -d /tmp/site_after) >> /tmp/out/build.log 2>&1
+          (cd "$GITHUB_WORKSPACE/site" && JEKYLL_ENV=production bundle exec jekyll build -d /tmp/site_after) >> /tmp/out/build.log 2>&1
           echo "EXIT_AFTER=$?" >> /tmp/out/build.log
           echo "=== BUILD MASTER (before) ===" >> /tmp/out/build.log
           (cd /tmp/master && JEKYLL_ENV=production bundle exec --gemfile=/tmp/master/Gemfile jekyll build -d /tmp/site_before) >> /tmp/out/build.log 2>&1
