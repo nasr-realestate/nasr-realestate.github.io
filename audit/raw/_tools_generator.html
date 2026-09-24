@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>مولّد العقارات | سمسار طلبك</title>
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href="/tools/manifest.json">
+<link rel="apple-touch-icon" href="/tools/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مولّد العقارات">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+:root {
+  --bg: #050505;
+  --surface: #141414;
+  --surface-2: #1a1a1a;
+  --border: #333;
+  --gold: #d4af37;
+  --gold-dark: #b38f1d;
+  --gold-soft: rgba(212, 175, 55, 0.08);
+  --text: #ffffff;
+  --text-sec: #b0b0b0;
+  --text-ter: #666;
+  --wa: #25d366;
+  --wa-dark: #128c7e;
+  --error: #ff4d4d;
+  --warn: #ffc107;
+  --success: #25d366;
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  padding: 1rem 0.75rem 6rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 720px; margin: 0 auto; }
+
+/* ═══ Header ═══ */
+.header {
+  text-align: center;
+  margin-bottom: 1.2rem;
+  padding: 1rem;
+}
+.header h1 {
+  color: var(--gold);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.header p {
+  color: var(--text-sec);
+  font-size: 0.85rem;
+}
+
+/* ═══ Stepper ═══ */
+.stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  gap: 4px;
+}
+.step-tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-ter);
+  transition: 0.2s;
+}
+.step-tab.active {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.step-tab.done {
+  background: rgba(37, 211, 102, 0.08);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+/* ═══ Card ═══ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-sub {
+  font-size: 0.8rem;
+  color: var(--text-sec);
+  margin-bottom: 1rem;
+}
+
+/* ═══ Type Grid ═══ */
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 8px;
+}
+.type-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  padding: 14px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  font-family: inherit;
+  transition: 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.type-btn i { font-size: 1.2rem; }
+.type-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.type-btn.selected {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+}
+
+/* ═══ Textarea ═══ */
+.raw-input {
+  width: 100%;
+  min-height: 180px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  transition: 0.2s;
+}
+.raw-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+.raw-input::placeholder { color: var(--text-ter); }
+
+.counter {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--text-ter);
+  margin-top: 6px;
+}
+
+/* ═══ Buttons ═══ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+  text-decoration: none;
+  width: 100%;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--gold);
+  color: #000;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--gold-dark);
+  color: #fff;
+}
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text-sec);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.btn-success {
+  background: var(--wa);
+  color: #fff;
+}
+.btn-success:hover:not(:disabled) {
+  background: var(--wa-dark);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-sec);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 1rem;
+}
+.btn-group.single { grid-template-columns: 1fr; }
+
+/* ═══ Fields ═══ */
+.field {
+  margin-bottom: 12px;
+}
+.field label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-sec);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.field label .found {
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.field label .missing {
+  color: var(--warn);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.15s;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+.field input.error,
+.field select.error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.12);
+}
+.field input.filled,
+.field select.filled,
+.field textarea.filled {
+  border-color: rgba(37, 211, 102, 0.4);
+}
+
+/* ═══ Alert ═══ */
+.alert {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.alert i { margin-top: 2px; }
+.alert-warn {
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: var(--warn);
+}
+.alert-success {
+  background: rgba(37, 211, 102, 0.08);
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  color: var(--success);
+}
+
+/* ═══ Code Box ═══ */
+.code-box {
+  background: #0a0a0a;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  direction: ltr;
+  text-align: left;
+}
+
+/* ═══ Meta Info ═══ */
+.meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.meta-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  color: var(--text-sec);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.meta-chip i { color: var(--gold); }
+
+/* ═══ Screens ═══ */
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ Toast ═══ */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 9999;
+  opacity: 0;
+  transition: 0.3s;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90vw;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.success { border-color: var(--success); }
+.toast.error { border-color: var(--error); }
+
+/* ═══ Bottom Bar ═══ */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(5, 5, 5, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.bottom-bar .btn {
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 0.85rem;
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 480px) {
+  .header h1 { font-size: 1.3rem; }
+  .btn-group { grid-template-columns: 1fr; }
+}
+
+/* ═══ Spinner ═══ */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="header">
+    <h1>🏢 مولّد العقارات</h1>
+    <p>حوّل رسالة واتساب إلى ملف Jekyll كامل</p>
+  </header>
+
+  <!-- ═══ Stepper ═══ -->
+  <div class="stepper">
+    <div class="step-tab active" id="tab1"><i class="fas fa-1"></i> النوع</div>
+    <div class="step-tab" id="tab2"><i class="fas fa-2"></i> البيانات</div>
+    <div class="step-tab" id="tab3"><i class="fas fa-3"></i> الملف</div>
+  </div>
+
+  <!-- ═══ Screen 1: Type + Paste ═══ -->
+  <section class="screen active" id="screen1">
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-tags"></i> اختر نوع الرسالة</div>
+      <p class="card-sub">اختر النوع أولاً حتى تستطيع الأداة تطبيق القواعد الصحيحة</p>
+
+      <div class="type-grid" id="typeGrid">
+        <button class="type-btn" data-type="sale-apartment"><i class="fas fa-home"></i>شقة للبيع</button>
+        <button class="type-btn" data-type="rent-apartment"><i class="fas fa-key"></i>شقة للإيجار</button>
+        <button class="type-btn" data-type="sale-villa"><i class="fas fa-house-chimney"></i>فيلا للبيع</button>
+        <button class="type-btn" data-type="rent-villa"><i class="fas fa-house-chimney-window"></i>فيلا للإيجار</button>
+        <button class="type-btn" data-type="sale-office"><i class="fas fa-building"></i>مكتب للبيع</button>
+        <button class="type-btn" data-type="rent-office"><i class="fas fa-briefcase"></i>مكتب للإيجار</button>
+        <button class="type-btn" data-type="sale-shop"><i class="fas fa-store"></i>محل للبيع</button>
+        <button class="type-btn" data-type="rent-shop"><i class="fas fa-bag-shopping"></i>محل للإيجار</button>
+        <button class="type-btn" data-type="sale-warehouse"><i class="fas fa-warehouse"></i>مخزن للبيع</button>
+        <button class="type-btn" data-type="rent-warehouse"><i class="fas fa-boxes-stacked"></i>مخزن للإيجار</button>
+        <button class="type-btn" data-type="request-apartment"><i class="fas fa-magnifying-glass"></i>طلب شقة</button>
+        <button class="type-btn" data-type="request-shop"><i class="fas fa-magnifying-glass-dollar"></i>طلب محل</button>
+      </div>
+    </div>
+
+    <div class="card" id="pasteCard">
+      <div class="card-title"><i class="fas fa-paste"></i> الصق رسالة واتساب</div>
+      <p class="card-sub">انسخ الرسالة من واتساب والصقها هنا كما هي</p>
+
+      <textarea
+        id="rawInput"
+        class="raw-input"
+        placeholder="مثال:
+شقة للبيع في مدينة نصر
+المنطقة السادسة - شارع مكرم عبيد
+180 متر - 3 غرف - 2 حمام - الدور الثالث
+سوبر لوكس - أسانسير
+السعر: 4,500,000 جنيه
+01012345678"
+      ></textarea>
+
+      <div class="counter">
+        <span id="charCount">0</span> حرف
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══ Screen 2: Review ═══ -->
+  <section class="screen" id="screen2">
+
+    <div class="alert alert-warn" id="missingAlert" style="display: none;">
+      <i class="fas fa-triangle-exclamation"></i>
+      <div>
+        <strong>فيه حقول ناقصة</strong>
+        <div id="missingList" style="margin-top: 4px; font-size: 0.78rem;"></div>
+      </div>
+    </div>
+
+    <div class="alert alert-success" id="completeAlert" style="display: none;">
+      <i class="fas fa-circle-check"></i>
+      <div>كل الحقول مكتملة — جاهز للتوليد</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-pen-to-square"></i> راجع وكمّل البيانات</div>
+      <p class="card-sub">الحقول المعلّمة بـ <span style="color: var(--error); font-weight: 700;">إلزامي</span> لازم تكتمل</p>
+      <div id="fieldsContainer"></div>
+    </div>
+
+  </section>
+
+  <!-- ═══ Screen 3: Generated ═══ -->
+  <section class="screen" id="screen3">
+
+    <div class="alert alert-success">
+      <i class="fas fa-circle-check"></i>
+      <div>تم توليد الملف بنجاح — جاهز للحفظ</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-file-code"></i> الملف المولّد</div>
+
+      <div class="meta-row">
+        <div class="meta-chip"><i class="fas fa-folder"></i> <span id="metaFolder">_properties</span></div>
+        <div class="meta-chip"><i class="fas fa-file"></i> <span id="metaFile">file.md</span></div>
+        <div class="meta-chip"><i class="fas fa-tag"></i> <span id="metaType">—</span></div>
+      </div>
+
+      <div class="code-box" id="codeBox"></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="copyBtn">
+        <i class="fas fa-copy"></i> نسخ
+      </button>
+      <button class="btn btn-secondary" id="downloadBtn">
+        <i class="fas fa-download"></i> تنزيل
+      </button>
+    </div>
+
+    <div class="btn-group single">
+      <button class="btn btn-success" id="publishBtn">
+        <i class="fab fa-github"></i> حفظ في GitHub
+      </button>
+    </div>
+
+  </section>
+
+  <!-- ═══ Bottom Bar ═══ -->
+  <div class="bottom-bar">
+    <button class="btn btn-ghost" id="backBtn" style="display:none;">
+      <i class="fas fa-arrow-right"></i> رجوع
+    </button>
+    <button class="btn btn-primary" id="nextBtn" disabled>
+      <span id="nextLabel">تحليل الرسالة</span> <i class="fas fa-arrow-left"></i>
+    </button>
+  </div>
+
+</div>
+
+<!-- ═══ Toast ═══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   مولّد العقارات — المنطق الكامل
+   ═══════════════════════════════════════════════════════════ */
+
+// ═══ الإعدادات ═══
+const CONFIG = {
+  WORKER_URL: "", // ← ضع رابط Cloudflare Worker هنا لاحقًا
+  SHARED_SECRET: "" // ← ضع Shared Secret هنا
+};
+
+// ═══ Schemas ═══
+const SCHEMAS = {
+  'sale-apartment': {
+    label: 'شقة للبيع',
+    icon: 'fa-home',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'sale',
+    propertyType: 'شقة',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true, placeholder: 'مدينة نصر - المنطقة السادسة' },
+      { key: 'address', label: 'الشارع', type: 'text', required: true, placeholder: 'شارع مكرم عبيد' },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²', placeholder: '180' },
+      { key: 'rooms', label: 'عدد الغرف', type: 'select', required: true, options: ['1','2','3','4','5+'] },
+      { key: 'baths', label: 'عدد الحمامات', type: 'select', required: true, options: ['1','2','3','4+'] },
+      { key: 'floor', label: 'الدور', type: 'select', required: true, options: ['أرضي','أول','ثاني','ثالث','رابع','خامس+'] },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد','طوب أحمر'] },
+      { key: 'price', label: 'السعر', type: 'number', required: true, unit: 'ج.م', placeholder: '4500000' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true, placeholder: '01xxxxxxxxx' },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false, placeholder: 'يوجد أسانسير، واجهة بحرية...' }
+    ]
+  },
+
+  'rent-apartment': {
+    label: 'شقة للإيجار',
+    icon: 'fa-key',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'rent',
+    propertyType: 'شقة',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'rooms', label: 'عدد الغرف', type: 'select', required: true, options: ['1','2','3','4','5+'] },
+      { key: 'baths', label: 'عدد الحمامات', type: 'select', required: true, options: ['1','2','3','4+'] },
+      { key: 'floor', label: 'الدور', type: 'select', required: true, options: ['أرضي','أول','ثاني','ثالث','رابع','خامس+'] },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد','طوب أحمر'] },
+      { key: 'furnished', label: 'التسليم', type: 'select', required: true, options: ['مفروش','فاضي (قانون جديد)'] },
+      { key: 'duration', label: 'مدة العقد', type: 'select', required: true, options: ['سنة','سنتين','3 سنين','4 سنين','5 سنين'] },
+      { key: 'price', label: 'الإيجار الشهري', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'sale-villa': {
+    label: 'فيلا للبيع',
+    icon: 'fa-house-chimney',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'sale',
+    propertyType: 'فيلا',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'rooms', label: 'عدد الغرف', type: 'select', required: true, options: ['3','4','5','6','7+'] },
+      { key: 'baths', label: 'عدد الحمامات', type: 'select', required: true, options: ['2','3','4','5+'] },
+      { key: 'floors', label: 'عدد الأدوار', type: 'select', required: true, options: ['1','2','3','4+'] },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد','طوب أحمر'] },
+      { key: 'price', label: 'السعر', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'rent-villa': {
+    label: 'فيلا للإيجار',
+    icon: 'fa-house-chimney-window',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'rent',
+    propertyType: 'فيلا',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'rooms', label: 'عدد الغرف', type: 'select', required: true, options: ['3','4','5','6','7+'] },
+      { key: 'baths', label: 'عدد الحمامات', type: 'select', required: true, options: ['2','3','4','5+'] },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد'] },
+      { key: 'furnished', label: 'التسليم', type: 'select', required: true, options: ['مفروش','فاضي'] },
+      { key: 'price', label: 'الإيجار الشهري', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'sale-office': {
+    label: 'مكتب للبيع',
+    icon: 'fa-building',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'sale',
+    propertyType: 'مكتب إداري',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'activity', label: 'النشاط', type: 'text', required: true, placeholder: 'إداري، محاماة، عيادة...' },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد'] },
+      { key: 'floor', label: 'الدور', type: 'select', required: true, options: ['أرضي','أول','ثاني','ثالث','رابع','خامس+'] },
+      { key: 'price', label: 'السعر', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'rent-office': {
+    label: 'مكتب للإيجار',
+    icon: 'fa-briefcase',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'rent',
+    propertyType: 'مكتب إداري',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'activity', label: 'النشاط', type: 'text', required: true },
+      { key: 'finishing', label: 'التشطيب', type: 'select', required: true, options: ['سوبر لوكس','نصف تشطيب','تحتاج تجديد'] },
+      { key: 'floor', label: 'الدور', type: 'select', required: true, options: ['أرضي','أول','ثاني','ثالث','رابع','خامس+'] },
+      { key: 'price', label: 'الإيجار الشهري', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'sale-shop': {
+    label: 'محل للبيع',
+    icon: 'fa-store',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'sale',
+    propertyType: 'محل تجاري',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'activity', label: 'النشاط الحالي', type: 'text', required: true, placeholder: 'مطعم، كافيه، صيدلية...' },
+      { key: 'frontage', label: 'الواجهة', type: 'select', required: true, options: ['شارع رئيسي','شارع جانبي','داخل مول'] },
+      { key: 'price', label: 'السعر', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'rent-shop': {
+    label: 'محل للإيجار',
+    icon: 'fa-bag-shopping',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'rent',
+    propertyType: 'محل تجاري',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'activity', label: 'النشاط الحالي', type: 'text', required: true },
+      { key: 'frontage', label: 'الواجهة', type: 'select', required: true, options: ['شارع رئيسي','شارع جانبي','داخل مول'] },
+      { key: 'price', label: 'الإيجار الشهري', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'sale-warehouse': {
+    label: 'مخزن للبيع',
+    icon: 'fa-warehouse',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'sale',
+    propertyType: 'مخزن',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'storageType', label: 'نوع التخزين', type: 'text', required: true, placeholder: 'أغذية، ملابس، عام...' },
+      { key: 'price', label: 'السعر', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'rent-warehouse': {
+    label: 'مخزن للإيجار',
+    icon: 'fa-boxes-stacked',
+    folder: '_properties',
+    layout: 'property_page',
+    transaction: 'rent',
+    propertyType: 'مخزن',
+    fields: [
+      { key: 'location', label: 'المنطقة', type: 'text', required: true },
+      { key: 'address', label: 'الشارع', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'storageType', label: 'نوع التخزين', type: 'text', required: true },
+      { key: 'price', label: 'الإيجار الشهري', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'request-apartment': {
+    label: 'طلب شقة',
+    icon: 'fa-magnifying-glass',
+    folder: '_requests',
+    layout: 'request_page',
+    transaction: 'request',
+    propertyType: 'شقة',
+    fields: [
+      { key: 'location', label: 'المنطقة المطلوبة', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'rooms', label: 'عدد الغرف', type: 'select', required: true, options: ['1','2','3','4','5+'] },
+      { key: 'budget', label: 'الميزانية', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'purpose', label: 'الغرض', type: 'select', required: true, options: ['شراء','إيجار'] },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  },
+
+  'request-shop': {
+    label: 'طلب محل',
+    icon: 'fa-magnifying-glass-dollar',
+    folder: '_requests',
+    layout: 'request_page',
+    transaction: 'request',
+    propertyType: 'محل تجاري',
+    fields: [
+      { key: 'location', label: 'المنطقة المطلوبة', type: 'text', required: true },
+      { key: 'area', label: 'المساحة', type: 'number', required: true, unit: 'م²' },
+      { key: 'activity', label: 'النشاط المطلوب', type: 'text', required: true },
+      { key: 'budget', label: 'الميزانية', type: 'number', required: true, unit: 'ج.م' },
+      { key: 'purpose', label: 'الغرض', type: 'select', required: true, options: ['شراء','إيجار'] },
+      { key: 'phone', label: 'رقم التواصل', type: 'tel', required: true },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea', required: false }
+    ]
+  }
+};
+
+// ═══ الحالة ═══
+const state = {
+  step: 1,
+  selectedType: null,
+  rawText: '',
+  parsedData: {},
+  generated: null
+};
+
+// ═══ Helpers ═══
+function $ (id) { return document.getElementById(id); }
+
+function toast(msg, type = '') {
+  const t = $('toast');
+  t.className = 'toast show ' + type;
+  const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'circle-exclamation' : 'info-circle';
+  t.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast ' + type, 3000);
+}
+
+const AR_DIGITS = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+
+function normalize(text) {
+  return (text || '')
+    .replace(/[٠-٩]/g, d => AR_DIGITS[d])
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\u200f|\u200e/g, '')
+    .trim();
+}
+
+function toNumeric(str) {
+  if (!str) return 0;
+  const cleaned = String(str).replace(/,/g, '').replace(/[^\d.]/g, '');
+  return parseFloat(cleaned) || 0;
+}
+
+function formatNumber(n) {
+  if (!n && n !== 0) return '';
+  return Number(n).toLocaleString('en-US');
+}
+
+// ═══ Parser ═══
+function parseMessage(raw, typeKey) {
+  const schema = SCHEMAS[typeKey];
+  const text = normalize(raw);
+  const result = {};
+
+  // المساحة
+  const areaM = text.match(/(\d{2,4})\s*(?:متر|م2|متر مربع|م²)/);
+  if (areaM) result.area = parseInt(areaM[1]);
+
+  // الغرف
+  const roomsM = text.match(/(\d+)\s*(?:غرف|غرفه|غرفة|اوض|أوض|غرف نوم)/);
+  if (roomsM) result.rooms = roomsM[1];
+
+  // الحمامات
+  const bathsM = text.match(/(\d+)\s*(?:حمام|حمامات)/);
+  if (bathsM) result.baths = bathsM[1];
+
+  // الدور
+  const floorMatch = text.match(/الدور\s+(الاول|التاني|الثاني|الثالث|الرابع|الخامس|الارضي|الأرضي)/);
+  if (floorMatch) {
+    const f = floorMatch[1];
+    if (/الاول/.test(f)) result.floor = 'أول';
+    else if (/التاني|الثاني/.test(f)) result.floor = 'ثاني';
+    else if (/الثالث/.test(f)) result.floor = 'ثالث';
+    else if (/الرابع/.test(f)) result.floor = 'رابع';
+    else if (/الخامس/.test(f)) result.floor = 'خامس+';
+    else result.floor = 'أرضي';
+  }
+
+  // التشطيب
+  if (/سوبر لوكس/.test(text)) result.finishing = 'سوبر لوكس';
+  else if (/نص تشطيب|نصف تشطيب/.test(text)) result.finishing = 'نصف تشطيب';
+  else if (/تحتاج تجديد|يحتاج تجديد/.test(text)) result.finishing = 'تحتاج تجديد';
+  else if (/طوب احمر|طوب أحمر/.test(text)) result.finishing = 'طوب أحمر';
+
+  // السعر
+  let price = null;
+  let priceMult = 1;
+  const milM = text.match(/(\d+(?:[.,]\d+)?)\s*(?:مليون|مليون جنيه|مليون ج\.م)/);
+  if (milM) {
+    price = parseFloat(milM[1].replace(',', '.'));
+    priceMult = 1000000;
+  } else {
+    const alfM = text.match(/(\d+(?:[.,]\d+)?)\s*(?:الف|ألف)/);
+    if (alfM) {
+      price = parseFloat(alfM[1].replace(',', '.'));
+      priceMult = 1000;
+    } else {
+      const numM = text.match(/(\d{4,10})/);
+      if (numM) price = parseInt(numM[1]);
+    }
+  }
+  if (price !== null) {
+    const finalPrice = price * priceMult;
+    if (finalPrice >= 1000) {
+      result.price = finalPrice;
+      result.budget = finalPrice;
+    }
+  }
+
+  // الرقم
+  const phoneM = text.match(/(01[0-2]\d{8})/);
+  if (phoneM) result.phone = phoneM[1];
+
+  // التسليم
+  if (/مفروش/.test(text)) result.furnished = 'مفروش';
+  else if (/فاضي|فاضية|قانون جديد/.test(text)) result.furnished = 'فاضي (قانون جديد)';
+
+  // مدة العقد
+  if (/سنتين/.test(text)) result.duration = 'سنتين';
+  else if (/3 سنين|ثلاث سنين/.test(text)) result.duration = '3 سنين';
+  else if (/4 سنين/.test(text)) result.duration = '4 سنين';
+  else if (/5 سنين/.test(text)) result.duration = '5 سنين';
+  else if (/سنه|سنة/.test(text)) result.duration = 'سنة';
+
+  // الواجهة
+  if (/شارع رئيسي|رئيسي/.test(text)) result.frontage = 'شارع رئيسي';
+  else if (/شارع جانبي|جانبي/.test(text)) result.frontage = 'شارع جانبي';
+  else if (/داخل مول|مول/.test(text)) result.frontage = 'داخل مول';
+
+  // المنطقة
+  const knownAreas = [
+    'مدينة نصر','المنطقة السادسة','المنطقة العاشرة','المنطقة الاولي','المنطقة الأولى',
+    'المنطقة الثانية','المنطقة الثالثة','المنطقة الرابعة','المنطقة الخامسة',
+    'المنطقة السابعة','المنطقة الثامنة','المنطقة التاسعة',
+    'عباس العقاد','مكرم عبيد','مصطفي النحاس','مصطفى النحاس','النحاس','حسن المامون','حسن مامون',
+    'الطيران','الالفين','ألفين','مدينتي','التجمع الخامس','التجمع الاول','التجمع الثالث',
+    'الرحاب','المستثمرين','الحي العاشر','الحي السابع','الحي الاول','بيفرلي هيلز','شيراتون','مصر الجديدة',
+    'المعادي','الزمالك','وسط البلد','المهندسين','الدقي','الهرم','فيصل','السلام','العبور','الشروق',
+    'مدينة الشروق','بدر','حدائق الاهرام','حدائق الأهرام','6 اكتوبر','أكتوبر','الشيخ زايد'
+  ];
+  for (const area of knownAreas) {
+    if (text.includes(area)) { result.location = area; break; }
+  }
+
+  // الشارع
+  const streetPatterns = [
+    /شارع\s+([^\n،,\-0-9]{3,40})/,
+    /([^\n،,\-0-9]{3,40})\s+شارع/
+  ];
+  for (const p of streetPatterns) {
+    const m = text.match(p);
+    if (m) {
+      const clean = m[1].trim();
+      if (clean.length > 3 && clean.length < 40 && !knownAreas.includes(clean)) {
+        result.address = clean;
+        break;
+      }
+    }
+  }
+
+  // النشاط
+  if (schema.propertyType === 'محل تجاري' || schema.propertyType === 'مكتب إداري') {
+    const activityM = text.match(/(?:نشاط|النشاط)\s*[:\-]?\s*([^\n،,\-]{3,40})/);
+    if (activityM) {
+      result.activity = activityM[1].trim();
+    } else {
+      const commonActivities = ['مطعم','كافيه','كافي','صيدلية','صيدليه','سوبر ماركت','بقالة','مخبز','حلاق','كوافير','ملابس','اداري','إداري','محاماة','عيادة','عياده'];
+      for (const act of commonActivities) {
+        if (text.includes(act)) { result.activity = act; break; }
+      }
+    }
+  }
+
+  // نوع التخزين
+  if (schema.propertyType === 'مخزن') {
+    const storageM = text.match(/(?:تخزين|نوع)\s*[:\-]?\s*([^\n،,\-]{2,40})/);
+    if (storageM) result.storageType = storageM[1].trim();
+  }
+
+  // الغرض
+  if (typeKey.startsWith('request')) {
+    if (/ايجار|إيجار|للايجار/.test(text)) result.purpose = 'إيجار';
+    else if (/شراء|للبيع|بيع/.test(text)) result.purpose = 'شراء';
+  }
+
+  // ملاحظات
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+  if (lines.length > 3) result.notes = lines[lines.length - 1];
+
+  return result;
+}
+
+// ═══ التوليد ═══
+function slugify(parts) {
+  return parts
+    .filter(Boolean)
+    .map(s => String(s).replace(/\s+/g, '-').replace(/[^\w\u0600-\u06FF\-]/g, ''))
+    .join('-')
+    .toLowerCase()
+    .substring(0, 60);
+}
+
+function buildFileName(typeKey, data) {
+  const schema = SCHEMAS[typeKey];
+  const parts = [
+    schema.transaction,
+    schema.propertyType,
+    data.location,
+    data.area ? `${data.area}m` : ''
+  ];
+  return slugify(parts) + '.md';
+}
+
+function yamlEscape(v) {
+  if (v === null || v === undefined || v === '') return '""';
+  const s = String(v);
+  if (/[:#\[\]{}&*!|>'"%@`]/.test(s) || s.includes('\n')) {
+    return `"${s.replace(/"/g, '\\"')}"`;
+  }
+  return `"${s}"`;
+}
+
+function generateMarkdown(typeKey, data) {
+  const schema = SCHEMAS[typeKey];
+  const today = new Date().toISOString().split('T')[0];
+
+  const typeLabel = schema.transaction === 'sale' ? 'للبيع' : schema.transaction === 'rent' ? 'للإيجار' : 'مطلوب';
+  const title = `${schema.propertyType} ${typeLabel} في ${data.location || ''}`.trim();
+
+  // Front Matter
+  const fm = [];
+  fm.push('---');
+  fm.push(`layout: ${schema.layout}`);
+  fm.push(`title: ${yamlEscape(title)}`);
+
+  const descParts = [schema.propertyType];
+  if (data.area) descParts.push(`${data.area} متر`);
+  if (data.location) descParts.push(`في ${data.location}`);
+  if (data.rooms) descParts.push(`${data.rooms} غرف`);
+  fm.push(`description: ${yamlEscape(descParts.join(' - '))}`);
+
+  fm.push(`type: ${schema.transaction}`);
+  fm.push(`property_type: ${yamlEscape(schema.propertyType)}`);
+  fm.push(`location: ${yamlEscape(data.location || '')}`);
+  fm.push(`address: ${yamlEscape(data.address || '')}`);
+  fm.push(`area: ${data.area || 0}`);
+  if (data.rooms) fm.push(`rooms: ${data.rooms}`);
+  if (data.baths) fm.push(`baths: ${data.baths}`);
+  if (data.floor) fm.push(`floor: ${yamlEscape(data.floor)}`);
+  if (data.floors) fm.push(`floors: ${data.floors}`);
+  if (data.finishing) fm.push(`finishing: ${yamlEscape(data.finishing)}`);
+  if (data.furnished) fm.push(`furnished: ${yamlEscape(data.furnished)}`);
+  if (data.duration) fm.push(`duration: ${yamlEscape(data.duration)}`);
+  if (data.frontage) fm.push(`frontage: ${yamlEscape(data.frontage)}`);
+  if (data.activity) fm.push(`activity: ${yamlEscape(data.activity)}`);
+  if (data.storageType) fm.push(`storage_type: ${yamlEscape(data.storageType)}`);
+  if (data.purpose) fm.push(`purpose: ${yamlEscape(data.purpose)}`);
+
+  const price = data.price || data.budget;
+  if (price) {
+    fm.push(`price: ${price}`);
+    fm.push(`price_unit: ${schema.transaction === 'rent' ? 'monthly' : 'total'}`);
+  }
+
+  fm.push(`phone: ${yamlEscape(data.phone || '')}`);
+  fm.push(`featured: false`);
+  fm.push(`date: ${today}`);
+  fm.push('---');
+
+  // Body
+  const body = [];
+  body.push(`# ${title}`);
+  body.push('');
+
+  if (data.location) body.push(`**الموقع:** ${data.location}${data.address ? ' - ' + data.address : ''}`);
+  if (data.area) body.push(`**المساحة:** ${data.area} متر مربع`);
+  if (data.rooms) body.push(`**الغرف:** ${data.rooms}`);
+  if (data.baths) body.push(`**الحمامات:** ${data.baths}`);
+  if (data.floor) body.push(`**الدور:** ${data.floor}`);
+  if (data.floors) body.push(`**عدد الأدوار:** ${data.floors}`);
+  if (data.finishing) body.push(`**التشطيب:** ${data.finishing}`);
+  if (data.furnished) body.push(`**التسليم:** ${data.furnished}`);
+  if (data.duration) body.push(`**مدة العقد:** ${data.duration}`);
+  if (data.frontage) body.push(`**الواجهة:** ${data.frontage}`);
+  if (data.activity) body.push(`**النشاط:** ${data.activity}`);
+  if (data.storageType) body.push(`**نوع التخزين:** ${data.storageType}`);
+  if (data.purpose) body.push(`**الغرض:** ${data.purpose}`);
+  if (price) {
+    const priceLabel = schema.transaction === 'rent' ? 'الإيجار الشهري' : schema.transaction === 'sale' ? 'السعر' : 'الميزانية';
+    body.push(`**${priceLabel}:** ${formatNumber(price)} ج.م`);
+  }
+
+  body.push('');
+  body.push('## وصف العقار');
+  body.push('');
+
+  let desc = `${schema.propertyType}${data.area ? ' ' + data.area + ' متر ' : ' '}في ${data.location || ''}`;
+  if (data.rooms) desc += `، تتكون من ${data.rooms} غرف`;
+  if (data.baths) desc += ` و${data.baths} حمام`;
+  if (data.finishing) desc += `، تشطيب ${data.finishing}`;
+  if (data.floor) desc += `، بالدور ${data.floor}`;
+  desc += '.';
+  body.push(desc);
+
+  if (data.notes) {
+    body.push('');
+    body.push(data.notes);
+  }
+
+  body.push('');
+  body.push('## للتواصل');
+  body.push('');
+  body.push(`📞 **${data.phone || ''}**`);
+  body.push('');
+  body.push('---');
+  body.push('');
+
+  const waPhone = (data.phone || '').replace(/^0/, '20');
+  const folderPath = '/' + schema.folder.substring(1) + '/';
+  body.push(`[تواصل عبر واتساب](https://wa.me/${waPhone}) · [العودة للعقارات](${folderPath})`);
+
+  return {
+    frontMatter: fm.join('\n'),
+    body: body.join('\n'),
+    full: fm.join('\n') + '\n\n' + body.join('\n')
+  };
+}
+
+// ═══ عرض الحقول ═══
+function renderFields() {
+  const schema = SCHEMAS[state.selectedType];
+  const container = $('fieldsContainer');
+  container.innerHTML = '';
+
+  schema.fields.forEach(f => {
+    const val = state.parsedData[f.key] ?? '';
+    const isFilled = val !== '' && val !== 0 && val !== null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+
+    let statusHTML = '';
+    if (f.required) {
+      statusHTML = isFilled
+        ? '<span class="found">✓ تم الاستخراج</span>'
+        : '<span class="missing">⚠ ناقص</span>';
+    } else {
+      statusHTML = '<span style="color:var(--text-ter);font-size:0.7rem">اختياري</span>';
+    }
+
+    const labelHTML = `
+      <label for="f_${f.key}">
+        <span>${f.label}${f.unit ? ` <span style="color:var(--text-ter);font-size:0.75rem">(${f.unit})</span>` : ''}</span>
+        ${statusHTML}
+      </label>
+    `;
+
+    let inputHTML = '';
+    if (f.type === 'select') {
+      const opts = ['<option value="">— اختر —</option>']
+        .concat(f.options.map(o => `<option value="${o}" ${String(val) === String(o) ? 'selected' : ''}>${o}</option>`))
+        .join('');
+      inputHTML = `<select id="f_${f.key}" class="${isFilled ? 'filled' : ''}" data-key="${f.key}">${opts}</select>`;
+    } else if (f.type === 'textarea') {
+      inputHTML = `<textarea id="f_${f.key}" rows="2" data-key="${f.key}" class="${isFilled ? 'filled' : ''}" placeholder="${f.placeholder || ''}">${val}</textarea>`;
+    } else {
+      const safeVal = String(val).replace(/"/g, '&quot;');
+      inputHTML = `<input type="${f.type}" id="f_${f.key}" data-key="${f.key}" class="${isFilled ? 'filled' : ''}" placeholder="${f.placeholder || ''}" value="${safeVal}">`;
+    }
+
+    wrap.innerHTML = labelHTML + inputHTML;
+    container.appendChild(wrap);
+  });
+
+  container.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('input', handleFieldChange);
+    el.addEventListener('change', handleFieldChange);
+  });
+
+  updateMissingAlert();
+}
+
+function handleFieldChange(e) {
+  const key = e.target.dataset.key;
+  const val = e.target.value.trim();
+  state.parsedData[key] = val;
+
+  const schema = SCHEMAS[state.selectedType];
+  const fieldDef = schema.fields.find(f => f.key === key);
+  if (val) {
+    e.target.classList.add('filled');
+    e.target.classList.remove('error');
+  } else {
+    e.target.classList.remove('filled');
+    if (fieldDef.required) e.target.classList.add('error');
+  }
+
+  // حدّث حالة الـ label
+  const label = e.target.previousElementSibling;
+  if (label && fieldDef && fieldDef.required) {
+    const badge = label.querySelector('.found, .missing');
+    if (badge) {
+      if (val) {
+        badge.className = 'found';
+        badge.textContent = '✓ تم الاستخراج';
+      } else {
+        badge.className = 'missing';
+        badge.textContent = '⚠ ناقص';
+      }
+    }
+  }
+
+  updateMissingAlert();
+}
+
+function getMissingFields() {
+  const schema = SCHEMAS[state.selectedType];
+  return schema.fields
+    .filter(f => f.required)
+    .filter(f => {
+      const v = state.parsedData[f.key];
+      return v === undefined || v === null || v === '' || (f.type === 'number' && !v);
+    })
+    .map(f => f.label);
+}
+
+function updateMissingAlert() {
+  if (state.step !== 2) return;
+  const missing = getMissingFields();
+  const warnAlert = $('missingAlert');
+  const okAlert = $('completeAlert');
+  const nextBtn = $('nextBtn');
+
+  if (missing.length === 0) {
+    warnAlert.style.display = 'none';
+    okAlert.style.display = 'flex';
+    nextBtn.disabled = false;
+    $('nextLabel').textContent = 'توليد الملف';
+  } else {
+    warnAlert.style.display = 'flex';
+    okAlert.style.display = 'none';
+    $('missingList').textContent = missing.join('، ');
+    nextBtn.disabled = true;
+    $('nextLabel').textContent = `${missing.length} حقول ناقصة`;
+  }
+}
+
+// ═══ التنقل ═══
+function gotoStep(n) {
+  state.step = n;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $('screen' + n).classList.add('active');
+
+  document.querySelectorAll('.step-tab').forEach((t, i) => {
+    t.classList.remove('active', 'done');
+    if (i + 1 < n) t.classList.add('done');
+    else if (i + 1 === n) t.classList.add('active');
+  });
+
+  const backBtn = $('backBtn');
+  const nextBtn = $('nextBtn');
+
+  if (n === 1) {
+    backBtn.style.display = 'none';
+    nextBtn.style.display = '';
+    nextBtn.disabled = !state.selectedType || state.rawText.trim().length < 20;
+    $('nextLabel').textContent = 'تحليل الرسالة';
+  } else if (n === 2) {
+    backBtn.style.display = 'flex';
+    nextBtn.style.display = '';
+    nextBtn.disabled = true;
+    $('nextLabel').textContent = 'توليد الملف';
+    updateMissingAlert();
+  } else if (n === 3) {
+    backBtn.style.display = 'flex';
+    nextBtn.style.display = 'none';
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══ الأزرار ═══
+$('nextBtn').addEventListener('click', () => {
+  if (state.step === 1) {
+    if (!state.selectedType) return toast('اختر نوع الرسالة أولاً', 'error');
+    if (state.rawText.trim().length < 20) return toast('الصق الرسالة كاملة', 'error');
+
+    state.parsedData = parseMessage(state.rawText, state.selectedType);
+    renderFields();
+    gotoStep(2);
+  } else if (state.step === 2) {
+    const missing = getMissingFields();
+    if (missing.length > 0) return toast('كمّل الحقول الناقصة', 'error');
+
+    const md = generateMarkdown(state.selectedType, state.parsedData);
+    state.generated = {
+      markdown: md,
+      fileName: buildFileName(state.selectedType, state.parsedData),
+      folder: SCHEMAS[state.selectedType].folder,
+      typeLabel: SCHEMAS[state.selectedType].label
+    };
+
+    $('codeBox').textContent = md.full;
+    $('metaFolder').textContent = state.generated.folder;
+    $('metaFile').textContent = state.generated.fileName;
+    $('metaType').textContent = state.generated.typeLabel;
+
+    gotoStep(3);
+    toast('تم توليد الملف', 'success');
+  }
+});
+
+$('backBtn').addEventListener('click', () => {
+  if (state.step === 2) gotoStep(1);
+  else if (state.step === 3) gotoStep(2);
+});
+
+// ═══ اختيار النوع ═══
+$('typeGrid').addEventListener('click', (e) => {
+  const btn = e.target.closest('.type-btn');
+  if (!btn) return;
+
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.selectedType = btn.dataset.type;
+
+  // حدّث زر التالي
+  const ready = state.rawText.trim().length >= 20;
+  $('nextBtn').disabled = !ready;
+
+  // scroll لصندوق اللصق
+  setTimeout(() => {
+    $('pasteCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+});
+
+// ═══ textarea ═══
+$('rawInput').addEventListener('input', (e) => {
+  state.rawText = e.target.value;
+  $('charCount').textContent = state.rawText.length;
+
+  const ok = state.selectedType && state.rawText.trim().length >= 20;
+  $('nextBtn').disabled = !ok;
+});
+
+// ═══ نسخ ═══
+$('copyBtn').addEventListener('click', async () => {
+  if (!state.generated) return;
+  try {
+    await navigator.clipboard.writeText(state.generated.markdown.full);
+    toast('تم النسخ', 'success');
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = state.generated.markdown.full;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('تم النسخ', 'success'); }
+    catch { toast('فشل النسخ', 'error'); }
+    ta.remove();
+  }
+});
+
+// ═══ تنزيل ═══
+$('downloadBtn').addEventListener('click', () => {
+  if (!state.generated) return;
+  const blob = new Blob([state.generated.markdown.full], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = state.generated.fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('تم التنزيل', 'success');
+});
+
+// ═══ حفظ في GitHub ═══
+$('publishBtn').addEventListener('click', async () => {
+  if (!CONFIG.WORKER_URL || !CONFIG.SHARED_SECRET) {
+    return toast('لم يتم إعداد Worker بعد', 'error');
+  }
+  if (!state.generated) return;
+
+  const btn = $('publishBtn');
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> جارٍ الحفظ...';
+
+  try {
+    const path = `${state.generated.folder}/${state.generated.fileName}`;
+    const res = await fetch(CONFIG.WORKER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth': CONFIG.SHARED_SECRET
+      },
+      body: JSON.stringify({
+        path: path,
+        content: state.generated.markdown.full,
+        message: `Add: ${state.generated.typeLabel} - ${state.parsedData.location || ''}`
+      })
+    });
+
+    if (!res.ok) throw new Error('فشل الحفظ');
+
+    toast('تم الحفظ في GitHub ✓', 'success');
+    btn.innerHTML = '<i class="fas fa-check"></i> تم الحفظ';
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }, 3000);
+  } catch (err) {
+    toast('فشل الحفظ: ' + err.message, 'error');
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
+  }
+});
+
+// ═══ Init ═══
+document.addEventListener('DOMContentLoaded', () => {
+  gotoStep(1);
+});
+
+// ═══ Service Worker ═══
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/tools/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
