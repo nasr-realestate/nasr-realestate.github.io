@@ -15,7 +15,13 @@ bathrooms: "1 حمام"
 floor: "الدور الثالث (مميز)"
 finish: "تشطيب عادي"
 meta_title: "شقة 86م للبيع في زهراء مدينة نصر | فيو مفتوح وسعر لقطة"
-meta_description: "شقة 86م للبيع في زهراء مدينة نصر الدور الثالث. فيو مفتوح غير مجروحة، تقسيم 2 غرفة وصالة. موقع حيوي وسعر استثماري ممتاز 1,650,000 ج.م كاش."
+description: "شقة 86م للبيع في زهراء مدينة نصر الدور الثالث. فيو مفتوح غير مجروحة، تقسيم 2 غرفة وصالة. موقع حيوي وسعر استثماري ممتاز 1,650,000 ج.م كاش."
+image: "/assets/img/properties/zahraa-thirdfloor.webp"
+priceNumeric: 1650000
+areaNumeric: 86
+roomsNumeric: 2
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "2 حمام (مودرن)"
 floor: "الدور الرابع (واجهة)"
 finish: "الترا سوبر لوكس (مفروش)"
 meta_title: "شقة فندقية للإيجار في دجلة لاند مارك مدينة نصر | 30,000 ج.م"
-meta_description: "شقة 122م مفروشة بالكامل للإيجار في كمبوند دجلة لاند مارك مدينة نصر. 3 غرف نوم بفيو حمام سباحة، تشطيب فندقي، شامل الجراج. عرض حصري للأجانب."
+description: "شقة 122م مفروشة بالكامل للإيجار في كمبوند دجلة لاند مارك مدينة نصر. 3 غرف نوم بفيو حمام سباحة، تشطيب فندقي، شامل الجراج. عرض حصري للأجانب."
+image: "/assets/img/properties/maamar-al-murshidi.webp"
+priceNumeric: 30000
+areaNumeric: 122
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -55,9 +55,9 @@
         "width": 512,
         "height": 512
       },
+      <!-- ⚠️ إصلاح: كان الملفان social-home.webp و Come-here.webp غير موجودين (404) -->
       "image": [
-        "https://nasr-realestate.github.io/assets/img/social-home.webp",
-        "https://nasr-realestate.github.io/assets/img/Come-here.webp"
+        "https://nasr-realestate.github.io/assets/img/social-home.png"
       ],
       "description": "تقديم خدمات واستشارات عقارية متكاملة. شراء أو بيع عقار هو نقطة تحول في حياة كل شخص يتطلب أقصى جهد لاتخاذ القرار الصحيح.",
       "slogan": "عقارك بأمان — بيعاً وشراءً وتأجيراً في مدينة نصر",
@@ -73,10 +73,11 @@
         "postalCode": "11371",
         "addressCountry": "EG"
       },
+      <!-- ⚠️ إصلاح: الإحداثيات القديمة 30.0635/31.311 تبعد ~2.8 كم عن دبوس Google Maps الحقيقي -->
       "geo": {
         "@type": "GeoCoordinates",
-        "latitude": 30.0635,
-        "longitude": 31.311
+        "latitude": 30.067317,
+        "longitude": 31.339143
       },
       "hasMap": "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
       "openingHoursSpecification": [
@@ -96,8 +97,8 @@
         "@type": "GeoCircle",
         "geoMidpoint": {
           "@type": "GeoCoordinates",
-          "latitude": 30.0635,
-          "longitude": 31.311
+          "latitude": 30.067317,
+          "longitude": 31.339143
         },
         "geoRadius": "15000"
       },
@@ -135,10 +136,12 @@
           }
         }
       ],
+      <!-- ⚠️ إصلاح: reviewCount كان 195 بينما Google Maps يُظهر 102 مراجعة (تحقق 2026-09-24) -->
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.7",
-        "reviewCount": "195",
+        "reviewCount": "102",
+        "ratingCount": "102",
         "bestRating": "5",
         "worstRating": "1"
       },

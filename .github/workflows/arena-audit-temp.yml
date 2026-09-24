@@ -1,32 +1,165 @@
+# ⚠️ مؤقت — أداة تحقق فقط (لا تنشر أي شيء). يُحذف قبل التسليم.
 name: "Arena Audit Temp"
+
 on:
   push:
     branches: ["arena/**"]
+
 permissions:
   contents: write
+
 jobs:
-  probe:
+  verify:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.head_commit.message, '[audit-results]') }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          path: site
+
+      - name: Setup Ruby + Node
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-      - name: Dump main drop.rb
+          working-directory: site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare master copy (before)
+        run: |
+          cd site
+          git fetch --depth=1 origin master:refs/remotes/origin/master
+          rm -rf /tmp/master && mkdir -p /tmp/master
+          git archive origin/master | tar -x -C /tmp/master
+          echo "master files: $(find /tmp/master -name '*.md' -path '*_properties*' | wc -l)"
+
+      - name: Build BOTH versions
         run: |
           set +e
-          mkdir -p audit/out
-          : > audit/out/seotag5.txt
+          cd site
           bundle install --jobs 4 >/dev/null 2>&1
-          DROP=$(bundle exec gem contents jekyll-seo-tag 2>/dev/null | grep 'jekyll-seo-tag/drop.rb' | head -1)
-          echo "DROP=$DROP" >> audit/out/seotag5.txt
-          cat "$DROP" >> audit/out/seotag5.txt 2>&1
-          exit 0
-      - name: Commit
+          mkdir -p /tmp/out
+          echo "=== BUILD BRANCH (after) ===" > /tmp/out/build.log
+          (cd site && JEKYLL_ENV=production bundle exec jekyll build -d /tmp/site_after) >> /tmp/out/build.log 2>&1
+          echo "EXIT_AFTER=$?" >> /tmp/out/build.log
+          echo "=== BUILD MASTER (before) ===" >> /tmp/out/build.log
+          (cd /tmp/master && JEKYLL_ENV=production bundle exec --gemfile=/tmp/master/Gemfile jekyll build -d /tmp/site_before) >> /tmp/out/build.log 2>&1
+          echo "EXIT_BEFORE=$?" >> /tmp/out/build.log
+          # fallback: build master with the branch's bundle
+          if [ ! -f /tmp/site_before/index.html ]; then
+            (cd /tmp/master && JEKYLL_ENV=production BUNDLE_GEMFILE=$GITHUB_WORKSPACE/site/Gemfile bundle exec jekyll build -d /tmp/site_before) >> /tmp/out/build.log 2>&1
+            echo "EXIT_BEFORE_RETRY=$?" >> /tmp/out/build.log
+          fi
+          tail -30 /tmp/out/build.log
+          ls /tmp/site_after | head; echo "---"; ls /tmp/site_before | head
+
+      - name: Serve both sites
         run: |
+          npx --yes http-server /tmp/site_before -p 8081 --silent >/dev/null 2>&1 &
+          npx --yes http-server /tmp/site_after  -p 8082 --silent >/dev/null 2>&1 &
+          sleep 6
+          curl -s -o /dev/null -w "before=%{http_code}\n" http://127.0.0.1:8081/
+          curl -s -o /dev/null -w "after=%{http_code}\n"  http://127.0.0.1:8082/
+
+      - name: Install Lighthouse
+        run: |
+          npm install -g lighthouse@12
+          npx --yes @puppeteer/browsers install chrome@stable
+          CH=$(ls -d $PWD/chrome/*/chrome-linux64/chrome 2>/dev/null | head -1)
+          echo "CHROME_PATH=$CH" >> $GITHUB_ENV
+
+      - name: Lighthouse A/B
+        run: |
+          mkdir -p /tmp/out
+          : > /tmp/out/ab.txt
+          for path in "/" "/properties/" "/properties/10th-district-180m/"; do
+            slug=$(echo "$path" | tr -d '/' | tr -d '.'); [ -z "$slug" ] && slug=home
+            for side in before after; do
+              if [ "$side" = before ]; then PORT=8081; else PORT=8082; fi
+              lighthouse "http://127.0.0.1:${PORT}${path}" \
+                --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+                --output=json --output-path=/tmp/out/lh-${side}-${slug}.json \
+                --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
+            done
+            node -e '
+              const fs=require("fs");
+              const slug=process.argv[1];
+              const out=[];
+              for (const side of ["before","after"]) {
+                const f=`/tmp/out/lh-${side}-${slug}.json`;
+                if(!fs.existsSync(f)){out.push(side+"=MISSING");continue}
+                const r=JSON.parse(fs.readFileSync(f,"utf8"));
+                const c=r.categories,a=r.audits;
+                const s=k=>c[k]?Math.round(c[k].score*100):"-";
+                const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:"-";
+                out.push(`${side}: perf=${s("performance")} seo=${s("seo")} a11y=${s("accessibility")} bp=${s("best-practices")} | FCP=${g("first-contentful-paint")} LCP=${g("largest-contentful-paint")} TBT=${g("total-blocking-time")} CLS=${g("cumulative-layout-shift")} SI=${g("speed-index")}`);
+              }
+              console.log("### "+slug+"\n  "+out.join("\n  "));
+            ' "$slug" >> /tmp/out/ab.txt
+          done
+          cat /tmp/out/ab.txt
+
+      - name: Dump built heads (after) for review
+        run: |
+          mkdir -p /tmp/out/heads
+          for f in index.html properties/index.html properties/10th-district-180m/index.html agent.html add-your-property.html property-images.html 404.html; do
+            [ -f "/tmp/site_after/$f" ] || continue
+            out="/tmp/out/heads/$(echo $f | tr '/' '_').txt"
+            python3 - "/tmp/site_after/$f" "$out" <<'PY'
+          import sys,re
+          h=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+          m=re.search(r'(?is)<head.*?</head>',h)
+          body=h[m.end():] if m else h
+          part=m.group(0) if m else h[:6000]
+          # strip huge inline style
+          part=re.sub(r'(?is)<style.*?</style>','<style>[...]</style>',part)
+          open(sys.argv[2],'w',encoding='utf-8').write(part+"\n\n<!-- BODY STATS: h1=%d h2=%d h3=%d html=%d body=%d doctype=%d len=%d -->"%(
+            len(re.findall(r'<h1',body)),len(re.findall(r'<h2',body)),len(re.findall(r'<h3',body)),
+            len(re.findall(r'<html',h)),len(re.findall(r'<body',h)),len(re.findall(r'<!DOCTYPE',h)),len(h)))
+          PY
+          done
+          ls -la /tmp/out/heads
+
+      - name: Validate JSON outputs
+        run: |
+          : > /tmp/out/jsoncheck.txt
+          for f in ai-feed.json; do
+            echo "=== $f ===" >> /tmp/out/jsoncheck.txt
+            python3 -c "
+          import json,sys
+          try:
+              d=json.load(open('/tmp/site_after/$f',encoding='utf-8'))
+              print('VALID JSON. keys:',list(d.keys()),'items:',len(d.get('properties',[])))
+              p=d['properties'][0]
+              print('sample:',json.dumps({k:p[k] for k in list(p)[:12]},ensure_ascii=False)[:600])
+          except Exception as e:
+              print('INVALID:',e)
+          " >> /tmp/out/jsoncheck.txt 2>&1
+          done
+          cat /tmp/out/jsoncheck.txt
+
+      - name: Sitemap diff
+        run: |
+          : > /tmp/out/sitemap.txt
+          echo "BEFORE: $(grep -o '<loc>' /tmp/site_before/sitemap.xml | wc -l) urls" >> /tmp/out/sitemap.txt
+          echo "AFTER : $(grep -o '<loc>' /tmp/site_after/sitemap.xml | wc -l) urls" >> /tmp/out/sitemap.txt
+          grep -o '<loc>[^<]*</loc>' /tmp/site_before/sitemap.xml | sed 's/<[^>]*>//g' | sort > /tmp/out/b.txt
+          grep -o '<loc>[^<]*</loc>' /tmp/site_after/sitemap.xml | sed 's/<[^>]*>//g' | sort > /tmp/out/a.txt
+          echo "--- REMOVED (in before, not after) ---" >> /tmp/out/sitemap.txt
+          comm -23 /tmp/out/b.txt /tmp/out/a.txt >> /tmp/out/sitemap.txt
+          echo "--- ADDED ---" >> /tmp/out/sitemap.txt
+          comm -13 /tmp/out/b.txt /tmp/out/a.txt >> /tmp/out/sitemap.txt
+          cat /tmp/out/sitemap.txt
+
+      - name: Commit verification artifacts
+        run: |
+          cd site
+          mkdir -p audit/verify
+          cp -r /tmp/out/* audit/verify/ 2>/dev/null || true
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "probe drop [audit-results]" || echo "nothing"
+          git commit -m "verify: build + Lighthouse A/B [audit-results]" || echo "nothing"
           git push origin HEAD:${{ github.ref_name }}

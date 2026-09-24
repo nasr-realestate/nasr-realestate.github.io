@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور 12 (يوجد مصعد)"
 finish: "طوب أحمر (فرصة للتشطيب)"
 meta_title: "بنتهاوس 218م للبيع في مدينة السلام | فيو المطار 1.1 مليون"
-meta_description: "شقة 218م (بنتهاوس) للبيع في مدينة السلام ناصية شارع السادات. فيو مفتوح على المطار، مصعد، عداد كهرباء، مرخصة. سعر لقطة لسرعة البيع."
+description: "شقة 218م (بنتهاوس) للبيع في مدينة السلام ناصية شارع السادات. فيو مفتوح على المطار، مصعد، عداد كهرباء، مرخصة. سعر لقطة لسرعة البيع."
+image: "/assets/img/properties/nour-mahmoud-st.webp"
+priceNumeric: 1100000
+areaNumeric: 218
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "دور متكرر (مميز)"
 finish: "تشطيب لوكس (محافظ عليه)"
 meta_title: "شقة 220م بحري للبيع في شارع حلمي حسن علي مدينة نصر"
-meta_description: "شقة 220م بحري صريح للبيع في شارع حلمي حسن علي موازي لمصطفى النحاس. مساحة رحبة، 3 غرف كبار، تشطيب لوكس، حصة في الأرض. موقع هادئ وراقي بقلب مدينة نصر."
+description: "شقة 220م بحري صريح للبيع في شارع حلمي حسن علي موازي لمصطفى النحاس. مساحة رحبة، 3 غرف كبار، تشطيب لوكس، حصة في الأرض. موقع هادئ وراقي بقلب مدينة نصر."
+image: "/assets/img/properties/helmy-hassan-ali-street-220m-nasr-city.webp"
+priceNumeric: 5500000
+areaNumeric: 220
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

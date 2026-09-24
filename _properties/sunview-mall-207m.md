@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور السابع"
 finish: "تشطيب راقٍ (جاهزة للسكن)"
 meta_title: "شقة 207م للبيع في مول صن فيو مدينة نصر | رفاهية الخدمات"
-meta_description: "شقة واسعة 207م للبيع في مول صن فيو (شارع مصر للتعمير) بمدينة نصر. 3 غرف، ريسبشن واسع، تشطيب راقٍ، خدمات أمنية ومداخل فندقية. استلام فوري."
+description: "شقة واسعة 207م للبيع في مول صن فيو (شارع مصر للتعمير) بمدينة نصر. 3 غرف، ريسبشن واسع، تشطيب راقٍ، خدمات أمنية ومداخل فندقية. استلام فوري."
+image: "/assets/img/properties/sun-view.webp"
+priceNumeric: 6000000
+areaNumeric: 207
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

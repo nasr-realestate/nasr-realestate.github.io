@@ -223,6 +223,20 @@ hide_navbar: true
   .pl-chip:active { transform: scale(0.96); }
 
   /* ═══ Results Grid ═══ */
+  .pl-grid-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #f5f5f5;
+    margin: 0 0 1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+  }
+  .pl-grid-heading i { color: #d4af37; }
+  .pl-grid-heading-count { color: #888; font-size: 0.85rem; font-weight: 600; }
+
   .pl-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -553,6 +567,14 @@ hide_navbar: true
   </div>
 
   <!-- ═══ Results Grid ═══ -->
+  <!-- ⚠️ إصلاح (2026-09-24): كان تسلسل العناوين h1 ثم h3 مباشرة (تخطّي h2)
+       وهو ما أفشل تدقيق heading-order في Lighthouse. -->
+  <h2 class="pl-grid-heading">
+    <i class="fas fa-list-ul"></i>
+    كل العقارات المتاحة
+    <span class="pl-grid-heading-count">({{ site.properties | size }})</span>
+  </h2>
+
   <section class="pl-grid" id="plGrid">
     {%- assign all_properties = site.properties | sort: 'date' | reverse -%}
     {%- for prop in all_properties -%}
@@ -598,10 +620,13 @@ hide_navbar: true
 
         <div class="pl-card-img-wrap">
           {% if prop.image_file %}
+          {%- comment -%} أول 6 بطاقات فوق الطية: تحميل فوري + أولوية عالية (صورة LCP كانت lazy) {%- endcomment -%}
           <img src="{{ img_url }}"
                alt="{{ prop.title | escape }}"
                class="pl-card-img"
-               loading="lazy"
+               width="400" height="260"
+               {%- if forloop.index <= 6 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+               decoding="async"
                onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp';this.style.objectFit='contain';this.style.padding='30px';">
           {% else %}
           <div class="pl-card-img" style="display:flex;align-items:center;justify-content:center;color:#444;">
@@ -761,17 +786,31 @@ hide_navbar: true
     }
 
     // ترتيب البطاقات
+    // ⚠️ إصلاح (2026-09-24): العقارات التي بلا رقم (سعر "للاستعلام"، مساحة غير محددة)
+    // كانت تترتب كأنها صفر → تتصدّر ترتيب "الأرخص"/"الأكبر". الآن تُدفع للنهاية دائماً.
     function sortCards(cards) {
+      const num = (el, key) => {
+        const v = parseInt(el.dataset[key], 10);
+        return Number.isFinite(v) && v > 0 ? v : null;
+      };
+      // null (غير محدّد) يذهب للنهاية في كل الترتيبات
+      const cmp = (a, b, key, dir) => {
+        const va = num(a, key), vb = num(b, key);
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        return dir === 'asc' ? va - vb : vb - va;
+      };
       cards.sort((a, b) => {
         switch (currentSort) {
           case 'price-asc':
-            return (parseInt(a.dataset.price) || 0) - (parseInt(b.dataset.price) || 0);
+            return cmp(a, b, 'price', 'asc');
           case 'price-desc':
-            return (parseInt(b.dataset.price) || 0) - (parseInt(a.dataset.price) || 0);
+            return cmp(a, b, 'price', 'desc');
           case 'area-desc':
-            return (parseInt(b.dataset.area) || 0) - (parseInt(a.dataset.area) || 0);
+            return cmp(a, b, 'area', 'desc');
           case 'rooms-desc':
-            return (parseInt(b.dataset.rooms) || 0) - (parseInt(a.dataset.rooms) || 0);
+            return cmp(a, b, 'rooms', 'desc');
           case 'newest':
           default:
             return (parseInt(b.dataset.date) || 0) - (parseInt(a.dataset.date) || 0);

@@ -14,33 +14,15 @@ bathrooms: "2 حمام"
 floor: "الدور التاسع (عمارة 11 دور)"
 finish: "مفروشة بالكامل (جاهزة للسكن)"
 meta_title: "شقة 125م للبيع مفروشة خلف مصر للطيران مدينة نصر | استلام فوري"
-meta_description: "فرصة للسكن الفوري: شقة 125م للبيع بمدينة نصر خلف مصر للطيران (قرب جامع بلال). تباع بالعفش بالكامل. 3 غرف، 2 حمام، صحة توقيع وحصة بالأرض. السعر 4 مليون."
+description: "فرصة للسكن الفوري: شقة 125م للبيع بمدينة نصر خلف مصر للطيران (قرب جامع بلال). تباع بالعفش بالكامل. 3 غرف، 2 حمام، صحة توقيع وحصة بالأرض. السعر 4 مليون."
+image: "/assets/img/properties/Egyptair-Bilal-Mosque-Nasr-City-125m.webp"
+priceNumeric: 4000000
+areaNumeric: 125
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "4000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "خلف مصر للطيران - قرب جامع بلال",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
 
 <div class="property-detail-wrapper">
 

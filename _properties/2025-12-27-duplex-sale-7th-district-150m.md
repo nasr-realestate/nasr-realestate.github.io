@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور 5 و 6 (دوبلكس)"
 finish: "سوبر لوكس"
 meta_title: "دوبلكس 150م للبيع في الحي السابع مدينة نصر | مسجلة شهر عقاري"
-meta_description: "دوبلكس فاخر 150م للبيع في الحي السابع مدينة نصر شارع ابن قتيبة. مسجلة شهر عقاري، حصة في الأرض، مصعد جديد، واجهة على الشارع. السعر 3.8 مليون ج.م."
+description: "دوبلكس فاخر 150م للبيع في الحي السابع مدينة نصر شارع ابن قتيبة. مسجلة شهر عقاري، حصة في الأرض، مصعد جديد، واجهة على الشارع. السعر 3.8 مليون ج.م."
+image: "/assets/img/properties/Duplex-the-Seventh-district-150m².webp"
+priceNumeric: 3800000
+areaNumeric: 150
+roomsNumeric: 2
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

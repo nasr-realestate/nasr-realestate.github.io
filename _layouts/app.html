@@ -2,9 +2,10 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- ⚠️ إصلاح: كان maximum-scale=1, user-scalable=no يمنع التكبير/التصغير (مخالف لـ WCAG 1.4.4) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075e54">
-  <title>{{ page.title | default: site.title }}</title>
+
   {% seo %}
 
   <!-- ═══ Favicons — أيقونة الموقع ═══ -->
@@ -16,17 +17,11 @@
   {% include schema-global.html %}
 
   <!-- ═══════════════════════════════════════════════
-       Open Graph Image — صورة المعاينة الذكية
-       - أولاً: page.image (من Front Matter)
-       - ثانياً: صفحة-محددة افتراضية
-       - ثالثاً: social-home.png
+       ⚠️ إصلاح (2026-09-24):
+       كان هذا القالب يُصدِر <title> ثم {% seo %} يُصدِر <title> ثانياً،
+       ومعه og:title / og:description / og:image / og:url / og:type مكرّرة.
+       الآن {% seo %} هو المصدر الوحيد لكل وسوم الـ <head> التعريفية.
        ═══════════════════════════════════════════════ -->
-  {%- assign og_image = page.image | default: '/assets/img/social-home.png' -%}
-  <meta property="og:image" content="{{ og_image | absolute_url }}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:type" content="image/png">
-  <meta name="twitter:image" content="{{ og_image | absolute_url }}">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">

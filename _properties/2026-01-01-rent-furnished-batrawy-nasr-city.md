@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور التاسع (2 أسانسير)"
 finish: "سوبر لوكس (مكيفة بالكامل)"
 meta_title: "شقة مفروشة للإيجار في شارع البطراوي مدينة نصر | 30 ألف"
-meta_description: "شقة مفروشة فاخرة للإيجار في شارع البطراوي خطوات من جنينة مول وعباس العقاد. 3 غرف، 2 حمام، مكيفة بالكامل، فيو بحري، عمارة راقية بـ 2 أسانسير."
+description: "شقة مفروشة فاخرة للإيجار في شارع البطراوي خطوات من جنينة مول وعباس العقاد. 3 غرف، 2 حمام، مكيفة بالكامل، فيو بحري، عمارة راقية بـ 2 أسانسير."
+image: "/assets/img/properties/rent-furnished-batrawy-nasr-city.webp"
+priceNumeric: 30000
+areaNumeric: 0
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "3 حمام"
 floor: "الدور الثامن (2 أسانسير)"
 finish: "الترا سوبر لوكس"
 meta_title: "شقة 260م للبيع في شارع المقريفي مدينة نصر | فيو مفتوح"
-meta_description: "شقة 260م الترا سوبر لوكس للبيع في شارع المقريفي الرئيسي مدينة نصر. 3 غرف، ليفينج، ماستر بدريسنج، شاملة التكييفات والمطبخ. مسجلة شهر عقاري وحصة بالأرض."
+description: "شقة 260م الترا سوبر لوكس للبيع في شارع المقريفي الرئيسي مدينة نصر. 3 غرف، ليفينج، ماستر بدريسنج، شاملة التكييفات والمطبخ. مسجلة شهر عقاري وحصة بالأرض."
+image: "/assets/img/properties/al-muqrafi-street.webp"
+priceNumeric: 6000000
+areaNumeric: 260
+roomsNumeric: 3
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "1 حمام"
 floor: "الدور الثاني (مميز جداً)"
 finish: "يحتاج توضيب (فرصة للتخصيص)"
 meta_title: "شقة 120م للبيع في رابعة العدوية شارع النصر | سكن وإداري"
-meta_description: "شقة 120م للبيع في قلب رابعة العدوية مدينة نصر. فيو مفتوح على شارع النصر وحديقة، دور ثاني، تصلح مكتب أو عيادة بجوار نادي الزهور ومستشفى تبارك."
+description: "شقة 120م للبيع في قلب رابعة العدوية مدينة نصر. فيو مفتوح على شارع النصر وحديقة، دور ثاني، تصلح مكتب أو عيادة بجوار نادي الزهور ومستشفى تبارك."
+image: "/assets/img/properties/nasr-st.webp"
+priceNumeric: 3000000
+areaNumeric: 120
+roomsNumeric: 3
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

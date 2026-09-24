@@ -15,7 +15,13 @@ bathrooms: "4 حمام + مطبخ"
 floor: "أرضي مرتفع + بيزمنت"
 finish: "تشطيب لوكس (مباني حديثة 2008)"
 meta_title: "مقر إداري 500م للبيع بجوار إنبي والبترول مدينة نصر"
-meta_description: "مقر إداري فخم 500م للبيع في المنطقة الحرة بجوار شركة إنبي. أرضي وبيزمنت، 8 غرف، قاعة اجتماعات، جراج خاص. مثالي لشركات البترول والمقاولات."
+description: "مقر إداري فخم 500م للبيع في المنطقة الحرة بجوار شركة إنبي. أرضي وبيزمنت، 8 غرف، قاعة اجتماعات، جراج خاص. مثالي لشركات البترول والمقاولات."
+image: "/assets/img/properties/administrative-headquarters-next-enppi.webp"
+priceNumeric: 20000000
+areaNumeric: 500
+roomsNumeric: 8
+bathsNumeric: 4
+status: available
 ---
 
 <div class="property-detail-wrapper">

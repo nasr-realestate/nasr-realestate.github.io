@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الأول (ميزانين مرتفع)"
 finish: "سوبر سوبر لوكس"
 meta_title: "شقة 170م للبيع في شارع النزهة مدينة نصر | الشركة السعودية"
-meta_description: "شقة 170م للبيع في شارع النزهة الرئيسي أمام الرقابة الإدارية. واجهة بحري صريحة، فيو مفتوح، تشطيب راقٍ. تصلح سكن فاخر أو مقر إداري لشركة."
+description: "شقة 170م للبيع في شارع النزهة الرئيسي أمام الرقابة الإدارية. واجهة بحري صريحة، فيو مفتوح، تشطيب راقٍ. تصلح سكن فاخر أو مقر إداري لشركة."
+image: "/assets/img/properties/el-nozha-saudi-apartment-170m.webp"
+priceNumeric: 4500000
+areaNumeric: 170
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

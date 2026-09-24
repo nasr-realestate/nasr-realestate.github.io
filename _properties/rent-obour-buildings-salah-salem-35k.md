@@ -15,7 +15,13 @@ bathrooms: "2 حمام (تجهيز مودرن)"
 floor: "الدور الرابع (مطل على صلاح سالم)"
 finish: "سوبر لوكس (أول استخدام)"
 meta_title: "شقة للإيجار في عمارات العبور صلاح سالم | أول سكن 35,000 ج.م"
-meta_description: "شقة فاخرة للإيجار في عمارات العبور (عمارة 2) بمدينة نصر. فيو مباشر على صلاح سالم، تشطيب سوبر لوكس جديد بالكامل (أول سكن)، الدور الرابع، استلام فوري."
+description: "شقة فاخرة للإيجار في عمارات العبور (عمارة 2) بمدينة نصر. فيو مباشر على صلاح سالم، تشطيب سوبر لوكس جديد بالكامل (أول سكن)، الدور الرابع، استلام فوري."
+image: "/assets/img/properties/salah-salemal-abour.webp"
+priceNumeric: 35000
+areaNumeric: 0
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

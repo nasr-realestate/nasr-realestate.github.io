@@ -15,7 +15,13 @@ bathrooms: "1 حمام"
 floor: "الدور الخامس (الأخير)"
 finish: "تشطيب قديم (تحتاج وش نظافة)"
 meta_title: "شقة للبيع في عمارات التعاونيات حسن المأمون | سعر لقطة"
-meta_description: "شقة 2 غرفة وصالة للبيع في عمارات التعاونيات آخر حسن المأمون بمدينة نصر. موقع حيوي، سعر ممتاز للشباب 1,650,000 ج.م، شاملة خط أرضي وإنترنت."
+description: "شقة 2 غرفة وصالة للبيع في عمارات التعاونيات آخر حسن المأمون بمدينة نصر. موقع حيوي، سعر ممتاز للشباب 1,650,000 ج.م، شاملة خط أرضي وإنترنت."
+image: "/assets/img/properties/tawnit.webp"
+priceNumeric: 1650000
+areaNumeric: 86
+roomsNumeric: 2
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الأول"
 finish: "الترا سوبر لوكس (مفروش بالكامل)"
 meta_title: "مقر إداري 400م للبيع في شارع الطيران مدينة نصر | مرخص إداري"
-meta_description: "مقر إداري فخم 400م للبيع في شارع الطيران الرئيسي. مرخص إداري، تشطيب الترا سوبر لوكس، مفروش بالكامل. عمارة حديثة تضم كبرى البنوك، موقع استراتيجي."
+description: "مقر إداري فخم 400م للبيع في شارع الطيران الرئيسي. مرخص إداري، تشطيب الترا سوبر لوكس، مفروش بالكامل. عمارة حديثة تضم كبرى البنوك، موقع استراتيجي."
+image: "/assets/img/properties/edari400m.webp"
+priceNumeric: 35000000
+areaNumeric: 400
+roomsNumeric: 0
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

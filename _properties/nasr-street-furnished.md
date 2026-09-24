@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الثامن (يوجد 3 مصاعد)"
 finish: "سوبر لوكس (فرش فندقي)"
 meta_title: "شقة مفروشة فاخرة للبيع شارع النصر مدينة نصر | فرش فندقي"
-meta_description: "شقة مفروشة فاخرة للبيع في شارع النصر الرئيسي بمدينة نصر. أمام المخابرات العامة، تشطيب فندقي، 2 غرفة، 2 حمام، 3 مصاعد. موقع استراتيجي بجوار طيبة مول."
+description: "شقة مفروشة فاخرة للبيع في شارع النصر الرئيسي بمدينة نصر. أمام المخابرات العامة، تشطيب فندقي، 2 غرفة، 2 حمام، 3 مصاعد. موقع استراتيجي بجوار طيبة مول."
+image: "/assets/img/properties/nasr-street.webp"
+priceNumeric: 4200000
+areaNumeric: 0
+roomsNumeric: 2
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

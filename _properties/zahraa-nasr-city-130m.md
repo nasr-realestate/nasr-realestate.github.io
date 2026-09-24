@@ -15,7 +15,13 @@ bathrooms: "1 حمام"
 floor: "الدور الثامن (يوجد 2 أسانسير)"
 finish: "سوبر لوكس / مفروش"
 meta_title: "شقة 130م مفروشة للبيع في زهراء مدينة نصر | عائد استثماري"
-meta_description: "فرصة استثمارية: شقة 130م للبيع في زهراء مدينة نصر بالفرش والأجهزة. مؤجرة حالياً بـ 12 ألف ج.م شهرياً، ناصية مميزة، تشطيب سوبر لوكس، 2 أسانسير."
+description: "فرصة استثمارية: شقة 130م للبيع في زهراء مدينة نصر بالفرش والأجهزة. مؤجرة حالياً بـ 12 ألف ج.م شهرياً، ناصية مميزة، تشطيب سوبر لوكس، 2 أسانسير."
+image: "/assets/img/properties/zhraa-nasr.webp"
+priceNumeric: 1900000
+areaNumeric: 130
+roomsNumeric: 3
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">

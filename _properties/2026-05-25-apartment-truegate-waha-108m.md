@@ -14,7 +14,13 @@ bathrooms: "2 حمام"
 floor: "بالدور العاشر"
 finish: "نصف تشطيب"
 meta_title: "شقة 108م للبيع في كمبوند ترو جيت الواحة مدينة نصر | بالتقسيط"
-meta_description: "شقة للبيع 108م بكمبوند ترو جيت حي الواحة، امتداد حسن المأمون. نصف تشطيب، 3 غرف، 2 حمام. جراج خاص وحصة بالأرض. السعر 2.6 مليون متاح تقسيط على سنة."
+description: "شقة للبيع 108م بكمبوند ترو جيت حي الواحة، امتداد حسن المأمون. نصف تشطيب، 3 غرف، 2 حمام. جراج خاص وحصة بالأرض. السعر 2.6 مليون متاح تقسيط على سنة."
+image: "/assets/img/properties/True-Gate-Compound-Waha-108m.webp"
+priceNumeric: 2600000
+areaNumeric: 108.4
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

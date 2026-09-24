@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "دور متوسط (واجهة)"
 finish: "تشطيب شركة (حالة جيدة)"
 meta_title: "مقر إداري 145م للبيع في عمارات عثمان مصطفى النحاس"
-meta_description: "مقر إداري 145م للبيع في شارع مصطفى النحاس الرئيسي (عمارات عثمان). واجهة بحرية، 3 غرف، ريسبشن واسع. موقع استراتيجي للعيادات والشركات بقلب مدينة نصر."
+description: "مقر إداري 145م للبيع في شارع مصطفى النحاس الرئيسي (عمارات عثمان). واجهة بحرية، 3 غرف، ريسبشن واسع. موقع استراتيجي للعيادات والشركات بقلب مدينة نصر."
+image: "/assets/img/properties/othman-buildings.webp"
+priceNumeric: 5500000
+areaNumeric: 145
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

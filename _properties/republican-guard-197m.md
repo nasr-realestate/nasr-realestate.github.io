@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الخامس"
 finish: "نصف تشطيب"
 meta_title: "شقة 197م للبيع في عمارات الحرس الجمهوري عباس العقاد | مدينة نصر"
-meta_description: "شقة 197م للبيع في عمارات الحرس الجمهوري بمدينة نصر. تقاطع عباس العقاد مع طريق النصر، حصة في الأرض والجراج، نصف تشطيب، أمان تام وموقع استراتيجي."
+description: "شقة 197م للبيع في عمارات الحرس الجمهوري بمدينة نصر. تقاطع عباس العقاد مع طريق النصر، حصة في الأرض والجراج، نصف تشطيب، أمان تام وموقع استراتيجي."
+image: "/assets/img/properties/republican-guard.webp"
+priceNumeric: 5000000
+areaNumeric: 197
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

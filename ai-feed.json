@@ -78,9 +78,9 @@ sitemap: false
       "finish": {{ property.finish | default: "" | jsonify }},
       "finishing": {{ property.finish | default: "" | jsonify }},
 
-      "furnished": {% if property.title contains "غير مفروش" or property.title contains "فاضية" or property.title contains "مش مفروش" %}"فاضي (قانون جديد)"{% elsif property.furnished == true %}"مفروش"{% elsif property.title contains "مفروش" or property.meta_description contains "مفروش" %}"مفروش"{% else %}""{% endif %},
+      "furnished": {% if property.title contains "غير مفروش" or property.title contains "فاضية" or property.title contains "مش مفروش" %}"فاضي (قانون جديد)"{% elsif property.furnished == true %}"مفروش"{% elsif property.title contains "مفروش" or property.description contains "مفروش" %}"مفروش"{% else %}""{% endif %},
 
-      "description": {{ property.meta_description | default: property.description | default: "" | strip_html | truncate: 200 | jsonify }},
+      "description": {{ property.description | default: "" | strip_html | truncate: 200 | jsonify }},
       "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ property.image_file }}",
 
       "date": {{ property.date | date_to_xmlschema | jsonify }},

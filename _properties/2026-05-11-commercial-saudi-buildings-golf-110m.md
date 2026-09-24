@@ -14,7 +14,13 @@ bathrooms: "2 تواليت"
 floor: "مقر تجاري / إداري"
 finish: "ديكورات فاخرة (جاهز للعمل)"
 meta_title: "مقر تجاري 110م للبيع بعمارات السعودية أرض الجولف | مساحة مفتوحة"
-meta_description: "مقر تجاري للبيع 110م صافي بعمارات السعودية أرض الجولف أمام دار البنك الأهلي. ريسبشن 17 متر بدون أعمدة، يصلح لكافة الأنشطة التجارية والإدارية. حصة بالأرض."
+description: "مقر تجاري للبيع 110م صافي بعمارات السعودية أرض الجولف أمام دار البنك الأهلي. ريسبشن 17 متر بدون أعمدة، يصلح لكافة الأنشطة التجارية والإدارية. حصة بالأرض."
+image: "/assets/img/properties/Commercial-Saudi-Buildings-Golf-110m.webp"
+priceNumeric: 0
+areaNumeric: 110
+roomsNumeric: 17
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

@@ -15,7 +15,13 @@ bathrooms: "3 حمام"
 floor: "الدور 11 (ليس الأخير)"
 finish: "الترا سوبر لوكس (رخام كرارة)"
 meta_title: "شقة 240م تشطيب فاخر للبيع في شارع علي عامر مكرم عبيد"
-meta_description: "شقة 240م الترا سوبر لوكس للبيع في شارع الفريق علي عامر متفرع من مكرم عبيد. تشطيب رخام كرارة وباركي مسمار، 3 حمام، مسجلة شهر عقاري، حصة في الأرض."
+description: "شقة 240م الترا سوبر لوكس للبيع في شارع الفريق علي عامر متفرع من مكرم عبيد. تشطيب رخام كرارة وباركي مسمار، 3 حمام، مسجلة شهر عقاري، حصة في الأرض."
+image: "/assets/img/properties/ali-amer.webp"
+priceNumeric: 7000000
+areaNumeric: 240
+roomsNumeric: 3
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

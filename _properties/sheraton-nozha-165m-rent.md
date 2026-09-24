@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "أرضي مرتفع (واجهة)"
 finish: "سوبر لوكس (مكيف)"
 meta_title: "شقة 165م للإيجار في شيراتون النزهة | سكني أو إداري"
-meta_description: "شقة واسعة 165م للإيجار في مساكن شيراتون النزهة قرب فلوريدا مول. 3 غرف كبار، ريسبشن واسع، تشطيب سوبر لوكس، شاملة جراج. تصلح سكني أو مقر شركة."
+description: "شقة واسعة 165م للإيجار في مساكن شيراتون النزهة قرب فلوريدا مول. 3 غرف كبار، ريسبشن واسع، تشطيب سوبر لوكس، شاملة جراج. تصلح سكني أو مقر شركة."
+image: "/assets/img/properties/sheraton-nozha.webp"
+priceNumeric: 25000
+areaNumeric: 165
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

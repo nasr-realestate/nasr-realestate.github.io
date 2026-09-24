@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور 11 (معزول بالكامل)"
 finish: "الترا سوبر لوكس"
 meta_title: "شقة 225م للبيع شارع الطيران مدينة نصر | مباني 2014"
-meta_description: "شقة 225م الترا سوبر لوكس للبيع في شارع الطيران الرئيسي مدينة نصر. مباني حديثة 2014، فيو بانوراما غير مجروح، شامل الجراج وحصة الأرض. خيارات بالفرش أو بدونه."
+description: "شقة 225م الترا سوبر لوكس للبيع في شارع الطيران الرئيسي مدينة نصر. مباني حديثة 2014، فيو بانوراما غير مجروح، شامل الجراج وحصة الأرض. خيارات بالفرش أو بدونه."
+image: "/assets/img/properties/al-Tayaranstreet.webp"
+priceNumeric: 8000000
+areaNumeric: 225
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

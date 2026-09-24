@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الثالث (2 أسانسير)"
 finish: "تشطيب لوكس"
 meta_title: "شقة 170م للبيع بجوار السراج مول مدينة نصر | سعر تجاري"
-meta_description: "شقة 170م للبيع بجوار السراج مول مدينة نصر. 3 غرف، ريسبشن 3 قطع، حصة في الأرض، فيو بحري وقبلي، عمارة 2 أسانسير. استلام فوري بسعر لقطة 4.2 مليون."
+description: "شقة 170م للبيع بجوار السراج مول مدينة نصر. 3 غرف، ريسبشن 3 قطع، حصة في الأرض، فيو بحري وقبلي، عمارة 2 أسانسير. استلام فوري بسعر لقطة 4.2 مليون."
+image: "/assets/img/properties/Next-to-al-siraj-mall.webp"
+priceNumeric: 4200000
+areaNumeric: 170
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

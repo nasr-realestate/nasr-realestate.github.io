@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور الرابع"
 finish: "نصف تشطيب"
 meta_title: "شقة 190م للبيع في أبراج جرين هيلز مدينة نصر | بجوار المقاولين العرب"
-meta_description: "شقة 190م نصف تشطيب للبيع في أبراج جرين هيلز بطريق الأوتوستراد. موقع هادئ صف ثاني، ريسبشن واسع، 2 أسانسير، متاح جراج بالتقسيط. استلام فوري."
+description: "شقة 190م نصف تشطيب للبيع في أبراج جرين هيلز بطريق الأوتوستراد. موقع هادئ صف ثاني، ريسبشن واسع، 2 أسانسير، متاح جراج بالتقسيط. استلام فوري."
+image: "/assets/img/properties/greenhilz.webp"
+priceNumeric: 4100000
+areaNumeric: 190
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

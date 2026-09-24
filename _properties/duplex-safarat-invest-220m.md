@@ -15,7 +15,13 @@ bathrooms: "2 حمام"
 floor: "الدور 11 + 12 (الخصوصية والفيو)"
 finish: "سوبر لوكس (بحري صرف)"
 meta_title: "دوبلكس 220م للبيع في حي السفارات مدينة نصر | فرص استثمارية"
-meta_description: "دوبلكس 220م سوبر لوكس للبيع في حي السفارات مدينة نصر. عائد استثماري فوري (مؤجر)، فيو بانوراما غير مجروح، مسجل صحة توقيع. فرصة للمستثمرين."
+description: "دوبلكس 220م سوبر لوكس للبيع في حي السفارات مدينة نصر. عائد استثماري فوري (مؤجر)، فيو بانوراما غير مجروح، مسجل صحة توقيع. فرصة للمستثمرين."
+image: "/assets/img/properties/elsfarat-duplex.webp"
+priceNumeric: 4850000
+areaNumeric: 220
+roomsNumeric: 3
+bathsNumeric: 2
+status: available
 ---
 
 <div class="property-detail-wrapper">

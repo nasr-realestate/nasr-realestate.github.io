@@ -15,7 +15,13 @@ bathrooms: "3 حمام فاخر"
 floor: "الدور الثالث (الذهبي)"
 finish: "نصف تشطيب (مرونة التصميم)"
 meta_title: "شقة 250م للبيع في عبد الرزاق السنهوري مدينة نصر | سكن الصفوة"
-meta_description: "شقة 250م للبيع في شارع عبد الرزاق السنهوري (المنطقة الأولى). مبنى حديث فخم، 3 غرف ماستر، 2 باكية جراج، مسجلة شهر عقاري. عنوان النخبة في مدينة نصر."
+description: "شقة 250م للبيع في شارع عبد الرزاق السنهوري (المنطقة الأولى). مبنى حديث فخم، 3 غرف ماستر، 2 باكية جراج، مسجلة شهر عقاري. عنوان النخبة في مدينة نصر."
+image: "/assets/img/properties/abdul-razzaq-al-sanhuri.webp"
+priceNumeric: 12000000
+areaNumeric: 250
+roomsNumeric: 3
+bathsNumeric: 3
+status: available
 ---
 
 <div class="property-detail-wrapper">

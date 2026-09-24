@@ -15,7 +15,13 @@ bathrooms: "1"
 floor: "أرضي تجاري"
 finish: "تشطيب براند (مؤجر)"
 meta_title: "محل تجاري للبيع في عباس العقاد | عائد 160 ألف شهرياً"
-meta_description: "فرصة استثمارية: محل 212م للبيع ثاني نمرة من عباس العقاد. مؤجر لبراند معروف بعائد 160 ألف ج.م شهرياً، واجهة 12 متر، عقد 6 سنوات. متاح تسهيلات في السداد."
+description: "فرصة استثمارية: محل 212م للبيع ثاني نمرة من عباس العقاد. مؤجر لبراند معروف بعائد 160 ألف ج.م شهرياً، واجهة 12 متر، عقد 6 سنوات. متاح تسهيلات في السداد."
+image: "/assets/img/properties/shopp212m.webp"
+priceNumeric: 30000000
+areaNumeric: 212
+roomsNumeric: 0
+bathsNumeric: 1
+status: available
 ---
 
 <div class="property-detail-wrapper">
