@@ -1,85 +1,110 @@
 ### home
-  before: perf=85 seo=100 a11y=100 bp=96 | FCP=2.8 s LCP=2.9 s TBT=260 ms CLS=0.012 SI=2.8 s
-  after: perf=91 seo=100 a11y=100 bp=96 | FCP=1.4 s LCP=2.5 s TBT=270 ms CLS=0.043 SI=1.4 s
-  --- after: 22 audits <0.9 ---
-    largest-contentful-paint | Largest Contentful Paint | 2.5 s
-    total-blocking-time | Total Blocking Time | 270 ms
-    max-potential-fid | Max Potential First Input Delay | 300 ms
+  before: perf=77 seo=100 a11y=100 bp=96 | FCP=2.7 s LCP=3.9 s TBT=290 ms CLS=0.011 SI=2.7 s
+  after: perf=92 seo=100 a11y=100 bp=96 | FCP=1.4 s LCP=2.5 s TBT=260 ms CLS=0.042 SI=1.4 s
+  --- after: 21 audits <0.9 ---
+    total-blocking-time | Total Blocking Time | 260 ms
+    max-potential-fid | Max Potential First Input Delay | 290 ms
     errors-in-console | Browser errors were logged to the console | 
     interactive | Time to Interactive | 7.1 s
-    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 390 ms
-    largest-contentful-paint-element | Largest Contentful Paint element | 2,530 ms
+    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 380 ms
     uses-long-cache-ttl | Serve static assets with an efficient cache policy | 5 resources found
     offscreen-images | Defer offscreen images | Est savings of 34 KiB
     render-blocking-resources | Eliminate render-blocking resources | Est savings of 280 ms
     unminified-css | Minify CSS | Est savings of 17 KiB
     unused-css-rules | Reduce unused CSS | Est savings of 66 KiB
-    unused-javascript | Reduce unused JavaScript | Est savings of 141 KiB
-    uses-text-compression | Enable text compression | Est savings of 103 KiB
+    unused-javascript | Reduce unused JavaScript | Est savings of 137 KiB
+    uses-text-compression | Enable text compression | Est savings of 104 KiB
     uses-responsive-images | Properly size images | Est savings of 86 KiB
     legacy-javascript | Avoid serving legacy JavaScript to modern browsers | 
     cache-insight | Use efficient cache lifetimes | Est savings of 184 KiB
     document-latency-insight | Document request latency | Est savings of 53 KiB
     font-display-insight | Font display | Est savings of 30 ms
+    forced-reflow-insight | Forced reflow | 
     image-delivery-insight | Improve image delivery | Est savings of 56 KiB
     network-dependency-tree-insight | Network dependency tree | 
     render-blocking-insight | Render blocking requests | Est savings of 280 ms
+  console errors:
+    {"source":"network","description":"Failed to load resource: the server responded with a status of 404 (Not Found)","sourceLocation":{"type":"source-location","url":"http://127.0.0.1:8082/favicon.ico","urlProvider":"netwo
+  long tasks: 6
+    {"url":"https://www.googletagmanager.com/gtag/js?id=G-CDT8Q9YSJ0&cx=c&gtm=4e69n0","dur":285,"start":7164}
+    {"url":"https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP","dur":163,"start":5498}
+    {"url":"http://127.0.0.1:8082/","dur":122,"start":1076}
+    {"url":"http://127.0.0.1:8082/","dur":85,"start":1198}
+    {"url":"https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP","dur":80,"start":5710}
+  TTI=7.1 s mainthread=1.7 s
   LCP el: {"type":"node","lhId":"page-0-BODY","path":"1,HTML,1,BODY","selector":"body.homepage","boundingRect":{"top":0,"bottom":6332,"left":120,"right":532,"width":412,"height":6332},"snippet":"<body class=\"homepage\">","nodeLab
 ### properties
-  before: perf=57 seo=100 a11y=98 bp=96 | FCP=5.3 s LCP=6.9 s TBT=290 ms CLS=0.026 SI=5.3 s
-  after: perf=63 seo=100 a11y=100 bp=96 | FCP=2.1 s LCP=4.9 s TBT=730 ms CLS=0.015 SI=2.1 s
+  before: perf=71 seo=100 a11y=98 bp=96 | FCP=2.9 s LCP=6.1 s TBT=180 ms CLS=0.027 SI=2.9 s
+  after: perf=60 seo=100 a11y=100 bp=96 | FCP=2.1 s LCP=6.2 s TBT=640 ms CLS=0.03 SI=2.1 s
   --- after: 26 audits <0.9 ---
     first-contentful-paint | First Contentful Paint | 2.1 s
-    largest-contentful-paint | Largest Contentful Paint | 4.9 s
-    total-blocking-time | Total Blocking Time | 730 ms
-    max-potential-fid | Max Potential First Input Delay | 330 ms
+    largest-contentful-paint | Largest Contentful Paint | 6.2 s
+    total-blocking-time | Total Blocking Time | 640 ms
+    max-potential-fid | Max Potential First Input Delay | 280 ms
     errors-in-console | Browser errors were logged to the console | 
     interactive | Time to Interactive | 8.3 s
-    mainthread-work-breakdown | Minimize main-thread work | 3.6 s
-    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 510 ms
-    largest-contentful-paint-element | Largest Contentful Paint element | 4,870 ms
+    mainthread-work-breakdown | Minimize main-thread work | 3.2 s
+    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 340 ms
+    largest-contentful-paint-element | Largest Contentful Paint element | 6,160 ms
     lcp-lazy-loaded | Largest Contentful Paint image was lazily loaded | 
     uses-long-cache-ttl | Serve static assets with an efficient cache policy | 10 resources found
-    render-blocking-resources | Eliminate render-blocking resources | Est savings of 280 ms
+    render-blocking-resources | Eliminate render-blocking resources | Est savings of 290 ms
     unminified-css | Minify CSS | Est savings of 16 KiB
     unused-css-rules | Reduce unused CSS | Est savings of 66 KiB
     unused-javascript | Reduce unused JavaScript | Est savings of 141 KiB
     uses-text-compression | Enable text compression | Est savings of 252 KiB
     uses-responsive-images | Properly size images | Est savings of 185 KiB
     legacy-javascript | Avoid serving legacy JavaScript to modern browsers | 
-    dom-size | Avoid an excessive DOM size | 1,890 elements
+    dom-size | Avoid an excessive DOM size | 1,891 elements
     cache-insight | Use efficient cache lifetimes | Est savings of 344 KiB
     document-latency-insight | Document request latency | Est savings of 162 KiB
     font-display-insight | Font display | Est savings of 40 ms
     image-delivery-insight | Improve image delivery | Est savings of 23 KiB
     lcp-discovery-insight | LCP request discovery | 
     network-dependency-tree-insight | Network dependency tree | 
-  LCP el: {"type":"node","lhId":"page-0-IMG","path":"1,HTML,1,BODY,55,MAIN,2,DIV,9,SECTION,2,A,0,DIV,0,IMG","selector":"section#plGrid > a.pl-card > div.pl-card-img-wrap > img.pl-card-img","boundingRect":{"top":682,"bottom":972,"l
+  console errors:
+    {"source":"network","description":"Failed to load resource: the server responded with a status of 404 (Not Found)","sourceLocation":{"type":"source-location","url":"http://127.0.0.1:8082/favicon.ico","urlProvider":"netwo
+  long tasks: 10
+    {"url":"https://www.googletagmanager.com/gtag/js?id=G-CDT8Q9YSJ0&cx=c&gtm=4e69n0","dur":281,"start":8724}
+    {"url":"http://127.0.0.1:8082/properties/","dur":196,"start":1923}
+    {"url":"http://127.0.0.1:8082/properties/","dur":194,"start":2344}
+    {"url":"http://127.0.0.1:8082/properties/","dur":179,"start":2538}
+    {"url":"http://127.0.0.1:8082/properties/","dur":159,"start":2185}
+  TTI=8.3 s mainthread=3.2 s
+  LCP el: {"type":"node","lhId":"page-0-IMG","path":"1,HTML,1,BODY,57,MAIN,2,DIV,9,SECTION,2,A,0,DIV,0,IMG","selector":"section#plGrid > a.pl-card > div.pl-card-img-wrap > img.pl-card-img","boundingRect":{"top":682,"bottom":972,"l
 ### properties10th-district-180m
-  before: perf=64 seo=100 a11y=96 bp=96 | FCP=4.0 s LCP=5.5 s TBT=280 ms CLS=0.003 SI=4.0 s
-  after: perf=85 seo=100 a11y=100 bp=96 | FCP=1.4 s LCP=3.5 s TBT=260 ms CLS=0.011 SI=1.4 s
-  --- after: 23 audits <0.9 ---
+  before: perf=74 seo=100 a11y=96 bp=96 | FCP=2.9 s LCP=4.4 s TBT=260 ms CLS=0.003 SI=2.9 s
+  after: perf=88 seo=100 a11y=100 bp=96 | FCP=1.4 s LCP=3.5 s TBT=210 ms CLS=0.011 SI=1.4 s
+  --- after: 22 audits <0.9 ---
     largest-contentful-paint | Largest Contentful Paint | 3.5 s
-    total-blocking-time | Total Blocking Time | 260 ms
-    max-potential-fid | Max Potential First Input Delay | 350 ms
+    total-blocking-time | Total Blocking Time | 210 ms
+    max-potential-fid | Max Potential First Input Delay | 250 ms
     errors-in-console | Browser errors were logged to the console | 
-    interactive | Time to Interactive | 7.8 s
+    interactive | Time to Interactive | 7.5 s
     mainthread-work-breakdown | Minimize main-thread work | 2.1 s
-    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 430 ms
-    largest-contentful-paint-element | Largest Contentful Paint element | 3,530 ms
+    third-party-summary | Reduce the impact of third-party code | Third-party code blocked the main thread for 300 ms
+    largest-contentful-paint-element | Largest Contentful Paint element | 3,460 ms
     uses-long-cache-ttl | Serve static assets with an efficient cache policy | 8 resources found
     render-blocking-resources | Eliminate render-blocking resources | Est savings of 270 ms
     unminified-css | Minify CSS | Est savings of 17 KiB
     unused-css-rules | Reduce unused CSS | Est savings of 64 KiB
-    unused-javascript | Reduce unused JavaScript | Est savings of 136 KiB
-    uses-text-compression | Enable text compression | Est savings of 107 KiB
-    uses-responsive-images | Properly size images | Est savings of 225 KiB
+    unused-javascript | Reduce unused JavaScript | Est savings of 141 KiB
+    uses-text-compression | Enable text compression | Est savings of 108 KiB
+    uses-responsive-images | Properly size images | Est savings of 173 KiB
     legacy-javascript | Avoid serving legacy JavaScript to modern browsers | 
-    cache-insight | Use efficient cache lifetimes | Est savings of 346 KiB
-    document-latency-insight | Document request latency | Est savings of 56 KiB
-    font-display-insight | Font display | Est savings of 40 ms
-    forced-reflow-insight | Forced reflow | 
-    image-delivery-insight | Improve image delivery | Est savings of 216 KiB
+    cache-insight | Use efficient cache lifetimes | Est savings of 302 KiB
+    document-latency-insight | Document request latency | Est savings of 57 KiB
+    font-display-insight | Font display | Est savings of 30 ms
+    image-delivery-insight | Improve image delivery | Est savings of 142 KiB
     network-dependency-tree-insight | Network dependency tree | 
     render-blocking-insight | Render blocking requests | Est savings of 270 ms
-  LCP el: {"type":"node","lhId":"page-0-IMG","path":"1,HTML,1,BODY,56,MAIN,3,DIV,3,SECTION,0,DIV,1,IMG","selector":"div.pp-container > section.pp-gallery > div.pp-gallery-main > img#ppMainImage","boundingRect":{"top":264,"bottom":
+  console errors:
+    {"source":"network","description":"Failed to load resource: the server responded with a status of 404 (Not Found)","sourceLocation":{"type":"source-location","url":"http://127.0.0.1:8082/favicon.ico","urlProvider":"netwo
+  long tasks: 5
+    {"url":"https://www.googletagmanager.com/gtag/js?id=G-CDT8Q9YSJ0&cx=c&gtm=4e69n0","dur":249,"start":7840}
+    {"url":"http://127.0.0.1:8082/properties/10th-district-180m/","dur":173,"start":1127}
+    {"url":"https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP","dur":139,"start":6263}
+    {"url":"http://127.0.0.1:8082/properties/10th-district-180m/","dur":112,"start":1300}
+    {"url":"https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP","dur":64,"start":6402}
+  TTI=7.5 s mainthread=2.1 s
+  LCP el: {"type":"node","lhId":"page-0-IMG","path":"1,HTML,1,BODY,58,MAIN,3,DIV,3,SECTION,0,DIV,1,IMG","selector":"div.pp-container > section.pp-gallery > div.pp-gallery-main > img#ppMainImage","boundingRect":{"top":264,"bottom":
