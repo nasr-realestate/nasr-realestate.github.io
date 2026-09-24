@@ -94,7 +94,7 @@ jobs:
                 const c=r.categories,a=r.audits;
                 const s=k=>c[k]?Math.round(c[k].score*100):"-";
                 const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:"-";
-                out.push(`${side}: perf=${s("performance")} seo=${s("seo")} a11y=${s("accessibility")} bp=${s("best-practices")} | FCP=${g("first-contentful-paint")} LCP=${g("largest-contentful-paint")} TBT=${g("total-blocking-time")} CLS=${g("cumulative-layout-shift")} SI=${g("speed-index")}`);
+                out.push(`${side}: perf=${s("performance")} seo=${s("seo")} a11y=${s("accessibility")} bp=${s("best-practices")} | FCP=${g("first-contentful-paint")} LCP=${g("largest-contentful-paint")} TBT=${g("total-blocking-time")} CLS=${g("cumulative-layout-shift")} SI=${g("speed-index")} TTI=${g("interactive")} mainthread=${g("mainthread-work-breakdown")} dom=${a["dom-size"]&&a["dom-size"].displayValue||"-"}`);
               }
               console.log("### "+slug+"\n  "+out.join("\n  "));
               try{

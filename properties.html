@@ -237,6 +237,14 @@ hide_navbar: true
   .pl-grid-heading i { color: #d4af37; }
   .pl-grid-heading-count { color: #888; font-size: 0.85rem; font-weight: 600; }
 
+  /* ⚠️ تحسين (2026-09-24): الشبكة تعرض 94 بطاقة دفعة واحدة (1,890 عنصر DOM).
+     content-visibility يؤجّل عرض البطاقات خارج الشاشة → عمل أقل على الخيط الرئيسي.
+     contain-intrinsic-size يحفظ مكان البطاقة حتى لا يحدث CLS. */
+  .pl-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 420px;
+  }
+
   .pl-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -244,7 +252,15 @@ hide_navbar: true
     min-height: 300px;
   }
   @media (max-width: 480px) {
-    .pl-grid { grid-template-columns: 1fr; gap: 14px; }
+    /* ⚠️ تحسين (2026-09-24): الشبكة تعرض 94 بطاقة دفعة واحدة (1,890 عنصر DOM).
+     content-visibility يؤجّل عرض البطاقات خارج الشاشة → عمل أقل على الخيط الرئيسي.
+     contain-intrinsic-size يحفظ مكان البطاقة حتى لا يحدث CLS. */
+  .pl-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 420px;
+  }
+
+  .pl-grid { grid-template-columns: 1fr; gap: 14px; }
   }
 
   /* ═══ Card ═══ */
