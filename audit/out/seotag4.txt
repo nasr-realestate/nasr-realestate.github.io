@@ -1,0 +1,224 @@
+TPL=/opt/hostedtoolcache/Ruby/3.1.7/x64/lib/ruby/gems/3.1.0/gems/jekyll-seo-tag-2.8.0/lib/template.html
+=========== template.html ===========
+<!-- Begin Jekyll SEO tag v{{ seo_tag.version }} -->
+{% if seo_tag.title? %}
+  <title>{{ seo_tag.title }}</title>
+{% endif %}
+
+<meta name="generator" content="Jekyll v{{ jekyll.version }}" />
+
+{% if seo_tag.page_title %}
+  <meta property="og:title" content="{{ seo_tag.page_title }}" />
+{% endif %}
+
+{% if seo_tag.author.name %}
+  <meta name="author" content="{{ seo_tag.author.name }}" />
+{% endif %}
+
+<meta property="og:locale" content="{{ seo_tag.page_locale }}" />
+
+{% if seo_tag.description %}
+  <meta name="description" content="{{ seo_tag.description }}" />
+  <meta property="og:description" content="{{ seo_tag.description }}" />
+{% endif %}
+
+{% if site.url %}
+  <link rel="canonical" href="{{ seo_tag.canonical_url }}" />
+  <meta property="og:url" content="{{ seo_tag.canonical_url }}" />
+{% endif %}
+
+{% if seo_tag.site_title %}
+  <meta property="og:site_name" content="{{ seo_tag.site_title }}" />
+{% endif %}
+
+{% if seo_tag.image %}
+  <meta property="og:image" content="{{ seo_tag.image.path }}" />
+  {% if seo_tag.image.height %}
+    <meta property="og:image:height" content="{{ seo_tag.image.height }}" />
+  {% endif %}
+  {% if seo_tag.image.width %}
+    <meta property="og:image:width" content="{{ seo_tag.image.width }}" />
+  {% endif %}
+  {% if seo_tag.image.alt %}
+    <meta property="og:image:alt" content="{{ seo_tag.image.alt }}" />
+  {% endif %}
+{% endif %}
+
+{% if page.date %}
+  <meta property="og:type" content="article" />
+  <meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}" />
+{% else %}
+  <meta property="og:type" content="website" />
+{% endif %}
+
+{% if paginator.previous_page %}
+  <link rel="prev" href="{{ paginator.previous_page_path | absolute_url }}" />
+{% endif %}
+{% if paginator.next_page %}
+  <link rel="next" href="{{ paginator.next_page_path | absolute_url }}" />
+{% endif %}
+
+{% if seo_tag.image %}
+  <meta name="twitter:card" content="{{ page.twitter.card | default: site.twitter.card | default: "summary_large_image" }}" />
+  <meta property="twitter:image" content="{{ seo_tag.image.path }}" />
+{% else %}
+  <meta name="twitter:card" content="summary" />
+{% endif %}
+
+{% if seo_tag.image.alt %}
+  <meta name="twitter:image:alt" content="{{ seo_tag.image.alt }}" />
+{% endif %}
+
+{% if seo_tag.page_title %}
+  <meta property="twitter:title" content="{{ seo_tag.page_title }}" />
+{% endif %}
+
+{% if site.twitter %}
+  <meta name="twitter:site" content="@{{ site.twitter.username | remove:'@' }}" />
+
+  {% if seo_tag.author.twitter %}
+    <meta name="twitter:creator" content="@{{ seo_tag.author.twitter | remove:'@' }}" />
+  {% endif %}
+{% endif %}
+
+{% if site.facebook %}
+  {% if site.facebook.admins %}
+    <meta property="fb:admins" content="{{ site.facebook.admins }}" />
+  {% endif %}
+
+  {% if site.facebook.publisher %}
+    <meta property="article:publisher" content="{{ site.facebook.publisher }}" />
+  {% endif %}
+
+  {% if site.facebook.app_id %}
+    <meta property="fb:app_id" content="{{ site.facebook.app_id }}" />
+  {% endif %}
+{% endif %}
+
+{% if site.webmaster_verifications %}
+  {% if site.webmaster_verifications.google %}
+    <meta name="google-site-verification" content="{{ site.webmaster_verifications.google }}" />
+  {% endif %}
+
+  {% if site.webmaster_verifications.bing %}
+    <meta name="msvalidate.01" content="{{ site.webmaster_verifications.bing }}" />
+  {% endif %}
+
+  {% if site.webmaster_verifications.alexa %}
+    <meta name="alexaVerifyID" content="{{ site.webmaster_verifications.alexa }}" />
+  {% endif %}
+
+  {% if site.webmaster_verifications.yandex %}
+    <meta name="yandex-verification" content="{{ site.webmaster_verifications.yandex }}" />
+  {% endif %}
+
+  {% if site.webmaster_verifications.baidu %}
+    <meta name="baidu-site-verification" content="{{ site.webmaster_verifications.baidu }}" />
+  {% endif %}
+
+  {% if site.webmaster_verifications.facebook %}
+    <meta name="facebook-domain-verification" content="{{ site.webmaster_verifications.facebook }}" />
+  {% endif %}
+{% elsif site.google_site_verification %}
+  <meta name="google-site-verification" content="{{ site.google_site_verification }}" />
+{% endif %}
+
+<script type="application/ld+json">
+  {{ seo_tag.json_ld | jsonify }}
+</script>
+
+<!-- End Jekyll SEO tag -->
+=========== drop.rb ===========
+# frozen_string_literal: true
+
+module Jekyll
+  class SeoTag
+    # A drop representing the current page's author
+    #
+    # Author name will be pulled from:
+    #
+    # 1. The page's `author` key
+    # 2. The first author in the page's `authors` key
+    # 3. The `author` key in the site config
+    #
+    # If the result from the name search is a string, we'll also check
+    # for additional author metadata in `site.data.authors`
+    class AuthorDrop < Jekyll::Drops::Drop
+      # Initialize a new AuthorDrop
+      #
+      # page - The page hash (e.g., Page#to_liquid)
+      # site - The Jekyll::Drops::SiteDrop
+      def initialize(page: nil, site: nil)
+        raise ArgumentError unless page && site
+
+        @mutations = {}
+        @page = page
+        @site = site
+      end
+
+      # AuthorDrop#to_s should return name, allowing the author drop to safely
+      # replace `page.author`, if necessary, and remain backwards compatible
+      def name
+        author_hash["name"]
+      end
+      alias_method :to_s, :name
+
+      def twitter
+        return @twitter if defined? @twitter
+
+        twitter = author_hash["twitter"] || author_hash["name"]
+        @twitter = twitter.is_a?(String) ? twitter.sub(%r!^@!, "") : nil
+      end
+
+      private
+
+      attr_reader :site, :page
+
+      # Finds the page author in the page.author, page.authors, or site.author
+      #
+      # Returns a string or hash representing the author
+      def resolved_author
+        return @resolved_author if defined? @resolved_author
+
+        sources = [page["author"]]
+        sources << page["authors"].first if page["authors"].is_a?(Array)
+        sources << site["author"]
+        @resolved_author = sources.find { |s| !s.to_s.empty? }
+      end
+
+      # If resolved_author is a string, attempts to find coresponding author
+      # metadata in `site.data.authors`
+      #
+      # Returns a hash representing additional metadata or an empty hash
+      def site_data_hash
+        @site_data_hash ||= begin
+          return {} unless resolved_author.is_a?(String)
+          return {} unless site.data["authors"].is_a?(Hash)
+
+          author_hash = site.data["authors"][resolved_author]
+          author_hash.is_a?(Hash) ? author_hash : {}
+        end
+      end
+
+      # Returns the normalized author hash representing the page author,
+      # including site-wide metadata if the author is provided as a string,
+      # or an empty hash, if the author cannot be resolved
+      def author_hash
+        @author_hash ||= begin
+          case resolved_author
+          when Hash
+            resolved_author
+          when String
+            { "name" => resolved_author }.merge!(site_data_hash)
+          else
+            {}
+          end
+        end
+      end
+
+      # Since author_hash is aliased to fallback_data, any values in the hash
+      # will be exposed via the drop, allowing support for arbitrary metadata
+      alias_method :fallback_data, :author_hash
+    end
+  end
+end
