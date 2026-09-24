@@ -16,124 +16,91 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Fetch raw HTML of key pages
+      - name: Extract Lighthouse category scores from committed JSONs
         run: |
-          mkdir -p audit/raw audit/heads audit/out
-          BASE="https://nasr-realestate.github.io"
-          for p in "/" "/properties/" "/properties/10th-district-180m/" "/requests/" "/agent.html" "/add-your-property.html" "/privacy-policy.html" "/about-us.html" "/contact-us.html" "/ai-feed.json" "/llms.txt" "/feed.xml" "/luxury-gallery.html" "/property-images.html" "/404.html" "/assets/img/social-home.webp" "/assets/img/social-home.png" "/floating-menu.html" "/tools/generator.html" "/assets/tools/valuation.html" "/ARENA-TEST/" "/sitemap.xml"; do
-            fn=$(echo "$p" | tr '/' '_'); [ "$fn" = "_" ] && fn="home"
-            code=$(curl -sS -L -A "Mozilla/5.0 (compatible; ArenaAudit/1.0)" -o "audit/raw/${fn}" -w "%{http_code}" "$BASE$p")
-            echo "$p -> $code" >> audit/out/http-status.txt
-          done
-          echo "=== HEADERS / ===" > audit/out/headers.txt
-          curl -sSI -L "$BASE/" >> audit/out/headers.txt
-          echo "=== HEADERS css ===" >> audit/out/headers.txt
-          curl -sSI -L "$BASE/assets/css/style.css" >> audit/out/headers.txt
-          echo "=== HEADERS img ===" >> audit/out/headers.txt
-          curl -sSI -L "$BASE/assets/img/properties/apartment-180m-nasr-city.webp" >> audit/out/headers.txt
-
-      - name: Extract <head> for every page
-        run: |
-          for f in audit/raw/*; do
-            b=$(basename "$f")
-            python3 - "$f" "audit/heads/$b.txt" <<'PY'
-          import sys,re
-          src,dst=sys.argv[1],sys.argv[2]
-          try: html=open(src,encoding='utf-8',errors='replace').read()
-          except Exception as e: open(dst,'w').write(str(e)); raise SystemExit
-          m=re.search(r'(?is)<head.*?</head>',html)
-          out=m.group(0) if m else html[:8000]
-          open(dst,'w',encoding='utf-8').write(out)
-          PY
-          done
-
-      - name: Crawl sitemap for broken links
-        run: |
-          curl -sS https://nasr-realestate.github.io/sitemap.xml -o audit/out/sitemap.xml
-          python3 - <<'PY' > audit/out/link-status.txt
-          import re,urllib.request,concurrent.futures
-          xml=open('audit/out/sitemap.xml',encoding='utf-8').read()
-          urls=re.findall(r'<loc>(.*?)</loc>',xml)
-          print("TOTAL URLS IN SITEMAP:",len(urls))
-          def chk(u):
-            try:
-              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0 ArenaAudit'})
-              with urllib.request.urlopen(req,timeout=30) as r: return (u,r.status,len(r.read()))
-            except Exception as e: return (u,getattr(e,'code',str(e)),0)
-          with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
-            for u,st,sz in ex.map(chk,urls):
-              print(f"{st}\t{sz}\t{u}")
-          PY
-          grep -c "^200" audit/out/link-status.txt > audit/out/ok-count.txt || true
-          echo "--- NON-200 ---" >> audit/out/http-status.txt
-          awk -F'\t' '$1!=200' audit/out/link-status.txt >> audit/out/http-status.txt || true
-
-      - name: Install Lighthouse + Chrome
-        run: |
-          npm install -g lighthouse@12
-          npx --yes @puppeteer/browsers install chrome@stable
-
-      - name: Locate Chrome
-        id: chrome
-        run: |
-          CH=$(ls -d $PWD/chrome/*/chrome-linux64/chrome 2>/dev/null | head -1)
-          if [ -z "$CH" ]; then CH=$(which google-chrome || true); fi
-          echo "path=$CH" >> $GITHUB_OUTPUT
-          echo "CHROME=$CH"
-
-      - name: Run Lighthouse (mobile) — home
-        run: |
-          export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-home-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
-
-      - name: Run Lighthouse (mobile) — properties
-        run: |
-          export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/properties/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-properties-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
-
-      - name: Run Lighthouse (mobile) — property detail
-        run: |
-          export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/properties/10th-district-180m/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-property-mobile.json --form-factor=mobile --screenEmulation.mobile --throttling-method=simulate || true
-
-      - name: Run Lighthouse (desktop) — home
-        run: |
-          export CHROME_PATH=${{ steps.chrome.outputs.path }}
-          lighthouse "https://nasr-realestate.github.io/" --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --output=json --output-path=./audit/out/lh-home-desktop.json --preset=desktop || true
-
-      - name: Summarize Lighthouse
-        run: |
+          mkdir -p audit/out
+          : > audit/out/scores.txt
           for f in audit/out/lh-*.json; do
-            b=$(basename "$f")
+            [ -f "$f" ] || continue
             node -e "
-              const r=require('./$f');
-              const a=r.audits;
-              const score=(id)=>a[id]&&a[id].score!==null?Math.round(a[id].score*100):'-';
-              const g=(id)=>a[id]&&a[id].displayValue?a[id].displayValue:'-';
-              console.log('=== $b ===');
-              console.log('  perf='+score('performance')+' seo='+score('seo')+' a11y='+score('accessibility')+' bp='+score('best-practices'));
-              console.log('  FCP='+g('first-contentful-paint')+' | LCP='+g('largest-contentful-paint')+' | TBT='+g('total-blocking-time')+' | CLS='+g('cumulative-layout-shift')+' | SI='+g('speed-index')+' | TTFB='+g('server-response-time'));
-              const lcpEl=a['largest-contentful-paint-element']?JSON.stringify(a['largest-contentful-paint-element'].details&&a['largest-contentful-paint-element'].details.items?a['largest-contentful-paint-element'].details.items[0].items[0].node:null):'-';
-              console.log('  LCP element: '+lcpEl);
-              const groups=['diagnostics','load-opportunities','seo-mobile','seo-content','a11y-color-contrast','best-practices-trust-safety','best-practices-browser-compat','a11y-names-labels','a11y-aria','a11y-contrast','a11y-navigation','a11y-descriptions','a11y-language','a11y-tables','a11y-forms','a11y-audio-video','a11y-visual-order','seo-crawl','seo-meta'];
-              const fails=Object.values(a).filter(x=>x.score!==null&&x.score<0.9&&x.scoreDisplayMode!=='informative'&&x.scoreDisplayMode!=='notApplicable').map(x=>x.id+' | '+x.title+' | '+(x.displayValue||''));
-              console.log('  --- audits scoring <0.9 ('+fails.length+') ---');
-              fails.forEach(x=>console.log('   - '+x));
-              const na=Object.values(a).filter(x=>x.scoreDisplayMode==='manual'||x.scoreDisplayMode==='notApplicable').length;
-              console.log('  manual/NA audits: '+na);
-            " >> audit/out/lighthouse-summary.txt 2>&1 || true
+              const fs=require('fs');
+              const r=JSON.parse(fs.readFileSync('$f','utf8'));
+              const c=r.categories,a=r.audits;
+              const s=k=>c[k]?Math.round(c[k].score*100):'-';
+              const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:'-';
+              console.log('=== $f ===');
+              console.log('  Performance='+s('performance')+' SEO='+s('seo')+' Accessibility='+s('accessibility')+' BestPractices='+s('best-practices'));
+              console.log('  FCP='+g('first-contentful-paint')+' LCP='+g('largest-contentful-paint')+' TBT='+g('total-blocking-time')+' CLS='+g('cumulative-layout-shift')+' SI='+g('speed-index')+' TTI='+g('interactive'));
+              const keys=Object.keys(a).filter(k=>a[k].score!==null&&a[k].score<1&&a[k].scoreDisplayMode!=='informative'&&a[k].scoreDisplayMode!=='notApplicable'&&a[k].scoreDisplayMode!=='manual');
+              console.log('  failing audits: '+keys.join(', '));
+              console.log('  SEo group detail:');
+              ['is-crawlable','robots-txt','http-status-code','link-text','crawlable-anchors','document-title','meta-description','hreflang','canonical','font-size','tap-targets','image-alt','heading-order','structured-data'].forEach(k=>{ if(a[k]) console.log('    '+k+'='+(a[k].score===null?'n/a':a[k].score)+(a[k].displayValue?' ('+a[k].displayValue+')':'')); });
+              console.log('  top opportunities:');
+              Object.values(a).filter(x=>x.details&&x.details.overallSavingsMs>50).sort((x,y)=>y.details.overallSavingsMs-x.details.overallSavingsMs).slice(0,10).forEach(x=>console.log('    '+x.id+' saves '+Math.round(x.details.overallSavingsMs)+'ms'));
+              const items=x=>x&&x.details&&x.details.items?x.details.items:[];
+              console.log('  --- render-blocking-resources ---');
+              items(a['render-blocking-resources']).forEach(i=>console.log('    '+i.url+' ('+Math.round(i.wastedMs)+'ms, '+i.totalBytes+'B)'));
+              console.log('  --- third-party-summary ---');
+              items(a['third-party-summary']).forEach(i=>console.log('    '+i.entity+' blocking='+i.blockingTime+'ms bytes='+i.transferSize));
+              console.log('  --- errors-in-console ---');
+              items(a['errors-in-console']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,300)));
+              console.log('  --- uses-responsive-images ---');
+              items(a['uses-responsive-images']).slice(0,6).forEach(i=>console.log('    '+i.url+' '+(i.totalBytes-i.wastedBytes)+'/'+i.totalBytes));
+              console.log('  --- image-alt failures ---');
+              items(a['image-alt']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,200)));
+              console.log('  --- heading-order ---');
+              items(a['heading-order']).forEach(i=>console.log('    '+JSON.stringify(i).slice(0,300)));
+              console.log('  --- structured-data (errors) ---');
+              const sd=a['structured-data'];
+              if(sd&&sd.details&&sd.details.items){sd.details.items.forEach(i=>console.log('    '+JSON.stringify(i).slice(0,500)));}              
+            " >> audit/out/scores.txt 2>&1
           done
-          cat audit/out/lighthouse-summary.txt
+          cat audit/out/scores.txt
 
-      - name: Commit audit results to branch
+      - name: Probe Cloudflare Worker backend
+        run: |
+          : > audit/out/worker-probe.txt
+          W="https://royal-snow-ea32.footcai-555.workers.dev/"
+          echo "=== OPTIONS ===" >> audit/out/worker-probe.txt
+          curl -sS -i -X OPTIONS "$W" -H "Origin: https://nasr-realestate.github.io" -m 30 >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
+          echo "" >> audit/out/worker-probe.txt
+          echo "=== POST / (chat ping) ===" >> audit/out/worker-probe.txt
+          curl -sS -i -X POST "$W" -H "Content-Type: application/json" -H "Origin: https://nasr-realestate.github.io" -m 40 \
+            -d '{"source":"arena-audit","message":"ping","history":[]}' >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
+          echo "" >> audit/out/worker-probe.txt
+          echo "=== POST /upload-images (empty) ===" >> audit/out/worker-probe.txt
+          curl -sS -i -X POST "${W}upload-images" -H "Content-Type: application/json" -m 30 -d '{"images":[]}' >> audit/out/worker-probe.txt 2>&1 || echo "FAILED" >> audit/out/worker-probe.txt
+          cat audit/out/worker-probe.txt
+
+      - name: PageSpeed Insights API (mobile)
+        run: |
+          : > audit/out/psi.txt
+          for u in "https://nasr-realestate.github.io/" "https://nasr-realestate.github.io/properties/" "https://nasr-realestate.github.io/properties/10th-district-180m/"; do
+            echo "=== $u ===" >> audit/out/psi.txt
+            curl -sS -m 180 "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")&strategy=mobile&category=performance&category=seo&category=accessibility&category=best-practices" -o psi_tmp.json || echo "PSI FAILED" >> audit/out/psi.txt
+            if [ -f psi_tmp.json ]; then
+              node -e "
+                try{
+                  const r=require('./psi_tmp.json');
+                  const lr=r.lighthouseResult;
+                  if(!lr){console.log('no lighthouseResult', Object.keys(r));process.exit(0)}
+                  const c=lr.categories,a=lr.audits;
+                  const s=k=>c[k]?Math.round(c[k].score*100):'-';
+                  const g=k=>a[k]&&a[k].displayValue?a[k].displayValue:'-';
+                  console.log('  perf='+s('performance')+' seo='+s('seo')+' a11y='+s('accessibility')+' bp='+s('best-practices'));
+                  console.log('  FCP='+g('first-contentful-paint')+' LCP='+g('largest-contentful-paint')+' TBT='+g('total-blocking-time')+' CLS='+g('cumulative-layout-shift')+' SI='+g('speed-index'));
+                  console.log('  env: '+JSON.stringify(lr.configSettings.formFactor)+' '+(lr.configSettings.throttling||''));
+                }catch(e){console.log('parse error: '+e.message)}
+              " >> audit/out/psi.txt
+              rm -f psi_tmp.json
+            fi
+          done
+          cat audit/out/psi.txt
+
+      - name: Commit results
         run: |
           git config user.name "Arena Audit Bot"
           git config user.email "audit@arena.local"
           git add -f audit
-          git commit -m "chore(audit): audit results [audit-results]" || echo "nothing to commit"
+          git commit -m "chore(audit): scores + worker probe + psi [audit-results]" || echo "nothing to commit"
           git push origin HEAD:${{ github.ref_name }}
