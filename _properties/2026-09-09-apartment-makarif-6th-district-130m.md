@@ -71,7 +71,7 @@ status: available
             <div class="spec-item"><span><i class="fas fa-bath gold-text"></i> الحمامات:</span> <strong>1 حمام + مطبخ</strong></div>
             <div class="spec-item"><span><i class="fas fa-wind gold-text"></i> التهوية:</span> <strong>واجهة بحري + بلكونة واسعة</strong></div>
         </div>
-        <div class="detail-text" style="margin-top: 15px;">
+        <div class="detail-text u-mt15">
             <p><strong>حالة الشقة:</strong> الوحدة معروضة للبيع بحالتها الحالية التي تحتاج إلى تشطيب وتحديث، وهي ميزة رائعة لمن يبحث عن شقة بسعر تنافسي ليقوم بتأسيسها وتشطيب ديكوراتها بالكامل على ذوقه الخاص دون إهدار لتشطيبات سابقة.</p>
         </div>
     </section>

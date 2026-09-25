@@ -72,7 +72,7 @@ status: available
             <div class="spec-item"><span><i class="fas fa-bath gold-text"></i> الحمامات:</span> <strong>2 حمام</strong></div>
             <div class="spec-item"><span><i class="fas fa-paint-roller gold-text"></i> التشطيب:</span> <strong>نصف تشطيب (على ذوقك)</strong></div>
         </div>
-        <div class="detail-text" style="margin-top: 15px;">
+        <div class="detail-text u-mt15">
             <p>الشقة <strong>نصف تشطيب</strong>، مما يمنح المشتري ميزة هامة جداً وهي إمكانية تأسيس السباكة والكهرباء واختيار الديكورات والألوان على ذوقه الخاص منذ البداية، دون الحاجة لتحمل تكلفة تكسير تشطيبات قديمة.</p>
         </div>
     </section>

@@ -71,7 +71,7 @@ status: available
             <div class="spec-item"><span><i class="fas fa-bath gold-text"></i> الحمامات:</span> <strong>{{ page.bathrooms }}</strong></div>
             <div class="spec-item"><span><i class="fas fa-wind gold-text"></i> الواجهة:</span> <strong>بلكونة رئيسية (بحري صريح)</strong></div>
         </div>
-        <div class="detail-text" style="margin-top: 15px;">
+        <div class="detail-text u-mt15">
             <p><strong>حالة الشقة:</strong> الوحدة بحالة تتيح لك خيارين مرنين؛ إما إجراء بعض التشطيبات واللمسات السريعة لتكون جاهزة للسكن الفوري، أو استغلال التقسيم الواسع للقيام بتحديثات عصرية شاملة وتحويلها إلى "تحفة معمارية" سواء كشقة مودرن أو مقر عمل فخم.</p>
         </div>
     </section>

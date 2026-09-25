@@ -65,11 +65,11 @@ status: available
     <!-- 5. الفرصة الاستثمارية (العائد المادي) -->
     <section class="detail-section">
         <h2 class="detail-title"><i class="fas fa-coins"></i> القيمة الاستثمارية والعائد (ROI)</h2>
-        <div class="technical-specs" style="background: rgba(212,175,55,0.05); border: 1px solid #d4af37;">
-            <div class="spec-item" style="border-bottom: none;"><span><i class="fas fa-file-invoice-dollar gold-text"></i> الإيجار الحالي:</span> <strong>35,000 ج.م شهرياً</strong></div>
-            <div class="spec-item" style="border-bottom: none;"><span><i class="fas fa-hourglass-half gold-text"></i> حالة العقد:</span> <strong>ينتهي خلال شهر واحد فقط</strong></div>
+        <div class="technical-specs hl-box">
+            <div class="spec-item u-nobb"><span><i class="fas fa-file-invoice-dollar gold-text"></i> الإيجار الحالي:</span> <strong>35,000 ج.م شهرياً</strong></div>
+            <div class="spec-item u-nobb"><span><i class="fas fa-hourglass-half gold-text"></i> حالة العقد:</span> <strong>ينتهي خلال شهر واحد فقط</strong></div>
         </div>
-        <div class="detail-text" style="margin-top: 15px;">
+        <div class="detail-text u-mt15">
             <p>هذه هي الميزة الكبرى للمشتري الجديد؛ العقد الحالي ينتهي خلال شهر، مما يعطيك <strong>حرية الاختيار الكاملة</strong>: إما تجديد العقد للشركة الحالية بقيمة إيجارية جديدة تتماشى مع أسعار السوق اليوم لضمان عائد شهري ضخم، أو استلام الوحدة فارغة لاستخدامك الشخصي أو الإداري فوراً.</p>
         </div>
     </section>

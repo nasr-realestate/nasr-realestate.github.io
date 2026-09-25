@@ -96,7 +96,7 @@ status: available
         <i class="fas fa-exchange-alt gold-text"></i>
         <span>
             المطلوب <strong>{{ page.price }}</strong><br>
-            <small style="color: #ccc;">(يُشترط أن يكون المشتري مصرياً مقيماً بالخارج، ويتم الدفع عبر تحويل بنكي خارجي بالدولار بما يعادل القيمة المطلوبة).</small>
+            <small class="u-dim">(يُشترط أن يكون المشتري مصرياً مقيماً بالخارج، ويتم الدفع عبر تحويل بنكي خارجي بالدولار بما يعادل القيمة المطلوبة).</small>
         </span>
     </div>
 
