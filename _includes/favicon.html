@@ -1,0 +1,22 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════
+  Favicons — المصدر الوحيد لكل وسوم الأيقونات (2026-09-25)
+  ─────────────────────────────────────────────────────────
+  الهدف: ضمان أن Google (نتائج البحث) والمتصفحات تقطف
+  شعار الموقع بدل شعار GitHub الافتراضي.
+
+  التغطية:
+  • /favicon.svg        — SVG واضح (Google SERP + المتصفحات الحديثة)
+  • /favicon-32x32.png  — الحجم القياسي للمتبّعات
+  • /favicon-16x16.png  — الحجم القياسي للنوافذ الصغيرة
+  • /favicon.ico        — 16/32/48 في ملف واحد (الأقصى توافقًا)
+  • /apple-touch-icon.png — 180×180 (iOS/iPadOS)
+  • /site.webmanifest   — PWA: 192/512 + أيقونة maskable
+═══════════════════════════════════════════════════════════
+{%- endcomment -%}
+<link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg' | relative_url }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ '/favicon-32x32.png' | relative_url }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ '/favicon-16x16.png' | relative_url }}">
+<link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ '/apple-touch-icon.png' | relative_url }}">
+<link rel="manifest" href="{{ '/site.webmanifest' | relative_url }}">
