@@ -71,7 +71,7 @@ status: available
             <div class="spec-item"><span><i class="fas fa-bath gold-text"></i> الحمامات:</span> <strong>3 حمام (ماستر + رئيسي + ضيوف)</strong></div>
             <div class="spec-item"><span><i class="fas fa-utensils gold-text"></i> المطبخ:</span> <strong>مطبخ واسع جداً</strong></div>
         </div>
-        <div class="detail-text" style="margin-top: 15px;">
+        <div class="detail-text u-mt15">
             <p>التقسيمة الداخلية للشقة ممتازة؛ حيث توجد غرفة معيشة (Living Room) منفصلة لتوفير الخصوصية، وغرف النوم جيدة التهوية. الشقة على المحارة مما يمنحك الفرصة لتنفيذ ديكوراتك الخاصة وتأسيس الكهرباء والسباكة بضمانك الشخصي.</p>
         </div>
     </section>

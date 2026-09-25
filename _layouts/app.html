@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="{{ page.body_class | default: 'app-page' }} layout-app">
 <head>
   <meta charset="UTF-8">
   <!-- ⚠️ إصلاح: كان maximum-scale=1, user-scalable=no يمنع التكبير/التصغير (مخالف لـ WCAG 1.4.4) -->
@@ -16,6 +16,9 @@
 
   {% include schema-global.html %}
 
+  <!-- ملف الأنماط الموحّد (v4.0) — أقسام هذه الصفحة مُنطَّقة بـ body class -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
   <!-- ═══════════════════════════════════════════════
        ⚠️ إصلاح (2026-09-24):
        كان هذا القالب يُصدِر <title> ثم قالب SEO (jekyll-seo-tag) يُصدِر <title> ثانياً،
@@ -26,54 +29,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
-  <!-- ═══════════════════════════════════════════════
-       هوية الموقع الموحدة — خلفية داكنة + ذهبي
-       تُطبَّق على كل صفحات app
-       ═══════════════════════════════════════════════ -->
-  <style>
-    /* ═══ متغيرات الهوية ═══ */
-    :root {
-      --color-primary: #d4af37;
-      --color-secondary: #fce205;
-      --color-text-primary: #f5f5f5;
-      --color-text-secondary: #b0b0b0;
-      --color-surface-1: #0a0a0a;
-      --color-surface-2: #1a1a1a;
-      --color-surface-3: #222222;
-      --color-border: #333333;
-      --color-border-light: #1a1a1a;
-    }
-
-    /* ═══ الخلفية الأساسية ═══ */
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #050505;
-      color: var(--color-text-primary);
-      font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* ═══ الروابط العامة ═══ */
-    a {
-      color: var(--color-primary);
-      text-decoration: none;
-    }
-    a:hover {
-      opacity: 0.9;
-    }
-
-    /* ═══ حقول الإدخال — هوية موحدة ═══ */
-    input, textarea, select, button {
-      font-family: inherit;
-    }
-  </style>
-
   {{ page.extra_head }}
 </head>
-<body>
+<body class="{{ page.body_class | default: 'app-page' }} layout-app">
 
   <!-- ═══ القائمة الموحدة (مشتركة مع default.html) ═══ -->
   {% include floating-menu.html %}

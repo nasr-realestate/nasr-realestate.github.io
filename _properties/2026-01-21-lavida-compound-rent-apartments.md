@@ -69,11 +69,11 @@ status: available
             <p>نقدم عرضاً مزدوجاً لعدد <strong>2 شقة للإيجار</strong> بنفس السعر وبمواصفات ممتازة، والاختلاف في الإطلالة والمساحة لتناسب ذوقك:</p>
         </div>
         
-        <div class="features-columns" style="grid-template-columns: 1fr 1fr;">
+        <div class="features-columns u-cols2">
             <!-- الوحدة الأولى -->
-            <div class="spec-item" style="display: block; border: 1px solid #d4af37;">
-                <h3 style="color: #d4af37; margin-bottom: 10px; border-bottom: 1px dashed #555; padding-bottom: 5px;">الخيار الأول (Pool View)</h3>
-                <ul class="features-list" style="padding: 0;">
+            <div class="spec-item opt-card">
+                <h3 class="opt-title">الخيار الأول (Pool View)</h3>
+                <ul class="features-list u-p0">
                     <li><strong>المساحة:</strong> 135 متر مربع</li>
                     <li><strong>الموقع:</strong> منطقة فينسيا 4</li>
                     <li><strong>الدور:</strong> الثالث</li>
@@ -82,9 +82,9 @@ status: available
             </div>
 
             <!-- الوحدة الثانية -->
-            <div class="spec-item" style="display: block; border: 1px solid #d4af37;">
-                <h3 style="color: #d4af37; margin-bottom: 10px; border-bottom: 1px dashed #555; padding-bottom: 5px;">الخيار الثاني (Baron View)</h3>
-                <ul class="features-list" style="padding: 0;">
+            <div class="spec-item opt-card">
+                <h3 class="opt-title">الخيار الثاني (Baron View)</h3>
+                <ul class="features-list u-p0">
                     <li><strong>المساحة:</strong> 128 متر مربع</li>
                     <li><strong>الموقع:</strong> منطقة ميلانو 2</li>
                     <li><strong>الدور:</strong> الثاني</li>
