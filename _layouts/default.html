@@ -20,11 +20,10 @@
 
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
 
-  <!-- ═══ Favicons — تمنع طلب /favicon.ico الذي كان يرجع 404 في كل صفحة ═══ -->
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ '/assets/img/favicons/apple-touch-icon.png' | relative_url }}">
-  <link rel="icon" type="image/png" sizes="96x96" href="{{ '/assets/img/favicons/favicon-96x96.png' | relative_url }}">
-  <link rel="shortcut icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
-  <link rel="manifest" href="{{ '/assets/img/favicons/site.webmanifest' | relative_url }}">
+  <!-- ═══ Favicons — وسوم موحّدة من _includes/favicon.html (2026-09-25)
+       SVG + PNG 16/32 + ICO 16/32/48 + Apple 180 + Manifest في الجذر —
+       الهدف: شعار الموقع في نتائج Google بدل شعار GitHub الافتراضي ═══ -->
+  {% include favicon.html %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
