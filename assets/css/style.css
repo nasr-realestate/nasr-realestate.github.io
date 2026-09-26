@@ -33,9 +33,24 @@ body {
 main { flex-grow: 1; position: relative; z-index: 2; }
 img  { max-width: 100%; height: auto; }
 /* ↳ نُقلت هنا من ذيل الملف (كانت body, .home-hero(dead), #header-hero(dead)) — الترتيب آمن: !important يفوز أيًا كان الموضع */
-/* تحديث خلفية الواجهة الرئيسية - سمسار طلبك 2026 */body { 
+/* تحديث خلفية الواجهة الرئيسية - سمسار طلبك 2026 */
+
+/* ⚠️ إصلاح (2026-09-26): هذه القاعدة تستعمل !important، وقبل التوحيد كانت
+   محصورة في الصفحات التي تُحمّل هذا الملف (قالب default فقط). بعد التوحيد أصبح
+   الملف يُحمّل في كل الصفحات — فصارت الخلفية السوداء المنقّطة بالذهبي تتسرّب
+   إلى خمس صفحات لم تكن تحمّل القاعدة أصلًا ولكلٍّ منها خلفية كاملة خاصة:
+       body.page-agent      (#efeae2 — واجهة واتساب)
+       body.page-add        (#050505)
+       body.page-valuation  (var(--black-1) = #030303)
+       body.page-generator  (var(--bg)      = #050505)
+       body.page-luxury     (شاشة ثابتة full-screen)
+   و !important يفوز على أي قاعدة مُنطَّقة مهما بلغت درجة تخصيصها — فكانت
+   تكتسح خلفياتها (أوضح أثرها في صفحة الوكيل: الشريط السفلي شفاف فتظهر
+   الخلفية السوداء المنقّطة من تحته، وكذلك الهوامش حول عمود المحادثة على
+   الشاشات العريضة). الاستثناءات أدناه تُعيد لكل صفحة خلفيتها الأصلية. */
+body:not(.page-agent):not(.page-add):not(.page-luxury):not(.page-valuation):not(.page-generator) {
     background-color: #000000 !important;
-    background-image: 
+    background-image:
         radial-gradient(circle at 2px 2px, rgba(255, 215, 0, 0.03) 1px, transparent 0) !important;
     background-size: 30px 30px !important;
 }
