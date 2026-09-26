@@ -6889,3 +6889,71 @@ body.page-generator .btn-group { grid-template-columns: 1fr; }
       from { opacity:0; transform:translateY(16px); }
       to   { opacity:1; transform:translateY(0); }
     }
+
+/* ═══ Interactive OpenStreetMap / Leaflet maps ═══ */
+.interactive-map-section {
+  margin: 1.5rem 0 2rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(212, 175, 55, .28);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(26, 26, 26, .96), rgba(12, 12, 12, .96));
+  color: #f5f5f5;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
+}
+.interactive-map-section .map-status { color: #e2cf8b; margin: .5rem 0 .75rem; font-weight: 700; }
+.interactive-map-section .map-canvas {
+  width: 100%; height: clamp(240px, 42vw, 390px); border-radius: 14px;
+  overflow: hidden; background: #e7e4dc; z-index: 0;
+}
+.interactive-map-section.map-level-broad .map-canvas { display: none; }
+.interactive-map-section.map-level-broad .map-cta { display: flex; width: 100%; min-height: 56px; font-size: 1.05rem; }
+.interactive-map-section .map-cta {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+  margin-top: .85rem; padding: .65rem 1.15rem; border-radius: 12px;
+  background: linear-gradient(135deg, #d4af37, #f2d978); color: #17130a;
+  text-decoration: none; font-weight: 900;
+}
+.interactive-map-section .map-privacy-note { margin-top: .7rem; color: #aaa; font-size: .84rem; line-height: 1.7; }
+.property-map-section .pp-section-title { margin-bottom: .5rem; }
+.office-map-section { margin: 0 0 3rem; }
+.office-map-section .ab-section-title { margin-bottom: .8rem; }
+.property-gps-pin { border: 0; background: none; color: #d4af37; text-align: center; font-size: 30px; line-height: 28px; text-shadow: 0 1px 4px #111; }
+.property-gps-pin span { display: block; border: 3px solid #fff1a6; border-radius: 50%; background: #d4af37; width: 25px; height: 25px; font-size: 0; box-shadow: 0 2px 10px #222; }
+.leaflet-container { font-family: 'Cairo', sans-serif; direction: ltr; }
+.leaflet-control-attribution { font-size: 10px !important; }
+
+/* Agent map picker */
+.agent-location-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: .55rem;
+  padding: .55rem .8rem; margin: 0 0 .55rem; border: 1px solid rgba(212, 175, 55, .38);
+  border-radius: 13px; color: #f4df94; background: rgba(212, 175, 55, .09);
+  font: 700 .86rem 'Cairo', sans-serif; cursor: pointer;
+}
+.agent-location-trigger:hover { background: rgba(212, 175, 55, .17); }
+.agent-map-overlay {
+  position: fixed; inset: 0; z-index: 10050; display: none; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(0, 0, 0, .76); backdrop-filter: blur(5px);
+}
+.agent-map-overlay.open { display: flex; }
+.agent-map-sheet {
+  width: min(620px, 100%); max-height: min(92dvh, 850px); overflow-y: auto; padding: 1.2rem;
+  border: 1px solid rgba(212, 175, 55, .42); border-radius: 20px; background: #101010; color: #f5f5f5;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .55);
+}
+.agent-map-sheet h2 { color: #e6c95e; font-size: 1.25rem; margin-bottom: .35rem; }
+.agent-map-sheet > p { color: #c6c6c6; font-size: .9rem; line-height: 1.65; margin: .45rem 0; }
+.agent-map-sheet .map-canvas { height: min(43dvh, 360px); min-height: 230px; border-radius: 14px; background: #ddd; overflow: hidden; }
+.agent-map-label { display: block; color: #e6c95e; font-size: .86rem; font-weight: 700; margin: .8rem 0 .3rem; }
+.agent-map-input { display: block; width: 100%; min-height: 46px; border: 1px solid #555; border-radius: 10px; padding: .65rem .8rem; color: #fff; background: #1d1d1d; font:  .95rem 'Cairo', sans-serif; }
+.agent-map-actions { display: flex; gap: .7rem; margin-top: .85rem; }
+.agent-map-actions button { flex: 1; min-height: 46px; border: 1px solid #575757; border-radius: 11px; background: #252525; color: #eee; font: 700 .9rem 'Cairo', sans-serif; cursor: pointer; }
+.agent-map-actions #agent-picker-confirm { border-color: #d4af37; background: #d4af37; color: #17130a; }
+.agent-map-actions #agent-picker-confirm:disabled { opacity: .45; cursor: not-allowed; }
+.agent-map-attribution { margin-top: .55rem; color: #aaa; direction: ltr; text-align: right; font: 11px Arial, sans-serif; }
+.agent-map-sheet .leaflet-container { direction: ltr; }
+@media (max-width: 560px) {
+  .interactive-map-section { margin-inline: 0; border-radius: 15px; }
+  .agent-map-overlay { padding: .5rem; align-items: flex-end; }
+  .agent-map-sheet { max-height: 94dvh; border-radius: 19px 19px 12px 12px; padding: 1rem; }
+  .agent-map-sheet .map-canvas { height: 34dvh; min-height: 210px; }
+}

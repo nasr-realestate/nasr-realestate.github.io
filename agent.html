@@ -109,6 +109,9 @@ extra_head: |
       </a>
     </div>
 
+    <button type="button" class="agent-location-trigger" onclick="chooseAgentLocation(false)">
+      <i class="fas fa-map-marker-alt"></i> حدد موقع العقار (اختياري)
+    </button>
     <div class="img-strip" id="imgStrip"></div>
 
     <div class="input-glass">
@@ -270,8 +273,26 @@ extra_head: |
   </div>
 </div>
 
+<!-- ═══ Location picker: إحداثيات الخريطة مؤقتة داخل الذاكرة ولا تُرسل للخادم ═══ -->
+<div class="agent-map-overlay" id="agent-location-picker" role="dialog" aria-modal="true" aria-labelledby="agent-picker-title">
+  <div class="agent-map-sheet">
+    <h2 id="agent-picker-title">حدد موقع العقار</h2>
+    <p id="agent-picker-address" aria-live="polite">اضغط على الخريطة لاختيار الموقع.</p>
+    <div id="agent-picker-map" class="map-canvas" role="region" aria-label="اختر موقع العقار على الخريطة"></div>
+    <label class="agent-map-label" for="agent-picker-manual">اسم الشارع أو المنطقة</label>
+    <input id="agent-picker-manual" class="agent-map-input" type="text" autocomplete="off" placeholder="مثال: شارع عباس العقاد، مدينة نصر">
+    <p class="map-privacy-note">الإحداثيات لا تُحفظ ولا تُرسل؛ الذي يُرسل فقط وصف الموقع النصي الذي تؤكده.</p>
+    <div class="agent-map-actions">
+      <button type="button" id="agent-picker-cancel">إلغاء</button>
+      <button type="button" id="agent-picker-confirm" disabled>تأكيد الموقع</button>
+    </div>
+    <div class="agent-map-attribution">© OpenStreetMap contributors</div>
+  </div>
+</div>
+
 <!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"></div>
+<script src="{{ '/assets/js/interactive-maps.js' | relative_url }}"></script>
 
 <script>
 // ═══════════════════════════════════════════
@@ -526,9 +547,16 @@ function renderButtons(opts) {
     const btn = document.createElement("button");
     btn.className = "btn-glass" + (primary.includes(o) ? " primary" : "");
     btn.textContent = o;
-    btn.onclick = () => {
+      btn.onclick = async () => {
       if (isSending) return;
       wrap.querySelectorAll(".btn-glass").forEach(b => { b.style.pointerEvents = "none"; b.style.opacity = "0.5"; });
+      if (o === "💰 أبيع") {
+        const accepted = await chooseAgentLocation(true);
+        if (!accepted) {
+          wrap.querySelectorAll(".btn-glass").forEach(b => { b.style.pointerEvents = ""; b.style.opacity = ""; });
+          return;
+        }
+      }
       msgInput.value = o;
       updateSendIcon();
       sendMsg();
@@ -606,12 +634,35 @@ async function uploadPendingImages() {
   } catch { return []; }
 }
 
+// الموقع النصي وحده هو الذي ينتقل مع الرسالة؛ الإحداثيات تبقى مؤقتة في الخريطة فقط.
+let pendingAgentLocation = '';
+async function chooseAgentLocation(required) {
+  const location = await window.SemsarMaps.openAgentPicker({ required: !!required });
+  if (!location) return false;
+  pendingAgentLocation = location;
+  if (!required) {
+    msgInput.value = '📍 موقع العقار';
+    updateSendIcon();
+    sendMsg();
+  }
+  return true;
+}
+
 // ═══ SEND MESSAGE ═══
 async function sendMsg() {
   if (isSending) return;
-  const txt = msgInput.value.trim();
+  const initialText = msgInput.value.trim();
+  const sellingIntent = /أبيع|عايز أبيع|أريد أبيع|اريد ابيع|للبيع|بيع عقاري|أعرض عقاري/.test(initialText);
+  if (sellingIntent && !pendingAgentLocation) {
+    const accepted = await chooseAgentLocation(true);
+    if (!accepted) return;
+  }
+  const typedText = msgInput.value.trim();
+  const locationText = pendingAgentLocation;
+  const txt = locationText ? `${typedText}${typedText ? "\n" : ""}📍 موقع العقار: ${locationText}` : typedText;
   const hasImgs = state.pendingImages.length > 0;
   if (!txt && !hasImgs) return;
+  pendingAgentLocation = '';
 
   msgInput.value = "";
   updateSendIcon();
