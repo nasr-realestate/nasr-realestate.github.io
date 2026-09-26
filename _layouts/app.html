@@ -4,7 +4,14 @@
   <meta charset="UTF-8">
   <!-- ⚠️ إصلاح: كان maximum-scale=1, user-scalable=no يمنع التكبير/التصغير (مخالف لـ WCAG 1.4.4) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#075e54">
+  <!-- ⚠️ إصلاح PWA (2026-09-26): كان #075e54 (تركواز واتساب) — صار #0a3d2e
+       (أخضر الهوية) ليطابق manifest.json في شريط حالة التطبيق المثبّت. -->
+  <meta name="theme-color" content="#0a3d2e">
+
+  <!-- ═══ PWA — مانيفست + Service Worker (2026-09-26)
+       صفحة الوكيل الذكي هي start_url للتطبيق، وكانت بلا تسجيل Service Worker
+       وبلا وسم مانيفست سليم. الوسوم والتسجيل كلها في _includes/pwa.html ═══ -->
+  {% include pwa.html %}
 
   {% seo %}
 

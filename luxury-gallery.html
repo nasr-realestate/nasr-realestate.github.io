@@ -35,6 +35,12 @@ permalink: /luxury-gallery.html
          كانت هذه الصفحة (layout: null) بلا أي وسوم أيقونات ═══ -->
     {% include favicon.html %}
 
+    <!-- ═══ PWA (2026-09-26): مانيفست + تسجيل Service Worker.
+         كان وسم المانيفست يأتي من favicon.html — انتقل إلى pwa.html
+         لذلك يُستدعى هنا أيضاً حتى لا تفقد الصفحة مانيفستها.
+         (هذه الصفحة فيها theme-color خاص بها #0a0a0a فوق — بلا تكرار) ═══ -->
+    {% include pwa.html %}
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
