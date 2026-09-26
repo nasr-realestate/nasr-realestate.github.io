@@ -5,6 +5,7 @@ title: "من نحن | سمسار طلبك - خبراء عقارات مدينة �
 description: "تعرف على فريق سمسار طلبك، نخبة الخبراء العقاريين في مدينة نصر منذ 2014. شفافية، أمان، وسرعة في التنفيذ."
 permalink: /about-us.html
 image: "/assets/img/social-home.png"
+leaflet: true
 ---
 
 {%- comment -%}
@@ -181,14 +182,27 @@ image: "/assets/img/social-home.png"
     </div>
   </section>
 
-  <!-- ═══ مكتبنا على الخريطة ═══ -->
-  <section class="ab-section interactive-map-section office-map-section" id="office-location-map"
-           data-address="{{ site.office.address | escape }}">
+  <!-- ═══ موقع المكتب — Leaflet + OpenFreeMap (مجاني بالكامل، بدون مفاتيح)
+       إحداثيات ثابتة من _config.yml (plus code 388Q+WM → 30.06725, 31.34163).
+       maps.js بيرسم الدبوس الذهبي + أيقونة المكتب، والزر تحت بيهدي للمسار. ═══ -->
+  <section class="office-location" id="office-location"
+           data-lat="{{ site.office.lat }}" data-lng="{{ site.office.lng }}">
     <h2 class="ab-section-title"><i class="fas fa-map-marked-alt"></i> موقع المكتب</h2>
-    <p class="map-status" aria-live="polite">جارٍ تجهيز موقع المكتب…</p>
-    <div class="map-canvas" role="region" aria-label="خريطة مكتب سمسار طلبك"></div>
-    <a class="map-cta" href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer">افتح الموقع في OpenStreetMap</a>
-    <p class="map-privacy-note">موقع تقريبي مُحدد آلياً من عنوان المكتب؛ يُرجى التواصل معنا للتأكيد قبل الزيارة.</p>
+    <div class="office-map" role="region" aria-label="خريطة مكتب سمسار طلبك"></div>
+    <div class="office-info">
+      <p><i class="fas fa-map-marker-alt"></i> {{ site.office.address }}</p>
+      <p>
+        <i class="far fa-clock"></i> {{ site.office.hours }}
+        {% if site.office.hours_exception %}<span class="office-hours-exception">— {{ site.office.hours_exception }}</span>{% endif %}
+      </p>
+      <a class="office-phone" href="tel:+201147758857" dir="ltr"><i class="fas fa-phone-alt"></i> 011 477 58857</a>
+    </div>
+    <a class="map-cta office-directions"
+       href="https://www.google.com/maps/dir/?api=1&destination={{ site.office.lat }},{{ site.office.lng }}"
+       target="_blank" rel="noopener noreferrer">
+      <i class="fas fa-directions"></i> افتح المسار على Google Maps
+    </a>
+    <p class="map-footer" dir="ltr">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
   </section>
 
   <!-- ═══ Final CTA ═══ -->
@@ -212,5 +226,5 @@ image: "/assets/img/social-home.png"
     </div>
   </section>
 
-  <script src="{{ '/assets/js/interactive-maps.js' | relative_url }}"></script>
+  <script src="{{ '/assets/js/maps.js' | relative_url }}"></script>
 </div>

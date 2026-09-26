@@ -1,8 +1,23 @@
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v8.4-HARDENED
+// سمسار طلبك — Cloudflare Worker v8.5-MAPS
 // طارق طنطاوي | مدينة نصر | 2014–2026
 // Google Local Guide Level 7 | 16.3M+ Views
 // Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
+// ------------------------------------------------------------
+// ⚠️ هذا الملف أرشيف مرجعي — النشر يتم بلصقه يدويًا في لوحة
+// Cloudflare (مش من المستودع).
+// ------------------------------------------------------------
+// جديد v8.5-MAPS (متوافق مع كل الواجهات القديمة والجديدة):
+//  • استقبال gps من منتقي الخريطة في agent.html (خطوة الموقع
+//    في مسار البيع إجبارية عبر ui:'map_picker' + mapRequired).
+//  • fetchNearbyLandmarks: معالم قريبة عبر Photon (مجاني بدون
+//    مفتاح) مع Nominatim احتياط — كاش في ذاكرة الـ isolate فقط
+//    (بدون KV)، TTL 5 دقائق، المفتاح normAr(areaText).
+//  • buildWAMsg: إضافة إحداثيات GPS + رابط Google Maps مجاني
+//    (مجرد رابط — مش Google Maps API ولا بيحتاج مفتاح).
+//  • مفيش أي تخزين دائم للإحداثيات — الجلسة العابرة فقط.
+//  • FORM_VERSION زي ما هي (v83): التغييرات متوافقة للأمام والخلف
+//    (الواجهات القديمة بتتجاهل حقول الخريطة بصمت).
 // ------------------------------------------------------------
 // تحسينات v8.4 (بدون كسر أي وظيفة أو أي حقل في الـ JSON):
 //  • أمان: CORS مقيّد بنطاقات الموقع، مفتاح Gemini في Header مش في الـ URL،
@@ -530,6 +545,82 @@ async function fetchLandmarks(filters) {
   }
 }
 
+// ═══ GPS / PHOTON LANDMARKS (منتقي الخريطة — agent.html) ═══
+// استقبال إحداثيات من منتقي الخريطة في الواجهة. كلها ذاكرة جلسة عابرة:
+// بتعيش جوه formState للطلب الحالي فقط — بدون KV وبدون أي تخزين دائم.
+function sanitizeGps(g) {
+  if (!g || typeof g !== "object") return null;
+  const lat = Number(g.lat), lng = Number(g.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  if (lat === 0 && lng === 0) return null;
+  return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+}
+
+const gmapsLink = g => `https://www.google.com/maps?q=${g.lat},${g.lng}`;
+
+const PHOTON_REV_URL   = (lat, lng) => `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`;
+const NOMINATIM_REV_URL = (lat, lng) => `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&zoom=17`;
+const FETCH_TIMEOUT_GEO  = 4000;          // مهلة geocoding الخارجي (سريعة — مش نستنى كتير)
+const NEARBY_LM_TTL_MS   = 5 * 60 * 1000; // TTL 5 دقائق — كاش في ذاكرة الـ isolate فقط (مش KV)
+
+// كاش مؤقت للمناطق القريبة — isolate memory فقط، بمفتاح normAr(areaText)
+const nearbyLmCache = new Map();
+
+// fetchNearbyLandmarks — Photon (مجاني، بدون مفتاح) مع Nominatim كاحتياط.
+// بترجّع أسماء شوارع/مناطق قريبة من نقطة الـ GPS، مطابقة مع MASTER_LANDMARKS.
+// ملاحظة: Photon لا يدعم lang=ar (يرفض الطلب) — فبنستخدم الوضع الافتراضي،
+// والعربي بييجي من Nominatim (accept-language=ar) في الاحتياط.
+async function fetchNearbyLandmarks(gps, areaText) {
+  const key = normAr(String(areaText || `${gps.lat},${gps.lng}`));
+  const now = Date.now();
+  const hit = nearbyLmCache.get(key);
+  if (hit && (now - hit.at) < NEARBY_LM_TTL_MS) return hit.data;
+
+  const collect = (pool) => {
+    const out = [];
+    for (const raw of pool) {
+      if (!raw) continue;
+      const n = normAr(raw);
+      const lm = MASTER_LANDMARKS.find(m => {
+        const mn = normAr(m);
+        return n.includes(mn) || mn.includes(n);
+      });
+      if (lm) out.push(lm);
+    }
+    return [...new Set(out)].slice(0, 4);
+  };
+
+  let names = [];
+  try {
+    const r = await fetchWithTimeout(PHOTON_REV_URL(gps.lat, gps.lng), { headers: { "Accept": "application/json" } }, FETCH_TIMEOUT_GEO);
+    if (r.ok) {
+      const d = await r.json();
+      const feats = Array.isArray(d && d.features) ? d.features : [];
+      const pool = [];
+      for (const f of feats.slice(0, 5)) {
+        const p = (f && f.properties) || {};
+        [p.street, p.district, p.locality, p.city_district].forEach(x => { if (x) pool.push(String(x)); });
+      }
+      names = collect(pool);
+    }
+  } catch (_) { /* نكمل للاحتياط */ }
+
+  if (!names.length) {
+    try {
+      const r = await fetchWithTimeout(NOMINATIM_REV_URL(gps.lat, gps.lng), { headers: { "Accept": "application/json" } }, FETCH_TIMEOUT_GEO);
+      if (r.ok) {
+        const d = await r.json();
+        const a = (d && d.address) || {};
+        names = collect([a.road, a.neighbourhood, a.suburb, a.city_district]);
+      }
+    } catch (_) { /* فشل الاتنين — بنتكمل من غير معالم */ }
+  }
+
+  cacheSet(nearbyLmCache, key, { at: now, data: names });
+  return names;
+}
+
 // ═══ STEP DEFINITIONS ═══
 function getOwnerSteps(type) {
   const isSale = type==="sale";
@@ -761,6 +852,15 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
 
   if (isOwner) {
     if (hasVal(data.location))  lines.push(`│ 📍 الموقع: ${data.location}`);
+    // 🗺️ GPS من منتقي الخريطة — إحداثيات + رابط Google Maps (مجرد رابط مجاني بدون API)
+    const gps = sanitizeGps(data.gps);
+    if (gps) {
+      lines.push(`│ 🗺️ موقع محدد بالخريطة: ${gps.lat}, ${gps.lng}`);
+      lines.push(`│ 🔗 ${gmapsLink(gps)}`);
+      if (Array.isArray(data.nearbyLandmarks) && data.nearbyLandmarks.length) {
+        lines.push(`│ 🧭 قريب من: ${data.nearbyLandmarks.join("، ")}`);
+      }
+    }
     if (hasVal(data.area))      lines.push(`│ 📐 المساحة: ${fmtVal(data.area)} م²`);
 
     if (isShop(pt)) {
@@ -811,6 +911,9 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
   } else {
     const landmark = data.landmark && data.landmark!=="__ANY__" ? data.landmark : "أي منطقة في مدينة نصر";
     lines.push(`│ 📍 المنطقة: ${landmark}`);
+    // 🗺️ لو العميل حدد منطقته على الخريطة (اختياري في مسارات الشراء/الإيجار)
+    const bgps = sanitizeGps(data.gps);
+    if (bgps) lines.push(`│ 🗺️ المنطقة على الخريطة: ${gmapsLink(bgps)}`);
     const bgt = hasVal(data.budget) ? data.budget : data.price;
     if (hasVal(bgt)) lines.push(`│ 💰 الميزانية: ${fmtNum(bgt)} ج.م`);
     if (isVilla(pt) && hasVal(data.villaType)) lines.push(`│ 🏡 نوع الفيلا: ${data.villaType}`);
@@ -1126,12 +1229,31 @@ function askOwnerStep(steps, idx, fs, extra, lms) {
   if (step.type==="buttons") opts = withCtrl(step.opts, data);
   else opts = withCtrl([], data);
 
-  return {
+  // 🗺️ خطوة الموقع → منتقي الخريطة في الواجهة (ui:'map_picker')
+  // مسار البيع (owner_sale): إجباري — الواجهة بتقفل الإدخال لحد اختيار نقطة،
+  // ومفيش زر "تخطي" عشان مفيش متابعة بدون GPS.
+  const out = {
     response: extra ? `${extra}\n\n${q}` : q,
     formState: {...fs, data, stepIndex:idx, awaitingQ:true},
     options: opts, done:false, readyToSend:false, canShareWhatsapp:false,
     progress, imageUrls:fs.imageUrls||[]
   };
+  if (step.id==="location") {
+    const isSale = fs.type==="sale";
+    out.ui = "map_picker";
+    out.mapRequired = isSale;
+    out.mapTitle = isSale
+      ? "📍 العقار فين؟ حدد مكانه على الخريطة (مطلوب)"
+      : "📍 حدد موقع العقار على الخريطة (اختياري) — أو اكتب العنوان";
+    // نعيد صياغة السؤال (بدون عدّاد مكرر) — الخريطة هي وسيلة الإجابة الأساسية
+    q = isSale
+      ? "العقار فين بالظبط؟\n📍 حدد مكانه على الخريطة تحت — لازم تحدد النقطة عشان نكمّل."
+      : "العقار فين بالضبط؟ اكتب الشارع والمنطقة — أو 📍 حدده على الخريطة تحت (اختياري).";
+    if (progress.remaining>1) q += `\n\n(${progress.current}/${progress.total})`;
+    out.response = extra ? `${extra}\n\n${q}` : q;
+    if (isSale) out.options = [BTN.BACK, BTN.CANCEL, BTN.NEW_REQ]; // مفيش SKIP/SEND قبل تحديد النقطة
+  }
+  return out;
 }
 
 function askBuyerStep(steps, idx, fs, extra, lms) {
@@ -1160,12 +1282,19 @@ function askBuyerStep(steps, idx, fs, extra, lms) {
     }
   } else opts = withCtrl([], data, idx>0);
 
-  return {
+  const out = {
     response: extra ? `${extra}\n\n${q}` : q,
     formState: {...fs, data, stepIndex:idx, awaitingQ:true},
     options: opts, done:false, readyToSend:false, canShareWhatsapp:false,
     progress, imageUrls:fs.imageUrls||[]
   };
+  // 🗺️ خطوة المنطقة → منتقي خريطة اختياري بجانب أزرار المناطق
+  if (step.type==="dynamic_buttons" && step.id==="landmark") {
+    out.ui = "map_picker";
+    out.mapRequired = false;
+    out.mapTitle = "📍 عايز العقار في أنهي منطقة؟ — تقدر تحدد على الخريطة (اختياري)";
+  }
+  return out;
 }
 
 function askImgStep(steps, idx, fs) {
@@ -1337,9 +1466,21 @@ async function processOwner(fs, msg, env, history, lms) {
     data[step.id]=txt;
   }
   markFilled(data,step);
+  // 🗺️ خطوة الموقع + GPS من منتقي الخريطة → نجيب المعالم القريبة عبر Photon
+  // (كاش isolate مؤقت 5 دقايق بمفتاح normAr) ونأكّد للعميل تسجيل الموقع.
+  let note = null;
+  const gpsNow = sanitizeGps(data.gps);
+  if (step.id==="location" && gpsNow) {
+    let nearby = [];
+    try { nearby = await fetchNearbyLandmarks(gpsNow, txt); } catch (_) {}
+    data.nearbyLandmarks = Array.isArray(nearby) ? nearby : [];
+    note = data.nearbyLandmarks.length
+      ? `📍 سجّلت الموقع من الخريطة ✅ (قريب من: ${data.nearbyLandmarks.join("، ")})`
+      : "📍 سجّلت الموقع من الخريطة ✅";
+  }
   const ni = nextStep(steps,data,fs.stepIndex+1);
   if (ni===-1) return completeOwnerCheck({...fs,data},data);
-  return askOwnerStep(steps,ni,{...fs,stepIndex:ni,data},null,lms);
+  return askOwnerStep(steps,ni,{...fs,stepIndex:ni,data},note,lms);
 }
 
 async function processBuyer(fs, msg, env, history, lms) {
@@ -1381,8 +1522,13 @@ async function processBuyer(fs, msg, env, history, lms) {
     if (isAnyArea(msg)) data.landmark="__ANY__";
     else {
       const pool = lms?.length?lms:MASTER_LANDMARKS;
-      const lm = matchLandmark(msg, pool) || msg.trim();
-      data.landmark = lm;
+      let lm = matchLandmark(msg, pool);
+      // 🗺️ لو حدد على الخريطة والاسم الراجع من geocoding مش من المناطق المعروفة →
+      // نحاول نطابق أقرب معلم عربي من النقطة نفسها (Photon — نفس كاش الـ 5 دقائق)
+      if (!lm && sanitizeGps(data.gps)) {
+        try { lm = (await fetchNearbyLandmarks(sanitizeGps(data.gps), msg))[0] || null; } catch (_) {}
+      }
+      data.landmark = lm || msg.trim();
     }
     markFilled(data,step);
     const ni = nextStep(steps,data,fs.stepIndex+1);
@@ -1693,6 +1839,8 @@ function goBack(fs) {
   const prevStep = steps[prev];
   const k = stepKey(prevStep);
   delete data[k]; delete data._filled[k];
+  // 🗺️ الرجوع في خطوة الموقع يمسح الإحداثيات القديمة — لازم اختيار جديد من الخريطة
+  if (k==="location") { delete data.gps; delete data.nearbyLandmarks; }
   return {...fs,active:true,lifecycle:LC.ACTIVE,stepIndex:prev,data,awaitingQ:true, waMessage:null};
 }
 
@@ -1925,6 +2073,13 @@ export default {
       // قصّ رسالة المستخدم — يمنع استهلاك توكنز/CPU برسالة ضخمة
       const userMsg = String(body.message||"").trim().slice(0, MAX_MSG_LEN);
       let fs = sanitizeState(body.formState && typeof body.formState === "object" ? body.formState : {});
+      // 🗺️ استقبال GPS من منتقي الخريطة في الواجهة (اختياري).
+      // يُدمج في بيانات الجلسة الحالية فقط (ذاكرة عابرة — بدون KV وبدون تخزين دائم).
+      const reqGps = sanitizeGps(body.gps);
+      if (reqGps && fs?.active) {
+        if (!fs.data || typeof fs.data !== "object") fs.data = {};
+        fs.data.gps = reqGps;
+      }
       // السجل بيتفلتر ويتقص: بنقبل بس العناصر اللي شكلها صح
       const history = (Array.isArray(body.history)?body.history:[])
         .filter(m => m && typeof m === "object" && typeof m.message === "string")
@@ -2048,6 +2203,7 @@ export default {
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v8.4-HARDENED
+// نهاية الملف — سمسار طلبك v8.5-MAPS
 // ✅ Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
+// ✅ خرائط Leaflet/OpenFreeMap + Photon بدون مفاتيح وبدون تخزين GPS
 // ═══════════════════════════════════════════════════
