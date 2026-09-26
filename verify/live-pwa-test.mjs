@@ -8,6 +8,7 @@
  *  3) الكاش: القشرة الأساسية موجودة، وبلا أي مسار محظور
  *  4) فتح التطبيق بلا شبكة (نفس ما يحدث عند الضغط على الأيقونة)
  */
+import { writeFileSync } from 'node:fs';
 import puppeteer from 'puppeteer';
 
 const BASE = 'https://nasr-realestate.github.io';
@@ -92,7 +93,9 @@ report.files = await page.evaluate(async (base) => {
   return out;
 }, BASE);
 
+const json = JSON.stringify(report, null, 2);
+writeFileSync('verify/live-report.json', json + '\n');
 console.log('===PWA-LIVE-REPORT===');
-console.log(JSON.stringify(report, null, 2));
+console.log(json);
 console.log('===END===');
 await browser.close();
