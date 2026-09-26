@@ -1,0 +1,43 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════
+  PWA — مانيفست + تسجيل Service Worker (2026-09-26)
+  ─────────────────────────────────────────────────────────
+  ⚠️ سبب الإصلاح:
+  كان الموقع يُعلن عن /site.webmanifest فقط، ورغم ذلك كانت Chrome
+  تعرض «تثبيت التطبيق» (لأن وجود المانيفست وحده كافٍ لظهور الزر)،
+  لكن بدون Service Worker لا يوجد «قشرة تطبيق» تعمل — فيفشل الفتح
+  من أيقونة الشاشة الرئيسية أو يفتح داخل المتصفح فقط.
+
+  هذا الملف هو المصدر الوحيد لكل ما يخص الـ PWA:
+  • وسم المانيفست → /manifest.json (بديل /site.webmanifest)
+  • وسوم الثيم للـ Android / iOS
+  • تسجيل /sw.js بنطاق الجذر "/"
+
+  ملاحظة: المانيفست يجب أن يكون واحداً لكل صفحة — لذلك أُزيل الوسم
+  القديم من _includes/favicon.html حتى لا يتقدم عليه في ترتيب الـ head.
+═══════════════════════════════════════════════════════════
+{%- endcomment -%}
+<link rel="manifest" href="{{ '/manifest.json' | relative_url }}">
+{%- comment -%}
+  لون شريط الحالة: لا نُصدر وسم theme-color هنا إلا لو الصفحة حدّدته
+  في الـ Front Matter (theme_color) — احتراماً لبقية الوسوم الموجودة
+  في الـ layout (الرئيسية فيها نسختا light/dark)، لأن المتصفح يعتمد
+  آخر وسم مطابق، فالتكرار كان سيلغي تبديل الفاتح/الغامق.
+{%- endcomment -%}
+{% if page.theme_color %}<meta name="theme-color" content="{{ page.theme_color }}">{% endif %}
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="سمسار طلبك">
+<link rel="apple-touch-icon" sizes="192x192" href="{{ '/assets/img/icon-192.png' | relative_url }}">
+<script>
+  // تسجيل الـ Service Worker — ضروري لعمل التطبيق بعد التثبيت
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker
+        .register('{{ "/sw.js" | relative_url }}', { scope: '{{ "/" | relative_url }}' })
+        .then(function (reg) { console.log('SW registered:', reg.scope); })
+        .catch(function (err) { console.warn('SW failed:', err); });
+    });
+  }
+</script>

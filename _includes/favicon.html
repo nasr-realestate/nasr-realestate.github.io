@@ -11,7 +11,11 @@
   • /favicon-16x16.png  — الحجم القياسي للنوافذ الصغيرة
   • /favicon.ico        — 16/32/48 في ملف واحد (الأقصى توافقًا)
   • /apple-touch-icon.png — 180×180 (iOS/iPadOS)
-  • /site.webmanifest   — PWA: 192/512 + أيقونة maskable
+
+  ⚠️ ملاحظة (2026-09-26): وسم المانيفست أُزيل من هنا وانتقل إلى
+  _includes/pwa.html ليشير إلى /manifest.json
+  (كان هنا يشير إلى /site.webmanifest — مانيفست قديم بدون Service Worker،
+  ولأنه كان يأتي أولاً في الـ head كانت المتصفحات تتجاهل المانيفست الجديد).
 ═══════════════════════════════════════════════════════════
 {%- endcomment -%}
 <link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg' | relative_url }}">
@@ -19,4 +23,3 @@
 <link rel="icon" type="image/png" sizes="16x16" href="{{ '/favicon-16x16.png' | relative_url }}">
 <link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ '/apple-touch-icon.png' | relative_url }}">
-<link rel="manifest" href="{{ '/site.webmanifest' | relative_url }}">

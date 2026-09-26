@@ -6,6 +6,12 @@
   <meta name="theme-color" content="#075e54" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#054d44" media="(prefers-color-scheme: dark)">
 
+  <!-- ═══ PWA — مانيفست + Service Worker (2026-09-26)
+       كان الموقع بلا Service Worker إطلاقاً: زر «تثبيت التطبيق» يظهر
+       (لوجود مانيفست)، لكن التطبيق المثبّت لا يفتح.
+       الوسوم والتسجيل كلها في _includes/pwa.html ═══ -->
+  {% include pwa.html %}
+
   {% seo %}
 
   {% include schema-global.html %}
