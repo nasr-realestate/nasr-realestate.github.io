@@ -51,19 +51,7 @@
 
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
 
-  <!-- ═══════════════════════════════════════════════
-       Leaflet 1.9.4 (unpkg) — يُحمَّل فقط في الصفحات اللي فيها خرائط
-       (صفحات العقارات + صفحة المكتب عبر leaflet: true في front matter)
-       غير محجوب للعرض + defer. أي فشل CDN يعالجه assets/js/maps.js
-       بالتبديل التلقائي لـ jsdelivr ثم لصور OSM الراسترية.
-       ═══════════════════════════════════════════════ -->
-  {% if page.layout == 'property_page' or page.leaflet %}
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  {% endif %}
-
+  
 </head>
 
 <body class="{{ page.body_class | default: 'default-page' }} layout-{{ page.layout }}">

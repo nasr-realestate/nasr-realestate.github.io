@@ -5,7 +5,6 @@ title: "من نحن | سمسار طلبك - خبراء عقارات مدينة �
 description: "تعرف على فريق سمسار طلبك، نخبة الخبراء العقاريين في مدينة نصر منذ 2014. شفافية، أمان، وسرعة في التنفيذ."
 permalink: /about-us.html
 image: "/assets/img/social-home.png"
-leaflet: true
 ---
 
 {%- comment -%}
@@ -182,27 +181,30 @@ leaflet: true
     </div>
   </section>
 
-  <!-- ═══ موقع المكتب — Leaflet + OpenFreeMap (مجاني بالكامل، بدون مفاتيح)
-       إحداثيات ثابتة من _config.yml (plus code 388Q+WM → 30.06725, 31.34163).
-       maps.js بيرسم الدبوس الذهبي + أيقونة المكتب، والزر تحت بيهدي للمسار. ═══ -->
-  <section class="office-location" id="office-location"
-           data-lat="{{ site.office.lat }}" data-lng="{{ site.office.lng }}">
-    <h2 class="ab-section-title"><i class="fas fa-map-marked-alt"></i> موقع المكتب</h2>
-    <div class="office-map" role="region" aria-label="خريطة مكتب سمسار طلبك"></div>
-    <div class="office-info">
-      <p><i class="fas fa-map-marker-alt"></i> {{ site.office.address }}</p>
-      <p>
-        <i class="far fa-clock"></i> {{ site.office.hours }}
-        {% if site.office.hours_exception %}<span class="office-hours-exception">— {{ site.office.hours_exception }}</span>{% endif %}
-      </p>
-      <a class="office-phone" href="tel:+201147758857" dir="ltr"><i class="fas fa-phone-alt"></i> 011 477 58857</a>
+  <!-- ═══ Office Map ═══
+       إحداثيات المكتب من Google Maps (maps.app.goo.gl/jQBJvzfxA4vzo6Qe7): 30.0673165, 31.3391426
+       Leaflet + CartoDB Voyager (labels إنجليزية) — تحميل كسول عند ظهور القسم -->
+  <section class="ab-section ab-office" data-nm="office" data-lat="30.0673165" data-lng="31.3391426" aria-label="موقع المكتب">
+    <h2 class="ab-section-title">
+      <i class="fas fa-map-marked-alt"></i>
+      موقع المكتب
+    </h2>
+    <div class="ab-office-grid">
+      <div class="nm-map-wrap">
+        <div class="nm-skeleton" aria-hidden="true"><div class="nm-skeleton-shimmer"></div><span>جاري تحميل الخريطة…</span></div>
+        <div class="nm-map-target" role="application" aria-label="خريطة موقع مكتب سمسار طلبك"></div>
+      </div>
+      <div class="ab-office-card">
+        <h3>سمسار طلبك — مدينة نصر</h3>
+        <div class="ab-office-line"><i class="fas fa-map-marker-alt"></i><span>{{ site.office.address }}</span></div>
+        <div class="ab-office-line"><i class="far fa-clock"></i><span>{{ site.office.hours }}</span></div>
+        <div class="ab-office-line"><i class="fas fa-phone-alt"></i><a href="tel:{{ site.author.phone }}" dir="ltr">{{ site.author.phone }}</a></div>
+        <div class="ab-office-line"><i class="fas fa-location-dot"></i><span class="ab-office-coords">30.06732, 31.33914</span></div>
+        <a class="ab-office-btn" href="https://www.google.com/maps/dir/?api=1&destination=30.0673165,31.3391426" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-route"></i> افتح المسار
+        </a>
+      </div>
     </div>
-    <a class="map-cta office-directions"
-       href="https://www.google.com/maps/dir/?api=1&destination={{ site.office.lat }},{{ site.office.lng }}"
-       target="_blank" rel="noopener noreferrer">
-      <i class="fas fa-directions"></i> افتح المسار على Google Maps
-    </a>
-    <p class="map-footer" dir="ltr">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
   </section>
 
   <!-- ═══ Final CTA ═══ -->
@@ -226,5 +228,7 @@ leaflet: true
     </div>
   </section>
 
-  <script src="{{ '/assets/js/maps.js' | relative_url }}"></script>
 </div>
+
+<!-- نظام الخرائط (تحميل كسول لـ Leaflet عند ظهور القسم) -->
+<script src="{{ '/assets/js/nasr-maps.js' | relative_url }}" defer></script>

@@ -6890,271 +6890,203 @@ body.page-generator .btn-group { grid-template-columns: 1fr; }
       to   { opacity:1; transform:translateY(0); }
     }
 
-
-/* ═══════════════════════════════════════════════════════════════════
-   الخرائط التفاعلية المجانية — Leaflet + OpenFreeMap/OSM (2026-09-26)
-   ─────────────────────────────────────────────────────────────────
-   نظام دقة 4 مستويات لصفحات العقارات + خريطة المكتب + منتقي
-   الموقع في الوكيل الذكي. بدون API keys — الإسناد إجباري:
-   © OpenStreetMap contributors
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ── 1) قسم الموقع في صفحة العقار (ثيم داكن) ── */
-.property-location {
-  margin: 1.5rem 0 2rem;
-  padding: clamp(1rem, 3vw, 1.5rem);
-  border: 1px solid rgba(212, 175, 55, .28);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(26, 26, 26, .96), rgba(12, 12, 12, .96));
-  color: #f5f5f5;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
-}
-.property-location .pp-section-title { margin-bottom: .6rem; }
-
-.location-status {
-  margin: .35rem 0 .8rem;
-  font-weight: 700;
-  font-size: .98rem;
-  line-height: 1.7;
-  color: #e2cf8b;
-  min-height: 1.4em;
-}
-.location-status.level-1 { color: #7dde8b; }
-.location-status.level-2 { color: #e2cf8b; font-size: .88rem; font-weight: 600; }
-.location-status.level-3 {
-  color: #ffb256;
-  background: rgba(255, 138, 42, .10);
-  border: 1px solid rgba(255, 138, 42, .30);
-  border-radius: 10px;
-  padding: .5rem .75rem;
-}
-.location-status.level-4 {
-  color: #ffd9a0;
-  background: rgba(212, 175, 55, .08);
-  border: 1px dashed rgba(212, 175, 55, .40);
-  border-radius: 12px;
-  padding: .7rem .9rem;
-  font-size: 1rem;
-}
-
-/* مستوى 4: بدون خريطة خالص — تنويه + منطقة نصية + CTA كبير */
-.property-location.location-unknown .location-map { display: none; }
-.location-text {
-  margin: .45rem 0 .6rem;
-  color: #cfcfcf;
-  font-size: .92rem;
-  line-height: 1.8;
-}
-.location-text::before { content: "🗺️ "; }
-
-.location-map {
+/* ═══════════════════════════════════════════════════════════════
+   NM — نظام الخرائط (Leaflet + CartoDB Voyager) — v2 2026-09-26
+   ملاحظات RTL: الخريطة نفسها LTR إجباريًا (Leaflet بيحسب المواضع
+   بالبكسل ومع direction:rtl الوراثي البلاطات بتتشقلب). كل الحاوية
+   حوالين الخريطة RTL عادي.
+   ═══════════════════════════════════════════════════════════════ */
+.nm-map-wrap {
   position: relative;
-  z-index: 0;                 /* عزل سياق الترتيب عن عناصر الموقع العائمة */
   width: 100%;
-  height: clamp(240px, 42vw, 380px);
-  border-radius: 14px;
-  overflow: hidden;
-  background: #e7e4dc;
-  border: 1px solid rgba(255, 255, 255, .08);
-}
-
-/* ── 2) زر CTA الموحّد (askExactLocation → واتساب طارق) ── */
-.map-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .4rem;
-  min-height: 46px;
-  margin-top: .85rem;
-  padding: .65rem 1.3rem;
+  height: 280px;
+  min-height: 280px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #d4af37, #f2d978);
-  color: #17130a;
-  text-decoration: none;
-  font-weight: 900;
-  font-size: .98rem;
-  box-shadow: 0 4px 16px rgba(212, 175, 55, .25);
-  transition: transform .15s ease, box-shadow .15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.map-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(212, 175, 55, .38); color: #17130a; }
-.map-cta:active { transform: scale(.97); }
-.map-cta.big {
-  display: flex;
-  width: 100%;
-  min-height: 58px;
-  font-size: 1.08rem;
-}
-
-/* ── 3) تذييل الإسناد — إجباري في كل خريطة ── */
-.map-footer {
-  margin-top: .7rem;
-  color: #9a9a9a;
-  font-size: .78rem;
-  line-height: 1.6;
-}
-.map-footer a { color: #c9b06a; text-decoration: none; }
-.map-footer a:hover { text-decoration: underline; }
-
-/* ── 4) خريطة المكتب (about-us — ثيم داكن) ── */
-.office-location {
-  margin: 0 0 3rem;
-  padding: clamp(1rem, 3vw, 1.5rem);
-  border: 1px solid rgba(212, 175, 55, .28);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(26, 26, 26, .96), rgba(12, 12, 12, .96));
-  color: #f5f5f5;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .18);
-}
-.office-location .ab-section-title { margin-bottom: .9rem; }
-.office-map {
-  position: relative;
-  z-index: 0;
-  width: 100%;
-  height: clamp(250px, 40vw, 400px);
-  border-radius: 14px;
   overflow: hidden;
-  background: #e7e4dc;
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: #e8e4dc;
+  isolation: isolate;
+  direction: rtl;
 }
-.office-info { margin-top: 1rem; display: grid; gap: .55rem; }
-.office-info p, .office-info a {
-  margin: 0;
-  color: #e8e8e8;
-  font-size: .95rem;
-  line-height: 1.8;
-  text-decoration: none;
-  display: flex;
-  align-items: flex-start;
-  gap: .55rem;
+@media (min-width: 768px) { .nm-map-wrap { height: 400px; min-height: 400px; } }
+.nm-map-target, .nm-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+.nm-map, .nm-map .leaflet-container, .nm-map .leaflet-pane, .nm-map .leaflet-control-container {
+  direction: ltr !important;
+  text-align: left !important;
 }
-.office-info i { color: #d4af37; margin-top: .28rem; }
-.office-hours-exception { color: #ffb256; font-size: .85rem; }
-.office-phone:hover { color: #f2d978; }
-.office-directions { margin-top: 1rem; }
+.nm-map.leaflet-container { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #e8e4dc; cursor: grab; }
+.nm-map.leaflet-container:active { cursor: grabbing; }
+.nm-map .leaflet-control-zoom { border: none; box-shadow: 0 2px 10px rgba(0,0,0,.25); border-radius: 10px; overflow: hidden; margin: 10px; }
+.nm-map .leaflet-bar a {
+  width: 44px; height: 44px; line-height: 44px;
+  font-size: 22px; font-weight: 700; color: #222; background: #fff; border-bottom: 1px solid #e5e5e5;
+}
+.nm-map .leaflet-bar a:last-child { border-bottom: none; }
+.nm-map .leaflet-bar a:hover { background: #f5f0e1; color: #000; }
+.nm-map .leaflet-control-attribution {
+  direction: ltr; font-size: 10px; line-height: 1.3; padding: 2px 6px;
+  background: rgba(255,255,255,.85); color: #444; border-top-left-radius: 6px;
+}
+.nm-map .leaflet-control-attribution a { color: #0a6ebd; }
+.nm-map .leaflet-popup-content-wrapper { border-radius: 10px; font-family: 'Cairo', 'Segoe UI', sans-serif; }
+.nm-map .leaflet-popup-content { margin: 10px 14px; font-size: 13px; line-height: 1.5; }
+.nm-gold-pin { background: transparent !important; border: none !important; filter: drop-shadow(0 4px 6px rgba(0,0,0,.4)); }
+.nm-gold-pin svg { display: block; }
 
-/* ── 5) الدبوس الذهبي (SVG/CSS خالص — بدون صور مولّدة) ── */
-.semsar-pin { background: none; border: 0; }
-.semsar-pin-body {
-  width: 30px; height: 30px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  background: linear-gradient(135deg, #f2d978, #d4af37);
-  border: 2px solid #fff1a6;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .45);
+/* skeleton loader — يشغل نفس المساحة → مفيش CLS */
+.nm-skeleton {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  background: #e8e4dc; color: #6b6660; font-size: 13px; font-weight: 600;
+  overflow: hidden; transition: opacity .35s ease, visibility .35s ease;
+}
+.nm-skeleton-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.65) 50%, rgba(255,255,255,0) 70%);
+  background-size: 250% 100%;
+  animation: nmShimmer 1.4s ease-in-out infinite;
+}
+.nm-skeleton span { position: relative; z-index: 1; padding: 6px 12px; background: rgba(255,255,255,.7); border-radius: 20px; }
+@keyframes nmShimmer { from { background-position: 200% 0; } to { background-position: -50% 0; } }
+.nm-map-wrap.nm-loaded .nm-skeleton { opacity: 0; visibility: hidden; pointer-events: none; }
+.nm-map-wrap.nm-failed .nm-skeleton { display: none; }
+.nm-fail-msg {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  direction: rtl; text-align: center; padding: 20px;
+  background: #f3efe6; color: #5c574f; font-size: 14px; font-weight: 600;
+}
+.nm-fail-msg i { font-size: 28px; color: #b8860b; }
+.nm-fail-msg a { color: #0a6ebd; font-weight: 700; text-decoration: underline; }
+
+/* ── قسم موقع العقار (صفحة العقار — ثيم داكن/ذهبي) ── */
+body.layout-property_page .pp-location { margin-bottom: 2rem; }
+body.layout-property_page .pp-location .nm-map-wrap { border: 1px solid rgba(212,175,55,.35); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+body.layout-property_page .pp-location-foot {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px;
+  margin-top: 12px;
+}
+body.layout-property_page .nm-caption { color: #e9e2cf; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+body.layout-property_page .nm-caption::before { content: "\f3c5"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #d4af37; }
+body.layout-property_page .nm-gmaps {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 8px 16px; border-radius: 10px;
+  background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.45);
+  color: #f5d76e; font-weight: 700; font-size: .92rem; text-decoration: none; transition: background .2s, transform .15s;
+}
+body.layout-property_page .nm-gmaps:hover { background: rgba(212,175,55,.25); transform: translateY(-1px); }
+body.layout-property_page .nm-note {
+  display: none; margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+  font-size: .88rem; line-height: 1.6; color: #d9d2bf;
+  background: rgba(212,175,55,.07); border-right: 3px solid #d4af37;
+}
+body.layout-property_page .nm-note.show { display: block; }
+body.layout-property_page .nm-note i { color: #d4af37; margin-left: 6px; }
+body.layout-property_page .pp-location.nm-level-area .nm-note { border-right-color: #8a8a8a; }
+
+/* ── خريطة المكتب (من نحن) ── */
+body.page-about .ab-office { margin-bottom: 3.5rem; }
+body.page-about .ab-office .nm-map-wrap { height: 300px; min-height: 300px; border: 1px solid rgba(212,175,55,.35); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+body.page-about .ab-office-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+@media (min-width: 900px) { body.page-about .ab-office-grid { grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); align-items: stretch; } }
+body.page-about .ab-office-card {
+  background: #111; border: 1px solid rgba(212,175,55,.25); border-radius: 14px; padding: 1.4rem;
+  display: flex; flex-direction: column; gap: 12px; color: #ddd;
+}
+body.page-about .ab-office-card h3 { color: #d4af37; font-size: 1.15rem; margin: 0; }
+body.page-about .ab-office-line { display: flex; gap: 10px; align-items: flex-start; font-size: .95rem; line-height: 1.6; }
+body.page-about .ab-office-line i { color: #d4af37; width: 20px; text-align: center; margin-top: 4px; }
+body.page-about .ab-office-line a { color: #fff; text-decoration: none; }
+body.page-about .ab-office-line a:hover { color: #d4af37; }
+body.page-about .ab-office-coords { font-family: 'Segoe UI', monospace; direction: ltr; text-align: left; color: #aaa; font-size: .82rem; }
+body.page-about .ab-office-btn {
+  margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 10px 18px; border-radius: 12px;
+  background: linear-gradient(135deg, #d4af37, #b8860b); color: #000; font-weight: 800; text-decoration: none; font-size: 1rem;
+  box-shadow: var(--shadow-btn-gold); transition: transform .15s, box-shadow .2s;
+}
+body.page-about .ab-office-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-btn-gold-hover); }
+
+/* ── Location Picker (الوكيل الذكي — ثيم فاتح) ── */
+body.page-agent .nm-picker {
+  align-self: stretch; width: 100%; max-width: 100%;
+  background: var(--bubble-in); border: 1px solid var(--border-subtle);
+  border-radius: 14px; box-shadow: var(--shadow-md);
+  padding: 12px; margin: 4px 0 6px;
+  display: flex; flex-direction: column; gap: 10px;
+  animation: msgIn .25s ease; direction: rtl; font-family: var(--font);
+}
+body.page-agent .nm-pk-title { font-size: 15.5px; font-weight: 800; color: var(--text-primary); }
+body.page-agent .nm-pk-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5; }
+body.page-agent .nm-pk-search { position: relative; }
+body.page-agent .nm-pk-search-ico { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 14px; pointer-events: none; }
+body.page-agent .nm-pk-input {
+  width: 100%; min-height: 46px; padding: 10px 40px 10px 40px;
+  border-radius: 12px; border: 1.5px solid rgba(0,0,0,.12); background: #fff;
+  font-family: var(--font); font-size: 15px; color: var(--text-primary); outline: none;
+  transition: border-color .15s, box-shadow .15s; -webkit-appearance: none; appearance: none;
+}
+body.page-agent .nm-pk-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+body.page-agent .nm-pk-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,168,132,.15); }
+body.page-agent .nm-pk-input::placeholder { color: var(--text-tertiary); }
+body.page-agent .nm-pk-clear {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(0,0,0,.06); color: var(--text-secondary); cursor: pointer; font-size: 12px;
+}
+body.page-agent .nm-pk-spinner {
+  position: absolute; left: 44px; top: 50%; margin-top: -8px; width: 16px; height: 16px;
+  border: 2px solid rgba(0,168,132,.25); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
+}
+body.page-agent .nm-pk-results {
+  position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 50;
+  list-style: none; margin: 0; padding: 6px; max-height: 260px; overflow-y: auto;
+  background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 12px; box-shadow: var(--shadow-lg);
+}
+body.page-agent .nm-pk-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px; min-height: 48px;
+  border-radius: 9px; cursor: pointer; transition: background .12s;
+}
+body.page-agent .nm-pk-item:hover, body.page-agent .nm-pk-item:focus { background: rgba(0,168,132,.08); outline: none; }
+body.page-agent .nm-pk-item-ico { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(212,175,55,.18); color: #b8860b; flex-shrink: 0; font-size: 13px; }
+body.page-agent .nm-pk-item-txt { display: flex; flex-direction: column; text-align: left; min-width: 0; flex: 1; }
+body.page-agent .nm-pk-item-txt strong { font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.page-agent .nm-pk-item-txt small { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.page-agent .nm-pk-noresult { padding: 12px; font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.6; }
+body.page-agent .nm-pk-mapwrap { height: 260px; min-height: 260px; }
+@media (min-width: 768px) { body.page-agent .nm-pk-mapwrap { height: 340px; min-height: 340px; } }
+body.page-agent .nm-pk-mapwrap .nm-map.leaflet-container { cursor: crosshair; }
+body.page-agent .nm-pk-locate {
+  position: absolute; left: 10px; bottom: 26px; z-index: 5;
+  width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+  background: #fff; color: var(--accent-dark); font-size: 17px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
   display: flex; align-items: center; justify-content: center;
 }
-.semsar-pin-body > * { transform: rotate(45deg); }
-.semsar-pin-dot {
-  display: block; width: 10px; height: 10px;
-  border-radius: 50%;
-  background: #17130a;
+body.page-agent .nm-pk-locate.busy i { animation: spin .8s linear infinite; }
+body.page-agent .nm-pk-hint {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 5;
+  padding: 6px 12px; border-radius: 20px; background: rgba(17,27,33,.82); color: #fff;
+  font-size: 12.5px; font-weight: 600; pointer-events: none; white-space: nowrap; transition: opacity .3s;
 }
-.semsar-pin-office .semsar-pin-body { width: 34px; height: 34px; }
-.semsar-pin-office i { transform: rotate(45deg); color: #17130a; font-size: 14px; }
-
-/* ── 6) Leaflet — توافق مع الثيم الداكن والموبايل ── */
-.leaflet-container { font-family: 'Cairo', sans-serif; direction: ltr; background: #e7e4dc; }
-.leaflet-control-attribution {
-  font-size: 10px !important;
-  background: rgba(255, 255, 255, .82) !important;
-  color: #444 !important;
-  direction: ltr;
-  max-width: 78%;
+body.page-agent .nm-pk-hint.hide, body.page-agent .nm-map-wrap:not(.nm-loaded) .nm-pk-hint { opacity: 0; }
+body.page-agent .nm-pk-result-label { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+body.page-agent .nm-pk-result-box {
+  border: 1.5px solid rgba(212,175,55,.6); background: rgba(212,175,55,.08); border-radius: 12px; padding: 10px 14px; min-height: 66px;
+  transition: border-color .2s, background .2s;
 }
-.leaflet-control-attribution a { color: #0078a8 !important; }
-.leaflet-bar a { color: #333 !important; }
-.leaflet-popup-content { direction: rtl; text-align: right; font-family: 'Cairo', sans-serif; }
-
-/* ── 7) منتقي الموقع في الوكيل الذكي (ثيم الواتساب الفاتح) ── */
-body.page-agent .msg.msg-map-picker {
-  max-width: min(430px, 88%);
-  width: 88%;
-  padding: 10px;
-  border-radius: 16px;
-  background: var(--bubble-in);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
+body.page-agent .nm-pk-result-box.nm-empty { border-style: dashed; border-color: rgba(0,0,0,.18); background: rgba(0,0,0,.02); }
+body.page-agent .nm-pk-result-box.nm-pending { border-color: rgba(0,168,132,.5); }
+body.page-agent .nm-pk-r1 { font-size: 15px; font-weight: 800; color: var(--text-primary); direction: ltr; text-align: left; }
+body.page-agent .nm-pk-result-box.nm-empty .nm-pk-r1 { direction: rtl; text-align: right; font-weight: 600; color: var(--text-tertiary); }
+body.page-agent .nm-pk-r2 { font-size: 13px; color: var(--text-secondary); direction: ltr; text-align: left; }
+body.page-agent .nm-pk-r3 { font-size: 12px; color: var(--text-tertiary); font-family: 'Segoe UI', monospace; text-align: left; margin-top: 3px; }
+body.page-agent .nm-pk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+body.page-agent .nm-pk-btn {
+  flex: 1 1 auto; min-height: 46px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+  font-family: var(--font); font-size: 14.5px; font-weight: 700; border: 1.5px solid rgba(0,0,0,.12); background: #fff; color: var(--text-primary);
+  transition: transform .12s, box-shadow .15s, opacity .15s; -webkit-tap-highlight-color: transparent;
 }
-body.page-agent .msg-map-picker .map-picker-canvas {
-  position: relative;
-  z-index: 0;
-  width: 100%;
-  height: clamp(220px, 38dvh, 330px);
-  min-height: 220px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #e7e4dc;
-  border: 1px solid rgba(0, 0, 0, .08);
-  margin-top: 8px;
-}
-body.page-agent .msg-map-picker .map-picker-status {
-  margin: 8px 2px 4px;
-  font-size: 12.8px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-  min-height: 1.5em;
-  word-break: break-word;
-}
-body.page-agent .msg-map-picker .map-picker-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-body.page-agent .msg-map-picker .map-picker-btn {
-  flex: 1;
-  min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--border-glass);
-  background: var(--bg-glass);
-  color: var(--text-primary);
-  font-family: var(--font);
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform .15s ease, opacity .15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-body.page-agent .msg-map-picker .map-picker-btn:active { transform: scale(.97); }
-body.page-agent .msg-map-picker .map-picker-btn.map-picker-confirm {
-  background: linear-gradient(135deg, #d4af37, #f2d978);
-  border-color: transparent;
-  color: #17130a;
-}
-body.page-agent .msg-map-picker .map-picker-btn.map-picker-confirm:disabled {
-  opacity: .45;
-  cursor: not-allowed;
-  transform: none;
-}
-body.page-agent .msg-map-picker .map-footer {
-  margin: 8px 2px 0;
-  color: var(--text-tertiary);
-  font-size: 10.5px;
-  text-align: left;
-}
-body.page-agent .msg-map-picker .map-footer a { color: #0078a8; }
-
-/* إشارة "الخريطة مطلوبة" فوق شريط الإدخال المقفول */
-body.page-agent .input-glass.locked-notice::after {
-  content: "📍 حدد الموقع على الخريطة الأول";
-  position: absolute;
-  top: -30px; right: 6px;
-  background: rgba(7, 94, 84, .92);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-  animation: msgIn .25s ease;
-}
-
-/* ── 8) موبايل ── */
-@media (max-width: 560px) {
-  .property-location, .office-location { margin-inline: 0; border-radius: 15px; }
-  .location-map { height: clamp(210px, 52vw, 300px); border-radius: 12px; }
-  .office-map { height: clamp(220px, 48vw, 320px); border-radius: 12px; }
-  .map-cta.big { min-height: 54px; font-size: 1.02rem; }
-  body.page-agent .msg.msg-map-picker { width: 92%; max-width: 92%; padding: 8px; }
-  body.page-agent .msg-map-picker .map-picker-canvas { height: 34dvh; min-height: 200px; }
-}
+body.page-agent .nm-pk-btn:active { transform: scale(.98); }
+body.page-agent .nm-pk-confirm { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(0,168,132,.35); flex-basis: 60%; }
+body.page-agent .nm-pk-confirm:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+body.page-agent .nm-pk-manual { color: var(--text-secondary); }
+body.page-agent .btn-glass.nm-open-picker { border-color: rgba(212,175,55,.6); background: rgba(212,175,55,.12); color: #7a5b00; }
+body.page-agent .input-field:disabled { opacity: .55; }

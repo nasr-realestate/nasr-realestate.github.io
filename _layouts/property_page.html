@@ -100,25 +100,6 @@ hide_navbar: true
   </section>
   {% endif %}
 
-  <!-- ═══ الموقع — نظام دقة من 4 مستويات (Leaflet + OpenFreeMap، مجاني بالكامل) ═══
-       المستوى 1: gps في front matter → pin ذهبي دقيق بدون تنويه
-       المستوى 2: رقم عمارة بدون (منطقة/حي/مدينة نصر) → pin ذهبي + تنويه تقريبي
-       المستوى 3: شارع معروف → دائرة شفافة 500م بدون pin + تنويه برتقالي + CTA
-       المستوى 4: منطقة عامة → بدون خريطة خالص + تنويه + CTA كبير (ممنوع pin كاذب)
-       التفاصيل: assets/js/maps.js -->
-  <section class="property-location" id="property-location"
-           data-location="{{ page.location | default: '' | escape }}"
-           data-title="{{ page.title | escape }}"
-           data-gps-lat="{{ page.gps.lat | default: '' }}"
-           data-gps-lng="{{ page.gps.lng | default: '' }}">
-    <h2 class="pp-section-title"><i class="fas fa-map-marked-alt"></i> الموقع</h2>
-    <p class="location-status" aria-live="polite">جارٍ تجهيز الموقع…</p>
-    <div class="location-map" role="region" aria-label="خريطة موقع العقار" hidden></div>
-    <p class="location-text" hidden></p>
-    <a class="map-cta" href="#" hidden></a>
-    <p class="map-footer">بيانات الخرائط <span dir="ltr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></span></p>
-  </section>
-
   <!-- ═══ Header + Price ═══ -->
   <header class="pp-header">
     <h1 class="pp-title">{{ page.title }}</h1>
@@ -226,6 +207,53 @@ hide_navbar: true
       <i class="fas fa-print"></i> طباعة
     </button>
   </div>
+
+  <!-- ═══ Location Map ═══
+       مستويات الدقة (بدون pin كاذب):
+       • lat/lng في front matter → pin ذهبي (map_precision: building → تنويه "على مستوى العمارة")
+       • شارع معروف في نص الموقع → دائرة تقريبية 500م
+       • منطقة عامة → بدون خريطة + تنويه
+       القرار بيتاخد هنا في Liquid (has_map) عشان مساحة الخريطة تتحجز من أول paint (مفيش CLS)،
+       والإحداثيات نفسها بتتحدد في assets/js/nasr-maps.js -->
+  {%- assign has_map = false -%}
+  {%- if page.lat and page.lng -%}
+    {%- assign has_map = true -%}
+  {%- else -%}
+    {%- assign nm_known = "عباس العقاد|مكرم عبيد|مصطفى النحاس|مصطفي النحاس|شارع الطيران|الطيران الرئيسي|من الطيران|حسن المأمون|حسن المامون|أحمد فخري|احمد فخري|يوسف عباس|عبد الحميد بدوي|عبدالحميد بدوي|حلمي حسن علي|محمد حسن الجمل|حسن الجمل|رابعة|رابعه|شينزو|السنهوري|سراج مول" | split: "|" -%}
+    {%- for k in nm_known -%}
+      {%- if page.location contains k -%}{%- assign has_map = true -%}{%- endif -%}
+    {%- endfor -%}
+    {%- comment -%} "امتداد X" أو كمبوند = بعيد عن الشارع نفسه → بدون خريطة (نفس القاعدة في nasr-maps.js) {%- endcomment -%}
+    {%- if page.location contains "امتداد" or page.location contains "كمبوند" -%}{%- assign has_map = false -%}{%- endif -%}
+  {%- endif -%}
+  {% if page.location %}
+  <section class="pp-location"
+           data-nm="property"
+           data-lat="{{ page.lat }}"
+           data-lng="{{ page.lng }}"
+           data-precision="{{ page.map_precision | default: '' }}"
+           data-location="{{ page.location | escape }}"
+           data-title="{{ page.title | escape }}"
+           aria-label="موقع العقار">
+    <h2 class="pp-section-title">
+      <i class="fas fa-map-marked-alt"></i>
+      موقع العقار
+    </h2>
+    {% if has_map %}
+    <div class="nm-map-wrap">
+      <div class="nm-skeleton" aria-hidden="true"><div class="nm-skeleton-shimmer"></div><span>جاري تحميل الخريطة…</span></div>
+      <div class="nm-map-target" role="application" aria-label="خريطة موقع العقار"></div>
+    </div>
+    {% endif %}
+    <div class="pp-location-foot">
+      <div class="nm-caption">{{ page.location }}</div>
+      <a class="nm-gmaps" href="https://www.google.com/maps/search/?api=1&query={{ page.location | url_encode }}" target="_blank" rel="noopener noreferrer">
+        <i class="fas fa-map"></i> افتح في Google Maps
+      </a>
+    </div>
+    <div class="nm-note"></div>
+  </section>
+  {% endif %}
 
   <!-- ═══ Content (الوصف من ملف العقار) ═══ -->
   {% if content and content != "" %}
@@ -364,7 +392,9 @@ hide_navbar: true
   <img src="" alt="صورة مكبرة" id="ppLightboxImg">
 </div>
 
-<script src="{{ '/assets/js/maps.js' | relative_url }}"></script>
+<!-- نظام الخرائط (تحميل كسول لـ Leaflet عند ظهور القسم) -->
+<script src="{{ '/assets/js/nasr-maps.js' | relative_url }}" defer></script>
+
 <script>
   // ═══ Gallery ═══
   function ppSwitchImage(src, thumbEl) {
