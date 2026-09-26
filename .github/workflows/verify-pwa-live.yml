@@ -1,0 +1,35 @@
+# ⚠️ ملف مؤقت للتحقق من الـ PWA على الموقع المنشور — يُحذف بعد انتهاء الفحص.
+name: verify-pwa-live
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Headers + content-type للـ sw.js والمانيفست والأيقونات
+        run: |
+          for p in /sw.js /manifest.json /assets/img/icon-192.png /assets/img/icon-512.png /assets/img/icon-maskable-512.png ; do
+            echo "=================== $p"
+            curl -sS -o /dev/null -D - "https://nasr-realestate.github.io$p?cb=$GITHUB_RUN_ID" \
+              | grep -iE "^HTTP|^content-type|^content-length|^cache-control" || true
+          done
+          echo "=================== أول 12 سطر من sw.js"
+          curl -sS "https://nasr-realestate.github.io/sw.js?cb=$GITHUB_RUN_ID" | head -12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: تثبيت Puppeteer
+        run: npm i puppeteer@23 --no-audit --no-fund
+
+      - name: اختبار Chromium حقيقي على الموقع المنشور
+        run: node verify/live-pwa-test.mjs
