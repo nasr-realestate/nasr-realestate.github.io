@@ -100,23 +100,17 @@ hide_navbar: true
   </section>
   {% endif %}
 
-  <!-- ═══ الموقع — نظام دقة من 4 مستويات (Leaflet + OpenFreeMap، مجاني بالكامل) ═══
-       المستوى 1: gps في front matter → pin ذهبي دقيق بدون تنويه
-       المستوى 2: رقم عمارة بدون (منطقة/حي/مدينة نصر) → pin ذهبي + تنويه تقريبي
-       المستوى 3: شارع معروف → دائرة شفافة 500م بدون pin + تنويه برتقالي + CTA
-       المستوى 4: منطقة عامة → بدون خريطة خالص + تنويه + CTA كبير (ممنوع pin كاذب)
-       التفاصيل: assets/js/maps.js -->
-  <section class="property-location" id="property-location"
+  <!-- ═══ الموقع — لا تظهر الإحداثيات إلا إذا كانت GPS محفوظة صراحةً في بيانات العقار ═══ -->
+  <section class="interactive-map-section property-map-section" id="property-location-map"
            data-location="{{ page.location | default: '' | escape }}"
            data-title="{{ page.title | escape }}"
-           data-gps-lat="{{ page.gps.lat | default: '' }}"
-           data-gps-lng="{{ page.gps.lng | default: '' }}">
+           data-latitude="{{ page.latitude | default: '' | escape }}"
+           data-longitude="{{ page.longitude | default: '' | escape }}">
     <h2 class="pp-section-title"><i class="fas fa-map-marked-alt"></i> الموقع</h2>
-    <p class="location-status" aria-live="polite">جارٍ تجهيز الموقع…</p>
-    <div class="location-map" role="region" aria-label="خريطة موقع العقار" hidden></div>
-    <p class="location-text" hidden></p>
-    <a class="map-cta" href="#" hidden></a>
-    <p class="map-footer">بيانات الخرائط <span dir="ltr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></span></p>
+    <p class="map-status" aria-live="polite">جارٍ تجهيز الموقع…</p>
+    <div class="map-canvas" role="region" aria-label="خريطة موقع العقار"></div>
+    <a class="map-cta" href="https://wa.me/201147758857" target="_blank" rel="noopener noreferrer">ابعت لطارق</a>
+    <p class="map-privacy-note">لا نحفظ إحداثيات العقار. المواقع غير الدقيقة تظهر كنطاق تقريبي، وليس كدبوس موقع مؤكد.</p>
   </section>
 
   <!-- ═══ Header + Price ═══ -->
@@ -364,7 +358,7 @@ hide_navbar: true
   <img src="" alt="صورة مكبرة" id="ppLightboxImg">
 </div>
 
-<script src="{{ '/assets/js/maps.js' | relative_url }}"></script>
+<script src="{{ '/assets/js/interactive-maps.js' | relative_url }}"></script>
 <script>
   // ═══ Gallery ═══
   function ppSwitchImage(src, thumbEl) {
