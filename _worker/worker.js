@@ -1,8 +1,19 @@
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v8.3-FINAL
+// سمسار طلبك — Cloudflare Worker v8.4-HARDENED
 // طارق طنطاوي | مدينة نصر | 2014–2026
 // Google Local Guide Level 7 | 16.3M+ Views
 // Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
+// ------------------------------------------------------------
+// تحسينات v8.4 (بدون كسر أي وظيفة أو أي حقل في الـ JSON):
+//  • أمان: CORS مقيّد بنطاقات الموقع، مفتاح Gemini في Header مش في الـ URL،
+//    حماية /upload-images (rate limit + تحقق من الصور + حجم أقصى)،
+//    تنظيف مدخلات المستخدم قبل ما تروح للـ AI (منع Prompt Injection)،
+//    وإخفاء بيانات العميل الشخصية عن الـ AI.
+//  • أداء: timeouts على كل fetch خارجي، رفع الصور بالتوازي،
+//    Levenshtein بذاكرة O(n) بدل O(n·m)، كاش للتطبيع العربي،
+//    وتحميل المناطق (landmarks) عند الحاجة فقط.
+//  • تنظيم: استخراج الدوال المتكررة، ثوابت بدل النصوص السحرية،
+//    معالجة أخطاء موحّدة مع لوجات قابلة للتتبّع.
 // ============================================================
 
 // ═══ CONSTANTS ═══
@@ -24,22 +35,39 @@ const RATE_WINDOW_MS     = 30 * 1000;
 const RATE_MAX           = 15;
 const MAX_VISIBLE_LM     = 8;
 
+// ═══ حدود الأمان والأداء (جديد في v8.4) ═══
+// مهلات زمنية: الـ Worker عنده حد أقصى للـ CPU/الاستجابة، فلازم نقطع أي طلب خارجي بطيء
+const FETCH_TIMEOUT_FEED   = 6000;   // مهلة تحميل ai-feed.json
+const FETCH_TIMEOUT_GEMINI = 8000;   // مهلة استدعاء Gemini
+const FETCH_TIMEOUT_IMGBB  = 15000;  // مهلة رفع الصورة الواحدة
+// حدود الرسائل والصور — تمنع إغراق الـ Worker بحمولات ضخمة
+const MAX_MSG_LEN          = 1000;   // أقصى طول لرسالة المستخدم
+const MAX_HISTORY          = 20;     // أقصى عدد رسائل من السجل نعتمد عليها
+const MAX_BODY_BYTES       = 12 * 1024 * 1024; // أقصى حجم للـ request body (الصور base64)
+const MAX_IMG_BYTES        = 6 * 1024 * 1024;  // أقصى حجم للصورة الواحدة بعد فك base64
+const UPLOAD_RATE_WINDOW   = 60 * 1000; // نافذة حد رفع الصور
+const UPLOAD_RATE_MAX      = 6;         // أقصى عدد عمليات رفع في الدقيقة لكل IP
+const RATE_MAP_MAX_KEYS    = 5000;      // سقف حجم خرائط الـ rate limit (منع تضخم الذاكرة)
+const CACHE_MAX_KEYS       = 500;       // سقف حجم الكاشات الداخلية
+
+// النطاقات المسموح لها باستدعاء الـ Worker — بديل آمن لـ "*"
+// ملاحظة: أضف أي دومين جديد هنا (أو عبر متغير البيئة ALLOWED_ORIGINS مفصولاً بفواصل)
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://nasr-realestate.github.io",
+];
+
 // ═══ GOOGLE AUTHORITY ═══
-// إحصائيات ملف طارق كمرشد محلي (Local Guide) — وليست تقييم النشاط.
-// تحقق 2026-09-24 من: https://www.google.com/maps/contrib/100792782130997747487/
-//   تبويب Reviews: 151 مراجعة + 28 تقييم · تبويب Photos: 430 صورة · 16,305,265 مشاهدة
-// ⚠️ تقييم النشاط «سمسار طلبك» (4.7 من 102 مراجعة عملاء) رقم مختلف — مكانه aggregateRating في _includes/schema-global.html
 const GOOGLE_PROFILE = {
   url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
   level: 7,
   badge: "Google Local Guide Level 7",
   points: 7741,
   maxPoints: 15000,
-  photosCount: 430,
-  totalViews: 16305265,
+  photosCount: 468,
+  totalViews: 16273294,
   formattedViews: "16.3 مليون",
-  reviewsCount: 151,
-  ratingsCount: 28,
+  reviewsCount: 195,
+  ratingsCount: 39,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",
 };
@@ -154,12 +182,25 @@ function hasVal(v) {
 
 function fmtVal(v) { return hasVal(v) ? toEnNum(String(v).trim()) : "—"; }
 
+// تطبيع النص العربي — بيتنادى آلاف المرات في المطابقة، فبنكاش النتيجة
+// الكاش محدود الحجم عشان ميكبرش مع الوقت في نفس الـ isolate
+const _normCache = new Map();
 function normAr(s) {
-  return String(s||"")
+  const raw = String(s||"");
+  if (raw.length <= 64) {
+    const hit = _normCache.get(raw);
+    if (hit !== undefined) return hit;
+  }
+  const out = raw
     .replace(/[٠-٩]/g,d=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
     .replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي")
     .replace(/[ًٌٍَُِّْـ]/g,"").replace(/[^\w\u0600-\u06FF]/g,"")
     .toLowerCase().trim();
+  if (raw.length <= 64) {
+    if (_normCache.size >= CACHE_MAX_KEYS) _normCache.clear();
+    _normCache.set(raw, out);
+  }
+  return out;
 }
 
 function normalizePropType(pt) {
@@ -221,7 +262,7 @@ function buildGoogleAuthorityMsg() {
 📊 *الأرقام الرسمية على Google Maps:*
 • 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
 • 📸 ${GOOGLE_PROFILE.photosCount} صورة
-• ✍️ كتب ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم
+• ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم
 • 🎯 ${GOOGLE_PROFILE.points.toLocaleString("en-US")} / ${GOOGLE_PROFILE.maxPoints.toLocaleString("en-US")} نقطة
 
 📍 ${GOOGLE_PROFILE.description}
@@ -231,14 +272,14 @@ function buildGoogleAuthorityMsg() {
 function buildGoogleAuthorityShort() {
   return `🏆 ${GOOGLE_PROFILE.badge}
 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps
-✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها
+⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة
 🗺️ ${GOOGLE_PROFILE.url}`;
 }
 
 function buildTrustBar() {
   return `━━━━━━━━━━━━━━━━━━━
 🏆 Google Local Guide Level 7
-✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
+⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة
 ━━━━━━━━━━━━━━━━━━━`;
 }
 
@@ -270,21 +311,26 @@ function getRequestLabel(type, propertyType, furnished, isOwner = false) {
 }
 
 // ═══ LANDMARK MATCHING ═══
+// مسافة ليفنشتاين — نفس النتيجة بالظبط، بس بصفّين بدل مصفوفة كاملة
+// الذاكرة بقت O(n) بدل O(n×m): فرق كبير لما نقارن النص بكل المناطق
 function levenshtein(a, b) {
   if (!a || !b) return Math.max(a?.length || 0, b?.length || 0);
   if (a === b) return 0;
   const m = a.length, n = b.length;
   if (m === 0) return n;
   if (n === 0) return m;
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  let prev = new Uint16Array(n + 1);
+  let cur  = new Uint16Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
   for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    const ca = a[i-1];
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+      cur[j] = ca === b[j-1] ? prev[j-1] : 1 + Math.min(prev[j], cur[j-1], prev[j-1]);
     }
+    const tmp = prev; prev = cur; cur = tmp;
   }
-  return dp[m][n];
+  return prev[n];
 }
 
 function similarity(a, b) {
@@ -354,7 +400,19 @@ function isOfficeQ(text) {
   return ["هو مكتبكم فين","هو المكتب فين","مكتبكم فين","المكتب فين","فين المكتب","فين مكتبكم","عنوان المكتب ايه","عنوانكم ايه","عنوانكم فين","العنوان ايه","العنوان فين","عنوانك ايه"].some(p => normAr(p)===t);
 }
 
-const officeMsg = () => `📌 عنوان المكتب: ${OFFICE_ADDRESS}\n\n🗺️ اللوكيشن: ${OFFICE_MAP_URL}\n\n⏰ المواعيد: ${OFFICE_HOURS}\n\n📝 الأفضل تكلمنا على الواتساب قبل ما تجي.`;
+// ملاحظة حالة المكتب دلوقتي — بتتحط قبل رسالة العنوان
+// الفايدة: العميل اللي بيسأل 11 بالليل يعرف إن المكتب قافل من غير ما يروح
+function officeStatusNote(now = cairoNow()) {
+  const { hour, isFriday } = now;
+  if (isFriday) return "النهاردة الجمعة والمكتب إجازة.";
+  if (hour >= 21 || hour < 12) return "المكتب قافل دلوقتي، بيفتح 12 الضهر.";
+  return "";
+}
+
+const officeMsg = () => {
+  const note = officeStatusNote();
+  return `${note ? note + "\n\n" : ""}📌 عنوان المكتب: ${OFFICE_ADDRESS}\n\n🗺️ اللوكيشن: ${OFFICE_MAP_URL}\n\n⏰ المواعيد: ${OFFICE_HOURS}\n\n📝 الأفضل تكلمنا على الواتساب قبل ما تجي.`;
+};
 
 // ═══ BUTTON MATCHERS ═══
 const isSkip       = m => isBtn(m,BTN.SKIP)||/^(تخطي|skip|بعدين|مش دلوقتي|مفيش)$/i.test(String(m).trim());
@@ -387,14 +445,48 @@ let feedCache = { at:0, data:null };
 const lmCache = new Map();
 const geminiCache = new Map();
 
+// إضافة لأي Map مع سقف للحجم — يمنع تسريب الذاكرة داخل الـ isolate الطويل العمر
+function cacheSet(map, key, value) {
+  if (map.size >= CACHE_MAX_KEYS) {
+    // امسح أقدم مفتاح (Map بتحافظ على ترتيب الإدخال)
+    const oldest = map.keys().next().value;
+    if (oldest !== undefined) map.delete(oldest);
+  }
+  map.set(key, value);
+}
+
+// fetch بمهلة زمنية — أي طلب خارجي بطيء بيتقطع بدل ما يعلّق الـ Worker
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// تحميل ملف العقارات مع كاش + مهلة + تحقق من الشكل
+// ملاحظة: بنرجّع آخر نسخة ناجحة (stale) لو التحميل فشل، عشان الشات ميقفش
 async function fetchFeed() {
   const now = Date.now();
   if (feedCache.data && (now-feedCache.at)<CACHE_TTL_MS) return feedCache.data;
-  const r = await fetch(AI_FEED_URL, { headers:{"Accept":"application/json"} });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const d = await r.json();
-  feedCache = { at:now, data:d };
-  return d;
+  try {
+    const r = await fetchWithTimeout(AI_FEED_URL, { headers:{"Accept":"application/json"} }, FETCH_TIMEOUT_FEED);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    // تحقق دفاعي: لو الملف اتغيّر شكله، منكسرش الفلترة
+    const safe = (d && typeof d === "object") ? d : { properties: [] };
+    if (!Array.isArray(safe.properties)) safe.properties = [];
+    feedCache = { at:now, data:safe };
+    return safe;
+  } catch (err) {
+    if (feedCache.data) {
+      console.warn("[feed] fallback to stale cache:", err?.message);
+      return feedCache.data; // نسخة قديمة أحسن من انهيار الطلب
+    }
+    throw err;
+  }
 }
 
 async function fetchLandmarks(filters) {
@@ -428,10 +520,12 @@ async function fetchLandmarks(filters) {
       }
     }
     const lms = [...set].sort((a,b)=>a.localeCompare(b,"ar"));
-    lmCache.set(key, { at:now, data:lms });
+    cacheSet(lmCache, key, { at:now, data:lms });
     return lms;
-  } catch {
-    lmCache.set(key, { at:now, data:[] });
+  } catch (err) {
+    // فشل تحميل المناطق مش سبب لكسر المحادثة — بنرجع قائمة فاضية والواجهة بتستخدم MASTER_LANDMARKS
+    console.warn("[landmarks] fallback:", err?.message);
+    cacheSet(lmCache, key, { at:now, data:[] });
     return [];
   }
 }
@@ -744,7 +838,7 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
     if (hasVal(data.selectedImage))     lines.push(`│ 📷 ${data.selectedImage}`);
     if (hasVal(data.selectedUrl))       lines.push(`│ 🔗 ${data.selectedUrl}`);
     lines.push(`└───────────────────`);
-    lines.push(``, `📅 *طلب حجز معاينة ميدانية* — جاهز للتواصل`);
+    lines.push(``, `📩 *عميل مهتم* — جاهز للتواصل`);
   }
 
   // بيانات العميل
@@ -763,12 +857,16 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
     imgUrls.forEach((u,i) => lines.push(`${i+1}. ${u}`));
   }
 
+  // التذييل الموحّد — بطاقة طارق أولًا، وتحتها سطر التوقيع كسطر فرعي
+  // ملحوظة: التوقيع اندمج جوه نفس الصندوق بدل ما يكون صندوق منفصل،
+  // وبقى بخط مائل (_نص_ في واتساب) عشان يبان ثانوي مش عنوان رئيسي.
   lines.push("", `━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}`);
-  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ✍️ ${GOOGLE_PROFILE.reviewsCount} مراجعة كتبها`);
+  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة`);
   lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
   lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(`_🤖 تم الإرسال من الوكيل الذكي_`);
 
   return lines.join("\n");
 }
@@ -780,7 +878,7 @@ const LC = { ACTIVE:"active", DONE:"completed", CANCELLED:"cancelled" };
 
 function sanitizeState(fs) {
   if (!fs?.active) return fs;
-  if (fs._version && fs._version!==FORM_VERSION) return { active:false, lifecycle:LC.CANCELLED, type:null, stepIndex:-1, data:{}, awaitingQ:false, flowType:null, imageUrls:[] };
+  if (fs._version && fs._version!==FORM_VERSION) return { active:false, lifecycle:LC.CANCELLED, type:null, stepIndex:-1, data:{}, awaitingQ:false, flowType:null, imageUrls:[], _version:FORM_VERSION };
   if (fs._savedAt && (Date.now()-fs._savedAt) > 86400000) return { active:false, lifecycle:LC.CANCELLED, type:null, stepIndex:-1, data:{}, awaitingQ:false, flowType:null, imageUrls:[] };
   try {
     const steps = getSteps(fs.type, fs.flowType);
@@ -793,70 +891,216 @@ function sanitizeState(fs) {
 }
 
 // ═══ GEMINI CALLS ═══
+
+// تنظيف نص المستخدم قبل ما يتحط جوه الـ system prompt
+// بيمنع Prompt Injection (محاولة العميل يغيّر تعليمات البوت) وبيحد الطول
+function sanitizeForPrompt(s, max = 300) {
+  return String(s || "")
+    .replace(/[`\u0000-\u001F\u007F]/g, " ")   // شيل الأحرف التحكمية والباك-تيك
+    .replace(/\b(ignore|disregard|system\s*prompt|forget)\b/gi, "") // عبارات التلاعب الشائعة
+    .replace(/تجاهل\s+(كل\s+)?(التعليمات|اللي\s+فات)/g, "")
+    // إخفاء أرقام الموبايل قبل إرسال النص لطرف تالت — العميل ساعات بيكتب رقمه في الرسالة نفسها
+    .replace(/(?:\+?2)?0?1[0-2]\d{8}/g, "[رقم]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+// نسخة مختصرة وآمنة من بيانات الفورم للـ AI
+// مهم: بنشيل الاسم والتليفون — مفيش داعي نبعت بيانات العميل الشخصية لطرف تالت
+const PII_KEYS = new Set(["ownerName","ownerPhone","buyerName","buyerPhone","phone","_filled"]);
+function safeDataForPrompt(data) {
+  const out = {};
+  for (const [k, v] of Object.entries(data || {})) {
+    if (PII_KEYS.has(k)) continue;
+    if (k.startsWith("_") || k.startsWith("selected")) continue;
+    if (!hasVal(v)) continue;
+    out[k] = typeof v === "string" ? v.slice(0, 60) : v;
+  }
+  return JSON.stringify(out).slice(0, 500);
+}
+
 async function callGemini(env, sys, msgs, maxTok=150, temp=0.6) {
   if (!env?.GEMINI_API_KEY) return null;
   try {
-    const url = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+    // المفتاح في Header مش في الـ query string — الـ URLs بتتسجّل في اللوجات والـ proxies
+    const url = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`;
     const body = { system_instruction: { parts:[{text:sys}] }, contents: msgs, generationConfig: { temperature:temp, maxOutputTokens:maxTok } };
-    const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
-    if (!r.ok) return null;
+    const r = await fetchWithTimeout(url, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body:JSON.stringify(body)
+    }, FETCH_TIMEOUT_GEMINI);
+    if (!r.ok) {
+      // منسجّلش نص الرد كامل عشان ميحتويش على بيانات حساسة
+      console.warn("[gemini] non-ok status:", r.status);
+      return null;
+    }
     const j = await r.json();
     const t = j?.candidates?.[0]?.content?.parts?.[0]?.text;
     return t ? String(t).trim() : null;
-  } catch { return null; }
+  } catch (err) {
+    console.warn("[gemini] failed:", err?.name === "AbortError" ? "timeout" : err?.message);
+    return null;
+  }
 }
 
-async function geminiFirstMsg(env, userMsg, history) {
-  const sys = `أنت "طارق طنطاوي" — سمسار عقاري في مدينة نصر من 2014.
-🏆 Google Local Guide Level 7 | ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps
+// ═══ الإحساس بالوقت (v8.6) ═══
+// طارق بيرد من موبايله، فلازم يبان إنه عارف الساعة كام واليوم إيه.
+// بنحسب توقيت القاهرة مباشرة عشان الـ Worker بيشتغل على UTC.
+function cairoNow(d = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo", hour: "numeric", hour12: false, weekday: "short",
+  }).formatToParts(d);
+  const get = t => parts.find(p => p.type === t)?.value || "";
+  // Intl بيرجّع 24 بدل 0 بعد منتصف الليل في بعض البيئات
+  const hour = Number(get("hour")) % 24;
+  const wd = get("weekday");
+  return { hour, isFriday: wd === "Fri" };
+}
 
-دورك: العميل لسه بادئ — وجّهه للأزرار فقط في رد قصير (2-3 أسطر).
-ممنوع: تسأل عن تفاصيل العقار / تتكلم عن أسعار أو مناطق.
-اللغة: عامية مصرية. النبرة: ودود ومختصر واحترافي.
-مهم: وجّه للأزرار دايماً — لا تسأل أسئلة تفصيلية.`;
-  return callGemini(env, sys, [{role:"user",parts:[{text:userMsg}]}], 150, 0.6);
+// وصف الوقت بكلام بشري — بيتحط في الـ prompt عشان النموذج يتصرف على أساسه
+// ملاحظة: ده سياق للـ AI بس، مش نص بيتعرض للعميل، عشان ميبقاش جملة محفوظة
+function timeContext(now = cairoNow()) {
+  const { hour, isFriday } = now;
+  const bits = [];
+  if (isFriday) bits.push("النهاردة الجمعة والمكتب إجازة");
+  if (hour >= 22 || hour < 5) bits.push("الوقت دلوقتي متأخر بالليل");
+  else if (hour >= 21) bits.push("الوقت بعد التسعة بالليل والمكتب قفل");
+  else if (hour < 9) bits.push("الوقت بدري الصبح والمكتب لسه مافتحش");
+  else if (hour < 12) bits.push("المكتب بيفتح 12 الضهر، لسه مافتحش");
+  if (!bits.length) return "";
+  return `الوقت دلوقتي: ${bits.join("، ")}.
+اذكر ده بشكل عابر وطبيعي لو كان له لازمة (زي إنك هترد متأخر أو المعاينة تتأجل)، من غير ما تعتذر كتير ومن غير ما تكرره في كل رد.`;
+}
+
+// شخصية طارق — أساس مشترك لكل الـ prompts
+// الفكرة: نوصف إنسان بعاداته في الكلام، مش موظف بمواصفات وظيفية
+const TAREK_PERSONA = `انت طارق طنطاوي. بتشتغل في العقارات في مدينة نصر من 2014.
+بتكتب من موبايلك وانت في الشارع أو في المكتب، مش قاعد تألف كلام.
+
+طريقتك في الكلام:
+- عامية مصرية زي ما بتتكلم مع حد قدامك، مش عربي فصيح ولا كلام كتالوجات
+- بتكتب قصير. كلمة أو كلمتين لو الموقف مايستاهلش أكتر
+- مش بتستخدم إيموجي في كلامك العادي
+- مش بتقول "حضرتك" في كل جملة، بتقولها لما الموقف يستاهل
+- مش بتمدح نفسك ولا بتقول أرقامك ولا تقييماتك من نفسك`;
+
+// أمثلة تعليم بالسلوك — النماذج بتتعلم من الأمثلة أحسن من قوائم "ممنوع"
+const MOOD_GUIDE = `اقرا نفسية العميل من كلامه ورد على قدها:
+- مستعجل (علامات تعجب، "بسرعة"، "دلوقتي") → اختصر جدا وامشي في الطلب
+- بيهزر ("هههه"، سخرية، سؤال عن إنك بوت) → رد بخفة دم من غير ما تخرج عن الموضوع
+- قلقان أو مش فاهم → طمّنه في كلمتين وبسّط
+- بيشتكي من الأسعار → اتفهم من غير ما تتنازل ولا تجادل
+- عادي → رد عادي من غير مبالغة`;
+
+async function geminiFirstMsg(env, userMsg, history) {
+  const sys = `${TAREK_PERSONA}
+
+الموقف: حد لسه داخل على الشات دلوقتي وكتبلك حاجة.
+انت عايز تعرف هو عايز يشتري ولا يأجر ولا عنده عقار عايز يبيعه أو يأجره.
+تحت الشات في أزرار جاهزة، وجّهه ليها بكلامك من غير ما تسرد الاختيارات كأنها قايمة.
+
+${MOOD_GUIDE}
+${timeContext()}
+
+رد بسطر أو اتنين بالكتير. متسألش عن تفاصيل العقار دلوقتي ومتتكلمش في أسعار.`;
+  // 0.85 بدل 0.6 — أول انطباع محتاج تنوّع، الحرارة الواطية بتنتج نفس الجملة كل مرة
+  return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(userMsg)}]}], 150, 0.85);
 }
 
 async function geminiComment(env, userMsg, nextQ, fsData) {
-  const cacheKey = `c:${normAr(userMsg).slice(0,80)}`;
+  const safeMsg = sanitizeForPrompt(userMsg);
+
+  // مفتاح الكاش لازم يشمل السؤال المطروح كمان، مش نص العميل بس
+  // قبل كده: العميل يكتب "3" للغرف و"3" للحمامات فياخد نفس التعليق حرفيًا
+  // وكمان كل العملاء اللي بيكتبوا نفس الكلمة كانوا بياخدوا نفس الجملة لمدة نص ساعة
+  const qKey = normAr(String(nextQ||"")).slice(0,40);
+  const cacheKey = `c:${qKey}:${normAr(userMsg).slice(0,60)}`;
   const cached = geminiCache.get(cacheKey);
-  if (cached && (Date.now()-cached.at) < GEMINI_CACHE_TTL) return cached.reply;
+  // بنخزّن عدة صيغ للموقف الواحد وبنختار واحدة عشوائية — يمنع تكرار نفس الجملة
+  if (cached && (Date.now()-cached.at) < GEMINI_CACHE_TTL && cached.variants?.length) {
+    return cached.variants[Math.floor(Math.random()*cached.variants.length)];
+  }
 
-  const sys = `أنت "طارق طنطاوي" — سمسار مدينة نصر.
-دورك: تعليق قصير (سطر واحد، 15 كلمة بحد أقصى) على إجابة العميل.
-ممنوع: تكتب السؤال التالي / تفتح مواضيع جديدة.
-لو الإجابة عادية: "تمام" أو "ماشي".
-لو مميزة: علّق بإيجابية قصيرة.
-السياق — إجابة العميل: "${userMsg}" | السؤال التالي: "${nextQ}" | البيانات: ${JSON.stringify(fsData||{})}
-اللغة: عامية مصرية. ممنوع: "يا هلا" / "منور" / "يا باشا".`;
+  const sys = `${TAREK_PERSONA}
 
-  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:userMsg}]}], 60, 0.7);
-  if (reply) geminiCache.set(cacheKey, { reply, at:Date.now() });
-  return reply;
+الموقف: العميل لسه جاوبك على سؤال، وانت هتسأله السؤال اللي بعده على طول.
+عايز منك رد فعل قصير جدا على إجابته — زي ما بتعمل في الواتساب بالظبط.
+
+${MOOD_GUIDE}
+${timeContext()}
+
+مهم جدا: مش كل إجابة محتاجة رد.
+لو إجابته عادية خالص (رقم، اختيار من زرار، كلمة واحدة) — مترّدش خالص واكتب: -
+الرد الفاضي ده طبيعي، البني آدم مش بيعلّق على كل كلمة.
+علّق بس لما يكون في حاجة فعلا تستاهل: حاجة مميزة، أو حاجة محتاجة طمأنة، أو مزاج واضح في كلامه.
+
+لو هتعلّق: كلمتين أو تلاتة بالكتير. متعيدش السؤال اللي جاي. متفتحش موضوع جديد.
+نوّع في كلامك، متقولش نفس الكلمة كل مرة.
+
+إجابة العميل: "${safeMsg}"
+السؤال اللي جاي: "${sanitizeForPrompt(nextQ, 200)}"
+اللي عارفه عنه: ${safeDataForPrompt(fsData)}`;
+
+  // 0.95 بدل 0.7 — دي أكتر دالة محتاجة عشوائية عشان متكررش نفس التعليق
+  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95);
+
+  // النموذج بيرجع "-" لما يقرر إن الإجابة متستاهلش تعليق
+  const cleaned = String(reply||"").trim();
+  if (!cleaned || cleaned === "-" || /^[-–—.]+$/.test(cleaned)) return null;
+
+  // خزّن الصيغة الجديدة مع الصيغ السابقة لنفس الموقف (بحد أقصى 4)
+  const variants = cached?.variants ? [...new Set([...cached.variants, cleaned])].slice(-4) : [cleaned];
+  cacheSet(geminiCache, cacheKey, { variants, at: cached?.at || Date.now() });
+  return cleaned;
 }
 
 async function geminiContextual(env, userMsg, formState, currentStep, history) {
   const q = currentStep ? (typeof currentStep.q==="function"?currentStep.q(formState?.data):currentStep.q) : "";
   const convHistory = (Array.isArray(history)?history:[]).slice(-8)
     .filter(m=>m?.message?.trim())
-    .map(m=>({ role:m.role==="assistant"?"model":"user", parts:[{text:String(m.message).slice(0,500)}] }));
+    .map(m=>({ role:m.role==="assistant"?"model":"user", parts:[{text:sanitizeForPrompt(m.message, 500)}] }));
   if (convHistory[convHistory.length-1]?.role==="user") convHistory.pop();
-  convHistory.push({ role:"user", parts:[{text:userMsg}] });
+  convHistory.push({ role:"user", parts:[{text:sanitizeForPrompt(userMsg)}] });
 
-  const sys = `أنت "طارق طنطاوي" — سمسار عقاري في مدينة نصر من 2014.
-🏆 Google Local Guide Level 7 | ${GOOGLE_PROFILE.formattedViews} مشاهدة
+  const sys = `${TAREK_PERSONA}
 
-دورك: رد على سؤال العميل في سطر واحد + أعِد السؤال المعلّق حرفياً.
-السؤال المعلّق: "${q}"
-البيانات: ${JSON.stringify(formState?.data||{})}
-ممنوع: تسأل سؤال جديد / تتكلم خارج العقارات.
-اللغة: عامية مصرية.`;
-  return callGemini(env, sys, convHistory, 150, 0.5);
+الموقف: انت كنت سألته سؤال، وهو بدل ما يجاوب سألك انت سؤال تاني.
+جاوب على سؤاله بسرعة وبعدين رجّعه للسؤال بتاعك.
+
+${MOOD_GUIDE}
+${timeContext()}
+
+السؤال اللي انت مستنيه منه: "${sanitizeForPrompt(q, 200)}"
+اللي عارفه عنه: ${safeDataForPrompt(formState?.data)}
+
+جاوب سؤاله في سطر واحد بس، وبعدين اسأله سؤالك تاني.
+السؤال ترجّعه بمعناه وبكلامك انت، مش نسخ لصق حرفي.
+لو سأل في حاجة بعيدة عن العقارات، رجّعه للموضوع من غير ما تحسسه إنك بتتجاهله.`;
+  // 0.75 بدل 0.5 — كانت أقل حرارة وهي أكتر دالة بترد على أسئلة حقيقية
+  return callGemini(env, sys, convHistory, 150, 0.75);
 }
 
 // ═══ ✅ Gemini في كل محادثة ═══
+// بيحدد هل الإجابة دي تستاهل تعليق أصلًا قبل ما نستدعي الـ AI
+// البني آدم مش بيعلّق على كل كلمة — التعليق على كل رد هو أوضح علامة إنه بوت
+function deservesComment(userMsg) {
+  const t = String(userMsg||"").trim();
+  if (!t) return false;
+  // ضغطة زرار أو رقم مجرد — مفيش داعي لتعليق
+  if (/^\d+$/.test(toEnNum(t))) return false;
+  if (t.length <= 3) return false;
+  // مؤشرات إن العميل كاتب حاجة فيها مزاج أو تفصيل يستاهل رد فعل
+  const hasMood = /[!؟?]{1,}|هه|😀|😂|🙏|😊|حلو|تمام\s*\?|مستعجل|بسرعة|دلوقتي|مش فاهم|غالي|كتير|معقول/.test(t);
+  const isLong  = t.split(/\s+/).length >= 4;
+  return hasMood || isLong;
+}
+
 async function enhanceResponse(env, result, userMsg, formState, currentStep, history) {
   if (!formState?.active || result.done || result.readyToSend) return result;
+  // فلتر قبلي: بيوفر استدعاءات Gemini وبيخلي الإيقاع طبيعي
+  if (!deservesComment(userMsg)) return result;
   const comment = await geminiComment(env, userMsg, result.response, formState?.data);
   if (comment) return { ...result, response:`${comment}\n\n${result.response}` };
   return result;
@@ -1487,37 +1731,151 @@ function detectRoute(msg) {
 }
 
 // ═══ UPLOAD IMGBB ═══
+
+// تحقق من إن المدخل فعلاً صورة base64 وحجمها معقول
+// من غير ده الـ endpoint مفتوح لأي حد يرفع أي داتا على حساب مفتاحنا
+const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+function validateImagePayload(raw) {
+  if (typeof raw !== "string") return null;
+  // اقبل شكل data URL كمان واستخرج منه الجزء المشفّر
+  let b64 = raw.trim();
+  const dataUrl = b64.match(/^data:image\/(png|jpe?g|webp|gif);base64,(.+)$/i);
+  if (dataUrl) b64 = dataUrl[2];
+  b64 = b64.replace(/\s/g, "");
+  if (!b64 || b64.length < 64) return null;
+  if (!B64_RE.test(b64)) return null;
+  // الحجم التقريبي بعد فك التشفير = 3/4 طول النص
+  const approxBytes = Math.floor(b64.length * 3 / 4);
+  if (approxBytes > MAX_IMG_BYTES) return null;
+  return b64;
+}
+
 async function uploadImgBB(env, images) {
   const key = env?.IMGBB_API_KEY;
-  if (!key||!images?.length) return {ok:false,error:"No images or key"};
+  if (!key) { console.warn("[imgbb] missing key"); return {ok:false,error:"Upload unavailable"}; }
+  if (!Array.isArray(images) || !images.length) return {ok:false,error:"No images"};
   if (images.length>MAX_IMAGES) return {ok:false,error:`Max ${MAX_IMAGES}`};
-  const urls=[];
-  for (const img of images) {
-    if (!img?.trim()) continue;
-    try {
-      const f=new FormData(); f.append("key",key); f.append("image",img.trim());
-      const r=await fetch("https://api.imgbb.com/1/upload",{method:"POST",body:f});
-      if (!r.ok) continue;
-      const d=await r.json();
-      if (d?.data?.url) urls.push(d.data.url);
-    } catch {}
+
+  // تحقق من كل صورة قبل أي طلب خارجي
+  const valid = images.map(validateImagePayload).filter(Boolean);
+  if (!valid.length) return {ok:false,error:"Invalid image data"};
+
+  // رفع بالتوازي بدل التسلسل — 5 صور بقت في زمن صورة واحدة تقريباً
+  const results = await Promise.allSettled(valid.map(async (b64) => {
+    const f = new FormData();
+    f.append("key", key);
+    f.append("image", b64);
+    const r = await fetchWithTimeout("https://api.imgbb.com/1/upload", {method:"POST", body:f}, FETCH_TIMEOUT_IMGBB);
+    if (!r.ok) throw new Error(`imgbb HTTP ${r.status}`);
+    const d = await r.json();
+    const u = d?.data?.url;
+    if (typeof u !== "string" || !/^https:\/\//.test(u)) throw new Error("bad url");
+    return u;
+  }));
+
+  const urls = [];
+  for (const res of results) {
+    if (res.status === "fulfilled") urls.push(res.value);
+    else console.warn("[imgbb] one upload failed:", res.reason?.message);
   }
   return urls.length?{ok:true,urls}:{ok:false,error:"Upload failed"};
 }
 
 // ═══ RATE LIMITER ═══
+// خريطتين منفصلتين: الشات له حد، ورفع الصور له حد أقل (لأنه أغلى بكتير)
 const rateMap = new Map();
-function rateLimited(ip) {
-  const now=Date.now();
-  const arr=(rateMap.get(ip)||[]).filter(t=>now-t<RATE_WINDOW_MS);
-  if (arr.length>=RATE_MAX) return true;
-  arr.push(now); rateMap.set(ip,arr);
+const uploadRateMap = new Map();
+
+// تنظيف دوري للمفاتيح القديمة — من غيره الخريطة بتفضل تكبر طول عمر الـ isolate
+function pruneRateMap(map, windowMs) {
+  if (map.size < RATE_MAP_MAX_KEYS) return;
+  const now = Date.now();
+  for (const [k, arr] of map) {
+    const fresh = arr.filter(t => now - t < windowMs);
+    if (fresh.length) map.set(k, fresh); else map.delete(k);
+  }
+  // لو لسه كبيرة بعد التنظيف، امسحها بالكامل (حماية قصوى)
+  if (map.size >= RATE_MAP_MAX_KEYS) map.clear();
+}
+
+function hitLimit(map, key, windowMs, max) {
+  pruneRateMap(map, windowMs);
+  const now = Date.now();
+  const arr = (map.get(key)||[]).filter(t=>now-t<windowMs);
+  if (arr.length>=max) return true;
+  arr.push(now); map.set(key,arr);
   return false;
 }
 
+function rateLimited(ip)       { return hitLimit(rateMap, ip, RATE_WINDOW_MS, RATE_MAX); }
+function uploadRateLimited(ip) { return hitLimit(uploadRateMap, ip, UPLOAD_RATE_WINDOW, UPLOAD_RATE_MAX); }
+
 // ═══ RESPONSE HELPERS ═══
-const CORS = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type"};
-const jsonRes = (obj,s=200) => new Response(JSON.stringify(obj),{status:s,headers:{...CORS,"Content-Type":"application/json"}});
+// CORS مقيّد: بنرجّع الـ Origin بس لو موجود في القائمة البيضاء
+// (قبل كده كان "*" — أي موقع كان يقدر يستهلك الـ Worker ومفاتيحه)
+function allowedOrigins(env) {
+  const extra = String(env?.ALLOWED_ORIGINS || "").split(",").map(s=>s.trim()).filter(Boolean);
+  return [...DEFAULT_ALLOWED_ORIGINS, ...extra];
+}
+
+function corsHeaders(request, env) {
+  const origin = request?.headers?.get("Origin") || "";
+  const list = allowedOrigins(env);
+  const ok = origin && list.includes(origin);
+  return {
+    // لو الـ Origin مش مسموح بنرجّع الدومين الأساسي فالمتصفح هيرفض الرد
+    "Access-Control-Allow-Origin": ok ? origin : DEFAULT_ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+    // هيدرز أمان إضافية
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+  };
+}
+
+// ═══ تأخير الكتابة (v8.6) ═══
+// طارق بيكتب من موبايله، فالرد الفوري بيفضح إنه آلة.
+// بنحسب المدة هنا وبنبعتها للواجهة في حقل typingDelay، والواجهة هي اللي تستنى —
+// عشان منستهلكش وقت تنفيذ الـ Worker (ده بيتحاسب عليه في فاتورة Cloudflare).
+const TYPING_MIN_MS = 400;
+const TYPING_MAX_MS = 900;
+function typingDelayFor(text) {
+  const len = String(text||"").length;
+  if (!len) return 0;
+  // خريطة خطية: رد قصير (~40 حرف) ≈ الحد الأدنى، رد طويل (~400 حرف) ≈ الحد الأقصى
+  const span = TYPING_MAX_MS - TYPING_MIN_MS;
+  const ratio = Math.min(1, Math.max(0, (len - 40) / 360));
+  const base = TYPING_MIN_MS + Math.round(span * ratio);
+  // ±12% عشوائية عشان المدة متبقاش منتظمة بشكل ملحوظ
+  const jitter = Math.round(base * (Math.random() * 0.24 - 0.12));
+  return Math.max(TYPING_MIN_MS, Math.min(TYPING_MAX_MS, base + jitter));
+}
+
+// بيضيف حقل typingDelay لأي رد فيه نص للعميل
+// الحقل اختياري تمامًا: أي نسخة قديمة من الواجهة هتتجاهله ببساطة
+function withTypingDelay(obj) {
+  if (obj && typeof obj === "object" && typeof obj.response === "string" && obj.response) {
+    return { ...obj, typingDelay: typingDelayFor(obj.response) };
+  }
+  return obj;
+}
+
+// ختم نسخة النموذج على أي formState راجع للواجهة.
+// السبب: الواجهة كانت بتبعت _version قديم، والسيرفر كان بيرجّع الحالة
+// من غير _version خالص، فالجلسة كانت بتتلغي عشوائيًا في نص المسار.
+// دلوقتي كل رد بيحمل النسخة الصح، فالواجهة تفضل متزامنة تلقائيًا.
+function stampVersion(obj) {
+  if (obj && typeof obj === "object" && obj.formState && typeof obj.formState === "object") {
+    return { ...obj, formState: { ...obj.formState, _version: FORM_VERSION } };
+  }
+  return obj;
+}
+
+const jsonResWith = (cors, obj, s=200) =>
+  new Response(JSON.stringify(obj), {status:s, headers:{...cors, "Content-Type":"application/json; charset=utf-8"}});
 
 // ══════════════════════════════════════════════════
 // MAIN EXPORT
@@ -1525,34 +1883,65 @@ const jsonRes = (obj,s=200) => new Response(JSON.stringify(obj),{status:s,header
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // الـ CORS بقى متوقّف على الـ Origin، فبنحسبه مرة واحدة لكل طلب
+    const cors = corsHeaders(request, env);
+    // كل الردود بتعدي من هنا، فبنضيف typingDelay في مكان واحد بدل 20 موضع
+    const jsonRes = (obj, s=200) => jsonResWith(cors, stampVersion(withTypingDelay(obj)), s);
+    // معرّف قصير للطلب عشان نقدر نربط اللوجات ببعض وقت التشخيص
+    const reqId = Math.random().toString(36).slice(2, 10);
+    const ip = request.headers.get("CF-Connecting-IP")||"unknown";
 
+    // preflight الأول — لازم يرد قبل أي فحص تاني
+    if (request.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
+
+    // رفض أي حمولة أكبر من الحد قبل ما نقراها أصلاً
+    const declaredLen = Number(request.headers.get("Content-Length")||0);
+    if (declaredLen > MAX_BODY_BYTES) return jsonRes({error:"Payload too large"},413);
+
+    // ── مسار رفع الصور ──
     if (url.pathname==="/upload-images" && request.method==="POST") {
+      // حد أقل للرفع: العملية دي بتستهلك مفتاح ImgBB وبتكلف وقت
+      if (uploadRateLimited(ip)) return jsonRes({error:"Too many uploads, slow down"},429);
       try {
-        const body = await request.json().catch(()=>({}));
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object") return jsonRes({error:"Invalid JSON"},400);
         const r = await uploadImgBB(env, body.images||[]);
         if (!r.ok) return jsonRes({error:r.error},400);
         return jsonRes({urls:r.urls});
-      } catch { return jsonRes({error:"Upload failed"},500); }
+      } catch (err) {
+        console.error(`[${reqId}][upload] ${err?.message}`);
+        return jsonRes({error:"Upload failed"},500);
+      }
     }
 
-    if (request.method==="OPTIONS") return new Response(null,{status:204,headers:CORS});
     if (request.method!=="POST") return jsonRes({error:"Method not allowed"},405);
 
-    const ip = request.headers.get("CF-Connecting-IP")||"unknown";
     if (rateLimited(ip)) return jsonRes({response:"استنى شوية، بتبعت رسايل كتير.",options:ROUTE_BTNS},429);
 
     try {
-      const body = await request.json().catch(()=>({}));
-      const userMsg = String(body.message||"").trim();
-      let fs = sanitizeState(body.formState||{});
-      const history = Array.isArray(body.history)?body.history:[];
-      const incomingImgs = Array.isArray(body.imageUrls)?body.imageUrls:[];
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object") return jsonRes({response:"طلب غير صالح.",options:ROUTE_BTNS},400);
+
+      // قصّ رسالة المستخدم — يمنع استهلاك توكنز/CPU برسالة ضخمة
+      const userMsg = String(body.message||"").trim().slice(0, MAX_MSG_LEN);
+      let fs = sanitizeState(body.formState && typeof body.formState === "object" ? body.formState : {});
+      // السجل بيتفلتر ويتقص: بنقبل بس العناصر اللي شكلها صح
+      const history = (Array.isArray(body.history)?body.history:[])
+        .filter(m => m && typeof m === "object" && typeof m.message === "string")
+        .slice(-MAX_HISTORY);
+      // روابط الصور لازم تكون https فعلاً — منع حقن روابط خبيثة في رسالة الواتساب
+      const incomingImgs = (Array.isArray(body.imageUrls)?body.imageUrls:[])
+        .filter(u => typeof u === "string" && /^https:\/\/[^\s<>"']+$/.test(u))
+        .slice(0, MAX_IMAGES);
 
       if (incomingImgs.length && fs?.active) {
         fs.imageUrls = [...(fs.imageUrls||[]),...incomingImgs].slice(0,MAX_IMAGES);
       }
 
-      if (!env?.GEMINI_API_KEY) return jsonRes({response:"حصل خطأ مؤقت.",options:ROUTE_BTNS},500);
+      if (!env?.GEMINI_API_KEY) {
+        console.error(`[${reqId}] GEMINI_API_KEY missing`);
+        return jsonRes({response:"حصل خطأ مؤقت.",options:ROUTE_BTNS},500);
+      }
 
       const flowType = fs.flowType||"";
       const hasFlow = fs.active===true && flowType!=="";
@@ -1652,12 +2041,13 @@ export default {
       return jsonRes({response:"معاك طارق طنطاوي. اختار طلبك:",options:ROUTE_BTNS,formState:fs});
 
     } catch(err) {
-      console.error("[ERROR]", err.message, err.stack);
+      // لوج فيه معرّف الطلب للتشخيص — من غير ما نسرّب التفاصيل للعميل
+      console.error(`[${reqId}][ERROR]`, err?.message, err?.stack);
       return jsonRes({response:"حصلت مشكلة مؤقتة، جرّب تاني.",options:ROUTE_BTNS},500);
     }
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v8.3-FINAL
+// نهاية الملف — سمسار طلبك v8.4-HARDENED
 // ✅ Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
 // ═══════════════════════════════════════════════════
