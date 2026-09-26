@@ -1,0 +1,37 @@
+=================== /sw.js
+HTTP/2 200 
+content-type: application/javascript; charset=utf-8
+cache-control: max-age=600
+content-length: 3880
+=================== /manifest.json
+HTTP/2 200 
+content-type: application/json; charset=utf-8
+cache-control: max-age=600
+content-length: 903
+=================== /assets/img/icon-192.png
+HTTP/2 200 
+content-type: image/png
+cache-control: max-age=600
+content-length: 36936
+=================== /assets/img/icon-512.png
+HTTP/2 200 
+content-type: image/png
+cache-control: max-age=600
+content-length: 139363
+=================== /assets/img/icon-maskable-512.png
+HTTP/2 200 
+content-type: image/png
+cache-control: max-age=600
+content-length: 107154
+/* ═══════════════════════════════════════════════════════════════
+   Service Worker — «سمسار طلبك» (وكيل طارق طنطاوي)
+   ─────────────────────────────────────────────────────────────
+   الغرض: جعل الموقع PWA قابلة للتثبيت فعلياً (manifest لوحده لا يكفي).
+   النطاق: "/" — الملف في روت المستودع، لذلك يتحكم في كل الموقع.
+
+   ⚠️ قواعد السلامة المطبقة هنا:
+   • لا كاش لأي طلب غير GET، ولا لأي أصل خارجي (الخطوط / الـ Worker / Firebase).
+   • لا كاش للمسارات الحساسة: /upload-images و /api/ ... إلخ.
+   • لا نحفظ إلا الاستجابات الناجحة (200) من نفس الأصل (basic).
+   • الاستراتيجية: Network-First مع السقوط على الكاش عند انقطاع الشبكة.
+   ═══════════════════════════════════════════════════════════════ */
