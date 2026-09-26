@@ -14,6 +14,7 @@ extra_head: |
   <meta property="og:image:height" content="630">
   <meta property="og:image:secure_url" content="https://nasr-realestate.github.io/assets/img/social-agent-wav2.png">
   <meta property="og:image:type" content="image/png">
+  <script src="/assets/js/nasr-maps.js" defer></script>
 ---
 <div id="app">
 
@@ -300,8 +301,23 @@ let state = {
 };
 let isSending = false;
 
+// ═══ MAP PICKER STATE — ذاكرة الصفحة فقط (ممنوع sessionStorage/localStorage للإحداثيات) ═══
+let sessionGps = null;   // { lat, lng, address } — بيتبعت مع كل طلب طول ما المسار شغال
+let mapPicker  = null;   // instance من NasrMaps.createPicker
+let mapPickerEl = null;
+
+function stripGps(fs) {
+  if (!fs || typeof fs !== "object") return fs;
+  const out = { ...fs };
+  if (out.data && typeof out.data === "object" && "gps" in out.data) {
+    const d = { ...out.data }; delete d.gps; out.data = d;
+  }
+  return out;
+}
+
 function saveState() {
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: []})); } catch {}
+  // الإحداثيات بتتشال قبل الحفظ — بتفضل في الذاكرة بس (sessionGps + state.formState الحي)
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: [], formState: stripGps(state.formState)})); } catch {}
 }
 function loadState() {
   try {
@@ -642,7 +658,8 @@ async function sendMsg() {
       message: txt,
       formState: state.formState || { _version: FORM_VERSION },
       history: state.history.slice(-20),
-      imageUrls: imgUrls
+      imageUrls: imgUrls,
+      gps: sessionGps || undefined
     };
 
     const r = await fetch(WORKER_URL, {
@@ -685,6 +702,8 @@ async function sendMsg() {
 
     if (data.options?.length) renderButtons(data.options);
 
+    handleMapUi(data);
+
     if (data.imageUrls?.length) {
       state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls].slice(-MAX_IMAGES);
     }
@@ -700,6 +719,87 @@ async function sendMsg() {
     sendBtn.disabled = false;
     msgInput.focus();
   }
+}
+
+// ═══════════════════════════════════════════
+// MAP PICKER — منتقي الموقع (Leaflet + CartoDB EN + Photon EN)
+//   • الـ Worker بيبعت ui:"map_picker" (+ uiRequired) في خطوة الموقع
+//   • مسار البيع: إجباري (الكتابة مقفولة لحد ما يختار أو يدوس "اكتب يدويًا")
+//   • باقي المسارات: زر اختياري "📍 حدد على الخريطة"
+//   • الإحداثيات في الذاكرة فقط (sessionGps) — مش بتتحفظ في أي storage
+// ═══════════════════════════════════════════
+function lockInput(placeholder) {
+  msgInput.disabled = true;
+  msgInput.placeholder = placeholder || "اختار الموقع من الخريطة فوق 👆";
+}
+function unlockInput() {
+  msgInput.disabled = false;
+  msgInput.placeholder = "رسالة...";
+}
+function closeMapPicker() {
+  if (mapPicker) { try { mapPicker.destroy(); } catch {} mapPicker = null; }
+  if (mapPickerEl) { mapPickerEl.remove(); mapPickerEl = null; }
+  chatArea.querySelectorAll(".nm-open-picker").forEach(b => b.remove());
+}
+
+function openMapPicker(required) {
+  if (!window.NasrMaps) { showToast("الخريطة مش جاهزة — اكتب العنوان يدويًا"); return; }
+  closeMapPicker();
+  mapPickerEl = document.createElement("div");
+  chatArea.insertBefore(mapPickerEl, typingBubble);
+  mapPicker = window.NasrMaps.createPicker(mapPickerEl, {
+    required: !!required,
+    onToast: showToast,
+    onConfirm: (sel) => {
+      sessionGps = { lat: sel.lat, lng: sel.lng, address: sel.address };
+      state.uiPending = null;
+      closeMapPicker();
+      unlockInput();
+      msgInput.value = sel.address;
+      updateSendIcon();
+      sendMsg();
+    },
+    onManual: () => {
+      sessionGps = null; // كتابة يدوية = بدون GPS
+      state.uiPending = null;
+      saveState();
+      closeMapPicker();
+      unlockInput();
+      msgInput.focus();
+      showToast("تمام — اكتب الشارع والمنطقة بالتفصيل");
+    }
+  });
+  if (required) lockInput();
+  scrollToBottom();
+}
+
+function renderOpenPickerChip() {
+  let rack = chatArea.querySelector(".btns-rack");
+  if (!rack) {
+    rack = document.createElement("div");
+    rack.className = "btns-rack";
+    chatArea.insertBefore(rack, typingBubble);
+  }
+  const btn = document.createElement("button");
+  btn.className = "btn-glass nm-open-picker";
+  btn.textContent = "📍 حدد على الخريطة";
+  btn.onclick = () => { if (isSending) return; openMapPicker(false); };
+  rack.insertBefore(btn, rack.firstChild);
+}
+
+function handleMapUi(data) {
+  closeMapPicker();
+  unlockInput();
+  if (data && data.ui === "map_picker" && data.formState?.active) {
+    const required = !!data.uiRequired;
+    // بنحفظ "إن فيه picker مطلوب" بس (مش أي إحداثيات) عشان لو عمل reload يرجع نفس الخطوة
+    state.uiPending = { required };
+    if (required) openMapPicker(true);
+    else renderOpenPickerChip();
+  } else {
+    state.uiPending = null;
+  }
+  if (data?.done || data?.formState?.lifecycle === "completed") sessionGps = null;
 }
 
 // ═══ NAVIGATION ═══
@@ -743,6 +843,7 @@ function openGoogle() {
 
 // ═══ RESET / DELETE ═══
 function resetChat() {
+  sessionGps = null; closeMapPicker(); unlockInput();
   state = {
     formState: { _version: FORM_VERSION },
     history: [], imageUrls: [], pendingImages: [],
@@ -758,6 +859,7 @@ function resetChat() {
 
 function deleteChat() {
   sessionStorage.removeItem(STORAGE_KEY);
+  sessionGps = null; closeMapPicker(); unlockInput();
   state = {
     formState: { _version: FORM_VERSION },
     history: [], imageUrls: [], pendingImages: [],
@@ -798,6 +900,12 @@ if (state.history && state.history.length) {
   });
   if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
     showWA(state.whatsappUrl, state.waMessage);
+  }
+  // لو الجلسة كانت واقفة عند خطوة الموقع — نرجّع المنتقي (بدون أي إحداثيات محفوظة)
+  if (state.uiPending && state.formState?.active) {
+    const req = !!state.uiPending.required;
+    const restore = () => { if (window.NasrMaps) { req ? openMapPicker(true) : renderOpenPickerChip(); } };
+    if (window.NasrMaps) restore(); else window.addEventListener("load", restore, { once: true });
   }
 } else {
   startConversation();

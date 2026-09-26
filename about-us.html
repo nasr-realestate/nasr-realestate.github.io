@@ -181,6 +181,32 @@ image: "/assets/img/social-home.png"
     </div>
   </section>
 
+  <!-- ═══ Office Map ═══
+       إحداثيات المكتب من Google Maps (maps.app.goo.gl/jQBJvzfxA4vzo6Qe7): 30.0673165, 31.3391426
+       Leaflet + CartoDB Voyager (labels إنجليزية) — تحميل كسول عند ظهور القسم -->
+  <section class="ab-section ab-office" data-nm="office" data-lat="30.0673165" data-lng="31.3391426" aria-label="موقع المكتب">
+    <h2 class="ab-section-title">
+      <i class="fas fa-map-marked-alt"></i>
+      موقع المكتب
+    </h2>
+    <div class="ab-office-grid">
+      <div class="nm-map-wrap">
+        <div class="nm-skeleton" aria-hidden="true"><div class="nm-skeleton-shimmer"></div><span>جاري تحميل الخريطة…</span></div>
+        <div class="nm-map-target" role="application" aria-label="خريطة موقع مكتب سمسار طلبك"></div>
+      </div>
+      <div class="ab-office-card">
+        <h3>سمسار طلبك — مدينة نصر</h3>
+        <div class="ab-office-line"><i class="fas fa-map-marker-alt"></i><span>{{ site.office.address }}</span></div>
+        <div class="ab-office-line"><i class="far fa-clock"></i><span>{{ site.office.hours }}</span></div>
+        <div class="ab-office-line"><i class="fas fa-phone-alt"></i><a href="tel:{{ site.author.phone }}" dir="ltr">{{ site.author.phone }}</a></div>
+        <div class="ab-office-line"><i class="fas fa-location-dot"></i><span class="ab-office-coords">30.06732, 31.33914</span></div>
+        <a class="ab-office-btn" href="https://www.google.com/maps/dir/?api=1&destination=30.0673165,31.3391426" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-route"></i> افتح المسار
+        </a>
+      </div>
+    </div>
+  </section>
+
   <!-- ═══ Final CTA ═══ -->
   <section class="ab-cta">
     <h2>هل أنت جاهز لاتخاذ <span>خطوتك القادمة؟</span></h2>
@@ -203,3 +229,6 @@ image: "/assets/img/social-home.png"
   </section>
 
 </div>
+
+<!-- نظام الخرائط (تحميل كسول لـ Leaflet عند ظهور القسم) -->
+<script src="{{ '/assets/js/nasr-maps.js' | relative_url }}" defer></script>

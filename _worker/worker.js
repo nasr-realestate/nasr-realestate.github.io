@@ -738,6 +738,27 @@ function filterAndRank(properties, criteria) {
 }
 
 // ═══ WA MESSAGE BUILDER ═══
+// ═══ GPS (من منتقي الخريطة في agent.html) ═══
+// بيتقبل من الواجهة كـ body.gps = { lat, lng, address } — بدون أي تخزين دائم (بيعيش جوه formState بس)
+function sanitizeGps(g) {
+  if (!g || typeof g !== "object") return null;
+  const lat = Number(g.lat), lng = Number(g.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const address = String(g.address||"").replace(/[\u0000-\u001F\u007F<>]/g," ").replace(/\s+/g," ").trim().slice(0,200);
+  return { lat: Math.round(lat*1e5)/1e5, lng: Math.round(lng*1e5)/1e5, address };
+}
+function gpsLines(data) {
+  const g = sanitizeGps(data?.gps);
+  if (!g) return [];
+  const out = [];
+  if (g.address && g.address !== String(data.location||"").trim() && g.address !== String(data.landmark||"").trim())
+    out.push(`│ 🗺️ العنوان (خريطة): ${g.address}`);
+  out.push(`│ 📌 الإحداثيات: ${g.lat}, ${g.lng}`);
+  out.push(`│ 🔗 https://maps.google.com/?q=${g.lat},${g.lng}`);
+  return out;
+}
+
 function buildWAMsg(ctx, data, imgUrls=[]) {
   const isOwner = ctx==="owner_sale"||ctx==="owner_rent";
   const isSale  = ctx==="owner_sale"||ctx==="buyer";
@@ -761,6 +782,7 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
 
   if (isOwner) {
     if (hasVal(data.location))  lines.push(`│ 📍 الموقع: ${data.location}`);
+    lines.push(...gpsLines(data));
     if (hasVal(data.area))      lines.push(`│ 📐 المساحة: ${fmtVal(data.area)} م²`);
 
     if (isShop(pt)) {
@@ -811,6 +833,7 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
   } else {
     const landmark = data.landmark && data.landmark!=="__ANY__" ? data.landmark : "أي منطقة في مدينة نصر";
     lines.push(`│ 📍 المنطقة: ${landmark}`);
+    lines.push(...gpsLines(data));
     const bgt = hasVal(data.budget) ? data.budget : data.price;
     if (hasVal(bgt)) lines.push(`│ 💰 الميزانية: ${fmtNum(bgt)} ج.م`);
     if (isVilla(pt) && hasVal(data.villaType)) lines.push(`│ 🏡 نوع الفيلا: ${data.villaType}`);
@@ -1126,11 +1149,14 @@ function askOwnerStep(steps, idx, fs, extra, lms) {
   if (step.type==="buttons") opts = withCtrl(step.opts, data);
   else opts = withCtrl([], data);
 
+  // خطوة الموقع → الواجهة بتفتح منتقي الخريطة (إجباري في البيع، اختياري في الإيجار)
+  const ui = step.id==="location" ? { ui:"map_picker", uiRequired: fs.type==="sale" } : {};
+
   return {
     response: extra ? `${extra}\n\n${q}` : q,
     formState: {...fs, data, stepIndex:idx, awaitingQ:true},
     options: opts, done:false, readyToSend:false, canShareWhatsapp:false,
-    progress, imageUrls:fs.imageUrls||[]
+    progress, imageUrls:fs.imageUrls||[], ...ui
   };
 }
 
@@ -1160,11 +1186,14 @@ function askBuyerStep(steps, idx, fs, extra, lms) {
     }
   } else opts = withCtrl([], data, idx>0);
 
+  // خطوة المنطقة عند المشتري/المستأجر → منتقي الخريطة اختياري
+  const ui = step.id==="landmark" ? { ui:"map_picker", uiRequired:false } : {};
+
   return {
     response: extra ? `${extra}\n\n${q}` : q,
     formState: {...fs, data, stepIndex:idx, awaitingQ:true},
     options: opts, done:false, readyToSend:false, canShareWhatsapp:false,
-    progress, imageUrls:fs.imageUrls||[]
+    progress, imageUrls:fs.imageUrls||[], ...ui
   };
 }
 
@@ -1938,6 +1967,12 @@ export default {
         fs.imageUrls = [...(fs.imageUrls||[]),...incomingImgs].slice(0,MAX_IMAGES);
       }
 
+      // GPS من منتقي الخريطة — بيتربط بالطلب الحالي فقط (ذاكرة الجلسة، بدون تخزين)
+      const incomingGps = sanitizeGps(body.gps);
+      if (incomingGps && fs?.active) {
+        fs.data = { ...(fs.data||{}), gps: incomingGps };
+      }
+
       if (!env?.GEMINI_API_KEY) {
         console.error(`[${reqId}] GEMINI_API_KEY missing`);
         return jsonRes({response:"حصل خطأ مؤقت.",options:ROUTE_BTNS},500);
@@ -2017,6 +2052,8 @@ export default {
       if (flowType==="owner") {
         const lms = await fetchLandmarks({transaction:fs.type});
         const step = getOwnerSteps(fs.type)[fs.stepIndex];
+        // إجابة يدوية على خطوة الموقع (بدون gps في نفس الطلب) → أي إحداثيات قديمة بتتشال (لا pin كاذب)
+        if (step?.id==="location" && !incomingGps && fs.data?.gps) { fs.data = {...fs.data}; delete fs.data.gps; }
         const r = await processOwner(fs,userMsg,env,history,lms);
         return jsonRes(await enhanceResponse(env,r,userMsg,fs,step,history));
       }
@@ -2024,6 +2061,7 @@ export default {
       if (flowType==="buyer"||flowType==="tenant") {
         const lms = await fetchLandmarks({transaction:fs.type,propertyType:fs.data?.propertyType});
         const step = getBuyerSteps(fs.type)[fs.stepIndex];
+        if (step?.id==="landmark" && !incomingGps && fs.data?.gps) { fs.data = {...fs.data}; delete fs.data.gps; }
         const r = await processBuyer(fs,userMsg,env,history,lms);
         return jsonRes(await enhanceResponse(env,r,userMsg,fs,step,history));
       }
@@ -2048,6 +2086,6 @@ export default {
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v8.4-HARDENED
+// نهاية الملف — سمسار طلبك v8.5-MAPS (منتقي الخريطة: ui:"map_picker" + gps في رسالة الواتساب)
 // ✅ Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
 // ═══════════════════════════════════════════════════
