@@ -181,6 +181,16 @@ image: "/assets/img/social-home.png"
     </div>
   </section>
 
+  <!-- ═══ مكتبنا على الخريطة ═══ -->
+  <section class="ab-section interactive-map-section office-map-section" id="office-location-map"
+           data-address="{{ site.office.address | escape }}">
+    <h2 class="ab-section-title"><i class="fas fa-map-marked-alt"></i> موقع المكتب</h2>
+    <p class="map-status" aria-live="polite">جارٍ تجهيز موقع المكتب…</p>
+    <div class="map-canvas" role="region" aria-label="خريطة مكتب سمسار طلبك"></div>
+    <a class="map-cta" href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer">افتح الموقع في OpenStreetMap</a>
+    <p class="map-privacy-note">موقع تقريبي مُحدد آلياً من عنوان المكتب؛ يُرجى التواصل معنا للتأكيد قبل الزيارة.</p>
+  </section>
+
   <!-- ═══ Final CTA ═══ -->
   <section class="ab-cta">
     <h2>هل أنت جاهز لاتخاذ <span>خطوتك القادمة؟</span></h2>
@@ -202,4 +212,5 @@ image: "/assets/img/social-home.png"
     </div>
   </section>
 
+  <script src="{{ '/assets/js/interactive-maps.js' | relative_url }}"></script>
 </div>

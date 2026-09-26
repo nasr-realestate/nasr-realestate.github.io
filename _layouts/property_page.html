@@ -100,6 +100,19 @@ hide_navbar: true
   </section>
   {% endif %}
 
+  <!-- ═══ الموقع — لا تظهر الإحداثيات إلا إذا كانت GPS محفوظة صراحةً في بيانات العقار ═══ -->
+  <section class="interactive-map-section property-map-section" id="property-location-map"
+           data-location="{{ page.location | default: '' | escape }}"
+           data-title="{{ page.title | escape }}"
+           data-latitude="{{ page.latitude | default: '' | escape }}"
+           data-longitude="{{ page.longitude | default: '' | escape }}">
+    <h2 class="pp-section-title"><i class="fas fa-map-marked-alt"></i> الموقع</h2>
+    <p class="map-status" aria-live="polite">جارٍ تجهيز الموقع…</p>
+    <div class="map-canvas" role="region" aria-label="خريطة موقع العقار"></div>
+    <a class="map-cta" href="https://wa.me/201147758857" target="_blank" rel="noopener noreferrer">ابعت لطارق</a>
+    <p class="map-privacy-note">لا نحفظ إحداثيات العقار. المواقع غير الدقيقة تظهر كنطاق تقريبي، وليس كدبوس موقع مؤكد.</p>
+  </section>
+
   <!-- ═══ Header + Price ═══ -->
   <header class="pp-header">
     <h1 class="pp-title">{{ page.title }}</h1>
@@ -345,6 +358,7 @@ hide_navbar: true
   <img src="" alt="صورة مكبرة" id="ppLightboxImg">
 </div>
 
+<script src="{{ '/assets/js/interactive-maps.js' | relative_url }}"></script>
 <script>
   // ═══ Gallery ═══
   function ppSwitchImage(src, thumbEl) {
