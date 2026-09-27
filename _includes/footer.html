@@ -166,16 +166,26 @@
       isExpanded = sessionStorage.getItem(STORAGE_KEY) === 'expanded';
     } catch (e) { /* ignore */ }
 
+    // نص الزر حسب الحالة (عرض التفاصيل / إخفاء التفاصيل)
+    function syncToggleLabel(expanded) {
+      const label = footer.querySelector('.footer-toggle-label');
+      if (label) label.textContent = expanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل';
+      const btn = footer.querySelector('.footer-toggle-btn');
+      if (btn) btn.setAttribute('aria-label', expanded ? 'إخفاء تفاصيل الفوتر' : 'عرض تفاصيل الفوتر');
+    }
+
     // تطبيق الحالة الأولية
     if (isExpanded) {
       footer.classList.add('expanded');
       miniBar.setAttribute('aria-expanded', 'true');
     }
+    syncToggleLabel(isExpanded);
 
     // دالة التبديل
     window.toggleFooter = function() {
       const nowExpanded = footer.classList.toggle('expanded');
       miniBar.setAttribute('aria-expanded', nowExpanded ? 'true' : 'false');
+      syncToggleLabel(nowExpanded);
 
       // حفظ الحالة
       try {

@@ -2,356 +2,861 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>قيّم عقارك | سمسار طلبك</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>قيّم عقارك | سمسار طلبك — أدق تقييم عقاري في مدينة نصر</title>
+  <meta name="description" content="قيّم عقارك مجانًا بناءً على بيانات سوق حقيقية في مدينة نصر: السعر المتوقع، النطاق، سعر المتر، ومقارنة بمتوسط المنطقة.">
+  <meta name="theme-color" content="#050505">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/style.css">
 
   <style>
-    body { background: #050505; color: #fff; font-family: 'Cairo', sans-serif; min-height: 100vh; padding: 1rem; }
+    :root {
+      --gold: #d4af37; --gold-dark: #b38f1d;
+      --bg: #050505; --card: #141414; --input: #1a1a1a;
+      --border: #333; --text: #fff; --muted: #b0b0b0; --dim: #666;
+      --green: #25d366; --red: #ff5b5b; --amber: #ffc107;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; min-height: 100vh; padding: 1rem 1rem 3rem; margin: 0; }
     .wrap { max-width: 720px; margin: 0 auto; }
 
-    .hdr { text-align: center; padding: 1.5rem 0; }
-    .hdr .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid rgba(212,175,55,0.4); border-radius: 20px; color: #d4af37; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem; }
-    .hdr h1 { color: #d4af37; font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
-    .hdr p { color: #b0b0b0; font-size: 0.85rem; line-height: 1.7; }
+    /* ═══ زر الرجوع (يظهر عند القدوم من صفحة اعرض عقارك) ═══ */
+    .back-bar { display: none; margin-bottom: 1rem; }
+    .back-bar.show { display: block; }
+    .back-bar a {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 700;
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; background: var(--card);
+    }
+    .back-bar a:hover { color: var(--gold); border-color: var(--gold); }
 
-    .card { background: #141414; border: 1px solid rgba(212,175,55,0.2); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; }
+    /* ═══ الهيدر ═══ */
+    .hdr { text-align: center; padding: 1.2rem 0 1rem; }
+    .hdr .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border: 1px solid rgba(212,175,55,0.4); border-radius: 20px;
+      color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.8rem;
+    }
+    .hdr h1 { color: var(--gold); font-size: 1.6rem; font-weight: 900; margin: 0 0 6px; }
+    .hdr p { color: var(--muted); font-size: 0.85rem; line-height: 1.7; margin: 0; }
 
-    .field-label { color: #b0b0b0; font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-    .field-label i { color: #d4af37; }
+    /* ═══ مؤشر الخطوات ═══ */
+    .steps { display: flex; gap: 6px; margin: 1.2rem 0; }
+    .step {
+      flex: 1; text-align: center; padding: 10px 4px; font-size: 0.78rem; font-weight: 700;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--dim);
+      display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.25s;
+    }
+    .step .n {
+      width: 22px; height: 22px; border-radius: 50%; background: #222; color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;
+    }
+    .step.active { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.06); }
+    .step.active .n { background: var(--gold); color: #000; }
+    .step.done { border-color: rgba(37,211,102,0.4); color: var(--green); }
+    .step.done .n { background: var(--green); color: #fff; }
+
+    /* ═══ البطاقات ═══ */
+    .card { background: var(--card); border: 1px solid rgba(212,175,55,0.2); border-radius: 16px; padding: 1.4rem; margin-bottom: 1rem; }
+    .card-title { color: var(--gold); font-size: 1rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .card-sub { color: var(--muted); font-size: 0.8rem; margin-bottom: 1rem; line-height: 1.6; }
+
+    .field-label { color: var(--muted); font-size: 0.85rem; font-weight: 700; margin: 1rem 0 8px; display: flex; align-items: center; gap: 8px; }
+    .field-label:first-child { margin-top: 0; }
+    .field-label i { color: var(--gold); }
+    .field-label .opt { font-weight: 400; font-size: 0.75rem; color: var(--dim); }
 
     textarea, input, select {
-      width: 100%; background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+      width: 100%; background: var(--input); border: 1px solid var(--border); border-radius: 10px;
       padding: 12px; color: #fff; font-family: inherit; font-size: 0.95rem;
-      outline: none; transition: 0.2s; resize: vertical;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
     }
-    textarea:focus, input:focus, select:focus { border-color: #d4af37; box-shadow: 0 0 0 3px rgba(212,175,55,0.12); }
+    textarea { resize: vertical; line-height: 1.8; }
+    textarea:focus, input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.12); }
+    select.auto-filled, input.auto-filled { border-color: rgba(37,211,102,0.5); }
+    label.mini { display: block; color: #888; font-size: 0.75rem; margin-bottom: 5px; font-weight: 600; }
 
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
 
-    .btn-analyze {
-      width: 100%; background: #d4af37; color: #000; border: none; border-radius: 12px;
-      padding: 15px; font-family: inherit; font-size: 1rem; font-weight: 800;
-      cursor: pointer; transition: 0.2s; margin-top: 1rem;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
+    /* شارات الاستخراج التلقائي */
+    .extracted { display: none; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .extracted.show { display: flex; animation: fadeIn 0.3s; }
+    .chip {
+      background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.4); color: var(--green);
+      font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 5px;
     }
-    .btn-analyze:hover:not(:disabled) { background: #b38f1d; color: #fff; }
-    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .error-box { display: none; background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.4); color: #ff6b6b; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; }
+    .btn-analyze {
+      width: 100%; background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000; border: none; border-radius: 12px;
+      padding: 15px; font-family: inherit; font-size: 1.05rem; font-weight: 900;
+      cursor: pointer; transition: 0.2s; margin-top: 1.2rem;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
+    }
+    .btn-analyze:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 26px rgba(212,175,55,0.4); }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    .loading { display: none; text-align: center; padding: 2rem; }
-    .loading.show { display: block; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #d4af37; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    .error-box {
+      display: none; background: rgba(255,91,91,0.1); border: 1px solid rgba(255,91,91,0.4);
+      color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600;
+    }
+
+    /* ═══ التحميل ═══ */
+    .loading { display: none; text-align: center; padding: 2.5rem 1rem; }
+    .loading.show { display: block; animation: fadeIn 0.3s; }
+    .spinner {
+      width: 46px; height: 46px; border: 4px solid #222; border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: var(--muted); font-size: 0.9rem; font-weight: 600; min-height: 1.6em; }
+    .loading .load-sub { color: var(--dim); font-size: 0.75rem; margin-top: 4px; }
 
+    /* ═══ النتيجة ═══ */
     .result { display: none; }
     .result.show { display: block; animation: fadeIn 0.4s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-    .result-card { background: #141414; border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; }
-    .result-title { color: #d4af37; font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+    .result-card { background: var(--card); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; padding: 1.4rem; margin-bottom: 1rem; }
+    .result-title { color: var(--gold); font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
 
-    .estimate-box { background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.05)); border: 2px solid #d4af37; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
-    .estimate-label { color: #b0b0b0; font-size: 0.8rem; margin-bottom: 6px; }
-    .estimate-value { color: #d4af37; font-size: 2rem; font-weight: 900; }
-    .estimate-unit { color: #b0b0b0; font-size: 0.9rem; margin-top: 4px; }
+    /* شريط الحكم: أخضر = فرصة / ذهبي = مناسب / أحمر = مبالغ فيه */
+    .verdict { border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 1rem; border: 2px solid; }
+    .verdict .v-label { font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .verdict .v-sub { font-size: 0.8rem; margin-top: 4px; opacity: 0.85; }
+    .verdict.green { background: rgba(37,211,102,0.08); border-color: var(--green); color: var(--green); }
+    .verdict.gold { background: rgba(212,175,55,0.08); border-color: var(--gold); color: var(--gold); }
+    .verdict.red { background: rgba(255,91,91,0.08); border-color: var(--red); color: #ff8a8a; }
+    .verdict.neutral { background: rgba(176,176,176,0.06); border-color: #444; color: var(--muted); }
 
-    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .meta-item { background: #1a1a1a; border-radius: 10px; padding: 12px; }
-    .meta-label { color: #888; font-size: 0.75rem; margin-bottom: 4px; }
-    .meta-value { color: #fff; font-size: 1rem; font-weight: 700; }
+    .estimate-box {
+      background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04));
+      border: 2px solid var(--gold); border-radius: 12px; padding: 1.4rem; text-align: center; margin-bottom: 1rem;
+    }
+    .estimate-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 6px; font-weight: 600; }
+    .estimate-value { color: var(--gold); font-size: 2.1rem; font-weight: 900; line-height: 1.2; }
+    .estimate-unit { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+    @media (max-width: 380px) { .estimate-value { font-size: 1.7rem; } }
 
-    .confidence { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; }
-    .confidence.high { background: rgba(37,211,102,0.15); color: #25d366; }
-    .confidence.medium { background: rgba(255,193,7,0.15); color: #ffc107; }
-    .confidence.low { background: rgba(255,77,77,0.15); color: #ff6b6b; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+    @media (max-width: 380px) { .meta-grid { grid-template-columns: 1fr; } }
+    .meta-item { background: var(--input); border-radius: 10px; padding: 12px; border: 1px solid #262626; }
+    .meta-item.full { grid-column: 1 / -1; }
+    .meta-label { color: #888; font-size: 0.72rem; margin-bottom: 4px; font-weight: 600; }
+    .meta-value { color: #fff; font-size: 1rem; font-weight: 800; }
+    .meta-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+    .diff-up { color: #ff8a8a; } .diff-down { color: var(--green); } .diff-even { color: var(--gold); }
 
-    .disclaimer { color: #666; font-size: 0.75rem; line-height: 1.6; padding-top: 1rem; border-top: 1px solid #222; margin-top: 1rem; }
+    .confidence { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; }
+    .confidence.high { background: rgba(37,211,102,0.15); color: var(--green); }
+    .confidence.medium { background: rgba(255,193,7,0.15); color: var(--amber); }
+    .confidence.low { background: rgba(255,91,91,0.15); color: #ff8a8a; }
 
-    .actions { display: flex; gap: 8px; margin-top: 1rem; }
-    .icon-btn { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #b0b0b0; padding: 12px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; }
-    .icon-btn:hover { border-color: #d4af37; color: #d4af37; }
+    /* شريط المقارنة */
+    .compare-bar { height: 10px; background: #222; border-radius: 6px; margin-top: 8px; position: relative; overflow: hidden; }
+    .compare-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; }
 
-    .footer-note { text-align: center; color: #666; font-size: 0.75rem; padding: 2rem 0 1rem; line-height: 1.8; }
-    .footer-note strong { color: #d4af37; }
+    /* بطاقة المنطقة */
+    .area-card { background: var(--input); border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; margin-bottom: 1rem; }
+    .area-card h4 { color: var(--gold); font-size: 0.9rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+    .area-card .lvl { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--muted); background: #222; padding: 3px 10px; border-radius: 14px; margin-bottom: 10px; }
+    .area-list { margin: 0; padding: 0; list-style: none; }
+    .area-list li { font-size: 0.8rem; color: var(--muted); padding: 5px 0; border-top: 1px solid #222; display: flex; gap: 8px; align-items: flex-start; line-height: 1.6; }
+    .area-list li:first-child { border-top: none; }
+    .area-list i { color: var(--gold); margin-top: 4px; font-size: 0.7rem; }
 
-    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1f1b10; border: 1px solid #d4af37; color: #d4af37; padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; z-index: 9999; animation: fadeIn 0.3s; }
+    .disclaimer { color: var(--dim); font-size: 0.75rem; line-height: 1.7; padding-top: 1rem; border-top: 1px solid #222; margin-top: 0.5rem; }
+    .src-note { color: #555; font-size: 0.7rem; margin-top: 6px; }
+
+    /* ═══ أزرار الإجراءات ═══ */
+    .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 1.1rem; }
+    .btn-wa {
+      background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; border: none; border-radius: 12px;
+      padding: 14px; font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+      box-shadow: 0 4px 18px rgba(37,211,102,0.25);
+    }
+    .btn-wa:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(37,211,102,0.4); }
+    .actions-row { display: flex; gap: 8px; }
+    .icon-btn {
+      flex: 1; background: var(--input); border: 1px solid var(--border); color: var(--muted);
+      padding: 12px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; transition: 0.2s;
+    }
+    .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .footer-note { text-align: center; color: var(--dim); font-size: 0.75rem; padding: 2rem 0 1rem; line-height: 1.9; }
+    .footer-note strong { color: var(--gold); }
+    .footer-note a { color: var(--muted); }
+
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: #1f1b10; border: 1px solid var(--gold); color: var(--gold);
+      padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; z-index: 9999;
+      animation: fadeIn 0.3s; max-width: 90vw; text-align: center;
+    }
   </style>
 </head>
 <body>
 <div class="wrap">
 
+  <div class="back-bar" id="backBar">
+    <a href="/add-your-property.html"><i class="fas fa-arrow-right"></i> رجوع لاستكمال عرض العقار</a>
+  </div>
+
   <div class="hdr">
     <div class="badge"><i class="fas fa-crown"></i> سمسار طلبك | مدينة نصر</div>
-    <h1>قيّم عقارك بذكاء</h1>
-    <p>الصق رسالة واتساب أو املأ البيانات يدويًا — التقييم مبني على بيانات سوق حقيقية</p>
+    <h1>💎 قيّم عقارك بذكاء</h1>
+    <p>الصق رسالة واتساب أو املأ البيانات يدويًا — التقييم مبني على بيانات سوق حقيقية ومحدّثة</p>
   </div>
 
-  <div class="card">
-    <div class="field-label"><i class="fab fa-whatsapp"></i> الصق رسالة الواتساب (اختياري)</div>
-    <textarea id="msg" rows="4" placeholder="مثال: شقة في عباس العقاد 170 متر، سوبر لوكس، 6,200,000 جنيه..."></textarea>
-
-    <div class="field-label" style="margin-top: 1rem;"><i class="fas fa-tags"></i> أو املأ البيانات يدويًا</div>
-
-    <div class="row">
-      <div>
-        <label class="meta-label">المنطقة</label>
-        <select id="area"><option value="">اختر المنطقة</option></select>
-      </div>
-      <div>
-        <label class="meta-label">نوع العملية</label>
-        <select id="areaType">
-          <option value="sale">بيع</option>
-          <option value="rent">إيجار</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label class="meta-label">نوع العقار</label>
-        <select id="propertyType">
-          <option value="شقة">شقة</option>
-          <option value="فيلا">فيلا</option>
-          <option value="دوبلكس">دوبلكس</option>
-          <option value="روف">روف</option>
-          <option value="محل تجاري">محل تجاري</option>
-          <option value="مكتب إداري">مكتب إداري</option>
-          <option value="مخزن">مخزن</option>
-        </select>
-      </div>
-      <div>
-        <label class="meta-label">المساحة (م²)</label>
-        <input type="number" id="size" placeholder="مثال: 180">
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label class="meta-label">التشطيب</label>
-        <select id="finishing">
-          <option value="سوبر لوكس">سوبر لوكس</option>
-          <option value="ألترا سوبر لوكس">ألترا سوبر لوكس</option>
-          <option value="نصف تشطيب">نصف تشطيب</option>
-          <option value="طوب أحمر">طوب أحمر</option>
-        </select>
-      </div>
-      <div>
-        <label class="meta-label">الدور</label>
-        <select id="floor">
-          <option value="أرضي">أرضي</option>
-          <option value="أول">أول</option>
-          <option value="ثالث">ثالث</option>
-          <option value="خامس+">خامس أو أعلى</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label class="meta-label">العمر</label>
-        <select id="age">
-          <option value="new">جديد (أقل من 10 سنوات)</option>
-          <option value="medium" selected>متوسط (10-25 سنة)</option>
-          <option value="old">قديم (أكثر من 25 سنة)</option>
-        </select>
-      </div>
-      <div id="furnishedRow" style="display: none;">
-        <label class="meta-label">مفروش؟</label>
-        <select id="furnished">
-          <option value="false">لا (فاضي)</option>
-          <option value="true">نعم (مفروش)</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="error-box" class="error-box"></div>
-
-    <button id="analyzeBtn" class="btn-analyze" onclick="runValuation()">
-      <i class="fas fa-gem"></i> قيّم الآن <i class="fas fa-arrow-left"></i>
-    </button>
+  <!-- مؤشر الخطوات -->
+  <div class="steps">
+    <div class="step active" id="st1"><span class="n">1</span> الإدخال</div>
+    <div class="step" id="st2"><span class="n">2</span> التحليل</div>
+    <div class="step" id="st3"><span class="n">3</span> النتيجة</div>
   </div>
 
+  <!-- ═══ الإدخال ═══ -->
+  <div id="inputSection">
+    <div class="card">
+      <div class="card-title"><i class="fab fa-whatsapp"></i> الصق رسالة الواتساب</div>
+      <div class="card-sub">انسخ أي رسالة عقارية والصقها هنا — هنستخرج المنطقة والمساحة والسعر والتشطيب تلقائيًا</div>
+      <textarea id="msg" rows="4" placeholder="مثال: شقة للبيع في عباس العقاد 170 متر، سوبر لوكس، الدور الثالث، 6,200,000 جنيه..."></textarea>
+      <div class="extracted" id="extracted"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-pen-to-square"></i> أو املأ البيانات يدويًا</div>
+      <div class="card-sub">كل الحقول قوائم جاهزة — اختر وخلاص</div>
+
+      <div class="row">
+        <div>
+          <label class="mini">المنطقة *</label>
+          <select id="area"><option value="">اختر المنطقة</option></select>
+        </div>
+        <div>
+          <label class="mini">نوع العملية</label>
+          <select id="areaType">
+            <option value="sale">بيع</option>
+            <option value="rent">إيجار</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="mini">نوع العقار</label>
+          <select id="propertyType">
+            <option value="شقة">شقة</option>
+            <option value="فيلا">فيلا</option>
+            <option value="دوبلكس">دوبلكس</option>
+            <option value="روف">روف</option>
+            <option value="محل تجاري">محل تجاري</option>
+            <option value="مكتب إداري">مكتب إداري</option>
+            <option value="مخزن">مخزن</option>
+          </select>
+        </div>
+        <div>
+          <label class="mini">المساحة (م²) *</label>
+          <input type="number" id="size" placeholder="مثال: 180" min="20">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="mini">السعر المطلوب (اختياري — للحكم على السعر)</label>
+          <input type="text" id="askingPrice" placeholder="مثال: 6,200,000" inputmode="numeric">
+        </div>
+        <div>
+          <label class="mini">التشطيب</label>
+          <select id="finishing">
+            <option value="سوبر لوكس">سوبر لوكس</option>
+            <option value="ألترا سوبر لوكس">ألترا سوبر لوكس</option>
+            <option value="نصف تشطيب">نصف تشطيب</option>
+            <option value="طوب أحمر">طوب أحمر</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="mini">الدور</label>
+          <select id="floor">
+            <option value="أرضي">أرضي</option>
+            <option value="أول">أول</option>
+            <option value="ثاني">ثاني</option>
+            <option value="ثالث">ثالث</option>
+            <option value="رابع">رابع</option>
+            <option value="خامس+">خامس أو أعلى</option>
+          </select>
+        </div>
+        <div>
+          <label class="mini">عمر العقار</label>
+          <select id="age">
+            <option value="new">جديد (أقل من 10 سنوات)</option>
+            <option value="medium" selected>متوسط (10-25 سنة)</option>
+            <option value="old">قديم (أكثر من 25 سنة)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" id="furnishedRow" style="display: none;">
+        <div>
+          <label class="mini">مفروش؟</label>
+          <select id="furnished">
+            <option value="false">لا (فاضي)</option>
+            <option value="true">نعم (مفروش)</option>
+          </select>
+        </div>
+        <div></div>
+      </div>
+
+      <div id="error-box" class="error-box"></div>
+
+      <button id="analyzeBtn" class="btn-analyze" onclick="runValuation()">
+        <i class="fas fa-gem"></i> قيّم الآن <i class="fas fa-arrow-left"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ التحميل ═══ -->
   <div id="loading" class="loading">
     <div class="spinner"></div>
-    <p style="color:#b0b0b0">جارٍ تحليل بيانات السوق…</p>
+    <p id="loadMsg">جارٍ تحليل بيانات السوق…</p>
+    <div class="load-sub">نقارن عقارك بمتوسطات المنطقة لحظيًا</div>
   </div>
 
+  <!-- ═══ النتيجة ═══ -->
   <div id="result" class="result">
     <div class="result-card">
       <div class="result-title"><i class="fas fa-chart-line"></i> التقييم التقديري</div>
+
+      <div class="verdict neutral" id="verdict">
+        <div class="v-label" id="verdictLabel">—</div>
+        <div class="v-sub" id="verdictSub"></div>
+      </div>
+
       <div class="estimate-box">
-        <div class="estimate-label">السعر المتوقع</div>
+        <div class="estimate-label" id="estimateLabel">السعر المتوقع</div>
         <div class="estimate-value" id="estimate">—</div>
-        <div class="estimate-unit">جنيه مصري</div>
+        <div class="estimate-unit" id="estimateUnit">جنيه مصري</div>
       </div>
+
       <div class="meta-grid">
-        <div class="meta-item"><div class="meta-label">النطاق</div><div class="meta-value" id="range">—</div></div>
-        <div class="meta-item"><div class="meta-label">سعر المتر</div><div class="meta-value" id="perMeter">—</div></div>
-        <div class="meta-item"><div class="meta-label">المنطقة</div><div class="meta-value" id="areaFound">—</div></div>
-        <div class="meta-item"><div class="meta-label">مستوى الثقة</div><div class="meta-value"><span id="confidence" class="confidence">—</span></div></div>
+        <div class="meta-item">
+          <div class="meta-label">النطاق السعري</div>
+          <div class="meta-value" id="range" style="font-size:0.9rem">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">سعر المتر</div>
+          <div class="meta-value" id="perMeter">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">المنطقة</div>
+          <div class="meta-value" id="areaFound" style="font-size:0.9rem">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">مستوى الثقة</div>
+          <div class="meta-value"><span id="confidence" class="confidence">—</span></div>
+        </div>
+        <div class="meta-item full">
+          <div class="meta-label">مقارنة بمتوسط المنطقة</div>
+          <div class="meta-value" id="avgCompare">—</div>
+          <div class="compare-bar"><div class="compare-fill" id="compareFill" style="width:0%"></div></div>
+        </div>
       </div>
+
+      <div class="area-card" id="areaCard" style="display:none">
+        <h4><i class="fas fa-map-location-dot"></i> عن المنطقة: <span id="areaName"></span></h4>
+        <span class="lvl" id="areaLevel"></span>
+        <ul class="area-list">
+          <li id="areaLandmarksRow"><i class="fas fa-landmark"></i><span id="areaLandmarks"></span></li>
+          <li id="areaStreetsRow"><i class="fas fa-road"></i><span id="areaStreets"></span></li>
+        </ul>
+      </div>
+
       <div class="disclaimer" id="disclaimer"></div>
+      <div class="src-note" id="srcNote"></div>
+
       <div class="actions">
-        <button class="icon-btn" onclick="copyResult()"><i class="fas fa-copy"></i> نسخ</button>
-        <button class="icon-btn" onclick="resetTool()"><i class="fas fa-rotate-right"></i> جديد</button>
+        <button class="btn-wa" onclick="sendToTarek()"><i class="fab fa-whatsapp"></i> أرسل النتيجة لطارق</button>
+        <div class="actions-row">
+          <button class="icon-btn" onclick="copyResult()"><i class="fas fa-copy"></i> انسخ التقرير</button>
+          <button class="icon-btn" onclick="resetTool()"><i class="fas fa-rotate-right"></i> قيّم عقار تاني</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="footer-note">
     <strong>سمسار طلبك</strong> — طارق طنطاوي | مدينة نصر<br>
-    التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي
+    التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي<br>
+    <a href="/">الصفحة الرئيسية</a> · <a href="/agent.html">الوكيل الذكي</a> · <a href="/add-your-property.html">اعرض عقارك</a>
   </div>
 
 </div>
 
 <script>
+/* ═══════════════════════════════════════════
+   أداة التقييم — سمسار طلبك
+   Worker: noisy-bush-fd84 (التقييم)
+   البيانات: /assets/data/market-data.json
+   ─────────────────────────────────────────
+   عقد الـ Worker (لا يتغير):
+   POST {area, areaType, propertyType, size, finishing, floor, age, furnished}
+   ← {estimate, range{low,high}, price_per_meter, area_found, confidence, disclaimer}
+   ═══════════════════════════════════════════ */
 const WORKER_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev';
-let lastResult = null;
+const TAREK_WA = '201147758857';
+const MARKET_URLS = ['/assets/data/market-data.json', 'https://nasr-realestate.github.io/assets/data/market-data.json'];
 
-async function loadAreas() {
-  try {
-    const m = await fetch('https://nasr-realestate.github.io/assets/data/market-data.json');
-    const market = await m.json();
-    const sel = document.getElementById('area');
-    market.areas.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.name;
-      opt.textContent = a.name;
-      sel.appendChild(opt);
-    });
-  } catch (e) { console.warn('فشل تحميل المناطق', e); }
+let MARKET = null;          // بيانات السوق كاملة
+let AREAS = [];             // أسماء المناطق
+let lastResult = null;      // آخر نتيجة
+let lastInputs = null;      // آخر مدخلات (للتقرير)
+let resultSource = 'worker';
+
+/* ─── أدوات مساعدة ─── */
+const fmt = n => Number(n || 0).toLocaleString('en-US');
+const $ = id => document.getElementById(id);
+const AR_DIGITS = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+const toEn = s => String(s || '').replace(/[٠-٩]/g, d => AR_DIGITS[d]);
+const normAr = s => toEn(s).replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ـ/g, '');
+
+function setStep(n) {
+  [1, 2, 3].forEach(i => {
+    const el = $('st' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) { el.classList.add('done'); el.querySelector('.n').innerHTML = '✓'; }
+    else { el.querySelector('.n').textContent = i; if (i === n) el.classList.add('active'); }
+  });
 }
 
-function extractFromMessage(msg) {
-  const text = msg.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-  const areaMatch = text.match(/(\d{2,4})\s*(?:متر|م²|م2)/);
-  if (areaMatch) document.getElementById('size').value = areaMatch[1];
+/* ═══ تحميل بيانات السوق ═══ */
+async function loadMarket() {
+  for (const url of MARKET_URLS) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      MARKET = await r.json();
+      break;
+    } catch (e) { /* جرّب الرابط التالي */ }
+  }
+  if (!MARKET || !MARKET.areas) { console.warn('فشل تحميل market-data'); return; }
+  AREAS = MARKET.areas.map(a => a.name);
+  const sel = $('area');
+  MARKET.areas.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.name;
+    opt.textContent = a.name;
+    sel.appendChild(opt);
+  });
+}
 
-  const areas = ['عباس العقاد','مكرم عبيد','مصطفى النحاس','المنطقة الأولى','المنطقة الثانية','المنطقة الثالثة','المنطقة الرابعة','المنطقة الخامسة','المنطقة السادسة','المنطقة السابعة','المنطقة الثامنة','المنطقة التاسعة','المنطقة العاشرة','حي الواحة','زهراء مدينة نصر','رابعة العدوية','الحي السابع','الحي الثامن'];
-  for (const a of areas) {
-    if (text.includes(a)) { document.getElementById('area').value = a; break; }
+function findArea(name) {
+  if (!MARKET) return null;
+  const n = normAr(name);
+  return MARKET.areas.find(a => normAr(a.name) === n) || null;
+}
+
+/* ═══ الاستخراج التلقائي من رسالة الواتساب ═══ */
+const AREA_ALIASES = [
+  ['عباس العقاد', ['عباس العقاد', 'عباس', 'العقاد']],
+  ['مكرم عبيد', ['مكرم عبيد', 'مكرم']],
+  ['مصطفى النحاس', ['مصطفى النحاس', 'النحاس']],
+  ['رابعة العدوية', ['رابعة', 'العدوية']],
+  ['المنطقة الأولى', ['المنطقه الاولي', 'المنطقة الاولى', 'المنطقة الأولى', 'الاولي', 'الأولى']],
+  ['المنطقة الثانية', ['المنطقه الثانيه', 'المنطقة الثانيه', 'المنطقة الثانية', 'الثانيه', 'الثانية']],
+  ['المنطقة الثالثة', ['المنطقه الثالثه', 'المنطقة الثالثه', 'المنطقة الثالثة', 'الثالثه', 'الثالثة']],
+  ['المنطقة الرابعة', ['المنطقه الرابعه', 'المنطقة الرابعه', 'المنطقة الرابعة', 'الرابعه', 'الرابعة']],
+  ['المنطقة الخامسة', ['المنطقه الخامسه', 'المنطقة الخامسه', 'المنطقة الخامسة', 'الخامسه', 'الخامسة']],
+  ['المنطقة السادسة', ['المنطقه السادسه', 'المنطقة السادسه', 'المنطقة السادسة', 'السادسه', 'السادسة']],
+  ['الحي السابع', ['الحي السابع', 'الحى السابع', 'السابع']],
+  ['الحي الثامن', ['الحي الثامن', 'الحى الثامن', 'الثامن']],
+  ['المنطقة العاشرة', ['المنطقه العاشره', 'المنطقة العاشره', 'المنطقة العاشرة', 'العاشره', 'العاشرة', 'الحي العاشر']],
+  ['حي الواحة', ['الواحه', 'الواحة', 'واحه', 'واحة']],
+  ['زهراء مدينة نصر', ['زهراء', 'الزهراء']],
+];
+
+function markFilled(id) {
+  const el = $(id);
+  el.classList.remove('auto-filled');
+  void el.offsetWidth;
+  el.classList.add('auto-filled');
+  setTimeout(() => el.classList.remove('auto-filled'), 2500);
+}
+
+function extractFromMessage(raw) {
+  const text = normAr(raw);
+  const found = [];
+  const setVal = (id, val, label) => {
+    const el = $(id);
+    if (!el || el.value === val) return;
+    el.value = val;
+    markFilled(id);
+    if (label) found.push(label);
+  };
+
+  // المساحة: 170 متر / 180م / 200 م²
+  const sizeM = text.match(/(\d[\d,]*)\s*(متر مربع|متر|م2|م²|م\b)/);
+  if (sizeM) {
+    const v = parseFloat(sizeM[1].replace(/,/g, ''));
+    if (v >= 20 && v <= 5000) setVal('size', v, '📐 ' + v + ' م²');
   }
 
-  if (/الترا|ألترا/.test(text)) document.getElementById('finishing').value = 'ألترا سوبر لوكس';
-  else if (/نصف تشطيب|نص تشطيب/.test(text)) document.getElementById('finishing').value = 'نصف تشطيب';
-  else if (/طوب أحمر/.test(text)) document.getElementById('finishing').value = 'طوب أحمر';
-  else if (/سوبر لوكس/.test(text)) document.getElementById('finishing').value = 'سوبر لوكس';
+  // السعر: 6,200,000 جنيه / 6.2 مليون / 25000 شهريا
+  let price = 0;
+  const milM = text.match(/(\d[\d,\.]*)\s*(مليون|مليار)/);
+  if (milM) {
+    price = parseFloat(milM[1].replace(/,/g, '')) * (milM[2].includes('مليار') ? 1e9 : 1e6);
+  } else {
+    const numM = text.match(/(\d{1,3}(?:,\d{3})+|\d{5,})\s*(جنيه|ج\s?م|جنيه مصري|شهريا|شهري|في الشهر)?/);
+    if (numM) price = parseFloat(numM[1].replace(/,/g, ''));
+  }
+  if (price >= 1000 && price <= 500000000) {
+    setVal('askingPrice', fmt(Math.round(price)), '💰 ' + fmt(Math.round(price)) + ' ج');
+  }
 
-  if (/ايجار|إيجار|للإيجار|شهري/i.test(text)) document.getElementById('areaType').value = 'rent';
-  else if (/بيع|للبيع/i.test(text)) document.getElementById('areaType').value = 'sale';
+  // المنطقة (بالأسماء البديلة)
+  for (const [name, aliases] of AREA_ALIASES) {
+    if (aliases.some(a => text.includes(normAr(a)))) {
+      if (AREAS.includes(name)) { setVal('area', name, '📍 ' + name); syncFurnishedRow(); }
+      break;
+    }
+  }
 
-  if (/مفروش/.test(text)) document.getElementById('furnished').value = 'true';
+  // التشطيب
+  if (/الترا|الترا سوبر/.test(text)) setVal('finishing', 'ألترا سوبر لوكس', '✨ ألترا سوبر لوكس');
+  else if (/نصف تشطيب|نص تشطيب|علي الطوب|على الطوب/.test(text)) setVal('finishing', 'نصف تشطيب', '🛠️ نصف تشطيب');
+  else if (/طوب احمر/.test(text)) setVal('finishing', 'طوب أحمر', '🧱 طوب أحمر');
+  else if (/سوبر لوكس|سوبرلوكس|متشطب/.test(text)) setVal('finishing', 'سوبر لوكس', '✨ سوبر لوكس');
+
+  // الدور
+  const floorMap = [['أرضي', /ارضي|دور ارضي/], ['أول', /الدور الاول|دور اول|اول بلكونه|اول علوي/],
+    ['ثاني', /الدور الثاني|دور ثاني|ثاني بلكونه/], ['ثالث', /الدور الثالث|دور ثالث|ثالث بلكونه/],
+    ['رابع', /الدور الرابع|دور رابع/], ['خامس+', /الدور الخامس|الخامس|السادس|السابع|الثامن|التاسع|العاشر|اخير|روف/]];
+  for (const [val, re] of floorMap) {
+    if (re.test(text)) { setVal('floor', val, '🏢 الدور ' + val); break; }
+  }
+
+  // نوع العقار
+  const ptMap = [['فيلا', /فيلا|فله/], ['دوبلكس', /دوبلكس|دوبليكس/], ['روف', /روف|بنتهاوس|بنت هاوس/],
+    ['محل تجاري', /محل|معرض|صيدليه/], ['مكتب إداري', /مكتب|عياده|مقر اداري/], ['مخزن', /مخزن|مستودع|جمالون/], ['شقة', /شقه|شقة/]];
+  for (const [val, re] of ptMap) {
+    if (re.test(text)) { setVal('propertyType', val, '🏷️ ' + val); break; }
+  }
+
+  // نوع العملية
+  if (/ايجار|للايجار|شهريا|شهري|مفروش للايجار/.test(text)) { setVal('areaType', 'rent', '🔑 إيجار'); syncFurnishedRow(); }
+  else if (/للبيع|بيع|تمليك/.test(text)) { setVal('areaType', 'sale', '🏠 بيع'); syncFurnishedRow(); }
+
+  // مفروش
+  if (/مفروش|مفروشه|فرش/.test(text)) { setVal('furnished', 'true', '🛋️ مفروش'); }
+  else if (/فاضي|غير مفروش|بدون فرش|قانون جديد/.test(text)) { setVal('furnished', 'false', null); }
+
+  // عمر العقار
+  if (/اول سكن|جديده|جديد|استلام فوري|كمبوند جديد/.test(text)) setVal('age', 'new', '🆕 جديد');
+  else if (/قديم|قديمه|عماره قديمه/.test(text)) setVal('age', 'old', '🏚️ قديم');
+
+  // عرض الشارات
+  const box = $('extracted');
+  if (found.length) {
+    box.innerHTML = found.map(f => '<span class="chip">✓ ' + f + '</span>').join('');
+    box.classList.add('show');
+  } else if (raw.trim().length < 10) {
+    box.classList.remove('show');
+    box.innerHTML = '';
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadAreas();
-  document.getElementById('areaType').addEventListener('change', e => {
-    document.getElementById('furnishedRow').style.display = e.target.value === 'rent' ? 'block' : 'none';
-  });
-  document.getElementById('msg').addEventListener('input', e => {
-    if (e.target.value.length > 20) extractFromMessage(e.target.value);
-  });
-});
+function syncFurnishedRow() {
+  $('furnishedRow').style.display = $('areaType').value === 'rent' ? 'grid' : 'none';
+}
+
+/* ═══ التقييم ═══ */
+const LOAD_MSGS = ['جارٍ تحميل بيانات السوق…', 'نقارن بمتوسط المنطقة…', 'نحسب سعر المتر العادل…', 'نجهّز التقرير النهائي…'];
+let loadTimer = null;
 
 async function runValuation() {
-  const error = document.getElementById('error-box');
+  const error = $('error-box');
   error.style.display = 'none';
 
   const payload = {
-    area: document.getElementById('area').value,
-    areaType: document.getElementById('areaType').value,
-    propertyType: document.getElementById('propertyType').value,
-    size: parseFloat(document.getElementById('size').value),
-    finishing: document.getElementById('finishing').value,
-    floor: document.getElementById('floor').value,
-    age: document.getElementById('age').value,
-    furnished: document.getElementById('furnished').value === 'true',
+    area: $('area').value,
+    areaType: $('areaType').value,
+    propertyType: $('propertyType').value,
+    size: parseFloat(toEn($('size').value)),
+    finishing: $('finishing').value,
+    floor: $('floor').value,
+    age: $('age').value,
+    furnished: $('furnished').value === 'true',
   };
+  const askingRaw = toEn($('askingPrice').value).replace(/,/g, '').replace(/[^\d.]/g, '');
+  const asking = parseFloat(askingRaw) || 0;
 
-  if (!payload.area) { showError('⚠️ اختر المنطقة'); return; }
+  if (!payload.area) { showError('⚠️ اختر المنطقة أولاً'); return; }
   if (!payload.size || payload.size < 20) { showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)'); return; }
 
-  document.getElementById('analyzeBtn').disabled = true;
-  document.getElementById('loading').classList.add('show');
-  document.getElementById('result').classList.remove('show');
+  lastInputs = { ...payload, asking };
+  setStep(2);
+  $('inputSection').style.display = 'none';
+  $('result').classList.remove('show');
+  $('analyzeBtn') && ($('analyzeBtn').disabled = true);
 
+  // شاشة التحميل المتحركة
+  $('loading').classList.add('show');
+  let li = 0;
+  $('loadMsg').textContent = LOAD_MSGS[0];
+  loadTimer = setInterval(() => { li = (li + 1) % LOAD_MSGS.length; $('loadMsg').textContent = LOAD_MSGS[li]; }, 900);
+
+  let data = null;
+  resultSource = 'worker';
   try {
     const r = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = await r.json();
-
-    if (data.error) {
-      showError('⚠️ ' + data.error);
-      return;
-    }
-    lastResult = data;
-    showResult(data);
+    data = await r.json();
+    if (data.error) throw new Error(data.error);
   } catch (e) {
-    showError('⚠️ فشل الاتصال: ' + e.message);
+    console.warn('Worker failed, local fallback:', e);
+    data = localEstimate(payload);
+    resultSource = 'local';
   } finally {
-    document.getElementById('analyzeBtn').disabled = false;
-    document.getElementById('loading').classList.remove('show');
+    clearInterval(loadTimer);
+    $('loading').classList.remove('show');
+    const btn = $('analyzeBtn');
+    if (btn) btn.disabled = false;
   }
-}
 
-function showResult(data) {
-  const fmt = n => Number(n).toLocaleString('en-US');
-  document.getElementById('estimate').textContent = fmt(data.estimate);
-  document.getElementById('range').textContent = fmt(data.range.low) + ' - ' + fmt(data.range.high);
-  document.getElementById('perMeter').textContent = fmt(data.price_per_meter) + ' /م²';
-  document.getElementById('areaFound').textContent = data.area_found;
-  const conf = document.getElementById('confidence');
-  conf.className = 'confidence ' + data.confidence;
-  conf.textContent = data.confidence === 'high' ? 'عالية' : data.confidence === 'medium' ? 'متوسطة' : 'منخفضة';
-  document.getElementById('disclaimer').textContent = data.disclaimer || '';
-  document.getElementById('result').classList.add('show');
-  document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+  if (!data || !data.estimate) { setStep(1); $('inputSection').style.display = 'block'; showError('⚠️ تعذّر التقييم — جرّب تاني'); return; }
+  lastResult = data;
+  setStep(3);
+  showResult(data, payload, asking);
 }
 
 function showError(msg) {
-  const e = document.getElementById('error-box');
+  const e = $('error-box');
   e.textContent = msg;
   e.style.display = 'block';
+  e.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function resetTool() {
-  document.getElementById('result').classList.remove('show');
-  document.getElementById('msg').value = '';
-  document.getElementById('size').value = '';
-  document.getElementById('area').value = '';
-  lastResult = null;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+/* ═══ تقدير محلي احتياطي (نفس معادلة الـ Worker) ═══ */
+function localEstimate(p) {
+  const area = findArea(p.area);
+  if (!area) return null;
+  const PT = (MARKET.property_type_multipliers || {})[p.propertyType] || 1;
+  const FIN = { 'ألترا سوبر لوكس': 1.18, 'سوبر لوكس': 1.0, 'نصف تشطيب': 0.78, 'طوب أحمر': 0.68 }[p.finishing] || 1;
+  const AGE = { new: 1.10, medium: 1.0, old: 0.85 }[p.age] || 1;
+  const FLR = { 'أرضي': 0.95, 'أول': 1.0, 'ثاني': 1.0, 'ثالث': 1.0, 'رابع': 1.0, 'خامس+': 0.97 }[p.floor] || 1;
+
+  let base, conf;
+  if (p.areaType === 'rent') {
+    base = p.furnished ? area.rent.furnished_per_meter_avg : area.rent.unfurnished_per_meter_avg;
+    conf = area.rent.confidence;
+  } else {
+    base = area.sale.apartment_per_meter_avg;
+    conf = area.sale.confidence;
+  }
+  const perMeter = Math.round(base * PT * FIN * AGE * FLR);
+  let estimate = perMeter * p.size;
+  estimate = p.areaType === 'rent' ? Math.round(estimate / 100) * 100 : Math.round(estimate / 1000) * 1000;
+  return {
+    estimate,
+    range: {
+      low: Math.round(estimate * 0.9 / 1000) * 1000,
+      high: Math.round(estimate * 1.1 / 1000) * 1000
+    },
+    price_per_meter: perMeter,
+    area_found: area.name,
+    confidence: conf || 'medium',
+    disclaimer: 'التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.'
+  };
+}
+
+/* ═══ عرض النتيجة ═══ */
+function showResult(data, inputs, asking) {
+  const isRent = inputs.areaType === 'rent';
+  $('estimate').textContent = fmt(data.estimate);
+  $('estimateLabel').textContent = isRent ? 'الإيجار الشهري المتوقع' : 'السعر المتوقع';
+  $('estimateUnit').textContent = isRent ? 'جنيه مصري / شهريًا' : 'جنيه مصري';
+  $('range').textContent = fmt(data.range.low) + ' – ' + fmt(data.range.high);
+  $('perMeter').textContent = fmt(data.price_per_meter) + ' /م²';
+  $('areaFound').textContent = data.area_found;
+
+  const conf = $('confidence');
+  conf.className = 'confidence ' + (data.confidence || 'medium');
+  conf.textContent = data.confidence === 'high' ? '● عالية' : data.confidence === 'medium' ? '● متوسطة' : '● منخفضة';
+
+  // الحكم على السعر المطلوب (أخضر = فرصة / ذهبي = مناسب / أحمر = مبالغ فيه)
+  const v = $('verdict'), vl = $('verdictLabel'), vs = $('verdictSub');
+  if (asking > 0) {
+    const diff = (asking - data.estimate) / data.estimate;
+    const pct = Math.abs(Math.round(diff * 100));
+    if (diff > 0.10) {
+      v.className = 'verdict red';
+      vl.innerHTML = '🔴 السعر مبالغ فيه';
+      vs.textContent = 'السعر المطلوب أعلى من القيمة العادلة بحوالي ' + pct + '% — فيه مساحة تفاوض كبيرة';
+    } else if (diff < -0.10) {
+      v.className = 'verdict green';
+      vl.innerHTML = '🟢 فرصة ممتازة';
+      vs.textContent = 'السعر المطلوب أقل من القيمة العادلة بحوالي ' + pct + '% — يستحق المعاينة فورًا';
+    } else {
+      v.className = 'verdict gold';
+      vl.innerHTML = '🟡 سعر مناسب';
+      vs.textContent = 'السعر المطلوب قريب من القيمة العادلة (فرق ' + pct + '% فقط)';
+    }
+  } else {
+    v.className = 'verdict neutral';
+    vl.innerHTML = '💎 تقييم استرشادي';
+    vs.textContent = 'أدخل السعر المطلوب للحصول على حكم: فرصة / مناسب / مبالغ فيه';
+  }
+
+  // المقارنة بمتوسط المنطقة
+  const area = findArea(data.area_found);
+  const avgBox = $('avgCompare'), fill = $('compareFill');
+  if (area) {
+    const avg = isRent
+      ? (inputs.furnished ? area.rent.furnished_per_meter_avg : area.rent.unfurnished_per_meter_avg)
+      : area.sale.apartment_per_meter_avg;
+    const d = (data.price_per_meter - avg) / avg;
+    const p = Math.abs(Math.round(d * 100));
+    let cls, txt;
+    if (d > 0.05) { cls = 'diff-up'; txt = 'أعلى من متوسط المنطقة (' + fmt(avg) + '/م²) بـ ' + p + '%'; }
+    else if (d < -0.05) { cls = 'diff-down'; txt = 'أقل من متوسط المنطقة (' + fmt(avg) + '/م²) بـ ' + p + '%'; }
+    else { cls = 'diff-even'; txt = 'مطابق تقريبًا لمتوسط المنطقة (' + fmt(avg) + '/م²)'; }
+    avgBox.innerHTML = '<span class="' + cls + '">' + txt + '</span>';
+    const ratio = Math.min(Math.max(data.price_per_meter / (avg * 1.6), 0.05), 1);
+    fill.style.width = Math.round(ratio * 100) + '%';
+    fill.style.background = d > 0.05 ? 'linear-gradient(90deg,#d4af37,#ff5b5b)' : 'linear-gradient(90deg,#d4af37,#25d366)';
+
+    // بطاقة المنطقة: معالم + شوارع
+    $('areaCard').style.display = 'block';
+    $('areaName').textContent = area.name;
+    $('areaLevel').textContent = 'المستوى: ' + (area.level_ar || '—');
+    $('areaLandmarks').textContent = 'أبرز المعالم: ' + (area.landmarks || []).slice(0, 5).join('، ');
+    $('areaStreets').textContent = 'أهم الشوارع: ' + (area.main_streets || []).slice(0, 4).join('، ');
+  } else {
+    avgBox.innerHTML = '<small>متوسط المنطقة غير متاح حاليًا</small>';
+    fill.style.width = '0%';
+    $('areaCard').style.display = 'none';
+  }
+
+  $('disclaimer').textContent = data.disclaimer || 'التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.';
+  $('srcNote').textContent = resultSource === 'worker'
+    ? '✓ تم الحساب عبر محرك التقييم السحابي — بيانات محدّثة'
+    : '✓ تم الحساب محليًا من بيانات السوق (وضع احتياطي)';
+
+  $('result').classList.add('show');
+  setTimeout(() => fill.style.width = fill.style.width, 50);
+  $('result').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ═══ التقرير (واتساب + نسخ) ═══ */
+function buildReport() {
+  if (!lastResult || !lastInputs) return '';
+  const d = lastResult, i = lastInputs;
+  const isRent = i.areaType === 'rent';
+  const typeLabel = i.propertyType + (isRent ? ' للإيجار' : ' للبيع');
+  const L = [
+    '💎 *تقييم عقاري — سمسار طلبك*',
+    '━━━━━━━━━━━━',
+    '🏷️ النوع: ' + typeLabel,
+    '📍 المنطقة: ' + d.area_found,
+    '📐 المساحة: ' + fmt(i.size) + ' م²',
+    '✨ التشطيب: ' + i.finishing,
+    '🏢 الدور: ' + i.floor,
+  ];
+  if (i.asking > 0) L.push('💰 السعر المطلوب: ' + fmt(i.asking) + ' ج.م' + (isRent ? ' / شهريًا' : ''));
+  L.push(
+    '━━━━━━━━━━━━',
+    '💰 *' + (isRent ? 'الإيجار المتوقع' : 'السعر المتوقع') + ': ' + fmt(d.estimate) + ' ج.م*',
+    '📊 النطاق: ' + fmt(d.range.low) + ' – ' + fmt(d.range.high),
+    '📏 سعر المتر: ' + fmt(d.price_per_meter) + ' ج.م',
+    '🎯 الثقة: ' + (d.confidence === 'high' ? 'عالية' : d.confidence === 'medium' ? 'متوسطة' : 'منخفضة'),
+    '━━━━━━━━━━━━',
+    'السلام عليكم أ. طارق، قيّمت عقاري بالأداة وعايز نكمل مع بعض.'
+  );
+  return L.join('\n');
+}
+
+function sendToTarek() {
+  const txt = buildReport();
+  if (!txt) return;
+  window.open('https://wa.me/' + TAREK_WA + '?text=' + encodeURIComponent(txt), '_blank');
 }
 
 async function copyResult() {
-  if (!lastResult) return;
-  const txt = `التقييم: ${lastResult.estimate.toLocaleString()} ج.م
-النطاق: ${lastResult.range.low.toLocaleString()} - ${lastResult.range.high.toLocaleString()} ج.م
-سعر المتر: ${lastResult.price_per_meter.toLocaleString()} ج.م
-المنطقة: ${lastResult.area_found}
-الثقة: ${lastResult.confidence}`;
+  const txt = buildReport();
+  if (!txt) return;
   try {
     await navigator.clipboard.writeText(txt);
-    toast('تم النسخ ✓');
-  } catch { toast('تعذر النسخ'); }
+    toast('تم نسخ التقرير ✓');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('تم نسخ التقرير ✓'); }
+    catch { toast('تعذّر النسخ'); }
+    ta.remove();
+  }
+}
+
+function resetTool() {
+  lastResult = null; lastInputs = null;
+  $('result').classList.remove('show');
+  $('inputSection').style.display = 'block';
+  $('msg').value = '';
+  $('size').value = '';
+  $('askingPrice').value = '';
+  $('area').value = '';
+  $('extracted').classList.remove('show');
+  $('extracted').innerHTML = '';
+  setStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2000);
+  setTimeout(() => t.remove(), 2200);
 }
+
+/* ═══ تهيئة ═══ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadMarket();
+  syncFurnishedRow();
+  $('areaType').addEventListener('change', syncFurnishedRow);
+  let deb = null;
+  $('msg').addEventListener('input', e => {
+    clearTimeout(deb);
+    deb = setTimeout(() => extractFromMessage(e.target.value), 350);
+  });
+  // تنسيق السعر أثناء الكتابة
+  $('askingPrice').addEventListener('input', e => {
+    const n = toEn(e.target.value).replace(/,/g, '').replace(/[^\d]/g, '');
+    e.target.value = n ? fmt(parseInt(n, 10)) : '';
+  });
+  // القدوم من صفحة "اعرض عقارك" → إظهار زر الرجوع
+  try {
+    if (new URLSearchParams(location.search).get('from') === 'add-your-property') {
+      $('backBar').classList.add('show');
+    }
+  } catch (e) {}
+});
 </script>
 </body>
 </html>
