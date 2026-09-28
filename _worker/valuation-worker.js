@@ -1,82 +1,216 @@
 // ============================================================
-// سمسار طلبك — Valuation Worker (مرجع الصيانة)
+// سمسار طلبك — Valuation Worker v2.0
 // الخدمة المنشورة: noisy-bush-fd84.footcai-555.workers.dev
-// الصفحة: /tools/valuation.html (+ نسخة مطابقة /assets/tools/valuation.html)
-// البيانات: /assets/data/market-data.json (لقطة مضمّنة أدناه + تحديث دوري)
+// الصفحة: /tools/valuation.html
+// البيانات: /assets/data/market-data.json
 // ------------------------------------------------------------
-// ⚠️ هذا الملف مرجع للصيانة داخل المستودع — النسخة الفعلية
-// منشورة على Cloudflare Workers. عند أي تعديل هنا لازم
-// إعادة النشر عبر wrangler (انظر آخر الملف).
-//
-// عقد الـ JSON (ممنوع كسره — الصفحة تعتمد عليه):
+// عقد الـ JSON (ممنوع كسره):
 //   POST {area, areaType, propertyType, size, finishing, floor, age, furnished}
 //   ← 200 {estimate, range{low,high}, price_per_meter, area_found, confidence, disclaimer}
 //   ← 400 {error}
 //   GET  → {service, status, areas, available_areas, version}
 // ------------------------------------------------------------
-// العلاقة مع الوكيل (royal-snow-ea32):
-//   • دومينان مختلفان + صفحتان مختلفتان = لا تعارض إطلاقًا
-//   • نفس سياسة CORS (القائمة البيضاء أدناه)
+// v2.0 — بيقرأ market-data.json مباشرة (20 منطقة)
 // ============================================================
 
-// ═══ CONFIG ═══
-const WORKER_VERSION = "v1.2";
+const WORKER_VERSION = "v2.0";
 const SERVICE_NAME = "nasr-valuation";
+const MARKET_DATA_URL = "https://nasr-realestate.github.io/assets/data/market-data.json";
+const CACHE_TTL_MS = 60 * 60 * 1000; // ساعة
 
-// النطاقات المسموح لها — نفس نمط worker.js (الوكيل)
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://nasr-realestate.github.io",
 ];
 
-// ═══ MARKET SNAPSHOT (من market-data.json — حدّثها مع أي تحديث للملف) ═══
-// last_updated: 2026-09-27 | areas: 15
-const AREAS = [
-  { name: "عباس العقاد", sale_avg: 34000, rent_unf: 210, rent_fur: 310, confidence: "high" },
-  { name: "مكرم عبيد", sale_avg: 32500, rent_unf: 200, rent_fur: 290, confidence: "high" },
-  { name: "المنطقة الأولى", sale_avg: 31000, rent_unf: 195, rent_fur: 280, confidence: "high" },
-  { name: "رابعة العدوية", sale_avg: 30000, rent_unf: 190, rent_fur: 275, confidence: "high" },
-  { name: "المنطقة الرابعة", sale_avg: 29000, rent_unf: 185, rent_fur: 260, confidence: "high" },
-  { name: "المنطقة السادسة", sale_avg: 28500, rent_unf: 180, rent_fur: 250, confidence: "high" },
-  { name: "المنطقة الثانية", sale_avg: 28500, rent_unf: 180, rent_fur: 250, confidence: "high" },
-  { name: "مصطفى النحاس", sale_avg: 26000, rent_unf: 165, rent_fur: 230, confidence: "high" },
-  { name: "المنطقة الثالثة", sale_avg: 24500, rent_unf: 160, rent_fur: 220, confidence: "high" },
-  { name: "المنطقة الخامسة", sale_avg: 23500, rent_unf: 150, rent_fur: 210, confidence: "high" },
-  { name: "الحي الثامن", sale_avg: 23000, rent_unf: 155, rent_fur: 225, confidence: "high" },
-  { name: "المنطقة العاشرة", sale_avg: 21500, rent_unf: 140, rent_fur: 195, confidence: "high" },
-  { name: "الحي السابع", sale_avg: 21000, rent_unf: 140, rent_fur: 200, confidence: "high" },
-  { name: "حي الواحة", sale_avg: 19500, rent_unf: 130, rent_fur: 185, confidence: "high" },
-  { name: "زهراء مدينة نصر", sale_avg: 16500, rent_unf: 110, rent_fur: 155, confidence: "high" },
-];
+let cache = { at: 0, data: null };
 
-const PT_MULT = {
-  "شقة": 1.00, "فيلا": 1.25, "دوبلكس": 1.20, "روف": 0.75,
-  "محل تجاري": 1.80, "مكتب إداري": 1.30, "مخزن": 0.65,
-};
+// ═══ جلب market-data.json ═══
+async function getMarketData() {
+  const now = Date.now();
+  if (cache.data && (now - cache.at) < CACHE_TTL_MS) return cache.data;
+  const r = await fetch(MARKET_DATA_URL, {
+    headers: { "Accept": "application/json" },
+    cf: { cacheTtl: 3600, cacheEverything: true }
+  });
+  if (!r.ok) throw new Error(`Market data HTTP ${r.status}`);
+  const data = await r.json();
+  if (!data || !Array.isArray(data.areas)) throw new Error("Invalid market data");
+  cache = { at: now, data };
+  return data;
+}
 
-const FIN_FACTOR = {
-  "ألترا سوبر لوكس": 1.18, "سوبر لوكس": 1.00,
-  "نصف تشطيب": 0.78, "طوب أحمر": 0.68,
-};
-
-const AGE_FACTOR = { new: 1.10, medium: 1.00, old: 0.85 };
-
-const FLOOR_FACTOR = {
-  "أرضي": 0.95, "أول": 1.00, "ثاني": 1.00,
-  "ثالث": 1.00, "رابع": 1.00, "خامس+": 0.97,
-};
-
-const DISCLAIMER = "التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.";
-
-// ═══ HELPERS ═══
+// ═══ Helpers ═══
 const AR_MAP = { "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9" };
 const toEn = s => String(s || "").replace(/[٠-٩]/g, d => AR_MAP[d]);
 const normAr = s => toEn(s).replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ـ/g, "").trim();
 
-function findArea(name) {
+function findArea(marketData, name) {
   const n = normAr(name);
-  return AREAS.find(a => normAr(a.name) === n) || null;
+  if (!n) return null;
+  for (const a of marketData.areas) {
+    if (normAr(a.name) === n) return a;
+    if (a.name_en && normAr(a.name_en) === n) return a;
+  }
+  for (const a of marketData.areas) {
+    const an = normAr(a.name);
+    if (an.includes(n) || n.includes(an)) return a;
+  }
+  for (const a of marketData.areas) {
+    for (const street of (a.main_streets || [])) {
+      if (normAr(street).includes(n)) return a;
+    }
+  }
+  return null;
 }
 
+function getFinishFactor(finishing, marketData) {
+  if (!finishing) return 1;
+  const adj = marketData.adjustments?.finishing || {};
+  const t = normAr(finishing);
+  if (t.includes("الترا")) return adj.ultra_lux?.factor || 1.20;
+  if (t.includes("سوبر")) return adj.super_lux?.factor || 1.00;
+  if (t.includes("نصف") || t.includes("نص")) return adj.half_finished?.factor || 0.78;
+  if (t.includes("طوب")) return adj.red_brick?.factor || 0.68;
+  return 1;
+}
+
+function getFloorFactor(floor, marketData) {
+  if (!floor) return 1;
+  const adj = marketData.adjustments?.floor || {};
+  const t = normAr(floor);
+  if (t.includes("ارضي") && t.includes("حديقه")) return adj.ground_with_garden?.factor || 1.08;
+  if (t.includes("ارضي")) return adj.ground_no_garden?.factor || 0.90;
+  if (t.includes("خامس") || t.includes("سادس") || t.includes("اخير")) {
+    return adj.high_with_elevator?.factor || 1.03;
+  }
+  return adj.middle?.factor || 1.00;
+}
+
+function getAgeFactor(age, marketData) {
+  if (!age) return 1;
+  const adj = marketData.adjustments?.age || {};
+  const map = { new: "new", medium: "medium", old: "old", very_old: "very_old" };
+  return adj[map[age]]?.factor || 1.00;
+}
+
+// ═══ تحديد السعر الأساسي حسب النوع ═══
+function getBasePrice(areaData, areaType, propertyType, furnished) {
+  // ═ تجاري/إداري (بيع) ═
+  if (areaType === "sale" && propertyType === "محل تجاري") {
+    return areaData.commercial_sale?.avg || 0;
+  }
+  if (areaType === "sale" && propertyType === "مكتب إداري") {
+    return areaData.office_sale?.avg || 0;
+  }
+
+  // ═ تجاري/إداري (إيجار) ═
+  if (areaType === "rent" && propertyType === "محل تجاري") {
+    return areaData.rent?.commercial?.avg || 0;
+  }
+  if (areaType === "rent" && propertyType === "مكتب إداري") {
+    return areaData.rent?.office?.avg || 0;
+  }
+
+  // ═ سكني — إيجار ═
+  if (areaType === "rent") {
+    if (furnished) return areaData.rent?.furnished?.avg || 0;
+    return areaData.rent?.unfurnished?.avg || 0;
+  }
+
+  // ═ سكني — بيع ═
+  const typeMap = {
+    "شقة": "apartment",
+    "فيلا": "villa",
+    "دوبلكس": "duplex",
+    "روف": "roof",
+  };
+  const key = typeMap[propertyType] || "apartment";
+  return areaData.sale?.[key]?.avg || 0;
+}
+
+function getConfidence(areaData, areaType, propertyType, furnished) {
+  const typeMap = { "شقة": "apartment", "فيلا": "villa", "دوبلكس": "duplex", "روف": "roof" };
+  if (areaType === "sale" && propertyType === "محل تجاري") return areaData.commercial_sale?.confidence || "low";
+  if (areaType === "sale" && propertyType === "مكتب إداري") return areaData.office_sale?.confidence || "low";
+  if (areaType === "rent" && propertyType === "محل تجاري") return areaData.rent?.commercial?.confidence || "low";
+  if (areaType === "rent" && propertyType === "مكتب إداري") return areaData.rent?.office?.confidence || "low";
+  if (areaType === "rent") {
+    if (furnished) return areaData.rent?.furnished?.confidence || "low";
+    return areaData.rent?.unfurnished?.confidence || "low";
+  }
+  const key = typeMap[propertyType] || "apartment";
+  return areaData.sale?.[key]?.confidence || "low";
+}
+
+function getPropertyTypeMultiplier(propertyType, marketData) {
+  if (!propertyType) return 1.0;
+  const map = marketData.property_type_multipliers || {};
+  for (const [k, v] of Object.entries(map)) {
+    if (normAr(k) === normAr(propertyType)) return v;
+  }
+  return 1.0;
+}
+
+// ═══ التقييم ═══
+async function valuate(p, marketData) {
+  const area = findArea(marketData, p.area);
+  if (!area) {
+    return {
+      error: "المنطقة غير مدعومة حاليًا",
+      available_areas: marketData.areas.map(a => a.name)
+    };
+  }
+
+  const size = parseFloat(toEn(p.size));
+  if (!size || size < 20 || size > 100000) return { error: "مساحة غير صالحة" };
+
+  const areaType = p.areaType === "rent" ? "rent" : "sale";
+  const propertyType = p.propertyType || "شقة";
+  const furnished = !!p.furnished;
+
+  const base = getBasePrice(area, areaType, propertyType, furnished);
+  if (!base) return { error: "لا توجد بيانات كافية لهذا النوع في المنطقة دي" };
+
+  const finishF = getFinishFactor(p.finishing, marketData);
+  const floorF = getFloorFactor(p.floor, marketData);
+  const ageF = getAgeFactor(p.age, marketData);
+  const ptMult = getPropertyTypeMultiplier(propertyType, marketData);
+
+  const perMeter = Math.round(base * finishF * floorF * ageF * ptMult);
+  const raw = perMeter * size;
+
+  const estimate = areaType === "rent"
+    ? Math.round(raw / 100) * 100
+    : Math.round(raw / 1000) * 1000;
+
+  const confidence = getConfidence(area, areaType, propertyType, furnished);
+  const rangeMult = confidence === "high" ? 0.95
+                  : confidence === "medium" ? 0.90
+                  : 0.85;
+
+  return {
+    estimate,
+    range: {
+      low: Math.round(estimate * rangeMult / 1000) * 1000,
+      high: Math.round(estimate * (2 - rangeMult) / 1000) * 1000,
+    },
+    price_per_meter: perMeter,
+    area_found: area.name,
+    area_level: area.level_ar || area.level,
+    confidence,
+    data_source: area.data_source || "Gemini (estimate)",
+    verified: area.verified || false,
+    adjustments: {
+      finishing: finishF,
+      floor: floorF,
+      age: ageF,
+      property_type: ptMult,
+    },
+    disclaimer: "التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.",
+  };
+}
+
+// ═══ CORS ═══
 function allowedOrigins(env) {
   const extra = String(env?.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
   return [...DEFAULT_ALLOWED_ORIGINS, ...extra];
@@ -91,50 +225,12 @@ function corsHeaders(request, env) {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
+    "X-Content-Type-Options": "nosniff",
   };
 }
 
 const jsonRes = (cors, obj, s = 200) =>
   new Response(JSON.stringify(obj), { status: s, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" } });
-
-// ═══ CORE: نفس المعادلة في كل مكان (هنا + التقدير المحلي في الصفحة) ═══
-function valuate(p) {
-  const area = findArea(p.area);
-  if (!area) return { error: "المنطقة غير مدعومة حاليًا" };
-
-  const size = parseFloat(toEn(p.size));
-  if (!size || size < 20 || size > 100000) return { error: "مساحة غير صالحة" };
-
-  const isRent = p.areaType === "rent";
-  const base = isRent
-    ? (p.furnished ? area.rent_fur : area.rent_unf)
-    : area.sale_avg;
-
-  const perMeter = Math.round(
-    base *
-    (PT_MULT[p.propertyType] || 1.0) *
-    (FIN_FACTOR[p.finishing] || 1.0) *
-    (AGE_FACTOR[p.age] || 1.0) *
-    (FLOOR_FACTOR[p.floor] || 1.0)
-  );
-
-  const raw = perMeter * size;
-  const estimate = isRent
-    ? Math.round(raw / 100) * 100
-    : Math.round(raw / 1000) * 1000;
-
-  return {
-    estimate,
-    range: {
-      low: Math.round(estimate * 0.9 / 1000) * 1000,
-      high: Math.round(estimate * 1.1 / 1000) * 1000,
-    },
-    price_per_meter: perMeter,
-    area_found: area.name,
-    confidence: area.confidence || "medium",
-    disclaimer: DISCLAIMER,
-  };
-}
 
 // ═══ ENTRY ═══
 export default {
@@ -146,13 +242,19 @@ export default {
     }
 
     if (request.method === "GET") {
-      return jsonRes(cors, {
-        service: SERVICE_NAME,
-        status: "running",
-        version: WORKER_VERSION,
-        areas: AREAS.length,
-        available_areas: AREAS.map(a => a.name),
-      });
+      try {
+        const marketData = await getMarketData();
+        return jsonRes(cors, {
+          service: SERVICE_NAME,
+          status: "running",
+          version: WORKER_VERSION,
+          areas: marketData.areas.length,
+          available_areas: marketData.areas.map(a => a.name),
+          last_updated: marketData.last_updated,
+        });
+      } catch (err) {
+        return jsonRes(cors, { error: err.message }, 500);
+      }
     }
 
     if (request.method === "POST") {
@@ -162,9 +264,15 @@ export default {
       } catch {
         return jsonRes(cors, { error: "طلب غير صالح (JSON)" }, 400);
       }
-      const out = valuate(body || {});
-      if (out.error) return jsonRes(cors, out, 400);
-      return jsonRes(cors, out, 200);
+
+      try {
+        const marketData = await getMarketData();
+        const out = await valuate(body || {}, marketData);
+        if (out.error) return jsonRes(cors, out, 400);
+        return jsonRes(cors, out, 200);
+      } catch (err) {
+        return jsonRes(cors, { error: "خطأ في التقييم: " + err.message }, 500);
+      }
     }
 
     return jsonRes(cors, { error: "Method not allowed" }, 405);
@@ -172,10 +280,9 @@ export default {
 };
 
 // ============================================================
-// النشر (عند تعديل هذا الملف):
-//   cd _worker
-//   npx wrangler deploy valuation-worker.js --name noisy-bush-fd84
-// ثم تحقق:
-//   curl "https://noisy-bush-fd84.footcai-555.workers.dev"
-//   → {"service":"nasr-valuation","status":"running","areas":15,...}
+// النشر:
+//   1. انسخ الكود ده
+//   2. Cloudflare → Workers → noisy-bush-fd84 → Edit code
+//   3. الصق → Deploy
+//   4. اختبر: curl "https://noisy-bush-fd84.footcai-555.workers.dev"
 // ============================================================
