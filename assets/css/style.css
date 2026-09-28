@@ -3767,6 +3767,10 @@ body.homepage .hp-hero-subtitle {
     z-index: 2;
   }
 body.homepage .hp-hero-subtitle strong { color: #f5f5f5; }
+/* سطر الخبرة/الهاتف داخل الـ Hero — لا هو subtitle ولا action وكان بلا margin،
+   لأن إعادة الضبط العامة في أول الملف تصفّر هوامش كل العناصر (margin: 0).
+   الـ specificity هنا أدنى من .hp-hero-subtitle فلا تزيح قواعدها. */
+.hp-hero > p { margin: 0.75rem 0; }
 body.homepage .hp-hero-actions {
     display: flex;
     justify-content: center;
