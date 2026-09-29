@@ -1,8 +1,19 @@
+import {
+  calculateMarketTotals,
+  findAreaMention,
+  getMarketSnapshot,
+  listMarketAreas,
+  normalizeArabic as normalizeMarketText,
+  normalizePropertyType as normalizeMarketPropertyType,
+  normalizeRentCondition,
+  normalizeTransaction as normalizeMarketTransaction,
+} from "./market-data.js";
+
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v8.4-HARDENED
+// سمسار طلبك — Cloudflare Worker v8.5-MAPS + D1 MARKET
 // طارق طنطاوي | مدينة نصر | 2014–2026
 // Google Local Guide Level 7 | 16.3M+ Views
-// Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
+// Gemini للردود الحوارية + D1 حتمي لأسئلة السوق + رسالة مؤهلة كاملة
 // ------------------------------------------------------------
 // تحسينات v8.4 (بدون كسر أي وظيفة أو أي حقل في الـ JSON):
 //  • أمان: CORS مقيّد بنطاقات الموقع، مفتاح Gemini في Header مش في الـ URL،
@@ -269,6 +280,261 @@ function extractPrice(text) {
   const d  = c.match(/(\d{4,})/);
   if (d && parseFloat(d[1])>=10000) return parseFloat(d[1]);
   return null;
+}
+
+function isOwnerSaleIntent(message) {
+  const text = normalizeMarketText(message);
+  return /(?:عايز|عاوز|حابب|ارغب|اريد|ناوي|نفسي|بفكر|محتاج|ابغى).{0,40}(?:ابيع|بيع|اعرض|تبيع)/.test(text)
+    || /عندي.{0,80}(?:شقه|عقار|فيلا|دوبلكس|محل|مكتب|روف).{0,70}(?:عايز|عاوز|حابب|ارغب|ناوي|ابيع|بيع)/.test(text)
+    || /(?:ابيع|بيع).{0,30}(?:شقتي|عقاري|عقار|فيلا|دوبلكس|محلي|مكتبي|روفي)/.test(text);
+}
+
+function isMarketQuestion(message) {
+  const text = normalizeMarketText(message);
+  return /سعر\s*المتر|المتر\s*(?:بكام|كام|سعره)|سعر\s*السوق|متوسط\s*(?:السعر|الاسعار)|قيمه\s*(?:عقاري|الشقه|شقتي)|(?:شقتي|عقاري(?:\s*بتاعي)?|الشقه(?:\s*بتاعتي)?).{0,30}(?:تسوي|تساوي|قيمه|كام)|(?:تسوي|تساوي)\s*كام|هل\s*السعر\s*(?:مناسب|عادل)|السعر\s*(?:مناسب|عادل)|التقييم\s*كام|قبل\s*البيع/.test(text);
+}
+
+function isValuationIntent(message) {
+  const text = normalizeMarketText(message);
+  return isMarketQuestion(message)
+    || /(?:قيم|تقييم|تسوي|تساوي|قيمه).{0,30}(?:شقتي|عقاري|الشقه|عقار)|(?:شقتي|الشقه|عقاري).{0,30}(?:ابيع|بيع|تسوي|تساوي)/.test(text);
+}
+
+function isListingSearchIntent(message) {
+  const text = normalizeMarketText(message);
+  return /معروض|المعروض|متاح|متوفر|بدور|ادور|ابحث|اشوف|اعرضلي|وريني|عندكم\s*(?:شقق|عقارات|وحدات)|عايز\s+(?:اشتري|شقه|عقار|فيلا|دوبلكس|محل|مكتب)/.test(text);
+}
+
+function extractPropertySize(message) {
+  const text = toEnNum(String(message || "")).replace(/٬/g, ",");
+  const match = text.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:متر(?:\s*مربع)?|م\s*(?:²|2)|sqm)/i);
+  if (!match) return 0;
+  const size = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(size) && size >= 20 && size <= 100000 ? size : 0;
+}
+
+function propertyTypeLabel(type) {
+  return ({
+    apartment: "شقة", duplex: "دوبلكس", villa: "فيلا", roof: "روف",
+    shop: "محل تجاري", office: "مكتب إداري", warehouse: "مخزن",
+  })[type] || "";
+}
+
+function rentConditionFromText(message) {
+  const text = normalizeMarketText(message);
+  if (/غير\s*مفروش|فاضي|بدون\s*فرش|قانون\s*جديد/.test(text)) return "unfurnished";
+  if (/مفروش|مفروشه/.test(text)) return "furnished";
+  return "unknown";
+}
+
+function valuationCta(intent, context = {}) {
+  const type = context.propertyType ? normalizeMarketPropertyType(context.propertyType) : null;
+  const transaction = normalizeMarketTransaction(context.areaType || context.transaction);
+  const size = parseNum(context.size ?? context.area);
+  return {
+    intent: intent === "seller" ? "seller" : "valuation",
+    area: String(context.areaName || context.marketArea || "").trim().slice(0, 80) || null,
+    size: size >= 20 && size <= 100000 ? size : null,
+    propertyType: type ? propertyTypeLabel(type) || null : null,
+    areaType: transaction || null,
+    rentCondition: context.rentCondition || null,
+  };
+}
+
+async function marketContextForMessage(env, message, formState = {}) {
+  const data = formState?.data || {};
+  let areaNames = [];
+  try { areaNames = await listMarketAreas(env?.DB); } catch {}
+
+  const areaFromMessage = findAreaMention(message, areaNames);
+  const areaFromState = findAreaMention(
+    [data.marketArea, data.landmark, data.location].filter(Boolean).join(" "),
+    areaNames
+  );
+  const area = areaFromMessage || areaFromState;
+  const propertyType = normalizeMarketPropertyType(message)
+    || normalizeMarketPropertyType(data.propertyType)
+    || null;
+  const transaction = normalizeMarketTransaction(message)
+    || normalizeMarketTransaction(formState?.type)
+    || "sale"; // sale is the display default; rent snapshots are queried only when rent is stated
+  const rentCondition = transaction === "rent"
+    ? rentConditionFromText(message) || normalizeRentCondition(data.furnished) || "unknown"
+    : null;
+  const size = extractPropertySize(message) || parseNum(data.area);
+
+  if (!area) {
+    return { area: null, areaNames, propertyType, transaction, rentCondition, size, snapshot: { ok: false, reason: "area_required" } };
+  }
+  if (!propertyType || !transaction) {
+    return {
+      area, areaNames, propertyType, transaction, rentCondition, size,
+      snapshot: { ok: false, reason: "market_context_required" },
+    };
+  }
+
+  const snapshot = await getMarketSnapshot(env?.DB, {
+    area,
+    areaType: transaction,
+    propertyType,
+    rentCondition,
+  });
+  return { area, areaNames, propertyType, transaction, rentCondition, size, snapshot };
+}
+
+function formatMarketQuote(snapshot, size = 0) {
+  const totals = size >= 20 ? calculateMarketTotals(snapshot, size) : null;
+  const typeLabel = propertyTypeLabel(snapshot.property_type) || "العقار";
+  const operationLabel = snapshot.transaction === "rent" ? "للإيجار" : "للبيع";
+  const conditionLabel = snapshot.rent_condition === "furnished" ? "مفروش"
+    : snapshot.rent_condition === "unfurnished" ? "غير مفروش" : "حالة الفرش غير محددة";
+  const confidenceLabel = snapshot.confidence === "high" ? "عالية"
+    : snapshot.confidence === "medium" ? "متوسطة"
+      : snapshot.confidence === "low" ? "منخفضة" : "غير محددة";
+
+  const lines = [
+    `📊 مؤشر السوق المتاح: ${typeLabel} ${operationLabel}${snapshot.transaction === "rent" ? ` (${conditionLabel})` : ""}`,
+    `📍 المنطقة: ${snapshot.area_found}`,
+    `📏 سعر المتر في بيانات D1: ${fmtNum(snapshot.price_per_meter)} ج.م/م²${snapshot.transaction === "rent" ? " شهريًا" : ""}`,
+  ];
+  const hasMeterRange = Number.isFinite(snapshot.min_price_m2) && Number.isFinite(snapshot.max_price_m2)
+    && snapshot.min_price_m2 > 0 && snapshot.max_price_m2 >= snapshot.min_price_m2;
+  lines.push(hasMeterRange
+    ? `↕️ نطاق سعر المتر المسجل: ${fmtNum(snapshot.min_price_m2)}–${fmtNum(snapshot.max_price_m2)} ج.م/م²${snapshot.transaction === "rent" ? " شهريًا" : ""}`
+    : "↕️ نطاق سعر المتر غير متاح في السجل");
+  if (totals) {
+    const timeUnit = snapshot.transaction === "rent" ? " / شهريًا" : "";
+    const rangeText = totals.range.low !== null && totals.range.high !== null
+      ? ` (النطاق المسجل: ${fmtNum(totals.range.low)}–${fmtNum(totals.range.high)} ج.م${timeUnit})`
+      : " (نطاق السعر غير متاح في السجل)";
+    lines.push(`📐 لمساحة ${fmtNum(size)} م²: مؤشر حسابي ${fmtNum(totals.estimate)} ج.م${timeUnit}${rangeText}`);
+  }
+  if (snapshot.sample_count !== null && snapshot.sample_count !== undefined) lines.push(`🔎 عدد العينات: ${fmtNum(snapshot.sample_count)}`);
+  else lines.push("🔎 عدد العينات: غير متاح في السجل");
+  if (snapshot.period) lines.push(`🗓️ الفترة: ${snapshot.period}`);
+  else if (snapshot.updated_at) lines.push(`🗓️ آخر تحديث مسجل: ${snapshot.updated_at}`);
+  else lines.push("🗓️ الفترة: غير محددة في السجل");
+  const priceBasis = snapshot.price_basis === "median_price_m2" ? "الوسيط المسجل (median_price_m2)" : "المتوسط المسجل (avg_price_m2)";
+  lines.push(`📚 أساس سعر المتر: ${priceBasis}`);
+  lines.push(`🎯 الثقة: ${confidenceLabel}`, `المصدر: ${snapshot.data_source || "price_snapshots"}`);
+  lines.push("تنبيه: هذا مؤشر من بيانات أسعار الطلب المتاحة، وليس سعر إتمام بيع أو إيجار مؤكدًا.");
+  return lines.join("\n");
+}
+
+function marketQuestionReply(context) {
+  const result = context.snapshot;
+  if (result.ok) return formatMarketQuote(result, context.size);
+  if (result.reason === "area_required") {
+    return "أقدر أراجع مؤشر السوق من البيانات المتاحة، بس محتاج أعرف المنطقة بالاسم أولًا. لو بتسأل عن قيمة عقارك، ابعت المنطقة والمساحة، أو استخدم زر التقييم.";
+  }
+  if (result.reason === "market_context_required") {
+    const missing = [];
+    if (!context.propertyType) missing.push("نوع العقار");
+    if (!context.transaction) missing.push("العملية (بيع أم إيجار)");
+    return `عشان ما أستخدمش بيانات غير مطابقة، حدّد ${missing.join(" و")} في ${context.area}؛ بعدها أراجع الـD1 من غير تخمين.`;
+  }
+  if (result.reason === "unsupported_type") {
+    return "بيانات السوق المتاحة لا تغطي هذا النوع أو العملية حاليًا؛ مش هستخدم متوسط نوع عقار تاني كبديل. أقدر أساعدك بتقييم يدوي من خلال الأداة عند توفر بيانات مناسبة.";
+  }
+  if (result.reason === "market_unavailable") {
+    return "بيانات السوق مش متاحة مؤقتًا، ومش هخمن رقم. تقدر تكمل المحادثة أو تجرّب أداة التقييم بعد شوية.";
+  }
+  return "لا توجد بيانات سوقية كافية لهذا النوع والمنطقة في السجل الحالي، لذلك مش هخمن سعرًا.";
+}
+
+function listingMatchesArea(property, areaName) {
+  if (!areaName) return true;
+  const location = [property?.zone, property?.location].filter(Boolean).join(" ");
+  return Boolean(findAreaMention(location, [areaName]));
+}
+
+function currentListingMatches(property, context) {
+  const tx = normalizeMarketTransaction(property?.transaction || property?.category || property?.title);
+  if (tx !== context.transaction) return false;
+  const propertyType = normalizeMarketPropertyType(`${property?.propertyType || property?.type || property?.category || ""} ${property?.title || ""}`);
+  if (propertyType !== context.propertyType) return false;
+  return listingMatchesArea(property, context.area);
+}
+
+async function findCurrentListings(context) {
+  try {
+    const feed = await fetchFeed();
+    return (feed.properties || [])
+      .filter(property => currentListingMatches(property, context))
+      .map(property => ({
+        property,
+        size: parseNum(property.areaNumeric || property.area),
+      }))
+      .sort((left, right) => {
+        const leftDistance = left.size ? Math.abs(left.size - context.size) : Number.MAX_SAFE_INTEGER;
+        const rightDistance = right.size ? Math.abs(right.size - context.size) : Number.MAX_SAFE_INTEGER;
+        return leftDistance - rightDistance;
+      })
+      .slice(0, 3)
+      .map(item => item.property);
+  } catch {
+    return null;
+  }
+}
+
+function formatCurrentListings(properties) {
+  if (properties === null) return "\n\n🏠 تعذر تحميل قائمة العقارات المنشورة الآن؛ بيانات السوق أعلاه مستقلة عن ذلك.";
+  if (!properties.length) return "\n\n🏠 لا توجد عقارات منشورة مطابقة في المصدر الحالي لهذه المنطقة والنوع.";
+  const lines = ["", "🏠 عقارات منشورة من المصدر الحالي:"];
+  for (const property of properties) {
+    const price = parseNum(property.priceNumeric || property.price);
+    lines.push(`• ${property.title || "عقار معروض"}`);
+    if (property.zone || property.location) lines.push(`  📍 ${property.zone || property.location}`);
+    if (price > 0) lines.push(`  💰 السعر المعروض: ${fmtNum(price)} ج.م`);
+    if (property.url) lines.push(`  🔗 ${property.url}`);
+  }
+  return lines.join("\n");
+}
+
+async function answerMarketQuestion(env, message, formState = {}) {
+  const context = await marketContextForMessage(env, message, formState);
+  let response = marketQuestionReply(context);
+  if (isListingSearchIntent(message)) {
+    const listings = await findCurrentListings(context);
+    response += formatCurrentListings(listings);
+  }
+  const sellerContext = isOwnerSaleIntent(message)
+    || (formState?.active && String(formState?.flowType || "").startsWith("owner") && normalizeMarketTransaction(formState.type) === "sale");
+  const cta = isValuationIntent(message)
+    ? valuationCta(sellerContext ? "seller" : "valuation", {
+      areaName: context.area,
+      size: context.size,
+      propertyType: propertyTypeLabel(context.propertyType),
+      areaType: context.transaction,
+      rentCondition: context.rentCondition,
+    })
+    : null;
+  return { response, valuationCta: cta, marketContext: context };
+}
+
+async function controlsForExistingFlow(formState) {
+  const flowType = String(formState?.flowType || "");
+  if (!formState?.active || !flowType || flowType === "route_selection") return { options: ROUTE_BTNS };
+
+  if (flowType === "owner") {
+    const steps = getOwnerSteps(formState.type);
+    const step = steps[formState.stepIndex];
+    const lms = await fetchLandmarks({ transaction: formState.type });
+    const prompt = askOwnerStep(steps, formState.stepIndex, formState, null, lms);
+    return { options: prompt.options, ui: prompt.ui, uiRequired: prompt.uiRequired };
+  }
+  if (flowType === "buyer" || flowType === "tenant") {
+    const steps = getBuyerSteps(formState.type);
+    const lms = await fetchLandmarks({ transaction: formState.type, propertyType: formState.data?.propertyType });
+    const prompt = askBuyerStep(steps, formState.stepIndex, formState, null, lms);
+    return { options: prompt.options, ui: prompt.ui, uiRequired: prompt.uiRequired };
+  }
+  if (flowType === "buyer_select") {
+    return { options: [...(formState.suggestedProperties || []).map((_, index) => String(index + 1)), BTN.CUSTOM_SPEC, BTN.BACK] };
+  }
+  if (flowType === "buyer_selected_property") return { options: POST_SELECTED };
+  if (flowType.startsWith("owner_completed") || flowType === "buyer_completed") return { options: POST_COMPLETE };
+  return { options: ROUTE_BTNS };
 }
 
 // ═══ GOOGLE AUTHORITY BUILDERS ═══
@@ -1141,7 +1407,7 @@ ${timeContext()}
   return callGemini(env, sys, convHistory, 150, 0.75);
 }
 
-// ═══ ✅ Gemini في كل محادثة ═══
+// ═══ Gemini لتعليق الردود الحوارية المؤهلة (تُستثنى أسعار D1 الحتمية) ═══
 // بيحدد هل الإجابة دي تستاهل تعليق أصلًا قبل ما نستدعي الـ AI
 // البني آدم مش بيعلّق على كل كلمة — التعليق على كل رد هو أوضح علامة إنه بوت
 function deservesComment(userMsg) {
@@ -1400,6 +1666,12 @@ async function processOwner(fs, msg, env, history, lms) {
   } else {
     if (!txt) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب إجابة.",lms);
     data[step.id]=txt;
+    if (step.id === "location") {
+      try {
+        const area = findAreaMention(txt, await listMarketAreas(env?.DB));
+        if (area) data.marketArea = area;
+      } catch {}
+    }
   }
   markFilled(data,step);
   const ni = nextStep(steps,data,fs.stepIndex+1);
@@ -1782,15 +2054,60 @@ function newRequest() {
   };
 }
 
+async function startOwnerFlow(type, message, env, history, lms) {
+  const steps = getOwnerSteps(type);
+  const data = { _filled: {} };
+  const parsedType = normalizeMarketPropertyType(message);
+  const parsedSize = extractPropertySize(message);
+  let marketContext = null;
+
+  if (type === "sale" && isOwnerSaleIntent(message)) {
+    marketContext = await marketContextForMessage(env, message, { type, data });
+  }
+
+  // Keep the existing owner qualification form unchanged; seller details travel only in the separate CTA.
+  const formState = {
+    active: true,
+    lifecycle: LC.ACTIVE,
+    type,
+    stepIndex: 0,
+    data,
+    awaitingQ: true,
+    flowType: "owner",
+    imageUrls: [],
+  };
+  const firstStep = nextStep(steps, data, 0);
+  let result = askOwnerStep(steps, firstStep < 0 ? 0 : firstStep, formState, null, lms);
+
+  if (isMarketQuestion(message) && marketContext?.area && parsedType && parsedSize) {
+    if (marketContext.snapshot?.ok) {
+      result.response = `${formatMarketQuote(marketContext.snapshot, parsedSize)}\n\n${result.response}`;
+    } else if (marketContext.snapshot?.reason === "insufficient_data" || marketContext.snapshot?.reason === "unsupported_type") {
+      result.response = `مافيش بيانات D1 كافية لنوع العقار والمنطقة دي، فمش هخمن سعرًا.\n\n${result.response}`;
+    }
+  }
+
+  result.valuationCta = valuationCta(type === "sale" ? "seller" : "valuation", {
+    areaName: marketContext?.area,
+    size: parsedSize,
+    propertyType: propertyTypeLabel(parsedType),
+    areaType: type,
+  });
+  // Keep market/seller replies deterministic; Gemini must not attach an unverified price to them.
+  if (isMarketQuestion(message) || isOwnerSaleIntent(message)) return result;
+  return enhanceResponse(env, result, message, result.formState, steps[firstStep] || steps[0], history);
+}
+
 // ═══ ROUTE DETECTION ═══
 function detectRoute(msg) {
   const raw = String(msg||"").trim();
-  const n = normAr(raw);
+  const n = normalizeMarketText(raw);
   if (/ااجر|اؤجر|أأجر|أاجر|مؤجر|عندي.*للإيجار/i.test(raw)) return "owner_rent";
-  if (n.includes("استاجر")||n.includes("استأجر")||n.includes("مستاجر")) return "buyer_rent";
-  if (/عايز ابيع|عايز أبيع|ابيع شقتي|أبيع شقتي/i.test(raw)) return "owner_sale";
-  if (n.includes("اشتري")||n.includes("أشتري")||n.includes("شراء")||n.includes("تمليك")) return "buyer_sale";
-  if (n.includes("ايجار")||n.includes("إيجار")) return "buyer_rent";
+  if (n.includes("استاجر") || n.includes("مستاجر") || /بدور.{0,30}(?:ايجار|للايجار)/.test(n)) return "buyer_rent";
+  if (isOwnerSaleIntent(raw)) return "owner_sale";
+  if (n.includes("اشتري") || n.includes("شراء") || n.includes("تمليك")
+      || (/(?:شقه|عقار|فيلا|دوبلكس|محل|مكتب)/.test(n) && /للبيع|للتملك/.test(n) && !n.includes("شقتي"))) return "buyer_sale";
+  if (n.includes("ايجار") || n.includes("اجار")) return "buyer_rent";
   if (n.includes("بيع")) return "owner_sale";
   return null;
 }
@@ -2022,13 +2339,28 @@ export default {
         });
       }
 
+      const flowType = fs.flowType||"";
+      const hasFlow = fs.active===true && flowType!=="";
+
+      // Market questions are answered from D1 before Gemini so no model can invent prices.
+      // Returning the unchanged formState preserves an in-progress qualified chat flow.
+      if (userMsg && isMarketQuestion(userMsg) && !isOwnerSaleIntent(userMsg)) {
+        const marketReply = await answerMarketQuestion(env, userMsg, fs);
+        const controls = await controlsForExistingFlow(fs);
+        const response = {
+          response: marketReply.response,
+          formState: fs,
+          imageUrls: fs.imageUrls || [],
+          ...controls,
+        };
+        if (marketReply.valuationCta) response.valuationCta = marketReply.valuationCta;
+        return jsonRes(response);
+      }
+
       if (!env?.GEMINI_API_KEY) {
         console.error(`[${reqId}] GEMINI_API_KEY missing`);
         return jsonRes({response:"حصل خطأ مؤقت.",options:ROUTE_BTNS},500);
       }
-
-      const flowType = fs.flowType||"";
-      const hasFlow = fs.active===true && flowType!=="";
 
       if (!hasFlow || flowType==="route_selection") {
 
@@ -2048,17 +2380,11 @@ export default {
         }
         if (isSell(userMsg)) {
           const lms = await fetchLandmarks({transaction:"sale"});
-          const steps = getOwnerSteps("sale");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"sale",stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-          const r = askOwnerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+          return jsonRes(await startOwnerFlow("sale", userMsg, env, history, lms));
         }
         if (isLandlord(userMsg)) {
           const lms = await fetchLandmarks({transaction:"rent"});
-          const steps = getOwnerSteps("rent");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"rent",stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-          const r = askOwnerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+          return jsonRes(await startOwnerFlow("rent", userMsg, env, history, lms));
         }
 
         if (!userMsg) return jsonRes(newRequest());
@@ -2074,10 +2400,7 @@ export default {
             const r = askBuyerStep(steps,0,newFs,null,lms);
             return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
           } else {
-            const steps = getOwnerSteps(type);
-            const newFs = {active:true,lifecycle:LC.ACTIVE,type,stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-            const r = askOwnerStep(steps,0,newFs,null,lms);
-            return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+            return jsonRes(await startOwnerFlow(type, userMsg, env, history, lms));
           }
         }
 
@@ -2104,7 +2427,21 @@ export default {
         // إجابة يدوية على خطوة الموقع (بدون gps في نفس الطلب) → أي إحداثيات قديمة بتتشال (لا pin كاذب)
         if (step?.id==="location" && !incomingGps && fs.data?.gps) { fs.data = {...fs.data}; delete fs.data.gps; }
         const r = await processOwner(fs,userMsg,env,history,lms);
-        return jsonRes(await enhanceResponse(env,r,userMsg,fs,step,history));
+        const enhanced = await enhanceResponse(env,r,userMsg,fs,step,history);
+        if (!r.done && !r.readyToSend) {
+          const ownerData = r.formState?.data || fs.data || {};
+          let marketArea = ownerData.marketArea || null;
+          if (!marketArea && ownerData.location) {
+            try { marketArea = findAreaMention(ownerData.location, await listMarketAreas(env?.DB)); } catch {}
+          }
+          enhanced.valuationCta = valuationCta(fs.type === "sale" ? "seller" : "valuation", {
+            areaName: marketArea,
+            size: ownerData.area,
+            propertyType: ownerData.propertyType,
+            areaType: fs.type,
+          });
+        }
+        return jsonRes(enhanced);
       }
 
       if (flowType==="buyer"||flowType==="tenant") {
@@ -2135,6 +2472,6 @@ export default {
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v8.5-MAPS (منتقي الخريطة: ui:"map_picker" + gps في رسالة الواتساب)
-// ✅ Gemini في كل محادثة + لا تعليق + رسالة مؤهلة كاملة
+// نهاية الملف — سمسار طلبك v8.5-MAPS + D1 MARKET (منتقي الخريطة: ui:"map_picker" + gps في رسالة الواتساب)
+// ✅ Gemini للردود الحوارية + أسعار D1 حتمية + رسالة مؤهلة كاملة
 // ═══════════════════════════════════════════════════
