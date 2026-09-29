@@ -26,9 +26,7 @@ extra_scripts: |
     </button>
 
     <div class="header-info" onclick="openAbout()">
-      <div class="header-name">
-        طارق طنطاوي
-      </div>
+      <div class="header-name">طارق طنطاوي</div>
       <div class="header-status" id="statusLine">
         <span class="status-dot"></span>
         <span id="statusText">متصل الآن</span>
@@ -113,52 +111,28 @@ extra_scripts: |
 
 <div class="privacy-overlay" id="privacyOverlay">
   <div class="privacy-sheet" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
-
     <div class="privacy-handle"></div>
-
     <div class="privacy-icon">🤖</div>
-
     <div class="privacy-badge">
       <i class="fas fa-robot ag-ai-ico"></i>
       وكيل ذكي — ليس واتساب
     </div>
-
-    <h2 class="privacy-title" id="privacyTitle">
-      قبل ما تبدأ، خليك عارف
-    </h2>
-
+    <h2 class="privacy-title" id="privacyTitle">قبل ما تبدأ، خليك عارف</h2>
     <p class="privacy-desc">
       هذه الواجهة وكيل ذكي مخصص لـ <strong>سمسار طلبك</strong>، مش محادثة واتساب عادية.<br>
       الهدف بسيط: نفهم طلبك بسرعة ونوفر وقتك ووقت طارق.
     </p>
-
     <ul class="privacy-rules">
-      <li>
-        <span class="rule-icon">✅</span>
-        <span>المحادثة مشفرة ومش بتتخزن على أجهزتنا بعد انتهاء الجلسة.</span>
-      </li>
-      <li>
-        <span class="rule-icon">✅</span>
-        <span>ردود الوكيل للتأهيل الأولي فقط — القرار النهائي دايمًا مع طارق شخصيًا.</span>
-      </li>
-      <li>
-        <span class="rule-icon">✅</span>
-        <span>لو مش عاجبك الأسلوب، في أي وقت تقدر تتواصل مباشرة على واتساب.</span>
-      </li>
+      <li><span class="rule-icon">✅</span><span>المحادثة مشفرة ومش بتتخزن على أجهزتنا بعد انتهاء الجلسة.</span></li>
+      <li><span class="rule-icon">✅</span><span>ردود الوكيل للتأهيل الأولي فقط — القرار النهائي دايمًا مع طارق شخصيًا.</span></li>
+      <li><span class="rule-icon">✅</span><span>لو مش عاجبك الأسلوب، في أي وقت تقدر تتواصل مباشرة على واتساب.</span></li>
     </ul>
-
     <div class="privacy-warn">
       <span class="privacy-warn-icon">⚠️</span>
       <span>متبعتش بيانات حساسة: رقم قومي، بيانات بنكية، أرقام بطاقات، أو كلمات مرور.</span>
     </div>
-
-    <button class="privacy-btn" onclick="acceptPrivacy()">
-      فهمت — ابدأ المحادثة
-    </button>
-    <button class="privacy-skip" onclick="acceptPrivacy()">
-      إغلاق
-    </button>
-
+    <button class="privacy-btn" onclick="acceptPrivacy()">فهمت — ابدأ المحادثة</button>
+    <button class="privacy-skip" onclick="acceptPrivacy()">إغلاق</button>
   </div>
 </div>
 
@@ -186,9 +160,7 @@ extra_scripts: |
 
 <div class="gallery-overlay" id="galleryOverlay" onclick="if(event.target===this) closeGallery()">
   <div class="gallery-sheet" role="dialog" aria-modal="true" aria-label="معرض العقارات">
-
     <div class="gallery-handle"></div>
-
     <div class="gallery-header">
       <div class="gallery-header-title">
         🏠 معرض العقارات
@@ -198,7 +170,6 @@ extra_scripts: |
         <i class="fas fa-times"></i>
       </button>
     </div>
-
     <div class="gallery-body">
       <div class="gallery-loading" id="galleryLoading">
         <div class="gallery-spinner"></div>
@@ -210,34 +181,20 @@ extra_scripts: |
         لا توجد عقارات متاحة حالياً
       </div>
     </div>
-
   </div>
 </div>
 
 <div class="wa-dialog-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
   <div class="wa-dialog ag-about-dialog">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
-         alt="طارق طنطاوي"
-         class="ag-about-avatar"
-         onerror="this.style.display='none'">
+    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="ag-about-avatar" onerror="this.style.display='none'">
     <div class="ag-about-name">طارق طنطاوي</div>
     <div class="ag-about-sub">سمسار مدينة نصر — منذ 2014</div>
     <div class="ag-stats">
-      <div class="ag-stat">
-        <span class="ag-stat-num">16.3M</span>
-        <span class="ag-stat-lbl">مشاهدة</span>
-      </div>
-      <div class="ag-stat">
-        <span class="ag-stat-num">430</span>
-        <span class="ag-stat-lbl">صورة</span>
-      </div>
-      <div class="ag-stat">
-        <span class="ag-stat-num">151</span>
-        <span class="ag-stat-lbl">مراجعة كتبها</span>
-      </div>
+      <div class="ag-stat"><span class="ag-stat-num">16.3M</span><span class="ag-stat-lbl">مشاهدة</span></div>
+      <div class="ag-stat"><span class="ag-stat-num">430</span><span class="ag-stat-lbl">صورة</span></div>
+      <div class="ag-stat"><span class="ag-stat-num">151</span><span class="ag-stat-lbl">مراجعة كتبها</span></div>
     </div>
-    <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener"
-       class="ag-maps-btn">
+    <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener" class="ag-maps-btn">
       <i class="fas fa-map-marked-alt"></i>
       شوف بروفايلي على Google Maps
     </a>
@@ -252,7 +209,7 @@ extra_scripts: |
 // CONFIG
 // ═══════════════════════════════════════════
 const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY  = "simsar_wa_v91";
+const STORAGE_KEY  = "simsar_wa_v92";
 const RETURN_KEY   = "simsar_return_session";
 const PRIVACY_KEY  = "simsar_privacy_v1";
 const TAREK_WA     = "201147758857";
@@ -261,7 +218,7 @@ const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
 const FORM_VERSION = "v83";
 
-const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/><path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-.996-.94-1.085 1.32 1.775 1.775a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.663-.728z"/></svg>`;
+const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/></svg>`;
 
 // ═══ STATE ═══
 let state = {
@@ -272,6 +229,7 @@ let state = {
   waMessage: null,
   whatsappUrl: null,
   valuationCta: null,
+  valuationResult: null,
 };
 let isSending = false;
 
@@ -307,43 +265,72 @@ function loadState() {
     state = { ...state, ...s };
     state.pendingImages = [];
     state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
+    // امسح نتيجة التقييم إذا مر عليها أكثر من 24 ساعة
+    if (state.valuationResult?.savedAt) {
+      const age = Date.now() - state.valuationResult.savedAt;
+      if (age > 24 * 60 * 60 * 1000) state.valuationResult = null;
+    }
   } catch {}
 }
 
 // ═══ RETURN FROM VALUATION ═══
-// لما العميل يخرج من valuation.html ويرجع للوكيل، بنسترجع الجلسة
-// وبنكمل من نفس الخطوة اللي وقف عندها.
+function parseValuationFromUrl() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("return") !== "valuation") return null;
+
+  const estimate = Number(params.get("estimate"));
+  if (!Number.isFinite(estimate) || estimate <= 0) return null;
+
+  return {
+    estimate: estimate,
+    confidence: params.get("confidence") || "unknown",
+    samples: Number(params.get("samples")) || 0,
+    perMeter: Number(params.get("perMeter")) || 0,
+    area: params.get("area") || "",
+    size: Number(params.get("size")) || 0,
+    savedAt: Date.now(),
+  };
+}
+
 function checkReturnFromValuation() {
   const params = new URLSearchParams(location.search);
   if (params.get("return") !== "valuation") return false;
 
+  // 1) اقرأ نتيجة التقييم من الرابط
+  const valuation = parseValuationFromUrl();
+
+  // 2) استرجع الجلسة السابقة من sessionStorage
   try {
     const saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null");
-    if (!saved) return false;
-
-    const age = Date.now() - (saved.savedAt || 0);
-    if (age > 24 * 60 * 60 * 1000) {
+    if (saved) {
+      const age = Date.now() - (saved.savedAt || 0);
+      if (age < 24 * 60 * 60 * 1000 && saved.state) {
+        state = { ...state, ...saved.state };
+        state.pendingImages = [];
+        state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
+      }
       sessionStorage.removeItem(RETURN_KEY);
-      return false;
     }
+  } catch {}
 
-    if (saved.state) {
-      state = { ...state, ...saved.state };
-      state.pendingImages = [];
-      state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
-    }
-
-    sessionStorage.removeItem(RETURN_KEY);
-
-    // امسح الـ params من الرابط
-    const clean = new URL(window.location.href);
-    clean.searchParams.delete("return");
-    window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
-
-    return true;
-  } catch {
-    return false;
+  // 3) خزّن نتيجة التقييم في state
+  if (valuation) {
+    state.valuationResult = valuation;
+    saveState();
   }
+
+  // 4) امسح الـ params من الرابط
+  const clean = new URL(window.location.href);
+  clean.searchParams.delete("return");
+  clean.searchParams.delete("estimate");
+  clean.searchParams.delete("confidence");
+  clean.searchParams.delete("samples");
+  clean.searchParams.delete("perMeter");
+  clean.searchParams.delete("area");
+  clean.searchParams.delete("size");
+  window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
+
+  return { returning: true, valuation };
 }
 
 function saveReturnContext() {
@@ -356,16 +343,41 @@ function saveReturnContext() {
         waMessage: state.waMessage,
         whatsappUrl: state.whatsappUrl,
         valuationCta: state.valuationCta,
+        valuationResult: state.valuationResult,
       },
       savedAt: Date.now()
     }));
   } catch {}
 }
 
-function renderReturnBanner() {
+function renderReturnBanner(valuation) {
+  const fmtN = n => Number(n || 0).toLocaleString('en-US');
   const banner = document.createElement("div");
   banner.className = "msg msg-bot";
-  banner.innerHTML = `<span class="msg-content">تمام، رجعت 👋<br>كمّل من النقطة اللي وقفنا عندها.</span><div class="msg-time">${getTime()}</div>`;
+
+  if (valuation && valuation.estimate > 0) {
+    const confLabel = valuation.confidence === 'high' ? 'عالية'
+                    : valuation.confidence === 'medium' ? 'متوسطة'
+                    : valuation.confidence === 'low' ? 'منخفضة'
+                    : 'غير محددة';
+    let subline = `📊 التقييم المسجل: <strong>${fmtN(valuation.estimate)} ج.م</strong>`;
+    if (valuation.confidence) subline += ` — ثقة ${confLabel}`;
+    if (valuation.samples > 0) subline += ` (${valuation.samples} عينات)`;
+
+    banner.innerHTML = `
+      <span class="msg-content">تمام، رجعت 👋<br>
+      فاكر إن شقتك اتقيمت؟<br>
+      ${subline}<br><br>
+      نكمّل من النقطة اللي وقفنا عندها؟</span>
+      <div class="msg-time">${getTime()}</div>
+    `;
+  } else {
+    banner.innerHTML = `
+      <span class="msg-content">تمام، رجعت 👋<br>نكمّل من النقطة اللي وقفنا عندها؟</span>
+      <div class="msg-time">${getTime()}</div>
+    `;
+  }
+
   chatArea.insertBefore(banner, typingBubble);
   scrollToBottom();
 }
@@ -386,15 +398,9 @@ const menuGlass    = document.getElementById("menuGlass");
 const menuOverlay  = document.getElementById("menuOverlay");
 
 // ═══ PRIVACY ═══
-function hasSeenPrivacy() {
-  try { return !!localStorage.getItem(PRIVACY_KEY); } catch { return true; }
-}
-function markPrivacySeen() {
-  try { localStorage.setItem(PRIVACY_KEY, "1"); } catch {}
-}
-function showPrivacy() {
-  document.getElementById("privacyOverlay").classList.add("show");
-}
+function hasSeenPrivacy() { try { return !!localStorage.getItem(PRIVACY_KEY); } catch { return true; } }
+function markPrivacySeen() { try { localStorage.setItem(PRIVACY_KEY, "1"); } catch {} }
+function showPrivacy() { document.getElementById("privacyOverlay").classList.add("show"); }
 function acceptPrivacy() {
   markPrivacySeen();
   const overlay = document.getElementById("privacyOverlay");
@@ -402,18 +408,12 @@ function acceptPrivacy() {
   overlay.classList.remove("show");
   setTimeout(() => {
     overlay.style.display = "none";
-    showInappNotif({
-      icon: "💬",
-      iconClass: "green",
-      title: "الوكيل الذكي جاهز",
-      sub: "اكتب طلبك وهنساعدك في ثواني"
-    });
+    showInappNotif({ icon: "💬", iconClass: "green", title: "الوكيل الذكي جاهز", sub: "اكتب طلبك وهنساعدك في ثواني" });
   }, 350);
 }
 
 // ═══ IN-APP NOTIFICATION ═══
 let _notifTimer = null;
-
 function showInappNotif({ icon = "💬", iconClass = "green", title = "", sub = "" }, autoDismiss = 4000) {
   const notif = document.getElementById("inappNotif");
   document.getElementById("notifIcon").textContent = icon;
@@ -425,7 +425,6 @@ function showInappNotif({ icon = "💬", iconClass = "green", title = "", sub = 
   clearTimeout(_notifTimer);
   if (autoDismiss > 0) _notifTimer = setTimeout(() => hideInappNotif(), autoDismiss);
 }
-
 function hideInappNotif() {
   const notif = document.getElementById("inappNotif");
   notif.classList.add("hiding");
@@ -435,7 +434,6 @@ function hideInappNotif() {
 
 // ═══ WA DIALOG ═══
 let waDialogCallback = null;
-
 function showWaDialog(options) {
   const { title = "تأكيد", message = "هل أنت متأكد؟", okText = "تأكيد", cancelText = "إلغاء", okStyle = "danger", onOk = null } = options || {};
   document.getElementById("waDialogTitle").textContent = title;
@@ -446,7 +444,6 @@ function showWaDialog(options) {
   waDialogCallback = onOk;
   document.getElementById("waDialog").classList.add("show");
 }
-
 function closeWaDialog(confirmed) {
   document.getElementById("waDialog").classList.remove("show");
   const cb = waDialogCallback;
@@ -460,10 +457,7 @@ function showNewChatDialog() {
     title: "محادثة جديدة؟",
     message: "هتبدأ محادثة جديدة من الأول. الرسائل والبيانات الحالية هتتمسح.",
     okText: "ابدأ", cancelText: "إلغاء", okStyle: "danger",
-    onOk: () => {
-      resetChat();
-      showInappNotif({ icon: "🔄", iconClass: "green", title: "محادثة جديدة", sub: "الوكيل الذكي جاهز من الأول" });
-    }
+    onOk: () => { resetChat(); showInappNotif({ icon: "🔄", iconClass: "green", title: "محادثة جديدة", sub: "الوكيل الذكي جاهز من الأول" }); }
   });
 }
 
@@ -473,40 +467,24 @@ function showDeleteDialog() {
     title: "حذف المحادثة؟",
     message: "كل الرسائل والبيانات هتتمسح نهائيًا، ومش هتقدر ترجعها تاني.",
     okText: "حذف", cancelText: "إلغاء", okStyle: "danger",
-    onOk: () => {
-      deleteChat();
-      showInappNotif({ icon: "🗑️", iconClass: "red", title: "تم الحذف", sub: "المحادثة والبيانات اتمسحت" });
-    }
+    onOk: () => { deleteChat(); showInappNotif({ icon: "🗑️", iconClass: "red", title: "تم الحذف", sub: "المحادثة والبيانات اتمسحت" }); }
   });
 }
 
 // ═══ HELPERS ═══
-function getTime() {
-  return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
-}
-function escapeHtml(text) {
-  return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
+function getTime() { return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }); }
+function escapeHtml(text) { return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 }
-function scrollToBottom() {
-  requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; });
-}
+function scrollToBottom() { requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; }); }
 function setTyping(on, customText) {
-  if (on) {
-    statusText.textContent = customText || "يكتب...";
-    statusLine.classList.add("typing");
-  } else {
-    statusText.textContent = "متصل الآن";
-    statusLine.classList.remove("typing");
-  }
+  if (on) { statusText.textContent = customText || "يكتب..."; statusLine.classList.add("typing"); }
+  else { statusText.textContent = "متصل الآن"; statusLine.classList.remove("typing"); }
 }
-function toggleTypingBubble(on) {
-  typingBubble.classList.toggle("active", !!on);
-}
+function toggleTypingBubble(on) { typingBubble.classList.toggle("active", !!on); }
 function showToast(msg, dur = 2400) {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -528,9 +506,7 @@ function renderMsg(text, type = "bot", images) {
   if (text && text.trim()) html += `<span class="msg-content">${formatMsg(text)}</span>`;
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
-    images.forEach(src => {
-      html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة" onclick="window.open('${src}','_blank')">`;
-    });
+    images.forEach(src => { html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة" onclick="window.open('${src}','_blank')">`; });
     html += `</div>`;
   }
   const ticks = type === "user" ? `<span class="msg-ticks">${TICKS_SVG}</span>` : "";
@@ -553,9 +529,7 @@ function renderButtons(opts) {
     btn.onclick = () => {
       if (isSending) return;
       wrap.querySelectorAll(".btn-glass").forEach(b => { b.style.pointerEvents = "none"; b.style.opacity = "0.5"; });
-      msgInput.value = o;
-      updateSendIcon();
-      sendMsg();
+      msgInput.value = o; updateSendIcon(); sendMsg();
     };
     wrap.appendChild(btn);
   });
@@ -578,9 +552,7 @@ function buildValuationHref(context) {
   if (Number.isFinite(size) && size >= 20 && size <= 100000) params.set("size", String(size));
   if (propertyType) params.set("propertyType", propertyType);
   if (areaType) params.set("type", areaType);
-  if (["furnished", "unfurnished", "unknown"].includes(context.rentCondition)) {
-    params.set("rentCondition", context.rentCondition);
-  }
+  if (["furnished", "unfurnished", "unknown"].includes(context.rentCondition)) params.set("rentCondition", context.rentCondition);
 
   return `${VALUATION_URL}?${params.toString()}`;
 }
@@ -596,10 +568,7 @@ function renderValuationCta(context) {
   link.href = buildValuationHref(context);
   link.textContent = "💎 قيّم عقارك";
   link.setAttribute("aria-label", "افتح أداة تقييم العقار مع الاحتفاظ بسياق المحادثة");
-  link.addEventListener("click", () => {
-    // احفظ الجلسة قبل الخروج عشان لما العميل يرجع نكمّل من نفس النقطة
-    saveReturnContext();
-  });
+  link.addEventListener("click", () => { saveReturnContext(); });
   wrap.appendChild(link);
   chatArea.insertBefore(wrap, typingBubble);
   scrollToBottom();
@@ -612,19 +581,13 @@ function showWA(url, msg) {
   state.whatsappUrl = url;
   state.waMessage = msg;
 }
-function hideWA() {
-  waWrapper.classList.remove("show");
-  waBtn.href = "#";
-}
+function hideWA() { waWrapper.classList.remove("show"); waBtn.href = "#"; }
 
 // ═══ IMAGES ═══
 function onFilesSelected(e) {
   const files = [...(e.target.files || [])];
   if (!files.length) return;
-  if (state.pendingImages.length + files.length > MAX_IMAGES) {
-    showToast(`الحد الأقصى ${MAX_IMAGES} صور`);
-    return;
-  }
+  if (state.pendingImages.length + files.length > MAX_IMAGES) { showToast(`الحد الأقصى ${MAX_IMAGES} صور`); return; }
   files.forEach(f => {
     if (!f.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -640,9 +603,7 @@ function onFilesSelected(e) {
 }
 
 function renderImgStrip() {
-  if (!state.pendingImages.length) {
-    imgStrip.classList.remove("show"); imgStrip.innerHTML = ""; return;
-  }
+  if (!state.pendingImages.length) { imgStrip.classList.remove("show"); imgStrip.innerHTML = ""; return; }
   imgStrip.classList.add("show"); imgStrip.innerHTML = "";
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
@@ -652,10 +613,7 @@ function renderImgStrip() {
   });
 }
 
-function removeImg(i) {
-  state.pendingImages.splice(i, 1);
-  renderImgStrip(); updateSendIcon();
-}
+function removeImg(i) { state.pendingImages.splice(i, 1); renderImgStrip(); updateSendIcon(); }
 
 async function uploadPendingImages() {
   if (!state.pendingImages.length) return [];
@@ -709,7 +667,8 @@ async function sendMsg() {
       formState: state.formState || { _version: FORM_VERSION },
       history: state.history.slice(-20),
       imageUrls: imgUrls,
-      gps: sessionGps || undefined
+      gps: sessionGps || undefined,
+      valuationResult: state.valuationResult || null,
     };
 
     const r = await fetch(WORKER_URL, {
@@ -719,15 +678,13 @@ async function sendMsg() {
     });
 
     if (!r.ok) {
-      toggleTypingBubble(false);
-      setTyping(false);
+      toggleTypingBubble(false); setTyping(false);
       renderMsg("حصل خطأ مؤقت. جرّب تاني.", "bot");
       return;
     }
 
     const data = await r.json();
     const reply = data.response || "";
-
     const delay = Number(data.typingDelay) || 0;
     if (delay > 0) await new Promise(res => setTimeout(res, Math.min(delay, 1500)));
 
@@ -762,8 +719,7 @@ async function sendMsg() {
     saveState();
 
   } catch (err) {
-    toggleTypingBubble(false);
-    setTyping(false);
+    toggleTypingBubble(false); setTyping(false);
     renderMsg("تعذّر الاتصال بالخادم. جرّب تاني.", "bot");
   } finally {
     isSending = false;
@@ -773,14 +729,8 @@ async function sendMsg() {
 }
 
 // ═══ MAP PICKER ═══
-function lockInput(placeholder) {
-  msgInput.disabled = true;
-  msgInput.placeholder = placeholder || "اختار الموقع من الخريطة فوق 👆";
-}
-function unlockInput() {
-  msgInput.disabled = false;
-  msgInput.placeholder = "رسالة...";
-}
+function lockInput(placeholder) { msgInput.disabled = true; msgInput.placeholder = placeholder || "اختار الموقع من الخريطة فوق 👆"; }
+function unlockInput() { msgInput.disabled = false; msgInput.placeholder = "رسالة..."; }
 function closeMapPicker() {
   if (mapPicker) { try { mapPicker.destroy(); } catch {} mapPicker = null; }
   if (mapPickerEl) { mapPickerEl.remove(); mapPickerEl = null; }
@@ -850,36 +800,18 @@ function handleMapUi(data) {
 function goBack() {
   const ref = document.referrer;
   const host = window.location.host;
-  if (ref && ref.includes(host) && window.history.length > 1) {
-    window.history.back();
-    return;
-  }
+  if (ref && ref.includes(host) && window.history.length > 1) { window.history.back(); return; }
   window.location.href = "/";
 }
 
 // ═══ MENU ═══
-function openMenu(e) {
-  if (e) e.stopPropagation();
-  menuGlass.classList.add("open");
-  menuOverlay.classList.add("open");
-}
-function closeMenu() {
-  menuGlass.classList.remove("open");
-  menuOverlay.classList.remove("open");
-}
+function openMenu(e) { if (e) e.stopPropagation(); menuGlass.classList.add("open"); menuOverlay.classList.add("open"); }
+function closeMenu() { menuGlass.classList.remove("open"); menuOverlay.classList.remove("open"); }
 
 // ═══ MODALS ═══
-function openAbout() {
-  closeMenu();
-  document.getElementById("aboutModal").classList.add("show");
-}
-function closeAbout() {
-  document.getElementById("aboutModal").classList.remove("show");
-}
-function openGoogle() {
-  closeMenu();
-  window.open(GOOGLE_URL, "_blank");
-}
+function openAbout() { closeMenu(); document.getElementById("aboutModal").classList.add("show"); }
+function closeAbout() { document.getElementById("aboutModal").classList.remove("show"); }
+function openGoogle() { closeMenu(); window.open(GOOGLE_URL, "_blank"); }
 
 // ═══ RESET / DELETE ═══
 function resetChat() {
@@ -888,6 +820,7 @@ function resetChat() {
     formState: { _version: FORM_VERSION },
     history: [], imageUrls: [], pendingImages: [],
     waMessage: null, whatsappUrl: null,
+    valuationCta: null, valuationResult: null,
   };
   saveState();
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
@@ -905,6 +838,7 @@ function deleteChat() {
     formState: { _version: FORM_VERSION },
     history: [], imageUrls: [], pendingImages: [],
     waMessage: null, whatsappUrl: null,
+    valuationCta: null, valuationResult: null,
   };
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
   hideWA();
@@ -921,9 +855,7 @@ chatArea.addEventListener("scroll", () => {
 
 // ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
-msgInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }
-});
+msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } });
 
 // ═══ INIT ═══
 function startConversation() {
@@ -934,7 +866,8 @@ function startConversation() {
 
 loadState();
 
-const returningFromValuation = checkReturnFromValuation();
+const returnInfo = checkReturnFromValuation();
+const returningFromValuation = returnInfo && returnInfo.returning;
 
 if (state.history && state.history.length) {
   state.history.forEach(m => {
@@ -951,7 +884,7 @@ if (state.history && state.history.length) {
     if (window.NasrMaps) restore(); else window.addEventListener("load", restore, { once: true });
   }
   if (returningFromValuation) {
-    renderReturnBanner();
+    renderReturnBanner(returnInfo.valuation);
     showInappNotif({
       icon: "💎",
       iconClass: "green",
@@ -961,6 +894,9 @@ if (state.history && state.history.length) {
   }
 } else {
   startConversation();
+  if (returningFromValuation) {
+    renderReturnBanner(returnInfo.valuation);
+  }
 }
 
 updateSendIcon();
@@ -977,14 +913,8 @@ const FALLBACK_CARD_IMG  = "https://nasr-realestate.github.io/assets/img/logo.we
 let _galleryLoaded = false;
 let _galleryProperties = [];
 
-function openGallery() {
-  closeMenu();
-  document.getElementById("galleryOverlay").classList.add("show");
-  if (!_galleryLoaded) fetchGalleryFeed();
-}
-function closeGallery() {
-  document.getElementById("galleryOverlay").classList.remove("show");
-}
+function openGallery() { closeMenu(); document.getElementById("galleryOverlay").classList.add("show"); if (!_galleryLoaded) fetchGalleryFeed(); }
+function closeGallery() { document.getElementById("galleryOverlay").classList.remove("show"); }
 
 async function fetchGalleryFeed() {
   const loading = document.getElementById("galleryLoading");
@@ -993,16 +923,10 @@ async function fetchGalleryFeed() {
   const count   = document.getElementById("galleryCount");
 
   loading.style.display = "block";
-  grid.style.display    = "none";
-  empty.style.display   = "none";
+  grid.style.display = "none";
+  empty.style.display = "none";
 
-  grid.innerHTML = Array(6).fill(0).map(() =>
-    `<div class="gallery-skel">
-       <div class="gallery-skel-img"></div>
-       <div class="gallery-skel-line"></div>
-       <div class="gallery-skel-line short"></div>
-     </div>`
-  ).join("");
+  grid.innerHTML = Array(6).fill(0).map(() => `<div class="gallery-skel"><div class="gallery-skel-img"></div><div class="gallery-skel-line"></div><div class="gallery-skel-line short"></div></div>`).join("");
   grid.style.display = "grid";
   loading.style.display = "none";
 
@@ -1012,16 +936,11 @@ async function fetchGalleryFeed() {
     const feed = await res.json();
     _galleryProperties = (feed.properties || []).filter(p => p.image);
 
-    if (!_galleryProperties.length) {
-      grid.style.display = "none";
-      empty.style.display = "block";
-      return;
-    }
+    if (!_galleryProperties.length) { grid.style.display = "none"; empty.style.display = "block"; return; }
 
     count.textContent = _galleryProperties.length + " عقار";
     renderGalleryCards(_galleryProperties);
     _galleryLoaded = true;
-
   } catch (e) {
     grid.innerHTML = "";
     grid.style.display = "none";
@@ -1054,14 +973,9 @@ function renderGalleryCards(properties) {
     const title  = prop.title || "عقار";
 
     card.innerHTML = `
-      <img class="gallery-card-img"
-           src="${escHtml(imgSrc)}"
-           alt="${escHtml(title)}"
-           loading="lazy" decoding="async"
+      <img class="gallery-card-img" src="${escHtml(imgSrc)}" alt="${escHtml(title)}" loading="lazy" decoding="async"
            onerror="this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';">
-      <div class="gallery-card-body">
-        <div class="gallery-card-title">${escHtml(title)}</div>
-      </div>
+      <div class="gallery-card-body"><div class="gallery-card-title">${escHtml(title)}</div></div>
       <div class="gallery-card-arrow"><i class="fas fa-arrow-left"></i></div>
     `;
 
@@ -1069,11 +983,7 @@ function renderGalleryCards(properties) {
   });
 }
 
-function escHtml(str) {
-  return String(str || "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
+function escHtml(str) { return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 // ═══ GLOBAL EXPOSE ═══
 window.sendMsg           = sendMsg;
