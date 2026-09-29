@@ -223,7 +223,6 @@
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
 
-    /* شارات الاستخراج التلقائي */
     .extracted { display: none; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .extracted.show { display: flex; animation: fadeIn 0.3s; }
     .chip {
@@ -248,7 +247,6 @@
       color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600;
     }
 
-    /* ═══ التحميل ═══ */
     .loading { display: none; text-align: center; padding: 2.5rem 1rem; }
     .loading.show { display: block; animation: fadeIn 0.3s; }
     .spinner {
@@ -259,7 +257,6 @@
     .loading p { color: var(--muted); font-size: 0.9rem; font-weight: 600; min-height: 1.6em; }
     .loading .load-sub { color: var(--dim); font-size: 0.75rem; margin-top: 4px; }
 
-    /* ═══ النتيجة ═══ */
     .result { display: none; }
     .result.show { display: block; animation: fadeIn 0.4s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -267,7 +264,6 @@
     .result-card { background: var(--card); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; padding: 1.4rem; margin-bottom: 1rem; }
     .result-title { color: var(--gold); font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
 
-    /* شريط الحكم: أخضر = فرصة / ذهبي = مناسب / أحمر = مبالغ فيه */
     .verdict { border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 1rem; border: 2px solid; }
     .verdict .v-label { font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .verdict .v-sub { font-size: 0.8rem; margin-top: 4px; opacity: 0.85; }
@@ -303,7 +299,6 @@
     .meta-value { min-width: 0; color: #fff; font-size: 1rem; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
     .meta-value.numeric { direction: ltr; unicode-bidi: isolate; text-align: right; font-size: clamp(0.88rem, 3.7vw, 1rem); }
     .meta-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
-    .diff-up { color: #ff8a8a; } .diff-down { color: var(--green); } .diff-even { color: var(--gold); }
 
     .confidence { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; }
     .confidence.high { background: rgba(37,211,102,0.15); color: var(--green); }
@@ -311,11 +306,6 @@
     .confidence.low { background: rgba(255,91,91,0.15); color: #ff8a8a; }
     .confidence.unknown { background: rgba(255,255,255,0.08); color: var(--muted); }
 
-    /* شريط المقارنة */
-    .compare-bar { height: 10px; background: #222; border-radius: 6px; margin-top: 8px; position: relative; overflow: hidden; }
-    .compare-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; }
-
-    /* بطاقة المنطقة */
     .area-card { background: var(--input); border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; margin-bottom: 1rem; }
     .area-card h4 { color: var(--gold); font-size: 0.9rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
     .area-card .lvl { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--muted); background: #222; padding: 3px 10px; border-radius: 14px; margin-bottom: 10px; }
@@ -327,7 +317,6 @@
     .disclaimer { color: var(--dim); font-size: 0.75rem; line-height: 1.7; padding-top: 1rem; border-top: 1px solid #222; margin-top: 0.5rem; }
     .src-note { color: #555; font-size: 0.7rem; margin-top: 6px; }
 
-    /* ═══ أزرار الإجراءات ═══ */
     .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 1.1rem; }
     .btn-wa {
       background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; border: none; border-radius: 12px;
@@ -344,7 +333,6 @@
     }
     .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
 
-    /* ═══ عقارات مشابهة من AI Feed ═══ */
     .similar-status { color: var(--muted); font-size: 0.82rem; line-height: 1.7; margin: -0.45rem 0 1rem; }
     .similar-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .similar-card {
@@ -389,7 +377,6 @@
 </head>
 <body>
 
-  <!-- ═══ شريط التنقل (Navigation Bar) ═══ -->
   <nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
     <div class="navbar-logo">
       <a href="/" aria-label="الصفحة الرئيسية — سمسار طلبك">
@@ -449,14 +436,12 @@
     <p>الصق رسالة واتساب أو املأ البيانات يدويًا — النتيجة من بيانات السوق المتاحة في قاعدة البيانات</p>
   </div>
 
-  <!-- مؤشر الخطوات -->
   <div class="steps">
     <div class="step active" id="st1"><span class="n">1</span> الإدخال</div>
     <div class="step" id="st2"><span class="n">2</span> التحليل</div>
     <div class="step" id="st3"><span class="n">3</span> النتيجة</div>
   </div>
 
-  <!-- ═══ الإدخال ═══ -->
   <div id="inputSection">
     <div class="card">
       <div class="card-title"><i class="fab fa-whatsapp"></i> الصق رسالة الواتساب</div>
@@ -560,14 +545,12 @@
     </div>
   </div>
 
-  <!-- ═══ التحميل ═══ -->
   <div id="loading" class="loading">
     <div class="spinner"></div>
     <p id="loadMsg">جارٍ استعلام بيانات السوق المتاحة…</p>
     <div class="load-sub">تُستخدم سجلات D1 المطابقة فقط، ولا يُنشأ تقدير بديل عند نقص البيانات.</div>
   </div>
 
-  <!-- ═══ النتيجة ═══ -->
   <div id="result" class="result">
     <div class="result-card">
       <div class="result-title"><i class="fas fa-chart-line"></i> التقييم التقديري</div>
@@ -664,13 +647,9 @@
 
 <script>
 /* ═══════════════════════════════════════════
-   أداة التقييم — سمسار طلبك
-   Worker: noisy-bush-fd84 (التقييم)
-   مصدر الأسعار الوحيد: Cloudflare D1 عبر Worker (price_snapshots)
-   العقارات المشابهة تبقى من ai-feed.json، ولا تُستنتج من بيانات السوق.
-   POST /api {area, areaType, propertyType, size, rentCondition, finishing, floor, age}
-   Contract: d1-price-snapshots-v1 (page rejects unverified/older Worker responses)
-   GET /areas supplies the live D1 area list.
+   أداة التقييم — سمسار طلبك (v5.0 — روابط إنجليزية)
+   Worker: noisy-bush-fd84
+   D1 source: price_snapshots
    ═══════════════════════════════════════════ */
 const WORKER_API_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/api';
 const WORKER_AREAS_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/areas';
@@ -696,6 +675,83 @@ const AR_DIGITS = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6
 const toEn = s => String(s || '').replace(/[٠-٩]/g, d => AR_DIGITS[d]);
 const normAr = s => toEn(s).replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ًٌٍَُِّْـ]/g, '');
 const normalizeMatchText = s => normAr(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+
+/* ═══ خريطة المناطق: عربي ↔ إنجليزي احترافي ═══ */
+const AREA_SLUG_MAP = {
+  'مدينة نصر': 'nasr-city',
+  'المنطقة الأولى': '1st-district',
+  'المنطقة الثانية': '2nd-district',
+  'المنطقة الثالثة': '3rd-district',
+  'المنطقة الرابعة': '4th-district',
+  'المنطقة الخامسة': '5th-district',
+  'المنطقة السادسة': '6th-district',
+  'المنطقة السابعة': '7th-district',
+  'المنطقة الثامنة': '8th-district',
+  'المنطقة التاسعة': '9th-district',
+  'المنطقة العاشرة': '10th-district',
+  'المنطقة الحادية عشرة': '11th-district',
+  'المنطقة الثانية عشرة': '12th-district',
+  'الحي الأول': '1st-neighborhood',
+  'الحي الثاني': '2nd-neighborhood',
+  'الحي الثالث': '3rd-neighborhood',
+  'الحي الرابع': '4th-neighborhood',
+  'الحي الخامس': '5th-neighborhood',
+  'الحي السادس': '6th-neighborhood',
+  'الحي السابع': '7th-neighborhood',
+  'الحي الثامن': '8th-neighborhood',
+  'الحي التاسع': '9th-neighborhood',
+  'الحي العاشر': '10th-neighborhood',
+  'الحي الحادي عشر': '11th-neighborhood',
+  'الحي الثاني عشر': '12th-neighborhood',
+  'الحي الدبلوماسي': 'diplomatic-district',
+  'الواحة': 'al-waha',
+  'زهراء مدينة نصر': 'zahraa-nasr-city',
+  'رابعة العدوية': 'rabaa-el-adawiya',
+  'ممر مكرم عبيد': 'makram-ebeid-route',
+  'ممر عباس العقاد': 'abbas-el-akkad-route',
+};
+
+const PROPERTY_TYPE_SLUG = {
+  'شقة': 'apartment',
+  'فيلا': 'villa',
+  'دوبلكس': 'duplex',
+  'روف': 'roof',
+  'محل تجاري': 'shop',
+  'مكتب إداري': 'office',
+  'مخزن': 'warehouse',
+};
+
+const FINISH_SLUG = {
+  'ألترا سوبر لوكس': 'ultra-lux',
+  'سوبر لوكس': 'super-lux',
+  'نصف تشطيب': 'semi-finished',
+  'طوب أحمر': 'red-brick',
+};
+
+const FLOOR_SLUG = {
+  'أرضي': 'ground',
+  'أول': '1',
+  'ثاني': '2',
+  'ثالث': '3',
+  'رابع': '4',
+  'خامس+': '5plus',
+};
+
+const AGE_SLUG = {
+  'new': 'new',
+  'medium': 'medium',
+  'old': 'old',
+};
+
+function buildReverseMap(map) {
+  const r = {};
+  for (const [ar, en] of Object.entries(map)) r[en] = ar;
+  return r;
+}
+const REVERSE_AREA_MAP = buildReverseMap(AREA_SLUG_MAP);
+const REVERSE_PROPERTY_TYPE_MAP = buildReverseMap(PROPERTY_TYPE_SLUG);
+const REVERSE_FINISH_MAP = buildReverseMap(FINISH_SLUG);
+const REVERSE_FLOOR_MAP = buildReverseMap(FLOOR_SLUG);
 
 const AREA_ALIAS_GROUPS = [
   ['حي السفارات', 'الحي الدبلوماسي'],
@@ -1053,21 +1109,34 @@ function showResult(data, inputs, asking) {
   $('result').scrollIntoView({ behavior: 'smooth' });
 }
 
+/* ═══ توليد رابط إنجليزي احترافي ═══ */
 function buildShareUrl(inputs = lastInputs) {
   if (!inputs || !inputs.area || !inputs.size) return '';
   const params = new URLSearchParams();
-  params.set('area', inputs.area);
+
+  const areaSlug = AREA_SLUG_MAP[inputs.area] || inputs.area;
+  params.set('area', areaSlug);
   params.set('size', String(inputs.size));
   params.set('type', inputs.areaType === 'rent' ? 'rent' : 'sale');
-  params.set('propertyType', inputs.propertyType || 'شقة');
-  params.set('finishing', inputs.finishing || 'سوبر لوكس');
-  params.set('floor', inputs.floor || 'ثالث');
-  params.set('age', inputs.age || 'medium');
-  if (inputs.rentCondition) params.set('rentCondition', inputs.rentCondition);
-  if (inputs.rentCondition === 'furnished' || inputs.rentCondition === 'unfurnished') {
-    params.set('furnished', inputs.rentCondition === 'furnished' ? 'true' : 'false');
+
+  const ptSlug = PROPERTY_TYPE_SLUG[inputs.propertyType] || inputs.propertyType;
+  params.set('pt', ptSlug);
+
+  if (inputs.finishing) {
+    params.set('finish', FINISH_SLUG[inputs.finishing] || inputs.finishing);
   }
-  if (Number(inputs.asking) > 0) params.set('askingPrice', String(inputs.asking));
+  if (inputs.floor) {
+    params.set('floor', FLOOR_SLUG[inputs.floor] || inputs.floor);
+  }
+  if (inputs.age) {
+    params.set('age', AGE_SLUG[inputs.age] || inputs.age);
+  }
+  if (inputs.rentCondition && inputs.rentCondition !== 'unknown') {
+    params.set('furnished', inputs.rentCondition);
+  }
+  if (Number(inputs.asking) > 0) {
+    params.set('price', String(inputs.asking));
+  }
 
   const url = new URL('/tools/valuation.html', window.location.origin);
   url.search = params.toString();
@@ -1079,7 +1148,7 @@ async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
       return;
-    } catch (e) { /* جرّب النسخ التقليدي */ }
+    } catch (e) { /* fallback */ }
   }
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -1371,34 +1440,46 @@ function setSelectFromParam(id, value) {
 
 function prefillFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  const areaParam = params.get('area');
+
+  const areaParam = params.get('area') || '';
+  const areaArabic = REVERSE_AREA_MAP[areaParam] || areaParam;
+  const area = findAvailableArea(areaArabic);
+
   const sizeParam = params.get('size');
-  const typeParam = params.get('type') || params.get('areaType');
-  const area = findAvailableArea(areaParam || '');
   const size = Number.parseFloat(toEn(sizeParam || '').replace(/,/g, ''));
+
+  const typeParam = params.get('type') || params.get('areaType');
   const transactionReady = typeParam === 'sale' || typeParam === 'rent';
+
+  const ptParam = params.get('pt') || params.get('propertyType') || '';
+  const ptArabic = REVERSE_PROPERTY_TYPE_MAP[ptParam] || ptParam;
+
+  const finishParam = params.get('finish') || params.get('finishing') || '';
+  const finishArabic = REVERSE_FINISH_MAP[finishParam] || finishParam;
+
+  const floorParam = params.get('floor') || '';
+  const floorArabic = REVERSE_FLOOR_MAP[floorParam] || floorParam;
+
+  const ageParam = params.get('age') || '';
+  const furnishedParam = params.get('furnished') || params.get('rentCondition') || '';
+  const priceParam = params.get('price') || params.get('askingPrice') || '';
 
   if (area) $('area').value = area;
   if (Number.isFinite(size) && size >= 20 && size <= 100000) $('size').value = String(size);
   if (transactionReady) $('areaType').value = typeParam;
-  const propertyTypeReady = setSelectFromParam('propertyType', params.get('propertyType'));
-  setSelectFromParam('finishing', params.get('finishing'));
-  setSelectFromParam('floor', params.get('floor'));
-  setSelectFromParam('age', params.get('age'));
+  const propertyTypeReady = setSelectFromParam('propertyType', ptArabic);
+  setSelectFromParam('finishing', finishArabic);
+  setSelectFromParam('floor', floorArabic);
+  setSelectFromParam('age', ageParam);
 
-  const conditionParam = params.get('rentCondition');
-  const furnishedParam = params.get('furnished');
-  if (['furnished', 'unfurnished', 'unknown'].includes(conditionParam)) {
-    $('furnished').value = conditionParam;
-  } else if (furnishedParam === 'true') {
-    $('furnished').value = 'furnished';
-  } else if (furnishedParam === 'false') {
-    $('furnished').value = 'unfurnished';
+  if (['furnished', 'unfurnished', 'unknown'].includes(furnishedParam)) {
+    $('furnished').value = furnishedParam;
   }
-  const asking = Number.parseFloat(toEn(params.get('askingPrice') || '').replace(/[^\d.]/g, ''));
-  if (Number.isFinite(asking) && asking > 0) $('askingPrice').value = fmt(asking);
-  syncFurnishedRow();
 
+  const asking = Number.parseFloat(toEn(priceParam).replace(/[^\d.]/g, ''));
+  if (Number.isFinite(asking) && asking > 0) $('askingPrice').value = fmt(asking);
+
+  syncFurnishedRow();
   return Boolean(area && Number.isFinite(size) && size >= 20 && size <= 100000 && transactionReady && propertyTypeReady);
 }
 
@@ -1426,7 +1507,7 @@ function resetTool() {
   setStep(1);
 
   const url = new URL(window.location.href);
-  ['area', 'size', 'type', 'areaType', 'propertyType', 'finishing', 'floor', 'age', 'furnished', 'rentCondition', 'askingPrice'].forEach(key => url.searchParams.delete(key));
+  ['area', 'size', 'type', 'areaType', 'pt', 'propertyType', 'finish', 'finishing', 'floor', 'age', 'furnished', 'rentCondition', 'price', 'askingPrice'].forEach(key => url.searchParams.delete(key));
   window.history.replaceState({}, '', url.pathname + url.search + url.hash);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
