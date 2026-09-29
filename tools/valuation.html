@@ -23,7 +23,6 @@
     body { background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; min-height: 100vh; padding: 0; margin: 0; }
     .wrap { max-width: 720px; margin: 0 auto; padding: 1rem 1rem 3rem; }
 
-    /* ═══ شريط التنقل (Navbar) ═══ */
     .navbar {
       background-color: rgba(5, 5, 5, 0.95);
       backdrop-filter: blur(15px);
@@ -37,184 +36,60 @@
       z-index: 1000;
       border-bottom: 1px solid rgba(212, 175, 55, 0.25);
     }
-    .navbar-logo {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .navbar-logo a {
-      display: inline-flex;
-      align-items: center;
-      text-decoration: none;
-      color: var(--gold);
-      font-size: 1.3rem;
-      font-weight: 800;
-      transition: all 0.3s ease;
-    }
-    .navbar-logo img {
-      max-height: 44px;
-      width: auto;
-      display: block;
-      transition: transform 0.2s;
-    }
-    .navbar-logo a:hover img {
-      transform: scale(1.04);
-    }
-    .navbar-links {
-      display: flex;
-      gap: 0.6rem;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .nav-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      color: var(--text);
-      padding: 0.55rem 1.1rem;
-      border-radius: 50px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.03);
-      transition: all 0.25s ease;
-      white-space: nowrap;
-    }
-    .nav-link:hover {
-      color: var(--gold);
-      border-color: var(--gold);
-      background: rgba(212, 175, 55, 0.08);
-      transform: translateY(-2px);
-    }
-    .nav-link.nav-cta {
-      border-color: var(--gold);
-      color: var(--gold);
-      background: rgba(212, 175, 55, 0.1);
-    }
-    .nav-link.nav-cta:hover {
-      background: var(--gold);
-      color: #000;
-      box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
-    }
-    .nav-link.nav-valuation {
-      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-      border-color: var(--gold);
-      color: #000;
-      box-shadow: 0 3px 12px rgba(212, 175, 55, 0.35);
-      font-weight: 800;
-    }
-    .nav-link.nav-wa {
-      background: rgba(37, 211, 102, 0.1);
-      border-color: rgba(37, 211, 102, 0.4);
-      color: var(--green);
-    }
-    .nav-link.nav-wa:hover {
-      background: var(--green);
-      color: #fff;
-    }
+    .navbar-logo { display: flex; align-items: center; flex-shrink: 0; }
+    .navbar-logo a { display: inline-flex; align-items: center; text-decoration: none; color: var(--gold); font-size: 1.3rem; font-weight: 800; transition: all 0.3s ease; }
+    .navbar-logo img { max-height: 44px; width: auto; display: block; transition: transform 0.2s; }
+    .navbar-logo a:hover img { transform: scale(1.04); }
+    .navbar-links { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-link { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--text); padding: 0.55rem 1.1rem; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.03); transition: all 0.25s ease; white-space: nowrap; }
+    .nav-link:hover { color: var(--gold); border-color: var(--gold); background: rgba(212, 175, 55, 0.08); transform: translateY(-2px); }
+    .nav-link.nav-cta { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+    .nav-link.nav-cta:hover { background: var(--gold); color: #000; box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35); }
+    .nav-link.nav-valuation { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); border-color: var(--gold); color: #000; box-shadow: 0 3px 12px rgba(212, 175, 55, 0.35); font-weight: 800; }
+    .nav-link.nav-wa { background: rgba(37, 211, 102, 0.1); border-color: rgba(37, 211, 102, 0.4); color: var(--green); }
+    .nav-link.nav-wa:hover { background: var(--green); color: #fff; }
 
     @media (max-width: 768px) {
-      .navbar {
-        padding: 0.55rem 1rem;
-        flex-wrap: nowrap;
-        gap: 8px;
-      }
-      .navbar-logo img {
-        max-height: 38px;
-      }
-      .navbar-links {
-        gap: 6px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding: 2px 0;
-      }
-      .navbar-links::-webkit-scrollbar {
-        display: none;
-      }
-      .nav-link {
-        padding: 0.42rem 0.8rem;
-        font-size: 0.82rem;
-        gap: 0.35rem;
-        flex-shrink: 0;
-      }
+      .navbar { padding: 0.55rem 1rem; flex-wrap: nowrap; gap: 8px; }
+      .navbar-logo img { max-height: 38px; }
+      .navbar-links { gap: 6px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 0; }
+      .navbar-links::-webkit-scrollbar { display: none; }
+      .nav-link { padding: 0.42rem 0.8rem; font-size: 0.82rem; gap: 0.35rem; flex-shrink: 0; }
     }
 
     @media (max-width: 480px) {
-      .navbar {
-        padding: 0.5rem 0.65rem;
-      }
-      .navbar-logo img {
-        max-height: 34px;
-      }
-      .nav-link {
-        padding: 0.38rem 0.7rem;
-        font-size: 0.78rem;
-      }
-      .nav-link.nav-valuation {
-        display: none;
-      }
-      .nav-link.nav-requests {
-        display: none;
-      }
+      .navbar { padding: 0.5rem 0.65rem; }
+      .navbar-logo img { max-height: 34px; }
+      .nav-link { padding: 0.38rem 0.7rem; font-size: 0.78rem; }
+      .nav-link.nav-valuation { display: none; }
+      .nav-link.nav-requests { display: none; }
     }
 
-    /* ═══ زر الرجوع (يظهر عند القدوم من صفحة اعرض عقارك) ═══ */
     .back-bar { display: none; margin-bottom: 1rem; }
     .back-bar.show { display: block; }
-    .back-bar a {
-      display: inline-flex; align-items: center; gap: 8px;
-      color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 700;
-      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; background: var(--card);
-    }
+    .back-bar a { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; background: var(--card); }
     .back-bar a:hover { color: var(--gold); border-color: var(--gold); }
     .agent-journey-bar.show { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid rgba(212,175,55,.22); border-radius: 12px; background: rgba(212,175,55,.05); }
     .agent-journey-note { color: var(--muted); font-size: .78rem; line-height: 1.7; }
 
-    /* ═══ الهيدر ═══ */
     .hdr { text-align: center; padding: 1.2rem 0 1rem; }
-    .hdr .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border: 1px solid rgba(212,175,55,0.4); border-radius: 20px;
-      color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.8rem;
-    }
+    .hdr .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid rgba(212,175,55,0.4); border-radius: 20px; color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.8rem; }
     .hdr h1 { color: var(--gold); font-size: 1.6rem; font-weight: 900; margin: 0 0 6px; }
     .hdr p { color: var(--muted); font-size: 0.85rem; line-height: 1.7; margin: 0; }
 
-    /* ═══ مؤشر الخطوات ═══ */
     .steps { display: flex; gap: 6px; margin: 1.2rem 0; }
-    .step {
-      flex: 1; text-align: center; padding: 10px 4px; font-size: 0.78rem; font-weight: 700;
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--dim);
-      display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.25s;
-    }
-    .step .n {
-      width: 22px; height: 22px; border-radius: 50%; background: #222; color: var(--muted);
-      display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;
-    }
+    .step { flex: 1; text-align: center; padding: 10px 4px; font-size: 0.78rem; font-weight: 700; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--dim); display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.25s; }
+    .step .n { width: 22px; height: 22px; border-radius: 50%; background: #222; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; }
     .step.active { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.06); }
     .step.active .n { background: var(--gold); color: #000; }
     .step.done { border-color: rgba(37,211,102,0.4); color: var(--green); }
     .step.done .n { background: var(--green); color: #fff; }
 
-    /* ═══ البطاقات ═══ */
     .card { background: var(--card); border: 1px solid rgba(212,175,55,0.2); border-radius: 16px; padding: 1.4rem; margin-bottom: 1rem; }
     .card-title { color: var(--gold); font-size: 1rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
     .card-sub { color: var(--muted); font-size: 0.8rem; margin-bottom: 1rem; line-height: 1.6; }
 
-    .field-label { color: var(--muted); font-size: 0.85rem; font-weight: 700; margin: 1rem 0 8px; display: flex; align-items: center; gap: 8px; }
-    .field-label:first-child { margin-top: 0; }
-    .field-label i { color: var(--gold); }
-    .field-label .opt { font-weight: 400; font-size: 0.75rem; color: var(--dim); }
-
-    textarea, input, select {
-      width: 100%; background: var(--input); border: 1px solid var(--border); border-radius: 10px;
-      padding: 12px; color: #fff; font-family: inherit; font-size: 0.95rem;
-      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-    }
+    textarea, input, select { width: 100%; background: var(--input); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: #fff; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
     textarea { resize: vertical; line-height: 1.8; }
     textarea:focus, input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.12); }
     select.auto-filled, input.auto-filled { border-color: rgba(37,211,102,0.5); }
@@ -225,34 +100,17 @@
 
     .extracted { display: none; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .extracted.show { display: flex; animation: fadeIn 0.3s; }
-    .chip {
-      background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.4); color: var(--green);
-      font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px;
-      display: inline-flex; align-items: center; gap: 5px;
-    }
+    .chip { background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.4); color: var(--green); font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
 
-    .btn-analyze {
-      width: 100%; background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-      color: #000; border: none; border-radius: 12px;
-      padding: 15px; font-family: inherit; font-size: 1.05rem; font-weight: 900;
-      cursor: pointer; transition: 0.2s; margin-top: 1.2rem;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
-    }
+    .btn-analyze { width: 100%; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; border: none; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 1.05rem; font-weight: 900; cursor: pointer; transition: 0.2s; margin-top: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 20px rgba(212,175,55,0.25); }
     .btn-analyze:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 26px rgba(212,175,55,0.4); }
     .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    .error-box {
-      display: none; background: rgba(255,91,91,0.1); border: 1px solid rgba(255,91,91,0.4);
-      color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600;
-    }
+    .error-box { display: none; background: rgba(255,91,91,0.1); border: 1px solid rgba(255,91,91,0.4); color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600; }
 
     .loading { display: none; text-align: center; padding: 2.5rem 1rem; }
     .loading.show { display: block; animation: fadeIn 0.3s; }
-    .spinner {
-      width: 46px; height: 46px; border: 4px solid #222; border-top-color: var(--gold);
-      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
-    }
+    .spinner { width: 46px; height: 46px; border: 4px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading p { color: var(--muted); font-size: 0.9rem; font-weight: 600; min-height: 1.6em; }
     .loading .load-sub { color: var(--dim); font-size: 0.75rem; margin-top: 4px; }
@@ -272,22 +130,12 @@
     .verdict.red { background: rgba(255,91,91,0.08); border-color: var(--red); color: #ff8a8a; }
     .verdict.neutral { background: rgba(176,176,176,0.06); border-color: #444; color: var(--muted); }
 
-    .estimate-box {
-      background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04));
-      border: 2px solid var(--gold); border-radius: 12px; padding: 1.4rem; text-align: center; margin-bottom: 1rem;
-    }
+    .estimate-box { background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04)); border: 2px solid var(--gold); border-radius: 12px; padding: 1.4rem; text-align: center; margin-bottom: 1rem; }
     .estimate-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 6px; font-weight: 600; }
-    .estimate-value {
-      color: var(--gold); font-size: clamp(1.5rem, 7.5vw, 2.25rem); font-weight: 900; line-height: 1.25;
-      font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere;
-    }
+    .estimate-value { color: var(--gold); font-size: clamp(1.5rem, 7.5vw, 2.25rem); font-weight: 900; line-height: 1.25; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; }
     .estimate-unit { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
 
-    .low-confidence-warning {
-      display: none; align-items: flex-start; gap: 10px; margin: 0 0 1rem; padding: 12px 14px;
-      border: 1px solid rgba(255,91,91,0.75); border-radius: 12px;
-      background: rgba(255,91,91,0.13); color: #ffd1d1; font-size: 0.9rem; font-weight: 800; line-height: 1.7;
-    }
+    .low-confidence-warning { display: none; align-items: flex-start; gap: 10px; margin: 0 0 1rem; padding: 12px 14px; border: 1px solid rgba(255,91,91,0.75); border-radius: 12px; background: rgba(255,91,91,0.13); color: #ffd1d1; font-size: 0.9rem; font-weight: 800; line-height: 1.7; }
     .low-confidence-warning.show { display: flex; }
     .low-confidence-warning i { color: #ff8585; flex: 0 0 auto; margin-top: 4px; }
 
@@ -298,7 +146,6 @@
     .meta-label { color: #888; font-size: 0.72rem; margin-bottom: 4px; font-weight: 600; }
     .meta-value { min-width: 0; color: #fff; font-size: 1rem; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
     .meta-value.numeric { direction: ltr; unicode-bidi: isolate; text-align: right; font-size: clamp(0.88rem, 3.7vw, 1rem); }
-    .meta-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
 
     .confidence { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; }
     .confidence.high { background: rgba(37,211,102,0.15); color: var(--green); }
@@ -318,27 +165,15 @@
     .src-note { color: #555; font-size: 0.7rem; margin-top: 6px; }
 
     .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 1.1rem; }
-    .btn-wa {
-      background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; border: none; border-radius: 12px;
-      padding: 14px; font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-      box-shadow: 0 4px 18px rgba(37,211,102,0.25);
-    }
+    .btn-wa { background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; border: none; border-radius: 12px; padding: 14px; font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 18px rgba(37,211,102,0.25); }
     .btn-wa:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(37,211,102,0.4); }
     .actions-row { display: flex; gap: 8px; }
-    .icon-btn {
-      flex: 1; background: var(--input); border: 1px solid var(--border); color: var(--muted);
-      padding: 12px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; transition: 0.2s;
-    }
+    .icon-btn { flex: 1; background: var(--input); border: 1px solid var(--border); color: var(--muted); padding: 12px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; transition: 0.2s; }
     .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
 
     .similar-status { color: var(--muted); font-size: 0.82rem; line-height: 1.7; margin: -0.45rem 0 1rem; }
     .similar-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .similar-card {
-      display: flex; flex-direction: column; min-width: 0; overflow: hidden; color: var(--text); text-decoration: none;
-      background: var(--input); border: 1px solid #303030; border-radius: 12px; transition: border-color 0.2s, transform 0.2s;
-    }
+    .similar-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; color: var(--text); text-decoration: none; background: var(--input); border: 1px solid #303030; border-radius: 12px; transition: border-color 0.2s, transform 0.2s; }
     .similar-card:hover { border-color: var(--gold); transform: translateY(-2px); }
     .similar-media { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #222; }
     .similar-media img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -348,22 +183,39 @@
     .similar-meta { color: var(--muted); font-size: 0.73rem; line-height: 1.6; margin-bottom: 6px; overflow-wrap: anywhere; }
     .similar-details { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; color: #aaa; font-size: 0.72rem; }
     .similar-price { color: var(--gold); font-size: 0.84rem; font-weight: 900; margin-top: 7px; overflow-wrap: anywhere; }
-    .whatsapp-message {
-      margin: 0 0 1rem; padding: 14px; border: 1px solid rgba(37,211,102,0.3); border-radius: 12px;
-      background: rgba(37,211,102,0.06); color: #e5f7eb; font-family: inherit; font-size: 0.82rem; line-height: 1.8;
-      white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext;
+
+    /* ═══ زر الرجوع للوكيل (يظهر لما العميل يكون جاي من agent) ═══ */
+    .back-to-agent-btn {
+      display: none;
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.3);
     }
+    .back-to-agent-btn.show { display: flex; }
+    .back-to-agent-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 26px rgba(212,175,55,0.45); }
+
+    .whatsapp-message { margin: 0 0 1rem; padding: 14px; border: 1px solid rgba(37,211,102,0.3); border-radius: 12px; background: rgba(37,211,102,0.06); color: #e5f7eb; font-family: inherit; font-size: 0.82rem; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 
     .footer-note { text-align: center; color: var(--dim); font-size: 0.75rem; padding: 2rem 0 1rem; line-height: 1.9; }
     .footer-note strong { color: var(--gold); }
     .footer-note a { color: var(--muted); }
 
-    .toast {
-      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
-      background: #1f1b10; border: 1px solid var(--gold); color: var(--gold);
-      padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; z-index: 9999;
-      animation: fadeIn 0.3s; max-width: 90vw; text-align: center;
-    }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1f1b10; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; z-index: 9999; animation: fadeIn 0.3s; max-width: 90vw; text-align: center; }
 
     @media (max-width: 520px) {
       .wrap { width: 100%; }
@@ -380,43 +232,17 @@
   <nav class="navbar" role="navigation" aria-label="القائمة الرئيسية">
     <div class="navbar-logo">
       <a href="/" aria-label="الصفحة الرئيسية — سمسار طلبك">
-        <img src="/assets/img/logo.webp"
-             alt="سمسار طلبك"
-             width="120" height="120"
-             loading="eager" fetchpriority="high">
+        <img src="/assets/img/logo.webp" alt="سمسار طلبك" width="120" height="120" loading="eager" fetchpriority="high">
       </a>
     </div>
 
     <div class="navbar-links">
-      <a href="/" class="nav-link" aria-label="الصفحة الرئيسية">
-        <i class="fas fa-house" aria-hidden="true"></i>
-        <span>الرئيسية</span>
-      </a>
-
-      <a href="/add-your-property.html" class="nav-link nav-cta" aria-label="اعرض عقارك">
-        <i class="fas fa-plus-circle" aria-hidden="true"></i>
-        <span>اعرض عقارك</span>
-      </a>
-
-      <a href="/properties/" class="nav-link nav-properties" aria-label="تصفح العقارات">
-        <i class="fas fa-building" aria-hidden="true"></i>
-        <span>عقارات</span>
-      </a>
-
-      <a href="/requests/" class="nav-link nav-requests" aria-label="طلبات العملاء">
-        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-        <span>طلبات</span>
-      </a>
-
-      <a href="/tools/valuation.html" class="nav-link nav-valuation" aria-label="قيّم عقارك مجانًا" aria-current="page">
-        <i class="fas fa-gem" aria-hidden="true"></i>
-        <span>💎 قيّم عقارك</span>
-      </a>
-
-      <a href="https://wa.me/201147758857" class="nav-link nav-wa" target="_blank" rel="noopener" aria-label="تواصل عبر واتساب">
-        <i class="fab fa-whatsapp" aria-hidden="true"></i>
-        <span class="nav-wa-text">تواصل</span>
-      </a>
+      <a href="/" class="nav-link" aria-label="الصفحة الرئيسية"><i class="fas fa-house" aria-hidden="true"></i><span>الرئيسية</span></a>
+      <a href="/add-your-property.html" class="nav-link nav-cta" aria-label="اعرض عقارك"><i class="fas fa-plus-circle" aria-hidden="true"></i><span>اعرض عقارك</span></a>
+      <a href="/properties/" class="nav-link nav-properties" aria-label="تصفح العقارات"><i class="fas fa-building" aria-hidden="true"></i><span>عقارات</span></a>
+      <a href="/requests/" class="nav-link nav-requests" aria-label="طلبات العملاء"><i class="fas fa-clipboard-list" aria-hidden="true"></i><span>طلبات</span></a>
+      <a href="/tools/valuation.html" class="nav-link nav-valuation" aria-label="قيّم عقارك مجانًا" aria-current="page"><i class="fas fa-gem" aria-hidden="true"></i><span>💎 قيّم عقارك</span></a>
+      <a href="https://wa.me/201147758857" class="nav-link nav-wa" target="_blank" rel="noopener" aria-label="تواصل عبر واتساب"><i class="fab fa-whatsapp" aria-hidden="true"></i><span class="nav-wa-text">تواصل</span></a>
     </div>
   </nav>
 
@@ -489,7 +315,7 @@
 
       <div class="row">
         <div>
-          <label class="mini">السعر المطلوب (اختياري — للحكم على السعر)</label>
+          <label class="mini">السعر المطلوب (اختياري)</label>
           <input type="text" id="askingPrice" placeholder="مثال: 6,200,000" inputmode="numeric">
         </div>
         <div>
@@ -597,7 +423,7 @@
           <div class="meta-value" id="marketPeriod">—</div>
         </div>
         <div class="meta-item full">
-          <div class="meta-label">نطاق سعر المتر المسجل في بيانات السوق</div>
+          <div class="meta-label">نطاق سعر المتر المسجل</div>
           <div class="meta-value" id="marketRange">—</div>
         </div>
       </div>
@@ -613,6 +439,11 @@
 
       <div class="disclaimer" id="disclaimer"></div>
       <div class="src-note" id="srcNote"></div>
+
+      <!-- ═══ زر الرجوع للوكيل — يظهر لما العميل يكون جاي من agent.html ═══ -->
+      <a class="back-to-agent-btn" id="backToAgentBtn" href="/agent.html">
+        <i class="fas fa-arrow-right"></i> الرجوع للوكيل لإكمال التسجيل
+      </a>
 
       <div class="actions">
         <div class="actions-row">
@@ -631,7 +462,7 @@
 
     <section class="result-card whatsapp-ready" id="whatsappReady" aria-labelledby="whatsappTitle">
       <h2 class="result-title" id="whatsappTitle"><i class="fab fa-whatsapp" aria-hidden="true"></i> رسالة واتساب جاهزة</h2>
-      <p class="similar-status">الإرسال اختياري ويحمل تقرير الأداة فقط؛ لا يسجل طلب بيع أو عميلًا مؤهلًا، ولا يتطلب اسمًا أو رقم هاتف.</p>
+      <p class="similar-status">الإرسال اختياري ويحمل تقرير الأداة فقط؛ لا يسجل طلب بيع أو عميلًا مؤهلًا.</p>
       <pre class="whatsapp-message" id="whatsappMessage" dir="auto">سيظهر ملخص التقييم هنا بعد الحساب.</pre>
       <button class="btn-wa" onclick="sendToTarek()"><i class="fab fa-whatsapp"></i> إرسال التقرير عبر واتساب (اختياري)</button>
     </section>
@@ -639,18 +470,14 @@
 
   <div class="footer-note">
     <strong>سمسار طلبك</strong> — طارق طنطاوي | مدينة نصر<br>
-    مؤشر استرشادي من بيانات السوق المتاحة، وقد يعكس أسعار طلب لا أسعار إتمام<br>
+    مؤشر استرشادي من بيانات السوق المتاحة<br>
     <a href="/">الصفحة الرئيسية</a> · <a href="/agent.html">الوكيل الذكي</a> · <a href="/add-your-property.html">اعرض عقارك</a>
   </div>
 
 </div>
 
 <script>
-/* ═══════════════════════════════════════════
-   أداة التقييم — سمسار طلبك (v5.0 — روابط إنجليزية)
-   Worker: noisy-bush-fd84
-   D1 source: price_snapshots
-   ═══════════════════════════════════════════ */
+/* ═══ أداة التقييم — سمسار طلبك v6.0 ═══ */
 const WORKER_API_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/api';
 const WORKER_AREAS_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/areas';
 const AREA_METADATA_URL = '/assets/data/market-data.json';
@@ -663,6 +490,7 @@ let AI_PROPERTIES = null;
 let similarRequestId = 0;
 let lastResult = null;
 let lastInputs = null;
+let fromAgent = false;
 
 const fmt = n => n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('en-US');
 const hasNumericValue = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
@@ -910,7 +738,6 @@ function extractFromMessage(raw) {
 
   if (/غير مفروش|فاضي|بدون فرش|قانون جديد/.test(text)) { setVal('furnished', 'unfurnished', '🛋️ غير مفروش'); }
   else if (/مفروش|مفروشه|فرش/.test(text)) { setVal('furnished', 'furnished', '🛋️ مفروش'); }
-  else if (/حالة الفرش غير محدده|غير محدد/.test(text)) { setVal('furnished', 'unknown', '🛋️ التأثيث غير محدد'); }
 
   if (/اول سكن|جديده|جديد|استلام فوري|كمبوند جديد/.test(text)) setVal('age', 'new', '🆕 جديد');
   else if (/قديم|قديمه|عماره قديمه/.test(text)) setVal('age', 'old', '🏚️ قديم');
@@ -988,7 +815,7 @@ async function runValuation() {
     }
     if (!isD1ValuationResponse(data)) {
       const workerError = new Error('Worker contract does not confirm D1 snapshot pricing');
-      workerError.apiMessage = '⚠️ عامل التقييم المنشور لا يؤكد استخدام price_snapshots؛ لم نعرض أي تقدير. حاول مرة أخرى بعد تحديث العامل.';
+      workerError.apiMessage = '⚠️ عامل التقييم المنشور لا يؤكد استخدام price_snapshots؛ لم نعرض أي تقدير.';
       throw workerError;
     }
   } catch (error) {
@@ -1067,11 +894,11 @@ function showResult(data, inputs, asking) {
     if (diff > 0.10) {
       verdict.className = 'verdict red';
       verdictLabel.textContent = '🔴 أعلى من مؤشر بيانات السوق';
-      verdictSub.textContent = `السعر المطلوب أعلى من المؤشر المسجل بحوالي ${pct}%. المقارنة ليست بسعر إتمام بيع.`;
+      verdictSub.textContent = `السعر المطلوب أعلى من المؤشر المسجل بحوالي ${pct}%.`;
     } else if (diff < -0.10) {
       verdict.className = 'verdict green';
       verdictLabel.textContent = '🟢 أقل من مؤشر بيانات السوق';
-      verdictSub.textContent = `السعر المطلوب أقل من المؤشر المسجل بحوالي ${pct}%. المقارنة ليست بسعر إتمام بيع.`;
+      verdictSub.textContent = `السعر المطلوب أقل من المؤشر المسجل بحوالي ${pct}%.`;
     } else {
       verdict.className = 'verdict gold';
       verdictLabel.textContent = '🟡 قريب من مؤشر بيانات السوق';
@@ -1103,13 +930,54 @@ function showResult(data, inputs, asking) {
     : data.price_basis === 'avg_price_m2' ? 'المتوسط (avg_price_m2)' : '';
   $('srcNote').textContent = `✓ المصدر: بيانات السوق المجمعة price_snapshots${source !== 'price_snapshots' ? ` — ${source}` : ''}${priceBasisLabel ? ` | الأساس: ${priceBasisLabel}` : ''}`;
 
+  // ═══ زر "الرجوع للوكيل" — يظهر لما العميل جاي من agent ═══
+  updateBackToAgentButton(data, inputs);
+
   $('result').classList.add('show');
   updateWhatsAppMessage();
   loadSimilarProperties(inputs, data.area_found || inputs.area);
   $('result').scrollIntoView({ behavior: 'smooth' });
 }
 
-/* ═══ توليد رابط إنجليزي احترافي ═══ */
+/* ═══ زر الرجوع للوكيل — بيضيف نتيجة التقييم في الرابط ═══ */
+function updateBackToAgentButton(data, inputs) {
+  const btn = $('backToAgentBtn');
+  if (!btn) return;
+
+  if (!fromAgent) {
+    btn.style.display = 'none';
+    btn.classList.remove('show');
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set('return', 'valuation');
+
+  if (data && hasNumericValue(data.estimate)) {
+    params.set('estimate', String(Math.round(Number(data.estimate))));
+  }
+  if (data && data.confidence) {
+    params.set('confidence', data.confidence);
+  }
+  if (data && hasNumericValue(data.sample_count)) {
+    params.set('samples', String(Number(data.sample_count)));
+  }
+  if (data && hasNumericValue(data.price_per_meter)) {
+    params.set('perMeter', String(Math.round(Number(data.perMeter || data.price_per_meter))));
+  }
+  if (inputs && inputs.area) {
+    params.set('area', inputs.area);
+  }
+  if (inputs && hasNumericValue(inputs.size)) {
+    params.set('size', String(inputs.size));
+  }
+
+  btn.href = `/agent.html?${params.toString()}`;
+  btn.style.display = 'flex';
+  btn.classList.add('show');
+}
+
+/* ═══ توليد رابط إنجليزي احترافي للمشاركة ═══ */
 function buildShareUrl(inputs = lastInputs) {
   if (!inputs || !inputs.area || !inputs.size) return '';
   const params = new URLSearchParams();
@@ -1145,20 +1013,13 @@ function buildShareUrl(inputs = lastInputs) {
 
 async function copyText(text) {
   if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch (e) { /* fallback */ }
+    try { await navigator.clipboard.writeText(text); return; } catch (e) {}
   }
   const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  const copied = document.execCommand('copy');
-  ta.remove();
+  ta.value = text; ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  const copied = document.execCommand('copy'); ta.remove();
   if (!copied) throw new Error('Clipboard unavailable');
 }
 
@@ -1167,22 +1028,12 @@ async function shareValuation() {
   if (!url) return;
   if (navigator.share) {
     try {
-      await navigator.share({
-        title: 'تقييم عقاري — سمسار طلبك',
-        text: 'رابط التقييم العقاري بالبيانات نفسها:',
-        url,
-      });
+      await navigator.share({ title: 'تقييم عقاري — سمسار طلبك', text: 'رابط التقييم:', url });
       return;
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-    }
+    } catch (e) { if (e.name === 'AbortError') return; }
   }
-  try {
-    await copyText(url);
-    toast('تم نسخ رابط التقييم ✓');
-  } catch (e) {
-    window.prompt('انسخ رابط التقييم للمشاركة:', url);
-  }
+  try { await copyText(url); toast('تم نسخ رابط التقييم ✓'); }
+  catch (e) { window.prompt('انسخ رابط التقييم:', url); }
 }
 
 async function fetchAiProperties() {
@@ -1215,7 +1066,6 @@ function feedPropertyMatchesArea(property, areaName) {
   if (locationArea && (areaAliasKey(locationArea) !== cityAreaKey || targetAliasKey === cityAreaKey)) {
     return areaAliasKey(locationArea) === targetAliasKey;
   }
-
   const locationIdentifiesDistrict = /المنطقه|الحي|حى السفارات|حي السفارات|حي الواحه|زهراء|ممر/.test(location);
   if (locationIdentifiesDistrict) return false;
   const titleArea = findAreaMention(property.title || '');
@@ -1235,9 +1085,9 @@ function getClosestProperties(properties, areaName, inputs) {
     .filter(property => getFeedTransaction(property) === inputs.areaType && feedPropertyMatchesArea(property, areaName))
     .map(property => ({ property, size: feedPropertySize(property) }))
     .sort((a, b) => {
-      const distanceA = a.size === null ? Number.POSITIVE_INFINITY : Math.abs(a.size - Number(inputs.size));
-      const distanceB = b.size === null ? Number.POSITIVE_INFINITY : Math.abs(b.size - Number(inputs.size));
-      if (distanceA !== distanceB) return distanceA - distanceB;
+      const dA = a.size === null ? Number.POSITIVE_INFINITY : Math.abs(a.size - Number(inputs.size));
+      const dB = b.size === null ? Number.POSITIVE_INFINITY : Math.abs(b.size - Number(inputs.size));
+      if (dA !== dB) return dA - dB;
       return String(a.property.title || '').localeCompare(String(b.property.title || ''), 'ar');
     })
     .slice(0, 2)
@@ -1248,9 +1098,7 @@ function safeFeedUrl(value) {
   try {
     const url = new URL(String(value || ''), window.location.href);
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
-  } catch (e) {
-    return '';
-  }
+  } catch (e) { return ''; }
 }
 
 function makeSimilarPlaceholder() {
@@ -1342,14 +1190,14 @@ async function loadSimilarProperties(inputs, areaName) {
     const cards = matches.map(makeSimilarCard).filter(Boolean);
     cards.forEach(card => grid.appendChild(card));
     if (cards.length) {
-      status.textContent = 'الأقرب لمساحة ' + fmt(inputs.size) + ' م² في ' + areaName + ' وبنفس نوع العملية.';
+      status.textContent = 'الأقرب لمساحة ' + fmt(inputs.size) + ' م² في ' + areaName + '.';
     } else {
-      status.textContent = 'لا توجد وحدات منشورة حاليًا في المنطقة نفسها وبنوع العملية نفسه.';
+      status.textContent = 'لا توجد وحدات منشورة حاليًا في المنطقة نفسها.';
     }
   } catch (error) {
     if (requestId !== similarRequestId) return;
     console.warn('تعذر تحميل العقارات المشابهة:', error);
-    status.textContent = 'تعذّر تحميل العقارات المشابهة حاليًا. حاول مرة أخرى لاحقًا.';
+    status.textContent = 'تعذّر تحميل العقارات المشابهة حاليًا.';
   } finally {
     if (requestId === similarRequestId) section.setAttribute('aria-busy', 'false');
   }
@@ -1367,7 +1215,7 @@ function buildReport() {
   const totalRange = data.range || {};
   const rangeLabel = hasNumericValue(totalRange.low) && hasNumericValue(totalRange.high)
     ? `${fmt(totalRange.low)} – ${fmt(totalRange.high)} ج.م${isRent ? ' / شهريًا' : ''}`
-    : 'غير متاح في سجل البيانات';
+    : 'غير متاح';
   const meterRange = data.price_per_m2_range || {};
   const meterRangeLabel = hasNumericValue(meterRange.low) && hasNumericValue(meterRange.high)
     ? `${fmt(meterRange.low)} – ${fmt(meterRange.high)} ج.م/م²`
@@ -1383,28 +1231,23 @@ function buildReport() {
   ];
   if (inputs.finishing) lines.push('✨ التشطيب: ' + inputs.finishing);
   if (inputs.floor) lines.push('🏢 الدور: ' + inputs.floor);
-  if (inputs.age) lines.push('🏚️ عمر العقار: ' + (inputs.age === 'new' ? 'جديد' : inputs.age === 'old' ? 'قديم' : 'متوسط'));
   if (isRent) lines.push('🛋️ حالة التأثيث: ' + (inputs.rentCondition === 'furnished' ? 'مفروش' : inputs.rentCondition === 'unfurnished' ? 'غير مفروش' : 'غير محدد'));
-  if (inputs.asking > 0) lines.push('💰 السعر المطلوب للمقارنة: ' + fmt(inputs.asking) + ' ج.م' + (isRent ? ' / شهريًا' : ''));
+  if (inputs.asking > 0) lines.push('💰 السعر المطلوب: ' + fmt(inputs.asking) + ' ج.م' + (isRent ? ' / شهريًا' : ''));
   lines.push(
     '━━━━━━━━━━━━',
     '💰 *' + (isRent ? 'الإيجار الاسترشادي' : 'السعر الاسترشادي') + ': ' + fmt(data.estimate) + ' ج.م*' + (isRent ? ' / شهريًا' : ''),
-    '📊 النطاق الإجمالي: ' + rangeLabel,
+    '📊 النطاق: ' + rangeLabel,
     '📏 سعر المتر: ' + fmt(data.price_per_meter) + ' ج.م/م²',
-    '↕️ نطاق سعر المتر في السجل: ' + meterRangeLabel,
-    '📚 أساس السعر: ' + priceBasis,
-    '🧪 عدد العينات: ' + sampleCount,
-    '🗓️ فترة البيانات: ' + (data.period || (data.updated_at ? 'آخر تحديث ' + data.updated_at : 'غير محددة في السجل')),
+    '↕️ نطاق المتر: ' + meterRangeLabel,
+    '📚 الأساس: ' + priceBasis,
+    '🧪 العينات: ' + sampleCount,
+    '🗓️ الفترة: ' + (data.period || (data.updated_at ? 'آخر تحديث ' + data.updated_at : 'غير محددة')),
     '🎯 الثقة: ' + confidenceLabel,
-    '🔎 المصدر: price_snapshots' + (data.data_source && data.data_source !== 'price_snapshots' ? ' — ' + data.data_source : '')
+    '🔎 المصدر: price_snapshots'
   );
   const reportUrl = buildShareUrl(inputs);
-  if (reportUrl) lines.push('🔗 رابط إعادة فتح الأداة: ' + reportUrl);
-  lines.push(
-    '━━━━━━━━━━━━',
-    data.disclaimer || 'مؤشر استرشادي مبني على بيانات السوق المتاحة، وليس سعر إتمام مؤكدًا.',
-    'مشاركة التقرير اختيارية ولا تسجل طلب بيع أو عميلًا مؤهلًا.'
-  );
+  if (reportUrl) lines.push('🔗 الرابط: ' + reportUrl);
+  lines.push('━━━━━━━━━━━━', data.disclaimer || 'مؤشر استرشادي، وليس سعر إتمام مؤكدًا.');
   return lines.join('\n');
 }
 
@@ -1421,12 +1264,8 @@ function sendToTarek() {
 async function copyResult() {
   const txt = buildReport();
   if (!txt) return;
-  try {
-    await copyText(txt);
-    toast('تم نسخ التقرير ✓');
-  } catch (e) {
-    toast('تعذّر النسخ');
-  }
+  try { await copyText(txt); toast('تم نسخ التقرير ✓'); }
+  catch (e) { toast('تعذّر النسخ'); }
 }
 
 function setSelectFromParam(id, value) {
@@ -1440,6 +1279,8 @@ function setSelectFromParam(id, value) {
 
 function prefillFromUrl() {
   const params = new URLSearchParams(window.location.search);
+
+  fromAgent = params.get('from') === 'agent' || params.get('journey') === 'seller';
 
   const areaParam = params.get('area') || '';
   const areaArabic = REVERSE_AREA_MAP[areaParam] || areaParam;
@@ -1503,6 +1344,8 @@ function resetTool() {
   $('whatsappMessage').textContent = '';
   $('extracted').classList.remove('show');
   $('extracted').innerHTML = '';
+  const backBtn = $('backToAgentBtn');
+  if (backBtn) { backBtn.style.display = 'none'; backBtn.classList.remove('show'); }
   syncFurnishedRow();
   setStep(1);
 
@@ -1538,7 +1381,10 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const params = new URLSearchParams(location.search);
     if (params.get('from') === 'add-your-property') $('backBar').classList.add('show');
-    if (params.get('from') === 'agent') $('agentJourneyBar').classList.add('show');
+    if (params.get('from') === 'agent' || params.get('journey') === 'seller') {
+      $('agentJourneyBar').classList.add('show');
+      fromAgent = true;
+    }
   } catch (e) {}
   areasReady.then(loaded => {
     if (loaded && prefillFromUrl()) runValuation();
