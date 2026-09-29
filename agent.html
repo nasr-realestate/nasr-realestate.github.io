@@ -18,31 +18,16 @@ extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
 ---
 <div id="app">
-  <!-- ⚠️ إصلاح (2026-09-24): هذه الصفحة (الوكيل الذكي — من أهم صفحات الموقع)
-       لم تكن تحتوي على أي <h1> لا للمستخدمين ولا لمحركات البحث. -->
   <h1 class="sr-only">الوكيل العقاري الذكي — تحدث مع طارق طنطاوي، خبير عقارات مدينة نصر</h1>
 
-  <!-- ═══ HEADER ═══ -->
   <header class="header">
     <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
       <i class="fas fa-arrow-right"></i>
     </button>
 
-    <!-- ═══════════════════════════════════════════════════
-         صورة طارق — مُعلَّقة (يمكن إرجاعها بحذف التعليق)
-         ═══════════════════════════════════════════════════
-    <img class="header-avatar"
-         src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
-         alt="طارق طنطاوي"
-         onclick="openAbout()"
-         onerror="this.style.display='none'">
-    -->
-
     <div class="header-info" onclick="openAbout()">
       <div class="header-name">
         طارق طنطاوي
-        <!-- شارة Level 7 — مُعلَّقة -->
-        <!-- <span class="header-badge">⭐ 7</span> -->
       </div>
       <div class="header-status" id="statusLine">
         <span class="status-dot"></span>
@@ -57,10 +42,8 @@ extra_scripts: |
     </div>
   </header>
 
-  <!-- ═══ MENU OVERLAY ═══ -->
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
-  <!-- ═══ MENU GLASS ═══ -->
   <div class="menu-glass" id="menuGlass">
     <button class="menu-glass-item" onclick="openAbout()">
       <span class="mi-icon">👤</span>
@@ -85,7 +68,6 @@ extra_scripts: |
     </button>
   </div>
 
-  <!-- ═══ CHAT AREA ═══ -->
   <div class="chat-area" id="chatArea">
     <div class="typing-bubble" id="typingBubble">
       <span class="typing-dot"></span>
@@ -94,7 +76,6 @@ extra_scripts: |
     </div>
   </div>
 
-  <!-- ═══ BOTTOM DOCK ═══ -->
   <div class="bottom-dock">
 
     <div class="wa-wrapper" id="waWrapper">
@@ -130,9 +111,6 @@ extra_scripts: |
   </button>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     PRIVACY NOTICE SHEET — نافذة الخصوصية
-     ═══════════════════════════════════════════════ -->
 <div class="privacy-overlay" id="privacyOverlay">
   <div class="privacy-sheet" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
 
@@ -184,7 +162,6 @@ extra_scripts: |
   </div>
 </div>
 
-<!-- ═══ IN-APP NOTIFICATION ═══ -->
 <div class="inapp-notif" id="inappNotif" role="status" aria-live="polite">
   <div class="notif-icon-wrap green" id="notifIcon">💬</div>
   <div class="notif-body">
@@ -196,7 +173,6 @@ extra_scripts: |
   </button>
 </div>
 
-<!-- ═══ WA DIALOG ═══ -->
 <div class="wa-dialog-overlay" id="waDialog" onclick="if(event.target===this) closeWaDialog(false)">
   <div class="wa-dialog">
     <div class="wa-dialog-title" id="waDialogTitle">تأكيد</div>
@@ -208,7 +184,6 @@ extra_scripts: |
   </div>
 </div>
 
-<!-- ═══ GALLERY MODAL — معرض العقارات ═══ -->
 <div class="gallery-overlay" id="galleryOverlay" onclick="if(event.target===this) closeGallery()">
   <div class="gallery-sheet" role="dialog" aria-modal="true" aria-label="معرض العقارات">
 
@@ -239,7 +214,6 @@ extra_scripts: |
   </div>
 </div>
 
-<!-- ═══ ABOUT MODAL ═══ -->
 <div class="wa-dialog-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
   <div class="wa-dialog ag-about-dialog">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
@@ -271,7 +245,6 @@ extra_scripts: |
   </div>
 </div>
 
-<!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -279,14 +252,13 @@ extra_scripts: |
 // CONFIG
 // ═══════════════════════════════════════════
 const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY  = "simsar_wa_v90";
+const STORAGE_KEY  = "simsar_wa_v91";
+const RETURN_KEY   = "simsar_return_session";
 const PRIVACY_KEY  = "simsar_privacy_v1";
 const TAREK_WA     = "201147758857";
 const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
-// لازم تفضل مطابقة لـ FORM_VERSION في _worker/worker.js.
-// لو اختلفت، السيرفر بيلغي الجلسة وسط المحادثة والعميل بيشوف سلوك غريب.
 const FORM_VERSION = "v83";
 
 const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/><path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-.996-.94-1.085 1.32 1.775 1.775a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.663-.728z"/></svg>`;
@@ -303,9 +275,8 @@ let state = {
 };
 let isSending = false;
 
-// ═══ MAP PICKER STATE — ذاكرة الصفحة فقط (ممنوع sessionStorage/localStorage للإحداثيات) ═══
-let sessionGps = null;   // { lat, lng, address } — بيتبعت مع كل طلب طول ما المسار شغال
-let mapPicker  = null;   // instance من NasrMaps.createPicker
+let sessionGps = null;
+let mapPicker  = null;
 let mapPickerEl = null;
 
 function stripGps(fs) {
@@ -318,22 +289,85 @@ function stripGps(fs) {
 }
 
 function saveState() {
-  // الإحداثيات بتتشال قبل الحفظ — بتفضل في الذاكرة بس (sessionGps + state.formState الحي)
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({...state, pendingImages: [], formState: stripGps(state.formState)})); } catch {}
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...state,
+      pendingImages: [],
+      formState: stripGps(state.formState)
+    }));
+  } catch {}
 }
+
 function loadState() {
   try {
     const s = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
     if (!s) return;
-    // جلسة محفوظة بنسخة نموذج قديمة = مش متوافقة مع السيرفر.
-    // بنمسحها ونبدأ نضيف بدل ما السيرفر يلغيها في نص الطريق.
     const v = s.formState?._version;
     if (v && v !== FORM_VERSION) { sessionStorage.removeItem(STORAGE_KEY); return; }
     state = { ...state, ...s };
     state.pendingImages = [];
-    // ضمان إن النسخة دايمًا صح حتى لو الجلسة اتحفظت من غيرها
     state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
   } catch {}
+}
+
+// ═══ RETURN FROM VALUATION ═══
+// لما العميل يخرج من valuation.html ويرجع للوكيل، بنسترجع الجلسة
+// وبنكمل من نفس الخطوة اللي وقف عندها.
+function checkReturnFromValuation() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("return") !== "valuation") return false;
+
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null");
+    if (!saved) return false;
+
+    const age = Date.now() - (saved.savedAt || 0);
+    if (age > 24 * 60 * 60 * 1000) {
+      sessionStorage.removeItem(RETURN_KEY);
+      return false;
+    }
+
+    if (saved.state) {
+      state = { ...state, ...saved.state };
+      state.pendingImages = [];
+      state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
+    }
+
+    sessionStorage.removeItem(RETURN_KEY);
+
+    // امسح الـ params من الرابط
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("return");
+    window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function saveReturnContext() {
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify({
+      state: {
+        formState: stripGps(state.formState),
+        history: state.history,
+        imageUrls: state.imageUrls,
+        waMessage: state.waMessage,
+        whatsappUrl: state.whatsappUrl,
+        valuationCta: state.valuationCta,
+      },
+      savedAt: Date.now()
+    }));
+  } catch {}
+}
+
+function renderReturnBanner() {
+  const banner = document.createElement("div");
+  banner.className = "msg msg-bot";
+  banner.innerHTML = `<span class="msg-content">تمام، رجعت 👋<br>كمّل من النقطة اللي وقفنا عندها.</span><div class="msg-time">${getTime()}</div>`;
+  chatArea.insertBefore(banner, typingBubble);
+  scrollToBottom();
 }
 
 // ═══ DOM REFS ═══
@@ -351,22 +385,16 @@ const scrollBtn    = document.getElementById("scrollBtn");
 const menuGlass    = document.getElementById("menuGlass");
 const menuOverlay  = document.getElementById("menuOverlay");
 
-// ═══════════════════════════════════════════
-// PRIVACY NOTICE
-// ═══════════════════════════════════════════
+// ═══ PRIVACY ═══
 function hasSeenPrivacy() {
   try { return !!localStorage.getItem(PRIVACY_KEY); } catch { return true; }
 }
-
 function markPrivacySeen() {
   try { localStorage.setItem(PRIVACY_KEY, "1"); } catch {}
 }
-
 function showPrivacy() {
-  const overlay = document.getElementById("privacyOverlay");
-  overlay.classList.add("show");
+  document.getElementById("privacyOverlay").classList.add("show");
 }
-
 function acceptPrivacy() {
   markPrivacySeen();
   const overlay = document.getElementById("privacyOverlay");
@@ -383,29 +411,19 @@ function acceptPrivacy() {
   }, 350);
 }
 
-// ═══════════════════════════════════════════
-// IN-APP NOTIFICATION
-// ═══════════════════════════════════════════
+// ═══ IN-APP NOTIFICATION ═══
 let _notifTimer = null;
 
 function showInappNotif({ icon = "💬", iconClass = "green", title = "", sub = "" }, autoDismiss = 4000) {
-  const notif    = document.getElementById("inappNotif");
-  const iconEl   = document.getElementById("notifIcon");
-  const titleEl  = document.getElementById("notifTitle");
-  const subEl    = document.getElementById("notifSub");
-
-  iconEl.textContent   = icon;
-  iconEl.className     = `notif-icon-wrap ${iconClass}`;
-  titleEl.textContent  = title;
-  subEl.textContent    = sub;
-
+  const notif = document.getElementById("inappNotif");
+  document.getElementById("notifIcon").textContent = icon;
+  document.getElementById("notifIcon").className = `notif-icon-wrap ${iconClass}`;
+  document.getElementById("notifTitle").textContent = title;
+  document.getElementById("notifSub").textContent = sub;
   notif.classList.remove("hiding");
   notif.classList.add("show");
-
   clearTimeout(_notifTimer);
-  if (autoDismiss > 0) {
-    _notifTimer = setTimeout(() => hideInappNotif(), autoDismiss);
-  }
+  if (autoDismiss > 0) _notifTimer = setTimeout(() => hideInappNotif(), autoDismiss);
 }
 
 function hideInappNotif() {
@@ -420,11 +438,11 @@ let waDialogCallback = null;
 
 function showWaDialog(options) {
   const { title = "تأكيد", message = "هل أنت متأكد؟", okText = "تأكيد", cancelText = "إلغاء", okStyle = "danger", onOk = null } = options || {};
-  document.getElementById("waDialogTitle").textContent   = title;
+  document.getElementById("waDialogTitle").textContent = title;
   document.getElementById("waDialogMessage").textContent = message;
-  document.getElementById("waDialogOk").textContent      = okText;
-  document.getElementById("waDialogCancel").textContent  = cancelText;
-  document.getElementById("waDialogOk").className        = "wa-dialog-btn " + (okStyle === "danger" ? "danger" : "cancel");
+  document.getElementById("waDialogOk").textContent = okText;
+  document.getElementById("waDialogCancel").textContent = cancelText;
+  document.getElementById("waDialogOk").className = "wa-dialog-btn " + (okStyle === "danger" ? "danger" : "cancel");
   waDialogCallback = onOk;
   document.getElementById("waDialog").classList.add("show");
 }
@@ -444,12 +462,7 @@ function showNewChatDialog() {
     okText: "ابدأ", cancelText: "إلغاء", okStyle: "danger",
     onOk: () => {
       resetChat();
-      showInappNotif({
-        icon: "🔄",
-        iconClass: "green",
-        title: "محادثة جديدة",
-        sub: "الوكيل الذكي جاهز من الأول"
-      });
+      showInappNotif({ icon: "🔄", iconClass: "green", title: "محادثة جديدة", sub: "الوكيل الذكي جاهز من الأول" });
     }
   });
 }
@@ -462,12 +475,7 @@ function showDeleteDialog() {
     okText: "حذف", cancelText: "إلغاء", okStyle: "danger",
     onOk: () => {
       deleteChat();
-      showInappNotif({
-        icon: "🗑️",
-        iconClass: "red",
-        title: "تم الحذف",
-        sub: "المحادثة والبيانات اتمسحت"
-      });
+      showInappNotif({ icon: "🗑️", iconClass: "red", title: "تم الحذف", sub: "المحادثة والبيانات اتمسحت" });
     }
   });
 }
@@ -517,13 +525,11 @@ function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
   div.className = `msg msg-${type}`;
   let html = "";
-  if (text && text.trim()) {
-    html += `<span class="msg-content">${formatMsg(text)}</span>`;
-  }
+  if (text && text.trim()) html += `<span class="msg-content">${formatMsg(text)}</span>`;
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
-      html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة عقارية أرسلها المستخدم في محادثة الوكيل العقاري" onclick="window.open('${src}','_blank')">`;
+      html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة" onclick="window.open('${src}','_blank')">`;
     });
     html += `</div>`;
   }
@@ -590,7 +596,10 @@ function renderValuationCta(context) {
   link.href = buildValuationHref(context);
   link.textContent = "💎 قيّم عقارك";
   link.setAttribute("aria-label", "افتح أداة تقييم العقار مع الاحتفاظ بسياق المحادثة");
-  link.addEventListener("click", () => saveState());
+  link.addEventListener("click", () => {
+    // احفظ الجلسة قبل الخروج عشان لما العميل يرجع نكمّل من نفس النقطة
+    saveReturnContext();
+  });
   wrap.appendChild(link);
   chatArea.insertBefore(wrap, typingBubble);
   scrollToBottom();
@@ -638,7 +647,7 @@ function renderImgStrip() {
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
     el.className = "img-strip-item";
-    el.innerHTML = `<img src="${img.preview}" alt="معاينة الصورة المرفقة ${i+1}"><button class="img-strip-rm" aria-label="إزالة الصورة ${i+1}" onclick="removeImg(${i})">✕</button>`;
+    el.innerHTML = `<img src="${img.preview}" alt="معاينة ${i+1}"><button class="img-strip-rm" aria-label="إزالة ${i+1}" onclick="removeImg(${i})">✕</button>`;
     imgStrip.appendChild(el);
   });
 }
@@ -719,8 +728,6 @@ async function sendMsg() {
     const data = await r.json();
     const reply = data.response || "";
 
-    // تأخير الكتابة: الـ Worker بيحسب المدة حسب طول الرد وبيبعتها في typingDelay
-    // بنسيب فقاعة الكتابة شغالة طول المدة دي عشان يبان إن طارق بيكتب فعلاً
     const delay = Number(data.typingDelay) || 0;
     if (delay > 0) await new Promise(res => setTimeout(res, Math.min(delay, 1500)));
 
@@ -765,13 +772,7 @@ async function sendMsg() {
   }
 }
 
-// ═══════════════════════════════════════════
-// MAP PICKER — منتقي الموقع (Leaflet + CartoDB EN + Photon EN)
-//   • الـ Worker بيبعت ui:"map_picker" (+ uiRequired) في خطوة الموقع
-//   • مسار البيع: إجباري (الكتابة مقفولة لحد ما يختار أو يدوس "اكتب يدويًا")
-//   • باقي المسارات: زر اختياري "📍 حدد على الخريطة"
-//   • الإحداثيات في الذاكرة فقط (sessionGps) — مش بتتحفظ في أي storage
-// ═══════════════════════════════════════════
+// ═══ MAP PICKER ═══
 function lockInput(placeholder) {
   msgInput.disabled = true;
   msgInput.placeholder = placeholder || "اختار الموقع من الخريطة فوق 👆";
@@ -804,7 +805,7 @@ function openMapPicker(required) {
       sendMsg();
     },
     onManual: () => {
-      sessionGps = null; // كتابة يدوية = بدون GPS
+      sessionGps = null;
       state.uiPending = null;
       saveState();
       closeMapPicker();
@@ -836,7 +837,6 @@ function handleMapUi(data) {
   unlockInput();
   if (data && data.ui === "map_picker" && data.formState?.active) {
     const required = !!data.uiRequired;
-    // بنحفظ "إن فيه picker مطلوب" بس (مش أي إحداثيات) عشان لو عمل reload يرجع نفس الخطوة
     state.uiPending = { required };
     if (required) openMapPicker(true);
     else renderOpenPickerChip();
@@ -850,14 +850,10 @@ function handleMapUi(data) {
 function goBack() {
   const ref = document.referrer;
   const host = window.location.host;
-  
-  // إذا جاء الزائر من نفس الموقع → ارجع للخلف
   if (ref && ref.includes(host) && window.history.length > 1) {
     window.history.back();
     return;
   }
-  
-  // وإلا → اذهب للرئيسية
   window.location.href = "/";
 }
 
@@ -903,6 +899,7 @@ function resetChat() {
 
 function deleteChat() {
   sessionStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(RETURN_KEY);
   sessionGps = null; closeMapPicker(); unlockInput();
   state = {
     formState: { _version: FORM_VERSION },
@@ -937,6 +934,8 @@ function startConversation() {
 
 loadState();
 
+const returningFromValuation = checkReturnFromValuation();
+
 if (state.history && state.history.length) {
   state.history.forEach(m => {
     if (m.role === "user") renderMsg(m.message, "user");
@@ -946,11 +945,19 @@ if (state.history && state.history.length) {
   if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
     showWA(state.whatsappUrl, state.waMessage);
   }
-  // لو الجلسة كانت واقفة عند خطوة الموقع — نرجّع المنتقي (بدون أي إحداثيات محفوظة)
   if (state.uiPending && state.formState?.active) {
     const req = !!state.uiPending.required;
     const restore = () => { if (window.NasrMaps) { req ? openMapPicker(true) : renderOpenPickerChip(); } };
     if (window.NasrMaps) restore(); else window.addEventListener("load", restore, { once: true });
+  }
+  if (returningFromValuation) {
+    renderReturnBanner();
+    showInappNotif({
+      icon: "💎",
+      iconClass: "green",
+      title: "رجعت من التقييم",
+      sub: "كمّل التسجيل من النقطة اللي وقفنا عندها"
+    });
   }
 } else {
   startConversation();
@@ -959,18 +966,12 @@ if (state.history && state.history.length) {
 updateSendIcon();
 msgInput.focus();
 
-// ═══ PRIVACY ON FIRST VISIT ═══
 if (!hasSeenPrivacy()) {
   setTimeout(() => showPrivacy(), 400);
 }
 
-// ═══════════════════════════════════════════
-// GALLERY MODAL
-// ═══════════════════════════════════════════
+// ═══ GALLERY ═══
 const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
-// ✅ إصلاح (2026-09-24): تم استبدال GALLERY_URL_BASE القديم الذي كان يشير
-// إلى gallery.html (صفحة غير موجودة/قديمة). الآن نستخدم مسار العقارات الفعلي
-// + صورة بديلة احتياطية عند فشل تحميل صورة العقار.
 const PROPERTY_LIST_URL  = "https://nasr-realestate.github.io/properties/";
 const FALLBACK_CARD_IMG  = "https://nasr-realestate.github.io/assets/img/logo.webp";
 let _galleryLoaded = false;
@@ -978,11 +979,9 @@ let _galleryProperties = [];
 
 function openGallery() {
   closeMenu();
-  const overlay = document.getElementById("galleryOverlay");
-  overlay.classList.add("show");
+  document.getElementById("galleryOverlay").classList.add("show");
   if (!_galleryLoaded) fetchGalleryFeed();
 }
-
 function closeGallery() {
   document.getElementById("galleryOverlay").classList.remove("show");
 }
@@ -1037,8 +1036,6 @@ function renderGalleryCards(properties) {
   grid.style.display = "grid";
 
   properties.forEach((prop, i) => {
-    // ✅ إصلاح (2026-09-24): منطق slug نظيف + سلسلة fallback للروابط.
-    // الأولوية: URL خارجي كامل → مسار /properties/slug/ → بحث بالعنوان → أرشيف العقارات.
     const slug = String(prop.slug || prop.id || "").replace(/^\/+|\/+$/g, "");
     const href =
       (typeof prop.url === "string" && /^https?:\/\//.test(prop.url) ? prop.url : "") ||
@@ -1056,7 +1053,6 @@ function renderGalleryCards(properties) {
     const imgSrc = prop.image || "";
     const title  = prop.title || "عقار";
 
-    // ✅ إصلاح (2026-09-24): onerror يستبدل الصورة بالشعار + decoding=async للأداء
     card.innerHTML = `
       <img class="gallery-card-img"
            src="${escHtml(imgSrc)}"
