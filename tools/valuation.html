@@ -866,11 +866,21 @@ async function runValuation() {
     age: $('age').value,
     furnished: $('furnished').value === 'true',
   };
-  const askingRaw = toEn($('askingPrice').value).replace(/,/g, '').replace(/[^\d.]/g, '');
+
+  const askingRaw = toEn($('askingPrice').value)
+    .replace(/,/g, '')
+    .replace(/[^\d.]/g, '');
   const asking = parseFloat(askingRaw) || 0;
 
-  if (!payload.area) { showError('⚠️ اختر المنطقة أولاً'); return; }
-  if (!payload.size || payload.size < 20) { showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)'); return; }
+  if (!payload.area) {
+    showError('⚠️ اختر المنطقة أولاً');
+    return;
+  }
+
+  if (!payload.size || payload.size < 20) {
+    showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)');
+    return;
+  }
 
   lastInputs = { ...payload, asking };
   setStep(2);
@@ -882,30 +892,57 @@ async function runValuation() {
   $('loading').classList.add('show');
   let li = 0;
   $('loadMsg').textContent = LOAD_MSGS[0];
-  loadTimer = setInterval(() => { li = (li + 1) % LOAD_MSGS.length; $('loadMsg').textContent = LOAD_MSGS[li]; }, 900);
+
+  loadTimer = setInterval(() => {
+    li = (li + 1) % LOAD_MSGS.length;
+    $('loadMsg').textContent = LOAD_MSGS[li];
+  }, 900);
 
   let data = null;
   resultSource = 'worker';
+
   try {
     const r = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(payload),
     });
+
     data = await r.json();
-    if (data.error) throw new Error(data.error);
+
+    if (!r.ok || data.error) {
+      throw new Error(data.error || `Worker HTTP ${r.status}`);
+    }
+
   } catch (e) {
-    console.warn('Worker failed, local fallback:', e);
-    data = localEstimate(payload);
-    resultSource = 'local';
+    console.error('Valuation Worker failed:', e);
+
+    setStep(1);
+    $('inputSection').style.display = 'block';
+
+    showError(
+      '⚠️ تعذر الحصول على التقييم من قاعدة بيانات السوق حاليًا. حاول مرة أخرى.'
+    );
+
+    return;
+
   } finally {
     clearInterval(loadTimer);
     $('loading').classList.remove('show');
+
     const btn = $('analyzeBtn');
     if (btn) btn.disabled = false;
   }
 
-  if (!data || !data.estimate) { setStep(1); $('inputSection').style.display = 'block'; showError('⚠️ تعذّر التقييم — جرّب تاني'); return; }
+  if (!data || !data.estimate) {
+    setStep(1);
+    $('inputSection').style.display = 'block';
+    showError('⚠️ تعذّر التقييم — لا توجد بيانات سوقية كافية لهذه الحالة');
+    return;
+  }
+
   lastResult = data;
   setStep(3);
   showResult(data, payload, asking);
@@ -918,10 +955,11 @@ function showError(msg) {
   e.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-/* ═══ تقدير محلي احتياطي (نفس معادلة الـ Worker) ═══ */
+/* ═══ تقدير محلي احتياطي — غير مستخدم حاليًا، لأن D1 هو مصدر الحقيقة ═══ */
 function localEstimate(p) {
   const area = findArea(p.area);
   if (!area) return null;
+
   const record = getMarketRecord(area, p);
   const base = Number(record?.avg) || 0;
   if (!base) return null;
@@ -929,6 +967,7 @@ function localEstimate(p) {
   const adjustments = MARKET.adjustments || {};
   const finish = normAr(p.finishing);
   const finishAdj = adjustments.finishing || {};
+
   const finishFactor = !p.finishing ? 1
     : finish.includes('الترا') ? (finishAdj.ultra_lux?.factor || 1.20)
     : finish.includes('سوبر') ? (finishAdj.super_lux?.factor || 1.00)
@@ -938,6 +977,7 @@ function localEstimate(p) {
 
   const floor = normAr(p.floor);
   const floorAdj = adjustments.floor || {};
+
   const floorFactor = !p.floor ? 1
     : floor.includes('ارضي') && floor.includes('حديقه') ? (floorAdj.ground_with_garden?.factor || 1.08)
     : floor.includes('ارضي') ? (floorAdj.ground_no_garden?.factor || 0.90)
@@ -945,16 +985,35 @@ function localEstimate(p) {
     : (floorAdj.middle?.factor || 1.00);
 
   const ageFactor = adjustments.age?.[p.age]?.factor || 1.00;
+
   const typeMultipliers = MARKET.property_type_multipliers || {};
-  const typeMatch = Object.entries(typeMultipliers).find(([key]) => normAr(key) === normAr(p.propertyType));
+  const typeMatch = Object.entries(typeMultipliers)
+    .find(([key]) => normAr(key) === normAr(p.propertyType));
+
   const typeFactor = (typeMatch && Number(typeMatch[1])) || 1.00;
-  const perMeter = Math.round(base * finishFactor * floorFactor * ageFactor * typeFactor);
+
+  const perMeter = Math.round(
+    base *
+    finishFactor *
+    floorFactor *
+    ageFactor *
+    typeFactor
+  );
+
   const raw = perMeter * Number(p.size);
+
   const estimate = p.areaType === 'rent'
     ? Math.round(raw / 100) * 100
     : Math.round(raw / 1000) * 1000;
+
   const confidence = record.confidence || 'low';
-  const rangeFactor = confidence === 'high' ? 0.95 : confidence === 'medium' ? 0.90 : 0.85;
+
+  const rangeFactor =
+    confidence === 'high'
+      ? 0.95
+      : confidence === 'medium'
+        ? 0.90
+        : 0.85;
 
   return {
     estimate,
@@ -975,63 +1034,154 @@ function localEstimate(p) {
 /* ═══ عرض النتيجة ═══ */
 function showResult(data, inputs, asking) {
   const isRent = inputs.areaType === 'rent';
+
   $('estimate').textContent = fmt(data.estimate);
-  $('estimateLabel').textContent = isRent ? 'الإيجار الشهري المتوقع' : 'السعر المتوقع';
-  $('estimateUnit').textContent = isRent ? 'جنيه مصري / شهريًا' : 'جنيه مصري';
-  $('range').textContent = fmt(data.range.low) + ' – ' + fmt(data.range.high);
-  $('perMeter').textContent = fmt(data.price_per_meter) + ' /م²';
+  $('estimateLabel').textContent = isRent
+    ? 'الإيجار الشهري المتوقع'
+    : 'السعر المتوقع';
+
+  $('estimateUnit').textContent = isRent
+    ? 'جنيه مصري / شهريًا'
+    : 'جنيه مصري';
+
+  $('range').textContent =
+    fmt(data.range.low) + ' – ' + fmt(data.range.high);
+
+  $('perMeter').textContent =
+    fmt(data.price_per_meter) + ' /م²';
+
   $('areaFound').textContent = data.area_found;
 
-  const confidenceLevel = ['high', 'medium', 'low'].includes(data.confidence) ? data.confidence : 'medium';
+  const confidenceLevel =
+    ['high', 'medium', 'low'].includes(data.confidence)
+      ? data.confidence
+      : 'medium';
+
   const conf = $('confidence');
+
   conf.className = 'confidence ' + confidenceLevel;
-  conf.textContent = confidenceLevel === 'high' ? '● عالية' : confidenceLevel === 'medium' ? '● متوسطة' : '● منخفضة';
+
+  conf.textContent =
+    confidenceLevel === 'high'
+      ? '● عالية'
+      : confidenceLevel === 'medium'
+        ? '● متوسطة'
+        : '● منخفضة';
+
   const confidenceWarning = $('confidenceWarning');
   const isLowConfidence = confidenceLevel === 'low';
-  confidenceWarning.classList.toggle('show', isLowConfidence);
-  confidenceWarning.setAttribute('aria-hidden', String(!isLowConfidence));
 
-  // الحكم على السعر المطلوب (أخضر = فرصة / ذهبي = مناسب / أحمر = مبالغ فيه)
-  const v = $('verdict'), vl = $('verdictLabel'), vs = $('verdictSub');
-  if (asking > 0) {
+  confidenceWarning.classList.toggle(
+    'show',
+    isLowConfidence
+  );
+
+  confidenceWarning.setAttribute(
+    'aria-hidden',
+    String(!isLowConfidence)
+  );
+
+  // الحكم على السعر المطلوب
+  const v = $('verdict');
+  const vl = $('verdictLabel');
+  const vs = $('verdictSub');
+
+  if (asking > 0 && data.estimate > 0) {
     const diff = (asking - data.estimate) / data.estimate;
     const pct = Math.abs(Math.round(diff * 100));
+
     if (diff > 0.10) {
       v.className = 'verdict red';
       vl.innerHTML = '🔴 السعر مبالغ فيه';
-      vs.textContent = 'السعر المطلوب أعلى من القيمة العادلة بحوالي ' + pct + '% — فيه مساحة تفاوض كبيرة';
+      vs.textContent =
+        'السعر المطلوب أعلى من القيمة العادلة بحوالي ' +
+        pct +
+        '% — فيه مساحة تفاوض كبيرة';
+
     } else if (diff < -0.10) {
       v.className = 'verdict green';
       vl.innerHTML = '🟢 فرصة ممتازة';
-      vs.textContent = 'السعر المطلوب أقل من القيمة العادلة بحوالي ' + pct + '% — يستحق المعاينة فورًا';
+      vs.textContent =
+        'السعر المطلوب أقل من القيمة العادلة بحوالي ' +
+        pct +
+        '% — يستحق المعاينة فورًا';
+
     } else {
       v.className = 'verdict gold';
       vl.innerHTML = '🟡 سعر مناسب';
-      vs.textContent = 'السعر المطلوب قريب من القيمة العادلة (فرق ' + pct + '% فقط)';
+      vs.textContent =
+        'السعر المطلوب قريب من القيمة العادلة (فرق ' +
+        pct +
+        '% فقط)';
     }
+
   } else {
     v.className = 'verdict neutral';
     vl.innerHTML = '💎 تقييم استرشادي';
-    vs.textContent = 'أدخل السعر المطلوب للحصول على حكم: فرصة / مناسب / مبالغ فيه';
+    vs.textContent =
+      'أدخل السعر المطلوب للحصول على حكم: فرصة / مناسب / مبالغ فيه';
   }
 
-  // المقارنة بمتوسط نفس نوع العقار والعملية في المنطقة.
+  // المقارنة بمتوسط نفس نوع العقار والعملية في المنطقة
   const area = findArea(data.area_found);
-  const avgBox = $('avgCompare'), fill = $('compareFill');
+  const avgBox = $('avgCompare');
+  const fill = $('compareFill');
+
   if (area) {
     const record = getMarketRecord(area, inputs);
     const avg = Number(record?.avg) || 0;
+
     if (avg > 0) {
       const d = (data.price_per_meter - avg) / avg;
       const pct = Math.abs(Math.round(d * 100));
+
       let cls, txt;
-      if (d > 0.05) { cls = 'diff-up'; txt = 'أعلى من متوسط المنطقة (' + fmt(avg) + '/م²) بـ ' + pct + '%'; }
-      else if (d < -0.05) { cls = 'diff-down'; txt = 'أقل من متوسط المنطقة (' + fmt(avg) + '/م²) بـ ' + pct + '%'; }
-      else { cls = 'diff-even'; txt = 'مطابق تقريبًا لمتوسط المنطقة (' + fmt(avg) + '/م²)'; }
-      avgBox.innerHTML = '<span class="' + cls + '">' + txt + '</span>';
-      const ratio = Math.min(Math.max(data.price_per_meter / (avg * 1.6), 0.05), 1);
+
+      if (d > 0.05) {
+        cls = 'diff-up';
+        txt =
+          'أعلى من متوسط المنطقة (' +
+          fmt(avg) +
+          '/م²) بـ ' +
+          pct +
+          '%';
+
+      } else if (d < -0.05) {
+        cls = 'diff-down';
+        txt =
+          'أقل من متوسط المنطقة (' +
+          fmt(avg) +
+          '/م²) بـ ' +
+          pct +
+          '%';
+
+      } else {
+        cls = 'diff-even';
+        txt =
+          'مطابق تقريبًا لمتوسط المنطقة (' +
+          fmt(avg) +
+          '/م²)';
+      }
+
+      avgBox.innerHTML =
+        '<span class="' +
+        cls +
+        '">' +
+        txt +
+        '</span>';
+
+      const ratio = Math.min(
+        Math.max(data.price_per_meter / (avg * 1.6), 0.05),
+        1
+      );
+
       fill.style.width = Math.round(ratio * 100) + '%';
-      fill.style.background = d > 0.05 ? 'linear-gradient(90deg,#d4af37,#ff5b5b)' : 'linear-gradient(90deg,#d4af37,#25d366)';
+
+      fill.style.background =
+        d > 0.05
+          ? 'linear-gradient(90deg,#d4af37,#ff5b5b)'
+          : 'linear-gradient(90deg,#d4af37,#25d366)';
+
     } else {
       avgBox.textContent = 'متوسط هذا النوع غير متاح حاليًا';
       fill.style.width = '0%';
@@ -1040,27 +1190,50 @@ function showResult(data, inputs, asking) {
     // بطاقة المنطقة: معالم + شوارع
     $('areaCard').style.display = 'block';
     $('areaName').textContent = area.name;
-    $('areaLevel').textContent = 'المستوى: ' + (area.level_ar || '—');
-    $('areaLandmarks').textContent = 'أبرز المعالم: ' + (area.landmarks || []).slice(0, 5).join('، ');
-    $('areaStreets').textContent = 'أهم الشوارع: ' + (area.main_streets || []).slice(0, 4).join('، ');
+    $('areaLevel').textContent =
+      'المستوى: ' + (area.level_ar || '—');
+
+    $('areaLandmarks').textContent =
+      'أبرز المعالم: ' +
+      (area.landmarks || []).slice(0, 5).join('، ');
+
+    $('areaStreets').textContent =
+      'أهم الشوارع: ' +
+      (area.main_streets || []).slice(0, 4).join('، ');
+
   } else {
     avgBox.textContent = 'متوسط المنطقة غير متاح حاليًا';
     fill.style.width = '0%';
     $('areaCard').style.display = 'none';
   }
 
-  $('disclaimer').textContent = data.disclaimer || 'التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.';
-  $('srcNote').textContent = resultSource === 'worker'
-    ? '✓ تم الحساب عبر محرك التقييم السحابي — بيانات محدّثة'
-    : '✓ تم الحساب محليًا من بيانات السوق (وضع احتياطي)';
+  $('disclaimer').textContent =
+    data.disclaimer ||
+    'التقييم تقديري ومرجعي — يُستخدم كأساس للتفاوض لا كسعر رسمي.';
+
+  $('srcNote').textContent =
+    resultSource === 'worker'
+      ? '✓ تم الحساب عبر محرك التقييم السحابي — بيانات محدّثة'
+      : '✓ تم الحساب محليًا من بيانات السوق (وضع احتياطي)';
 
   $('result').classList.add('show');
-  updateWhatsAppMessage();
-  loadSimilarProperties(inputs, data.area_found);
-  setTimeout(() => fill.style.width = fill.style.width, 50);
-  $('result').scrollIntoView({ behavior: 'smooth' });
-}
 
+  updateWhatsAppMessage();
+
+  loadSimilarProperties(
+    inputs,
+    data.area_found
+  );
+
+  setTimeout(
+    () => fill.style.width = fill.style.width,
+    50
+  );
+
+  $('result').scrollIntoView({
+    behavior: 'smooth'
+  });
+}
 /* ═══ روابط المشاركة والعقارات المشابهة ═══ */
 function buildShareUrl(inputs = lastInputs) {
   if (!inputs || !inputs.area || !inputs.size) return '';
