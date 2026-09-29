@@ -283,6 +283,7 @@ const STORAGE_KEY  = "simsar_wa_v90";
 const PRIVACY_KEY  = "simsar_privacy_v1";
 const TAREK_WA     = "201147758857";
 const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
+const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
 // لازم تفضل مطابقة لـ FORM_VERSION في _worker/worker.js.
 // لو اختلفت، السيرفر بيلغي الجلسة وسط المحادثة والعميل بيشوف سلوك غريب.
@@ -298,6 +299,7 @@ let state = {
   pendingImages: [],
   waMessage: null,
   whatsappUrl: null,
+  valuationCta: null,
 };
 let isSending = false;
 
@@ -555,6 +557,45 @@ function renderButtons(opts) {
   scrollToBottom();
 }
 
+function buildValuationHref(context) {
+  const params = new URLSearchParams();
+  params.set("from", "agent");
+  params.set("journey", context.intent === "seller" ? "seller" : "valuation");
+
+  const area = typeof context.area === "string" ? context.area.trim().slice(0, 80) : "";
+  const size = Number(context.size);
+  const allowedTypes = ["شقة", "دوبلكس", "فيلا", "روف", "محل تجاري", "مكتب إداري", "مخزن"];
+  const propertyType = allowedTypes.includes(context.propertyType) ? context.propertyType : "";
+  const areaType = context.areaType === "rent" || context.areaType === "sale" ? context.areaType : null;
+
+  if (area) params.set("area", area);
+  if (Number.isFinite(size) && size >= 20 && size <= 100000) params.set("size", String(size));
+  if (propertyType) params.set("propertyType", propertyType);
+  if (areaType) params.set("type", areaType);
+  if (["furnished", "unfurnished", "unknown"].includes(context.rentCondition)) {
+    params.set("rentCondition", context.rentCondition);
+  }
+
+  return `${VALUATION_URL}?${params.toString()}`;
+}
+
+function renderValuationCta(context) {
+  chatArea.querySelectorAll(".valuation-cta-rack").forEach(el => el.remove());
+  if (!context || typeof context !== "object") return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "btns-rack valuation-cta-rack";
+  const link = document.createElement("a");
+  link.className = "btn-glass valuation-link";
+  link.href = buildValuationHref(context);
+  link.textContent = "💎 قيّم عقارك";
+  link.setAttribute("aria-label", "افتح أداة تقييم العقار مع الاحتفاظ بسياق المحادثة");
+  link.addEventListener("click", () => saveState());
+  wrap.appendChild(link);
+  chatArea.insertBefore(wrap, typingBubble);
+  scrollToBottom();
+}
+
 function showWA(url, msg) {
   if (!url) return;
   waWrapper.classList.add("show");
@@ -701,6 +742,9 @@ async function sendMsg() {
     }
 
     if (data.options?.length) renderButtons(data.options);
+
+    state.valuationCta = data.valuationCta || null;
+    renderValuationCta(state.valuationCta);
 
     handleMapUi(data);
 
@@ -898,6 +942,7 @@ if (state.history && state.history.length) {
     if (m.role === "user") renderMsg(m.message, "user");
     else renderMsg(m.message, "bot");
   });
+  if (state.valuationCta) renderValuationCta(state.valuationCta);
   if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
     showWA(state.whatsappUrl, state.waMessage);
   }
