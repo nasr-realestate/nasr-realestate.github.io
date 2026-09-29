@@ -1,6 +1,7 @@
 import {
   calculateMarketTotals,
   findAreaMention,
+  findAreaName,
   getMarketSnapshot,
   listMarketAreas,
   normalizeArabic as normalizeMarketText,
@@ -10,11 +11,19 @@ import {
 } from "./market-data.js";
 
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v8.5-MAPS + D1 MARKET
+// سمسار طلبك — Cloudflare Worker v8.7-MAPS + D1 MARKET + VALUATION RETURN
 // طارق طنطاوي | مدينة نصر | 2014–2026
 // Google Local Guide Level 7 | 16.3M+ Views
 // Gemini للردود الحوارية + D1 حتمي لأسئلة السوق + رسالة مؤهلة كاملة
 // ------------------------------------------------------------
+// جديد v8.7 (تكامل صفحة التقييم مع الوكيل):
+//  • agent.html بيبعت valuationResult لما العميل يرجع من tools/valuation.html.
+//    الحقل بيتعقّم (شكل + حدود + اتساق داخلي + صلاحية 24 ساعة) وبيوصل لمسارات
+//    Gemini الحوارية بس كسياق واضح إنه «غير متحقق منه من الخادم».
+//  • مفيش نص خام من الحقل بيدخل الـ system prompt: اسم المنطقة بيتطابق مع قائمة
+//    مناطق السوق من D1 وياخد الاسم الرسمي، أو بيتشال — فمنع HTML/prompt injection.
+//  • من غير أي تغيير في: قواعد التأهيل، إنشاء الـ lead، رسالة الواتساب،
+//    أسعار D1 الحتمية، أو أي حقل في الـ JSON الخارج.
 // تحسينات v8.4 (بدون كسر أي وظيفة أو أي حقل في الـ JSON):
 //  • أمان: CORS مقيّد بنطاقات الموقع، مفتاح Gemini في Header مش في الـ URL،
 //    حماية /upload-images (rate limit + تحقق من الصور + حجم أقصى)،
@@ -339,6 +348,159 @@ function valuationCta(intent, context = {}) {
     areaType: transaction || null,
     rentCondition: context.rentCondition || null,
   };
+}
+
+// ═══ نتيجة التقييم الراجعة من الأداة (v8.7) ═══
+// agent.html بيبعت valuationResult في جسم الطلب لما العميل يرجع من tools/valuation.html.
+// ------------------------------------------------------------
+// قواعد التعامل مع الحقل ده (مهم):
+//  1) مدخل من المتصفح = غير موثوق. أي حد يقدر يعدّله من الـ devtools أو يبعت طلب مباشر.
+//  2) الخادم ما يقدرش يتحقق منه من مصدر موثوق: رابط الرجوع (return=valuation) بيبعت
+//     estimate/confidence/samples/perMeter/area/size بس — من غير نوع العقار ولا العملية
+//     ولا حالة الفرش، فمينفعش نعيد حساب الرقم من D1 ونطابقه. علشان كده الحالة دايمًا
+//     "غير متحقق منها" وبنقول للنموذج ده بصراحة.
+//  3) مفيش أي نص خام من الحقل ده بيدخل الـ system prompt. اسم المنطقة بيتطابق مع
+//     قائمة مناطق السوق من D1 وياخد الاسم الرسمي من القائمة، أو بيتشال خالص — فأي HTML
+//     أو تعليمات محقونة بتسقط قبل الـ prompt.
+//  4) الحقل ده ما يلمسش التأهيل ولا الـ lead ولا رسالة الواتساب ولا حسابات D1:
+//     ما بيتخزنش في formState، وما بيغيّرش أي مسار حتمي.
+const VALUATION_MAX_AGE_MS   = 24 * 60 * 60 * 1000; // نفس نافذة الصلاحية في agent.html
+const VALUATION_MAX_ESTIMATE = 1e11;                 // سقف معقول يمنع الأرقام العبثية
+const VALUATION_MAX_METER    = 1e7;
+const VALUATION_MAX_SAMPLES  = 100000;
+const VALUATION_MIN_SIZE     = 20;                   // نفس حد أداة التقييم
+const VALUATION_MAX_SIZE     = 100000;               // نفس حد أداة التقييم
+const VALUATION_AREA_MAX_LEN = 100;
+const VALUATION_FUTURE_SKEW  = 5 * 60 * 1000;        // تجاوز ساعة الجهاز (للأمام بس)
+const VALUATION_CONFIDENCE_VALUES = new Set(["high", "medium", "low", "unknown"]);
+const VALUATION_CONFIDENCE_LABELS = { high: "عالية", medium: "متوسطة", low: "منخفضة", unknown: "غير محددة" };
+
+// رقم محدود النطاق: بيرجع null لو مش رقم أو خرج عن الحدود (مش بيقصّ القيمة)
+function boundedNumber(value, min, max) {
+  if (typeof value === "boolean" || value === null || value === undefined) return null;
+  const n = typeof value === "number" ? value : parseNum(value);
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  return n;
+}
+
+// نص المنطقة: بنشيل التحكم/العلامات ونحدد الطول، وده مدخل للمطابقة بس — مش للـ prompt
+function valuationAreaLabel(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/[<>`{}[\]()*#]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, VALUATION_AREA_MAX_LEN);
+}
+
+// حقل اختياري: بيرجع undefined لو مش مبعت أصلًا، وnull لو مبعت بس تالف/خارج الحدود
+function optionalBounded(value, min, max) {
+  if (value === null || value === undefined || value === "") return undefined;
+  return boundedNumber(value, min, max);
+}
+
+// تحقّق الشكل والحدود والاتساق الداخلي. أي خلل → null (بنكمل المحادثة من غير السياق)
+// ملاحظة: الـ exports الجاية دي للاختبارات بس — الـ Worker على Cloudflare بيستخدم
+// الـ default export (fetch) ووجود named exports جنبه مش بيأثر على تشغيله.
+export function sanitizeValuationResult(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const estimate = boundedNumber(raw.estimate, 1, VALUATION_MAX_ESTIMATE);
+  if (estimate === null) return null;
+
+  // الصلاحية: لازم يكون في وقت تسجيل، وما يعدّاش 24 ساعة (زي الواجهة بالظبط)
+  const savedAt = typeof raw.savedAt === "number" ? raw.savedAt : parseNum(raw.savedAt);
+  if (!Number.isFinite(savedAt) || savedAt <= 0) return null;
+  const ageMs = Date.now() - savedAt;
+  if (ageMs > VALUATION_MAX_AGE_MS || ageMs < -VALUATION_FUTURE_SKEW) return null;
+
+  // حقل موجود بس خارج الحدود = حمولة تالفة أو متلاعب بيها → نرفض النتيجة كلها،
+  // بدل ما نسقط الحقل بس فيبقى رقم كبير عدى من غير فحص الاتساق
+  const size = optionalBounded(raw.size, VALUATION_MIN_SIZE, VALUATION_MAX_SIZE);
+  const perMeter = optionalBounded(raw.perMeter ?? raw.price_per_meter, 1, VALUATION_MAX_METER);
+  const samples = optionalBounded(raw.samples ?? raw.sample_count, 0, VALUATION_MAX_SAMPLES);
+  if (size === null || perMeter === null || samples === null) return null;
+
+  // اتساق داخلي: الصفحة بتقرّب estimate و perMeter لأقرب عدد صحيح من نفس سعر المتر،
+  // فلو الرقمين مش متطابقين حسابيًا يبقى الحمولة متلاعب بيها أو تالفة → نرفضها كلها.
+  if (perMeter !== undefined && size !== undefined) {
+    const expected = perMeter * size;
+    const tolerance = Math.max((size / 2) + 2, expected * 0.02);
+    if (Math.abs(expected - Math.round(estimate)) > tolerance) return null;
+  }
+
+  const confidence = typeof raw.confidence === "string" && VALUATION_CONFIDENCE_VALUES.has(raw.confidence.trim().toLowerCase())
+    ? raw.confidence.trim().toLowerCase()
+    : "unknown";
+
+  // أي حقل تاني في الحمولة (اسم، تليفون، gps، تعليمات…) بيتسقط هنا:
+  // شكل الكائن الناتج ثابت، فمفيش مجال لتسريب بيانات أو نصوص للـ prompt.
+  return {
+    estimate: Math.round(estimate),
+    perMeter: perMeter === undefined ? null : Math.round(perMeter),
+    size: size === undefined ? null : Math.round(size),
+    samples: samples === undefined ? null : Math.floor(samples),
+    confidence,
+    areaLabel: valuationAreaLabel(raw.area),
+    ageMs: Math.max(0, ageMs),
+  };
+}
+
+// مطابقة اسم المنطقة المبلَّغ مع قائمة مناطق السوق من D1 — بيرجّع الاسم الرسمي من
+// القائمة (مصدر موثوق) أو null. الأهم: ما بيوحّدش «المنطقة الأولى» مع «الحي الأول»،
+// لأن المطابقة بتيجي من findAreaName/findAreaMention اللي بتحافظ على الفصل ده.
+export async function canonicalMarketArea(db, label) {
+  const text = String(label || "").trim();
+  if (!text) return null;
+  try {
+    const names = await listMarketAreas(db);
+    if (!Array.isArray(names) || !names.length) return null;
+    return findAreaName(names, text) || findAreaMention(text, names) || null;
+  } catch {
+    return null;
+  }
+}
+
+function valuationAgeLabel(ms) {
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return "لحظات";
+  if (minutes < 60) return `حوالي ${fmtNum(minutes)} دقيقة`;
+  return `حوالي ${fmtNum(Math.round(minutes / 60))} ساعة`;
+}
+
+// جزء الـ system prompt: مبني بس من أرقام متحقق من حدودها ومن أسماء من قائمة D1.
+export function buildValuationPrompt(v, canonicalArea) {
+  const lines = [
+    "",
+    "── نتيجة تقييم رجعت من المتصفح (غير متحقق منها) ──",
+    "العميل راجع لك من أداة التقييم ومعاه نتيجة. الأرقام دي أبلغها المتصفح، والخادم ما قدرش يتحقق منها من مصدر موثوق (رابط الرجوع مابيبعتش نوع العقار ولا العملية، فمينفعش نعيد حسابها من بيانات السوق هنا).",
+    `• الرقم الاسترشادي المبلَّغ: ${fmtNum(v.estimate)} ج.م`,
+  ];
+  if (v.perMeter) lines.push(`• سعر المتر المبلَّغ: ${fmtNum(v.perMeter)} ج.م/م²`);
+  if (v.size) lines.push(`• المساحة المبلَّغة: ${fmtNum(v.size)} م²`);
+  if (v.samples) lines.push(`• عدد العينات المبلَّغ: ${fmtNum(v.samples)}`);
+  lines.push(`• مستوى الثقة المبلَّغ: ${VALUATION_CONFIDENCE_LABELS[v.confidence] || VALUATION_CONFIDENCE_LABELS.unknown}`);
+  lines.push(canonicalArea
+    ? `• المنطقة (مطابقة لقائمة مناطق السوق في D1): ${canonicalArea}`
+    : "• المنطقة المبلَّغة مش مطابقة لقائمة مناطق السوق الحالية، فمتتعاملش مع اسمها كأنه منطقة معروفة.");
+  lines.push(`• النتيجة مسجلة من ${valuationAgeLabel(v.ageMs)}.`);
+  lines.push(
+    "التعليمات بخصوص النتيجة دي:",
+    "• اعتبرها رقم استرشادي العميل شافه في الأداة — مش تقييم مؤكد، مش سعر إتمام، ومش حاجة معتمدة من عندك.",
+    "• ممنوع تعدّل الرقم أو تحسب أسعار جديدة من دماغك؛ أي رقم سوق في المحادثة بييجي بس من رد بيانات السوق الحتمي.",
+    "• لو سأل عن السعر أو قيمة عقاره، وجّهه لأداة التقييم أو اسأله المنطقة والمساحة عشان يطلع له مؤشر من البيانات.",
+    "• ممكن تشير لها عَرَضًا في كلامك (زي «الرقم اللي طلع لك في الأداة») من غير ما تكررها في كل رد،",
+    "  وكمل سؤال التأهيل اللي انت فيه عادي — النتيجة دي مش بديل عن أسئلة الطلب ولا بتغيّر ترتيبها.",
+  );
+  return lines.join("\n");
+}
+
+// بيجهّز جزء الـ prompt (أو فاضي) — بيتنادى من مسارات Gemini الحوارية بس
+export async function valuationPromptContext(env, valuation) {
+  if (!valuation) return "";
+  const canonicalArea = await canonicalMarketArea(env?.DB, valuation.areaLabel);
+  return buildValuationPrompt(valuation, canonicalArea);
 }
 
 async function marketContextForMessage(env, message, formState = {}) {
@@ -1319,7 +1481,8 @@ function timeContext(now = cairoNow()) {
 // ملاحظة: TAREK_PERSONA و MOOD_GUIDE و IDENTITY_RESPONSE معرّفين فوق بعد CONSTANTS —
 // الوكيل مؤتمت ومش طارق شخصيًا (توحيد الهوية + إفصاح صادق).
 
-async function geminiFirstMsg(env, userMsg, history) {
+async function geminiFirstMsg(env, userMsg, history, valuation = null) {
+  const valuationBlock = await valuationPromptContext(env, valuation);
   const sys = `${TAREK_PERSONA}
 
 الموقف: حد لسه داخل على الشات دلوقتي وكتبلك حاجة.
@@ -1328,26 +1491,31 @@ async function geminiFirstMsg(env, userMsg, history) {
 
 ${MOOD_GUIDE}
 ${timeContext()}
+${valuationBlock}
 
 رد بسطر أو اتنين بالكتير. متسألش عن تفاصيل العقار دلوقتي ومتتكلمش في أسعار.`;
   // 0.85 بدل 0.6 — أول انطباع محتاج تنوّع، الحرارة الواطية بتنتج نفس الجملة كل مرة
   return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(userMsg)}]}], 150, 0.85);
 }
 
-async function geminiComment(env, userMsg, nextQ, fsData) {
+async function geminiComment(env, userMsg, nextQ, fsData, valuation = null) {
   const safeMsg = sanitizeForPrompt(userMsg);
 
   // مفتاح الكاش لازم يشمل السؤال المطروح كمان، مش نص العميل بس
   // قبل كده: العميل يكتب "3" للغرف و"3" للحمامات فياخد نفس التعليق حرفيًا
   // وكمان كل العملاء اللي بيكتبوا نفس الكلمة كانوا بياخدوا نفس الجملة لمدة نص ساعة
+  // ولو معاه نتيجة تقييم، الرقم نفسه جزء من السياق — فبينضم للمفتاح عشان التعليق
+  // ما يتشاركش بين عميل لسه مقيّم وعميل ما قيّمش
   const qKey = normAr(String(nextQ||"")).slice(0,40);
-  const cacheKey = `c:${qKey}:${normAr(userMsg).slice(0,60)}`;
+  const vKey = valuation ? `:v${normAr(String(valuation.estimate))}` : "";
+  const cacheKey = `c:${qKey}:${normAr(userMsg).slice(0,60)}${vKey}`;
   const cached = geminiCache.get(cacheKey);
   // بنخزّن عدة صيغ للموقف الواحد وبنختار واحدة عشوائية — يمنع تكرار نفس الجملة
   if (cached && (Date.now()-cached.at) < GEMINI_CACHE_TTL && cached.variants?.length) {
     return cached.variants[Math.floor(Math.random()*cached.variants.length)];
   }
 
+  const valuationBlock = await valuationPromptContext(env, valuation);
   const sys = `${TAREK_PERSONA}
 
 الموقف: العميل لسه جاوبك على سؤال، وانت هتسأله السؤال اللي بعده على طول.
@@ -1355,6 +1523,7 @@ async function geminiComment(env, userMsg, nextQ, fsData) {
 
 ${MOOD_GUIDE}
 ${timeContext()}
+${valuationBlock}
 
 مهم جدا: مش كل إجابة محتاجة رد.
 لو إجابته عادية خالص (رقم، اختيار من زرار، كلمة واحدة) — مترّدش خالص واكتب: -
@@ -1381,8 +1550,9 @@ ${timeContext()}
   return cleaned;
 }
 
-async function geminiContextual(env, userMsg, formState, currentStep, history) {
+async function geminiContextual(env, userMsg, formState, currentStep, history, valuation = null) {
   const q = currentStep ? (typeof currentStep.q==="function"?currentStep.q(formState?.data):currentStep.q) : "";
+  const valuationBlock = await valuationPromptContext(env, valuation);
   const convHistory = (Array.isArray(history)?history:[]).slice(-8)
     .filter(m=>m?.message?.trim())
     .map(m=>({ role:m.role==="assistant"?"model":"user", parts:[{text:sanitizeForPrompt(m.message, 500)}] }));
@@ -1396,6 +1566,7 @@ async function geminiContextual(env, userMsg, formState, currentStep, history) {
 
 ${MOOD_GUIDE}
 ${timeContext()}
+${valuationBlock}
 
 السؤال اللي انت مستنيه منه: "${sanitizeForPrompt(q, 200)}"
 اللي عارفه عنه: ${safeDataForPrompt(formState?.data)}
@@ -1422,11 +1593,13 @@ function deservesComment(userMsg) {
   return hasMood || isLong;
 }
 
-async function enhanceResponse(env, result, userMsg, formState, currentStep, history) {
+// valuation: نتيجة التقييم المعقّمة (أو null) — بتوصل للـ AI كسياق بس،
+// ومش بتلمس result ولا formState ولا أي حقل تأهيل
+async function enhanceResponse(env, result, userMsg, formState, currentStep, history, valuation = null) {
   if (!formState?.active || result.done || result.readyToSend) return result;
   // فلتر قبلي: بيوفر استدعاءات Gemini وبيخلي الإيقاع طبيعي
   if (!deservesComment(userMsg)) return result;
-  const comment = await geminiComment(env, userMsg, result.response, formState?.data);
+  const comment = await geminiComment(env, userMsg, result.response, formState?.data, valuation);
   if (comment) return { ...result, response:`${comment}\n\n${result.response}` };
   return result;
 }
@@ -2054,7 +2227,7 @@ function newRequest() {
   };
 }
 
-async function startOwnerFlow(type, message, env, history, lms) {
+async function startOwnerFlow(type, message, env, history, lms, valuation = null) {
   const steps = getOwnerSteps(type);
   const data = { _filled: {} };
   const parsedType = normalizeMarketPropertyType(message);
@@ -2095,7 +2268,7 @@ async function startOwnerFlow(type, message, env, history, lms) {
   });
   // Keep market/seller replies deterministic; Gemini must not attach an unverified price to them.
   if (isMarketQuestion(message) || isOwnerSaleIntent(message)) return result;
-  return enhanceResponse(env, result, message, result.formState, steps[firstStep] || steps[0], history);
+  return enhanceResponse(env, result, message, result.formState, steps[firstStep] || steps[0], history, valuation);
 }
 
 // ═══ ROUTE DETECTION ═══
@@ -2326,6 +2499,13 @@ export default {
         fs.data = { ...(fs.data||{}), gps: incomingGps };
       }
 
+      // ── نتيجة التقييم الراجعة من الأداة (tools/valuation.html → agent.html → هنا) ──
+      // مدخل من المتصفح = غير موثوق: بيتعقّم ويتحدّد نطاقه، وأي خلل بيرجّع null
+      // فالمحادثة تكمل عادي من غير السياق ده. الاستخدام الوحيد هو سياق في الـ system
+      // prompt لمسارات Gemini الحوارية — مش بيتخزن في formState، ومش بيغيّر التأهيل
+      // ولا إنشاء الـ lead ولا رسالة الواتساب ولا حسابات D1 الحتمية.
+      const valuationResult = sanitizeValuationResult(body.valuationResult);
+
       // ── رد حتمي على أسئلة الهوية أو طلب إنسان (P0.1) ──
       // بيتحسم من غير Gemini وقبل أي مسار تاني — عشان الوكيل يعترف بالأتمتة
       // ويقدّم رابط طارق بدل ما ينتحل شخصيته أو ينفي بشريته. الحالة بتفضل زي ما هي عشان يكمل طلبه.
@@ -2369,22 +2549,22 @@ export default {
           const steps = getBuyerSteps("sale");
           const newFs = {active:true,lifecycle:LC.ACTIVE,type:"sale",stepIndex:0,data:{},awaitingQ:true,flowType:"buyer",imageUrls:[]};
           const r = askBuyerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history,valuationResult));
         }
         if (isTenant(userMsg)) {
           const lms = await fetchLandmarks({transaction:"rent"});
           const steps = getBuyerSteps("rent");
           const newFs = {active:true,lifecycle:LC.ACTIVE,type:"rent",stepIndex:0,data:{},awaitingQ:true,flowType:"tenant",imageUrls:[]};
           const r = askBuyerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history,valuationResult));
         }
         if (isSell(userMsg)) {
           const lms = await fetchLandmarks({transaction:"sale"});
-          return jsonRes(await startOwnerFlow("sale", userMsg, env, history, lms));
+          return jsonRes(await startOwnerFlow("sale", userMsg, env, history, lms, valuationResult));
         }
         if (isLandlord(userMsg)) {
           const lms = await fetchLandmarks({transaction:"rent"});
-          return jsonRes(await startOwnerFlow("rent", userMsg, env, history, lms));
+          return jsonRes(await startOwnerFlow("rent", userMsg, env, history, lms, valuationResult));
         }
 
         if (!userMsg) return jsonRes(newRequest());
@@ -2398,9 +2578,9 @@ export default {
             const steps = getBuyerSteps(type);
             const newFs = {active:true,lifecycle:LC.ACTIVE,type,stepIndex:0,data:{},awaitingQ:true,flowType:type==="sale"?"buyer":"tenant",imageUrls:[]};
             const r = askBuyerStep(steps,0,newFs,null,lms);
-            return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
+            return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history,valuationResult));
           } else {
-            return jsonRes(await startOwnerFlow(type, userMsg, env, history, lms));
+            return jsonRes(await startOwnerFlow(type, userMsg, env, history, lms, valuationResult));
           }
         }
 
@@ -2411,7 +2591,7 @@ export default {
         if (isOutOfArea(userMsg)&&!isNasr(userMsg)) return jsonRes({response:"إحنا بنشتغل في مدينة نصر بس يا فندم.",options:ROUTE_BTNS,formState:fs});
         if (/سيارة|عربية|موبايل|أجهزة|ساعة/i.test(userMsg)) return jsonRes({response:"بنشتغل في العقارات بس يا فندم.",options:ROUTE_BTNS,formState:fs});
 
-        const reply = await geminiFirstMsg(env, userMsg, history);
+        const reply = await geminiFirstMsg(env, userMsg, history, valuationResult);
         if (reply) return jsonRes({response:reply,options:ROUTE_BTNS,formState:fs});
         return jsonRes(newRequest());
       }
@@ -2427,7 +2607,7 @@ export default {
         // إجابة يدوية على خطوة الموقع (بدون gps في نفس الطلب) → أي إحداثيات قديمة بتتشال (لا pin كاذب)
         if (step?.id==="location" && !incomingGps && fs.data?.gps) { fs.data = {...fs.data}; delete fs.data.gps; }
         const r = await processOwner(fs,userMsg,env,history,lms);
-        const enhanced = await enhanceResponse(env,r,userMsg,fs,step,history);
+        const enhanced = await enhanceResponse(env,r,userMsg,fs,step,history,valuationResult);
         if (!r.done && !r.readyToSend) {
           const ownerData = r.formState?.data || fs.data || {};
           let marketArea = ownerData.marketArea || null;
@@ -2449,7 +2629,7 @@ export default {
         const step = getBuyerSteps(fs.type)[fs.stepIndex];
         if (step?.id==="landmark" && !incomingGps && fs.data?.gps) { fs.data = {...fs.data}; delete fs.data.gps; }
         const r = await processBuyer(fs,userMsg,env,history,lms);
-        return jsonRes(await enhanceResponse(env,r,userMsg,fs,step,history));
+        return jsonRes(await enhanceResponse(env,r,userMsg,fs,step,history,valuationResult));
       }
 
       if (flowType==="buyer_select") return jsonRes(await processBuyerSelect(fs,userMsg,env));
@@ -2458,7 +2638,7 @@ export default {
 
       const step = getSteps(fs.type,flowType)[fs.stepIndex];
       if (step) {
-        const reply = await geminiContextual(env,userMsg,fs,step,history);
+        const reply = await geminiContextual(env,userMsg,fs,step,history,valuationResult);
         if (reply) return jsonRes({response:reply,formState:fs,options:ROUTE_BTNS});
       }
 
@@ -2472,6 +2652,7 @@ export default {
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v8.5-MAPS + D1 MARKET (منتقي الخريطة: ui:"map_picker" + gps في رسالة الواتساب)
+// نهاية الملف — سمسار طلبك v8.7-MAPS + D1 MARKET + VALUATION RETURN (منتقي الخريطة: ui:"map_picker" + gps في رسالة الواتساب)
 // ✅ Gemini للردود الحوارية + أسعار D1 حتمية + رسالة مؤهلة كاملة
+// ✅ نتيجة التقييم الراجعة من الأداة: سياق معقّم وغير موثوق للـ AI، من غير أي تأثير على التأهيل أو الـ lead أو أسعار D1
 // ═══════════════════════════════════════════════════

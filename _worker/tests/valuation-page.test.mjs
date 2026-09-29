@@ -153,8 +153,20 @@ test("page displays missing D1 bounds as unavailable and reports D1-only source 
   assert.equal(getElementById("sampleCount").textContent, "غير متاح");
   assert.equal(getElementById("confidence").textContent, "● غير محددة");
   assert.match(getElementById("srcNote").textContent, /price_snapshots/);
-  assert.match(getElementById("whatsappMessage").textContent, /رابط إعادة فتح الأداة/);
-  assert.doesNotMatch(getElementById("whatsappMessage").textContent, /عايز نكمل مع بعض/);
+  // تقرير المشاركة لازم يحمل رابط إعادة فتح الأداة نفسه — مش مجرد عبارة وصفية.
+  // الصياغة الحالية في buildReport هي "🔗 الرابط: <url>" (بدل عبارة «رابط إعادة فتح الأداة»
+  // القديمة)، فبنتحقق من الصياغة الحالية ومن وجود الرابط فعليًا ومن بارامتراته الأساسية.
+  // ده أقوى من الادعاء القديم: عبارة وصفية من غير رابط كانت هتنجح قبل كده.
+  const report = getElementById("whatsappMessage").textContent;
+  assert.match(report, /🔗 الرابط: https:\/\/nasr-realestate\.github\.io\/tools\/valuation\.html\S*/);
+  const reportUrl = new URL(report.match(/https:\/\/\S+/)[0]);
+  assert.equal(reportUrl.pathname, "/tools/valuation.html");
+  // المنطقة الأولى → 1st-district، ومش 1st-neighborhood (اللي هو الحي الأول)
+  assert.equal(reportUrl.searchParams.get("area"), "1st-district");
+  assert.equal(reportUrl.searchParams.get("size"), "180");
+  assert.equal(reportUrl.searchParams.get("type"), "sale");
+  assert.equal(reportUrl.searchParams.get("pt"), "apartment");
+  assert.doesNotMatch(report, /عايز نكمل مع بعض/);
   assert.doesNotMatch(inlineScript, /function\s+localEstimate\s*\(/);
   assert.doesNotMatch(inlineScript, /function\s+loadMarket\s*\(/);
 });
