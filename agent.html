@@ -216,7 +216,7 @@ const TAREK_WA     = "201147758857";
 const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
-const FORM_VERSION = "v83";
+const FORM_VERSION = "v87";
 
 const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/></svg>`;
 
@@ -230,6 +230,7 @@ let state = {
   whatsappUrl: null,
   valuationCta: null,
   valuationResult: null,
+  _valuationSent: false,
 };
 let isSending = false;
 
@@ -264,8 +265,8 @@ function loadState() {
     if (v && v !== FORM_VERSION) { sessionStorage.removeItem(STORAGE_KEY); return; }
     state = { ...state, ...s };
     state.pendingImages = [];
+    state._valuationSent = !!s._valuationSent;
     state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
-    // امسح نتيجة التقييم إذا مر عليها أكثر من 24 ساعة
     if (state.valuationResult?.savedAt) {
       const age = Date.now() - state.valuationResult.savedAt;
       if (age > 24 * 60 * 60 * 1000) state.valuationResult = null;
@@ -296,10 +297,8 @@ function checkReturnFromValuation() {
   const params = new URLSearchParams(location.search);
   if (params.get("return") !== "valuation") return false;
 
-  // 1) اقرأ نتيجة التقييم من الرابط
   const valuation = parseValuationFromUrl();
 
-  // 2) استرجع الجلسة السابقة من sessionStorage
   try {
     const saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null");
     if (saved) {
@@ -307,19 +306,19 @@ function checkReturnFromValuation() {
       if (age < 24 * 60 * 60 * 1000 && saved.state) {
         state = { ...state, ...saved.state };
         state.pendingImages = [];
+        state._valuationSent = false;
         state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
       }
       sessionStorage.removeItem(RETURN_KEY);
     }
   } catch {}
 
-  // 3) خزّن نتيجة التقييم في state
   if (valuation) {
     state.valuationResult = valuation;
+    state._valuationSent = false;
     saveState();
   }
 
-  // 4) امسح الـ params من الرابط
   const clean = new URL(window.location.href);
   clean.searchParams.delete("return");
   clean.searchParams.delete("estimate");
@@ -344,6 +343,7 @@ function saveReturnContext() {
         whatsappUrl: state.whatsappUrl,
         valuationCta: state.valuationCta,
         valuationResult: state.valuationResult,
+        _valuationSent: state._valuationSent,
       },
       savedAt: Date.now()
     }));
@@ -661,6 +661,9 @@ async function sendMsg() {
   setTyping(true);
   toggleTypingBubble(true);
 
+  // ⭐ نبعث valuationResult مرة واحدة بس بعد الرجوع
+  const shouldSendValuation = state.valuationResult && !state._valuationSent;
+
   try {
     const payload = {
       message: txt,
@@ -668,7 +671,7 @@ async function sendMsg() {
       history: state.history.slice(-20),
       imageUrls: imgUrls,
       gps: sessionGps || undefined,
-      valuationResult: state.valuationResult || null,
+      valuationResult: shouldSendValuation ? state.valuationResult : null,
     };
 
     const r = await fetch(WORKER_URL, {
@@ -694,6 +697,11 @@ async function sendMsg() {
     if (reply) {
       renderMsg(reply, "bot");
       state.history.push({ role: "assistant", message: reply });
+    }
+
+    // ⭐ علّم إن التقييم اتبعت (بس بعد رد ناجح)
+    if (shouldSendValuation) {
+      state._valuationSent = true;
     }
 
     if (data.formState) state.formState = data.formState;
@@ -821,6 +829,7 @@ function resetChat() {
     history: [], imageUrls: [], pendingImages: [],
     waMessage: null, whatsappUrl: null,
     valuationCta: null, valuationResult: null,
+    _valuationSent: false,
   };
   saveState();
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
@@ -839,6 +848,7 @@ function deleteChat() {
     history: [], imageUrls: [], pendingImages: [],
     waMessage: null, whatsappUrl: null,
     valuationCta: null, valuationResult: null,
+    _valuationSent: false,
   };
   chatArea.querySelectorAll(".msg, .btns-rack").forEach(el => el.remove());
   hideWA();
