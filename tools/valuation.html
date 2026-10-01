@@ -212,7 +212,6 @@
     .similar-details { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; color: #aaa; font-size: 0.72rem; }
     .similar-price { color: var(--gold); font-size: 0.84rem; font-weight: 900; margin-top: 7px; overflow-wrap: anywhere; }
 
-    /* ═══ زر الرجوع للوكيل (يظهر لما العميل يكون جاي من agent) ═══ */
     .back-to-agent-btn {
       display: none;
       width: 100%;
@@ -473,7 +472,6 @@
       <div class="disclaimer" id="disclaimer"></div>
       <div class="src-note" id="srcNote"></div>
 
-      <!-- ═══ زر الرجوع للوكيل — يظهر لما العميل يكون جاي من agent.html ═══ -->
       <a class="back-to-agent-btn" id="backToAgentBtn" href="/agent.html">
         <i class="fas fa-arrow-right"></i> الرجوع للوكيل لإكمال التسجيل
       </a>
@@ -510,7 +508,9 @@
 </div>
 
 <script>
-/* ═══ أداة التقييم — سمسار طلبك v6.1 ═══ */
+/* ═══ أداة التقييم — سمسار طلبك v7.0 ═══
+   ═══ التحديثات: دعم "مدينة نصر (ككل)" + مصدرين (source_id=8 + source_id=9) ═══
+*/
 const WORKER_API_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/api';
 const WORKER_AREAS_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/areas';
 const AREA_METADATA_URL = '/assets/data/market-data.json';
@@ -518,11 +518,12 @@ const TAREK_WA = '201147758857';
 const AI_FEED_URL = '/ai-feed.json';
 
 /* ═══ النطاق الثابت: مدينة نصر ═══
-   - «مدينة نصر» تُعرض كنطاق ثابت في الواجهة، ولا تظهر كخيار في قائمة المناطق.
-   - الاختيار الفعلي للمستخدم هو المنطقة الفرعية داخل مدينة نصر.
-   - الاسم الفرعي هو ما يُرسل إلى Worker الذي يربطه بـ area_id المناسب في price_snapshots.
+   - «مدينة نصر» تُعرض كنطاق أب ثابت في الواجهة.
+   - خيار "مدينة نصر (ككل)" يمثل area_id=1 في price_snapshots.
+   - باقي الخيارات مناطق فرعية (area_id=14-31).
 */
 const PARENT_SCOPE = 'مدينة نصر';
+const WHOLE_CITY_OPTION = 'مدينة نصر (ككل)';
 
 let AREAS = [];
 let AREA_METADATA = [];
@@ -549,9 +550,15 @@ function isParentScope(value) {
   return normalizeMatchText(value).replace(/\s+/g, '') === normalizeMatchText(PARENT_SCOPE).replace(/\s+/g, '');
 }
 
+/* ═══ فحص هل هو خيار "مدينة نصر ككل" ═══ */
+function isWholeCityOption(value) {
+  return normalizeMatchText(value).replace(/\s+/g, '') === normalizeMatchText(WHOLE_CITY_OPTION).replace(/\s+/g, '');
+}
+
 /* ═══ خريطة المناطق: عربي ↔ إنجليزي احترافي ═══ */
 const AREA_SLUG_MAP = {
   'مدينة نصر': 'nasr-city',
+  'مدينة نصر (ككل)': 'nasr-city-whole',
   'المنطقة الأولى': '1st-district',
   'المنطقة الثانية': '2nd-district',
   'المنطقة الثالثة': '3rd-district',
@@ -644,6 +651,7 @@ function areaAliasKey(value) {
 function findAvailableArea(value) {
   if (!value) return null;
   if (isParentScope(value)) return null;
+  if (isWholeCityOption(value)) return WHOLE_CITY_OPTION;
   const wanted = normalizeMatchText(value).replace(/\s+/g, '');
   if (!wanted) return null;
   const exact = AREAS.find(name => normalizeMatchText(name).replace(/\s+/g, '') === wanted);
@@ -686,13 +694,20 @@ async function loadAreas() {
     const response = await fetch(WORKER_AREAS_URL, { headers: { Accept: 'application/json' } });
     const data = await response.json();
     if (!response.ok || !Array.isArray(data.available_areas)) throw new Error('تعذر تحميل مناطق السوق');
-    /* نبقي كل المناطق القادمة من الـ Worker في الذاكرة، ثم نستبعد «مدينة نصر» من قائمة العرض فقط.
-       هكذا لا تتأثر آليات المطابقة/الأسماء المستعارة، ولا تُحذف أي منطقة من قاعدة البيانات. */
     const allAreas = data.available_areas.filter(name => typeof name === 'string' && name.trim());
     const parentKey = normalizeMatchText(PARENT_SCOPE).replace(/\s+/g, '');
     AREAS = allAreas;
     const select = $('area');
     select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
+
+    /* ═══ إضافة خيار "مدينة نصر (ككل)" أولاً ═══ */
+    const wholeOpt = document.createElement('option');
+    wholeOpt.value = WHOLE_CITY_OPTION;
+    wholeOpt.textContent = WHOLE_CITY_OPTION;
+    wholeOpt.style.fontWeight = '700';
+    select.appendChild(wholeOpt);
+
+    /* ═══ ثم المناطق الفرعية ═══ */
     allAreas
       .filter(name => normalizeMatchText(name).replace(/\s+/g, '') !== parentKey)
       .forEach(name => {
@@ -772,8 +787,6 @@ function extractFromMessage(raw) {
     setVal('askingPrice', fmt(Math.round(price)), '💰 ' + fmt(Math.round(price)) + ' ج');
   }
 
-  /* استخراج المنطقة الفرعية فقط. إذا كانت الرسالة تذكر   /* استخراج المنطقة الفرعية فقط. إذا كانت الرسالة تذكر «مدينة نصر» وحدها
-     بدون منطقة فرعية، لا نخمّن — يترك الحقل فارغًا لاختيار المستخدم. */
   const areaName = findAreaMention(raw);
   if (areaName && !isParentScope(areaName)) {
     setVal('area', areaName, '📍 ' + areaName);
@@ -850,7 +863,7 @@ async function runValuation() {
   const asking = parseFloat(askingRaw) || 0;
 
   if (!payload.area) { showError('⚠️ اختر المنطقة داخل مدينة نصر أولاً'); return; }
-  if (isParentScope(payload.area)) { showError('⚠️ اختر المنطقة الفرعية داخل مدينة نصر (وليست مدينة نصر نفسها)'); return; }
+  if (isParentScope(payload.area)) { showError('⚠️ اختر المنطقة الفرعية داخل مدينة نصر (أو "مدينة نصر ككل")'); return; }
   if (!payload.size || payload.size < 20) { showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)'); return; }
 
   lastInputs = { ...payload, asking };
@@ -996,7 +1009,6 @@ function showResult(data, inputs, asking) {
     : data.price_basis === 'avg_price_m2' ? 'المتوسط (avg_price_m2)' : '';
   $('srcNote').textContent = `✓ المصدر: بيانات السوق المجمعة price_snapshots${source !== 'price_snapshots' ? ` — ${source}` : ''}${priceBasisLabel ? ` | الأساس: ${priceBasisLabel}` : ''}`;
 
-  // ═══ زر "الرجوع للوكيل" — يظهر لما العميل جاي من agent ═══
   updateBackToAgentButton(data, inputs);
 
   $('result').classList.add('show');
@@ -1005,7 +1017,6 @@ function showResult(data, inputs, asking) {
   $('result').scrollIntoView({ behavior: 'smooth' });
 }
 
-/* ═══ زر الرجوع للوكيل — بيضيف نتيجة التقييم في الرابط ═══ */
 function updateBackToAgentButton(data, inputs) {
   const btn = $('backToAgentBtn');
   if (!btn) return;
@@ -1043,7 +1054,6 @@ function updateBackToAgentButton(data, inputs) {
   btn.classList.add('show');
 }
 
-/* ═══ توليد رابط إنجليزي احترافي للمشاركة ═══ */
 function buildShareUrl(inputs = lastInputs) {
   if (!inputs || !inputs.area || !inputs.size) return '';
   const params = new URLSearchParams();
@@ -1256,7 +1266,7 @@ async function loadSimilarProperties(inputs, areaName) {
     const cards = matches.map(makeSimilarCard).filter(Boolean);
     cards.forEach(card => grid.appendChild(card));
     if (cards.length) {
-            status.textContent = 'الأقرب لمساحة ' + fmt(inputs.size) + ' م² في ' + areaName + '.';
+      status.textContent = 'الأقرب لمساحة ' + fmt(inputs.size) + ' م² في ' + areaName + '.';
     } else {
       status.textContent = 'لا توجد وحدات منشورة حاليًا في المنطقة نفسها.';
     }
