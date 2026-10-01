@@ -275,7 +275,6 @@ function loadState() {
 }
 
 // ═══ RETURN FROM VALUATION ═══
-/* ═══ الإصلاح 2: تحقق صارم + استقبال areaType + p25/p75/basis ═══ */
 function parseValuationFromUrl() {
   const params = new URLSearchParams(location.search);
   if (params.get("return") !== "valuation") return null;
@@ -283,7 +282,6 @@ function parseValuationFromUrl() {
   const estimate = Number(params.get("estimate"));
   if (!Number.isFinite(estimate) || estimate <= 0) return null;
 
-  /* تحقق صارم من confidence */
   const rawConfidence = String(params.get("confidence") || "").toLowerCase();
   const confidence = ["high", "medium", "low"].includes(rawConfidence)
     ? rawConfidence
@@ -294,7 +292,6 @@ function parseValuationFromUrl() {
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
 
-  /* areaType قد يأتي من النسخ الحديثة */
   const rawAreaType = String(params.get("areaType") || params.get("type") || "").toLowerCase();
   const areaType = rawAreaType === "rent" || rawAreaType === "sale" ? rawAreaType : "";
 
@@ -342,7 +339,6 @@ function checkReturnFromValuation() {
     saveState();
   }
 
-  /* ═══ الإصلاح 5: تنظيف شامل لكل params التقييم ═══ */
   const clean = new URL(window.location.href);
   [
     "return", "estimate", "confidence", "samples", "perMeter",
@@ -372,7 +368,6 @@ function saveReturnContext() {
   } catch {}
 }
 
-/* ═══ الإصلاح 3: شريط عودة موسّع مع P25/P75 + تمييز الإيجار ═══ */
 function renderReturnBanner(valuation) {
   const fmtN = n => Number(n || 0).toLocaleString('en-US');
   const banner = document.createElement("div");
@@ -542,7 +537,6 @@ function updateSendIcon() {
 }
 
 // ═══ MESSAGE RENDERING ═══
-/* ═══ الإصلاح 4: تحصين src للصور ═══ */
 function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
   div.className = `msg msg-${type}`;
@@ -585,7 +579,11 @@ function renderButtons(opts) {
   scrollToBottom();
 }
 
-/* ═══ الإصلاح 1: روابط نظيفة قصيرة بكلمات لاتينية كاملة ═══ */
+/* ═══ ═══════════════════════════════════════════════════════
+   الإصلاح الحاسم: buildValuationHref
+   - لو الاسم/النوع له slug في الخريطة → نستخدمه
+   - لو لأ (عنوان كامل من إدخال المستخدم) → نمرر النص كما هو
+   ═══════════════════════════════════════════════════════════ */
 const AREA_SLUG_MAP = {
   'المنطقة الأولى': '1st-district',
   'المنطقة الثانية': '2nd-district',
@@ -647,46 +645,50 @@ function buildValuationHref(context) {
   params.set("from", "agent");
   params.set("journey", context.intent === "seller" ? "seller" : "valuation");
 
-  const area = typeof context.area === "string" ? context.area.trim().slice(0, 80) : "";
+  const area = typeof context.area === "string" ? context.area.trim().slice(0, 100) : "";
   const size = Number(context.size);
   const propertyType = context.propertyType || "";
   const areaType = context.areaType === "rent" || context.areaType === "sale" ? context.areaType : null;
 
-  /* منطقة — slug لاتيني */
-  if (area && AREA_SLUG_MAP[area]) {
-    params.set("area", AREA_SLUG_MAP[area]);
+  /* ═══ منطقة: استخدم slug إن وُجد، وإلا مرر العنوان كما هو ═══ */
+  if (area) {
+    const slug = AREA_SLUG_MAP[area];
+    params.set("area", slug || area);
   }
 
-  /* مساحة */
+  /* ═══ مساحة ═══ */
   if (Number.isFinite(size) && size >= 20 && size <= 100000) {
     params.set("size", String(Math.round(size)));
   }
 
-  /* نوع العقار — slug لاتيني */
-  if (propertyType && PROPERTY_TYPE_SLUG_MAP[propertyType]) {
-    params.set("type", PROPERTY_TYPE_SLUG_MAP[propertyType]);
+  /* ═══ نوع العقار: استخدم slug إن وُجد، وإلا مرر العربي كما هو ═══ */
+  if (propertyType) {
+    const slug = PROPERTY_TYPE_SLUG_MAP[propertyType];
+    params.set("type", slug || propertyType);
   }
 
-  /* نوع العملية — deal */
+  /* ═══ نوع العملية ═══ */
   if (areaType) params.set("deal", areaType);
 
-  /* تأثيث — فقط عند الإيجار بقيمة صريحة (لا unknown) */
+  /* ═══ تأثيث — فقط عند الإيجار بقيمة صريحة ═══ */
   if (areaType === "rent" &&
       (context.rentCondition === "furnished" || context.rentCondition === "unfurnished")) {
     params.set("furnished", context.rentCondition === "furnished" ? "yes" : "no");
   }
 
-  /* تشطيب — يُحذف الافتراضي (سوبر لوكس) */
-  if (context.finishing && FINISH_SLUG_MAP[context.finishing] && context.finishing !== "سوبر لوكس") {
-    params.set("finish", FINISH_SLUG_MAP[context.finishing]);
+  /* ═══ تشطيب — slug فقط (لأن القيم عربية ثابتة من الـWorker) ═══ */
+  if (context.finishing && context.finishing !== "سوبر لوكس") {
+    const slug = FINISH_SLUG_MAP[context.finishing];
+    if (slug) params.set("finish", slug);
   }
 
-  /* دور — يُحذف الافتراضي (أرضي) */
-  if (context.floor && context.floor !== "أرضي" && FLOOR_SLUG_MAP[context.floor]) {
-    params.set("floor", FLOOR_SLUG_MAP[context.floor]);
+  /* ═══ دور — slug فقط ═══ */
+  if (context.floor && context.floor !== "أرضي") {
+    const slug = FLOOR_SLUG_MAP[context.floor];
+    if (slug) params.set("floor", slug);
   }
 
-  /* عمر — يُحذف الافتراضي (medium) */
+  /* ═══ عمر — يُحذف الافتراضي (medium) ═══ */
   if (context.age && context.age !== "medium" && ["new", "old"].includes(context.age)) {
     params.set("age", context.age);
   }
