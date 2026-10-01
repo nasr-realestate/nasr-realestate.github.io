@@ -264,7 +264,7 @@
     <div class="card">
       <div class="card-title"><i class="fab fa-whatsapp"></i> الصق رسالة الواتساب</div>
       <div class="card-sub">انسخ أي رسالة عقارية والصقها هنا — هنستخرج المنطقة والمساحة والسعر والتشطيب تلقائيًا</div>
-      <textarea id="msg" rows="4" placeholder="مثال: شقة للبيع في المنطقة السادسة 170 متر، سوبر لوكس، الدور الثالث، 6,200,000 جنيه..."></textarea>
+      <textarea id="msg" rows="4" placeholder="مثال: شقة للبيع في عباس العقاد 170 متر، سوبر لوكس، الدور الثالث، 6,200,000 جنيه..."></textarea>
       <div class="extracted" id="extracted"></div>
     </div>
 
@@ -493,13 +493,12 @@
 </div>
 
 <script>
-/* ═══ أداة التقييم — سمسار طلبك v7.2 ═══
-   ═══ التحديثات:
-     • توافق كامل مع Cloudflare Worker (d1-price-snapshots-v2)
-     • Worker هو مصدر الحقيقة الوحيد للتقييم.
-     • روابط نظيفة قصيرة بكلمات لاتينية كاملة.
-     • الأداة هدية مستقلة: لا تطلب اسم/رقم، طارق اختياري.
-     • رابط المشاركة لا يحمل أي أثر لسياق الوكيل.
+/* ═══ أداة التقييم — سمسار طلبك v7.3 ═══
+   ═══ التحديثات عن v7.2:
+     • findAvailableArea: استخراج اسم المنطقة الرسمي من النص الكامل
+       (يحل مشكلة "إبراهيم نوارة المنطقة السادسة" → "المنطقة السادسة")
+     • prefillFromUrl: يجرب النص الأصلي عند فشل الـslug
+     • رسائل خطأ تفصيلية من Worker عند الفشل
 */
 const WORKER_API_URL  = 'https://noisy-bush-fd84.footcai-555.workers.dev/api';
 const WORKER_AREAS_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/areas';
@@ -511,7 +510,6 @@ const TRACE_KEY = 'simsar_valuation_last_v1';
 const PARENT_SCOPE = 'مدينة نصر';
 const WHOLE_CITY_OPTION = 'مدينة نصر (ككل)';
 
-/* ═══ ترتيب أولوية عرض المناطق في الواجهة فقط ═══ */
 const AREA_PRIORITY_ORDER = [
   'المنطقة السادسة',
   'المنطقة الثامنة',
@@ -560,7 +558,6 @@ function areaPriorityIndex(name) {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
-/* ═══ خرائط slugs — لاتينية كاملة واضحة ═══ */
 const AREA_SLUG_MAP = {
   'مدينة نصر': 'nasr-city',
   'مدينة نصر (ككل)': 'nasr-city-whole',
@@ -644,31 +641,54 @@ function areaAliasKey(value) {
   );
   return group ? normalizeMatchText(group[0]).replace(/\s+/g, '') : key;
 }
-function findAvailableArea(value) {
-  if (!value) return null;
-  if (isParentScope(value)) return null;
-  if (isWholeCityOption(value)) return WHOLE_CITY_OPTION;
-  const wanted = normalizeMatchText(value).replace(/\s+/g, '');
-  if (!wanted) return null;
-  const exact = AREAS.find(name => normalizeMatchText(name).replace(/\s+/g, '') === wanted);
-  if (exact) return exact;
-  return AREAS.find(name => areaAliasKey(name) === areaAliasKey(value)) || null;
-}
+
+/* ═══ استخراج ذكر المنطقة من نص ═══ */
 function findAreaMention(text) {
+  if (!text) return null;
   const haystack = ' ' + normalizeMatchText(text) + ' ';
-  const candidates = [...AREAS].filter(n => !isParentScope(n))
+  const candidates = [...AREAS]
+    .filter(name => !isParentScope(name) && !isWholeCityOption(name))
     .sort((a, b) => normalizeMatchText(b).length - normalizeMatchText(a).length);
   for (const name of candidates) {
     const needle = ' ' + normalizeMatchText(name) + ' ';
     if (needle.trim() && haystack.includes(needle)) return name;
   }
   for (const group of AREA_ALIAS_GROUPS) {
-    const alias = group.find(name => (' ' + normalizeMatchText(text) + ' ').includes(' ' + normalizeMatchText(name) + ' '));
+    const alias = group.find(name =>
+      (' ' + normalizeMatchText(text) + ' ').includes(' ' + normalizeMatchText(name) + ' ')
+    );
     if (alias) {
-      const resolved = AREAS.find(n => areaAliasKey(n) === areaAliasKey(alias)) || null;
+      const resolved = AREAS.find(name => areaAliasKey(name) === areaAliasKey(alias)) || null;
       if (resolved && !isParentScope(resolved)) return resolved;
     }
   }
+  return null;
+}
+
+/* ═══ ⭐ الإصلاح الجذري: استخراج المنطقة من النص الكامل ═══
+   1) تطابق دقيق
+   2) تطابق aliases
+   3) استخراج من نص كامل (مثل "ابراهيم نواره المنطقه السادسه")
+*/
+function findAvailableArea(value) {
+  if (!value) return null;
+  if (isParentScope(value)) return null;
+  if (isWholeCityOption(value)) return WHOLE_CITY_OPTION;
+  const wanted = normalizeMatchText(value).replace(/\s+/g, '');
+  if (!wanted) return null;
+
+  /* 1) تطابق دقيق */
+  const exact = AREAS.find(name => normalizeMatchText(name).replace(/\s+/g, '') === wanted);
+  if (exact) return exact;
+
+  /* 2) تطابق aliases */
+  const aliasMatch = AREAS.find(name => areaAliasKey(name) === areaAliasKey(value));
+  if (aliasMatch) return aliasMatch;
+
+  /* 3) ⭐ استخراج اسم منطقة من نص كامل */
+  const mentioned = findAreaMention(value);
+  if (mentioned && !isParentScope(mentioned)) return mentioned;
+
   return null;
 }
 
@@ -837,6 +857,24 @@ async function runValuation() {
   const error = $('error-box');
   error.style.display = 'none';
 
+  /* ═══ ⭐ التحقق الصارم: تأكد أن القيمة المُختارة منطقة رسمية ═══ */
+  const rawArea = $('area').value;
+  if (!rawArea) { showError('⚠️ اختر المنطقة داخل مدينة نصر أولاً'); return; }
+
+  /* استخرج اسم المنطقة الرسمي حتى لو احتوى على نص إضافي */
+  const officialArea = findAvailableArea(rawArea);
+  if (!officialArea) {
+    showError(`⚠️ المنطقة "${rawArea}" غير معروفة في قائمة السوق. اختر من القائمة.`);
+    return;
+  }
+  if (isParentScope(officialArea)) {
+    showError('⚠️ اختر المنطقة الفرعية داخل مدينة نصر (أو "مدينة نصر ككل")');
+    return;
+  }
+
+  /* ⭐ اضبط القائمة على الاسم الرسمي */
+  if ($('area').value !== officialArea) $('area').value = officialArea;
+
   const selectedCondition = $('furnished').value;
   const effectiveCondition =
     selectedCondition === 'furnished' || selectedCondition === 'unfurnished'
@@ -844,7 +882,7 @@ async function runValuation() {
       : null;
 
   const payload = {
-    area: $('area').value,
+    area: officialArea,           /* ⭐ الاسم الرسمي فقط */
     areaType: $('areaType').value,
     propertyType: $('propertyType').value,
     size: parseFloat(toEn($('size').value)),
@@ -857,8 +895,6 @@ async function runValuation() {
   const askingRaw = toEn($('askingPrice').value).replace(/,/g, '').replace(/[^\d.]/g, '');
   const asking = parseFloat(askingRaw) || 0;
 
-  if (!payload.area) { showError('⚠️ اختر المنطقة داخل مدينة نصر أولاً'); return; }
-  if (isParentScope(payload.area)) { showError('⚠️ اختر المنطقة الفرعية داخل مدينة نصر (أو "مدينة نصر ككل")'); return; }
   if (!payload.size || payload.size < 20) { showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)'); return; }
 
   lastInputs = { ...payload, asking };
@@ -875,16 +911,19 @@ async function runValuation() {
   }, 900);
 
   let data = null;
+  let httpStatus = 0;
   try {
     const response = await fetch(WORKER_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    httpStatus = response.status;
     data = await response.json();
     if (!response.ok || data.error) {
       const e = new Error(data.error || 'تعذر إتمام التقييم');
-      e.apiMessage = data.error || '';
+      e.apiMessage = data.error || `⚠️ العامل رفض الطلب (HTTP ${httpStatus})`;
+      e.code = data.code || '';
       throw e;
     }
     if (!isD1ValuationResponse(data)) {
@@ -896,7 +935,18 @@ async function runValuation() {
     console.warn('Valuation Worker unavailable:', err);
     setStep(1);
     $('inputSection').style.display = 'block';
-    showError(err.apiMessage || '⚠️ تعذر الحصول على مؤشر من بيانات السوق حاليًا. حاول مرة أخرى بعد قليل.');
+    /* ⭐ رسالة أدق حسب code الـWorker */
+    let userMsg = err.apiMessage;
+    if (err.code === 'AREA_NOT_FOUND') {
+      userMsg = `⚠️ المنطقة "${officialArea}" غير مسجلة في بيانات السوق الحالية.\nجرّب منطقة أخرى أو تواصل معنا.`;
+    } else if (err.code === 'MARKET_UNAVAILABLE') {
+      userMsg = `⚠️ لا توجد لقطة سوقية مطابقة لـ"${officialArea}" + "${payload.propertyType}" + "${payload.areaType === 'rent' ? 'إيجار' : 'بيع'}" حاليًا.\n\nجرّب منطقة أخرى، أو نوع عقار آخر، أو عملية مختلفة.`;
+    } else if (err.code === 'UNSUPPORTED_PROPERTY_TYPE') {
+      userMsg = `⚠️ نوع العقار "${payload.propertyType}" غير مدعوم حاليًا في بيانات السوق.`;
+    } else if (!userMsg) {
+      userMsg = '⚠️ تعذر الحصول على مؤشر من بيانات السوق حاليًا. حاول مرة أخرى بعد قليل.';
+    }
+    showError(userMsg);
     return;
   } finally {
     clearInterval(loadTimer);
@@ -1320,8 +1370,9 @@ function prefillFromUrl() {
   fromAgent = params.get('from') === 'agent' || params.get('journey') === 'seller';
 
   const areaParam = params.get('area') || '';
+  /* ⭐ جرب العربي عبر الـslug، وإذا فشل جرب النص الأصلي مباشرة */
   const areaArabic = REVERSE_AREA_MAP[areaParam] || areaParam;
-  const area = findAvailableArea(areaArabic);
+  const area = findAvailableArea(areaArabic) || findAvailableArea(areaParam);
 
   const sizeParam = params.get('size');
   const size = Number.parseFloat(toEn(sizeParam || '').replace(/,/g, ''));
