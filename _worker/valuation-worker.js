@@ -25,9 +25,20 @@
 //   5) جميع المصادر تدخل في نفس نظام التقييم.
 //   6) أسعار البيانات الحالية هي أسعار طلب، وليست أسعار إتمام.
 //   7) لا يتم اختراع قيمة عند عدم وجود Snapshot مناسب.
+//      الاستثناء الوحيد (معلن وصريح): لو المنطقة الفرعية ليس لها Snapshot صالحة
+//      نستخدم Snapshot «مدينة نصر (ككل)» الحقيقية ونعلّم الرد fallback_used:true
+//      مع requested_area وfallback_reason — لا أرقام مخترعة ولا استبدال لنوع العقار.
+//
+// تحديثات v6.1 (العقد d1-price-snapshots-v2 كما هو — إضافات وإصلاحات فقط):
+//   • normalizeRentCondition: «غير مفروش / unfurnished» لم تعد تُقرأ «مفروش».
+//   • حالة التأثيث null / undefined / "" / unknown / غير محدد = بدون شرط تأثيث
+//     (بدل رفض الطلب بـ INVALID_RENT_CONDITION).
+//   • منطقة فرعية بلا Snapshot صالحة → fallback إلى area_id=1 مع fallback_used:true.
+//   • MARKET_UNAVAILABLE يرجع available_areas.
+//   • الإيجار بلا حالة تأثيث يفضّل Snapshot «الكل» على مفروش/غير مفروش.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v6.0";
+const WORKER_VERSION = "v6.1";
 const API_CONTRACT = "d1-price-snapshots-v2";
 const SERVICE_NAME = "nasr-valuation";
 
@@ -247,6 +258,33 @@ function normalizeTransaction(value) {
   return null;
 }
 
+// «مش عارف / غير محدد» = المستخدم لم يحدد حالة التأثيث.
+// دي مش قيمة غلط: تُعامل زي null (بدون شرط تأثيث) بدل رفض الطلب.
+const UNSPECIFIED_RENT_CONDITION_KEYS = new Set([
+  "unknown",
+  "unspecified",
+  "undefined",
+  "null",
+  "none",
+  "na",
+  "غيرمحدد",
+  "غيرمعروف",
+  "مشمحدد",
+  "لايهم",
+]);
+
+function isUnspecifiedRentCondition(value) {
+  if (value === null || value === undefined) return true;
+
+  // الأنواع الأخرى (boolean / رقم / مصفوفة / كائن) يحكم عليها
+  // normalizeRentCondition كما كان — لا نوسّع القبول لها.
+  if (typeof value !== "string") return false;
+
+  const key = keyArabic(value);
+
+  return !key || UNSPECIFIED_RENT_CONDITION_KEYS.has(key);
+}
+
 function normalizeRentCondition(value) {
   if (value === true) return "furnished";
   if (value === false) return "unfurnished";
@@ -255,22 +293,26 @@ function normalizeRentCondition(value) {
 
   if (!key) return null;
 
-  if (
-    key.includes("furnished") ||
-    key.includes("مفروش") ||
-    key === "furnished"
-  ) {
-    return "furnished";
-  }
+  if (UNSPECIFIED_RENT_CONDITION_KEYS.has(key)) return null;
 
+  // v6.1: «غير المفروش» لازم يتفحص قبل «المفروش».
+  // "unfurnished" بتحتوي على "furnished" و"غيرمفروش" بتحتوي على "مفروش"،
+  // فالترتيب القديم كان يقرأ «غير مفروش» على إنه «مفروش» ويرجّع أرقام المفروش.
   if (
     key.includes("unfurnished") ||
     key.includes("غيرمفروش") ||
-    key.includes("غير مفروش") ||
+    key.includes("بدونفرش") ||
     key.includes("فاضي") ||
     key.includes("فارغ")
   ) {
     return "unfurnished";
+  }
+
+  if (
+    key.includes("furnished") ||
+    key.includes("مفروش")
+  ) {
+    return "furnished";
   }
 
   if (
@@ -679,8 +721,18 @@ function snapshotPriceVerified(row) {
 // Snapshot matching
 // ═══════════════════════════════════════════════════════════════════════════
 
-function conditionRank(snapshotConditionValue, requestedCondition) {
+function conditionRank(
+  snapshotConditionValue,
+  requestedCondition,
+  preferAll = false
+) {
   if (!requestedCondition) {
+    // v6.1: إيجار بدون حالة تأثيث → لقطة «الكل» أصدق من لقطة مفروش أو غير مفروش.
+    // البيع يفضل ترتيبه القديم كما هو (preferAll=false).
+    if (preferAll) {
+      return snapshotConditionValue === "all" ? 0 : 1;
+    }
+
     return snapshotConditionValue === "all" ? 1 : 0;
   }
 
@@ -703,11 +755,16 @@ function sourceRank(sourceId) {
   return 50;
 }
 
-function snapshotSelectionScore(row, requestedCondition) {
+function snapshotSelectionScore(
+  row,
+  requestedCondition,
+  preferAll = false
+) {
   const condition = snapshotCondition(row);
   const conditionScore = conditionRank(
     condition,
-    requestedCondition
+    requestedCondition,
+    preferAll
   );
 
   if (conditionScore >= 99) {
@@ -764,10 +821,11 @@ function compareScores(a, b) {
 // Market snapshot
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function getMarketSnapshot(db, query = {}) {
+async function selectMarketSnapshot(db, query = {}, cache = {}) {
   try {
-    const areas = await loadAreas(db);
-    const snapshots = await loadSnapshots(db);
+    // v6.1: `cache` يشاركه المرور الأول والـ fallback، فلا تتكرر قراءات D1.
+    const areas = (cache.areas ??= await loadAreas(db));
+    const snapshots = (cache.snapshots ??= await loadSnapshots(db));
 
     const areaResult = findArea(
       areas,
@@ -781,6 +839,19 @@ async function getMarketSnapshot(db, query = {}) {
         available_areas: listAreaNames(areas),
       };
     }
+
+    // v6.1: فشل «لا توجد لقطة صالحة» يرجع مع المنطقة المطلوبة وقائمة المناطق:
+    //   • getMarketSnapshot تستخدمها لتجربة «مدينة نصر (ككل)» (fallback).
+    //   • رد MARKET_UNAVAILABLE النهائي يحمل available_areas.
+    const unavailable = detail => ({
+      ok: false,
+      reason: "market_unavailable",
+      detail,
+      requested_area: areaResult.name,
+      requested_area_id: areaResult.id,
+      whole_city: areaResult.wholeCity === true,
+      available_areas: listAreaNames(areas),
+    });
 
     const propertyType =
       normalizePropertyType(query.propertyType);
@@ -842,10 +913,7 @@ async function getMarketSnapshot(db, query = {}) {
     });
 
     if (!matches.length) {
-      return {
-        ok: false,
-        reason: "market_unavailable",
-      };
+      return unavailable("no_snapshot");
     }
 
     const scored = matches
@@ -853,7 +921,8 @@ async function getMarketSnapshot(db, query = {}) {
         row,
         score: snapshotSelectionScore(
           row,
-          requestedCondition
+          requestedCondition,
+          transaction === "rent"
         ),
       }))
       .filter(item => item.score !== null)
@@ -862,10 +931,7 @@ async function getMarketSnapshot(db, query = {}) {
       );
 
     if (!scored.length) {
-      return {
-        ok: false,
-        reason: "market_unavailable",
-      };
+      return unavailable("no_snapshot");
     }
 
     const selected = scored[0].row;
@@ -906,10 +972,7 @@ async function getMarketSnapshot(db, query = {}) {
       median === null ||
       median <= 0
     ) {
-      return {
-        ok: false,
-        reason: "market_unavailable",
-      };
+      return unavailable("invalid_snapshot");
     }
 
     if (
@@ -918,10 +981,7 @@ async function getMarketSnapshot(db, query = {}) {
       p25 <= 0 ||
       p75 <= 0
     ) {
-      return {
-        ok: false,
-        reason: "market_unavailable",
-      };
+      return unavailable("invalid_snapshot");
     }
 
     const sampleCount =
@@ -1026,6 +1086,58 @@ async function getMarketSnapshot(db, query = {}) {
       ),
     };
   }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// v6.1 Fallback: منطقة فرعية بلا لقطة سوق صالحة → «مدينة نصر (ككل)» (area_id=1)
+//
+//   • لا يحدث إلا عند فشل market_unavailable لمنطقة فرعية معروفة
+//     (لا لقطة مطابقة، أو اللقطة بلا median / P25 / P75 صالحة).
+//   • النوع والعملية وحالة التأثيث تبقى كما طلبها المستخدم — لا نستبدل نوع العقار.
+//   • الرد يحمل fallback_used:true + requested_area + requested_area_id +
+//     fallback_reason، فالواجهة تعرض أن الرقم لمدينة نصر ككل وليس للمنطقة المختارة.
+//   • لو المدينة نفسها بلا لقطة صالحة يرجع الخطأ الأصلي (MARKET_UNAVAILABLE).
+//   • عطل قاعدة البيانات (internal_error) لا يُجرَّب له fallback.
+//   • الـ fallback يعيد استخدام نفس بيانات areas/price_snapshots المقروءة (قراءتان من D1 فقط).
+// ───────────────────────────────────────────────────────────────────────────
+
+async function getMarketSnapshot(db, query = {}) {
+  const cache = {};
+  const primary = await selectMarketSnapshot(db, query, cache);
+
+  if (
+    primary.ok ||
+    primary.reason !== "market_unavailable" ||
+    primary.internal_error ||
+    primary.whole_city !== false
+  ) {
+    return primary;
+  }
+
+  const city = await selectMarketSnapshot(
+    db,
+    {
+      ...query,
+      area: WHOLE_CITY_NAME,
+    },
+    cache
+  );
+
+  if (!city.ok) {
+    return primary;
+  }
+
+  return {
+    ...city,
+
+    fallback_used: true,
+    requested_area: primary.requested_area,
+    requested_area_id: primary.requested_area_id,
+    fallback_reason:
+      primary.detail === "invalid_snapshot"
+        ? "invalid_snapshot_for_area"
+        : "no_snapshot_for_area",
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1139,6 +1251,24 @@ function calculateValuation(snapshot, size) {
     area_scope:
       snapshot.area_scope,
 
+    // v6.1 (إضافة): هل الرقم من «مدينة نصر (ككل)» بدل المنطقة المطلوبة؟
+    // الحقول الثلاثة التالية تظهر فقط عند fallback_used:true.
+    fallback_used:
+      snapshot.fallback_used === true,
+
+    ...(snapshot.fallback_used === true
+      ? {
+          requested_area:
+            snapshot.requested_area,
+
+          requested_area_id:
+            snapshot.requested_area_id,
+
+          fallback_reason:
+            snapshot.fallback_reason,
+        }
+      : {}),
+
     property_type:
       snapshot.property_type,
 
@@ -1245,6 +1375,9 @@ function errorForSnapshot(result) {
           "MARKET_UNAVAILABLE",
         error:
           "لا توجد لقطة سوقية صالحة مطابقة للطلب حاليًا.",
+        // v6.1: كل ردود الخطأ المتعلقة بالمنطقة/السوق تحمل قائمة المناطق المتاحة.
+        available_areas:
+          result.available_areas || [],
       },
     };
   }
@@ -1256,6 +1389,8 @@ function errorForSnapshot(result) {
         "INSUFFICIENT_MARKET_DATA",
       error:
         "لا توجد بيانات سوقية كافية تطابق المنطقة ونوع العقار والعملية وحالة التأثيث عند انطباقها؛ لن نخمن رقمًا.",
+      available_areas:
+        result.available_areas || [],
     },
   };
 }
@@ -1316,9 +1451,12 @@ function parsePayload(payload) {
       payload?.size
     );
 
+  // v6.1: rentCondition فاضية / null / "unknown" / «غير محدد» = «لم يُحدَّد»،
+  // فنقرأ furnished (boolean) لو موجود، وإلا لا يوجد شرط تأثيث.
   const rentCondition =
-    payload?.rentCondition ??
-    payload?.furnished;
+    isUnspecifiedRentCondition(payload?.rentCondition)
+      ? payload?.furnished
+      : payload?.rentCondition;
 
   return {
     area,
@@ -1383,11 +1521,11 @@ function validatePayload(input) {
     };
   }
 
+  // v6.1: «غير محدد / unknown / null» مقبولة بصمت؛
+  // الرفض فقط لقيمة تأثيث غير معروفة فعلًا.
   if (
     input.areaType === "rent" &&
-    input.rentCondition !== undefined &&
-    input.rentCondition !== null &&
-    input.rentCondition !== ""
+    !isUnspecifiedRentCondition(input.rentCondition)
   ) {
     const condition =
       normalizeRentCondition(

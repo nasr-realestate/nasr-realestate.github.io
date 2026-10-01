@@ -11,6 +11,12 @@
 //  • تنقية نتيجة التقييم القادمة من agent.html (sanitizeValuation).
 //  • قسم تقييم منسّق في رسالة الواتساب (للمالك فقط، لو استخدم الهدية).
 //  • إزالة الروابط الطويلة من رسالة الواتساب (GPS بسطر مختصر).
+// ------------------------------------------------------------
+// v8.7.1 — توافق مع أداة التقييم (إضافات فقط، لا تغيير في الحوار ولا الـScoring):
+//  • sanitizeValuation: قبول p25/p75/priceBasis/areaType (الحقول القديمة كما هي).
+//  • عرض التقييم للعميل: نطاق المتر P25–P75 + المنطقة والمساحة (والإيجار «شهريًا»).
+//  • قسم التقييم في واتساب: نطاق P25–P75 + منطقة التقييم.
+//  • valuationCta: price/floor/finishing للتعبئة المسبقة في الأداة.
 // ============================================================
 
 // ═══ CONSTANTS ═══
@@ -226,32 +232,41 @@ function sanitizeValuation(v) {
   const samples = Number(v.samples);
   const perMeter = Number(v.perMeter);
   const size = Number(v.size);
+  // نطاق P25–P75 لسعر المتر: لازم القيمتين مع بعض وبترتيب صحيح، وإلا الاتنين صفر (مفيش نطاق يتخترع)
+  const p25 = Math.round(Number(v.p25));
+  const p75 = Math.round(Number(v.p75));
+  const rangeOk = Number.isFinite(p25) && Number.isFinite(p75) && p25 > 0 && p75 >= p25 && p75 <= 1e9;
   return {
     estimate: Math.round(estimate),
     confidence: ["high","medium","low"].includes(v.confidence) ? v.confidence : "unknown",
     samples: Number.isFinite(samples) && samples >= 0 ? Math.round(samples) : 0,
     perMeter: Number.isFinite(perMeter) && perMeter > 0 ? Math.round(perMeter) : 0,
+    p25: rangeOk ? p25 : 0,
+    p75: rangeOk ? p75 : 0,
+    priceBasis: ["median_price_m2","avg_price_m2"].includes(v.priceBasis) ? v.priceBasis : "",
     area: String(v.area || "").replace(/[\u0000-\u001F\u007F<>]/g, " ").trim().slice(0, 80),
     size: Number.isFinite(size) && size >= 20 && size <= 100000 ? size : 0,
+    areaType: v.areaType === "rent" || v.areaType === "sale" ? v.areaType : "",
     savedAt: Date.now(),
   };
 }
 
 // بناء رابط أداة التقييم مع بيانات العقار مملوءة مسبقًا
+// نفس عقد agent.html: area,size,type(=نوع العقار),deal(=بيع/إيجار),furnished — والأداة بتقبل المفاتيح القديمة برضه
 function buildValuationUrl(data, type) {
   const params = new URLSearchParams();
   params.set("from", "agent");
   params.set("journey", "seller");
 
-  if (hasVal(data.propertyType)) params.set("propertyType", data.propertyType);
-  if (hasVal(data.location))     params.set("area", String(data.location).slice(0, 80));
-  if (hasVal(data.area))         params.set("size", String(parseNum(data.area)));
-  params.set("type", type === "rent" ? "rent" : "sale");
-  if (type === "rent" && hasVal(data.furnished)) {
-    const cond = data.furnished === "مفروش" ? "furnished"
-               : data.furnished === "فاضي (قانون جديد)" ? "unfurnished"
-               : "unknown";
-    params.set("rentCondition", cond);
+  if (hasVal(data.location)) params.set("area", String(data.location).slice(0, 100));
+  const size = hasVal(data.area) ? parseNum(data.area) : 0;
+  if (size >= 20 && size <= 100000) params.set("size", String(Math.round(size)));
+  if (hasVal(data.propertyType)) params.set("type", String(data.propertyType));
+  const deal = type === "rent" ? "rent" : "sale";
+  params.set("deal", deal);
+  // التأثيث: للإيجار وبقيمة صريحة فقط (مفيش unknown)
+  if (deal === "rent" && (data.furnished === "مفروش" || data.furnished === "فاضي (قانون جديد)")) {
+    params.set("furnished", data.furnished === "مفروش" ? "yes" : "no");
   }
   return `${VALUATION_URL_BASE}?${params.toString()}`;
 }
@@ -264,17 +279,23 @@ function buildValuationAnnouncement(v) {
                   : v.confidence === "medium" ? "متوسطة"
                   : v.confidence === "low" ? "منخفضة"
                   : "غير محددة";
+  // الإيجار والأساس (وسيط/متوسط) بيظهروا بس لو الحقول الجديدة وصلت من الأداة
+  const isRent = v.areaType === "rent";
+  const perMonth = isRent ? " / شهريًا" : "";
+  const basisLabel = v.priceBasis === "median_price_m2" ? " (الوسيط)"
+                   : v.priceBasis === "avg_price_m2" ? " (المتوسط)" : "";
   const lines = [
     `تمام، شفت نتيجة التقييم 👌`,
     ``,
     `💎 *تقييم عقارك:*`,
     `┌───────────────────`,
-    `│ 💰 السعر: ${fmtN(v.estimate)} ج.م`,
+    `│ 💰 ${isRent ? "الإيجار" : "السعر"}: ${fmtN(v.estimate)} ج.م${perMonth}`,
   ];
-  if (v.perMeter > 0) lines.push(`│ 📏 سعر المتر: ${fmtN(v.perMeter)} ج.م`);
+  if (v.perMeter > 0) lines.push(`│ 📏 سعر المتر${basisLabel}: ${fmtN(v.perMeter)} ج.م${perMonth}`);
+  if (v.p25 > 0 && v.p75 > 0) lines.push(`│ 📊 نطاق المتر (P25–P75): ${fmtN(v.p25)} – ${fmtN(v.p75)} ج.م${perMonth}`);
   if (v.confidence)   lines.push(`│ 🎯 الثقة: ${confLabel}`);
   if (v.samples > 0)  lines.push(`│ 🧪 العينات: ${fmtN(v.samples)}`);
-  if (v.area)         lines.push(`│ 📍 المنطقة: ${v.area}`);
+  if (v.area)         lines.push(`│ 📍 المنطقة: ${v.area}${v.size > 0 ? ` • ${fmtN(v.size)} م²` : ""}`);
   lines.push(`└───────────────────`);
   lines.push(``, `ده مؤشر استرشادي من بيانات مدينة نصر.`, ``, `نكمّل التسجيل؟`);
   return lines.join("\n");
@@ -962,8 +983,10 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
     lines.push("", `💎 *التقييم السوقي (استرشادي):*`, `┌───────────────────`);
     lines.push(`│ 💰 السعر التقديري: ${fmtN(v.estimate)} ج.م`);
     if (v.perMeter > 0) lines.push(`│ 📏 سعر المتر: ${fmtN(v.perMeter)} ج.م`);
+    if (v.p25 > 0 && v.p75 > 0) lines.push(`│ 📊 نطاق المتر (P25–P75): ${fmtN(v.p25)} – ${fmtN(v.p75)} ج.م`);
     if (v.confidence)   lines.push(`│ 🎯 الثقة: ${confLabel}`);
     if (v.samples > 0)  lines.push(`│ 🧪 العينات: ${fmtN(v.samples)}`);
+    if (v.area)         lines.push(`│ 📍 منطقة التقييم: ${v.area}`);
     lines.push(`└───────────────────`);
   }
 
@@ -1251,6 +1274,10 @@ function askOwnerStep(steps, idx, fs, extra, lms) {
       rentCondition: data.furnished === "مفروش" ? "furnished"
                    : data.furnished === "فاضي (قانون جديد)" ? "unfurnished"
                    : null,
+      // حقول إضافية للتعبئة المسبقة في أداة التقييم (السعر للمقارنة بالمؤشر فقط — مش مدخل في التقييم)
+      price: hasVal(data.price) ? parseNum(data.price) : null,
+      floor: hasVal(data.floor) ? String(data.floor).slice(0, 40) : "",
+      finishing: hasVal(data.finishing) ? String(data.finishing).slice(0, 40) : "",
     };
     result.options = [BTN.SKIP, BTN.BACK, BTN.CANCEL];
   }
