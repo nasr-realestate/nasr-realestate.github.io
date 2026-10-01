@@ -455,8 +455,12 @@
           <div class="meta-value" id="marketPeriod">—</div>
         </div>
         <div class="meta-item full">
-          <div class="meta-label">نطاق سعر المتر المسجل</div>
+          <div class="meta-label">نطاق سعر المتر المسجل (P25 – P75)</div>
           <div class="meta-value" id="marketRange">—</div>
+        </div>
+        <div class="meta-item full">
+          <div class="meta-label">حدود العينة (Min – Max سعر المتر)</div>
+          <div class="meta-value" id="marketBounds">—</div>
         </div>
       </div>
 
@@ -508,8 +512,12 @@
 </div>
 
 <script>
-/* ═══ أداة التقييم — سمسار طلبك v7.0 ═══
-   ═══ التحديثات: دعم "مدينة نصر (ككل)" + مصدرين (source_id=8 + source_id=9) ═══
+/* ═══ أداة التقييم — سمسار طلبك v7.1 ═══
+   ═══ التحديثات:
+     • توافق كامل مع Cloudflare Worker الجديد (API contract: d1-price-snapshots-v2)
+     • قائمة المناطق تُبنى من Worker (كائنات أو نصوص) مع ترتيب أولوية العرض
+     • Worker هو مصدر الحقيقة الوحيد للتقييم (median / p25 / p75 / min / max / confidence / sample_count)
+     • لا توجد حسابات تقييم محلية داخل HTML.
 */
 const WORKER_API_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/api';
 const WORKER_AREAS_URL = 'https://noisy-bush-fd84.footcai-555.workers.dev/areas';
@@ -517,13 +525,18 @@ const AREA_METADATA_URL = '/assets/data/market-data.json';
 const TAREK_WA = '201147758857';
 const AI_FEED_URL = '/ai-feed.json';
 
-/* ═══ النطاق الثابت: مدينة نصر ═══
-   - «مدينة نصر» تُعرض كنطاق أب ثابت في الواجهة.
-   - خيار "مدينة نصر (ككل)" يمثل area_id=1 في price_snapshots.
-   - باقي الخيارات مناطق فرعية (area_id=14-31).
-*/
+/* ═══ النطاق الثابت: مدينة نصر ═══ */
 const PARENT_SCOPE = 'مدينة نصر';
 const WHOLE_CITY_OPTION = 'مدينة نصر (ككل)';
+
+/* ═══ ترتيب أولوية عرض المناطق في الواجهة فقط ═══
+   لا يغيّر ترتيب D1 ولا ترتيب نتائج Worker ولا source priority. */
+const AREA_PRIORITY_ORDER = [
+  'المنطقة السادسة',
+  'المنطقة الثامنة',
+  'المنطقة التاسعة',
+  'الحي العاشر',
+];
 
 let AREAS = [];
 let AREA_METADATA = [];
@@ -535,27 +548,43 @@ let fromAgent = false;
 
 const fmt = n => n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('en-US');
 const hasNumericValue = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
-const isD1ContractResponse = data => data?.api_contract === 'd1-price-snapshots-v1' && data?.source_table === 'price_snapshots';
-const isD1ValuationResponse = data => isD1ContractResponse(data)
+
+/* ═══ عقود Worker المدعومة ═══
+   Worker الجديد يعيد d1-price-snapshots-v2.
+   نُبقي v1 مدعومًا كأمان توافق خلفي فقط. */
+const SUPPORTED_API_CONTRACTS = ['d1-price-snapshots-v1', 'd1-price-snapshots-v2'];
+const isD1ContractResponse = data =>
+  SUPPORTED_API_CONTRACTS.includes(data?.api_contract)
+  && data?.source_table === 'price_snapshots';
+const isD1ValuationResponse = data =>
+  isD1ContractResponse(data)
   && ['avg_price_m2', 'median_price_m2'].includes(data?.price_basis)
-  && hasNumericValue(data?.price_per_meter) && Number(data.price_per_meter) > 0;
+  && hasNumericValue(data?.price_per_meter)
+  && Number(data.price_per_meter) > 0;
+
 const $ = id => document.getElementById(id);
 const AR_DIGITS = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
 const toEn = s => String(s || '').replace(/[٠-٩]/g, d => AR_DIGITS[d]);
 const normAr = s => toEn(s).replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ًٌٍَُِّْـ]/g, '');
 const normalizeMatchText = s => normAr(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
 
-/* ═══ فحص هل الاسم هو النطاق الأب (مدينة نصر) ═══ */
 function isParentScope(value) {
   return normalizeMatchText(value).replace(/\s+/g, '') === normalizeMatchText(PARENT_SCOPE).replace(/\s+/g, '');
 }
-
-/* ═══ فحص هل هو خيار "مدينة نصر ككل" ═══ */
 function isWholeCityOption(value) {
   return normalizeMatchText(value).replace(/\s+/g, '') === normalizeMatchText(WHOLE_CITY_OPTION).replace(/\s+/g, '');
 }
 
-/* ═══ خريطة المناطق: عربي ↔ إنجليزي احترافي ═══ */
+/* ═══ دالة ترتيب أولوية العرض ═══ */
+function areaPriorityIndex(name) {
+  const key = normalizeMatchText(name).replace(/\s+/g, '');
+  const index = AREA_PRIORITY_ORDER.findIndex(
+    item => normalizeMatchText(item).replace(/\s+/g, '') === key
+  );
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+/* ═══ خريطة المناطق: عربي ↔ إنجليزي احترافي (خرائط تحويل فقط، لا تُنشئ خيارات) ═══ */
 const AREA_SLUG_MAP = {
   'مدينة نصر': 'nasr-city',
   'مدينة نصر (ككل)': 'nasr-city-whole',
@@ -643,7 +672,9 @@ const AREA_ALIAS_GROUPS = [
 
 function areaAliasKey(value) {
   const key = normalizeMatchText(value).replace(/\s+/g, '');
-  const group = AREA_ALIAS_GROUPS.find(items => items.some(item => normalizeMatchText(item).replace(/\s+/g, '') === key));
+  const group = AREA_ALIAS_GROUPS.find(items =>
+    items.some(item => normalizeMatchText(item).replace(/\s+/g, '') === key)
+  );
   return group ? normalizeMatchText(group[0]).replace(/\s+/g, '') : key;
 }
 
@@ -660,7 +691,7 @@ function findAvailableArea(value) {
   return AREAS.find(name => areaAliasKey(name) === aliasKey) || null;
 }
 
-/* ═══ استخراج ذكر المنطقة من نص — تُستبعد «مدينة نصر» وحدها دون منطقة فرعية ═══ */
+/* ═══ استخراج ذكر المنطقة من نص ═══ */
 function findAreaMention(text) {
   const haystack = ' ' + normalizeMatchText(text) + ' ';
   const candidates = [...AREAS]
@@ -671,7 +702,9 @@ function findAreaMention(text) {
     if (needle.trim() && haystack.includes(needle)) return name;
   }
   for (const group of AREA_ALIAS_GROUPS) {
-    const alias = group.find(name => (' ' + normalizeMatchText(text) + ' ').includes(' ' + normalizeMatchText(name) + ' '));
+    const alias = group.find(name =>
+      (' ' + normalizeMatchText(text) + ' ').includes(' ' + normalizeMatchText(name) + ' ')
+    );
     if (alias) {
       const resolved = AREAS.find(name => areaAliasKey(name) === areaAliasKey(alias)) || null;
       if (resolved && !isParentScope(resolved)) return resolved;
@@ -689,33 +722,59 @@ function setStep(n) {
   });
 }
 
+/* ═══ قائمة المناطق: تُبنى من Worker، ثم تُرتَّب الأولوية في الواجهة فقط ═══ */
 async function loadAreas() {
   try {
     const response = await fetch(WORKER_AREAS_URL, { headers: { Accept: 'application/json' } });
     const data = await response.json();
-    if (!response.ok || !Array.isArray(data.available_areas)) throw new Error('تعذر تحميل مناطق السوق');
-    const allAreas = data.available_areas.filter(name => typeof name === 'string' && name.trim());
-    const parentKey = normalizeMatchText(PARENT_SCOPE).replace(/\s+/g, '');
+    if (!response.ok) throw new Error('تعذر تحميل مناطق السوق');
+
+    const rawList = Array.isArray(data.available_areas) ? data.available_areas : [];
+
+    /* Worker v2 يعيد كائنات {id, name, name_ar, name_en, scope}
+       ونسخة v1 كانت تعيد نصوصًا — ندعم الاثنين. */
+    const allAreas = rawList
+      .map(item => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object') {
+          const name = item.name || item.name_ar || item.area_name_ar || '';
+          return String(name).trim();
+        }
+        return '';
+      })
+      .filter(Boolean);
+
+    if (!allAreas.length) throw new Error('قائمة المناطق فارغة من Worker');
+
     AREAS = allAreas;
+    const parentKey = normalizeMatchText(PARENT_SCOPE).replace(/\s+/g, '');
     const select = $('area');
     select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
 
-    /* ═══ إضافة خيار "مدينة نصر (ككل)" أولاً ═══ */
+    /* 1) خيار «مدينة نصر (ككل)» أولاً (لا يعتمد على وجوده في Worker) */
     const wholeOpt = document.createElement('option');
     wholeOpt.value = WHOLE_CITY_OPTION;
     wholeOpt.textContent = WHOLE_CITY_OPTION;
     wholeOpt.style.fontWeight = '700';
     select.appendChild(wholeOpt);
 
-    /* ═══ ثم المناطق الفرعية ═══ */
-    allAreas
-      .filter(name => normalizeMatchText(name).replace(/\s+/g, '') !== parentKey)
-      .forEach(name => {
+    /* 2) استبعاد النطاق الأب وخيار ككل من القائمة الفرعية */
+    const subAreas = allAreas.filter(name => {
+      const key = normalizeMatchText(name).replace(/\s+/g, '');
+      return key !== parentKey && !isWholeCityOption(name);
+    });
+
+    /* 3) فرز مستقر: أولوية العرض أولاً، ثم ترتيب Worker الأصلي */
+    subAreas
+      .map((name, index) => ({ name, index, priority: areaPriorityIndex(name) }))
+      .sort((a, b) => (a.priority - b.priority) || (a.index - b.index))
+      .forEach(({ name }) => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
       });
+
     return true;
   } catch (error) {
     console.warn('تعذر تحميل المناطق من D1:', error);
@@ -948,10 +1007,20 @@ function showResult(data, inputs, asking) {
     : 'غير متاح';
   $('marketPeriod').textContent = data.period || (data.updated_at ? `آخر تحديث: ${data.updated_at}` : 'غير محددة في السجل');
 
+  /* ═══ نطاق سعر المتر P25 – P75 (النطاق الأساسي للسوق) ═══ */
   const perMeterRange = data.price_per_m2_range || {};
   $('marketRange').textContent = hasNumericValue(perMeterRange.low) && hasNumericValue(perMeterRange.high)
     ? `${fmt(perMeterRange.low)} – ${fmt(perMeterRange.high)} ج.م/م²`
     : 'نطاق سعر المتر غير مسجل';
+
+  /* ═══ حدود العينة Min/Max — من Worker حصريًا (ليست النطاق الأساسي للسوق) ═══ */
+  const bounds = data.market_bounds || {};
+  const boundsEl = $('marketBounds');
+  if (boundsEl) {
+    boundsEl.textContent = hasNumericValue(bounds.min_price_per_m2) && hasNumericValue(bounds.max_price_per_m2)
+      ? `${fmt(bounds.min_price_per_m2)} – ${fmt(bounds.max_price_per_m2)} ج.م/م²`
+      : 'حدود العينة غير مسجلة';
+  }
 
   const knownConfidence = ['high', 'medium', 'low'].includes(data.confidence) ? data.confidence : 'unknown';
   const confidence = $('confidence');
@@ -1004,10 +1073,17 @@ function showResult(data, inputs, asking) {
     $('areaCard').style.display = 'none';
   }
   $('disclaimer').textContent = data.disclaimer || 'مؤشر استرشادي من بيانات السوق المتاحة، وليس سعر إتمام مؤكدًا.';
+
+  /* ═══ شريط مصدر البيانات ═══ */
   const source = String(data.data_source || 'price_snapshots');
   const priceBasisLabel = data.price_basis === 'median_price_m2' ? 'الوسيط (median_price_m2)'
     : data.price_basis === 'avg_price_m2' ? 'المتوسط (avg_price_m2)' : '';
-  $('srcNote').textContent = `✓ المصدر: بيانات السوق المجمعة price_snapshots${source !== 'price_snapshots' ? ` — ${source}` : ''}${priceBasisLabel ? ` | الأساس: ${priceBasisLabel}` : ''}`;
+  let srcNote = `✓ المصدر: بيانات السوق المجمعة price_snapshots${source !== 'price_snapshots' ? ` — ${source}` : ''}${priceBasisLabel ? ` | الأساس: ${priceBasisLabel}` : ''}`;
+  const workerNotes = String(data.notes || data.snapshot_notes || '').trim();
+  if (workerNotes) {
+    srcNote += ` | ملاحظة: ${workerNotes}`;
+  }
+  $('srcNote').textContent = srcNote;
 
   updateBackToAgentButton(data, inputs);
 
@@ -1315,7 +1391,7 @@ function buildReport() {
     '💰 *' + (isRent ? 'الإيجار الاسترشادي' : 'السعر الاسترشادي') + ': ' + fmt(data.estimate) + ' ج.م*' + (isRent ? ' / شهريًا' : ''),
     '📊 النطاق: ' + rangeLabel,
     '📏 سعر المتر: ' + fmt(data.price_per_meter) + ' ج.م/م²',
-    '↕️ نطاق المتر: ' + meterRangeLabel,
+    '↕️ نطاق المتر (P25–P75): ' + meterRangeLabel,
     '📚 الأساس: ' + priceBasis,
     '🧪 العينات: ' + sampleCount,
     '🗓️ الفترة: ' + (data.period || (data.updated_at ? 'آخر تحديث ' + data.updated_at : 'غير محددة')),
