@@ -14,6 +14,36 @@ extra_head: |
   <meta property="og:image:height" content="630">
   <meta property="og:image:secure_url" content="https://nasr-realestate.github.io/assets/img/social-agent-wav2.png">
   <meta property="og:image:type" content="image/png">
+  <style>
+    /* ═══ قفل الواجهة على ارتفاع الشاشة ═══
+       html/body/#app ثابتين على 100dvh بدون تمرير، و.chat-area هي الوحيدة القابلة للتمرير.
+       القواعد دي بتتحمّل بعد style.css (نفس الـselectors) فبتكسب بالترتيب — style.css نفسه مش متعدّل. */
+    :root { color-scheme: only light; } /* تصميم الصفحة فاتح — نمنع وضع الجهاز من قلب الحقول/السكرول */
+    html.page-agent, body.page-agent {
+      height: 100vh; height: 100dvh;
+      max-height: 100vh; max-height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body.page-agent #app {
+      height: 100vh; height: 100dvh;
+      max-height: 100vh; max-height: 100dvh;
+      overflow: hidden;
+    }
+    body.page-agent .chat-area {
+      min-height: 0;
+      overflow-y: auto; overflow-x: hidden;
+      overscroll-behavior: contain;
+      scroll-behavior: auto; /* من غير smooth: كان بيتعارض مع السحب التلقائي ويعمل اهتزاز */
+    }
+    /* لوحة مفاتيح الموبايل: الـJS بيضيف .vv-keyboard ويضبط --vv-h/--vv-tf على الـvisual viewport */
+    html.vv-keyboard body.page-agent #app {
+      height: var(--vv-h); max-height: var(--vv-h);
+      transform: var(--vv-tf, none);
+    }
+    /* حقل الكتابة: لون النص والمؤشر ثابتين مهما كان وضع الجهاز (نفس ألوان التصميم الحالي) */
+    body.page-agent .input-field { color-scheme: only light; color: var(--text-primary); caret-color: var(--accent); }
+  </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
 ---
@@ -104,7 +134,7 @@ extra_scripts: |
 
   </div>
 
-  <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()" aria-label="للأسفل">
+  <button class="scroll-btn" id="scrollBtn" onclick="forceScrollToBottom()" aria-label="للأسفل">
     <i class="fas fa-arrow-down"></i>
   </button>
 </div>
@@ -233,6 +263,9 @@ let state = {
   _valuationSent: false,
 };
 let isSending = false;
+// جهاز لمس؟ — على اللمس ما بنفتحش الكيبورد تاني تلقائيًا بعد ضغطة زرار (كان بيعمل قفزة في الشاشة)
+const IS_TOUCH = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+let _quickSend = false; // الإرسال الجاي من زرار/خريطة، مش من الكتابة
 
 let sessionGps = null;
 let mapPicker  = null;
@@ -384,7 +417,8 @@ function renderReturnBanner(valuation) {
 
     let lines = '';
     lines += '💎 رجعت من التقييم<br>';
-    const loc = valuation.area || '—';
+    // area جاية من الرابط (مدخل غير موثوق) وداخلة في innerHTML — لازم تعقيم
+    const loc = escapeHtml(valuation.area || '—');
     const szPart = valuation.size ? ' • ' + fmtN(valuation.size) + ' م²' : '';
     lines += `📍 ${loc}${szPart}<br>`;
     lines += `💰 <strong>${fmtN(valuation.estimate)} ج.م${unitSuffix}</strong><br>`;
@@ -409,7 +443,7 @@ function renderReturnBanner(valuation) {
   }
 
   chatArea.insertBefore(banner, typingBubble);
-  scrollToBottom();
+  forceScrollToBottom(); // الرجوع من التقييم: ننزل لبانر النتيجة دايمًا
 }
 
 // ═══ DOM REFS ═══
@@ -515,9 +549,28 @@ function escapeAttr(text) {
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    // الرابط بيقف عند أول علامة اقتباس — عشان ما يقدرش يطلّع نفسه برّه خاصية href
+    .replace(/(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 }
-function scrollToBottom() { requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; }); }
+
+// ═══ SCROLL ═══
+// scrollToBottom(): ذكي — بينزّل لآخر المحادثة بس لو القارئ قريب منها (أقل من 80px).
+//   لو القارئ طالع بيقرا فوق ما بنحرّكوش، وبنظهر زر «للأسفل» بس.
+// forceScrollToBottom(): صريح — لزر «للأسفل»، ولرسالة المستخدم نفسه، ولأول تحميل/رجوع من التقييم.
+const NEAR_BOTTOM_PX = 80;
+let stickToBottom = true; // آخر وضع معروف للقارئ — بيتحدّث من حدث scroll قبل ما المحتوى يتغيّر
+function distanceFromBottom() { return chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight; }
+function scrollToBottom() {
+  if (!stickToBottom) { scrollBtn.classList.add("show"); return; }
+  forceScrollToBottom();
+}
+function forceScrollToBottom() {
+  stickToBottom = true;
+  requestAnimationFrame(() => {
+    chatArea.scrollTop = chatArea.scrollHeight;
+    scrollBtn.classList.remove("show");
+  });
+}
 function setTyping(on, customText) {
   if (on) { statusText.textContent = customText || "يكتب..."; statusLine.classList.add("typing"); }
   else { statusText.textContent = "متصل الآن"; statusLine.classList.remove("typing"); }
@@ -555,7 +608,8 @@ function renderMsg(text, type = "bot", images) {
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
   div.innerHTML = html;
   chatArea.insertBefore(div, typingBubble);
-  scrollToBottom();
+  // رسالة المستخدم نفسه دايمًا تظهر؛ ردود البوت بتنزّل بس لو القارئ قريب من الآخر
+  if (type === "user") forceScrollToBottom(); else scrollToBottom();
 }
 
 function renderButtons(opts) {
@@ -571,7 +625,7 @@ function renderButtons(opts) {
     btn.onclick = () => {
       if (isSending) return;
       wrap.querySelectorAll(".btn-glass").forEach(b => { b.style.pointerEvents = "none"; b.style.opacity = "0.5"; });
-      msgInput.value = o; updateSendIcon(); sendMsg();
+      msgInput.value = o; updateSendIcon(); _quickSend = true; sendMsg();
     };
     wrap.appendChild(btn);
   });
@@ -639,6 +693,8 @@ const FLOOR_SLUG_MAP = {
   'رابع': '4',
   'خامس+': '5plus',
 };
+// أدوار الوكيل اللي بتتحوّل لـ«خامس+» في الأداة («أخير» و«بدروم» مش بتتبعت لأن معناها مش واضح)
+const FLOORS_5PLUS = ['خامس', 'سادس', 'سابع', 'ثامن', 'تاسع', 'عاشر'];
 
 function buildValuationHref(context) {
   const params = new URLSearchParams();
@@ -682,11 +738,16 @@ function buildValuationHref(context) {
     if (slug) params.set("finish", slug);
   }
 
-  /* ═══ دور — slug فقط ═══ */
-  if (context.floor && context.floor !== "أرضي") {
-    const slug = FLOOR_SLUG_MAP[context.floor];
+  /* ═══ دور — slug فقط (خامس..عاشر في الوكيل = «خامس+» في الأداة) ═══ */
+  const floorLabel = FLOORS_5PLUS.includes(context.floor) ? "خامس+" : context.floor;
+  if (floorLabel && floorLabel !== "أرضي") {
+    const slug = FLOOR_SLUG_MAP[floorLabel];
     if (slug) params.set("floor", slug);
   }
+
+  /* ═══ السعر المطلوب (اختياري) — للمقارنة بالمؤشر فقط، مش مدخل في التقييم ═══ */
+  const price = Number(context.price);
+  if (Number.isFinite(price) && price > 0 && price <= 1e12) params.set("price", String(Math.round(price)));
 
   /* ═══ عمر — يُحذف الافتراضي (medium) ═══ */
   if (context.age && context.age !== "medium" && ["new", "old"].includes(context.age)) {
@@ -771,6 +832,7 @@ async function uploadPendingImages() {
 
 // ═══ SEND MESSAGE ═══
 async function sendMsg() {
+  const quick = _quickSend; _quickSend = false; // الإرسال جه من زرار/خريطة مش من الكتابة؟
   if (isSending) return;
   const txt = msgInput.value.trim();
   const hasImgs = state.pendingImages.length > 0;
@@ -869,7 +931,8 @@ async function sendMsg() {
   } finally {
     isSending = false;
     sendBtn.disabled = false;
-    msgInput.focus();
+    // على اللمس ما نفتحش الكيبورد تاني بعد ضغطة زرار (كان بيزقّ الشاشة)؛ الكتابة العادية بتفضل زي ما هي
+    if (!(IS_TOUCH && quick)) msgInput.focus({ preventScroll: true });
   }
 }
 
@@ -897,6 +960,7 @@ function openMapPicker(required) {
       unlockInput();
       msgInput.value = sel.address;
       updateSendIcon();
+      _quickSend = true;
       sendMsg();
     },
     onManual: () => {
@@ -995,10 +1059,45 @@ function deleteChat() {
 }
 
 // ═══ SCROLL BTN ═══
+// بيحدّث «وضع القارئ» (قريب من آخر المحادثة ولا لأ) وبيظهر/يخفي زر «للأسفل» على أساسه
 chatArea.addEventListener("scroll", () => {
-  const atBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
-  scrollBtn.classList.toggle("show", !atBottom);
-});
+  stickToBottom = distanceFromBottom() < NEAR_BOTTOM_PX;
+  scrollBtn.classList.toggle("show", !stickToBottom);
+}, { passive: true });
+
+// ═══ لوحة مفاتيح الموبايل ═══
+// الواجهة مقفولة على ارتفاع الشاشة (CSS في أول الصفحة). لما الكيبورد يفتح نظبّط ارتفاع #app على
+// الـvisual viewport (ونمشي مع أي pan بيعمله المتصفح) فيفضل الهيدر والـdock في مكانهم والشات هو اللي بيتحرك.
+// أي فرق أقل من 80px (شريط العنوان/التولبار) مش بيتعامل معاه كأنه كيبورد، ولو المستخدم عامل pinch-zoom
+// ما بنتدخلش خالص. لو القارئ كان على آخر المحادثة بنفضّله هناك بعد التغيير.
+(function bindViewportLock() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const root = document.documentElement;
+  let raf = 0;
+
+  function apply() {
+    raf = 0;
+    const hidden = Math.round(window.innerHeight - vv.height); // الجزء المغطّى (الكيبورد غالبًا)
+    const active = !(vv.scale > 1.01) && hidden >= 80;
+    if (active) {
+      root.style.setProperty("--vv-h", Math.round(vv.height) + "px");
+      root.style.setProperty("--vv-tf", vv.offsetTop > 0 ? `translateY(${Math.round(vv.offsetTop)}px)` : "none");
+      root.classList.add("vv-keyboard");
+      if (window.scrollY) window.scrollTo(0, 0);
+    } else {
+      root.classList.remove("vv-keyboard");
+      root.style.removeProperty("--vv-h");
+      root.style.removeProperty("--vv-tf");
+    }
+    if (stickToBottom) forceScrollToBottom();
+  }
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
+
+  vv.addEventListener("resize", schedule);
+  vv.addEventListener("scroll", schedule);
+  msgInput.addEventListener("blur", () => setTimeout(schedule, 150)); // iOS مش دايمًا بيبعت resize عند قفل الكيبورد
+})();
 
 // ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
@@ -1006,6 +1105,7 @@ msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftK
 
 // ═══ INIT ═══
 function startConversation() {
+  stickToBottom = true; // محادثة جديدة: نتابع آخرها
   renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — سمسار مدينة نصر.\n\n🏆 Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
@@ -1046,8 +1146,9 @@ if (state.history && state.history.length) {
   }
 }
 
+forceScrollToBottom(); // أول تحميل: نبدأ من آخر المحادثة (التمرير الذكي لوحده ممكن يسيبنا فوق بعد رسم التاريخ)
 updateSendIcon();
-msgInput.focus();
+if (!IS_TOUCH) msgInput.focus({ preventScroll: true }); // على اللمس ما نفتحش الكيبورد من نفسنا
 
 if (!hasSeenPrivacy()) {
   setTimeout(() => showPrivacy(), 400);
@@ -1137,6 +1238,7 @@ window.sendMsg           = sendMsg;
 window.onFilesSelected   = onFilesSelected;
 window.removeImg         = removeImg;
 window.scrollToBottom    = scrollToBottom;
+window.forceScrollToBottom = forceScrollToBottom;
 window.resetChat         = resetChat;
 window.deleteChat        = deleteChat;
 window.goBack            = goBack;

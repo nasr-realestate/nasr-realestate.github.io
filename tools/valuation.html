@@ -14,6 +14,7 @@
 
   <style>
     :root {
+      color-scheme: dark; /* الصفحة سوداء بتصميمها — يمنع وضع الجهاز الفاتح من تسريب ألوان فاتحة للقوائم والحقول والسكرول */
       --gold: #d4af37; --gold-dark: #b38f1d;
       --bg: #050505; --card: #141414; --input: #1a1a1a;
       --border: #333; --text: #fff; --muted: #b0b0b0; --dim: #666;
@@ -92,6 +93,15 @@
     textarea, input, select { width: 100%; background: var(--input); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: #fff; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
     textarea { resize: vertical; line-height: 1.8; }
     textarea:focus, input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.12); }
+    /* ألوان الحقول والقوائم مفروضة (نفس ألوان التصميم الحالي) مهما كان وضع الجهاز */
+    textarea, input, select { color-scheme: dark; caret-color: var(--gold); }
+    textarea::placeholder, input::placeholder { color: #757575; opacity: 1; }
+    select option, select optgroup { background-color: var(--input); color: #fff; }
+    textarea:-webkit-autofill, input:-webkit-autofill, select:-webkit-autofill {
+      -webkit-text-fill-color: #fff; caret-color: #fff;
+      box-shadow: 0 0 0 1000px var(--input) inset;
+      transition: background-color 9999s ease-out 0s;
+    }
     select.auto-filled, input.auto-filled { border-color: rgba(37,211,102,0.5); }
     label.mini { display: block; color: #888; font-size: 0.75rem; margin-bottom: 5px; font-weight: 600; }
 
@@ -111,7 +121,7 @@
     .btn-analyze:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 26px rgba(212,175,55,0.4); }
     .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    .error-box { display: none; background: rgba(255,91,91,0.1); border: 1px solid rgba(255,91,91,0.4); color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600; }
+    .error-box { display: none; background: rgba(255,91,91,0.1); border: 1px solid rgba(255,91,91,0.4); color: #ff8a8a; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 10px; font-weight: 600; white-space: pre-line; }
 
     .loading { display: none; text-align: center; padding: 2.5rem 1rem; }
     .loading.show { display: block; animation: fadeIn 0.3s; }
@@ -143,6 +153,10 @@
     .low-confidence-warning { display: none; align-items: flex-start; gap: 10px; margin: 0 0 1rem; padding: 12px 14px; border: 1px solid rgba(255,91,91,0.75); border-radius: 12px; background: rgba(255,91,91,0.13); color: #ffd1d1; font-size: 0.9rem; font-weight: 800; line-height: 1.7; }
     .low-confidence-warning.show { display: flex; }
     .low-confidence-warning i { color: #ff8585; flex: 0 0 auto; margin-top: 4px; }
+    /* تنبيه الـfallback: المنطقة المختارة بلا لقطة مستقلة فالمؤشر مبني على مدينة نصر ككل (نفس شكل التحذير، بلون amber) */
+    .fallback-notice { display: none; align-items: flex-start; gap: 10px; margin: 0 0 1rem; padding: 12px 14px; border: 1px solid rgba(255,193,7,0.6); border-radius: 12px; background: rgba(255,193,7,0.1); color: #ffe39a; font-size: 0.88rem; font-weight: 700; line-height: 1.7; }
+    .fallback-notice.show { display: flex; }
+    .fallback-notice i { color: var(--amber); flex: 0 0 auto; margin-top: 4px; }
 
     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
     @media (max-width: 380px) { .meta-grid { grid-template-columns: 1fr; } }
@@ -394,13 +408,18 @@
         <span>العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.</span>
       </div>
 
+      <div class="fallback-notice" id="fallbackNotice" role="status" aria-live="polite" aria-hidden="true">
+        <i class="fas fa-circle-info" aria-hidden="true"></i>
+        <span id="fallbackNoticeText"></span>
+      </div>
+
       <div class="meta-grid">
         <div class="meta-item">
-          <div class="meta-label">النطاق السعري</div>
+          <div class="meta-label" id="rangeLabel">النطاق (P25 – P75)</div>
           <div class="meta-value numeric" id="range">—</div>
         </div>
         <div class="meta-item">
-          <div class="meta-label">سعر المتر</div>
+          <div class="meta-label" id="perMeterLabel">سعر المتر (الوسيط)</div>
           <div class="meta-value numeric" id="perMeter">—</div>
         </div>
         <div class="meta-item">
@@ -420,7 +439,7 @@
           <div class="meta-value" id="marketPeriod">—</div>
         </div>
         <div class="meta-item full">
-          <div class="meta-label">نطاق سعر المتر (P25 – P75)</div>
+          <div class="meta-label" id="marketRangeLabel">نطاق سعر المتر (P25 – P75)</div>
           <div class="meta-value" id="marketRange">—</div>
         </div>
         <div class="meta-item full">
@@ -493,7 +512,14 @@
 </div>
 
 <script>
-/* ═══ أداة التقييم — سمسار طلبك v7.3 ═══
+/* ═══ أداة التقييم — سمسار طلبك v7.4 ═══
+   ═══ التحديثات عن v7.3:
+     • rentCondition يُرسل للإيجار فقط وبقيمة صريحة (furnished/unfurnished) — لا unknown ولا null ولا في البيع
+     • رسائل أخطاء لكل code يرجّعه الـWorker + رمز الخطأ ظاهر + رسالة واضحة لو الـWorker مش متاح
+     • تنبيه الـfallback: لو الـWorker رجّع بيانات مدينة نصر ككل بدل المنطقة المختارة (fallback_used)
+     • تسميات النطاق حسب عقد الـWorker: v2 = P25–P75 هو الأساسي، v1 = Min–Max
+     • رابط المشاركة: لو المنطقة بلا slug بنمرر اسمها كما هو بدل ما نرفض
+     • color-scheme: dark وإجبار ألوان الحقول/القوائم (لا يتأثر بوضع الجهاز)
    ═══ التحديثات عن v7.2:
      • findAvailableArea: استخراج اسم المنطقة الرسمي من النص الكامل
        (يحل مشكلة "إبراهيم نوارة المنطقة السادسة" → "المنطقة السادسة")
@@ -537,6 +563,45 @@ const isD1ValuationResponse = data =>
   && ['avg_price_m2', 'median_price_m2'].includes(data?.price_basis)
   && hasNumericValue(data?.price_per_meter)
   && Number(data.price_per_meter) > 0;
+/* v2: range/price_per_m2_range = P25–P75، و market_bounds = Min/Max.  v1: range/price_per_m2_range = Min–Max. */
+const isV2Contract = data => data?.api_contract === 'd1-price-snapshots-v2';
+
+/* ═══ رسائل أخطاء الـWorker: code → رسالة مفهومة (الرمز نفسه بيظهر تحتها) ═══ */
+const MAX_SIZE_M2 = 100000;
+function workerErrorText(code, ctx = {}) {
+  const dealLabel = ctx.areaType === 'rent' ? 'إيجار' : 'بيع';
+  switch (code) {
+    case 'AREA_REQUIRED': return '⚠️ اختر المنطقة أولاً.';
+    case 'TRANSACTION_REQUIRED': return '⚠️ اختر نوع العملية (بيع أو إيجار).';
+    case 'PROPERTY_TYPE_REQUIRED': return '⚠️ اختر نوع العقار أولاً.';
+    case 'UNSUPPORTED_PROPERTY_TYPE': return `⚠️ نوع العقار "${ctx.propertyType || ''}" غير مدعوم حاليًا في بيانات السوق.`;
+    case 'INVALID_AREA_SIZE': return `⚠️ المساحة غير صالحة — لازم تكون بين 20 و${fmt(MAX_SIZE_M2)} م².`;
+    case 'INVALID_RENT_CONDITION': return '⚠️ حالة التأثيث غير مفهومة — اختر «مفروش» أو «غير مفروش» أو اتركها «غير محدد».';
+    case 'AREA_NOT_FOUND': return `⚠️ المنطقة "${ctx.area || ''}" غير مسجلة في بيانات السوق الحالية.\nجرّب منطقة أخرى من القائمة.`;
+    case 'MARKET_UNAVAILABLE':
+      return `⚠️ لا توجد لقطة سوقية مطابقة لـ"${ctx.area || ''}" + "${ctx.propertyType || ''}" + "${dealLabel}" حاليًا.\n\nجرّب منطقة أخرى، أو نوع عقار آخر، أو عملية مختلفة.`;
+    case 'INSUFFICIENT_MARKET_DATA': return '⚠️ لا توجد بيانات سوقية كافية لهذه الحالة؛ لم يتم إنشاء تقييم بديل.';
+    case 'REQUEST_TOO_LARGE': return '⚠️ حجم الطلب أكبر من المسموح — قصّر البيانات وحاول تاني.';
+    case 'INVALID_JSON':
+    case 'INVALID_PAYLOAD': return '⚠️ تعذر إرسال الطلب بشكل صحيح — حدّث الصفحة وحاول تاني.';
+    case 'METHOD_NOT_ALLOWED': return '⚠️ الخدمة رفضت نوع الطلب — حدّث الصفحة وحاول تاني.';
+    default: return '';
+  }
+}
+/* رسالة الفشل النهائية: نص مفهوم + رمز الـWorker (لو موجود) عشان يتبلّغ بسهولة */
+function workerFailureMessage(err, ctx = {}) {
+  const code = err && err.code ? String(err.code) : '';
+  let text = code ? workerErrorText(code, ctx) : '';
+  if (!text && err && err.apiMessage) text = err.apiMessage;
+  if (!text) {
+    text = err && err.noResponse
+      ? '⚠️ تعذر الاتصال بخدمة التقييم الآن — تأكد من الإنترنت وحاول بعد قليل.'
+      : err && err.badResponse
+        ? `⚠️ ردّت خدمة التقييم برد غير متوقع${ctx.httpStatus ? ` (HTTP ${ctx.httpStatus})` : ''} — حاول بعد قليل.`
+        : '⚠️ تعذر الحصول على مؤشر من بيانات السوق حاليًا. حاول مرة أخرى بعد قليل.';
+  }
+  return code ? `${text}\n(رمز الخطأ: ${code})` : text;
+}
 
 const $ = id => document.getElementById(id);
 const AR_DIGITS = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
@@ -875,27 +940,27 @@ async function runValuation() {
   /* ⭐ اضبط القائمة على الاسم الرسمي */
   if ($('area').value !== officialArea) $('area').value = officialArea;
 
+  const dealType = $('areaType').value;
   const selectedCondition = $('furnished').value;
-  const effectiveCondition =
-    selectedCondition === 'furnished' || selectedCondition === 'unfurnished'
-      ? selectedCondition
-      : null;
 
   const payload = {
     area: officialArea,           /* ⭐ الاسم الرسمي فقط */
-    areaType: $('areaType').value,
+    areaType: dealType,
     propertyType: $('propertyType').value,
     size: parseFloat(toEn($('size').value)),
-    rentCondition: $('areaType').value === 'rent' ? effectiveCondition : null,
-    furnished: selectedCondition === 'furnished' ? true : selectedCondition === 'unfurnished' ? false : null,
     finishing: $('finishing').value,
     floor: $('floor').value,
     age: $('age').value,
   };
+  /* rentCondition: للإيجار وبقيمة صريحة فقط — مفيش unknown ولا null، ومفيش حاجة في البيع */
+  if (dealType === 'rent' && (selectedCondition === 'furnished' || selectedCondition === 'unfurnished')) {
+    payload.rentCondition = selectedCondition;
+  }
   const askingRaw = toEn($('askingPrice').value).replace(/,/g, '').replace(/[^\d.]/g, '');
   const asking = parseFloat(askingRaw) || 0;
 
   if (!payload.size || payload.size < 20) { showError('⚠️ أدخل مساحة صحيحة (20 م² على الأقل)'); return; }
+  if (payload.size > MAX_SIZE_M2) { showError(`⚠️ المساحة كبيرة جدًا — الحد الأقصى ${fmt(MAX_SIZE_M2)} م².`); return; }
 
   lastInputs = { ...payload, asking };
   setStep(2);
@@ -919,7 +984,12 @@ async function runValuation() {
       body: JSON.stringify(payload),
     });
     httpStatus = response.status;
-    data = await response.json();
+    data = await response.json().catch(() => null);
+    if (!data || typeof data !== 'object') {
+      const e = new Error('Worker returned a non-JSON response');
+      e.badResponse = true;
+      throw e;
+    }
     if (!response.ok || data.error) {
       const e = new Error(data.error || 'تعذر إتمام التقييم');
       e.apiMessage = data.error || `⚠️ العامل رفض الطلب (HTTP ${httpStatus})`;
@@ -933,20 +1003,13 @@ async function runValuation() {
     }
   } catch (err) {
     console.warn('Valuation Worker unavailable:', err);
+    if (!httpStatus) err.noResponse = true; /* الطلب نفسه فشل (الـWorker واقف أو مفيش إنترنت) */
     setStep(1);
     $('inputSection').style.display = 'block';
-    /* ⭐ رسالة أدق حسب code الـWorker */
-    let userMsg = err.apiMessage;
-    if (err.code === 'AREA_NOT_FOUND') {
-      userMsg = `⚠️ المنطقة "${officialArea}" غير مسجلة في بيانات السوق الحالية.\nجرّب منطقة أخرى أو تواصل معنا.`;
-    } else if (err.code === 'MARKET_UNAVAILABLE') {
-      userMsg = `⚠️ لا توجد لقطة سوقية مطابقة لـ"${officialArea}" + "${payload.propertyType}" + "${payload.areaType === 'rent' ? 'إيجار' : 'بيع'}" حاليًا.\n\nجرّب منطقة أخرى، أو نوع عقار آخر، أو عملية مختلفة.`;
-    } else if (err.code === 'UNSUPPORTED_PROPERTY_TYPE') {
-      userMsg = `⚠️ نوع العقار "${payload.propertyType}" غير مدعوم حاليًا في بيانات السوق.`;
-    } else if (!userMsg) {
-      userMsg = '⚠️ تعذر الحصول على مؤشر من بيانات السوق حاليًا. حاول مرة أخرى بعد قليل.';
-    }
-    showError(userMsg);
+    /* ⭐ رسالة مفهومة حسب code الـWorker + رمز الخطأ ظاهر تحتها */
+    showError(workerFailureMessage(err, {
+      area: officialArea, propertyType: payload.propertyType, areaType: payload.areaType, httpStatus,
+    }));
     return;
   } finally {
     clearInterval(loadTimer);
@@ -980,11 +1043,29 @@ function showResult(data, inputs, asking) {
   $('estimateLabel').textContent = isRent ? 'الإيجار الاسترشادي' : 'السعر الاسترشادي';
   $('estimateUnit').textContent = isRent ? 'جنيه مصري / شهريًا' : 'جنيه مصري';
 
+  /* التسميات حسب عقد الـWorker: v2 = P25–P75 هو النطاق الأساسي، v1 = Min–Max */
+  const v2 = isV2Contract(data);
+  $('rangeLabel').textContent = v2 ? 'النطاق (P25 – P75)' : 'النطاق (Min – Max)';
+  $('marketRangeLabel').textContent = v2 ? 'نطاق سعر المتر (P25 – P75)' : 'نطاق سعر المتر (Min – Max)';
+  $('perMeterLabel').textContent = data.price_basis === 'median_price_m2' ? 'سعر المتر (الوسيط)' : 'سعر المتر (المتوسط)';
+
   const totalRange = data.range || {};
   $('range').textContent = hasNumericValue(totalRange.low) && hasNumericValue(totalRange.high)
     ? `${fmt(totalRange.low)} – ${fmt(totalRange.high)}` : 'النطاق غير متاح في السجل';
   $('perMeter').textContent = `${fmt(data.price_per_meter)} /م²`;
-  $('areaFound').textContent = data.area_found || inputs.area;
+
+  /* fallback: الـWorker ما لقاش لقطة للمنطقة المختارة فرجّع بيانات مدينة نصر ككل — لازم يتقال بوضوح */
+  const usedFallback = data.fallback_used === true;
+  const areaShown = data.area_found || inputs.area;
+  const requestedArea = String(data.requested_area || inputs.area || '');
+  $('areaFound').textContent = usedFallback && requestedArea && requestedArea !== areaShown
+    ? `${areaShown} — بديل عن «${requestedArea}»` : areaShown;
+  if (usedFallback) {
+    $('fallbackNoticeText').textContent =
+      `لا توجد لقطة سوقية مستقلة لـ«${requestedArea}» بهذا النوع والعملية — المؤشر مبني على بيانات «${areaShown}». استخدمه كإشارة عامة فقط.`;
+  }
+  $('fallbackNotice').classList.toggle('show', usedFallback);
+  $('fallbackNotice').setAttribute('aria-hidden', String(!usedFallback));
   const sampleCount = Number(data.sample_count);
   $('sampleCount').textContent = hasNumericValue(data.sample_count) && sampleCount >= 0 ? fmt(sampleCount) : 'غير متاح';
   $('marketPeriod').textContent = data.period || (data.updated_at ? `آخر تحديث: ${data.updated_at}` : 'غير محددة في السجل');
@@ -1046,6 +1127,13 @@ function showResult(data, inputs, asking) {
   const pbl = data.price_basis === 'median_price_m2' ? 'الوسيط (median_price_m2)'
     : data.price_basis === 'avg_price_m2' ? 'المتوسط (avg_price_m2)' : '';
   let srcNote = `✓ المصدر: بيانات السوق المجمعة price_snapshots${source !== 'price_snapshots' ? ` — ${source}` : ''}${pbl ? ` | الأساس: ${pbl}` : ''}`;
+  if (isRent) {
+    /* بنوضّح أي حالة تأثيث استخدمها الـWorker فعلًا في اللقطة */
+    const rcLabel = data.rent_condition === 'furnished' ? 'مفروش'
+      : data.rent_condition === 'unfurnished' ? 'غير مفروش'
+        : data.rent_condition === 'all' ? 'كل الحالات' : '';
+    if (rcLabel) srcNote += ` | التأثيث في اللقطة: ${rcLabel}`;
+  }
   const workerNotes = String(data.notes || data.snapshot_notes || '').trim();
   if (workerNotes) srcNote += ` | ملاحظة: ${workerNotes}`;
   $('srcNote').textContent = srcNote;
@@ -1081,11 +1169,16 @@ function updateBackToAgentButton(data, inputs) {
   if (data && hasNumericValue(data.price_per_meter)) params.set('perMeter', String(Math.round(Number(data.price_per_meter))));
   if (data) {
     const pr = data.price_per_m2_range || {};
-    if (hasNumericValue(pr.low)) params.set('p25', String(Math.round(Number(pr.low))));
-    if (hasNumericValue(pr.high)) params.set('p75', String(Math.round(Number(pr.high))));
+    /* p25/p75 هما P25–P75 فعلًا في عقد v2 فقط (في v1 النطاق ده Min–Max) */
+    if (isV2Contract(data)) {
+      if (hasNumericValue(pr.low)) params.set('p25', String(Math.round(Number(pr.low))));
+      if (hasNumericValue(pr.high)) params.set('p75', String(Math.round(Number(pr.high))));
+    }
     if (data.price_basis) params.set('basis', data.price_basis);
   }
-  if (inputs && inputs.area) params.set('area', inputs.area);
+  /* لو الأرقام جت من fallback (مدينة نصر ككل) بننسبها للمنطقة الفعلية، مش للمنطقة المختارة */
+  const areaForAgent = data && data.fallback_used === true && data.area_found ? data.area_found : (inputs && inputs.area);
+  if (areaForAgent) params.set('area', areaForAgent);
   if (inputs && inputs.size) params.set('size', String(inputs.size));
   if (inputs && (inputs.areaType === 'rent' || inputs.areaType === 'sale')) params.set('areaType', inputs.areaType);
 
@@ -1096,7 +1189,8 @@ function updateBackToAgentButton(data, inputs) {
 
 function buildShareUrl(inputs = lastInputs) {
   if (!inputs || !inputs.area || !inputs.size) return '';
-  const areaSlug = AREA_SLUG_MAP[inputs.area];
+  /* slug لو معروف، وإلا اسم المنطقة كما هو (prefillFromUrl بيقبل الاتنين) */
+  const areaSlug = AREA_SLUG_MAP[inputs.area] || String(inputs.area).trim().slice(0, 100);
   if (!areaSlug) return '';
 
   const params = new URLSearchParams();
@@ -1302,12 +1396,20 @@ function buildReport() {
     ? `${fmt(mr.low)} – ${fmt(mr.high)} ج.م/م²` : 'غير مسجل';
   const sc = hasNumericValue(d.sample_count) ? fmt(d.sample_count) : 'غير متاح';
   const pb = d.price_basis === 'median_price_m2' ? 'وسيط سعر المتر المسجل' : 'متوسط سعر المتر المسجل';
+  /* v2: النطاق الأساسي P25–P75 + حدود العينة Min–Max ؛ v1: النطاق Min–Max */
+  const v2 = isV2Contract(d);
+  const bd = d.market_bounds || {};
+  const bdLabel = hasNumericValue(bd.min_price_per_m2) && hasNumericValue(bd.max_price_per_m2)
+    ? `${fmt(bd.min_price_per_m2)} – ${fmt(bd.max_price_per_m2)} ج.م/م²` : '';
+  const usedFallback = d.fallback_used === true;
+  const areaShown = d.area_found || i.area;
+  const requestedArea = String(d.requested_area || i.area || '');
   const lines = [
     '💎 *مؤشر تقييم عقاري — سمسار طلبك*',
     '━━━━━━━━━━━━',
     '🗺️ النطاق: مدينة نصر',
     '🏷️ النوع: ' + typeLabel,
-    '📍 المنطقة: ' + (d.area_found || i.area),
+    '📍 المنطقة: ' + (usedFallback && requestedArea && requestedArea !== areaShown ? `${areaShown} — بديل عن «${requestedArea}»` : areaShown),
     '📐 المساحة: ' + fmt(i.size) + ' م²',
   ];
   if (i.finishing) lines.push('✨ التشطيب: ' + i.finishing);
@@ -1317,15 +1419,19 @@ function buildReport() {
   lines.push(
     '━━━━━━━━━━━━',
     '💰 *' + (isRent ? 'الإيجار الاسترشادي' : 'السعر الاسترشادي') + ': ' + fmt(d.estimate) + ' ج.م*' + (isRent ? ' / شهريًا' : ''),
-    '📊 النطاق: ' + rangeLabel,
-    '📏 سعر المتر: ' + fmt(d.price_per_meter) + ' ج.م/م²',
-    '↕️ نطاق المتر (P25–P75): ' + mrLabel,
+    (v2 ? '📊 النطاق الأساسي (P25–P75): ' : '📊 النطاق (Min–Max): ') + rangeLabel,
+    '📏 سعر المتر' + (d.price_basis === 'median_price_m2' ? ' (الوسيط)' : '') + ': ' + fmt(d.price_per_meter) + ' ج.م/م²',
+    (v2 ? '↕️ نطاق المتر (P25–P75): ' : '↕️ نطاق المتر (Min–Max): ') + mrLabel,
+  );
+  if (v2 && bdLabel) lines.push('↔️ حدود العينة (Min–Max): ' + bdLabel);
+  lines.push(
     '📚 الأساس: ' + pb,
     '🧪 العينات: ' + sc,
     '🗓️ الفترة: ' + (d.period || (d.updated_at ? 'آخر تحديث ' + d.updated_at : 'غير محددة')),
     '🎯 الثقة: ' + cLabel,
     '🔎 المصدر: price_snapshots'
   );
+  if (usedFallback) lines.push('⚠️ لا توجد لقطة مستقلة للمنطقة المختارة — المؤشر مبني على بيانات «' + areaShown + '».');
   const rUrl = buildShareUrl(i);
   if (rUrl) lines.push('🔗 الرابط: ' + rUrl);
   lines.push('━━━━━━━━━━━━', d.disclaimer || 'مؤشر استرشادي، وليس سعر إتمام مؤكدًا.');
