@@ -275,6 +275,7 @@ function loadState() {
 }
 
 // ═══ RETURN FROM VALUATION ═══
+/* ═══ الإصلاح 2: تحقق صارم + استقبال areaType + p25/p75/basis ═══ */
 function parseValuationFromUrl() {
   const params = new URLSearchParams(location.search);
   if (params.get("return") !== "valuation") return null;
@@ -282,13 +283,35 @@ function parseValuationFromUrl() {
   const estimate = Number(params.get("estimate"));
   if (!Number.isFinite(estimate) || estimate <= 0) return null;
 
+  /* تحقق صارم من confidence */
+  const rawConfidence = String(params.get("confidence") || "").toLowerCase();
+  const confidence = ["high", "medium", "low"].includes(rawConfidence)
+    ? rawConfidence
+    : "unknown";
+
+  const clampNonNegative = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  /* areaType قد يأتي من النسخ الحديثة */
+  const rawAreaType = String(params.get("areaType") || params.get("type") || "").toLowerCase();
+  const areaType = rawAreaType === "rent" || rawAreaType === "sale" ? rawAreaType : "";
+
+  const rawBasis = String(params.get("basis") || "");
+  const priceBasis = ["median_price_m2", "avg_price_m2"].includes(rawBasis) ? rawBasis : "";
+
   return {
-    estimate: estimate,
-    confidence: params.get("confidence") || "unknown",
-    samples: Number(params.get("samples")) || 0,
-    perMeter: Number(params.get("perMeter")) || 0,
-    area: params.get("area") || "",
-    size: Number(params.get("size")) || 0,
+    estimate: Math.round(estimate),
+    confidence,
+    samples: Math.round(clampNonNegative(params.get("samples"))),
+    perMeter: Math.round(clampNonNegative(params.get("perMeter"))),
+    p25: Math.round(clampNonNegative(params.get("p25"))),
+    p75: Math.round(clampNonNegative(params.get("p75"))),
+    priceBasis,
+    area: String(params.get("area") || "").slice(0, 100),
+    size: clampNonNegative(params.get("size")),
+    areaType,
     savedAt: Date.now(),
   };
 }
@@ -319,14 +342,13 @@ function checkReturnFromValuation() {
     saveState();
   }
 
+  /* ═══ الإصلاح 5: تنظيف شامل لكل params التقييم ═══ */
   const clean = new URL(window.location.href);
-  clean.searchParams.delete("return");
-  clean.searchParams.delete("estimate");
-  clean.searchParams.delete("confidence");
-  clean.searchParams.delete("samples");
-  clean.searchParams.delete("perMeter");
-  clean.searchParams.delete("area");
-  clean.searchParams.delete("size");
+  [
+    "return", "estimate", "confidence", "samples", "perMeter",
+    "p25", "p75", "basis",
+    "area", "size", "areaType", "type"
+  ].forEach(k => clean.searchParams.delete(k));
   window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
 
   return { returning: true, valuation };
@@ -350,6 +372,7 @@ function saveReturnContext() {
   } catch {}
 }
 
+/* ═══ الإصلاح 3: شريط عودة موسّع مع P25/P75 + تمييز الإيجار ═══ */
 function renderReturnBanner(valuation) {
   const fmtN = n => Number(n || 0).toLocaleString('en-US');
   const banner = document.createElement("div");
@@ -360,20 +383,32 @@ function renderReturnBanner(valuation) {
                     : valuation.confidence === 'medium' ? 'متوسطة'
                     : valuation.confidence === 'low' ? 'منخفضة'
                     : 'غير محددة';
-    let subline = `📊 التقييم المسجل: <strong>${fmtN(valuation.estimate)} ج.م</strong>`;
-    if (valuation.confidence) subline += ` — ثقة ${confLabel}`;
-    if (valuation.samples > 0) subline += ` (${valuation.samples} عينات)`;
+
+    const isRent = valuation.areaType === 'rent';
+    const unitSuffix = isRent ? ' / شهريًا' : '';
+
+    let lines = '';
+    lines += '💎 رجعت من التقييم<br>';
+    const loc = valuation.area || '—';
+    const szPart = valuation.size ? ' • ' + fmtN(valuation.size) + ' م²' : '';
+    lines += `📍 ${loc}${szPart}<br>`;
+    lines += `💰 <strong>${fmtN(valuation.estimate)} ج.م${unitSuffix}</strong><br>`;
+    if (valuation.p25 && valuation.p75) {
+      lines += `📊 النطاق (P25–P75): ${fmtN(valuation.p25)} – ${fmtN(valuation.p75)} ج.م/م²<br>`;
+    }
+    if (valuation.perMeter) {
+      lines += `📏 سعر المتر: ${fmtN(valuation.perMeter)} ج.م/م²<br>`;
+    }
+    lines += `🎯 الثقة: ${confLabel}`;
+    if (valuation.samples > 0) lines += ` (${valuation.samples} عينة)`;
 
     banner.innerHTML = `
-      <span class="msg-content">تمام، رجعت 👋<br>
-      فاكر إن شقتك اتقيمت؟<br>
-      ${subline}<br><br>
-      نكمّل من النقطة اللي وقفنا عندها؟</span>
+      <span class="msg-content">${lines}<br><br>نكمّل من النقطة اللي وقفنا عندها؟</span>
       <div class="msg-time">${getTime()}</div>
     `;
   } else {
     banner.innerHTML = `
-      <span class="msg-content">تمام، رجعت 👋<br>نكمّل من النقطة اللي وقفنا عندها؟</span>
+      <span class="msg-content">تمام، رجعت 👋<br>نكمّل من النقطة اللي وقفنا عليها؟</span>
       <div class="msg-time">${getTime()}</div>
     `;
   }
@@ -474,6 +509,14 @@ function showDeleteDialog() {
 // ═══ HELPERS ═══
 function getTime() { return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }); }
 function escapeHtml(text) { return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escapeAttr(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
@@ -499,6 +542,7 @@ function updateSendIcon() {
 }
 
 // ═══ MESSAGE RENDERING ═══
+/* ═══ الإصلاح 4: تحصين src للصور ═══ */
 function renderMsg(text, type = "bot", images) {
   const div = document.createElement("div");
   div.className = `msg msg-${type}`;
@@ -506,7 +550,11 @@ function renderMsg(text, type = "bot", images) {
   if (text && text.trim()) html += `<span class="msg-content">${formatMsg(text)}</span>`;
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
-    images.forEach(src => { html += `<img src="${src}" loading="lazy" decoding="async" alt="صورة" onclick="window.open('${src}','_blank')">`; });
+    images.forEach(src => {
+      const safe = escapeAttr(src);
+      if (!safe) return;
+      html += `<img src="${safe}" loading="lazy" decoding="async" alt="صورة" onclick="window.open(this.src,'_blank')">`;
+    });
     html += `</div>`;
   }
   const ticks = type === "user" ? `<span class="msg-ticks">${TICKS_SVG}</span>` : "";
@@ -537,6 +585,63 @@ function renderButtons(opts) {
   scrollToBottom();
 }
 
+/* ═══ الإصلاح 1: روابط نظيفة قصيرة بكلمات لاتينية كاملة ═══ */
+const AREA_SLUG_MAP = {
+  'المنطقة الأولى': '1st-district',
+  'المنطقة الثانية': '2nd-district',
+  'المنطقة الثالثة': '3rd-district',
+  'المنطقة الرابعة': '4th-district',
+  'المنطقة الخامسة': '5th-district',
+  'المنطقة السادسة': '6th-district',
+  'المنطقة السابعة': '7th-district',
+  'المنطقة الثامنة': '8th-district',
+  'المنطقة التاسعة': '9th-district',
+  'المنطقة العاشرة': '10th-district',
+  'المنطقة الحادية عشرة': '11th-district',
+  'المنطقة الثانية عشرة': '12th-district',
+  'الحي الأول': '1st-neighborhood',
+  'الحي الثاني': '2nd-neighborhood',
+  'الحي الثالث': '3rd-neighborhood',
+  'الحي الرابع': '4th-neighborhood',
+  'الحي الخامس': '5th-neighborhood',
+  'الحي السادس': '6th-neighborhood',
+  'الحي السابع': '7th-neighborhood',
+  'الحي الثامن': '8th-neighborhood',
+  'الحي التاسع': '9th-neighborhood',
+  'الحي العاشر': '10th-neighborhood',
+  'الحي الحادي عشر': '11th-neighborhood',
+  'الحي الثاني عشر': '12th-neighborhood',
+  'الحي الدبلوماسي': 'diplomatic-district',
+  'الواحة': 'al-waha',
+  'زهراء مدينة نصر': 'zahraa-nasr-city',
+  'رابعة العدوية': 'rabaa-el-adawiya',
+  'ممر مكرم عبيد': 'makram-ebeid-route',
+  'ممر عباس العقاد': 'abbas-el-akkad-route',
+};
+const PROPERTY_TYPE_SLUG_MAP = {
+  'شقة': 'apartment',
+  'فيلا': 'villa',
+  'دوبلكس': 'duplex',
+  'روف': 'roof',
+  'محل تجاري': 'shop',
+  'مكتب إداري': 'office',
+  'مخزن': 'warehouse',
+};
+const FINISH_SLUG_MAP = {
+  'ألترا سوبر لوكس': 'ultra-lux',
+  'سوبر لوكس': 'super-lux',
+  'نصف تشطيب': 'semi-finished',
+  'طوب أحمر': 'red-brick',
+};
+const FLOOR_SLUG_MAP = {
+  'أرضي': 'ground',
+  'أول': '1',
+  'ثاني': '2',
+  'ثالث': '3',
+  'رابع': '4',
+  'خامس+': '5plus',
+};
+
 function buildValuationHref(context) {
   const params = new URLSearchParams();
   params.set("from", "agent");
@@ -544,15 +649,47 @@ function buildValuationHref(context) {
 
   const area = typeof context.area === "string" ? context.area.trim().slice(0, 80) : "";
   const size = Number(context.size);
-  const allowedTypes = ["شقة", "دوبلكس", "فيلا", "روف", "محل تجاري", "مكتب إداري", "مخزن"];
-  const propertyType = allowedTypes.includes(context.propertyType) ? context.propertyType : "";
+  const propertyType = context.propertyType || "";
   const areaType = context.areaType === "rent" || context.areaType === "sale" ? context.areaType : null;
 
-  if (area) params.set("area", area);
-  if (Number.isFinite(size) && size >= 20 && size <= 100000) params.set("size", String(size));
-  if (propertyType) params.set("propertyType", propertyType);
-  if (areaType) params.set("type", areaType);
-  if (["furnished", "unfurnished", "unknown"].includes(context.rentCondition)) params.set("rentCondition", context.rentCondition);
+  /* منطقة — slug لاتيني */
+  if (area && AREA_SLUG_MAP[area]) {
+    params.set("area", AREA_SLUG_MAP[area]);
+  }
+
+  /* مساحة */
+  if (Number.isFinite(size) && size >= 20 && size <= 100000) {
+    params.set("size", String(Math.round(size)));
+  }
+
+  /* نوع العقار — slug لاتيني */
+  if (propertyType && PROPERTY_TYPE_SLUG_MAP[propertyType]) {
+    params.set("type", PROPERTY_TYPE_SLUG_MAP[propertyType]);
+  }
+
+  /* نوع العملية — deal */
+  if (areaType) params.set("deal", areaType);
+
+  /* تأثيث — فقط عند الإيجار بقيمة صريحة (لا unknown) */
+  if (areaType === "rent" &&
+      (context.rentCondition === "furnished" || context.rentCondition === "unfurnished")) {
+    params.set("furnished", context.rentCondition === "furnished" ? "yes" : "no");
+  }
+
+  /* تشطيب — يُحذف الافتراضي (سوبر لوكس) */
+  if (context.finishing && FINISH_SLUG_MAP[context.finishing] && context.finishing !== "سوبر لوكس") {
+    params.set("finish", FINISH_SLUG_MAP[context.finishing]);
+  }
+
+  /* دور — يُحذف الافتراضي (أرضي) */
+  if (context.floor && context.floor !== "أرضي" && FLOOR_SLUG_MAP[context.floor]) {
+    params.set("floor", FLOOR_SLUG_MAP[context.floor]);
+  }
+
+  /* عمر — يُحذف الافتراضي (medium) */
+  if (context.age && context.age !== "medium" && ["new", "old"].includes(context.age)) {
+    params.set("age", context.age);
+  }
 
   return `${VALUATION_URL}?${params.toString()}`;
 }
@@ -608,7 +745,7 @@ function renderImgStrip() {
   state.pendingImages.forEach((img, i) => {
     const el = document.createElement("div");
     el.className = "img-strip-item";
-    el.innerHTML = `<img src="${img.preview}" alt="معاينة ${i+1}"><button class="img-strip-rm" aria-label="إزالة ${i+1}" onclick="removeImg(${i})">✕</button>`;
+    el.innerHTML = `<img src="${escapeAttr(img.preview)}" alt="معاينة ${i+1}"><button class="img-strip-rm" aria-label="إزالة ${i+1}" onclick="removeImg(${i})">✕</button>`;
     imgStrip.appendChild(el);
   });
 }
@@ -661,7 +798,6 @@ async function sendMsg() {
   setTyping(true);
   toggleTypingBubble(true);
 
-  // ⭐ نبعث valuationResult مرة واحدة بس بعد الرجوع
   const shouldSendValuation = state.valuationResult && !state._valuationSent;
 
   try {
@@ -699,7 +835,6 @@ async function sendMsg() {
       state.history.push({ role: "assistant", message: reply });
     }
 
-    // ⭐ علّم إن التقييم اتبعت (بس بعد رد ناجح)
     if (shouldSendValuation) {
       state._valuationSent = true;
     }
