@@ -17,6 +17,16 @@
 //  • عرض التقييم للعميل: نطاق المتر P25–P75 + المنطقة والمساحة (والإيجار «شهريًا»).
 //  • قسم التقييم في واتساب: نطاق P25–P75 + منطقة التقييم.
 //  • valuationCta: price/floor/finishing للتعبئة المسبقة في الأداة.
+// ------------------------------------------------------------
+// v8.7.2 — تقوية الخصوصية والتحقق (إضافات وإصلاحات دفاعية فقط؛ لا تغيير في الحوار ولا الـScoring ولا FORM_VERSION):
+//  • D-1: sanitizeValuation صارم النوع (لا Number() coercion) + فحص اتساق estimate ≈ perMeter×size (تفاوت 0.51×size+1).
+//  • D-2: إعلان التقييم: سطر المنطقة أولًا + النطاق الإجمالي (P25×المساحة … P75×المساحة) + حالة حسب الثقة.
+//  • D-3: حذف buildValuationUrl وثابتها (كود ميت — agent.html بيبني الرابط بنفسه).
+//  • D-4 + D-4b (لا ينفصلان): GPS والعنوان الدقيق لا يدخلان أي prompt لـ Gemini (بيانات + رسالة العميل + history).
+//  • D-5: إخفاء كل أرقام الموبايل المصرية (010/011/012/015 بكل الصيغ + أرقام عربية/فارسية + الرقم القومي) قبل Gemini.
+//  • D-6: حد فعلي بالبايت (chat 256KB / رفع 12MB) + رفع الصور: 4/دقيقة و20/ساعة لكل IP + Content-Type JSON إجباري.
+//  • D-7: تعليق Gemini بياخد «السؤال التالي» الحقيقي بس — إعلان التقييم (وفيه اسم المنطقة اللي جه من المتصفح) مبيدخلش الـprompt.
+//  • D-8: «عايز أشوف التقييم» وهو على خطوة الهدية بيعيد الهدية بزرها (بدل الرد الجاهز اللي كان بيشيل الزر ويعرض قايمة البداية).
 // ============================================================
 
 // ═══ CONSTANTS ═══
@@ -39,7 +49,6 @@ const RATE_MAX           = 15;
 const MAX_VISIBLE_LM     = 8;
 
 // ═══ ثوابت التقييم (v8.7) ═══
-const VALUATION_URL_BASE = "https://nasr-realestate.github.io/tools/valuation.html";
 const VALUATION_MAX_AGE  = 24 * 60 * 60 * 1000; // 24 ساعة
 
 // ═══ حدود الأمان والأداء ═══
@@ -48,10 +57,13 @@ const FETCH_TIMEOUT_GEMINI = 8000;
 const FETCH_TIMEOUT_IMGBB  = 15000;
 const MAX_MSG_LEN          = 1000;
 const MAX_HISTORY          = 20;
-const MAX_BODY_BYTES       = 12 * 1024 * 1024;
-const MAX_IMG_BYTES        = 6 * 1024 * 1024;
-const UPLOAD_RATE_WINDOW   = 60 * 1000;
-const UPLOAD_RATE_MAX      = 6;
+const MAX_CHAT_BODY_BYTES    = 256 * 1024;
+const MAX_UPLOAD_BODY_BYTES  = 12 * 1024 * 1024;
+const MAX_IMG_BYTES          = 6 * 1024 * 1024;
+const UPLOAD_RATE_WINDOW     = 60 * 1000;
+const UPLOAD_RATE_MAX        = 4;
+const UPLOAD_HOURLY_WINDOW   = 60 * 60 * 1000;
+const UPLOAD_HOURLY_MAX      = 20;
 const RATE_MAP_MAX_KEYS    = 5000;
 const CACHE_MAX_KEYS       = 500;
 
@@ -224,80 +236,65 @@ function normAr(s) {
 
 // ═══ VALUATION HELPERS (v8.7) ═══
 
-// تنقية نتيجة التقييم القادمة من agent.html
-function sanitizeValuation(v) {
-  if (!v || typeof v !== "object") return null;
-  const estimate = Number(v.estimate);
-  if (!Number.isFinite(estimate) || estimate <= 0 || estimate > 1e12) return null;
-  const samples = Number(v.samples);
-  const perMeter = Number(v.perMeter);
-  const size = Number(v.size);
-  // نطاق P25–P75 لسعر المتر: لازم القيمتين مع بعض وبترتيب صحيح، وإلا الاتنين صفر (مفيش نطاق يتخترع)
-  const p25 = Math.round(Number(v.p25));
-  const p75 = Math.round(Number(v.p75));
-  const rangeOk = Number.isFinite(p25) && Number.isFinite(p75) && p25 > 0 && p75 >= p25 && p75 <= 1e9;
-  return {
-    estimate: Math.round(estimate),
-    confidence: ["high","medium","low"].includes(v.confidence) ? v.confidence : "unknown",
-    samples: Number.isFinite(samples) && samples >= 0 ? Math.round(samples) : 0,
-    perMeter: Number.isFinite(perMeter) && perMeter > 0 ? Math.round(perMeter) : 0,
-    p25: rangeOk ? p25 : 0,
-    p75: rangeOk ? p75 : 0,
-    priceBasis: ["median_price_m2","avg_price_m2"].includes(v.priceBasis) ? v.priceBasis : "",
-    area: String(v.area || "").replace(/[\u0000-\u001F\u007F<>]/g, " ").trim().slice(0, 80),
-    size: Number.isFinite(size) && size >= 20 && size <= 100000 ? size : 0,
-    areaType: v.areaType === "rent" || v.areaType === "sale" ? v.areaType : "",
-    savedAt: Date.now(),
-  };
+// D-1: رقم صارم — number منتهٍ، أو سلسلة عشرية بسيطة (أرقام عربية مقبولة). لا Boolean ولا Array ولا 0x/1e ولا مسافات.
+function strictNum(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") { const t = toEnNum(v); if (/^\d{1,15}(?:\.\d{1,6})?$/.test(t)) return Number(t); }
+  return null;
 }
 
-// بناء رابط أداة التقييم مع بيانات العقار مملوءة مسبقًا
-// نفس عقد agent.html: area,size,type(=نوع العقار),deal(=بيع/إيجار),furnished — والأداة بتقبل المفاتيح القديمة برضه
-function buildValuationUrl(data, type) {
-  const params = new URLSearchParams();
-  params.set("from", "agent");
-  params.set("journey", "seller");
-
-  if (hasVal(data.location)) params.set("area", String(data.location).slice(0, 100));
-  const size = hasVal(data.area) ? parseNum(data.area) : 0;
-  if (size >= 20 && size <= 100000) params.set("size", String(Math.round(size)));
-  if (hasVal(data.propertyType)) params.set("type", String(data.propertyType));
-  const deal = type === "rent" ? "rent" : "sale";
-  params.set("deal", deal);
-  // التأثيث: للإيجار وبقيمة صريحة فقط (مفيش unknown)
-  if (deal === "rent" && (data.furnished === "مفروش" || data.furnished === "فاضي (قانون جديد)")) {
-    params.set("furnished", data.furnished === "مفروش" ? "yes" : "no");
-  }
-  return `${VALUATION_URL_BASE}?${params.toString()}`;
+function sanitizeValuation(v) {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const estimate = strictNum(v.estimate);
+  if (estimate === null || estimate <= 0 || estimate > 1e12) return null;
+  const samples  = strictNum(v.samples);
+  const perMeter = strictNum(v.perMeter);
+  const size     = strictNum(v.size);
+  const p25      = strictNum(v.p25);
+  const p75      = strictNum(v.p75);
+  const sizeOk   = size !== null && size >= 20 && size <= 100000;
+  const pmOk     = perMeter !== null && perMeter > 0 && perMeter <= 1e9;
+  // اتساق داخلي: perMeter = round(round(median,2)) و estimate = round(median×size) ⇒ الفرق ≤ 0.505×size + 0.5 → نستخدم 0.51×size + 1
+  if (pmOk && sizeOk && Math.abs(estimate - perMeter * size) > size * 0.51 + 1) return null;
+  const rangeOk = p25 !== null && p75 !== null && p25 > 0 && p75 >= p25 && p75 <= 1e9;
+  const oneOf = (x, list) => (typeof x === "string" && list.includes(x) ? x : "");
+  return {
+    estimate: Math.round(estimate),
+    confidence: oneOf(v.confidence, ["high","medium","low"]) || "unknown",
+    samples: samples !== null && samples >= 0 && samples <= 1e6 ? Math.round(samples) : 0,
+    perMeter: pmOk ? Math.round(perMeter) : 0,
+    p25: rangeOk ? Math.round(p25) : 0,
+    p75: rangeOk ? Math.round(p75) : 0,
+    priceBasis: oneOf(v.priceBasis, ["median_price_m2","avg_price_m2"]),
+    area: typeof v.area === "string" ? redactPII(v.area).replace(/[\u0000-\u001F\u007F<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) : "",
+    size: sizeOk ? size : 0,
+    areaType: oneOf(v.areaType, ["rent","sale"]),
+    savedAt: Date.now(),
+  };
 }
 
 // نص عرض التقييم للعميل — يُعرض مرة واحدة فقط
 function buildValuationAnnouncement(v) {
   if (!v || !v.estimate) return "";
   const fmtN = n => Number(n || 0).toLocaleString("en-US");
-  const confLabel = v.confidence === "high" ? "عالية"
-                  : v.confidence === "medium" ? "متوسطة"
-                  : v.confidence === "low" ? "منخفضة"
-                  : "غير محددة";
-  // الإيجار والأساس (وسيط/متوسط) بيظهروا بس لو الحقول الجديدة وصلت من الأداة
+  const confLabel = v.confidence === "high" ? "عالية" : v.confidence === "medium" ? "متوسطة" : v.confidence === "low" ? "منخفضة" : "غير محددة";
+  const status = v.confidence === "high"   ? "🟢 عينة قوية — مؤشر موثوق نسبيًا"
+               : v.confidence === "medium" ? "🟡 عينة متوسطة — استرشادي"
+               : v.confidence === "low"    ? "🔴 عينة محدودة — استرشادي فقط"
+               : "⚪ الثقة غير محددة — مؤشر عام فقط";
   const isRent = v.areaType === "rent";
   const perMonth = isRent ? " / شهريًا" : "";
-  const basisLabel = v.priceBasis === "median_price_m2" ? " (الوسيط)"
-                   : v.priceBasis === "avg_price_m2" ? " (المتوسط)" : "";
-  const lines = [
-    `تمام، شفت نتيجة التقييم 👌`,
-    ``,
-    `💎 *تقييم عقارك:*`,
-    `┌───────────────────`,
-    `│ 💰 ${isRent ? "الإيجار" : "السعر"}: ${fmtN(v.estimate)} ج.م${perMonth}`,
-  ];
-  if (v.perMeter > 0) lines.push(`│ 📏 سعر المتر${basisLabel}: ${fmtN(v.perMeter)} ج.م${perMonth}`);
-  if (v.p25 > 0 && v.p75 > 0) lines.push(`│ 📊 نطاق المتر (P25–P75): ${fmtN(v.p25)} – ${fmtN(v.p75)} ج.م${perMonth}`);
-  if (v.confidence)   lines.push(`│ 🎯 الثقة: ${confLabel}`);
-  if (v.samples > 0)  lines.push(`│ 🧪 العينات: ${fmtN(v.samples)}`);
-  if (v.area)         lines.push(`│ 📍 المنطقة: ${v.area}${v.size > 0 ? ` • ${fmtN(v.size)} م²` : ""}`);
+  const basisLabel = v.priceBasis === "median_price_m2" ? " (الوسيط)" : v.priceBasis === "avg_price_m2" ? " (المتوسط)" : "";
+  const lines = [`تمام، شفت نتيجة التقييم 👌`, ``, `💎 *تقييم عقارك ${isRent ? "للإيجار" : "للبيع"}:*`, `┌───────────────────`];
+  if (v.area) lines.push(`│ 📍 المنطقة: ${v.area}${v.size > 0 ? ` • ${fmtN(v.size)} م²` : ""}`);
+  lines.push(`│ 💰 ${isRent ? "الإيجار" : "السعر"} التقديري: ${fmtN(v.estimate)} ج.م${perMonth}`);
+  if (v.p25 > 0 && v.p75 > 0 && v.size > 0) lines.push(`│ 📊 النطاق الأساسي: ${fmtN(Math.round(v.p25 * v.size))} – ${fmtN(Math.round(v.p75 * v.size))} ج.م${perMonth}`);
+  if (v.perMeter > 0) lines.push(`│ 📏 سعر المتر${basisLabel}: ${fmtN(v.perMeter)} ج.م/م²${perMonth}`);
+  if (v.p25 > 0 && v.p75 > 0) lines.push(`│ ↕️ نطاق المتر (P25–P75): ${fmtN(v.p25)} – ${fmtN(v.p75)} ج.م/م²${perMonth}`);
+  lines.push(`│ 🎯 الثقة: ${confLabel}${v.samples > 0 ? ` (${fmtN(v.samples)} عينة)` : ""}`);
+  lines.push(`│ ${status}`);
   lines.push(`└───────────────────`);
-  lines.push(``, `ده مؤشر استرشادي من بيانات مدينة نصر.`, ``, `نكمّل التسجيل؟`);
+  lines.push(``, `ده مؤشر استرشادي من بيانات مدينة نصر، مش سعر إتمام مؤكد.`, ``, `نكمّل التسجيل؟`);
   return lines.join("\n");
 }
 
@@ -510,9 +507,11 @@ function isIdentityQ(msg) {
   return IDENTITY_NORM_SUBSTR.some(s => n.includes(s));
 }
 
+const VALUATION_REQUEST_RE = /(عايز|ممكن|محتاج|وريني|أشوف|اشوف|هات|فين|ايه|إيه)\s*(التقييم|تقييم|قيم عقاري|قيّم عقاري)/i;
+
 function matchInterrupt(msg, fs) {
   // ⭐ طلب التقييم بشكل صريح — يرجّع آخر تقييم محفوظ لو موجود
-  if (/(عايز|ممكن|محتاج|وريني|أشوف|اشوف|هات|فين|ايه|إيه)\s*(التقييم|تقييم|قيم عقاري|قيّم عقاري)/i.test(String(msg||""))) {
+  if (VALUATION_REQUEST_RE.test(String(msg||""))) {
     if (fs?.data?.valuation) return buildValuationAnnouncement(fs.data.valuation);
     return "التقييم متاح وأنت في مسار تسجيل عقار. ابدأ بـ 💰 أبيع أو 🔑 أأجر وهتلاقي زر التقييم.";
   }
@@ -1052,27 +1051,58 @@ function sanitizeState(fs) {
 }
 
 // ═══ GEMINI CALLS ═══
+// ───────────────────────────────────────────────────────────────
+// S-2 (D-5): إخفاء أرقام الموبايل المصرية قبل أي استدعاء لـ Gemini
+//   010 / 011 / 012 / 015 بصيغ: 01xxxxxxxxx | 1xxxxxxxxx | 201xxxxxxxxx | +20 | 0020 — مع (مسافة/شرطة/نقطة) واحدة أو اتنين
+//   بين المجموعات وأقواس، وبأرقام عربية (٠–٩) وفارسية (۰–۹)، + الرقم القومي (14 رقم).
+//   الفواصل محدودة {0,2} عمدًا: النسخة المفتوحة (*) كانت بتعمل backtracking تربيعي (30 ثانية على 256KB مسافات).
+//   (?<!\d) و(?!\d) تمنع القص من وسط رقم أطول (سعر/رقم قومي).
+// ───────────────────────────────────────────────────────────────
+function asciiDigits(s) {
+  return String(s ?? "").replace(/[٠-٩۰-۹]/g, d => { const c = d.charCodeAt(0); return String(c >= 0x06F0 ? c - 0x06F0 : c - 0x0660); });
+}
+const EG_MOBILE_RE      = /(?<!\d)\(?(?:(?:\+|00)[\s.\-]{0,2})?(?:20\)?[\s.\-]{0,2})?(?:\(?0[\s.\-]{0,2})?1[0125]\)?(?:[\s.\-]{0,2}\d){8}(?!\d)/g;
+const EG_NATIONAL_ID_RE = /(?<!\d)[23]\d{13}(?!\d)/g;
+function redactPII(s) { return asciiDigits(s).replace(EG_NATIONAL_ID_RE, "[رقم]").replace(EG_MOBILE_RE, "[رقم]"); }
+
 function sanitizeForPrompt(s, max = 300) {
-  return String(s || "")
+  return redactPII(s)
     .replace(/[`\u0000-\u001F\u007F]/g, " ")
     .replace(/\b(ignore|disregard|system\s*prompt|forget)\b/gi, "")
     .replace(/تجاهل\s+(كل\s+)?(التعليمات|اللي\s*فات)/g, "")
-    .replace(/(?:\+?2)?0?1[0-2]\d{8}/g, "[رقم]")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);
 }
 
+// ───────────────────────────────────────────────────────────────
+// S-1 (D-4): GPS والعنوان الدقيق لا يدخلان أي prompt لـ Gemini. لازم يشتغل مع D-4b (تحت) — القناتين لا ينفصلوا:
+//   قناة البيانات (safeDataForPrompt) + قناة الرسالة/الـhistory (ADDRESS_STEP_IDS + scrubAddresses).
+//   valuation بيدخل أرقام/enums بس — نص area ممنوع (ممكن يكون عنوان كتبه العميل).
+// ───────────────────────────────────────────────────────────────
 const PII_KEYS = new Set(["ownerName","ownerPhone","buyerName","buyerPhone","phone","_filled"]);
+const LOCATION_KEYS = new Set(["gps","location","address","lat","lng","lon","latitude","longitude","coords","coordinates","mapUrl","mapsUrl","googleMapsUrl"]);
 function safeDataForPrompt(data) {
   const out = {};
   for (const [k, v] of Object.entries(data || {})) {
-    if (PII_KEYS.has(k)) continue;
+    if (PII_KEYS.has(k) || LOCATION_KEYS.has(k)) continue;
     if (k.startsWith("_") || k.startsWith("selected")) continue;
+    if (k === "valuation") {
+      if (v && typeof v === "object") { const { estimate, perMeter, p25, p75, confidence, samples, areaType } = v; out.valuation = { estimate, perMeter, p25, p75, confidence, samples, areaType }; }
+      continue;
+    }
     if (!hasVal(v)) continue;
-    out[k] = typeof v === "string" ? v.slice(0, 60) : v;
+    out[k] = typeof v === "string" ? sanitizeForPrompt(v, 60) : v;
   }
-  return JSON.stringify(out).slice(0, 500);
+  return redactPII(JSON.stringify(out)).slice(0, 500);
+}
+
+// D-4b: أي عنوان معروف من الحالة (نص العنوان أو عنوان الخريطة) يتحوّل لـ [عنوان] في أي نص رايح لـ Gemini (history / أسئلة جانبية)
+function scrubAddresses(text, data) {
+  let t = String(text || "");
+  const known = [data?.location, data?.gps?.address].map(x => String(x || "").trim()).filter(x => x.length >= 6);
+  for (const a of new Set(known)) t = t.split(a).join("[عنوان]");
+  return t;
 }
 
 async function callGemini(env, sys, msgs, maxTok=150, temp=0.6) {
@@ -1137,7 +1167,7 @@ ${timeContext()}
 }
 
 async function geminiComment(env, userMsg, nextQ, fsData) {
-  const safeMsg = sanitizeForPrompt(userMsg);
+  const safeMsg = sanitizeForPrompt(scrubAddresses(userMsg, fsData));
   const qKey = normAr(String(nextQ||"")).slice(0,40);
   const cacheKey = `c:${qKey}:${normAr(userMsg).slice(0,60)}`;
   const cached = geminiCache.get(cacheKey);
@@ -1178,9 +1208,9 @@ async function geminiContextual(env, userMsg, formState, currentStep, history) {
   const q = currentStep ? (typeof currentStep.q==="function"?currentStep.q(formState?.data):currentStep.q) : "";
   const convHistory = (Array.isArray(history)?history:[]).slice(-8)
     .filter(m=>m?.message?.trim())
-    .map(m=>({ role:m.role==="assistant"?"model":"user", parts:[{text:sanitizeForPrompt(m.message, 500)}] }));
+    .map(m=>({ role:m.role==="assistant"?"model":"user", parts:[{text:sanitizeForPrompt(scrubAddresses(m.message, formState?.data), 500)}] }));
   if (convHistory[convHistory.length-1]?.role==="user") convHistory.pop();
-  convHistory.push({ role:"user", parts:[{text:sanitizeForPrompt(userMsg)}] });
+  convHistory.push({ role:"user", parts:[{text:sanitizeForPrompt(scrubAddresses(userMsg, formState?.data))}] });
 
   const sys = `${TAREK_PERSONA}
 
@@ -1209,7 +1239,12 @@ function deservesComment(userMsg) {
   return hasMood || isLong;
 }
 
+// D-4b: إجابة العنوان/المنطقة هي نفسها العنوان — ما بنسيبش Gemini يعلّق عليها (بيروح لـ Gemini كـ "إجابة العميل")
+const ADDRESS_STEP_IDS = new Set(["location","landmark"]);
 async function enhanceResponse(env, result, userMsg, formState, currentStep, history) {
+  // السؤال الحقيقي التالي (قبل ما نضيف عليه إعلان التقييم) — ده اللي Gemini بياخده كـ«السؤال اللي جاي»،
+  // عشان نص الإعلان (وفيه اسم المنطقة اللي جه من المتصفح) ما يدخلش في الـprompt ولا يتعلّق عليه.
+  const nextQuestion = result.response;
   // ⭐ عرض التقييم مرة واحدة بعد الرجوع من صفحة التقييم
   if (formState?._justReturnedFromValuation && formState?.data?.valuation && !formState.data._valuationShown) {
     const announcement = buildValuationAnnouncement(formState.data.valuation);
@@ -1227,8 +1262,9 @@ async function enhanceResponse(env, result, userMsg, formState, currentStep, his
   }
 
   if (!formState?.active || result.done || result.readyToSend) return result;
+  if (ADDRESS_STEP_IDS.has(currentStep?.id)) return result;
   if (!deservesComment(userMsg)) return result;
-  const comment = await geminiComment(env, userMsg, result.response, formState?.data);
+  const comment = await geminiComment(env, userMsg, nextQuestion, formState?.data);
   if (comment) return { ...result, response:`${comment}\n\n${result.response}` };
   return result;
 }
@@ -1932,6 +1968,7 @@ async function uploadImgBB(env, images) {
 // ═══ RATE LIMITER ═══
 const rateMap = new Map();
 const uploadRateMap = new Map();
+const uploadHourlyMap = new Map();
 
 function pruneRateMap(map, windowMs) {
   if (map.size < RATE_MAP_MAX_KEYS) return;
@@ -1953,7 +1990,20 @@ function hitLimit(map, key, windowMs, max) {
 }
 
 function rateLimited(ip)       { return hitLimit(rateMap, ip, RATE_WINDOW_MS, RATE_MAX); }
-function uploadRateLimited(ip) { return hitLimit(uploadRateMap, ip, UPLOAD_RATE_WINDOW, UPLOAD_RATE_MAX); }
+function uploadRateLimited(ip) {
+  return hitLimit(uploadRateMap, ip, UPLOAD_RATE_WINDOW, UPLOAD_RATE_MAX) || hitLimit(uploadHourlyMap, ip, UPLOAD_HOURLY_WINDOW, UPLOAD_HOURLY_MAX);
+}
+// D-6: قراءة الجسم بحدّ بايتات فعلي — Content-Length ادعاء من العميل (وغايب مع chunked)، فبنعدّ البايتات اللي بتوصل فعلًا ونقطع عند الحد.
+async function readJsonBody(request, maxBytes) {
+  const declared = Number(request.headers.get("Content-Length"));
+  if (Number.isFinite(declared) && declared > maxBytes) return { tooLarge: true, json: null };
+  if (!request.body) return { tooLarge: false, json: null };
+  const reader = request.body.getReader(); const chunks = []; let total = 0;
+  try { for (;;) { const { done, value } = await reader.read(); if (done) break; total += value.byteLength; if (total > maxBytes) { await reader.cancel().catch(() => {}); return { tooLarge: true, json: null }; } chunks.push(value); } }
+  catch { return { tooLarge: false, json: null }; }
+  const bytes = new Uint8Array(total); let off = 0; for (const c of chunks) { bytes.set(c, off); off += c.byteLength; }
+  try { return { tooLarge: false, json: JSON.parse(new TextDecoder().decode(bytes)) }; } catch { return { tooLarge: false, json: null }; }
+}
 
 // ═══ RESPONSE HELPERS ═══
 function allowedOrigins(env) {
@@ -2019,13 +2069,16 @@ export default {
 
     if (request.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
 
+    const isUpload = url.pathname === "/upload-images";
     const declaredLen = Number(request.headers.get("Content-Length")||0);
-    if (declaredLen > MAX_BODY_BYTES) return jsonRes({error:"Payload too large"},413);
+    if (declaredLen > (isUpload ? MAX_UPLOAD_BODY_BYTES : MAX_CHAT_BODY_BYTES)) return jsonRes({error:"Payload too large"},413);
 
-    if (url.pathname==="/upload-images" && request.method==="POST") {
+    if (isUpload && request.method==="POST") {
       if (uploadRateLimited(ip)) return jsonRes({error:"Too many uploads, slow down"},429);
+      if (!/^application\/json\b/i.test(request.headers.get("Content-Type")||"")) return jsonRes({error:"Unsupported content type"},415);
       try {
-        const body = await request.json().catch(()=>null);
+        const { json: body, tooLarge } = await readJsonBody(request, MAX_UPLOAD_BODY_BYTES);
+        if (tooLarge) return jsonRes({error:"Payload too large"},413);
         if (!body || typeof body !== "object") return jsonRes({error:"Invalid JSON"},400);
         const r = await uploadImgBB(env, body.images||[]);
         if (!r.ok) return jsonRes({error:r.error},400);
@@ -2041,7 +2094,8 @@ export default {
     if (rateLimited(ip)) return jsonRes({response:"استنى شوية، بتبعت رسايل كتير.",options:ROUTE_BTNS},429);
 
     try {
-      const body = await request.json().catch(()=>null);
+      const { json: body, tooLarge } = await readJsonBody(request, MAX_CHAT_BODY_BYTES);
+      if (tooLarge) return jsonRes({response:"الرسالة كبيرة أوي — قصّرها وجرّب تاني.",options:ROUTE_BTNS},413);
       if (!body || typeof body !== "object") return jsonRes({response:"طلب غير صالح.",options:ROUTE_BTNS},400);
 
       const userMsg = String(body.message||"").trim().slice(0, MAX_MSG_LEN);
@@ -2155,6 +2209,14 @@ export default {
 
       if (isOfficeQ(userMsg)) return jsonRes({response:officeMsg(),options:ROUTE_BTNS,formState:fs});
       if (/طلاب|طلبة|مغتربين|مغتربات|سكن طلاب/i.test(userMsg)) return jsonRes({response:`سكن الطلاب مع الأستاذة آلاء: ${ALAA_PHONE}`,options:ROUTE_BTNS,formState:fs});
+      // ⭐ طلب التقييم صراحةً وهو واقف على خطوة الهدية (ومفيش تقييم محفوظ): نعيد سؤال الهدية بزرها،
+      //    بدل الرد الجاهز اللي كان بيقوله «ابدأ تسجيل» وهو أصلًا جواه ويشيل زر 💎 من الشاشة.
+      if (flowType==="owner" && !fs.data?.valuation && VALUATION_REQUEST_RE.test(userMsg)) {
+        const ownerSteps = getOwnerSteps(fs.type);
+        if (ownerSteps[fs.stepIndex]?.id==="valuationGift") {
+          return jsonRes(askOwnerStep(ownerSteps, fs.stepIndex, fs, "أكيد 👌 اضغط زر 💎 قيّم عقارك تحت.", null));
+        }
+      }
       const cannedMid = matchInterrupt(userMsg, fs);
       if (cannedMid) return jsonRes({response:cannedMid,options:ROUTE_BTNS,formState:fs});
 

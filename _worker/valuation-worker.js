@@ -36,9 +36,16 @@
 //   • منطقة فرعية بلا Snapshot صالحة → fallback إلى area_id=1 مع fallback_used:true.
 //   • MARKET_UNAVAILABLE يرجع available_areas.
 //   • الإيجار بلا حالة تأثيث يفضّل Snapshot «الكل» على مفروش/غير مفروش.
+//
+// تحديثات v6.2 (العقد d1-price-snapshots-v2 كما هو — إضافات دفاعية فقط، لا تغيير في أي حساب):
+//   • E-3: كل ردود الفشل (التحقق من الطلب + اللقطات) تحمل code + error + available_areas.
+//   • E-4: قراءة لقطات المنطقة المطلوبة + «مدينة نصر (ككل)» فقط (WHERE area_id IN …) بدل SELECT * LIMIT 1000،
+//          مع رجوع تلقائي للقراءة الكاملة عند خطأ SQL أو عند 0 صفوف (فلا false MARKET_UNAVAILABLE).
+//   • E-5: حد حجم فعلي للطلب (بالبايتات الواصلة فعلًا، مش Content-Length فقط).
+//   • القراءة فقط من D1: لا INSERT/UPDATE/DELETE ولا أي تغيير في schema.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v6.1";
+const WORKER_VERSION = "v6.2";
 const API_CONTRACT = "d1-price-snapshots-v2";
 const SERVICE_NAME = "nasr-valuation";
 
@@ -443,6 +450,30 @@ async function loadSnapshots(db) {
   return loadRows(db, SNAPSHOT_TABLE, MAX_ROWS);
 }
 
+// E-4: بدل SELECT * ... LIMIT 1000 (قد يقطع صفوفًا لو الجدول كبر بلا ORDER BY)، نقرأ لقطات المنطقة المطلوبة
+// + «مدينة نصر (ككل)» (للـ fallback) فقط بـ WHERE area_id IN (…) — استعلام واحد يخدم الطلب والـ fallback.
+// property_type / transaction_type بتفضل في JS لأن D1 ممكن يخزنها بعدة صيغ (apartment / شقة …) وفلترتها في SQL
+// بدون معرفة القيم الفعلية ممكن تضيّع لقطات صحيحة.
+// شبكات أمان (لا تغيير في السلوك لو حصل أي شك):
+//   • خطأ SQL (مثلًا اسم العمود مختلف)  → القراءة القديمة SELECT * … LIMIT.
+//   • 0 صفوف (مثلًا area_id مخزّن كنص بلا integer affinity) → القراءة القديمة، بدل false MARKET_UNAVAILABLE.
+async function loadSnapshotsForAreas(db, areaIds) {
+  const ids = [...new Set((areaIds || []).map(Number).filter(Number.isInteger))];
+  if (!ids.length) return loadSnapshots(db);
+
+  try {
+    const marks = ids.map(() => "?").join(",");
+    const result = await db
+      .prepare(`SELECT * FROM ${SNAPSHOT_TABLE} WHERE area_id IN (${marks}) LIMIT ?`)
+      .bind(...ids, MAX_ROWS)
+      .all();
+    const rows = Array.isArray(result?.results) ? result.results : [];
+    return rows.length ? rows : loadSnapshots(db);
+  } catch {
+    return loadSnapshots(db);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Area handling
 // ═══════════════════════════════════════════════════════════════════════════
@@ -825,7 +856,6 @@ async function selectMarketSnapshot(db, query = {}, cache = {}) {
   try {
     // v6.1: `cache` يشاركه المرور الأول والـ fallback، فلا تتكرر قراءات D1.
     const areas = (cache.areas ??= await loadAreas(db));
-    const snapshots = (cache.snapshots ??= await loadSnapshots(db));
 
     const areaResult = findArea(
       areas,
@@ -839,6 +869,12 @@ async function selectMarketSnapshot(db, query = {}, cache = {}) {
         available_areas: listAreaNames(areas),
       };
     }
+
+    // E-4: المنطقة المطلوبة + المدينة ككل (للـ fallback) في استعلام واحد، ويُعاد استخدامه في المرور الثاني.
+    const snapshots = (cache.snapshots ??= await loadSnapshotsForAreas(
+      db,
+      [areaResult.id, WHOLE_CITY_AREA_ID]
+    ));
 
     // v6.1: فشل «لا توجد لقطة صالحة» يرجع مع المنطقة المطلوبة وقائمة المناطق:
     //   • getMarketSnapshot تستخدمها لتجربة «مدينة نصر (ككل)» (fallback).
@@ -1395,6 +1431,68 @@ function errorForSnapshot(result) {
   };
 }
 
+// E-3: قائمة المناطق لردود الفشل — قراءة واحدة صغيرة (≤31 صف)، وأي عطل في D1 يرجّع [] بدل ما يكسر الرد.
+// E-5: قراءة الجسم بحدّ بايتات فعلي — Content-Length ادعاء من العميل (وغايب مع chunked)،
+// فبنعدّ البايتات اللي بتوصل فعلًا ونقطع عند الحد.
+async function readJsonLimited(request, maxBytes) {
+  const declared = Number(request.headers.get("Content-Length") || 0);
+
+  if (declared > maxBytes) {
+    return { tooLarge: true };
+  }
+
+  if (!request.body) {
+    return { invalid: true };
+  }
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      total += value.byteLength;
+
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        return { tooLarge: true };
+      }
+
+      chunks.push(value);
+    }
+  } catch {
+    return { invalid: true };
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return { json: JSON.parse(new TextDecoder().decode(bytes)) };
+  } catch {
+    return { invalid: true };
+  }
+}
+
+async function availableAreasSafe(db) {
+  try {
+    return listAreaNames(await loadAreas(db));
+  } catch {
+    return [];
+  }
+}
+
 function marketUnavailableResponse(cors) {
   return jsonResponse(
     cors,
@@ -1724,12 +1822,27 @@ export default {
     // JSON body
     // ─────────────────────────────────────────────────────────────────────
 
-    let payload;
+    // E-5: القراءة بحدّ بايتات فعلي (chunked بلا Content-Length ما يعدّيش فحص الـheader اللي فوق)
+    const read =
+      await readJsonLimited(
+        request,
+        MAX_REQUEST_BYTES
+      );
 
-    try {
-      payload =
-        await request.json();
-    } catch {
+    if (read.tooLarge) {
+      return jsonResponse(
+        cors,
+        {
+          code:
+            "REQUEST_TOO_LARGE",
+          error:
+            "حجم الطلب أكبر من المسموح.",
+        },
+        413
+      );
+    }
+
+    if (read.invalid) {
       return jsonResponse(
         cors,
         {
@@ -1741,6 +1854,8 @@ export default {
         400
       );
     }
+
+    const payload = read.json;
 
     if (
       !payload ||
@@ -1782,6 +1897,10 @@ export default {
 
           error:
             validationError.error,
+
+          // E-3: كل ردود الفشل تحمل available_areas
+          available_areas:
+            await availableAreasSafe(env?.DB),
         },
         validationError.status
       );
@@ -1824,6 +1943,12 @@ export default {
           snapshot
         );
 
+      // E-3: UNSUPPORTED_PROPERTY_TYPE كان بيرجع بدون available_areas
+      if (!Array.isArray(failure.body.available_areas)) {
+        failure.body.available_areas =
+          await availableAreasSafe(env?.DB);
+      }
+
       return jsonResponse(
         cors,
         failure.body,
@@ -1850,6 +1975,10 @@ export default {
 
           error:
             "لا توجد بيانات سوقية كافية لإتمام التقييم.",
+
+          // E-3
+          available_areas:
+            await availableAreasSafe(env?.DB),
         },
         422
       );
