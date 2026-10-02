@@ -18,7 +18,7 @@ extra_head: |
     /* ═══ قفل الواجهة على ارتفاع الشاشة ═══
        html/body/#app ثابتين على 100dvh بدون تمرير، و.chat-area هي الوحيدة القابلة للتمرير.
        القواعد دي بتتحمّل بعد style.css (نفس الـselectors) فبتكسب بالترتيب — style.css نفسه مش متعدّل. */
-    :root { color-scheme: only light; } /* تصميم الصفحة فاتح — نمنع وضع الجهاز من قلب الحقول/السكرول */
+    :root { color-scheme: dark; } /* الصفحة داكنة دائمًا (قرار المالك): الحقول والسكرول وقوائم المتصفح تتبع الداكن مهما كان وضع الجهاز */
     html.page-agent, body.page-agent {
       height: 100vh; height: 100dvh;
       max-height: 100vh; max-height: 100dvh;
@@ -41,8 +41,44 @@ extra_head: |
       height: var(--vv-h); max-height: var(--vv-h);
       transform: var(--vv-tf, none);
     }
-    /* حقل الكتابة: لون النص والمؤشر ثابتين مهما كان وضع الجهاز (نفس ألوان التصميم الحالي) */
-    body.page-agent .input-field { color-scheme: only light; color: var(--text-primary); caret-color: var(--accent); }
+    /* حقل الكتابة: لون النص والمؤشر ثابتين مهما كان وضع الجهاز */
+    /* font-size: 16px — iOS Safari بيعمل zoom تلقائي لما حقل الكتابة أصغر من 16px (style.css محدده 15.5px)، والـzoom ده بيزحزح الشاشة */
+    body.page-agent .input-field { color-scheme: dark; color: var(--text-primary); caret-color: var(--accent); font-size: 16px; }
+
+    /* ═══ الوضع الداكن مفروض دائمًا (A-3) ═══
+       نفس لوحة الوضع الداكن الموجودة في style.css (≈ L6566–6608 تحت prefers-color-scheme: dark) لكن غير مشروطة بوضع الجهاز.
+       مفيش ألوان جديدة. الكتلة دي بتتحمّل بعد style.css (نفس الـselectors) فبتكسب بالترتيب — style.css نفسه مش متعدّل.
+       زر «💎 قيّم عقارك» مش متأثر: لونه الذهبي مكتوب ثابت في style.css (.btn-glass.valuation-link) مش من المتغيرات. */
+    html.page-agent, body.page-agent {
+      --bg-app:           #0b141a;
+      --bg-glass:         rgba(30, 45, 61, 0.65);
+      --bg-glass-strong:  rgba(30, 45, 61, 0.85);
+      --bg-glass-light:   rgba(30, 45, 61, 0.45);
+      --border-glass:     rgba(255, 255, 255, 0.08);
+      --border-subtle:    rgba(255, 255, 255, 0.05);
+      --header-bg:        #202c33;
+      --header-text:      #e9edef;
+      --header-sub:       #8696a0;
+      --bubble-in:        rgba(30, 45, 61, 0.92);
+      --bubble-out:       #005c4b;
+      --text-primary:     #e9edef;
+      --text-secondary:   #8696a0;
+      --text-tertiary:    #667781;
+      --accent:           #25d366;
+      --accent-dark:      #00a884;
+      --tick-blue:        #53bdeb;
+      --danger:           #ff4d6d;
+    }
+    body.page-agent .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+    body.page-agent .chat-area { background-color: #0b141a; }
+    body.page-agent .chat-area::after { content: none; }
+    body.page-agent .msg-user { background: var(--bubble-out); color: #e9edef; }
+    body.page-agent .privacy-warn { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.2); }
+    body.page-agent .wa-dialog { background: #202c33; }
+    body.page-agent .wa-dialog-title { color: #e9edef; }
+    body.page-agent .wa-dialog-message { color: #8696a0; }
+    body.page-agent .wa-dialog-btn.danger { color: #ff4d6d; }
+    body.page-agent .wa-dialog-btn.danger:hover { background: rgba(255,77,109,0.1); }
   </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
@@ -59,7 +95,7 @@ extra_scripts: |
       <div class="header-name">طارق طنطاوي</div>
       <div class="header-status" id="statusLine">
         <span class="status-dot"></span>
-        <span id="statusText">متصل الآن</span>
+        <span id="statusText">وكيل ذكي • متصل الآن</span>
       </div>
     </div>
 
@@ -247,6 +283,7 @@ const GOOGLE_URL   = "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7";
 const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
 const FORM_VERSION = "v87";
+const STATUS_ONLINE = "وكيل ذكي • متصل الآن"; // إفصاح صريح: ده وكيل مؤتمت مش طارق شخصيًا (نفس كلام الـWorker)
 
 const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/></svg>`;
 
@@ -426,7 +463,9 @@ function renderReturnBanner(valuation) {
       lines += `📊 النطاق (P25–P75): ${fmtN(valuation.p25)} – ${fmtN(valuation.p75)} ج.م/م²<br>`;
     }
     if (valuation.perMeter) {
-      lines += `📏 سعر المتر: ${fmtN(valuation.perMeter)} ج.م/م²<br>`;
+      const basisLabel = valuation.priceBasis === 'median_price_m2' ? ' (الوسيط)'
+                       : valuation.priceBasis === 'avg_price_m2' ? ' (المتوسط)' : '';
+      lines += `📏 سعر المتر${basisLabel}: ${fmtN(valuation.perMeter)} ج.م/م²<br>`;
     }
     lines += `🎯 الثقة: ${confLabel}`;
     if (valuation.samples > 0) lines += ` (${valuation.samples} عينة)`;
@@ -546,6 +585,8 @@ function escapeAttr(text) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
+// A-4: مصدر الصورة المسموح: https: / blob: / data:image بس — بيمنع javascript: وغيره حتى بعد escapeAttr (دفاع إضافي؛ المصدر الحالي معاينات محلية)
+const SAFE_IMG_SRC = /^(?:https:\/\/|blob:|data:image\/(?:png|jpe?g|webp|gif|bmp|avif|heic|heif);base64,)/i;
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
@@ -573,7 +614,7 @@ function forceScrollToBottom() {
 }
 function setTyping(on, customText) {
   if (on) { statusText.textContent = customText || "يكتب..."; statusLine.classList.add("typing"); }
-  else { statusText.textContent = "متصل الآن"; statusLine.classList.remove("typing"); }
+  else { statusText.textContent = STATUS_ONLINE; statusLine.classList.remove("typing"); }
 }
 function toggleTypingBubble(on) { typingBubble.classList.toggle("active", !!on); }
 function showToast(msg, dur = 2400) {
@@ -598,9 +639,9 @@ function renderMsg(text, type = "bot", images) {
   if (images && images.length) {
     html += `<div class="msg-imgs">`;
     images.forEach(src => {
-      const safe = escapeAttr(src);
+      const safe = SAFE_IMG_SRC.test(String(src || "")) ? escapeAttr(src) : "";
       if (!safe) return;
-      html += `<img src="${safe}" loading="lazy" decoding="async" alt="صورة" onclick="window.open(this.src,'_blank')">`;
+      html += `<img src="${safe}" loading="lazy" decoding="async" alt="صورة" onclick="window.open(this.src,'_blank','noopener')">`;
     });
     html += `</div>`;
   }
@@ -846,7 +887,8 @@ async function sendMsg() {
 
   const localPreviews = state.pendingImages.map(p => p.preview);
   renderMsg(txt || "📷 صور", "user", localPreviews.length ? localPreviews : undefined);
-  state.history.push({ role: "user", message: txt || "[صور]" });
+  // سقف 1000 حرف (نفس سقف الـWorker): لصقة ضخمة واحدة ما تتحفظش في history فتكسر كل الطلبات اللي بعدها بـ413
+  state.history.push({ role: "user", message: (txt || "[صور]").slice(0, 1000) });
 
   isSending = true;
   sendBtn.disabled = true;
@@ -1106,7 +1148,7 @@ msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftK
 // ═══ INIT ═══
 function startConversation() {
   stickToBottom = true; // محادثة جديدة: نتابع آخرها
-  renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — سمسار مدينة نصر.\n\n🏆 Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟", "bot");
+  renderMsg("أهلاً بيك 👋\nأنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر.\n\n🏆 طارق: Google Local Guide 7 | 16.3 مليون مشاهدة\n\nازّاي أساعدك؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
 }

@@ -1479,6 +1479,8 @@ function prefillFromUrl() {
   /* ⭐ جرب العربي عبر الـslug، وإذا فشل جرب النص الأصلي مباشرة */
   const areaArabic = REVERSE_AREA_MAP[areaParam] || areaParam;
   const area = findAvailableArea(areaArabic) || findAvailableArea(areaParam);
+  /* T2.1: المنطقة جاية من رابط/محادثة ومش مطابقة لأي منطقة في قائمة السوق → نوضّح للمستخدم بدل ما نسكت */
+  if (areaParam && !area) toast('ما قدرناش نتعرّف على المنطقة من الرابط — اختر المنطقة من القائمة', 6000);
 
   const sizeParam = params.get('size');
   const size = Number.parseFloat(toEn(sizeParam || '').replace(/,/g, ''));
@@ -1560,13 +1562,13 @@ function resetTool() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function toast(msg) {
+function toast(msg, ms = 2200) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  setTimeout(() => t.remove(), ms);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

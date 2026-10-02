@@ -1,296 +1,256 @@
+// تكامل بيانات السوق: الـWorker (D1) هو المصدر الوحيد للأرقام — الصفحة والوكيل بيعرضوها وبينقلوها بس.
+//
+// خريطة الاختبارات الخمسة القديمة → الجديدة (الملف القديم كان بيستورد _worker/market-data.js الميّت واتشال):
+//   #1 «D1 keeps المنطقة الأولى separate from الحي الأول and resolves explicit area aliases»        → M1
+//   #2 «D1 valuation uses avg/median and real min/max; no apartment substitution…»                 → M2  (الوسيط بس، من غير fallback للمتوسط)
+//   #3 «valuation Worker serves D1 areas on /areas and D1 estimates on /api»                        → M3  (عقد v2 + MARKET_UNAVAILABLE 503)
+//   #4 «agent valuation CTA is separate from buyer/owner qualification and preserves seller context» → M4  (الوكيل ما بيقتبسش أسعار؛ الزر 💎 في خطوة الهدية بس)
+//   #5 «current listings remain sourced from ai-feed when the D1 snapshot is missing»                → M5  (الوحدات المشابهة من ai-feed في الصفحة، مفيش رقم بديل)
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { after, before, test } from "node:test";
-import agentWorker from "../worker.js";
 import valuationWorker from "../valuation-worker.js";
+import { ID, makeDb, snap, valuationPost } from "./_fixtures.mjs";
 import {
-  calculateMarketTotals,
-  findAreaName,
-  getMarketSnapshot,
-  listMarketAreas,
-  normalizePropertyType,
-} from "../market-data.js";
+  ADDRESS, agentPost, driveOwnerToGift, gemini, geminiText, installFetchMock, qualifiedOwnerState, resetGemini, restoreFetch,
+} from "./_agent-harness.mjs";
+import { createPageContext, textOf } from "./_dom-page.mjs";
 
-const areas = [
-  { id: 1, name_ar: "المنطقة الأولى" },
-  { id: 2, name_ar: "الحي الأول" },
-  { id: 3, name_ar: "ممر مكرم عبيد" },
-  { id: 4, name_ar: "ممر عباس العقاد" },
-  { id: 5, name_ar: "رابعة العدوية" },
-  { id: 6, name_ar: "الحي الدبلوماسي" },
-];
-
-const snapshots = [
-  {
-    id: 1, area_name_ar: "المنطقة الأولى", property_type: "شقة", transaction_type: "بيع",
-    rent_condition: null, avg_price_m2: 50000, median_price_m2: null,
-    min_price_m2: 45000, max_price_m2: 55000, sample_count: 12,
-    period: "2026-Q3", data_source: "D1 fixture",
-  },
-  {
-    id: 2, area_name_ar: "ممر مكرم عبيد", property_type: "شقة", transaction_type: "بيع",
-    rent_condition: null, avg_price_m2: null, median_price_m2: 42000,
-    min_price_m2: 40000, max_price_m2: 45000, sample_count: 7,
-    period: "2026-Q3", data_source: "D1 fixture",
-  },
-  {
-    id: 3, area_name_ar: "المنطقة الأولى", property_type: "شقة", transaction_type: "إيجار",
-    rent_condition: "مفروش", avg_price_m2: 1200, median_price_m2: null,
-    min_price_m2: 1000, max_price_m2: 1500, sample_count: 8,
-    period: "2026-Q3", data_source: "D1 fixture",
-  },
-  {
-    id: 4, area_name_ar: "الحي الدبلوماسي", property_type: "شقة", transaction_type: "إيجار",
-    rent_condition: null, avg_price_m2: 900, median_price_m2: null,
-    min_price_m2: 800, max_price_m2: 1100, sample_count: 5,
-    period: "2026-Q3", data_source: "D1 fixture",
-  },
-];
-
-const snapshotColumns = [
-  "id", "area_name_ar", "property_type", "transaction_type", "rent_condition",
-  "avg_price_m2", "median_price_m2", "min_price_m2", "max_price_m2",
-  "sample_count", "period", "data_source",
-];
-const areaColumns = ["id", "name_ar"];
-
-function makeDb(rows = snapshots) {
-  return {
-    prepare(sql) {
-      return {
-        async all() {
-          if (sql.startsWith("PRAGMA table_info")) {
-            const columns = sql.includes("'price_snapshots'") ? snapshotColumns : areaColumns;
-            return { results: columns.map(name => ({ name })) };
-          }
-          if (sql.includes('"price_snapshots"')) return { results: rows };
-          if (sql.includes('"areas"')) return { results: areas };
-          throw new Error(`Unexpected D1 statement: ${sql}`);
-        },
-      };
-    },
-  };
-}
-
-const feed = {
-  properties: [
-    {
-      id: "feed-unit-1",
-      title: "شقة معروضة في الحي الأول",
-      zone: "الحي الأول",
-      transaction: "sale",
-      propertyType: "apartment",
-      areaNumeric: 175,
-      priceNumeric: 6200000,
-      url: "https://nasr-realestate.github.io/properties/feed-unit-1.html",
-    },
-  ],
+const FEED = {
+  properties: [{
+    id: "feed-unit-1", title: "شقة معروضة في الحي الأول", zone: "الحي الأول", transaction: "sale", propertyType: "apartment",
+    areaNumeric: 175, priceNumeric: 6200000, url: "https://nasr-realestate.github.io/properties/feed-unit-1.html",
+  }],
 };
-const previousFetch = globalThis.fetch;
-let geminiCallCount = 0;
+before(() => installFetchMock({ feed: FEED }));
+after(() => restoreFetch());
 
-before(() => {
-  globalThis.fetch = async input => {
-    if (String(input).includes("ai-feed.json")) {
-      return new Response(JSON.stringify(feed), { status: 200, headers: { "Content-Type": "application/json" } });
-    }
-    geminiCallCount += 1;
-    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "-" }] } }] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  };
+// لقطات مخترعة للاختبار فقط (مش بيانات D1 الحقيقية)
+const rows = () => [
+  snap(ID.zone1, { median: 50000, p25: 45000, p75: 55000, min: 40000, max: 65000, n: 12 }),
+  snap(ID.makram, { median: 42000, p25: 40000, p75: 45000, min: 38000, max: 47000, n: 7 }),
+  snap(ID.zone1, { tx: "rent", cond: "furnished", median: 1200, p25: 1000, p75: 1500, min: 900, max: 1800, n: 8 }),
+  snap(ID.hayy1, { tx: "rent", cond: null, median: 900, p25: 800, p75: 1100, min: 700, max: 1300, n: 5 }),
+];
+const post = (body, r = rows()) => valuationPost(valuationWorker, body, { DB: makeDb({ rows: r }) });
+const REQ = { area: "المنطقة الأولى", areaType: "sale", propertyType: "شقة", size: 100 };
+
+test("M1 [was #1]: المنطقة الأولى stays separate from الحي الأول; the page resolves aliases, the Worker accepts official names only", async () => {
+  const get = await valuationWorker.fetch(new Request("https://worker.test/areas"), { DB: makeDb() });
+  const names = (await get.json()).available_areas.map(a => a.name);
+  assert.equal(names[0], "مدينة نصر (ككل)");
+  assert.ok(names.includes("المنطقة الأولى") && names.includes("الحي الأول"));
+  assert.notEqual(names.indexOf("المنطقة الأولى"), names.indexOf("الحي الأول"));
+
+  const page = createPageContext();
+  page.run(`AREAS = ${JSON.stringify(names)}`);
+  const find = text => page.run(`findAvailableArea(${JSON.stringify(text)})`);
+  assert.equal(find("المنطقة الأولى"), "المنطقة الأولى");
+  assert.equal(find("المنطقة الاولي"), "المنطقة الأولى");
+  assert.equal(find("الحي الاول"), "الحي الأول");
+  assert.notEqual(find("المنطقة الأولى"), find("الحي الأول"));
+  assert.equal(find("مكرم عبيد"), "ممر مكرم عبيد");
+  assert.equal(find("عباس العقاد"), "ممر عباس العقاد");
+  assert.equal(find("حي السفارات"), "الحي الدبلوماسي");
+  assert.equal(page.run(`findAreaMention(${JSON.stringify(ADDRESS)})`), "المنطقة السادسة");
+
+  // الـWorker بيطابق الاسم الرسمي (بتطبيع الهمزات/الياء) ومبيخمّنش: اسم الشهرة مرفوض ومعاه القائمة
+  const first = await post(REQ);
+  const hayy = await post({ ...REQ, area: "الحي الأول" }, [snap(ID.hayy1, { median: 38000, p25: 34000, p75: 42000, n: 9 })]);
+  assert.equal(first.body.area_found, "المنطقة الأولى");
+  assert.equal(first.body.area_id, ID.zone1);
+  assert.equal(hayy.body.area_found, "الحي الأول");
+  assert.equal(hayy.body.area_id, ID.hayy1);
+  assert.equal((await post({ ...REQ, area: "المنطقة الاولي" })).body.area_found, "المنطقة الأولى");
+  assert.equal((await post({ ...REQ, area: "ممر مكرم عبيد" })).body.area_found, "ممر مكرم عبيد");
+  const alias = await post({ ...REQ, area: "مكرم عبيد" });
+  assert.equal(alias.status, 400);
+  assert.equal(alias.body.code, "AREA_NOT_FOUND");
+  assert.ok(alias.body.available_areas.some(a => a.name === "ممر مكرم عبيد"), "the error carries the list so the client can recover");
+  assert.equal("estimate" in alias.body, false);
+  for (const type of ["شقة", "شقه", "apartment", "Apartment"]) assert.equal((await post({ ...REQ, propertyType: type })).body.property_type, "apartment", type);
 });
 
-after(() => {
-  globalThis.fetch = previousFetch;
+test("M2 [was #2]: the median is the only central value (no average fallback), min/max are real bounds, nothing is substituted", async () => {
+  const ok = await post(REQ);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.price_basis, "median_price_m2");
+  assert.equal(ok.body.estimate, 5000000);
+  assert.equal(ok.body.price_per_meter, 50000);
+  assert.deepEqual(ok.body.range, { low: 4500000, high: 5500000 });
+  assert.deepEqual(ok.body.price_per_m2_range, { low: 45000, high: 55000 });
+  assert.deepEqual(ok.body.market_bounds, { min_price_per_m2: 40000, max_price_per_m2: 65000, min_value: 4000000, max_value: 6500000 });
+  assert.equal(ok.body.sample_count, 12);
+  assert.equal(ok.body.fallback_used, false);
+  assert.equal((await post({ ...REQ, size: 150 })).body.estimate, 7500000, "the total is exactly median × size");
+
+  const makram = await post({ ...REQ, area: "ممر مكرم عبيد" });
+  assert.equal(makram.body.area_found, "ممر مكرم عبيد");
+  assert.equal(makram.body.price_basis, "median_price_m2");
+  assert.equal(makram.body.estimate, 4200000);
+
+  // مفيش fallback للمتوسط ولا مدى مخترع: لقطة من غير وسيط أو من غير P25/P75 = مفيش تقييم
+  const avgOnly = await post(REQ, [snap(ID.zone1, { median: null, min: 45000, max: 55000, n: 12, extra: { avg_price_m2: 50000 } })]);
+  assert.equal(avgOnly.status, 503);
+  assert.equal(avgOnly.body.code, "MARKET_UNAVAILABLE");
+  assert.equal("estimate" in avgOnly.body, false);
+  const noQuartiles = await post(REQ, [snap(ID.zone1, { median: 50000, min: 45000, max: 55000, n: 12 })]);
+  assert.equal(noQuartiles.status, 503);
+  assert.equal("estimate" in noQuartiles.body, false);
+
+  // مفيش استبدال لنوع العقار: فيلا/محل مفيش لهم لقطة (لا في المنطقة ولا في المدينة) = 503 مش سعر شقة
+  for (const propertyType of ["فيلا", "محل تجاري"]) {
+    const none = await post({ ...REQ, propertyType });
+    assert.equal(none.status, 503, propertyType);
+    assert.equal("estimate" in none.body, false, propertyType);
+  }
+  // مفيش استبدال لحالة الإيجار: مفروش بس موجود ⇒ «غير مفروش» مرفوض، و«مفروش» أو غير المحدد بيرجعوا لقطة المفروش باسمها
+  const rent = { ...REQ, areaType: "rent" };
+  assert.equal((await post({ ...rent, rentCondition: "unfurnished" })).status, 503);
+  const furnished = await post({ ...rent, rentCondition: "furnished" });
+  assert.equal(furnished.status, 200);
+  assert.equal(furnished.body.rent_condition, "furnished");
+  assert.equal(furnished.body.estimate, 120000);
+  const unspecified = await post({ ...rent, rentCondition: "unknown" });
+  assert.equal(unspecified.body.rent_condition, "furnished", "what was used is reported, never hidden");
+  assert.equal(unspecified.body.requested_rent_condition, null);
+  const allConditions = await post({ ...rent, area: "الحي الأول" });
+  assert.equal(allConditions.status, 200);
+  assert.equal(allConditions.body.rent_condition, "all");
 });
 
-test("D1 keeps المنطقة الأولى separate from الحي الأول and resolves explicit area aliases", async () => {
-  const names = await listMarketAreas(makeDb());
-  assert.deepEqual(names, areas.map(area => area.name_ar));
-  assert.equal(findAreaName(names, "المنطقة الأولى"), "المنطقة الأولى");
-  assert.equal(findAreaName(names, "الحي الأول"), "الحي الأول");
-  assert.equal(findAreaName(names, "مكرم عبيد"), "ممر مكرم عبيد");
-  assert.equal(findAreaName(names, "حي السفارات"), "الحي الدبلوماسي");
-  assert.notEqual(findAreaName(names, "المنطقة الأولى"), findAreaName(names, "الحي الأول"));
-  assert.equal(normalizePropertyType("شقتي"), "apartment");
-});
-
-test("D1 valuation uses avg/median and real min/max; no apartment substitution for unsupported types", async () => {
-  const db = makeDb();
-  const first = await getMarketSnapshot(db, { area: "المنطقة الأولى", propertyType: "شقة", areaType: "sale" });
-  assert.equal(first.ok, true);
-  assert.equal(first.price_basis, "avg_price_m2");
-  assert.deepEqual(calculateMarketTotals(first, 100), {
-    estimate: 5000000,
-    range: { low: 4500000, high: 5500000 },
-    price_per_meter: 50000,
-    price_per_m2_range: { low: 45000, high: 55000 },
-  });
-
-  const makram = await getMarketSnapshot(db, { area: "مكرم عبيد", propertyType: "شقة", areaType: "sale" });
-  assert.equal(makram.ok, true);
-  assert.equal(makram.area_found, "ممر مكرم عبيد");
-  assert.equal(makram.price_basis, "median_price_m2");
-
-  const villa = await getMarketSnapshot(db, { area: "المنطقة الأولى", propertyType: "فيلا", areaType: "sale" });
-  assert.equal(villa.ok, false);
-  assert.equal(villa.reason, "insufficient_data");
-  const noSaleSnapshot = await getMarketSnapshot(db, { area: "الحي الأول", propertyType: "شقة", areaType: "sale" });
-  assert.equal(noSaleSnapshot.ok, false);
-  assert.equal(noSaleSnapshot.reason, "insufficient_data");
-  const wrongRentCondition = await getMarketSnapshot(db, {
-    area: "المنطقة الأولى", propertyType: "شقة", areaType: "rent", rentCondition: "unfurnished",
-  });
-  assert.equal(wrongRentCondition.ok, false);
-  assert.equal(wrongRentCondition.reason, "insufficient_data");
-  const unspecifiedRent = await getMarketSnapshot(db, {
-    area: "الحي الدبلوماسي", propertyType: "شقة", areaType: "rent", rentCondition: "unknown",
-  });
-  assert.equal(unspecifiedRent.ok, true);
-  assert.equal(unspecifiedRent.rent_condition, "unknown");
-});
-
-test("valuation Worker serves D1 areas on /areas and D1 estimates on /api", async () => {
-  const db = makeDb();
-  const get = await valuationWorker.fetch(new Request("https://worker.test/areas"), { DB: db });
+test("M3 [was #3]: the valuation Worker serves D1 areas on /areas and D1 estimates on /api (contract v2)", async () => {
+  const env = { DB: makeDb({ rows: rows() }) };
+  const get = await valuationWorker.fetch(new Request("https://worker.test/areas"), env);
   const getBody = await get.json();
   assert.equal(get.status, 200);
   assert.ok(Array.isArray(getBody.available_areas));
-  assert.equal(getBody.api_contract, "d1-price-snapshots-v1");
+  assert.equal(getBody.api_contract, "d1-price-snapshots-v2");
   assert.equal(getBody.data_source, "price_snapshots");
+  assert.equal(getBody.version, "v6.2");
   assert.equal("database" in getBody, false);
 
-  const post = await valuationWorker.fetch(new Request("https://worker.test/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://nasr-realestate.github.io" },
-    body: JSON.stringify({ area: "المنطقة الأولى", areaType: "sale", propertyType: "شقة", size: 100 }),
-  }), { DB: db });
-  const body = await post.json();
-  assert.equal(post.status, 200);
-  assert.equal(body.api_contract, "d1-price-snapshots-v1");
+  const { status, body } = await valuationPost(valuationWorker, REQ, env);
+  assert.equal(status, 200);
+  assert.equal(body.api_contract, "d1-price-snapshots-v2");
   assert.equal(body.source_table, "price_snapshots");
   assert.equal(body.estimate, 5000000);
   assert.equal(body.sample_count, 12);
-  assert.equal(body.confidence, "high");
-  assert.equal(body.period, "2026-Q3");
+  assert.equal(body.confidence, "medium");
+  assert.equal(body.period, "2026-09");
   assert.equal(body.price_per_m2_range.low, 45000);
 
-  const unsupported = await valuationWorker.fetch(new Request("https://worker.test/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ area: "المنطقة الأولى", areaType: "sale", propertyType: "فيلا", size: 100 }),
-  }), { DB: db });
-  assert.equal(unsupported.status, 422);
-  const noSnapshotBody = await unsupported.json();
-  assert.equal(noSnapshotBody.code, "INSUFFICIENT_MARKET_DATA");
-  assert.equal("estimate" in noSnapshotBody, false);
+  const noSnapshot = await valuationPost(valuationWorker, { ...REQ, propertyType: "فيلا" }, env);
+  assert.equal(noSnapshot.status, 503);
+  assert.equal(noSnapshot.body.code, "MARKET_UNAVAILABLE");
+  assert.equal("estimate" in noSnapshot.body, false);
+  assert.ok(noSnapshot.body.available_areas.length > 0);
 
-  const unknownType = await valuationWorker.fetch(new Request("https://worker.test/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ area: "المنطقة الأولى", areaType: "sale", propertyType: "قصر", size: 100 }),
-  }), { DB: db });
+  const unknownType = await valuationPost(valuationWorker, { ...REQ, propertyType: "قصر" }, env);
   assert.equal(unknownType.status, 422);
-  assert.equal((await unknownType.json()).code, "UNSUPPORTED_PROPERTY_TYPE");
-
-  const missingPropertyType = await valuationWorker.fetch(new Request("https://worker.test/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ area: "المنطقة الأولى", areaType: "sale", size: 100 }),
-  }), { DB: db });
-  assert.equal(missingPropertyType.status, 400);
-  assert.equal((await missingPropertyType.json()).code, "PROPERTY_TYPE_REQUIRED");
-
-  const missingTransaction = await valuationWorker.fetch(new Request("https://worker.test/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ area: "المنطقة الأولى", propertyType: "شقة", size: 100 }),
-  }), { DB: db });
+  assert.equal(unknownType.body.code, "UNSUPPORTED_PROPERTY_TYPE");
+  const { propertyType: _omitType, ...noType } = REQ;
+  const missingType = await valuationPost(valuationWorker, noType, env);
+  assert.equal(missingType.status, 400);
+  assert.equal(missingType.body.code, "PROPERTY_TYPE_REQUIRED");
+  const { areaType: _omitTx, ...noTx } = REQ;
+  const missingTransaction = await valuationPost(valuationWorker, noTx, env);
   assert.equal(missingTransaction.status, 400);
-  assert.equal((await missingTransaction.json()).code, "TRANSACTION_REQUIRED");
+  assert.equal(missingTransaction.body.code, "TRANSACTION_REQUIRED");
 });
 
-async function agentPost(message, formState = {}, db = makeDb()) {
-  return agentWorker.fetch(new Request("https://agent.test/", {
-    method: "POST",
-    headers: {
-      Origin: "https://nasr-realestate.github.io",
-      "Content-Type": "application/json",
-      "CF-Connecting-IP": `192.0.2.${Math.floor(Math.random() * 200) + 1}`,
-    },
-    body: JSON.stringify({ message, formState, history: [] }),
-  }), { DB: db, GEMINI_API_KEY: "test-key" });
-}
+test("M4 [was #4]: the agent never quotes a price and never starts a valuation by itself; the 💎 button belongs to the owner's gift step and keeps the seller's context", async () => {
+  const quote = /سعر المتر في بيانات D1|بيانات D1|التقييم السوقي/;
+  // أسئلة السعر: Gemini بس (مفيش اقتباس أسعار ولا زر تقييم) — والقوائم/الأسعار اللي في ai-feed مش بتدخل الـprompt
+  for (const message of ["سعر المتر في المنطقة الأولى كام؟", "شقتي في المنطقة الأولى ١٨٠ متر تسوى كام؟", "السلام عليكم"]) {
+    resetGemini();
+    const { json } = await agentPost({ message, formState: {}, history: [] });
+    assert.equal(gemini.length, 1, message);
+    assert.equal(json.response, "-", `${message}: the (mocked) Gemini text is passed through, nothing is quoted`);
+    assert.doesNotMatch(json.response, quote);
+    assert.equal(json.valuationCta, undefined, message);
+    assert.equal(json.whatsappUrl, undefined);
+    assert.equal(json.readyToSend, undefined);
+    assert.ok(!/6,?200,?000/.test(geminiText()), "feed prices never reach the model");
+  }
+  // نية البيع بتبدأ تسجيل المالك من الأول (بدون ما نفترض أي بيانات من النص الحر) ومن غير زر تقييم في الخطوات العادية
+  for (const message of ["عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر", "أريد بيع شقتي في المنطقة الأولى ١٨٠ متر", "عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر، تسوى كام؟"]) {
+    const { json } = await agentPost({ message, formState: {}, history: [] });
+    assert.equal(json.formState.flowType, "owner", message);
+    assert.equal(json.formState.stepIndex, 0);
+    assert.equal(json.formState.data.area, undefined);
+    assert.equal(json.formState.data.propertyType, undefined);
+    assert.equal(json.valuationCta, undefined, "no CTA before the gift step");
+    assert.equal(json.done, false);
+    assert.equal(json.readyToSend, false);
+    assert.equal(json.whatsappUrl, undefined);
+    assert.doesNotMatch(json.response, quote);
+  }
+  // سؤال السعر وسط التسجيل مبيحرّكش الخطوة ومبيطلعش زر ولا واتساب، لا للمالك ولا للمشتري
+  const owner = qualifiedOwnerState({ stepIndex: 2 });
+  const ownerQ = (await agentPost({ message: "الشقة بتاعتي تسوى كام؟", formState: owner, history: [] })).json;
+  assert.equal(ownerQ.formState.flowType, "owner");
+  assert.equal(ownerQ.formState.stepIndex, 2);
+  assert.equal(ownerQ.valuationCta, undefined);
+  assert.equal(ownerQ.whatsappUrl, undefined);
+  const buyerQ = (await agentPost({ message: "سعر المتر في المنطقة الأولى كام؟", formState: { ...owner, flowType: "buyer" }, history: [] })).json;
+  assert.equal(buyerQ.formState.flowType, "buyer");
+  assert.equal(buyerQ.formState.stepIndex, 2);
+  assert.equal(buyerQ.valuationCta, undefined);
+  assert.ok(!buyerQ.readyToSend, "a price question never completes or sends the request");
+  assert.equal(buyerQ.whatsappUrl, undefined);
 
-test("agent valuation CTA is separate from buyer/owner qualification and preserves seller context", async () => {
-  const underspecified = await (await agentPost("سعر المتر في المنطقة الأولى كام؟")).json();
-  assert.match(underspecified.response, /حدّد نوع العقار/);
-  assert.equal(underspecified.valuationCta.propertyType, null);
-  assert.equal(underspecified.valuationCta.areaType, "sale");
-  assert.doesNotMatch(underspecified.response, /سعر المتر في بيانات D1/);
-  assert.equal(geminiCallCount, 0);
+  // خطوة الهدية: الزر مع سياق البائع كامل، وما فيش إرسال لطارق
+  const sale = (await driveOwnerToGift()).json;
+  assert.deepEqual(sale.valuationCta, {
+    intent: "seller", area: ADDRESS, size: 180, propertyType: "شقة", areaType: "sale", rentCondition: null, price: 9500000, floor: "ثالث", finishing: "سوبر لوكس",
+  });
+  assert.deepEqual(sale.options, ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"]);
+  assert.equal(sale.readyToSend, false);
+  assert.equal(sale.whatsappUrl, undefined);
+  const rent = (await driveOwnerToGift({ rent: true, furnished: true })).json;
+  assert.equal(rent.valuationCta.areaType, "rent");
+  assert.equal(rent.valuationCta.rentCondition, "furnished");
+  assert.equal(rent.valuationCta.price, 9000);
+  assert.equal((await driveOwnerToGift({ rent: true, furnished: false })).json.valuationCta.rentCondition, "unfurnished");
+});
 
-  const valuation = await (await agentPost("شقتي في المنطقة الأولى ١٨٠ متر تسوى كام؟")).json();
-  assert.match(valuation.response, /سعر المتر في بيانات D1/);
-  assert.equal(valuation.valuationCta.intent, "valuation");
-  assert.equal(valuation.valuationCta.area, "المنطقة الأولى");
-  assert.equal(valuation.valuationCta.size, 180);
-  assert.equal(valuation.readyToSend, undefined);
-  assert.equal(valuation.whatsappUrl, undefined);
+test("M5 [was #5]: listing prices live in ai-feed and the page — a missing D1 snapshot never produces a substitute number", async () => {
+  // الوكيل مبيقولش أسعار السوق ولا بيعرض أسعار من ai-feed حتى لو مفيش لقطة
+  resetGemini();
+  const { json } = await agentPost({ message: "في شقة معروضة للبيع في الحي الأول وسعر السوق كام؟", formState: {}, history: [] });
+  assert.doesNotMatch(json.response, /لا توجد بيانات سوقية كافية|عقارات منشورة من المصدر الحالي|السعر المعروض|6,200,000/);
+  assert.equal(json.whatsappUrl, undefined);
+  assert.ok(!/6,?200,?000/.test(geminiText()));
 
-  const seller = await (await agentPost("عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر")).json();
-  assert.equal(seller.valuationCta.intent, "seller");
-  assert.equal(seller.formState.flowType, "owner");
-  assert.equal(seller.formState.stepIndex, 0);
-  assert.equal(seller.formState.data.area, undefined);
-  assert.equal(seller.formState.data.propertyType, undefined);
-  assert.doesNotMatch(seller.response, /سعر المتر في بيانات D1/);
-  assert.equal(seller.done, false);
-  assert.equal(seller.readyToSend, false);
-  assert.equal(seller.whatsappUrl, undefined);
-  const explicitSeller = await (await agentPost("أريد بيع شقتي في المنطقة الأولى ١٨٠ متر")).json();
-  assert.equal(explicitSeller.valuationCta.intent, "seller");
-  assert.equal(explicitSeller.valuationCta.area, "المنطقة الأولى");
-  assert.equal(explicitSeller.valuationCta.size, 180);
-  assert.equal(explicitSeller.readyToSend, false);
-  const sellerValuation = await (await agentPost("عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر، تسوى كام؟")).json();
-  assert.match(sellerValuation.response, /سعر المتر في بيانات D1/);
-  assert.equal(sellerValuation.valuationCta.intent, "seller");
-  assert.equal(sellerValuation.formState.data.area, undefined);
-  assert.equal(sellerValuation.whatsappUrl, undefined);
-  assert.equal(geminiCallCount, 0, "D1 quote path stays deterministic and does not ask Gemini for a price");
-
-  const ownerState = {
-    active: true, lifecycle: "active", type: "sale", stepIndex: 2,
-    data: { propertyType: "شقة", area: 180, location: "المنطقة الأولى" },
-    awaitingQ: true, flowType: "owner", imageUrls: [], _version: "v83",
+  // الصفحة: مفيش لقطة ⇒ رسالة خطأ بالكود، ومفيش نتيجة ولا وحدات مشابهة ولا رقم بديل
+  const routed = (db, feed) => async (url, init = {}) => {
+    const u = String(url);
+    if (u.includes("ai-feed.json")) return new Response(JSON.stringify(feed), { status: 200 });
+    if (u.startsWith("https://noisy-bush-fd84.footcai-555.workers.dev/")) {
+      return valuationWorker.fetch(new Request(u, { method: init.method || "GET", headers: init.headers, body: init.body }), { DB: db });
+    }
+    return new Response("{}", { status: 404 });
   };
-  const ownerQuestion = await (await agentPost("الشقة بتاعتي تسوى كام؟", ownerState)).json();
-  assert.equal(ownerQuestion.formState.flowType, "owner");
-  assert.equal(ownerQuestion.valuationCta.intent, "seller");
-  assert.equal(ownerQuestion.valuationCta.size, 180);
-  assert.equal(ownerQuestion.whatsappUrl, undefined);
+  const noSnapshotPage = createPageContext({ fetchImpl: routed(makeDb({ rows: [] }), FEED) });
+  await noSnapshotPage.run("loadAreas()");
+  for (const [id, value] of Object.entries({ area: "الحي الأول", areaType: "sale", propertyType: "شقة", size: "175", finishing: "سوبر لوكس", floor: "ثالث", age: "medium", furnished: "unknown", askingPrice: "" })) noSnapshotPage.el(id).value = value;
+  await noSnapshotPage.run("runValuation()");
+  assert.match(noSnapshotPage.el("error-box").textContent, /\(رمز الخطأ: MARKET_UNAVAILABLE\)/);
+  assert.equal(noSnapshotPage.el("result").classList.contains("show"), false);
+  assert.equal(noSnapshotPage.run("lastResult"), null);
+  assert.equal(noSnapshotPage.el("estimate").textContent, "");
 
-  const buyerState = { ...ownerState, flowType: "buyer" };
-  const buyerQuestion = await (await agentPost("سعر المتر في المنطقة الأولى كام؟", buyerState)).json();
-  assert.equal(buyerQuestion.formState.flowType, "buyer");
-  assert.equal(buyerQuestion.formState.stepIndex, 2);
-  assert.equal(buyerQuestion.readyToSend, undefined);
-  assert.equal(buyerQuestion.whatsappUrl, undefined);
+  // ومع وجود لقطة: الوحدة المنشورة بتظهر بسعرها المعلن (مؤشر منفصل) من ai-feed بس
+  const withSnapshot = createPageContext({ fetchImpl: routed(makeDb({ rows: [snap(ID.hayy1, { median: 38000, p25: 34000, p75: 42000, min: 30000, max: 48000, n: 9 })] }), FEED) });
+  await withSnapshot.run("loadAreas()");
+  await withSnapshot.run("loadSimilarProperties({ areaType: 'sale', size: 175 }, 'الحي الأول')");
+  assert.equal(withSnapshot.el("similarGrid").children.length, 1);
+  assert.match(textOf(withSnapshot.el("similarGrid").children[0]), /السعر المعلن: 6,200,000 ج\.م/);
 
-  assert.equal(geminiCallCount, 0, "market interruptions do not call Gemini for prices");
-  const greeting = await (await agentPost("السلام عليكم")).json();
-  assert.equal(greeting.valuationCta, undefined);
-  assert.equal(geminiCallCount, 1, "the ordinary agent greeting keeps its existing Gemini path");
-});
-
-test("current listings remain sourced from ai-feed when the D1 snapshot is missing", async () => {
-  const noSaleSnapshotDb = makeDb(snapshots.filter(row => row.transaction_type !== "بيع"));
-  const response = await (await agentPost("في شقة معروضة للبيع في الحي الأول وسعر السوق كام؟", {}, noSaleSnapshotDb)).json();
-  assert.match(response.response, /لا توجد بيانات سوقية كافية/);
-  assert.match(response.response, /عقارات منشورة من المصدر الحالي/);
-  assert.match(response.response, /السعر المعروض: 6,200,000 ج\.م/);
-  assert.equal(response.valuationCta.area, "الحي الأول");
-  assert.equal(response.whatsappUrl, undefined);
+  // الـWorker مبيقراش ai-feed ومبيعملش أي طلب خارجي — D1 بس
+  const source = fs.readFileSync(new URL("../valuation-worker.js", import.meta.url), "utf8");
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(code, /ai-feed|market-data/);
+  assert.doesNotMatch(code, /await\s+fetch\(|globalThis\.fetch|=\s*fetch\(|\.then\(/, "no outbound requests — D1 only");
 });
