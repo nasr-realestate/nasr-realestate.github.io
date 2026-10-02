@@ -34,9 +34,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <!-- أداء (2026-10-02): يُوفّر رحلة ذهاب/إياب (DNS+TLS ≈ 300 مللي ثانية على الجوال)
+       قبل أول طلب لـ GTM بدلاً من اكتشافه متأخراً أثناء التحليل -->
+  <link rel="preconnect" href="https://www.googletagmanager.com">
 
-  <!-- CSS المحلي أولاً (غير محجوب لجهة خارجية) -->
-  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <!-- CSS المحلي أولاً (غير محجوب لجهة خارجية)
+       ⚠️ أداء (2026-10-02): نُخدم النسخة المُصغَّرة style.min.css بدل style.css
+       (250 ك.ب → 180 ك.ب خام، و40 ك.ب → 28 ك.ب بعد gzip أي −30%).
+       style.min.css ملف مُولَّد — المصدر الذي يُعدَّل هو style.css، ثم يُعاد تصغيره:
+         npx cleancss -O1 -o assets/css/style.min.css assets/css/style.css -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.min.css' | relative_url }}">
 
   <!-- ═══════════════════════════════════════════════
        الخطوط وأيقونات Font Awesome — تحميل غير محجوب للعرض

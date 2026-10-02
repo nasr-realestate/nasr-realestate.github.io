@@ -397,9 +397,12 @@ body_class: "homepage"
 <section class="hp-section">
   <div class="hp-container">
     <div class="hp-agent-strip">
+      <!-- أداء (2026-10-02): الصورة في القسم السادس (أسفل الشاشة) فصارت lazy،
+           ومع width/height يمنع أي CLS عند وصولها. الحجم الفعلي من CSS (80/64 بكسل) -->
       <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
            alt="طارق طنطاوي"
            class="hp-agent-avatar"
+           loading="lazy" width="80" height="80"
            onerror="this.style.display='none'">
 
       <div class="hp-agent-info">

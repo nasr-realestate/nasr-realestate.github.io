@@ -21,7 +21,8 @@
   {% include schema-global.html %}
 
   <!-- ملف الأنماط الموحّد (v4.0) — أقسام هذه الصفحة مُنطَّقة بـ body class -->
-  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <!-- ⚠️ أداء (2026-10-02): النسخة المُصغَّرة style.min.css (ملف مُولَّد من style.css) -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.min.css' | relative_url }}">
 
   <!-- ═══════════════════════════════════════════════
        ⚠️ إصلاح (2026-09-24):
