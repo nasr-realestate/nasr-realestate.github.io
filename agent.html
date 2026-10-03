@@ -57,9 +57,8 @@ extra_head: |
       height: var(--vv-h); max-height: var(--vv-h);
       transform: var(--vv-tf, none);
     }
-    /* حقل الكتابة: لون النص والمؤشر ثابتين مهما كان وضع الجهاز */
-    /* font-size: 16px — iOS Safari بيعمل zoom تلقائي لما حقل الكتابة أصغر من 16px (style.css محدده 15.5px)، والـzoom ده بيزحزح الشاشة */
-    body.page-agent .input-field { color-scheme: dark; color: var(--text-primary); caret-color: var(--accent); font-size: 16px; }
+    /* حقل الكتابة: القاعدة بقت في كتلة الهوية تحت (🟡) — نفس الـselector وهو آخر
+       قاعدة بتكسب بالترتيب، ومعه إصلاح iOS (16px) وcolor-scheme الداكن. */
 
     /* ═══ الوضع الداكن مفروض دائمًا (A-3) ═══
        نفس لوحة الوضع الداكن الموجودة في style.css (≈ L6566–6608 تحت prefers-color-scheme: dark) لكن غير مشروطة بوضع الجهاز.
@@ -95,6 +94,212 @@ extra_head: |
     body.page-agent .wa-dialog-message { color: #8696a0; }
     body.page-agent .wa-dialog-btn.danger { color: #ff4d6d; }
     body.page-agent .wa-dialog-btn.danger:hover { background: rgba(255,77,109,0.1); }
+
+    /* ═══════════════════════════════════════════════════════════
+       🟡 هوية طارق طنطاوي — كحلي داكن + ذهبي
+       نفس سلوك الواتساب العام (فقاعات، هيدر، مؤشّر، إدخال) بس بألوان
+       ونقشة وعلامة قراءة خاصة بالمنتج. الـJS والمنطق مش متغيّرين.
+       الكتلة دي بتحمّل بعد كتلة الوضع الداكن اللي فوق (نفس الـselectors)
+       فبتكسب بالترتيب — style.css نفسه مش متعدّل.
+       ═══════════════════════════════════════════════════════════ */
+    body.page-agent {
+      /* نقشة خلفية جديدة: شبكة نقاط هندسية خفيفة جدًا — مش أيقونات واتساب */
+      --brand-wallpaper: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Cg%20fill='none'%20stroke='%23c9a961'%20stroke-width='0.6'%20opacity='0.055'%3E%3Ccircle%20cx='8'%20cy='8'%20r='0.9'/%3E%3Ccircle%20cx='24'%20cy='8'%20r='0.9'/%3E%3Ccircle%20cx='8'%20cy='24'%20r='0.9'/%3E%3Ccircle%20cx='24'%20cy='24'%20r='0.9'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='0.9'/%3E%3Ccircle%20cx='0'%20cy='16'%20r='0.9'/%3E%3Ccircle%20cx='32'%20cy='16'%20r='0.9'/%3E%3Ccircle%20cx='16'%20cy='0'%20r='0.9'/%3E%3Ccircle%20cx='16'%20cy='32'%20r='0.9'/%3E%3C/g%3E%3C/svg%3E");
+
+      /* لوحة الهوية */
+      --brand-bg:      #0f1419;   /* خلفية الشات — كحلي شبه أسود */
+      --brand-panel:   #1a2229;   /* هيدر / حقل إدخال / فقاعة بوت */
+      --brand-in:      #1e2a33;   /* فقاعة البوت */
+      --brand-out:     #2d5266;   /* فقاعة المستخدم — كحلي فاتح */
+      --brand-chip:    #16202a;   /* شارة "اليوم" */
+      --brand-accent:  #c9a961;   /* الذهبي — accent عام */
+      --brand-text:    #e8e6e3;   /* نص أساسي أوف وايت */
+      --brand-sub:     #8a95a0;   /* نص ثانوي رمادي مزرق */
+      --brand-shadow:  0 1px 2px rgba(0,0,0,.35);
+    }
+
+    /* الخلفية — نقشة النقاط الجديدة بدل أيقونات واتساب */
+    body.page-agent .chat-area {
+      background-color: var(--brand-bg);
+      background-image: var(--brand-wallpaper);
+      background-size: 32px 32px;
+      background-repeat: repeat;
+    }
+
+    /* شارة "اليوم" — لون هادئ من هويتنا */
+    body.page-agent .chat-area::before {
+      background: var(--brand-chip);
+      color: var(--brand-sub);
+      box-shadow: var(--brand-shadow);
+    }
+
+    /* الهيدر */
+    body.page-agent .header {
+      background: var(--brand-panel);
+      box-shadow: 0 1px 0 rgba(0,0,0,.35);
+    }
+    body.page-agent .header-back,
+    body.page-agent .header-btn { color: var(--brand-sub); }
+    body.page-agent .header-back:active,
+    body.page-agent .header-btn:active { background: rgba(201,169,97,.12); }
+    body.page-agent .header-name { color: var(--brand-text); }
+    body.page-agent .header-status { color: var(--brand-sub); }
+    body.page-agent .header-status.typing { color: var(--brand-accent); }
+
+    /* الفقاعات */
+    body.page-agent .msg {
+      box-shadow: var(--brand-shadow);
+      color: var(--brand-text);
+    }
+    body.page-agent .msg-bot  { background: var(--brand-in);  }
+    body.page-agent .msg-user { background: var(--brand-out); }
+    body.page-agent .msg-bot::before  { background: var(--brand-in);  }
+    body.page-agent .msg-user::before { background: var(--brand-out); }
+    body.page-agent .msg-time { color: rgba(232,230,227,.55); }
+
+    /* مؤشر الكتابة */
+    body.page-agent .typing-bubble { background: var(--brand-in); box-shadow: var(--brand-shadow); }
+
+    /* أزرار الردود السريعة */
+    body.page-agent .btn-glass:not(.valuation-link):not(.primary) {
+      background: var(--brand-in);
+      color: var(--brand-accent);
+      box-shadow: var(--brand-shadow);
+    }
+    body.page-agent .btn-glass.primary {
+      background: var(--brand-accent);
+      color: #1a2229;
+      box-shadow: var(--brand-shadow);
+    }
+    /* زر «💎 قيّم عقارك» — يفضل بلونه الذهبي الأصلي من style.css، مفيش تعديل */
+
+    /* حقل الكتابة + الأزرار الدائرية */
+    /* font-size: 16px — iOS Safari بيعمل zoom تلقائي لما حقل الكتابة أصغر من 16px (style.css محدده 15.5px)، والـzoom ده بيزحزح الشاشة */
+    body.page-agent .input-field {
+      color-scheme: dark;
+      background: var(--brand-panel);
+      color: var(--brand-text);
+      caret-color: var(--brand-accent);
+      font-size: 16px;
+    }
+    body.page-agent .input-field::placeholder { color: var(--brand-sub); }
+    body.page-agent .input-icon-btn {
+      background: var(--brand-panel);
+      color: var(--brand-sub);
+    }
+    body.page-agent .send-btn-glass {
+      background: var(--brand-accent);
+      color: #1a2229;
+      box-shadow: var(--brand-shadow);
+    }
+
+    /* زر «للأسفل» */
+    body.page-agent .scroll-btn {
+      background: var(--brand-panel);
+      color: var(--brand-sub);
+    }
+
+    /* علامة القراءة — نجمة ذهبية صغيرة بدل صحّين واتساب الزرقاء.
+       الـSVG الأصلي موجود في JS (TICKS_SVG) ومش متغيّر؛ إحنا بس بنخفيه
+       ونرسم علامة بديلة في نفس المكان بـCSS. */
+    body.page-agent .msg-user .msg-ticks { position: relative; }
+    body.page-agent .msg-user .msg-ticks svg { visibility: hidden; }
+    body.page-agent .msg-user .msg-ticks::after {
+      content: "✓";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-accent);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 700;
+      direction: ltr;
+    }
+
+    /* ═══ تكملة الهوية — بقية أسطح الصفحة ═══
+       اللي فوق بيغطي سطح الشات نفسه. الأسطح الباقية (شريط الإدخال، القائمة،
+       شيت الخصوصية، الدايلوج، المعرض، الإشعارات، خلفية body) بتاخد ألوانها من
+       توكنات style.css — فبنعيد ربط التوكنات على لوحة الهوية هنا بدل ما نكرر
+       قاعدة لكل عنصر، وبنلمّ الألوان الحرفية اللي فاضلة من الواتساب.
+       ⚠️ كارت «تواصل مع طارق على واتساب» هو الوحيد اللي بيفضل بأخضر واتساب
+       الرسمي — لأنه فعلًا زر واتساب حقيقي مش جزء من هوية الواجهة. */
+    body.page-agent {
+      --bg-app:           var(--brand-bg);
+      --bg-glass:         rgba(26, 34, 41, 0.72);
+      --bg-glass-strong:  rgba(26, 34, 41, 0.9);
+      --bg-glass-light:   rgba(26, 34, 41, 0.55);
+      --border-glass:     rgba(201, 169, 97, 0.16);
+      --border-subtle:    rgba(232, 230, 227, 0.07);
+      --header-bg:        var(--brand-panel);
+      --header-text:      var(--brand-text);
+      --header-sub:       var(--brand-sub);
+      --bubble-in:        var(--brand-in);
+      --bubble-out:       var(--brand-out);
+      --text-primary:     var(--brand-text);
+      --text-secondary:   var(--brand-sub);
+      --text-tertiary:    var(--brand-sub);
+      --accent:           var(--brand-accent);
+      --accent-dark:      var(--brand-accent);
+      --tick-blue:        var(--brand-accent);
+    }
+    /* خلفية body (بره إطار الشات): بدل هالات واتساب الخضراء — هالات ذهبية خفيفة */
+    body.page-agent {
+      background:
+        radial-gradient(ellipse at top left, rgba(201,169,97,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(201,169,97,0.04) 0%, transparent 50%),
+        var(--brand-bg);
+      background-attachment: fixed;
+    }
+    /* الهيدر: الشارة + نقطة الاتصال */
+    body.page-agent .header-badge { background: var(--brand-accent); color: var(--brand-panel); }
+    body.page-agent .status-dot { background: var(--brand-accent); box-shadow: 0 0 0 0 rgba(201,169,97,0.45); }
+    /* القائمة المنسدلة */
+    body.page-agent .menu-glass-item:hover { background: rgba(201,169,97,0.1); }
+    /* شريط الإدخال */
+    body.page-agent .input-glass:focus-within {
+      border-color: rgba(201,169,97,0.32);
+      box-shadow: 0 6px 20px rgba(201,169,97,0.14), var(--shadow-md);
+    }
+    body.page-agent .input-icon-btn:hover { background: rgba(201,169,97,0.1); }
+    body.page-agent .input-icon-btn.active { background: rgba(201,169,97,0.14); }
+    body.page-agent .send-btn-glass:hover { box-shadow: 0 6px 18px rgba(201,169,97,0.42); }
+    body.page-agent .btn-glass.primary:hover { box-shadow: 0 6px 20px rgba(201,169,97,0.42); }
+    body.page-agent .scroll-btn:hover { color: var(--brand-accent); }
+    /* شيت الخصوصية */
+    body.page-agent .privacy-overlay { background: rgba(9, 13, 17, 0.82); }
+    body.page-agent .privacy-icon { box-shadow: 0 6px 18px rgba(201,169,97,0.3); }
+    body.page-agent .privacy-badge { background: rgba(201,169,97,0.12); border-color: rgba(201,169,97,0.28); }
+    body.page-agent .privacy-btn { color: var(--brand-panel); box-shadow: 0 6px 20px rgba(201,169,97,0.32); }
+    body.page-agent .privacy-btn:hover { box-shadow: 0 8px 26px rgba(201,169,97,0.42); }
+    /* الإشعارات */
+    body.page-agent .notif-icon-wrap.green { background: rgba(201,169,97,0.16); }
+    /* الدايلوج */
+    body.page-agent .wa-dialog { background: var(--brand-panel); }
+    body.page-agent .wa-dialog-title { color: var(--brand-text); }
+    body.page-agent .wa-dialog-message { color: var(--brand-sub); }
+    body.page-agent .wa-dialog-btn.cancel { color: var(--brand-accent); }
+    body.page-agent .wa-dialog-btn.cancel:hover { background: rgba(201,169,97,0.1); }
+    /* المعرض */
+    body.page-agent .gallery-header-count { background: rgba(201,169,97,0.12); }
+    body.page-agent .gallery-close-btn:hover { background: rgba(201,169,97,0.14); }
+    body.page-agent .gallery-card:hover { box-shadow: 0 8px 24px rgba(201,169,97,0.22); }
+    body.page-agent .gallery-card-arrow { background: rgba(201,169,97,0.9); color: var(--brand-panel); }
+    body.page-agent .gallery-spinner { border-color: rgba(201,169,97,0.22); border-top-color: var(--brand-accent); }
+    /* منتقي الموقع (زرار 📍 على الخريطة): كان حقول وقوايم بيضاء وفيها نص فاتح
+       عليها (مش مقروء على الصفحة الداكنة) ولهجات خضراء قديمة */
+    body.page-agent .nm-pk-input { background: var(--brand-panel); border-color: rgba(201,169,97,0.22); color: var(--brand-text); }
+    body.page-agent .nm-pk-input::placeholder { color: var(--brand-sub); }
+    body.page-agent .nm-pk-input:focus { border-color: var(--brand-accent); box-shadow: 0 0 0 3px rgba(201,169,97,0.15); }
+    body.page-agent .nm-pk-results { background: var(--brand-panel); border-color: rgba(201,169,97,0.22); }
+    body.page-agent .nm-pk-item:hover,
+    body.page-agent .nm-pk-item:focus { background: rgba(201,169,97,0.1); }
+    body.page-agent .nm-pk-btn { background: var(--brand-panel); border-color: rgba(201,169,97,0.22); color: var(--brand-text); }
+    body.page-agent .nm-pk-btn.nm-pk-manual { background: transparent; border-color: rgba(201,169,97,0.3); }
+    body.page-agent .nm-pk-confirm { background: var(--brand-accent); color: var(--brand-panel); border-color: transparent; box-shadow: 0 4px 14px rgba(201,169,97,0.3); }
+    body.page-agent .nm-pk-spinner { border-color: rgba(201,169,97,0.25); border-top-color: var(--brand-accent); }
+    body.page-agent .nm-pk-result-box.nm-pending { border-color: rgba(201,169,97,0.5); }
   </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
