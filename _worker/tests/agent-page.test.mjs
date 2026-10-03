@@ -58,6 +58,21 @@ test("T1.1: the agent page is always dark — same palette as style.css, no new 
   }
 });
 
+test("agent layout always keeps the header and input dock fixed around the scrollable chat", () => {
+  const rules = cssRules(agentStyle);
+  const bodyOf = selector => {
+    const rule = rules.filter(r => r.selector === selector).at(-1);
+    assert.ok(rule, `agent.html must define ${selector}`);
+    return rule.body;
+  };
+  assert.match(bodyOf("body.page-agent #app"), /display: flex/);
+  assert.match(bodyOf("body.page-agent #app"), /flex-direction: column/);
+  assert.match(bodyOf("body.page-agent #app > .header"), /flex: 0 0 auto/);
+  assert.match(bodyOf("body.page-agent #app > .chat-area"), /flex: 1 1 auto/);
+  assert.match(bodyOf("body.page-agent #app > .chat-area"), /min-height: 0/);
+  assert.match(bodyOf("body.page-agent #app > .bottom-dock"), /flex: 0 0 auto/);
+});
+
 // ───────── T1.2: مصادر الصور ─────────
 test("T1.2: image sources are allow-listed (https / blob / data:image) and open with noopener", () => {
   const a = bootAgent();
