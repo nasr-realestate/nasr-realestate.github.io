@@ -71,21 +71,28 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://nasr-realestate.github.io",
 ];
 
-const TAREK_PERSONA = `أنت وكيل سمسار طلبك المؤتمت، ولست طارقًا شخصيًا.
-رتّب الطلب مبدئيًا، ولا تدّعِ أنك إنسان أو أن طارق يرد الآن.
-بتكتب من موبايلك في الشارع أو المكتب.`;
+const TAREK_PERSONA = `أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.
+خبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide Level 7.
+بتتكلم مصري طبيعي، دافي ومختصر؛ مش رسمي، مش مبتذل، ومش بوت.
+فكّر قبل الرد: استخدم المعلومات اللي قالها العميل فقط، واسأل سؤالًا واحدًا في كل رسالة.
+متطلبش رقم موبايل أو أي بيانات شخصية قبل ما يبقى الطلب واضح: العملية، نوع العقار، المنطقة، والمساحة.
+أي سعر أو ميعاد مبدئي ويتأكد مع طارق.`;
 
-const MOOD_GUIDE = `عامية مصرية محترمة، مختصر وواضح، بلا مبالغة.
-عند سؤال الهوية أو طلب إنسان: اعترف بالأتمتة وقدّم رابط طارق.
-اقرا مزاج العميل: مستعجل → اختصر. بيهزر → خفة دم. قلقان → طمّنه.`;
+const MOOD_GUIDE = `صنّف النية الأول: عقارات، تحية أو سؤال شخصي، أو خارج الموضوع.
+لو خارج العقارات: جملة واحدة لطيفة من غير أي أسئلة تأهيلية.
+لو تحية: تحية قصيرة، عرّف نفسك في سطر، واسأل عن العملية فقط.
+اقرا مزاج العميل: المستعجل اختصر، المتردد طمّنه، والمستثمر ادّيه أرقامًا مبدئية فقط.
+لو العميل قال غالي، اسأل عن توقعه من غير دفاع. لو قال مش متأكد، ساعده يحدد من غير ضغط.`;
 
-const IDENTITY_RESPONSE = `أنا وكيل ذكي مؤتمت، مش طارق شخصيًا.
-مهمتي أرتّب طلبك مبدئيًا، والقرار النهائي دايمًا معاه.
-لو محتاج تكلم طارق مباشرة:
+const IDENTITY_RESPONSE = `طارق طنطاوي — وكيل عقاري في مدينة نصر، خبرة 15 سنة، 48 سنة، وGoogle Local Guide Level 7.
+تحب تشتري ولا تأجر ولا تبيع؟`;
 
-📲 [https://wa.me/201147758857](https://wa.me/201147758857)
+const GREETING_RESPONSE = `أهلاً بيك، أنا طارق طنطاوي — وكيل عقاري في مدينة نصر.
+تشتري ولا تأجر ولا تبيع؟`;
 
-عايز نكمل طلبك؟`;
+const OFF_TOPIC_RESPONSE = `أنا طارق، متخصص في عقارات مدينة نصر 🏠 ومش بساعد في ده، لكن معاك في أي طلب شراء أو إيجار أو بيع.`;
+const PRICE_OBJECTION_RESPONSE = `فاهمك، السعر بيفرق حسب المنطقة والحالة. إيه السعر اللي في دماغك؟`;
+const HESITATION_RESPONSE = `ولا يهمك، ناخدها واحدة واحدة ومن غير ضغط. نبدأ بشراء ولا إيجار؟`;
 
 // ═══ GOOGLE AUTHORITY ═══
 const GOOGLE_PROFILE = {
@@ -232,6 +239,92 @@ function normAr(s) {
     _normCache.set(raw, out);
   }
   return out;
+}
+
+// ═══ INTENT + FACT EXTRACTION ═══
+// الحتة دي حتمية: الأساسيات ما تعتمدش على نموذج خارجي، عشان الرد يفضل طبيعي وسؤالنا واحد.
+const GREETING_RE = /^(?:السلام\s*عليكم(?:\s*ورحمة\s*الله)?|وعليكم\s*السلام|اهلا|أهلا|أهلاً|اهلاً|صباح\s*الخير|صباح\s*النور|مساء\s*الخير|مساء\s*النور|ازيك|إزيك|ازاى|إزاى|عامل\s*ايه|عامل\s*إيه|هاي|hello|hi|hey|سلام)[!؟?.,\s]*$/i;
+const REAL_ESTATE_CORE_RE = /عقار|شقه?|فيلا|دوبلكس|روف|محل|مكتب|مخزن|سكن|تمليك|شراء|اشتري|أشتري|إيجار|ايجار|استأجر|استاجر|بيع|ابيع|أبيع|تأجير|أأجر|متر|مساحه|مساحة|ميزانيه|ميزانية|سعر/i;
+const REAL_ESTATE_RE = new RegExp(`${REAL_ESTATE_CORE_RE.source}|مدينة\\s*نصر|مدينه\\s*نصر|الحي|المنطقه|المنطقة|عباس|مكرم|النحاس|الطيران}`, "i");
+const OFF_TOPIC_RE = /شاي|قهوة|قهوه|جو\s*(بكره|بكرة|النهارده|دلوقتي)|الطقس|الجو|سياسة|سياسه|رياضة|رياضه|كورة|كره|ماتش|برمجه|برمجة|كود|بايثون|جافاسكربت|javascript|python|فيلم|اغنيه|أغنية|موسيقى|مزيكا|وصفة|اكل|أكل|طبخ|سفر|كرة\s*قدم|سيارة|سيارات|عربية/i;
+const PRICE_OBJECTION_RE = /غالي|غالى|غلاء|كتير|مرتفع|مش\s*مناسب|مش\s*قدرتي|فوق\s*ميزانيتي/i;
+const HESITATION_RE = /مش\s*متأكد|مش\s*متاكده|مش\s*عارف|لسه\s*محتار|محتارة|محتار|متردد|مترددة/i;
+
+function isGreeting(msg) {
+  const t = String(msg || "").trim();
+  if (!t || t.length > 80 || REAL_ESTATE_CORE_RE.test(t)) return false;
+  return GREETING_RE.test(t) || /^(?:السلام|اهلا|أهلا|أهلاً|صباح|مساء|ازيك|إزيك|هاي|hello|hi|hey|سلام)(?:\s|$)/i.test(t) && t.split(/\s+/).length <= 6;
+}
+
+function isOffTopic(msg) {
+  const t = String(msg || "").trim();
+  return !!t && !REAL_ESTATE_CORE_RE.test(t) && OFF_TOPIC_RE.test(t);
+}
+
+function extractRequestFacts(msg) {
+  const t = String(msg || "").trim();
+  const facts = {};
+  if (/دوبلكس/i.test(t)) facts.propertyType = "دوبلكس";
+  else if (/شقة|شقه|شقت/i.test(t)) facts.propertyType = "شقة";
+  else if (/فيلا/i.test(t)) facts.propertyType = "فيلا";
+  else if (/روف/i.test(t)) facts.propertyType = "روف";
+  else if (/محل/i.test(t)) facts.propertyType = "محل تجاري";
+  else if (/مكتب/i.test(t)) facts.propertyType = "مكتب إداري";
+  else if (/مخزن/i.test(t)) facts.propertyType = "مخزن";
+
+  const landmark = matchLandmark(t, MASTER_LANDMARKS);
+  if (landmark) facts.landmark = landmark;
+
+  const sizeMatch = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م(?:\s*²)?|م٢|m2|sqm)/i);
+  if (sizeMatch) facts.area = Number(sizeMatch[1]);
+
+  const price = extractPrice(t);
+  if (price > 0) facts.budget = price;
+  const rooms = toEnNum(t).match(/(\d+)\s*(?:غرف|غرفة|أوض|اوض)/i);
+  if (rooms) facts.rooms = rooms[1];
+  const baths = toEnNum(t).match(/(\d+)\s*(?:حمام|حمامات)/i);
+  if (baths) facts.baths = baths[1];
+  if (/مفروش/i.test(t)) facts.furnished = "مفروش";
+  else if (/فاضي|قانون\s*جديد/i.test(t)) facts.furnished = "فاضي (قانون جديد)";
+  facts.transaction = detectRoute(t);
+  return facts;
+}
+
+function hasRequestFacts(facts) {
+  return !!(facts && (facts.propertyType || facts.landmark || facts.area || facts.budget || facts.transaction));
+}
+
+function seedFlowData(facts, owner) {
+  const f = facts || {};
+  const data = {};
+  if (hasVal(f.propertyType)) data.propertyType = f.propertyType;
+  if (hasVal(f.area)) data.area = f.area;
+  if (hasVal(f.rooms)) data.rooms = f.rooms;
+  if (hasVal(f.baths)) data.baths = f.baths;
+  if (hasVal(f.furnished)) data.furnished = f.furnished;
+  if (owner) {
+    if (hasVal(f.landmark)) data.location = f.landmark;
+    if (hasVal(f.budget)) data.price = f.budget;
+  } else {
+    if (hasVal(f.landmark)) data.landmark = f.landmark;
+    if (hasVal(f.budget)) data.budget = f.budget;
+  }
+  if (!data._filled) data._filled = {};
+  return data;
+}
+
+function factsSummary(facts) {
+  const f = facts || {};
+  const bits = [];
+  if (f.propertyType) bits.push(f.propertyType);
+  if (f.area) bits.push(`${fmtNum(f.area)}م`);
+  if (f.landmark) bits.push(`في ${f.landmark}`);
+  return bits.join(" ");
+}
+
+function buildRouteQuestion(facts) {
+  const summary = factsSummary(facts);
+  return summary ? `تمام، ${summary}. للشراء ولا للإيجار؟` : "تمام، للشراء ولا للإيجار؟";
 }
 
 // ═══ VALUATION HELPERS (v8.7) ═══
@@ -465,12 +558,12 @@ const isOutOfArea = text => { if (isNasr(text)) return false; return OUT_OF_COVE
 
 // ═══ CANNED ANSWERS ═══
 const INTERRUPTS = [
-  { re: /عمول|السعي|نسبتكم|هتاخد كام|مصاريف|سمسرة/i, ans: "العمولة 2.5% من قيمة البيع — بتتحدد بعد المعاينة والتقييم." },
+  { re: /عمول|السعي|نسبتكم|هتاخد كام|مصاريف|سمسرة/i, ans: "العمولة مبدئيًا بتتحدد بعد المعاينة والاتفاق، والتفاصيل تتأكد مع طارق." },
   { re: /^اسمك ايه|حضرتك اسمك|^انت مين|مين حضرتك/i, ans: IDENTITY_RESPONSE },
   { re: /بتشتغلوا ازاي|طريقة العمل/i, ans: "معاينة، تقييم، تصوير، تسويق — وبعدين أوصلك العميل الجاد." },
-  { re: /ضمان|هتنصب|بتاخدوا مقدم/i, ans: "شغلنا بالعقد الواضح. مفيش فلوس بتتحرك قبل الاتفاق." },
+  { re: /ضمان|هتنصب|بتاخدوا مقدم/i, ans: "شغلنا بالعقد الواضح، وأي تفاصيل مالية مبدئية تتأكد مع طارق بعد الاتفاق." },
   { re: /المواعيد|بتفتحوا امتى|بتقفلوا امتى|ساعات العمل/i, ans: `مواعيد العمل: ${OFFICE_HOURS}` },
-  { re: /بتشتغلوا في التجمع|القاهرة الجديدة|مدينتي|الرحاب/i, ans: "إحنا بنشتغل في مدينة نصر بس يا فندم." },
+  { re: /بتشتغلوا في التجمع|القاهرة الجديدة|مدينتي|الرحاب/i, ans: "إحنا بنشتغل في مدينة نصر بس، وأي سعر أو توافر يتأكد مع طارق." },
   { re: /في رسوم|بتاخدوا فلوس/i, ans: "مفيش رسوم مبدئية. العمولة بس بعد إتمام البيع/الإيجار." },
 ];
 
@@ -510,6 +603,10 @@ function isIdentityQ(msg) {
 const VALUATION_REQUEST_RE = /(عايز|ممكن|محتاج|وريني|أشوف|اشوف|هات|فين|ايه|إيه)\s*(التقييم|تقييم|قيم عقاري|قيّم عقاري)/i;
 
 function matchInterrupt(msg, fs) {
+  const text = String(msg || "");
+  // اعتراض السعر له أولوية: نفهم التوقع بدل ما ندافع عن رقم.
+  if (PRICE_OBJECTION_RE.test(text)) return PRICE_OBJECTION_RESPONSE;
+  if (HESITATION_RE.test(text)) return HESITATION_RESPONSE;
   // ⭐ طلب التقييم بشكل صريح — يرجّع آخر تقييم محفوظ لو موجود
   if (VALUATION_REQUEST_RE.test(String(msg||""))) {
     if (fs?.data?.valuation) return buildValuationAnnouncement(fs.data.valuation);
@@ -694,6 +791,7 @@ function getBuyerSteps(type) {
   return [
     { id:"propertyType", type:"buttons", q:"عايز شقة ولا فيلا ولا دوبلكس ولا محل ولا مكتب ولا مخزن ولا روف؟", opts:["شقة","فيلا","دوبلكس","محل تجاري","مكتب إداري","مخزن","روف"] },
     { id:"landmark", type:"dynamic_buttons", q:"عايز العقار في أنهي منطقة؟" },
+    { id:"area", type:"number", q:"المساحة كام متر؟", opts:["80","100","120","150","180","200"], err:"اكتب المساحة بالمتر." },
     { id:"budget", type:"number", q: isSale?"ميزانيتك لحد كام؟":"ميزانيتك الشهرية لحد كام؟" },
     { id:"villaType", type:"buttons", q:"بتفضل نوع الفيلا إيه؟", opts:SUBTYPE_OPTIONS["فيلا"], when: d=>isVilla(d.propertyType) },
     { id:"duplexType", type:"buttons", q:"بتفضل نوع الدوبلكس إيه؟", opts:SUBTYPE_OPTIONS["دوبلكس"], when: d=>isDuplex(d.propertyType) },
@@ -716,7 +814,13 @@ function getSteps(type, flowType) {
 }
 
 // ═══ STEP ENGINE ═══
-const REQUIRED_OWNER = ["propertyType","location","price","ownerPhone"];
+const REQUIRED_OWNER = ["propertyType","location","area","price","ownerPhone"];
+const REQUIRED_BUYER = ["propertyType","landmark","area","budget"];
+const CORE_OWNER = new Set(["propertyType","location","area","price"]);
+const CORE_BUYER = new Set(["propertyType","landmark","area","budget"]);
+function missingCore(data, owner) {
+  return (owner ? REQUIRED_OWNER : REQUIRED_BUYER).filter(id => id !== "ownerPhone" && !hasVal(data?.[id]));
+}
 
 function stepKey(step) { return step?._key||step?.id||""; }
 function isApplicable(step, data) { if (!step) return false; if (typeof step.when !== "function") return true; try { return !!step.when(data||{}); } catch { return false; } }
@@ -750,11 +854,15 @@ function buildProgress(steps, data, idx) {
   return { current, total, remaining, pct };
 }
 
-function withCtrl(opts, data, showBack=true) {
+function withCtrl(opts, data, showBack=true, allowSkip=true) {
   const o = [...(opts||[])];
   if (showBack) o.push(BTN.BACK);
-  o.push(BTN.SKIP);
-  if (hasVal(data?.propertyType) && hasVal(data?.location) && hasVal(data?.price)) o.push(BTN.SEND);
+  if (allowSkip) o.push(BTN.SKIP);
+  // زر التسليم ما يظهرش قبل ما يبقى الطلب مفهوم: نوع + منطقة + مساحة + ميزانية/سعر.
+  const areaKnown = hasVal(data?.location) || hasVal(data?.landmark);
+  const sizeKnown = hasVal(data?.area);
+  const moneyKnown = hasVal(data?.price) || hasVal(data?.budget) || hasVal(data?.priceMonthly) || hasVal(data?.priceYearly) || hasVal(data?.priceWeekly);
+  if (hasVal(data?.propertyType) && areaKnown && sizeKnown && moneyKnown) o.push(BTN.SEND);
   o.push(BTN.CANCEL);
   o.push(BTN.NEW_REQ);
   return [...new Set(o)];
@@ -1026,7 +1134,7 @@ function buildWAMsg(ctx, data, imgUrls=[]) {
   lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
   lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
-  lines.push(`_🤖 تم الإرسال من الوكيل الذكي_`);
+  lines.push(`_تم تجهيز الطلب من موقع سمسار طلبك — طارق طنطاوي_`);
 
   return lines.join("\n");
 }
@@ -1274,6 +1382,11 @@ function askOwnerStep(steps, idx, fs, extra, lms) {
   const data = hydrateData(fs.data||{}, steps);
   if (idx<0||idx>=steps.length) return completeOwner({...fs,data}, data);
   const step = steps[idx];
+  if ((step.id === "ownerName" || step.id === "ownerPhone") && missingCore(data, true).length) {
+    const missing = missingCore(data, true)[0];
+    const mi = steps.findIndex(s => s.id === missing);
+    if (mi >= 0) return askOwnerStep(steps, mi, {...fs, data}, "خلينا نكمّل البيانات الأساسية الأول.", lms);
+  }
   if (!isApplicable(step,data)) {
     const ni = nextStep(steps, data, idx+1);
     if (ni===-1) return completeOwner({...fs,data},data);
@@ -1286,8 +1399,9 @@ function askOwnerStep(steps, idx, fs, extra, lms) {
   if (progress.remaining>1) q += `\n\n(${progress.current}/${progress.total})`;
 
   let opts;
-  if (step.type==="buttons") opts = withCtrl(step.opts, data);
-  else opts = withCtrl([], data);
+  const allowSkip = !CORE_OWNER.has(step.id);
+  if (step.type==="buttons") opts = withCtrl(step.opts, data, true, allowSkip);
+  else opts = withCtrl([], data, true, allowSkip);
 
   // خطوة الموقع → الواجهة بتفتح منتقي الخريطة
   const ui = step.id==="location" ? { ui:"map_picker", uiRequired: fs.type==="sale" } : {};
@@ -1325,6 +1439,11 @@ function askBuyerStep(steps, idx, fs, extra, lms) {
   const data = hydrateData(fs.data||{}, steps);
   if (idx<0||idx>=steps.length) return completeBuyer({...fs,data},data);
   const step = steps[idx];
+  if ((step.id === "buyerName" || step.id === "buyerPhone") && missingCore(data, false).length) {
+    const missing = missingCore(data, false)[0];
+    const mi = steps.findIndex(s => s.id === missing);
+    if (mi >= 0) return askBuyerStep(steps, mi, {...fs, data}, "خلينا نكمّل البيانات الأساسية الأول.", lms);
+  }
   if (!isApplicable(step,data)) {
     const ni = nextStep(steps,data,idx+1);
     if (ni===-1) return completeBuyer({...fs,data},data);
@@ -1336,16 +1455,18 @@ function askBuyerStep(steps, idx, fs, extra, lms) {
   if (progress.remaining>1) q += `\n\n(${progress.current}/${progress.total})`;
 
   let opts;
-  if (step.type==="buttons") opts = withCtrl(step.opts, data, idx>0);
+  const allowSkip = !CORE_BUYER.has(step.id);
+  if (step.type==="buttons") opts = withCtrl(step.opts, data, idx>0, allowSkip);
+  else if (step.id === "area") opts = withCtrl(step.opts || ["80","100","120","150","180","200"], data, idx>0, allowSkip);
   else if (step.type==="dynamic_buttons" && step.id==="landmark") {
     const pool = lms?.length ? lms : MASTER_LANDMARKS;
     if (pool.length>MAX_VISIBLE_LM) {
       const visible = pool.slice(0,MAX_VISIBLE_LM);
-      opts = withCtrl([...visible, `${BTN.MORE} (${pool.length-MAX_VISIBLE_LM})`, BTN.ANY_AREA], data, idx>0);
+      opts = withCtrl([...visible, `${BTN.MORE} (${pool.length-MAX_VISIBLE_LM})`, BTN.ANY_AREA], data, idx>0, allowSkip);
     } else {
-      opts = withCtrl([...pool, BTN.ANY_AREA], data, idx>0);
+      opts = withCtrl([...pool, BTN.ANY_AREA], data, idx>0, allowSkip);
     }
-  } else opts = withCtrl([], data, idx>0);
+  } else opts = withCtrl([], data, idx>0, allowSkip);
 
   const ui = step.id==="landmark" ? { ui:"map_picker", uiRequired:false } : {};
 
@@ -1394,7 +1515,7 @@ function completeOwner(fs, data) {
   const imgNote = hasImgs ? `استلمت ${imgs.length} صورة ✅` : (data.imagesSkipped ? "تم تخطي الصور" : "مفيش صور");
 
   return {
-    response: `تمام يا فندم، سجّلت العقار كامل ✅\n\n${imgNote}\n\nقبل ما نبعت لطارق، عايز تراجع الرسالة؟`,
+    response: `تمام، سجّلت العقار كامل ✅\n\n${imgNote}\n\nقبل ما نبعت لطارق، عايز تراجع الرسالة؟`,
     formState: {...fs, stepIndex:-1, data, lifecycle:LC.DONE,
       flowType: fs.type==="sale"?"owner_completed_sale":"owner_completed_rent",
       awaitingQ:false, imageUrls:imgs},
@@ -1428,7 +1549,7 @@ async function completeBuyer(fs, data) {
 
   if (!matches.length) {
     return {
-      response: `حالياً مفيش ${data.propertyType||"عقار"} معروض بنفس الميزانية في المنطقة دي على السيستم.\n\nبس ولا تشيل هم! أنا جهّزت كامل مواصفاتك لطارق طنطاوي عشان يدوّرلك في المعروض الخاص ويتواصل معاك أول ما ينزل طلبك مباشرة 🌟.\n\nابعت الرسالة لطارق دلوقتي على واتساب:`,
+      response: `حالياً مش لاقي ${data.propertyType||"عقار"} مناسب مبدئيًا بنفس الميزانية في المنطقة دي على السيستم.\n\nبس ولا تشيل هم! أنا جهّزت كامل مواصفاتك لطارق طنطاوي عشان يدوّرلك في المعروض الخاص ويتواصل معاك أول ما ينزل طلب مناسب 🌟.\n\nابعت الرسالة لطارق دلوقتي على واتساب:`,
       formState: {...fs, active:true, lifecycle:LC.DONE, flowType:"buyer_completed", stepIndex:-1, data, imageUrls:imgs, waMessage:waMsg},
       options: POST_COMPLETE,
       done:true, readyToSend:true, canShareWhatsapp:true,
@@ -1447,9 +1568,9 @@ async function completeBuyer(fs, data) {
     const priceN = parseNum(p.priceNumeric||p.price);
 
     lines.push("",`*${i+1}. ${p.title||"عقار"}*`,
-      [pt,tx,p.location,priceN>0?`${fmtNum(priceN)} ج.م`:""].filter(Boolean).join(" • "));
+      [pt,tx,p.location,priceN>0?`مبدئيًا ${fmtNum(priceN)} ج.م`:""].filter(Boolean).join(" • "));
 
-    if (priceN>0) lines.push(`💰 السعر: ${fmtNum(priceN)} ج.م`);
+    if (priceN>0) lines.push(`💰 السعر المبدئي: ${fmtNum(priceN)} ج.م`);
     if (p.area)   lines.push(`📐 المساحة: ${fmtVal(p.area)} متر مربع`);
     const rN = parseNum(p.roomsNumeric||p.rooms);
     if (rN>0) lines.push(`🛏️ الغرف: ${rN}`);
@@ -1493,6 +1614,7 @@ async function processOwner(fs, msg, env, history, lms) {
   const data = {...(fs.data||{})};
 
   if (isSkip(msg)) {
+    if (CORE_OWNER.has(step.id)) return askOwnerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
     data[step.id] = "—"; markFilled(data,step);
     const ni = nextStep(steps, data, fs.stepIndex+1);
     if (ni===-1) return completeOwnerCheck({...fs,data},data);
@@ -1507,6 +1629,22 @@ async function processOwner(fs, msg, env, history, lms) {
     data[step.id] = "—";
     markFilled(data, step);
     const ni = nextStep(steps, data, fs.stepIndex+1);
+    if (ni === -1) return completeOwnerCheck({...fs, data}, data);
+    return askOwnerStep(steps, ni, {...fs, stepIndex: ni, data}, null, lms);
+  }
+
+  // لو العميل قال كذا مواصفة مرة واحدة، ما نرجعش نطلبها واحدة واحدة.
+  const extracted = extractRequestFacts(msg);
+  if (!hasVal(data.propertyType) && hasVal(extracted.propertyType)) data.propertyType = extracted.propertyType;
+  if (!hasVal(data.location) && hasVal(extracted.landmark)) data.location = extracted.landmark;
+  if (!hasVal(data.area) && hasVal(extracted.area)) data.area = extracted.area;
+  if (!hasVal(data.price) && hasVal(extracted.budget)) data.price = extracted.budget;
+  for (const key of ["rooms", "baths", "furnished"]) {
+    if (!hasVal(data[key]) && hasVal(extracted[key])) data[key] = extracted[key];
+  }
+  if (hasVal(data[step.id])) {
+    markFilled(data, step);
+    const ni = nextStep(steps, data, fs.stepIndex + 1);
     if (ni === -1) return completeOwnerCheck({...fs, data}, data);
     return askOwnerStep(steps, ni, {...fs, stepIndex: ni, data}, null, lms);
   }
@@ -1555,6 +1693,15 @@ async function processBuyer(fs, msg, env, history, lms) {
 
   const data = {...(fs.data||{})};
 
+  if (isSkip(msg) && CORE_BUYER.has(step.id)) {
+    return askBuyerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
+  }
+
+  const extracted = extractBuyerFields(msg);
+  for (const [k,v] of Object.entries(extracted)) {
+    if (hasVal(v) && !hasVal(data[k])) { data[k]=v; if (!data._filled) data._filled={}; data._filled[k]=true; }
+  }
+
   if (step.type==="dynamic_buttons" && step.id==="landmark") {
     if (isMore(msg)) {
       const pool = lms?.length?lms:MASTER_LANDMARKS;
@@ -1587,11 +1734,6 @@ async function processBuyer(fs, msg, env, history, lms) {
     const ni = nextStep(steps,data,fs.stepIndex+1);
     if (ni===-1) return completeBuyer({...fs,data},data);
     return askBuyerStep(steps,ni,{...fs,stepIndex:ni,data},null,lms);
-  }
-
-  const extracted = extractBuyerFields(msg);
-  for (const [k,v] of Object.entries(extracted)) {
-    if (hasVal(v) && !hasVal(data[k])) { data[k]=v; if (!data._filled) data._filled={}; data._filled[k]=true; }
   }
 
   if (hasVal(data[step.id])) {
@@ -1641,7 +1783,7 @@ function extractBuyerFields(msg) {
   const t = String(msg||"").trim();
   const out = {};
   if (/دوبلكس/i.test(t)) out.propertyType="دوبلكس";
-  else if (/شقة|شقه/.test(t)) out.propertyType="شقة";
+  else if (/شقة|شقه|شقت/.test(t)) out.propertyType="شقة";
   else if (/فيلا/.test(t)) out.propertyType="فيلا";
   else if (/روف/.test(t)) out.propertyType="روف";
   else if (/محل/.test(t)) out.propertyType="محل تجاري";
@@ -1651,6 +1793,8 @@ function extractBuyerFields(msg) {
   if (lm) out.landmark=lm;
   const budget = extractPrice(t);
   if (budget>0) out.budget=budget;
+  const size = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م(?:\s*²)?|م٢|m2|sqm)/i);
+  if (size) out.area = Number(size[1]);
   const rm = t.match(/(\d+)\s*(غرف|غرفة|أوض|اوض)/);
   if (rm) out.rooms=rm[1];
   const bm = t.match(/(\d+)\s*(حمام|حمامات)/);
@@ -1711,7 +1855,7 @@ async function processBuyerSelect(fs, msg, env) {
 
   if (isCustomSpec(msg)) {
     return {
-      response: `تمام يا فندم 🌟\nجهّزتلك رسالتك المؤهلة بكل تفاصيل طلبك لطارق طنطاوي.\n\nتقدر تبعتها على واتساب دلوقتي:`,
+      response: `تمام 🌟\nجهّزتلك رسالتك المؤهلة بكل تفاصيل طلبك لطارق طنطاوي.\n\nتقدر تبعتها على واتساب دلوقتي:`,
       formState: {...fs, active:true, lifecycle:LC.DONE, flowType:"buyer_completed", stepIndex:-1, data, imageUrls:imgs, waMessage:waMsg},
       options: POST_COMPLETE,
       done:true, readyToSend:true, canShareWhatsapp:true,
@@ -1742,7 +1886,7 @@ async function processBuyerSelect(fs, msg, env) {
       selectedImage:sel.image||null
     };
     const propWaMsg = buildWAMsg(isRent?"tenant":"buyer", selData, imgs);
-    const lines = [`تمام يا فندم 👌 اخترت:`,``,`🎯 *${sel.title}*`,`📍 ${sel.location}`];
+    const lines = [`تمام 👌 اخترت:`,``,`🎯 *${sel.title}*`,`📍 ${sel.location}`];
     if (selPrice&&selPrice!=="0") lines.push(`💰 ${selPrice} ج.م`);
     if (sel.area) lines.push(`📐 المساحة: ${fmtVal(sel.area)} متر مربع`);
     const rN=parseNum(sel.roomsNumeric||sel.rooms);
@@ -1788,7 +1932,7 @@ async function processBuyerSelectedProp(fs, msg, env) {
 
   if (isBookView(msg)||isSendWA(msg)||isAccept(msg)) {
     return {
-      response: `تمام يا فندم! اضغط على الزر ده عشان تفتح واتساب وتبعت الرسالة لطارق مباشرة 👇`,
+      response: `تمام! اضغط على الزر ده عشان تفتح واتساب وتبعت الرسالة لطارق مباشرة 👇`,
       formState: {...fs, waMessage:waMsg},
       options: POST_VIEWING, done:true, readyToSend:true, canShareWhatsapp:true,
       waMessage: waMsg, whatsappUrl: waURL(TAREK_PHONE,waMsg), imageUrls:imgs
@@ -1834,7 +1978,7 @@ async function processPostComplete(fs, msg, env) {
 
   if (isSendWA(msg)) {
     return {
-      response: "تمام يا فندم! اضغط على الزر تحت لفتح المحادثة على واتساب فوراً 👇",
+      response: "تمام! اضغط على الزر تحت لفتح المحادثة على واتساب دلوقتي 👇",
       formState: {...fs, waMessage:waMsg},
       options: POST_COMPLETE, done:true, readyToSend:true, canShareWhatsapp:true,
       waMessage: waMsg, whatsappUrl: waURL(TAREK_PHONE,waMsg), imageUrls:imgs
@@ -1892,7 +2036,7 @@ function goBack(fs) {
 
 function cancelFlow(fs) {
   return {
-    response:"تمام يا فندم، ألغينا الطلب. تقدر تبدأ من جديد في أي وقت:",
+    response:"تمام، ألغينا الطلب. تقدر تبدأ من جديد وقت ما تحب:",
     formState:{active:false,lifecycle:LC.CANCELLED,type:fs.type,stepIndex:-1, data:{},awaitingQ:false,flowType:null,imageUrls:[]},
     options:ROUTE_BTNS, done:true,cancelled:true,readyToSend:false,canShareWhatsapp:false,imageUrls:[]
   };
@@ -1900,10 +2044,8 @@ function cancelFlow(fs) {
 
 function newRequest() {
   return {
-    response: `${buildTrustBar()}
-
-معاك سمسار طلبك 🏆
-بتدور على إيه، شراء ولا إيجار؟`,
+    response: `أهلاً بيك، أنا طارق طنطاوي — وكيل عقاري في مدينة نصر.
+تشتري ولا تأجر ولا تبيع؟`,
     formState:{active:true,lifecycle:LC.ACTIVE,type:null,stepIndex:-1,data:{}, awaitingQ:false,flowType:"route_selection",imageUrls:[]},
     options:ROUTE_BTNS, done:false,readyToSend:false,canShareWhatsapp:false,imageUrls:[]
   };
@@ -1912,11 +2054,10 @@ function newRequest() {
 function detectRoute(msg) {
   const raw = String(msg||"").trim();
   const n = normAr(raw);
-  if (/ااجر|اؤجر|أأجر|أاجر|مؤجر|عندي.*للإيجار/i.test(raw)) return "owner_rent";
-  if (n.includes("استاجر")||n.includes("استأجر")||n.includes("مستاجر")) return "buyer_rent";
-  if (/عايز ابيع|عايز أبيع|ابيع شقتي|أبيع شقتي/i.test(raw)) return "owner_sale";
-  if (n.includes("اشتري")||n.includes("أشتري")||n.includes("شراء")||n.includes("تمليك")) return "buyer_sale";
-  if (n.includes("ايجار")||n.includes("إيجار")) return "buyer_rent";
+  if (/أأجر|ااجر|اؤجر|أاجر|مؤجر|مؤجرة|عندي.*(?:للإيجار|للايجار)|عايز.*(?:أأجر|ااجر)/i.test(raw)) return "owner_rent";
+  if (n.includes("استاجر") || n.includes("مستاجر") || n.includes("للايجار") || n.includes("ايجار")) return "buyer_rent";
+  if (/عايز\s*(?:ا|أ)بيع|ابيع\s*(?:شقتي|عقاري)?|أبيع\s*(?:شقتي|عقاري)?/i.test(raw)) return "owner_sale";
+  if (n.includes("اشتري") || n.includes("شراء") || n.includes("للشراء") || n.includes("تمليك")) return "buyer_sale";
   if (n.includes("بيع")) return "owner_sale";
   return null;
 }
@@ -2125,7 +2266,7 @@ export default {
         fs._justReturnedFromValuation = true;
       }
 
-      // رد حتمي على أسئلة الهوية
+      // طبقات النية الحتمية: التحية والخارج عن العقارات ما يدخلش في مسار التأهيل ولا يحتاج نموذجًا خارجيًا.
       if (isIdentityQ(userMsg)) {
         return jsonRes({
           response: IDENTITY_RESPONSE,
@@ -2135,72 +2276,81 @@ export default {
           imageUrls: fs.imageUrls || [],
         });
       }
-
-      if (!env?.GEMINI_API_KEY) {
-        console.error(`[${reqId}] GEMINI_API_KEY missing`);
-        return jsonRes({response:"حصل خطأ مؤقت.",options:ROUTE_BTNS},500);
+      if (isGreeting(userMsg)) {
+        return jsonRes({
+          response: GREETING_RESPONSE,
+          formState: fs,
+          options: ROUTE_BTNS,
+          done: false, readyToSend: false, canShareWhatsapp: false,
+          imageUrls: fs.imageUrls || [],
+        });
       }
+      if (isOffTopic(userMsg)) {
+        return jsonRes({ response: OFF_TOPIC_RESPONSE, formState: fs, options: [] });
+      }
+
+      // اعتراض السعر والتردد يتقدّموا على أي خطوة، لكن أسئلة التقييم والهوية تفضل مرتبطة بالسياق.
+      if (PRICE_OBJECTION_RE.test(userMsg)) return jsonRes({ response: PRICE_OBJECTION_RESPONSE, options: ROUTE_BTNS, formState: fs });
+      if (HESITATION_RE.test(userMsg)) return jsonRes({ response: HESITATION_RESPONSE, options: ROUTE_BTNS, formState: fs });
 
       const flowType = fs.flowType||"";
       const hasFlow = fs.active===true && flowType!=="";
 
       if (!hasFlow || flowType==="route_selection") {
-
-        if (isBuy(userMsg)) {
-          const lms = await fetchLandmarks({transaction:"sale"});
-          const steps = getBuyerSteps("sale");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"sale",stepIndex:0,data:{},awaitingQ:true,flowType:"buyer",imageUrls:[]};
-          const r = askBuyerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-        }
-        if (isTenant(userMsg)) {
-          const lms = await fetchLandmarks({transaction:"rent"});
-          const steps = getBuyerSteps("rent");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"rent",stepIndex:0,data:{},awaitingQ:true,flowType:"tenant",imageUrls:[]};
-          const r = askBuyerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-        }
-        if (isSell(userMsg)) {
-          const lms = await fetchLandmarks({transaction:"sale"});
-          const steps = getOwnerSteps("sale");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"sale",stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-          const r = askOwnerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-        }
-        if (isLandlord(userMsg)) {
-          const lms = await fetchLandmarks({transaction:"rent"});
-          const steps = getOwnerSteps("rent");
-          const newFs = {active:true,lifecycle:LC.ACTIVE,type:"rent",stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-          const r = askOwnerStep(steps,0,newFs,null,lms);
-          return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-        }
-
         if (!userMsg) return jsonRes(newRequest());
 
-        const route = detectRoute(userMsg);
-        if (route) {
+        const currentFacts = extractRequestFacts(userMsg);
+        const pendingFacts = fs?.data?.pendingFacts && typeof fs.data.pendingFacts === "object" ? fs.data.pendingFacts : {};
+        const facts = { ...pendingFacts, ...currentFacts };
+
+        // اختيار العملية من الأزرار أو من رسالة كاملة — مع الاحتفاظ بأي مواصفات قالها قبل كده.
+        const beginFlow = async (route, seedFacts) => {
           const isBuyer = route.startsWith("buyer");
-          const type = route.endsWith("rent")?"rent":"sale";
-          const lms = await fetchLandmarks({transaction:type});
-          if (isBuyer) {
-            const steps = getBuyerSteps(type);
-            const newFs = {active:true,lifecycle:LC.ACTIVE,type,stepIndex:0,data:{},awaitingQ:true,flowType:type==="sale"?"buyer":"tenant",imageUrls:[]};
-            const r = askBuyerStep(steps,0,newFs,null,lms);
-            return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-          } else {
-            const steps = getOwnerSteps(type);
-            const newFs = {active:true,lifecycle:LC.ACTIVE,type,stepIndex:0,data:{},awaitingQ:true,flowType:"owner",imageUrls:[]};
-            const r = askOwnerStep(steps,0,newFs,null,lms);
-            return jsonRes(await enhanceResponse(env,r,userMsg,r.formState,steps[0],history));
-          }
-        }
+          const type = route.endsWith("rent") ? "rent" : "sale";
+          const owner = !isBuyer;
+          const lms = await fetchLandmarks({ transaction: type });
+          const steps = isBuyer ? getBuyerSteps(type) : getOwnerSteps(type);
+          const data = seedFlowData(seedFacts, owner);
+          const newFs = {
+            active: true, lifecycle: LC.ACTIVE, type, stepIndex: 0, data,
+            awaitingQ: true, flowType: isBuyer ? (type === "sale" ? "buyer" : "tenant") : "owner", imageUrls: []
+          };
+          const idx = nextStep(steps, data, 0);
+          const r = isBuyer
+            ? askBuyerStep(steps, idx < 0 ? 0 : idx, newFs, null, lms)
+            : askOwnerStep(steps, idx < 0 ? 0 : idx, newFs, null, lms);
+          const activeStep = steps[idx < 0 ? 0 : idx];
+          return jsonRes(await enhanceResponse(env, r, userMsg, r.formState, activeStep, history));
+        };
+
+        if (isBuy(userMsg)) return beginFlow("buyer_sale", facts);
+        if (isTenant(userMsg)) return beginFlow("buyer_rent", facts);
+        if (isSell(userMsg)) return beginFlow("owner_sale", facts);
+        if (isLandlord(userMsg)) return beginFlow("owner_rent", facts);
+
+        const route = facts.transaction || detectRoute(userMsg);
+        if (route) return beginFlow(route, facts);
 
         if (isOfficeQ(userMsg)) return jsonRes({response:officeMsg(),options:ROUTE_BTNS,formState:fs});
         if (/طلاب|طلبة|مغتربين|مغتربات|سكن طلاب/i.test(userMsg)) return jsonRes({response:`سكن الطلاب مع الأستاذة آلاء: ${ALAA_PHONE}`,options:ROUTE_BTNS,formState:fs});
         const canned = matchInterrupt(userMsg, fs);
         if (canned) return jsonRes({response:canned,options:ROUTE_BTNS,formState:fs});
-        if (isOutOfArea(userMsg)&&!isNasr(userMsg)) return jsonRes({response:"إحنا بنشتغل في مدينة نصر بس يا فندم.",options:ROUTE_BTNS,formState:fs});
-        if (/سيارة|عربية|موبايل|أجهزة|ساعة/i.test(userMsg)) return jsonRes({response:"بنشتغل في العقارات بس يا فندم.",options:ROUTE_BTNS,formState:fs});
+        if (isOutOfArea(userMsg)&&!isNasr(userMsg)) return jsonRes({response:"إحنا بنشتغل في مدينة نصر بس، وأي سعر أو توافر يتأكد مع طارق.",options:ROUTE_BTNS,formState:fs});
+
+        // مواصفة عقارية من غير عملية: نطلب العملية فقط، ونخزن اللي اتقال عشان ما نعيدش السؤال.
+        if (hasRequestFacts(facts) || REAL_ESTATE_RE.test(userMsg)) {
+          return jsonRes({
+            response: buildRouteQuestion(facts),
+            formState: {
+              active: true, lifecycle: LC.ACTIVE, type: null, stepIndex: -1,
+              data: { pendingFacts: facts }, awaitingQ: false, flowType: "route_selection", imageUrls: []
+            },
+            options: ROUTE_BTNS, done: false, readyToSend: false, canShareWhatsapp: false,
+          });
+        }
+
+        // لو المفتاح الخارجي مش متاح، يفضل الرد مبدئيًا بدل رسالة تقنية أو ادعاء رقم.
+        if (!env?.GEMINI_API_KEY) return jsonRes({response:"تمام، أساعدك في عقارات مدينة نصر. شراء ولا إيجار؟",options:ROUTE_BTNS,formState:fs});
 
         const reply = await geminiFirstMsg(env, userMsg, history);
         if (reply) return jsonRes({response:reply,options:ROUTE_BTNS,formState:fs});
