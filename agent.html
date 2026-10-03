@@ -111,7 +111,6 @@ extra_head: |
       --brand-panel:   #1a2229;   /* هيدر / حقل إدخال / فقاعة بوت */
       --brand-in:      #1e2a33;   /* فقاعة البوت */
       --brand-out:     #2d5266;   /* فقاعة المستخدم — كحلي فاتح */
-      --brand-chip:    #16202a;   /* شارة "اليوم" */
       --brand-accent:  #c9a961;   /* الذهبي — accent عام */
       --brand-text:    #e8e6e3;   /* نص أساسي أوف وايت */
       --brand-sub:     #8a95a0;   /* نص ثانوي رمادي مزرق */
@@ -126,11 +125,37 @@ extra_head: |
       background-repeat: repeat;
     }
 
-    /* شارة "اليوم" — لون هادئ من هويتنا */
+    /* شارة اليوم — خطّان ذهبيان بدون خلفية فقاعة */
     body.page-agent .chat-area::before {
-      background: var(--brand-chip);
-      color: var(--brand-sub);
-      box-shadow: var(--brand-shadow);
+      content: "اليوم";
+      flex-shrink: 0;
+      width: 100%;
+      text-align: center;
+      background: transparent;
+      color: rgba(201, 169, 97, 0.7);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 0;
+      box-shadow: none;
+      border-radius: 0;
+      letter-spacing: 0.5px;
+      position: relative;
+      background-image: linear-gradient(
+        to right,
+        transparent 0%,
+        transparent calc(50% - 60px),
+        rgba(201, 169, 97, 0.25) calc(50% - 40px),
+        rgba(201, 169, 97, 0.25) calc(50% - 30px),
+        transparent calc(50% - 30px),
+        transparent calc(50% + 30px),
+        rgba(201, 169, 97, 0.25) calc(50% + 30px),
+        rgba(201, 169, 97, 0.25) calc(50% + 40px),
+        transparent calc(50% + 60px),
+        transparent 100%
+      );
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 100% 1px;
     }
 
     /* الهيدر */
@@ -146,19 +171,77 @@ extra_head: |
     body.page-agent .header-status { color: var(--brand-sub); }
     body.page-agent .header-status.typing { color: var(--brand-accent); }
 
-    /* الفقاعات */
+    /* الشكل المعماري — زوايا ناعمة وزاوية حادة ناحية صاحب الرسالة */
+    body.page-agent .msg-bot::before,
+    body.page-agent .msg-user::before {
+      content: none !important;
+      display: none !important;
+    }
     body.page-agent .msg {
-      box-shadow: var(--brand-shadow);
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      padding: 8px 12px 7px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
       color: var(--brand-text);
     }
-    body.page-agent .msg-bot  { background: var(--brand-in);  }
-    body.page-agent .msg-user { background: var(--brand-out); }
-    body.page-agent .msg-bot::before  { background: var(--brand-in);  }
-    body.page-agent .msg-user::before { background: var(--brand-out); }
-    body.page-agent .msg-time { color: rgba(232,230,227,.55); }
+    body.page-agent .msg-bot {
+      background: var(--brand-in);
+      /* محور الشات RTL: flex-end هو الشمال */
+      align-self: flex-end;
+      border-bottom-left-radius: 4px;
+    }
+    body.page-agent .msg-user {
+      background: var(--brand-out);
+      align-self: flex-start;
+      border-bottom-right-radius: 4px;
+      max-width: min(85%, 520px);
+      width: fit-content;
+      box-sizing: border-box;
+      overflow: visible;
+    }
+    body.page-agent .msg-bot + .msg-bot,
+    body.page-agent .msg-user + .msg-user {
+      border-radius: 16px;
+      margin-top: 2px;
+    }
+    body.page-agent .msg-bot + .msg-bot { border-bottom-left-radius: 4px; }
+    body.page-agent .msg-user + .msg-user { border-bottom-right-radius: 4px; }
+
+    /* الوقت في التدفق الطبيعي، بدون الحجز القديم للتموضع المطلق */
+    body.page-agent .msg-content { padding-bottom: 0; }
+    body.page-agent .msg-time,
+    body.page-agent .msg-user .msg-time {
+      position: static;
+      inset: auto;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 3px;
+      padding: 0;
+      font-size: 11px;
+      line-height: 1;
+      color: rgba(232, 230, 227, 0.55);
+      direction: ltr;
+      white-space: nowrap;
+    }
+
+    body.page-agent .header-avatar {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #2a3942;
+      border: 1px solid rgba(201, 169, 97, 0.35);
+      cursor: default;
+    }
 
     /* مؤشر الكتابة */
-    body.page-agent .typing-bubble { background: var(--brand-in); box-shadow: var(--brand-shadow); }
+    body.page-agent .typing-bubble { background: var(--brand-in); box-shadow: var(--brand-shadow); align-self: flex-end; }
 
     /* أزرار الردود السريعة */
     body.page-agent .btn-glass:not(.valuation-link):not(.primary) {
@@ -199,10 +282,16 @@ extra_head: |
       color: var(--brand-sub);
     }
 
-    /* علامة القراءة — نجمة ذهبية صغيرة بدل صحّين واتساب الزرقاء.
+    /* علامة القراءة — صح ذهبية صغيرة بدل صحّين واتساب الزرقاء.
        الـSVG الأصلي موجود في JS (TICKS_SVG) ومش متغيّر؛ إحنا بس بنخفيه
        ونرسم علامة بديلة في نفس المكان بـCSS. */
-    body.page-agent .msg-user .msg-ticks { position: relative; }
+    body.page-agent .msg-user .msg-ticks {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      margin-inline-start: 2px;
+      flex-shrink: 0;
+    }
     body.page-agent .msg-user .msg-ticks svg { visibility: hidden; }
     body.page-agent .msg-user .msg-ticks::after {
       content: "✓";
@@ -311,6 +400,8 @@ extra_scripts: |
     <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
       <i class="fas fa-arrow-right"></i>
     </button>
+
+    <img class="header-avatar" src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="طارق طنطاوي" width="40" height="40">
 
     <div class="header-info" onclick="openAbout()">
       <div class="header-name">طارق طنطاوي</div>
