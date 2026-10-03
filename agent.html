@@ -30,6 +30,22 @@ extra_head: |
       max-height: 100vh; max-height: 100dvh;
       overflow: hidden;
     }
+    /* تثبيت الـlayout دايمًا: الهيدر فوق / الشات يتمرّر / مربع الكتابة ملزوق تحت.
+       نفس قواعد .vv-keyboard لكن بدون شرط، عشان طول المحادثة ما يزقّش الـbottom-dock خارج الشاشة. */
+    body.page-agent #app {
+      display: flex;
+      flex-direction: column;
+    }
+    body.page-agent #app > .header {
+      flex: 0 0 auto;
+    }
+    body.page-agent #app > .chat-area {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    body.page-agent #app > .bottom-dock {
+      flex: 0 0 auto;
+    }
     body.page-agent .chat-area {
       min-height: 0;
       overflow-y: auto; overflow-x: hidden;
