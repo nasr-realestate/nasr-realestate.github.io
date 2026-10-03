@@ -1,5 +1,5 @@
 // agent.html — the page's inline script under node:vm with a tiny DOM (see _dom-agent.mjs).
-//   T1.1 داكن دايمًا · T1.2 مصادر الصور + noopener · T1.3 سقف history · T1.4 تسمية الأساس · T1.5 هوية الوكيل
+//   T1.1 داكن دايمًا · T1.1b هوية كحلي داكن + ذهبي · T1.2 مصادر الصور + noopener · T1.3 سقف history · T1.4 تسمية الأساس · T1.5 هوية الوكيل
 //   + الرجوع من التقييم، زر 💎، الخصوصية (GPS)، والتمرير الذكي.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -38,7 +38,7 @@ function darkMediaRules(css) {
   return rules;
 }
 
-test("T1.1: the agent page is always dark — same palette as style.css, no new colours, nothing conditional on the device setting", () => {
+test("T1.1: the agent page is always dark — same palette as style.css, nothing conditional on the device setting", () => {
   assert.match(agentStyle, /:root\s*\{\s*color-scheme:\s*dark;/);
   const styleNoComments = agentStyle.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(styleNoComments, /only light|color-scheme:\s*light|prefers-color-scheme/, "the palette is not conditional on the device setting");
@@ -49,13 +49,73 @@ test("T1.1: the agent page is always dark — same palette as style.css, no new 
   for (const rule of wanted) {
     assert.ok(have.some(h => h.selector === rule.selector && h.body === rule.body), `agent.html must carry (unconditionally): ${rule.selector}`);
   }
-  assert.doesNotMatch(styleNoComments, /valuation-link/, "the gold 💎 button keeps its own style.css colours");
-  // لا ألوان جديدة: كل لون hex في كتلة agent.html الداكنة موجود في كتلة style.css الداكنة
+  // زر 💎 مستثنى صراحةً من قواعد الهوية (:not(.valuation-link)) ومالوش قاعدة خاصة بيه هنا
+  assert.doesNotMatch(styleNoComments.replace(/:not\(\.valuation-link\)/g, ""), /valuation-link/, "the gold 💎 button keeps its own style.css colours");
+  // القاعدة الداكنة الأساسية مالهاش ألوان جديدة: كل لون hex فيها موجود في كتلة style.css الداكنة
   const hexes = text => new Set((text.match(/#[0-9a-f]{3,8}\b/gi) || []).map(h => h.toLowerCase()));
   const darkText = wanted.map(r => r.body).join(" ");
   for (const rule of have.filter(r => /--bg-app|wa-dialog|chat-area \{ background-color|privacy-warn/.test(r.selector + r.body))) {
     for (const hex of hexes(rule.body)) assert.ok(hexes(darkText).has(hex), `new colour ${hex} in ${rule.selector}`);
   }
+});
+
+// ───────── T1.1b: هوية طارق طنطاوي (كحلي داكن + ذهبي) ─────────
+// كتلة الهوية بتتعرّف بعلامتها في agent.html، وكل اختبارات الألوان بتقصّها من الستايل.
+const IDENTITY_MARK = "🟡 هوية طارق طنطاوي";
+function identityLayerOf(css) {
+  const at = css.indexOf(IDENTITY_MARK);
+  assert.ok(at > 0, "agent.html must carry the navy+gold identity layer");
+  return css.slice(at);
+}
+
+test("T1.1b: the chrome wears the navy+gold identity — no WhatsApp wallpaper, ticks or greens left behind", () => {
+  const identity = identityLayerOf(agentStyle);
+  // مفيش أي لون من لوحة واتساب جوه كتلة الهوية (لا الأخضر ولا التركواز ولا كحلي الشات بتاعهم)
+  assert.doesNotMatch(identity, /#25d366|#00a884|#128c7e|#075e54|#005c4b|#53bdeb|#0b141a|#efeae2|#d9fdd3|#202c33|#e9edef|#8696a0/i,
+    "the identity layer must not re-use the WhatsApp palette");
+  assert.doesNotMatch(identity, /rgba?\(\s*(0,\s*168,\s*132|37,\s*211,\s*102|7,\s*94,\s*84|18,\s*140,\s*126|30,\s*45,\s*61)/i);
+
+  const rules = cssRules(agentStyle);
+  const bodyOf = selector => {
+    const rule = rules.filter(r => r.selector === selector).at(-1);
+    assert.ok(rule, `agent.html must style ${selector}`);
+    return rule.body;
+  };
+  const allOf = selector => rules.filter(r => r.selector === selector).map(r => r.body).join(" ");
+
+  // لوحة الهوية معرّفة بألوان حرفية في agent.html
+  for (const token of ["--brand-bg", "--brand-panel", "--brand-in", "--brand-out", "--brand-chip", "--brand-accent", "--brand-text", "--brand-sub"]) {
+    assert.match(identity, new RegExp(`${token}:\\s*#[0-9a-f]{6}`, "i"), `${token} must be declared`);
+  }
+  // خلفية الشات: كحلي + نقشة النقاط الجديدة (مش نقشة واتساب)
+  assert.match(identity, /--brand-wallpaper:\s*url\("data:image\/svg\+xml/);
+  assert.match(bodyOf("body.page-agent .chat-area"), /background-color:\s*var\(--brand-bg\)/);
+  assert.match(bodyOf("body.page-agent .chat-area"), /background-image:\s*var\(--brand-wallpaper\)/);
+  // الهيدر والفقاعات
+  assert.match(bodyOf("body.page-agent .header"), /background:\s*var\(--brand-panel\)/);
+  assert.match(bodyOf("body.page-agent .msg-bot"), /background:\s*var\(--brand-in\)/);
+  assert.match(bodyOf("body.page-agent .msg-user"), /background:\s*var\(--brand-out\)/);
+  // علامة القراءة: SVG واتساب مخفية و✓ ذهبية مكانها
+  assert.match(bodyOf("body.page-agent .msg-user .msg-ticks svg"), /visibility:\s*hidden/);
+  assert.match(bodyOf("body.page-agent .msg-user .msg-ticks::after"), /content:\s*"✓"/);
+  assert.match(bodyOf("body.page-agent .msg-user .msg-ticks::after"), /color:\s*var\(--brand-accent\)/);
+  // بقية الأسطح: التوكنات مربوطة على الهوية والأخضر/التركواز الحرفي اتشال
+  assert.match(allOf("body.page-agent"), /--bg-app:\s*var\(--brand-bg\)/);
+  assert.match(allOf("body.page-agent"), /--accent:\s*var\(--brand-accent\)/);
+  assert.match(allOf("body.page-agent"), /--text-primary:\s*var\(--brand-text\)/);
+  assert.match(bodyOf("body.page-agent .status-dot"), /background:\s*var\(--brand-accent\)/);
+  assert.match(bodyOf("body.page-agent .menu-glass-item:hover"), /rgba\(201,\s*169,\s*97/);
+  assert.match(bodyOf("body.page-agent .input-glass:focus-within"), /rgba\(201,\s*169,\s*97/);
+  assert.match(bodyOf("body.page-agent .privacy-overlay"), /background:\s*rgba\(9,\s*13,\s*17/);
+  assert.match(bodyOf("body.page-agent .privacy-badge"), /rgba\(201,\s*169,\s*97/);
+  assert.match(bodyOf("body.page-agent .wa-dialog-btn.cancel"), /color:\s*var\(--brand-accent\)/);
+  assert.match(bodyOf("body.page-agent .gallery-spinner"), /border-top-color:\s*var\(--brand-accent\)/);
+  // منتقي الموقع: الحقول والقوايم البيضاء بقت على لوحة الهوية (كان نص فاتح على أبيض)
+  assert.match(bodyOf("body.page-agent .nm-pk-input"), /background:\s*var\(--brand-panel\)/);
+  assert.match(bodyOf("body.page-agent .nm-pk-results"), /background:\s*var\(--brand-panel\)/);
+  assert.match(bodyOf("body.page-agent .nm-pk-confirm"), /background:\s*var\(--brand-accent\)/);
+  // ⚠️ كارت واتساب الحقيقي مستثنى عن قصد: لسه بأخضر واتساب الرسمي في style.css
+  assert.ok(!identity.includes("wa-glass-card") && !identity.includes(".wa-icon"), "the real WhatsApp card keeps its official colours in style.css");
 });
 
 test("agent layout always keeps the header and input dock fixed around the scrollable chat", () => {
