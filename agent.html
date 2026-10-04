@@ -389,6 +389,231 @@ extra_head: |
     body.page-agent .nm-pk-confirm { background: var(--brand-accent); color: var(--brand-panel); border-color: transparent; box-shadow: 0 4px 14px rgba(201,169,97,0.3); }
     body.page-agent .nm-pk-spinner { border-color: rgba(201,169,97,0.25); border-top-color: var(--brand-accent); }
     body.page-agent .nm-pk-result-box.nm-pending { border-color: rgba(201,169,97,0.5); }
+
+
+    /* ═══ تحسينات مركّزة لواجهة المحادثة ═══ */
+    /* هوية الخدمة داخل الهيدر: شارة صغيرة، مع إبقاء الاسم والصورة والحالة واضحة. */
+    body.page-agent .header-name { min-width: 0; gap: 6px; white-space: nowrap; }
+    body.page-agent .header-name .header-badge {
+      flex: 0 0 auto;
+      padding: 2px 7px;
+      border: 1px solid rgba(201,169,97,0.34);
+      border-radius: 999px;
+      background: rgba(201,169,97,0.12);
+      color: var(--brand-accent);
+      font-size: 9.5px;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+    body.page-agent .header-status { min-width: 0; white-space: nowrap; }
+    body.page-agent .header-service {
+      flex: 0 0 auto;
+      color: rgba(201,169,97,0.82);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    body.page-agent .header-service::before {
+      content: "|";
+      display: inline-block;
+      margin-inline: 5px;
+      color: rgba(201,169,97,0.48);
+      font-weight: 400;
+    }
+
+    /* الإشعار شريط ضمن التخطيط؛ يوسّع المساحة بدل أن يطفو فوق الرسائل. */
+    body.page-agent #app > .inapp-notif {
+      position: relative;
+      inset: auto;
+      transform: none;
+      flex: 0 0 auto;
+      width: calc(100% - 32px);
+      max-width: var(--max-w);
+      height: 0;
+      max-height: 0;
+      min-height: 0;
+      margin: 0 auto;
+      padding: 0 12px;
+      border-width: 0;
+      overflow: hidden;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 80;
+      transition: max-height .28s ease, margin .28s ease, padding .28s ease,
+                  border-width .28s ease, opacity .2s ease;
+    }
+    body.page-agent #app > .inapp-notif.show {
+      height: auto;
+      max-height: 92px;
+      margin: 8px auto;
+      padding: 10px 12px;
+      border-width: 1px;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+    body.page-agent #app > .inapp-notif.hiding {
+      opacity: 0;
+      pointer-events: none;
+      transform: none;
+    }
+
+    /* رسائل التنبيه القصيرة تظهر ضمن مساحة الإدخال بدل تغطية آخر الرسائل. */
+    body.page-agent .bottom-dock > .toast {
+      position: relative;
+      inset: auto;
+      transform: none;
+      z-index: auto;
+      width: fit-content;
+      max-width: 100%;
+      height: 0;
+      max-height: 0;
+      min-height: 0;
+      margin: 0 auto;
+      padding: 0 14px;
+      border-width: 0;
+      overflow: hidden;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: max-height .24s ease, margin .24s ease, padding .24s ease,
+                  border-width .24s ease, opacity .2s ease;
+    }
+    body.page-agent .bottom-dock > .toast.show {
+      height: auto;
+      max-height: 88px;
+      margin: 0 auto 8px;
+      padding: 10px 16px;
+      border-width: 1px;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: none;
+      transform: none;
+    }
+
+    /* بطاقة عقار أغنى بالمعلومات، مع إظهار القيم المتوفرة فقط. */
+    body.page-agent .gallery-card {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    body.page-agent .gallery-card-body {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      min-width: 0;
+      padding: 9px 10px 11px;
+      direction: rtl;
+    }
+    body.page-agent .gallery-card-price {
+      color: var(--brand-accent);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    body.page-agent .gallery-card-specs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px 7px;
+      color: var(--brand-text);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+    body.page-agent .gallery-card-type,
+    body.page-agent .gallery-card-area {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      padding: 3px 6px;
+      border: 1px solid rgba(201,169,97,0.16);
+      border-radius: 8px;
+      background: rgba(201,169,97,0.06);
+      overflow-wrap: anywhere;
+    }
+    body.page-agent .gallery-card-location {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      min-width: 0;
+      color: var(--brand-sub);
+      font-size: 11px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+    body.page-agent .gallery-card-location i {
+      flex: 0 0 auto;
+      margin-top: 4px;
+      color: var(--brand-accent);
+      font-size: 10px;
+    }
+    body.page-agent .gallery-card-location span { min-width: 0; overflow-wrap: anywhere; }
+    body.page-agent .gallery-card-title {
+      display: block;
+      -webkit-line-clamp: unset;
+      -webkit-box-orient: initial;
+      overflow: visible;
+      color: var(--brand-text);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.5;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-overflow: clip;
+    }
+    body.page-agent .gallery-card-arrow { top: 8px; bottom: auto; }
+
+    /* شريط كتابة مريح للمس، مع حقل مرن لا يزاحم الأزرار على العرض الضيق. */
+    body.page-agent .input-glass { align-items: center; gap: 6px; }
+    body.page-agent .input-icon-btn,
+    body.page-agent .send-btn-glass {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      touch-action: manipulation;
+    }
+    body.page-agent .input-field { min-width: 0; flex: 1 1 0%; }
+
+    @media (max-width: 480px) {
+      body.page-agent .btns-rack.initial-intents {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-self: stretch;
+        width: 100%;
+        max-width: 100%;
+        gap: 8px;
+        padding: 8px 0 12px;
+      }
+      body.page-agent .btns-rack.initial-intents .btn-glass {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 9px 8px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.35;
+      }
+    }
+
+    @media (max-width: 380px) {
+      body.page-agent .header { gap: 8px; padding-inline: 10px; }
+      body.page-agent .header-back,
+      body.page-agent .header-btn { width: 36px; height: 36px; }
+      body.page-agent .header-avatar { width: 36px; height: 36px; }
+      body.page-agent .header-name { gap: 3px; font-size: 13px; }
+      body.page-agent .header-name .header-badge { padding-inline: 4px; font-size: 8px; }
+      body.page-agent .header-status { gap: 3px; font-size: 10px; }
+      body.page-agent .header-service { font-size: 10px; }
+      body.page-agent .header-service::before { margin-inline: 3px; }
+    }
+
   </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
@@ -404,10 +629,14 @@ extra_scripts: |
     <img class="header-avatar" src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="طارق طنطاوي" width="40" height="40">
 
     <div class="header-info" onclick="openAbout()">
-      <div class="header-name">طارق طنطاوي</div>
+      <div class="header-name">
+        طارق طنطاوي
+        <span class="header-badge">سمسار طلبك</span>
+      </div>
       <div class="header-status" id="statusLine">
         <span class="status-dot"></span>
         <span id="statusText">متصل الآن</span>
+        <span class="header-service">عقارات مدينة نصر</span>
       </div>
     </div>
 
@@ -417,6 +646,17 @@ extra_scripts: |
       </button>
     </div>
   </header>
+
+  <div class="inapp-notif" id="inappNotif" role="status" aria-live="polite">
+    <div class="notif-icon-wrap green" id="notifIcon">💬</div>
+    <div class="notif-body">
+      <div class="notif-title" id="notifTitle">محادثة جديدة</div>
+      <div class="notif-sub" id="notifSub">طارق جاهز للمساعدة</div>
+    </div>
+    <button class="notif-close" onclick="hideInappNotif()" aria-label="إغلاق">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
 
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
@@ -469,6 +709,8 @@ extra_scripts: |
 
     <div class="img-strip" id="imgStrip"></div>
 
+    <div class="toast" id="toast"></div>
+
     <div class="input-glass">
       <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
         <i class="fas fa-plus"></i>
@@ -512,17 +754,6 @@ extra_scripts: |
     <button class="privacy-btn" onclick="acceptPrivacy()">فهمت — ابدأ المحادثة</button>
     <button class="privacy-skip" onclick="acceptPrivacy()">إغلاق</button>
   </div>
-</div>
-
-<div class="inapp-notif" id="inappNotif" role="status" aria-live="polite">
-  <div class="notif-icon-wrap green" id="notifIcon">💬</div>
-  <div class="notif-body">
-    <div class="notif-title" id="notifTitle">محادثة جديدة</div>
-    <div class="notif-sub" id="notifSub">طارق جاهز للمساعدة</div>
-  </div>
-  <button class="notif-close" onclick="hideInappNotif()" aria-label="إغلاق">
-    <i class="fas fa-times"></i>
-  </button>
 </div>
 
 <div class="wa-dialog-overlay" id="waDialog" onclick="if(event.target===this) closeWaDialog(false)">
@@ -579,8 +810,6 @@ extra_scripts: |
     <button class="ag-close-btn" onclick="closeAbout()">إغلاق</button>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════
@@ -1463,6 +1692,8 @@ function startConversation() {
   renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — وكيل عقاري في مدينة نصر، خبرة 15 سنة.\n\n🏆 Google Local Guide 7\n\nتشتري ولا تأجر ولا تبيع؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
+  const initialIntentRack = chatArea.querySelector(".btns-rack");
+  if (initialIntentRack) initialIntentRack.classList.add("initial-intents");
 }
 
 loadState();
@@ -1551,6 +1782,14 @@ async function fetchGalleryFeed() {
   }
 }
 
+const GALLERY_PROPERTY_TYPE_LABELS = Object.freeze({
+  apartment: "شقة",
+  villa: "فيلا",
+  shop: "محل تجاري",
+  office: "مكتب إداري",
+});
+const galleryText = value => typeof value === "string" ? value.trim() : "";
+
 function renderGalleryCards(properties) {
   const grid = document.getElementById("galleryGrid");
   grid.innerHTML = "";
@@ -1572,15 +1811,33 @@ function renderGalleryCards(properties) {
     card.style.animationDelay = `${i * 0.04}s`;
 
     const imgSrc = prop.image || "";
-    const title  = prop.title || "عقار";
+    const title = galleryText(prop.title);
+    const price = galleryText(prop.price);
+    const rawType = galleryText(prop.propertyType);
+    const propertyType = Object.prototype.hasOwnProperty.call(GALLERY_PROPERTY_TYPE_LABELS, rawType)
+      ? GALLERY_PROPERTY_TYPE_LABELS[rawType]
+      : rawType;
+    const area = galleryText(prop.area);
+    const location = galleryText(prop.location) || galleryText(prop.zone);
 
     card.innerHTML = `
       <img class="gallery-card-img" src="${escHtml(imgSrc)}" alt="${escHtml(title)}" loading="lazy" decoding="async"
            onerror="this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';">
-      <div class="gallery-card-body"><div class="gallery-card-title">${escHtml(title)}</div></div>
+      <div class="gallery-card-body">
+        ${price ? `<div class="gallery-card-price">${escHtml(price)}</div>` : ""}
+        ${propertyType || area ? `
+          <div class="gallery-card-specs">
+            ${propertyType ? `<span class="gallery-card-type">${escHtml(propertyType)}</span>` : ""}
+            ${area ? `<span class="gallery-card-area">${escHtml(area)}</span>` : ""}
+          </div>
+        ` : ""}
+        ${location ? `<div class="gallery-card-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>${escHtml(location)}</span></div>` : ""}
+        ${title ? `<div class="gallery-card-title">${escHtml(title)}</div>` : ""}
+      </div>
       <div class="gallery-card-arrow"><i class="fas fa-arrow-left"></i></div>
     `;
 
+    if (!title) card.setAttribute("aria-label", "فتح تفاصيل العقار");
     grid.appendChild(card);
   });
 }
