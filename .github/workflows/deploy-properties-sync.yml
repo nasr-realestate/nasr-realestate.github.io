@@ -1,0 +1,174 @@
+# Deploy the GitHub → D1 properties sync Worker and verify it against the real D1.
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
+#   CLOUDFLARE_ACCOUNT_ID (optional — inferred from the token when unset)
+# Optional:
+#   SYNC_TOKEN            (protects POST /sync; stored as a Worker secret when present)
+#
+# This workflow deploys ONLY the sync Worker. The valuation and agent Workers are not
+# touched here (their live builds are ahead of the repository copies on purpose).
+name: Deploy Properties Sync Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      verification:
+        description: "Run the live sync verification (two runs + D1 integrity checks)"
+        type: boolean
+        default: true
+  push:
+    branches: ["master", "arena/**"]
+    paths:
+      - "_worker/properties-sync-worker.js"
+      - "_worker/wrangler.sync.toml"
+      - ".github/workflows/deploy-properties-sync.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
+      SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
+      REPORT: _diag/sync-deploy-report.txt
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Start report
+        run: |
+          mkdir -p _diag
+          {
+            echo "=== Properties Sync Worker — deploy + verify ==="
+            echo "ref:      ${{ github.ref_name }}"
+            echo "commit:   ${{ github.sha }}"
+            echo "run:      ${{ github.run_id }}"
+            echo "when:     $(date -u +%FT%TZ)"
+            if [ -n "$CLOUDFLARE_API_TOKEN" ]; then echo "credential: PRESENT"; else echo "credential: MISSING (CLOUDFLARE_API_TOKEN)"; fi
+            echo
+          } > "$REPORT"
+
+      - name: Install wrangler
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm install --no-save wrangler@4
+
+      - name: Deploy sync Worker
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          {
+            echo "--- wrangler whoami ---"
+            npx wrangler whoami 2>&1 || true
+            echo
+            echo "--- wrangler deploy ---"
+            npx wrangler deploy --config _worker/wrangler.sync.toml 2>&1 | tee /tmp/deploy.log
+            echo
+          } >> "$REPORT"
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1 || true)
+          if [ -n "$URL" ]; then echo "SYNC_URL=$URL" >> "$GITHUB_ENV"; fi
+          echo "deployed_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Set SYNC_TOKEN worker secret (optional)
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.SYNC_TOKEN_VALUE != ''
+        run: |
+          echo "$SYNC_TOKEN_VALUE" | npx wrangler secret put SYNC_TOKEN --config _worker/wrangler.sync.toml 2>&1 | tee -a "$REPORT"
+
+      - name: Live verification
+        if: env.CLOUDFLARE_API_TOKEN != '' && inputs.verification != false
+        run: |
+          set -u
+          exec >> "$REPORT" 2>&1
+          AUTH=()
+          if [ -n "${SYNC_TOKEN_VALUE:-}" ]; then AUTH=(-H "Authorization: Bearer $SYNC_TOKEN_VALUE"); fi
+          echo "--- target: $SYNC_URL ---"
+          echo
+          echo "=== 1) service info (GET /) ==="
+          curl -sS -m 30 "$SYNC_URL/" || true
+          echo; echo
+          echo "=== 2) real D1 schema (GET /schema) ==="
+          curl -sS -m 30 "$SYNC_URL/schema" -o /tmp/schema.json || true
+          cat /tmp/schema.json || true
+          echo; echo
+          EXTERNAL_COL=$(jq -r '.mapping.externalId // empty' /tmp/schema.json 2>/dev/null || true)
+          SOURCE_COL=$(jq -r '.mapping.sourceId // empty' /tmp/schema.json 2>/dev/null || true)
+          echo "external_id column: ${EXTERNAL_COL:-<unknown>} | source_id column: ${SOURCE_COL:-<unknown>}"
+          echo
+          echo "=== 3) D1 counts BEFORE ==="
+          npx wrangler d1 execute nasr-market-db --remote --json \
+            --command "SELECT COUNT(*) AS listings_total FROM listings" 2>&1 || true
+          npx wrangler d1 execute nasr-market-db --remote --json \
+            --command "SELECT COUNT(*) AS snapshots_total FROM price_snapshots" 2>&1 || true
+          if [ -n "$SOURCE_COL" ]; then
+            npx wrangler d1 execute nasr-market-db --remote --json \
+              --command "SELECT $SOURCE_COL AS source_id, COUNT(*) AS n FROM listings GROUP BY 1 ORDER BY 1" 2>&1 || true
+          fi
+          echo
+          echo "=== 4) dry run (GET /sync?dryRun=1) ==="
+          curl -sS -m 60 "$SYNC_URL/sync?dryRun=1" "${AUTH[@]}" || true
+          echo; echo
+          echo "=== 5) RUN 1 (POST /sync) ==="
+          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run1.json || true
+          cat /tmp/run1.json || true
+          echo; echo
+          echo "=== 6) RUN 2 — idempotency (POST /sync again, no source change) ==="
+          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run2.json || true
+          cat /tmp/run2.json || true
+          echo; echo
+          echo "=== 7) D1 counts AFTER ==="
+          npx wrangler d1 execute nasr-market-db --remote --json \
+            --command "SELECT COUNT(*) AS listings_total FROM listings" 2>&1 || true
+          npx wrangler d1 execute nasr-market-db --remote --json \
+            --command "SELECT COUNT(*) AS snapshots_total FROM price_snapshots" 2>&1 || true
+          if [ -n "$SOURCE_COL" ]; then
+            npx wrangler d1 execute nasr-market-db --remote --json \
+              --command "SELECT $SOURCE_COL AS source_id, COUNT(*) AS n FROM listings GROUP BY 1 ORDER BY 1" 2>&1 || true
+          fi
+          if [ -n "$EXTERNAL_COL" ] && [ -n "$SOURCE_COL" ]; then
+            echo
+            echo "=== 8) duplicate check (must be empty) ==="
+            npx wrangler d1 execute nasr-market-db --remote --json \
+              --command "SELECT $SOURCE_COL AS source_id, $EXTERNAL_COL AS external_id, COUNT(*) AS n FROM listings GROUP BY 1,2 HAVING n > 1 LIMIT 20" 2>&1 || true
+            echo
+            echo "=== 9) source 9 sample rows ==="
+            npx wrangler d1 execute nasr-market-db --remote --json \
+              --command "SELECT * FROM listings WHERE $SOURCE_COL = 9 LIMIT 3" 2>&1 || true
+          fi
+          echo
+          echo "=== 10) run1 vs run2 summary ==="
+          for f in /tmp/run1.json /tmp/run2.json; do
+            echo "--- $f ---"
+            jq -c '{status, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, invalid: .db.invalid, duplicates: .db.duplicates, files: .github.files_total, fetched: .github.fetched, missing: .github.missing_from_github, errors}' "$f" 2>/dev/null || cat "$f"
+          done
+          echo
+          echo "=== 11) foreign keys / integrity ==="
+          npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA foreign_key_check" 2>&1 || true
+          npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA integrity_check" 2>&1 || true
+
+      - name: Publish report to branch (non-master runs only)
+        if: always() && github.ref_name != 'master'
+        run: |
+          git config user.name "Arena Sync Bot"
+          git config user.email "bot@nasr-realestate.com"
+          git add -f "$REPORT"
+          git commit -m "chore(ci): properties sync deploy report [skip ci]" || echo "nothing to commit"
+          git push origin HEAD:${{ github.ref_name }} || echo "push failed"
+
+      - name: Missing credential notice
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: |
+          {
+            echo "CLOUDFLARE_API_TOKEN is not set for this repository."
+            echo "Add it under Settings → Secrets and variables → Actions (Workers Scripts: Edit + D1: Edit),"
+            echo "then re-run this workflow. Nothing was deployed."
+          } >> "$REPORT"
+          cat "$REPORT"

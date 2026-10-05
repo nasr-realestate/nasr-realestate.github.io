@@ -609,3 +609,76 @@ test("GET / و GET /schema: معلومات الخدمة والـschema بدون 
   assert.ok(schema.tables.listings.includes("external_id"));
   assert.ok(!db.state.sqlLog.some((e) => /^(INSERT|UPDATE)/i.test(e.sql)));
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// 6) إعدادات النشر (wrangler.sync.toml)
+// ───────────────────────────────────────────────────────────────────────────
+test("wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger", () => {
+  const toml = fs.readFileSync(path.join(REPO_ROOT, "_worker", "wrangler.sync.toml"), "utf8");
+  assert.match(toml, /^name = "nasr-properties-sync"$/m);
+  assert.match(toml, /^main = "properties-sync-worker\.js"$/m);
+  assert.match(toml, /database_name = "nasr-market-db"/);
+  assert.match(toml, /database_id = "ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"/);
+  assert.match(toml, /binding = "DB"/);
+  assert.match(toml, /\[triggers\]/);
+  assert.match(toml, /crons = \["17 \* \* \* \*"\]/);
+});
+
+test("الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE", () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, "_worker", "properties-sync-worker.js"), "utf8");
+  const inserts = [...src.matchAll(/INSERT\s+INTO\s+(\$?\{[A-Za-z_]+\}|[A-Za-z_]+)/gi)].map((m) => m[1]);
+  const updates = [...src.matchAll(/UPDATE\s+(\$?\{[A-Za-z_]+\}|[A-Za-z_]+)\s+SET/gi)].map((m) => m[1]);
+  const deletes = [...src.matchAll(/DELETE\s+FROM/gi)];
+
+  assert.equal(deletes.length, 0, "ممنوع أي DELETE");
+  const allowedInserts = new Set(["listings", "ingestion_runs", "${STATE_TABLE}"]);
+  const allowedUpdates = new Set(["listings", "${STATE_TABLE}"]);
+  for (const t of inserts) assert.ok(allowedInserts.has(t), `INSERT غير مسموح في: ${t}`);
+  for (const t of updates) assert.ok(allowedUpdates.has(t), `UPDATE غير مسموح في: ${t}`);
+  // لا كتابة على price_snapshots / demand_signals / areas / sources
+  assert.doesNotMatch(src, /INSERT\s+INTO\s+(price_snapshots|demand_signals|areas|sources|listing_location_evidence)/i);
+  // سجلات المصدر الحالي تُقرأ دائمًا مقيّدة بـ source_id
+  assert.match(src, /FROM listings WHERE \$\{schema\.mapping\.sourceId\} = \?/);
+  assert.match(src, /\.bind\(SOURCE_ID\)/);
+});
+
+test("budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ", async () => {
+  const files = [];
+  for (let i = 0; i < 3; i++) files.push({ name: `g${i}.md`, content: md({ ...FM_BASE, id: `"g${i}"`, slug: `"g${i}"` }) });
+  const gh = installGitHubMock(files);
+  // سطر قديم في D1 لمصدر 9 لملف مش موجود في GitHub
+  const db = makeD1({ listings: [{ id: 900, external_id: "old-listing", source_id: 9, price: 1, area_m2: 50 }] });
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    assert.equal(res.body.github.complete, false);
+    assert.equal(res.body.github.budget_skipped, 1);
+    assert.equal(res.body.github.missing_from_github, null, "لا يجب تقرير ملفات مختفية في تشغيل جزئي");
+    assert.equal(db.state.listings.length, 3, "السطر القديم + ملفان جديدان");
+    const full = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "10" });
+    assert.equal(full.body.github.complete, true);
+    assert.equal(full.body.github.missing_from_github, 1, "السطر القديم مش موجود في GitHub ⇒ تقرير فقط");
+    assert.equal(db.state.listings.length, 4, "بدون أي حذف");
+  } finally {
+    gh.restore();
+  }
+});
+
+test("تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }]);
+  const db = makeD1({
+    listings: [
+      { id: 601, external_id: "dup-x", source_id: 9, price: 1, area_m2: 10 },
+      { id: 602, external_id: "dup-x", source_id: 9, price: 2, area_m2: 20 },
+    ],
+  });
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    assert.equal(res.body.db.preexisting_duplicate_ids, 1);
+    assert.deepEqual(res.body.db.preexisting_duplicate_sample, ["dup-x"]);
+    // السطران كما هما (مفيش حذف ولا تعديل)
+    assert.equal(db.state.listings.find((r) => r.id === 601).price, 1);
+    assert.equal(db.state.listings.find((r) => r.id === 602).price, 2);
+  } finally {
+    gh.restore();
+  }
+});

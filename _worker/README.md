@@ -1,15 +1,33 @@
 # Cloudflare Workers — deployment notes
 
-Two independent Workers serve the site. Both use the existing `nasr-market-db` D1 database through the `DB` binding, **read-only** (`SELECT` / `PRAGMA` only — no writes, no migrations, no schema changes).
+Two independent Workers serve the site; a third one syncs GitHub content into D1. All three use the existing `nasr-market-db` D1 database through the `DB` binding. The two serving Workers are **read-only** (`SELECT` / `PRAGMA` only). The sync Worker is the only writer, and it writes **only** `listings` rows whose `source_id = 9`, plus its own state table and the `ingestion_runs` log — never `areas`, `price_snapshots`, other sources, and never a `DELETE`.
 
 | Repository file | Wrangler config | Cloudflare Worker | Version | Role |
 | --- | --- | --- | --- | --- |
 | `_worker/worker.js` | `_worker/wrangler.agent.toml` (`main = "worker.js"`) | `royal-snow-ea32` | v8.7.2 (file header: "v8.7-GIFT") | The conversational agent used by `agent.html` (chat + `POST /upload-images`) |
 | `_worker/valuation-worker.js` | `_worker/wrangler.valuation.toml` (`main = "valuation-worker.js"`) | `noisy-bush-fd84` | **v6.2**, contract `d1-price-snapshots-v2` | The valuation API used by `tools/valuation.html` (`GET /areas`, `POST /api`) |
+| `_worker/properties-sync-worker.js` | `_worker/wrangler.sync.toml` (`main = "properties-sync-worker.js"`) | `nasr-properties-sync` | **v1.0.0** | GitHub `_properties/*.md` → D1 `listings` (source_id = 9), hourly Cron + manual HTTP trigger |
 
 **Each Worker is one self-contained file and imports nothing.** There is no shared module: the legacy shared D1 reader (`market-data`) was never imported by either Worker (Wrangler only bundles what is imported, so it was never deployed) and has been removed. The static `assets/data/market-data.json` is a different file: the valuation page reads only area *descriptions* from it (names, level, landmarks, streets) — never prices, confidence or fallbacks.
 
 Bindings and settings required by both Workers: the `DB` D1 binding to `nasr-market-db` (declared in both TOML files), `compatibility_date = "2026-09-01"`, and `workers_dev = true`. No KV, R2, queue, route or vars entry is needed. Secrets: only the **agent** Worker needs `GEMINI_API_KEY` and `IMGBB_API_KEY` (set with `npx wrangler secret put …`, never stored in this repository); the **valuation** Worker needs no secret. `ALLOWED_ORIGINS` is an optional comma-separated plain variable for extra CORS origins — the site origin is already allowed by default in code. The agent Worker does **not** read prices from D1; its property listings come from `ai-feed.json`.
+
+## Properties Sync Worker (v1.0.0)
+
+Source of truth for published listings is GitHub (`_properties/*.md`); D1 keeps a structured copy for the other systems. The Worker reads the real D1 schema at runtime (`PRAGMA table_info` / `PRAGMA index_list`) and **refuses to write anything** if it cannot map the required columns (`schema_mismatch`), so a different schema can never be corrupted. Nothing is ever invented: fields come from the file's front matter, and a property whose front matter has no numeric price or no numeric area is reported as invalid instead of being written half-empty.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /` or `GET /health` | service info + real schema summary + last `ingestion_runs` row |
+| `GET /schema` | the D1 schema as read at runtime + the column mapping |
+| `GET /sync?dryRun=1` | manual **dry run** (default for GET): parses and reports, writes nothing |
+| `POST /sync` | real run (requires `SYNC_TOKEN` as `Authorization: Bearer …` or `?token=…` when that binding is set) |
+
+Sync behaviour, in order: read schema → load areas → load existing `listings` rows **where `source_id = 9`** → list `_properties/*.md` from GitHub (tree API) → fetch only files whose blob SHA is not already recorded in `properties_sync_state` (fetch budget `SYNC_FETCH_BUDGET`, default 40 per run, so one run can never explode into hundreds of subrequests) → parse front matter → validate → `INSERT` new / `UPDATE` the same row when a mapped value actually changed / skip when nothing changed → append one row to `ingestion_runs`. A file that disappears from GitHub is only reported (`missing_from_github`): there is no delete path at all. Cron trigger: `17 * * * *` (hourly).
+
+Identity and mapping: `external_id` = front matter `id` (falls back to `slug`, then the file name; both are unique across the current 98 files). `transaction_type` = `rent` only on an explicit signal (`rent` / `للإيجار` / `شهري…` in `category` / `slug` / `title` / `price` / file name), otherwise `sale` — and the run report exposes how many used the default (`transactionEvidence`). `property_type` comes from `category` (`apartments → apartment`, `villas → villa`, `admin-hq → admin`, …). `price` uses `priceNumeric` first then the digits inside `price` (rent prices are monthly). `area_m2` uses `areaNumeric` then the digits inside `area`; the 5 files whose area is free text ("مساحة كبيرة واسعة") and the 3 whose price is "السعر عند التسليم" are reported as invalid, never guessed. `area_id` is matched against the real `areas` table (longest normalised match wins) and stays empty when there is no clear match — it is never defaulted to `area_id = 1`. Latitude/longitude are written only if the schema has the columns and the file carries them; the current files carry none.
+
+Rows already in D1 under `source_id = 9` are updated in place, never duplicated; rows of every other source are never read for writing and never touched. `price_snapshots` is never written and no valuation is recomputed.
 
 ## Valuation Worker — contract `d1-price-snapshots-v2` (v6.2)
 
@@ -79,6 +97,8 @@ Run the whole suite (plain `node:test`, no dependencies, no network, no real D1 
 node --experimental-default-type=module --test _worker/tests/*.test.mjs
 ```
 
+The sync Worker tests (`properties-sync.test.mjs`) run entirely offline against a mock D1 and a mock GitHub: first/second run idempotency, in-place update, invalid files, duplicates, missing files (no delete), other-source isolation, `price_snapshots` untouched, schema mismatch, alternative column names, dry run, `SYNC_TOKEN`, fetch budget and the cron handler.
+
 Syntax check every Worker file and test file, and confirm both Workers bundle (no Cloudflare login needed):
 
 ```sh
@@ -87,7 +107,7 @@ npx wrangler deploy --dry-run --outdir /tmp/wr-valuation --config _worker/wrangl
 npx wrangler deploy --dry-run --outdir /tmp/wr-agent --config _worker/wrangler.agent.toml
 ```
 
-95 tests in 7 files. Helpers (shared, not tests): `_fixtures.mjs` (invented D1 rows + mock D1), `_agent-harness.mjs` (drives the agent Worker through its public `fetch` handler and records every Gemini request), `_dom-agent.mjs` and `_dom-page.mjs` (run the inline scripts of `agent.html` / `tools/valuation.html` under `node:vm` with a small DOM stub — selects are built from the real HTML). `market-integration` and `valuation-handoff` were rewritten because their old versions imported a removed module and removed exports; each new test is tagged `[was #N]`.
+116 tests in 8 files (10 of them are pre-existing failures on `master` in the agent/valuation page suites — untouched by this work). Helpers (shared, not tests): `_fixtures.mjs` (invented D1 rows + mock D1), `_agent-harness.mjs` (drives the agent Worker through its public `fetch` handler and records every Gemini request), `_dom-agent.mjs` and `_dom-page.mjs` (run the inline scripts of `agent.html` / `tools/valuation.html` under `node:vm` with a small DOM stub — selects are built from the real HTML). `market-integration` and `valuation-handoff` were rewritten because their old versions imported a removed module and removed exports; each new test is tagged `[was #N]`.
 
 What each test file covers:
 
@@ -112,10 +132,16 @@ They confirm the real column names (the narrowed read assumes `area_id`), the st
 
 ## Deploy (run only with the owner's approval and Cloudflare login)
 
-From the repository root, one command deploys both Workers (valuation first):
+From the repository root, one command deploys the two serving Workers (valuation first):
 
 ```sh
 npx wrangler deploy --config _worker/wrangler.valuation.toml && npx wrangler deploy --config _worker/wrangler.agent.toml
+```
+
+The properties sync Worker deploys from CI (`.github/workflows/deploy-properties-sync.yml`) with the repository secret `CLOUDFLARE_API_TOKEN` (`+ CLOUDFLARE_ACCOUNT_ID`, optional `SYNC_TOKEN`), and the same workflow runs the live verification: `GET /schema`, counts of `listings` and `price_snapshots` before and after, a dry run, two real sync runs to prove idempotency, a duplicate query, `PRAGMA foreign_key_check` / `PRAGMA integrity_check`, and the source-9 sample rows. Locally it is the same single command:
+
+```sh
+npx wrangler deploy --config _worker/wrangler.sync.toml
 ```
 
 The site itself (`agent.html`, `tools/valuation.html`) is published by GitHub Pages when the change is merged to `master` (`.github/workflows/deploy.yml`). All contract changes are additive, so either order works; deploy the Workers first to be safe.

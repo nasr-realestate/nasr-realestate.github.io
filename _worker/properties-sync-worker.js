@@ -620,7 +620,11 @@ async function runSync(env, opts = {}) {
     finished_at: null,
     duration_ms: 0,
     status: "running",
-    github: { files_total: 0, fetched: 0, skipped_unchanged: 0, missing_from_github: 0, truncated: false },
+    github: {
+      files_total: 0, fetched: 0, skipped_unchanged: 0,
+      missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
+      complete: true, truncated: false,
+    },
     db: { inserted: 0, updated: 0, unchanged: 0, invalid: 0, duplicates: 0, writes_blocked: false },
     invalid_files: [],
     duplicate_files: [],
@@ -691,10 +695,15 @@ async function runSync(env, opts = {}) {
       .bind(SOURCE_ID)
       .all();
     const existing = new Map();
+    const preexistingDuplicates = [];
     for (const row of existingRows || []) {
       const key = String(row[externalIdCol] ?? "");
-      if (key) existing.set(key, row);
+      if (!key) continue;
+      if (existing.has(key)) preexistingDuplicates.push(key); // تكرار موجود قبل المزامنة — يُبلَّغ عنه ولا يُلمس
+      else existing.set(key, row);
     }
+    summary.db.preexisting_duplicate_ids = preexistingDuplicates.length;
+    if (preexistingDuplicates.length) summary.db.preexisting_duplicate_sample = preexistingDuplicates.slice(0, 5);
 
     // 4) قائمة ملفات GitHub
     const files = await githubTree(env, summary.github);
@@ -718,7 +727,10 @@ async function runSync(env, opts = {}) {
       }
 
       if (fetchCount >= budget) {
-        summary.errors.push(`fetch_budget_exhausted:${f.path}`);
+        // تشغيل جزئي مقصود: باقي الملفات في التشغيل الجاي (جدول الحالة = المؤشر)
+        summary.github.budget_skipped++;
+        summary.github.budget_exhausted = true;
+        summary.github.complete = false;
         continue;
       }
       fetchCount++;
@@ -771,10 +783,14 @@ async function runSync(env, opts = {}) {
       if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, contentHash]);
     }
 
-    // 5) ملفات موجودة في D1 ومختفية من GitHub ⇒ تُسجَّل فقط، بدون أي حذف
-    // ملفات موجودة في D1 ومش ظاهرة في شجرة GitHub ⇒ تُسجَّل فقط (بدون حذف)
-    for (const key of existing.keys()) {
-      if (key && !seenIds.has(key)) summary.github.missing_from_github++;
+    // 5) ملفات موجودة في D1 ومختفية من GitHub ⇒ تُسجَّل فقط، بدون أي حذف.
+    //    لو التشغيل ده ما استوعبش كل الملفات (budget) النتيجة تبقى «غير معروفة» بدل تقرير خاطئ.
+    if (summary.github.budget_exhausted) {
+      summary.github.missing_from_github = null;
+    } else {
+      for (const key of existing.keys()) {
+        if (key && !seenIds.has(key)) summary.github.missing_from_github++;
+      }
     }
 
     // 6) كتابة جدول الحالة (batch)
@@ -791,7 +807,10 @@ async function runSync(env, opts = {}) {
           .bind(SOURCE_ID, externalId || `__file__:${path}`, path, sha, hash, nowIso())
       );
       try {
-        await db.batch(stmts);
+        // D1 batch على دفعات (حدود D1) — بدون أي تأثير على السلوك
+        for (let i = 0; i < stmts.length; i += 40) {
+          await db.batch(stmts.slice(i, i + 40));
+        }
       } catch (err) {
         summary.errors.push(`state_write_failed:${String(err.message).slice(0, 120)}`);
       }
