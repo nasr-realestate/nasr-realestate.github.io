@@ -21,7 +21,7 @@ Source of truth for published listings is GitHub (`_properties/*.md`); D1 keeps 
 | `GET /` or `GET /health` | service info + real schema summary + last `ingestion_runs` row |
 | `GET /schema` | the D1 schema as read at runtime + the column mapping |
 | `GET /sync?dryRun=1` | manual **dry run** (default for GET): parses and reports, writes nothing |
-| `POST /sync` | real run (requires `SYNC_TOKEN` as `Authorization: Bearer …` or `?token=…` when that binding is set) |
+| `POST /sync` | real run (requires `SYNC_TOKEN` as `Authorization: Bearer …` or `?token=…` when that binding is set; two manual runs inside `SYNC_MIN_INTERVAL_S`, default 60 s, answer `429 throttled` — Cron is never throttled) |
 
 Sync behaviour, in order: read schema → load areas → load existing `listings` rows **where `source_id = 9`** → list `_properties/*.md` from GitHub (tree API) → fetch only files whose blob SHA is not already recorded in `properties_sync_state` (fetch budget `SYNC_FETCH_BUDGET`, default 40 per run, so one run can never explode into hundreds of subrequests) → parse front matter → validate → `INSERT` new / `UPDATE` the same row when a mapped value actually changed / skip when nothing changed → append one row to `ingestion_runs`. A file that disappears from GitHub is only reported (`missing_from_github`): there is no delete path at all. Cron trigger: `17 * * * *` (hourly). Optional vars, all owner-set and sanitised before use: `LISTINGS_TABLE` / `STATE_TABLE` (table-name overrides), `GITHUB_BRANCH` (branch override, default `master`), `SYNC_FETCH_BUDGET`, `SYNC_ALLOW_DDL=0`, `SYNC_TOKEN` (protects the manual trigger), `GITHUB_TOKEN` (raises the GitHub API limit).
 

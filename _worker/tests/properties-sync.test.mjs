@@ -343,9 +343,10 @@ test("التشغيل الأول يُدخل، والثاني لا يغيّر شي
     { name: "b.md", content: md({ ...FM_BASE, id: '"b-1"', slug: '"b-1"', priceNumeric: 5000000, price: '"5,000,000 ج.م"' }) },
   ]);
   const db = makeD1();
-  const env = { DB: db, SYNC_ALLOW_DDL: "1" };
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" };
   try {
     const first = await syncViaHttp(env);
+    assert.equal(first.status, 200);
     assert.equal(first.body.status, "success");
     assert.equal(first.body.db.inserted, 2);
     assert.equal(db.state.listings.length, 2);
@@ -358,6 +359,7 @@ test("التشغيل الأول يُدخل، والثاني لا يغيّر شي
     assert.equal(db.state.listings[0].area_m2, 180);
 
     const second = await syncViaHttp(env);
+    assert.equal(second.status, 200);
     assert.equal(second.body.db.inserted, 0);
     assert.equal(second.body.db.updated, 0);
     assert.equal(second.body.github.fetched, 0, "التشغيل الثاني لا يجب أن يقرأ أي ملف");
@@ -371,7 +373,7 @@ test("تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إد
   const file = { name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) };
   const gh = installGitHubMock([file]);
   const db = makeD1();
-  const env = { DB: db, SYNC_ALLOW_DDL: "1" };
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" };
   try {
     await syncViaHttp(env);
     const rowId = db.state.listings[0].id;
@@ -405,7 +407,7 @@ test("ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا
   ]);
   const db = makeD1();
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.db.inserted, 1);
     assert.equal(res.body.db.invalid, 3);
     assert.equal(db.state.listings.length, 1);
@@ -428,7 +430,7 @@ test("ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate 
   ]);
   const db = makeD1();
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(db.state.listings.length, 1);
     assert.equal(res.body.db.duplicates, 1);
   } finally {
@@ -448,7 +450,7 @@ test("لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ي�
     ],
   });
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.status, "success");
     const manus = db.state.listings.find((r) => r.id === 501);
     assert.equal(manus.price, 111, "سجل مصدر 8 اتغير — ممنوع");
@@ -472,12 +474,12 @@ test("ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
   ]);
   const db = makeD1();
   try {
-    await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(db.state.listings.length, 2);
     const rowsBefore = db.state.listings.length;
     // إزالة الملف b من المستودع
     gh.files.splice(1, 1);
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(db.state.listings.length, rowsBefore, "ممنوع الحذف");
     assert.ok(res.body.github.missing_from_github >= 1);
   } finally {
@@ -492,7 +494,7 @@ test("schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + sch
   const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }]);
   const db = makeD1({ tables: { listings: LISTINGS_COLUMNS.filter((c) => !["price", "price_egp", "asking_price", "price_total"].includes(c.name)) } });
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.status, "schema_mismatch");
     assert.match(res.body.errors.join(","), /missing_required_columns:price/);
     assert.equal(db.state.listings.length, 0);
@@ -511,7 +513,7 @@ test("schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (
   ];
   const db = makeD1({ tables: { listings: altColumns } });
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.status, "success");
     assert.equal(db.state.listings.length, 1);
     assert.equal(db.state.listings[0].ref_id, "a-1");
@@ -526,7 +528,7 @@ test("GET /sync افتراضيًا dry run: لا يكتب أي شيء", async ()
   const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }]);
   const db = makeD1();
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" }, { method: "GET" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" }, { method: "GET" });
     assert.equal(res.body.dry_run, true);
     assert.equal(res.body.db.inserted, 1);
     assert.equal(db.state.listings.length, 0, "dry run كتب في D1 — ممنوع");
@@ -561,16 +563,16 @@ test("budget: لا يتجاوز حد قراءة الملفات في التشغي
   const gh = installGitHubMock(files);
   const db = makeD1();
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.github.fetched, 2);
     assert.equal(db.state.listings.length, 2);
     // التشغيل التالي يكمل من حيث توقف (جدول الحالة) — بدون duplicates
-    const res2 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    const res2 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res2.body.github.fetched, 2);
     assert.equal(db.state.listings.length, 4);
-    const res3 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    const res3 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(db.state.listings.length, 6);
-    const res4 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    const res4 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res4.body.github.fetched, 0);
     assert.equal(db.state.listings.length, 6);
   } finally {
@@ -583,7 +585,7 @@ test("scheduled: يشغّل المزامنة عبر ctx.waitUntil", async () => 
   const db = makeD1();
   let waited = null;
   try {
-    await worker.scheduled({ cron: "17 * * * *" }, { DB: db, SYNC_ALLOW_DDL: "1" }, { waitUntil: (p) => { waited = p; } });
+    await worker.scheduled({ cron: "17 * * * *" }, { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" }, { waitUntil: (p) => { waited = p; } });
     assert.ok(waited, "waitUntil لم يُستدعَ");
     await waited;
     assert.equal(db.state.listings.length, 1);
@@ -652,12 +654,12 @@ test("budget: التشغيل الجزئي يعلّم complete=false ولا يب�
   // سطر قديم في D1 لمصدر 9 لملف مش موجود في GitHub
   const db = makeD1({ listings: [{ id: 900, external_id: "old-listing", source_id: 9, price: 1, area_m2: 50 }] });
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "2", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.github.complete, false);
     assert.equal(res.body.github.budget_skipped, 1);
     assert.equal(res.body.github.missing_from_github, null, "لا يجب تقرير ملفات مختفية في تشغيل جزئي");
     assert.equal(db.state.listings.length, 3, "السطر القديم + ملفان جديدان");
-    const full = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "10" });
+    const full = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_FETCH_BUDGET: "10", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(full.body.github.complete, true);
     assert.equal(full.body.github.missing_from_github, 1, "السطر القديم مش موجود في GitHub ⇒ تقرير فقط");
     assert.equal(db.state.listings.length, 4, "بدون أي حذف");
@@ -675,12 +677,35 @@ test("تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَ�
     ],
   });
   try {
-    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1" });
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res.body.db.preexisting_duplicate_ids, 1);
     assert.deepEqual(res.body.db.preexisting_duplicate_sample, ["dup-x"]);
     // السطران كما هما (مفيش حذف ولا تعديل)
     assert.equal(db.state.listings.find((r) => r.id === 601).price, 1);
     assert.equal(db.state.listings.find((r) => r.id === 602).price, 2);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }]);
+  const db = makeD1();
+  const env = { DB: db, SYNC_ALLOW_DDL: "1" };
+  try {
+    const first = await syncViaHttp(env);
+    assert.equal(first.status, 200);
+    assert.equal(first.body.db.inserted, 1);
+    const second = await syncViaHttp(env);
+    assert.equal(second.status, 429, "لازم يرفض التشغيل اليدوي المتكرر فورًا");
+    assert.equal(second.body.status, "throttled");
+    // مع تجاوز الحد بالضبط (0) يمرّ
+    const third = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(third.status, 200);
+    assert.equal(third.body.db.inserted, 0);
+    // الـcron لا يتأثر بالحماية
+    const cronSummary = await __test.runSync({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" }, { trigger: "cron" });
+    assert.equal(cronSummary.status, "success");
   } finally {
     gh.restore();
   }

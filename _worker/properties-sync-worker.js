@@ -54,7 +54,8 @@ function envIdent(value, fallback) {
 function envBranch(value, fallback) {
   return typeof value === "string" && /^[A-Za-z0-9._\/-]+$/.test(value) ? value : fallback;
 }
-const DEFAULT_MIN_INTERVAL_S = 60; // أقل فاصل بين تشغيلين فعليين متتاليين
+const DEFAULT_MIN_INTERVAL_S = 60; // أقل فاصل بين تشغيلين يدويين متتاليين
+const RUN_MARKER = "__run__";      // صف علامة في جدول الحالة يسجّل وقت آخر تشغيل
 
 const WORKER_UA = `nasr-properties-sync/${WORKER_VERSION}`;
 
@@ -722,6 +723,19 @@ async function runSync(env, opts = {}) {
     summary.db.preexisting_duplicate_ids = preexistingDuplicates.length;
     if (preexistingDuplicates.length) summary.db.preexisting_duplicate_sample = preexistingDuplicates.slice(0, 5);
 
+    // 3b) حماية من الطرق المتكرر على التشغيل اليدوي (cron مستثنى)
+    const minIntervalS = Number(env.SYNC_MIN_INTERVAL_S) >= 0 ? Number(env.SYNC_MIN_INTERVAL_S) : DEFAULT_MIN_INTERVAL_S;
+    if (trigger === "manual" && minIntervalS > 0) {
+      const lastMarker = state.get(RUN_MARKER);
+      const lastMs = lastMarker ? Date.parse(String(lastMarker.last_synced_at)) : NaN;
+      const sinceMs = Date.now() - lastMs;
+      if (Number.isFinite(lastMs) && sinceMs < minIntervalS * 1000) {
+        summary.status = "throttled";
+        summary.errors.push(`manual_run_throttled:retry_after_s=${Math.ceil((minIntervalS * 1000 - sinceMs) / 1000)}`);
+        return finalize(summary, startedMs);
+      }
+    }
+
     // 4) قائمة ملفات GitHub
     const files = await githubTree(env, summary.github);
     summary.github.files_total = files.length;
@@ -810,8 +824,9 @@ async function runSync(env, opts = {}) {
       }
     }
 
-    // 6) كتابة جدول الحالة (batch)
-    if (stateEnabled && stateWrites.length && !dryRun) {
+    // 6) كتابة جدول الحالة (batch) — دايمًا مع صف علامة وقت آخر تشغيل
+    if (stateEnabled && !dryRun) {
+      stateWrites.push([RUN_MARKER, RUN_MARKER, null, null]);
       const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
         db
           .prepare(
@@ -954,7 +969,10 @@ export default {
           ? url.searchParams.get("dryRun") !== "0"
           : url.searchParams.get("dryRun") === "1";
         const result = await runSync(env, { trigger: "manual", dryRun });
-        return json(result, result.status === "success" ? 200 : result.status === "schema_mismatch" ? 409 : 200, cors);
+        const status = result.status === "schema_mismatch" ? 409
+          : result.status === "throttled" ? 429
+          : 200;
+        return json(result, status, cors);
       }
 
       return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "POST /sync"] }, 404, cors);
