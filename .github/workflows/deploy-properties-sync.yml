@@ -25,7 +25,7 @@ on:
       - ".github/workflows/deploy-properties-sync.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   deploy-and-verify:
@@ -162,14 +162,18 @@ jobs:
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA foreign_key_check" 2>&1 || true
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA integrity_check" 2>&1 || true
 
-      - name: Publish report to branch (non-master runs only)
-        if: always() && github.ref_name != 'master'
-        run: |
-          git config user.name "Arena Sync Bot"
-          git config user.email "bot@nasr-realestate.com"
-          git add -f "$REPORT"
-          git commit -m "chore(ci): properties sync deploy report [skip ci]" || echo "nothing to commit"
-          git push origin HEAD:${{ github.ref_name }} || echo "push failed"
+      - name: Print report to the run log
+        if: always()
+        run: cat "$REPORT" || true
+
+      - name: Upload report as a workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-deploy-report
+          path: ${{ env.REPORT }}
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Missing credential notice
         if: env.CLOUDFLARE_API_TOKEN == ''
