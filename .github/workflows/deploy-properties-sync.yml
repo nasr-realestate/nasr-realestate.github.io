@@ -47,6 +47,7 @@ jobs:
           node-version: "20"
 
       - name: Start report
+        id: start
         run: |
           mkdir -p _diag
           {
@@ -84,7 +85,7 @@ jobs:
           echo "$SYNC_TOKEN_VALUE" | npx wrangler secret put SYNC_TOKEN --config _worker/wrangler.sync.toml 2>&1 | tee -a "$REPORT"
 
       - name: Live verification
-        if: env.CLOUDFLARE_API_TOKEN != '' && inputs.verification != false
+        if: env.CLOUDFLARE_API_TOKEN != '' && github.event.inputs.verification != 'false'
         run: |
           set -u
           exec >> "$REPORT" 2>&1
@@ -99,6 +100,7 @@ jobs:
           curl -sS -m 30 "$SYNC_URL/schema" -o /tmp/schema.json || true
           cat /tmp/schema.json || true
           echo; echo
+          echo "::notice title=SYNC_URL::${SYNC_URL}"
           EXTERNAL_COL=$(jq -r '.mapping.externalId // empty' /tmp/schema.json 2>/dev/null || true)
           SOURCE_COL=$(jq -r '.mapping.sourceId // empty' /tmp/schema.json 2>/dev/null || true)
           echo "external_id column: ${EXTERNAL_COL:-<unknown>} | source_id column: ${SOURCE_COL:-<unknown>}"
@@ -162,9 +164,12 @@ jobs:
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA foreign_key_check" 2>&1 || true
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA integrity_check" 2>&1 || true
 
-      - name: Print report to the run log
+      - name: Print report to the run log and annotate the summary
         if: always()
-        run: cat "$REPORT" || true
+        run: |
+          cat "$REPORT" || true
+          SUMMARY=$(sed -n '1,60p' "$REPORT" | tr '\n' ' ' | cut -c1-900)
+          echo "::notice title=SYNC_REPORT::${SUMMARY}" || true
 
       - name: Upload report as a workflow artifact
         if: always()
@@ -175,25 +180,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      # The report is also published to a dedicated branch so it can be read from
-      # anywhere (master and the PR branch are never written to by CI).
+      # The report is also published to a dedicated branch through the GitHub API so it
+      # can be read from anywhere (master and the PR branch are never written to by CI).
       - name: Publish report to the ci/sync-report branch
         if: always()
+        continue-on-error: true
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -u
-          rm -rf /tmp/sync-report-repo
-          mkdir -p /tmp/sync-report-repo/ci
-          cp "$REPORT" /tmp/sync-report-repo/ci/sync-deploy-report.txt
-          cd /tmp/sync-report-repo
-          git init -q -b ci/sync-report
-          git config user.name "Arena Sync Bot"
-          git config user.email "bot@nasr-realestate.com"
-          git add -f ci/sync-deploy-report.txt
-          git commit -q -m "sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})"
-          git config http.extraheader "AUTHORIZATION: bearer ${GITHUB_TOKEN}"
-          git push -f "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:ci/sync-report
+          BRANCH="ci/sync-report"
+          PATH_IN_REPO="ci/sync-deploy-report.txt"
+          SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq .object.sha 2>/dev/null || true)
+          if [ -z "$SHA" ]; then
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/heads/${BRANCH}" -f sha="${GITHUB_SHA}" >/dev/null 2>&1 || true
+            SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq .object.sha 2>/dev/null || true)
+          fi
+          if [ -z "$SHA" ]; then echo "could not create ${BRANCH}"; exit 0; fi
+          FILE_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}?ref=${BRANCH}" --jq .sha 2>/dev/null || true)
+          CONTENT=$(base64 -w0 "$REPORT")
+          if [ -n "$FILE_SHA" ]; then
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}"               -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})"               -f content="$CONTENT" -f sha="$FILE_SHA" -f branch="$BRANCH" >/dev/null
+          else
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}"               -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})"               -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
+          fi
+          echo "report published to ${BRANCH}"
 
       - name: Missing credential notice
         if: env.CLOUDFLARE_API_TOKEN == ''
