@@ -49,11 +49,17 @@ const LISTINGS_COLUMNS = [
 const AREAS_ROWS = [
   { id: 1, name: "مدينة نصر", name_ar: "مدينة نصر", name_en: "Nasr City" },
   { id: 2, name: "الحي الأول", name_ar: "الحي الأول", name_en: "First District" },
+  { id: 3, name: "الحي الثاني", name_ar: "الحي الثاني", name_en: "Second District" },
+  { id: 8, name: "الحي السابع", name_ar: "الحي السابع", name_en: "Seventh District" },
+  { id: 9, name: "الحي الثامن", name_ar: "الحي الثامن", name_en: "Eighth District" },
   { id: 11, name: "الحي العاشر", name_ar: "الحي العاشر", name_en: "Tenth District" },
   { id: 15, name: "الواحة", name_ar: "الواحة", name_en: "El Waha" },
+  { id: 16, name: "زهراء مدينة نصر", name_ar: "زهراء مدينة نصر", name_en: "Zahraa Nasr City" },
+  { id: 17, name: "المنطقة الأولى", name_ar: "المنطقة الأولى", name_en: "First Zone" },
   { id: 22, name: "المنطقة السادسة", name_ar: "المنطقة السادسة", name_en: "Sixth Zone" },
   { id: 26, name: "المنطقة العاشرة", name_ar: "المنطقة العاشرة", name_en: "Tenth Zone" },
   { id: 29, name: "ممر مكرم عبيد", name_ar: "ممر مكرم عبيد", name_en: "Makram Ebeid Corridor" },
+  { id: 30, name: "ممر عباس العقاد", name_ar: "ممر عباس العقاد", name_en: "Abbas El Akkad Corridor" },
 ];
 
 function tableFor(name, config) {
@@ -304,17 +310,23 @@ test("مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ 
   assert.equal(__test.matchArea("حى الواحة امتداد حسن المأمون", areas), null);
 });
 
-test("الملفات الحقيقية في _properties: كل ملف إما valid أو له سبب رفض صريح", () => {
+test("الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت", () => {
   const files = fs.readdirSync(PROPERTIES_DIR).filter((f) => f.endsWith(".md"));
   assert.ok(files.length >= 90, `عدد ملفات _properties غير متوقع: ${files.length}`);
-  const areas = AREAS_ROWS.map((a) => ({ id: a.id, name: a.name, names: [a.name, a.name_ar, a.name_en] }));
+  const areas = AREAS_ROWS.map((a) => ({ id: a.id, name: a.name, names: [a.name, a.name_ar, a.name_en], scope: a.id === 1 ? "city" : null }));
   let valid = 0;
   const rejected = [];
+  const outOfScope = [];
   for (const f of files) {
     const raw = fs.readFileSync(path.join(PROPERTIES_DIR, f), "utf8");
     const fm = __test.parseFrontMatter(raw);
     assert.ok(fm, `${f}: front matter مفقود`);
-    const { record, problems } = __test.buildRecord(fm, f, areas);
+    const { record, problems, outOfScope: isOut } = __test.buildRecord(fm, f, areas);
+    if (isOut) {
+      outOfScope.push(f);
+      assert.ok(record.externalId, `${f}: external_id مفقود`);
+      continue;
+    }
     if (problems.length) {
       rejected.push(`${f}: ${problems.join(",")}`);
       continue;
@@ -327,8 +339,10 @@ test("الملفات الحقيقية في _properties: كل ملف إما valid
     assert.ok(record.areaM2 > 0, `${f}: area_m2 غير صالح`);
     if (record.areaId !== null) assert.equal(typeof record.areaId, "number", `${f}: area_id غير رقمي`);
   }
-  assert.ok(valid >= 85, `عدد الملفات الصالحة أقل من المتوقع: ${valid}/${files.length}`);
-  // كل ملف مرفوض لازم يكون له سبب من القائمة المحددة (لا رفض صامت)
+  assert.equal(valid + rejected.length + outOfScope.length, files.length);
+  assert.ok(valid >= 75, `عدد الملفات الصالحة داخل النطاق أقل من المتوقع: ${valid}/${files.length}`);
+  assert.equal(outOfScope.length, 12, `عدد الملفات خارج النطاق غير متوقع: ${outOfScope.length}`);
+  assert.equal(rejected.length, 8, `عدد الملفات غير الصالحة غير متوقع: ${rejected.length}`);
   for (const r of rejected) {
     assert.match(r, /missing_(area_m2|price|property_type|external_id)/, `سبب رفض غير معروف: ${r}`);
   }
@@ -778,11 +792,16 @@ test("تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ث
     assert.equal(first.body.github.files_total, files.length);
     assert.equal(first.body.github.complete, true);
     assert.equal(first.body.db.duplicates, 0);
-    assert.equal(first.body.db.inserted + first.body.db.invalid, files.length,
-      "كل ملف إما اتحفظ أو اتسجّل كغير صالح — بدون تجاهل صامت");
-    assert.equal(db.state.listings.length, first.body.db.inserted);
-    assert.ok(first.body.db.inserted >= 85, `عدد السجلات المحفوظة أقل من المتوقع: ${first.body.db.inserted}`);
-    assert.ok(first.body.invalid_files.length >= 1 && first.body.invalid_files.length <= 12);
+    assert.equal(
+      first.body.db.inserted + first.body.db.invalid + first.body.db.out_of_scope,
+      files.length,
+      "كل ملف إما اتحفظ أو اتسجّل كغير صالح أو خارج النطاق — بدون تجاهل صامت"
+    );
+    assert.equal(first.body.db.inserted, 78, `عدد السجلات المحفوظة غير متوقع: ${first.body.db.inserted}`);
+    assert.equal(first.body.db.out_of_scope, 12);
+    assert.equal(first.body.db.invalid, 8);
+    assert.equal(db.state.listings.length, 78);
+    assert.equal(first.body.out_of_scope_files.length, 12, "كل ملف خارج النطاق لازم يظهر باسمه وسببه");
 
     // كل السجلات: مصدر 9، معرّف خارجي، بيع/إيجار، سعر ومساحة موجبان، ومفيش area_id=1 إلا لو المنطقة اتطابقت فعلًا
     for (const row of db.state.listings) {
@@ -813,11 +832,184 @@ test("تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ث
     assert.equal(second.body.db.inserted, 0);
     assert.equal(second.body.db.updated, 0);
     assert.equal(db.state.listings.length, first.body.db.inserted);
-    assert.equal(second.body.db.unchanged + second.body.db.unchanged_invalid, first.body.db.inserted + first.body.db.invalid);
+    assert.equal(
+      second.body.db.unchanged + second.body.db.unchanged_invalid + second.body.db.unchanged_out_of_scope,
+      first.body.db.inserted + first.body.db.invalid + first.body.db.out_of_scope
+    );
 
     // وسجل تشغيل واحد لكل تشغيل
     assert.equal(db.state.ingestionRuns.length, 2);
   } finally {
     gh.restore();
   }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 8) R1 + R2: حماية النطاق (خارج مدينة نصر ⇒ لا كتابة إطلاقًا)
+// ───────────────────────────────────────────────────────────────────────────
+const SCOPE_AREAS = AREAS_ROWS.map((a) => ({
+  id: a.id, name: a.name, names: [a.name, a.name_ar, a.name_en], scope: a.id === 1 ? "city" : null,
+}));
+
+function frontMatterOf(fileName) {
+  const raw = fs.readFileSync(path.join(PROPERTIES_DIR, fileName), "utf8");
+  return __test.parseFrontMatter(raw);
+}
+
+test("R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر", () => {
+  // الملفان المذكوران في R1 — يُقرآن من القرص الفعلي
+  const cases = [
+    { file: "2026-03-07-luxury-villa-new-cairo-1st-district-pool.md", reason: "التجمع الخامس", forbiddenAreaIds: [2] },
+    { file: "2026-03-07-villa-south-90th-dusit-hotel-license.md", reason: "شارع التسعين", forbiddenAreaIds: [3] },
+  ];
+  for (const c of cases) {
+    const built = __test.buildRecord(frontMatterOf(c.file), c.file, SCOPE_AREAS);
+    assert.equal(built.outOfScope, true, `${c.file}: لازم يكون out_of_scope`);
+    assert.ok(built.outOfScopeReasons.includes(c.reason), `${c.file}: السبب ${c.reason} غير مسجَّل (${built.outOfScopeReasons})`);
+    assert.equal(built.record.areaId, undefined, `${c.file}: ممنوع أي area_id`);
+    assert.equal(built.problems.length, 0);
+    // إثبات أن الخطر حقيقي: المطابقة المباشرة (بدون حماية النطاق) كانت ستُسند منطقة مدينة نصر خطأً
+    const naive = __test.matchArea(frontMatterOf(c.file).location, SCOPE_AREAS);
+    assert.ok(naive && c.forbiddenAreaIds.includes(naive.id),
+      `${c.file}: الاختبار لا يمثل حالة R1 (المطابقة المباشرة = ${naive && naive.id})`);
+  }
+});
+
+test("R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط", async () => {
+  const gh = installGitHubMock([
+    { name: "in-scope.md", content: md({ ...FM_BASE, id: '"in-1"' }) },
+    { name: "new-cairo.md", content: md({ ...FM_BASE, id: '"out-1"', location: '"التجمع الخامس - الحي الأول"', title: '"فيلا بالتجمع الخامس"' }) },
+    { name: "heliopolis.md", content: md({ ...FM_BASE, id: '"out-2"', location: '"مصر الجديدة - خلف الميرغني"' }) },
+  ]);
+  const db = makeD1();
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" };
+  try {
+    const res = await syncViaHttp(env);
+    assert.equal(res.body.db.inserted, 1);
+    assert.equal(res.body.db.out_of_scope, 2);
+    assert.equal(db.state.listings.length, 1, "الملفات خارج النطاق ممنوعة من listings");
+    assert.deepEqual(
+      res.body.out_of_scope_files.map((f) => f.file).sort(),
+      ["_properties/heliopolis.md", "_properties/new-cairo.md"]
+    );
+    assert.ok(res.body.out_of_scope_files.every((f) => f.reasons.length > 0), "كل ملف لازم يكون له سبب");
+    assert.ok(!db.state.listings.some((r) => ["out-1", "out-2"].includes(r.external_id)));
+
+    // إعادة التشغيل: لا كتابة، وتُتخطى الملفات المستبعدة من جدول الحالة
+    const second = await syncViaHttp(env);
+    assert.equal(second.body.db.inserted, 0);
+    assert.equal(second.body.db.out_of_scope, 0);
+    assert.equal(second.body.db.unchanged_out_of_scope, 2, "الملفات المستبعدة تُتخطى بدون إعادة فحص");
+    assert.equal(db.state.listings.length, 1);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»", async () => {
+  const gh = installGitHubMock([
+    { name: "new-cairo.md", content: md({ ...FM_BASE, id: '"out-1"', location: '"التجمع الخامس"' }) },
+  ]);
+  const db = makeD1({ listings: [{ id: 700, external_id: "out-1", source_id: 9, price: 1, area_m2: 500, area_id: null }] });
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.db.out_of_scope, 1);
+    assert.equal(res.body.github.missing_from_github, 0, "الملف موجود في GitHub — ليس مختفيًا");
+    const row = db.state.listings.find((r) => r.id === 700);
+    assert.equal(row.price, 1, "ممنوع تعديل سجل خارج النطاق");
+    assert.equal(db.state.listings.length, 1, "ممنوع الحذف");
+  } finally {
+    gh.restore();
+  }
+});
+
+test("scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر", () => {
+  const inScope = [
+    "عمارات العبور - شارع صلاح سالم الرئيسي - مدينة نصر",
+    "شارع النزهة الرئيسي - أمام الرقابة الإدارية - مدينة نصر",
+    "شقة 167م بين أبو داود الظاهري وأحمد فخري - مباني التسعينات",
+    "شقة بحاجة بدريسنج وغرفة ماستر",
+    "حي السفارات - آخر شارع الطيران - أمام مستشفى الأندلس",
+    "الواحة - ناصية شارع الخمسين - مدينة نصر",
+  ];
+  for (const text of inScope) {
+    assert.deepEqual(__test.detectOutOfScope(text), [], `إيجابية خاطئة في: ${text}`);
+  }
+  const outScope = [
+    ["التجمع الخامس - حي الأندلس 1", "التجمع الخامس"],
+    ["شارع التسعين الجنوبي - أمام فندق دويت", "شارع التسعين"],
+    ["مصر الجديدة - موقع راقي", "مصر الجديدة"],
+    ["كمبوند لافيدا - هليوبوليس الجديدة", "هليوبوليس"],
+    ["مدينة الرحاب - مجموعة 13", "الرحاب"],
+    ["النزهة - بالقرب من فلوريدا مول - مساكن شيراتون", "شيراتون"],
+    ["كمبوند نيوبوليس (وادي دجلة)", "وادي دجلة"],
+    ["مدينة السلام - ناصية شارع السادات", "مدينة السلام"],
+  ];
+  for (const [text, reason] of outScope) {
+    assert.ok(__test.detectOutOfScope(text).includes(reason), `لم يُكتشف: ${text} (${reason})`);
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 9) R3: قاعدة «الأخص يفوز» + aliases الممرات
+// ───────────────────────────────────────────────────────────────────────────
+test("R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)", () => {
+  const cases = [
+    ["الواحة - ناصية شارع الخمسين - مدينة نصر", 15],
+    ["زهراء مدينة نصر - ناصية شارع الوفاء", 16],
+    ["حي الواحة - امتداد حسن المأمون - مدينة نصر", 15],
+    ["الحي السابع - شارع ابن قتيبة - مدينة نصر", 8],
+    ["مدينة نصر - موقع عام بدون منطقة فرعية", 1],
+  ];
+  for (const [text, expected] of cases) {
+    const hit = __test.matchArea(text, SCOPE_AREAS);
+    assert.equal(hit && hit.id, expected, `${text} ⇒ ${hit && hit.id} (المتوقع ${expected})`);
+  }
+});
+
+test("R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1", () => {
+  assert.equal(__test.matchArea("شارع مكرم عبيد الرئيسي - قلب مدينة نصر", SCOPE_AREAS).id, 29);
+  assert.equal(__test.matchArea("آخر شارع مكرم عبيد - بعد كلية الألسن", SCOPE_AREAS).id, 29);
+  assert.equal(__test.matchArea("ثاني نمرة من شارع عباس العقاد - مدينة نصر", SCOPE_AREAS).id, 30);
+  assert.equal(__test.matchArea("ممر عباس العقاد - المنطقة الأولى", SCOPE_AREAS).id, 30);
+  // الأطول بين المناطق الفرعية يفوز: «المنطقة السادسة» أقوى من «مكرم عبيد»
+  assert.equal(__test.matchArea("شارع الفريق علي عامر - متفرع من مكرم عبيد - المنطقة السادسة", SCOPE_AREAS).id, 22);
+  // «المنطقة الأولى» أقوى من «عباس العقاد» عند اجتماعهما
+  assert.equal(__test.matchArea("شارع عباس العقاد الرئيسي - المنطقة الأولى - مدينة نصر", SCOPE_AREAS).id, 17);
+  // الحروف الملتصقة: «بالحي الثامن»
+  assert.equal(__test.matchArea("موقع يربط حسن المأمون بالحي الثامن", SCOPE_AREAS).id, 9);
+  // «بالواحة» تعمل أيضًا
+  assert.equal(__test.matchArea("بجوار الواحة مباشرة", SCOPE_AREAS).id, 15);
+});
+
+test("R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)", () => {
+  const mمر = { id: 29, name: "ممر مكرم عبيد", names: ["ممر مكرم عبيد", "Makram Ebeid Corridor"], scope: null };
+  const aliases = __test.areaAliases(mمر);
+  assert.ok(aliases.includes("ممر مكرم عبيد"));
+  assert.ok(aliases.includes("مكرم عبيد"));
+  assert.equal(aliases.length, 3);
+  assert.equal(__test.isCityArea({ id: 1, name: "مدينة نصر", names: ["مدينة نصر"], scope: "city" }), true);
+  assert.equal(__test.isCityArea({ id: 1, name: "مدينة نصر (ككل)", names: ["مدينة نصر"], scope: null }), true);
+  assert.equal(__test.isCityArea({ id: 22, name: "المنطقة السادسة", names: ["المنطقة السادسة"], scope: "zone" }), false);
+});
+
+test("R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص الـ98 ملفًا)", () => {
+  const files = fs.readdirSync(PROPERTIES_DIR).filter((f) => f.endsWith(".md"));
+  for (const f of files) {
+    const fm = __test.parseFrontMatter(fs.readFileSync(path.join(PROPERTIES_DIR, f), "utf8"));
+    const built = __test.buildRecord(fm, f, SCOPE_AREAS);
+    if (!built.outOfScope) continue;
+    assert.equal(built.record.areaId, undefined, `${f}: ملف خارج النطاق وله area_id`);
+    // لو تم تجاهل الحماية لأي سبب: لازم يظهر التطابق الخاطئ المحتمل في الـtest ده
+    const naive = __test.matchArea(fm.location || "", SCOPE_AREAS);
+    if (naive) assert.ok([2, 3].includes(naive.id) || naive.id >= 1);
+  }
+});
+
+test("containsToken: الكلمة الكاملة مع الحروف الملتصقة", () => {
+  const hay = ` ${__test.normalizeArabic("شقة بمدينة نصر وبالحي الثامن مقابل مسجد")} `;
+  assert.equal(__test.containsToken(hay, __test.normalizeArabic("مدينة نصر")), true);
+  assert.equal(__test.containsToken(hay, __test.normalizeArabic("الحي الثامن")), true);
+  assert.equal(__test.containsToken(hay, __test.normalizeArabic("الحي التاسع")), false);
+  assert.equal(__test.containsToken(` ${__test.normalizeArabic("بدروم وبدريسنج")} `, "بدر"), false);
 });

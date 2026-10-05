@@ -57,6 +57,46 @@ function envBranch(value, fallback) {
 const DEFAULT_MIN_INTERVAL_S = 60; // أقل فاصل بين تشغيلين يدويين متتاليين
 const RUN_MARKER = "__run__";      // صف علامة في جدول الحالة يسجّل وقت آخر تشغيل
 const INVALID_MARK = "__invalid__:"; // بادئة صفوف الملفات غير الصالحة في جدول الحالة
+const OOS_MARK = "__oos__:";         // بادئة صفوف الملفات خارج نطاق مدينة نصر
+
+// ── نطاق مدينة نصر (R2): مؤشرات صريحة على موقع خارج النطاق ──────────────────
+// المطابقة على كلمات كاملة بعد التطبيع العربي (فلا يتحول «بدريسنج» إلى «بدر»،
+// ولا «مباني التسعينات» إلى «التسعين»). لا تخمين: المؤشر لازم يكون مذكورًا نصًا.
+const OUT_OF_SCOPE_MARKERS = [
+  "مصر الجديدة",
+  "هليوبوليس",
+  "التجمع الخامس",
+  "التجمع الأول",
+  "التجمع الثاني",
+  "التجمع الثالث",
+  "القاهرة الجديدة",
+  "الرحاب",
+  "مدينتي",
+  "مستقبل سيتي",
+  "وادي دجلة",
+  "مدينة السلام",
+  "مدينة العبور",
+  "الشروق",
+  "الشيخ زايد",
+  "اكتوبر",
+  "المعادي",
+  "المقطم",
+  "حلوان",
+  "الزمالك",
+  "المهندسين",
+  "الدقي",
+  "وسط البلد",
+  "شارع التسعين",
+  "التسعين الجنوبي",
+  "التسعين الشمالي",
+  "الشويفات",
+  "نيوبوليس",
+  "مدينة بدر",
+];
+// مؤشرات مشروطة: تُحتسب فقط لو النص ما ذكرش «مدينة نصر» صريحًا
+// (لأن شارع النزهة الرئيسي ومساكن شيراتون لهما عناوين داخل مدينة نصر فعليًا).
+const CONDITIONAL_OUT_OF_SCOPE_MARKERS = ["شيراتون", "مساكن شيراتون"];
+const IN_SCOPE_MARKER = "مدينة نصر";
 
 const WORKER_UA = `nasr-properties-sync/${WORKER_VERSION}`;
 
@@ -163,6 +203,51 @@ function toNumber(value) {
   if (!m) return null;
   const n = Number(m[0]);
   return Number.isFinite(n) ? n : null;
+}
+
+// مطابقة كلمة كاملة مع مراعاة حروف الجر/العطف الملتصقة بالعربية:
+// «الحي الثامن» تُطابق «بالحي الثامن» و«والحي الثامن»، و«مدينة نصر» تُطابق «بمدينة نصر».
+// ومع ذلك «بدريسنج» لا تُطابق «بدر» و«مباني التسعينات» لا تُطابق «التسعين» (لأن المطابقة على كلمة كاملة).
+const ATTACHED_PREFIX_LETTERS = ["ب", "و", "ل", "ف", "ك"];
+function prefixVariants() {
+  const prefixes = new Set([""]);
+  for (const a of ATTACHED_PREFIX_LETTERS) {
+    prefixes.add(a);
+    for (const b of ATTACHED_PREFIX_LETTERS) prefixes.add(`${a}${b}`); // وب، وب، فل… مثل «وبالحي الثامن»
+  }
+  return [...prefixes];
+}
+const TOKEN_PREFIXES = prefixVariants();
+function tokenForms(needle) {
+  const variants = new Set([needle]);
+  const bare = needle.replace(/^ال/, "");
+  if (bare && bare !== needle) variants.add(bare);
+  const forms = new Set();
+  for (const v of variants) for (const p of TOKEN_PREFIXES) forms.add(`${p}${v}`);
+  return [...forms];
+}
+function containsToken(hay, needle) {
+  if (!needle) return false;
+  for (const form of tokenForms(needle)) {
+    if (hay.includes(` ${form} `)) return true;
+  }
+  return false;
+}
+
+// نطاق مدينة نصر: يرجّع قائمة المؤشرات الصريحة التي وُجدت فعلًا في نص الملف
+function detectOutOfScope(text) {
+  const hay = ` ${normalizeArabic(text)} `;
+  const inScope = containsToken(hay, normalizeArabic(IN_SCOPE_MARKER));
+  const hits = [];
+  for (const marker of OUT_OF_SCOPE_MARKERS) {
+    if (containsToken(hay, normalizeArabic(marker))) hits.push(marker);
+  }
+  if (!inScope) {
+    for (const marker of CONDITIONAL_OUT_OF_SCOPE_MARKERS) {
+      if (containsToken(hay, normalizeArabic(marker)) && !hits.includes(marker)) hits.push(marker);
+    }
+  }
+  return hits;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -369,10 +454,24 @@ async function loadState(db, stateTable = STATE_TABLE) {
 // ───────────────────────────────────────────────────────────────────────────
 function buildRecord(fm, file, areaIndex) {
   const problems = [];
+  const scopeText = [fm.location, fm.title, fm.description, fm.meta_description, file].filter(Boolean).join(" ");
 
   // external_id: id ثم slug ثم اسم الملف — كلها معرّفات موجودة فعلًا في الملف
   const externalId = String(fm.id || fm.slug || file.replace(/\.md$/, "")).trim();
   if (!externalId) problems.push("missing_external_id");
+
+  // R1 + R2: حماية النطاق — أي مؤشر صريح على موقع خارج مدينة نصر ⇒ out_of_scope
+  // (لا area_id من مناطق مدينة نصر ولا أي كتابة في listings)
+  const outOfScopeReasons = detectOutOfScope(scopeText);
+  if (outOfScopeReasons.length) {
+    return {
+      record: { externalId, outOfScope: true, outOfScopeReasons: outOfScopeReasons.slice() },
+      problems: [],
+      outOfScope: true,
+      outOfScopeReasons,
+      transactionEvidence: null,
+    };
+  }
 
   // نوع المعاملة: إشارة صريحة، وإلا الافتراضي «sale» مع توثيق ذلك
   const haystack = [fm.category, fm.slug, fm.title, fm.price, file].filter(Boolean).join(" ");
@@ -447,18 +546,46 @@ function buildRecord(fm, file, areaIndex) {
     longitude,
   };
 
-  return { record, problems, transactionEvidence };
+  return { record, problems, outOfScope: false, outOfScopeReasons: [], transactionEvidence };
 }
 
+// أسماء بديلة آمنة: مشتقة من اسم المنطقة نفسه فقط (بدون أي تخمين)
+// «ممر مكرم عبيد» ⇒ «مكرم عبيد» حتى تُطابق الصياغات الشائعة «شارع مكرم عبيد».
+function areaAliases(area) {
+  const out = new Set();
+  for (const raw of area.names || []) {
+    const name = String(raw || "").trim();
+    if (!name) continue;
+    out.add(name);
+    const stripped = name.replace(/^ممر\s+/, "").trim();
+    if (stripped && stripped !== name) out.add(stripped);
+  }
+  return [...out];
+}
+
+function isCityArea(area) {
+  if (area && area.scope) return String(area.scope).toLowerCase() === "city";
+  const name = normalizeArabic(area && area.name);
+  return name === normalizeArabic(IN_SCOPE_MARKER) || name.startsWith(`${normalizeArabic(IN_SCOPE_MARKER)} `);
+}
+
+// R3: قاعدة «الأخص يفوز» — أي منطقة فرعية واضحة تتغلب على عقدة المدينة.
+// وفي داخل كل مجموعة (فرعية / مدينة) الأطول يفوز، والمطابقة على كلمات كاملة.
 function matchArea(text, areaIndex) {
   if (!text || !areaIndex.length) return null;
   const hay = ` ${normalizeArabic(text)} `;
+  const subAreas = areaIndex.filter((a) => !isCityArea(a));
+  const cityAreas = areaIndex.filter((a) => isCityArea(a));
+  return bestAreaMatch(hay, subAreas) || bestAreaMatch(hay, cityAreas);
+}
+
+function bestAreaMatch(hay, areas) {
   let best = null;
-  for (const area of areaIndex) {
-    for (const name of area.names) {
+  for (const area of areas) {
+    for (const name of areaAliases(area)) {
       const needle = normalizeArabic(name);
       if (!needle || needle.length < 4) continue;
-      if (hay.includes(` ${needle} `) || hay.includes(needle)) {
+      if (containsToken(hay, needle)) {
         if (!best || needle.length > best.length) best = { id: area.id, name: area.name, length: needle.length };
       }
     }
@@ -475,11 +602,14 @@ async function loadAreaIndex(db) {
     if (!idCol) return [];
     const nameCols = ["name", "name_ar", "name_en"].filter((c) => cols.has(c));
     if (!nameCols.length) return [];
-    const { results } = await db.prepare(`SELECT id, ${nameCols.join(", ")} FROM areas`).all();
+    const scopeCol = cols.has("scope") ? "scope" : null;
+    const select = ["id", ...nameCols, ...(scopeCol ? [scopeCol] : [])];
+    const { results } = await db.prepare(`SELECT ${select.join(", ")} FROM areas`).all();
     return (results || []).map((r) => ({
       id: r.id,
       name: r[nameCols[0]],
       names: nameCols.map((c) => r[c]).filter(Boolean),
+      scope: scopeCol ? r[scopeCol] : null,
     }));
   } catch {
     return [];
@@ -599,6 +729,8 @@ async function writeRunLog(db, runMap, summary) {
       fetched: summary.github.fetched,
       missing: summary.github.missing_from_github,
       duplicates: summary.db.duplicates,
+      out_of_scope: summary.db.out_of_scope,
+      out_of_scope_files: summary.out_of_scope_files.slice(0, 25),
       invalid_files: summary.invalid_files.slice(0, 25),
       errors: summary.errors.slice(0, 10),
       area_unmatched: summary.area_unmatched.slice(0, 25),
@@ -654,8 +786,12 @@ async function runSync(env, opts = {}) {
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
       complete: true, truncated: false,
     },
-    db: { inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, invalid: 0, duplicates: 0, write_failures: 0, writes_blocked: false },
+    db: {
+      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0,
+      invalid: 0, out_of_scope: 0, duplicates: 0, write_failures: 0, writes_blocked: false,
+    },
     invalid_files: [],
+    out_of_scope_files: [],
     duplicate_files: [],
     area_unmatched: [],
     errors: [],
@@ -755,6 +891,7 @@ async function runSync(env, opts = {}) {
     summary.github.truncated = Boolean(summary.github.githubTruncated);
 
     const seenIds = new Set();      // external_ids اللي اتعالجت في التشغيل ده
+    const excludedIds = new Set();  // external_ids الملفات خارج النطاق (R2) — مش «مختفية»
     const stateWrites = [];
     let fetchCount = 0;
 
@@ -762,12 +899,14 @@ async function runSync(env, opts = {}) {
       const priorByPath = state.get(f.path) || null;
       const priorId = priorByPath && priorByPath.external_id ? String(priorByPath.external_id) : null;
 
-      // المسار السريع: نفس الـblob SHA والسطر موجود في D1 (أو الملف معروف كغير صالح بنفس المحتوى)
+      // المسار السريع: نفس الـblob SHA والسطر موجود في D1 (أو الملف معروف كمستبعد بنفس المحتوى)
       // ⇒ لا قراءة ولا كتابة
       const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
-      if (priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid)) {
+      const priorOutOfScope = Boolean(priorId && priorId.startsWith(OOS_MARK));
+      if (priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
         summary.github.skipped_unchanged++;
         if (priorInvalid) summary.db.unchanged_invalid++;
+        else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
         else { summary.db.unchanged++; seenIds.add(priorId); }
         continue;
       }
@@ -794,6 +933,15 @@ async function runSync(env, opts = {}) {
 
       const built = buildRecord(fm, f.file, areaIndex);
       const record = built.record;
+
+      // R1 + R2: خارج نطاق مدينة نصر ⇒ لا INSERT ولا UPDATE إطلاقًا
+      if (built.outOfScope) {
+        summary.out_of_scope_files.push({ file: f.path, reasons: built.outOfScopeReasons });
+        summary.db.out_of_scope++;
+        excludedIds.add(record.externalId);
+        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, contentHash]);
+        continue;
+      }
 
       if (built.problems.length) {
         summary.invalid_files.push({ file: f.path, reason: built.problems.join(",") });
@@ -844,7 +992,7 @@ async function runSync(env, opts = {}) {
       summary.github.missing_from_github = null;
     } else {
       for (const key of existing.keys()) {
-        if (key && !seenIds.has(key)) summary.github.missing_from_github++;
+        if (key && !seenIds.has(key) && !excludedIds.has(key)) summary.github.missing_from_github++;
       }
     }
 
@@ -939,6 +1087,11 @@ async function serviceInfo(env, request) {
     endpoints: { info: "GET /", schema: "GET /schema", manual: "POST /sync (or GET /sync?dryRun=1)" },
     read_only_sources: ["price_snapshots", "areas", "other source rows"],
     write_scope: { table: "listings", filter: "source_id = 9", deletes: false },
+    scope_policy: {
+      in_scope: "مدينة نصر فقط",
+      out_of_scope_action: "لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files",
+      area_rule: "المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، ولا area_id عند غياب مطابقة واضحة",
+    },
     write_ready: writeAccess,
     schema,
     last_run: last,
@@ -950,6 +1103,12 @@ export const __test = {
   parseFrontMatter,
   buildRecord,
   matchArea,
+  detectOutOfScope,
+  containsToken,
+  areaAliases,
+  isCityArea,
+  OUT_OF_SCOPE_MARKERS,
+  CONDITIONAL_OUT_OF_SCOPE_MARKERS,
   normalizeArabic,
   toNumber,
   propertyTypeFromCategory,
