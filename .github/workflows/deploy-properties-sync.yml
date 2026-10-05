@@ -116,13 +116,20 @@ jobs:
           echo "=== 4) dry run (GET /sync?dryRun=1) ==="
           curl -sS -m 60 "$SYNC_URL/sync?dryRun=1" "${AUTH[@]}" || true
           echo; echo
-          echo "=== 5) RUN 1 (POST /sync) ==="
-          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run1.json || true
-          cat /tmp/run1.json || true
-          echo; echo
-          echo "=== 6) RUN 2 — idempotency (POST /sync again, no source change) ==="
-          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run2.json || true
-          cat /tmp/run2.json || true
+          echo "=== 5) real runs until the pass is complete (manual runs are throttled to one per 60s) ==="
+          for i in 1 2 3 4; do
+            echo "--- run $i ---"
+            curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o "/tmp/run$i.json" || true
+            cat "/tmp/run$i.json" || true
+            echo
+            COMPLETE=$(jq -r '.github.complete // false' "/tmp/run$i.json" 2>/dev/null || echo false)
+            if [ "$COMPLETE" = "true" ]; then break; fi
+            sleep 65
+          done
+          echo "=== 6) idempotency: one more run with no source change ==="
+          sleep 65
+          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run_last.json || true
+          cat /tmp/run_last.json || true
           echo; echo
           echo "=== 7) D1 counts AFTER ==="
           npx wrangler d1 execute nasr-market-db --remote --json \
@@ -144,13 +151,14 @@ jobs:
               --command "SELECT * FROM listings WHERE $SOURCE_COL = 9 LIMIT 3" 2>&1 || true
           fi
           echo
-          echo "=== 10) run1 vs run2 summary ==="
-          for f in /tmp/run1.json /tmp/run2.json; do
+          echo "=== 10) run summaries ==="
+          for f in /tmp/run1.json /tmp/run2.json /tmp/run3.json /tmp/run4.json /tmp/run_last.json; do
+            [ -f "$f" ] || continue
             echo "--- $f ---"
-            jq -c '{status, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, invalid: .db.invalid, duplicates: .db.duplicates, files: .github.files_total, fetched: .github.fetched, missing: .github.missing_from_github, errors}' "$f" 2>/dev/null || cat "$f"
+            jq -c '{status, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, invalid: .db.invalid, duplicates: .db.duplicates, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, missing: .github.missing_from_github, errors}' "$f" 2>/dev/null || cat "$f"
           done
           echo
-          echo "=== 11) foreign keys / integrity ==="
+          echo "=== 11) integrity ==="
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA foreign_key_check" 2>&1 || true
           npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA integrity_check" 2>&1 || true
 
