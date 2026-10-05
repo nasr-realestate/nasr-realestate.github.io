@@ -107,7 +107,7 @@ npx wrangler deploy --dry-run --outdir /tmp/wr-valuation --config _worker/wrangl
 npx wrangler deploy --dry-run --outdir /tmp/wr-agent --config _worker/wrangler.agent.toml
 ```
 
-116 tests in 8 files (10 of them are pre-existing failures on `master` in the agent/valuation page suites — untouched by this work). Helpers (shared, not tests): `_fixtures.mjs` (invented D1 rows + mock D1), `_agent-harness.mjs` (drives the agent Worker through its public `fetch` handler and records every Gemini request), `_dom-agent.mjs` and `_dom-page.mjs` (run the inline scripts of `agent.html` / `tools/valuation.html` under `node:vm` with a small DOM stub — selects are built from the real HTML). `market-integration` and `valuation-handoff` were rewritten because their old versions imported a removed module and removed exports; each new test is tagged `[was #N]`.
+124 tests in 8 files, 27 of them the new sync suite (the 10 failures are pre-existing on `master` in the agent/valuation page suites — untouched by this work). Helpers (shared, not tests): `_fixtures.mjs` (invented D1 rows + mock D1), `_agent-harness.mjs` (drives the agent Worker through its public `fetch` handler and records every Gemini request), `_dom-agent.mjs` and `_dom-page.mjs` (run the inline scripts of `agent.html` / `tools/valuation.html` under `node:vm` with a small DOM stub — selects are built from the real HTML). `market-integration` and `valuation-handoff` were rewritten because their old versions imported a removed module and removed exports; each new test is tagged `[was #N]`.
 
 What each test file covers:
 
