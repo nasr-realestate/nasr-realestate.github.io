@@ -56,6 +56,7 @@ function envBranch(value, fallback) {
 }
 const DEFAULT_MIN_INTERVAL_S = 60; // أقل فاصل بين تشغيلين يدويين متتاليين
 const RUN_MARKER = "__run__";      // صف علامة في جدول الحالة يسجّل وقت آخر تشغيل
+const INVALID_MARK = "__invalid__:"; // بادئة صفوف الملفات غير الصالحة في جدول الحالة
 
 const WORKER_UA = `nasr-properties-sync/${WORKER_VERSION}`;
 
@@ -653,7 +654,7 @@ async function runSync(env, opts = {}) {
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
       complete: true, truncated: false,
     },
-    db: { inserted: 0, updated: 0, unchanged: 0, invalid: 0, duplicates: 0, writes_blocked: false },
+    db: { inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, invalid: 0, duplicates: 0, write_failures: 0, writes_blocked: false },
     invalid_files: [],
     duplicate_files: [],
     area_unmatched: [],
@@ -761,11 +762,13 @@ async function runSync(env, opts = {}) {
       const priorByPath = state.get(f.path) || null;
       const priorId = priorByPath && priorByPath.external_id ? String(priorByPath.external_id) : null;
 
-      // المسار السريع: نفس الـblob SHA والسطر موجود في D1 ⇒ لا قراءة ولا كتابة
-      if (priorByPath && priorByPath.blob_sha === f.sha && priorId && existing.has(priorId)) {
+      // المسار السريع: نفس الـblob SHA والسطر موجود في D1 (أو الملف معروف كغير صالح بنفس المحتوى)
+      // ⇒ لا قراءة ولا كتابة
+      const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
+      if (priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid)) {
         summary.github.skipped_unchanged++;
-        summary.db.unchanged++;
-        seenIds.add(priorId);
+        if (priorInvalid) summary.db.unchanged_invalid++;
+        else { summary.db.unchanged++; seenIds.add(priorId); }
         continue;
       }
 
@@ -785,7 +788,7 @@ async function runSync(env, opts = {}) {
       if (!fm) {
         summary.invalid_files.push({ file: f.path, reason: "no_front_matter" });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, null, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, contentHash]);
         continue;
       }
 
@@ -795,7 +798,7 @@ async function runSync(env, opts = {}) {
       if (built.problems.length) {
         summary.invalid_files.push({ file: f.path, reason: built.problems.join(",") });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, record.externalId || null, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, contentHash]);
         continue;
       }
 

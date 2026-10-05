@@ -740,6 +740,7 @@ test("فشل كتابة سطر واحد لا يوقف بقية الملفات و
     // الملف الفاشل مش متسجّل في جدول الحالة ⇒ يتكرر في التشغيل الجاي
     const stateKeys = [...db.state.syncState.values()].map((r) => r.external_id);
     assert.ok(!stateKeys.includes("a-1"), "الملف الفاشل مايتسجلش كـsynced");
+    assert.ok(!stateKeys.some((k) => String(k).includes("a.md")), "الملف الفاشل مايتسجلش كـinvalid كمان");
     const res2 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
     assert.equal(res2.body.db.inserted, 1, "إعادة المحاولة تكتب الملف الفاشل");
     assert.equal(db.state.listings.length, 2);
@@ -760,4 +761,63 @@ test("إحداثيات: تُكتب فقط لو موجودة في الملف (ب�
   );
   assert.equal(withoutGps.record.latitude, null);
   assert.equal(withoutGps.record.longitude, null);
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 7) تكامل: كل ملفات _properties الحقيقية عبر الـWorker (D1 وهمي)
+// ───────────────────────────────────────────────────────────────────────────
+test("تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة", async () => {
+  const names = fs.readdirSync(PROPERTIES_DIR).filter((f) => f.endsWith(".md"));
+  const files = names.map((name) => ({ name, content: fs.readFileSync(path.join(PROPERTIES_DIR, name), "utf8") }));
+  const gh = installGitHubMock(files);
+  const db = makeD1();
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "500" };
+  try {
+    const first = await syncViaHttp(env);
+    assert.equal(first.status, 200);
+    assert.equal(first.body.github.files_total, files.length);
+    assert.equal(first.body.github.complete, true);
+    assert.equal(first.body.db.duplicates, 0);
+    assert.equal(first.body.db.inserted + first.body.db.invalid, files.length,
+      "كل ملف إما اتحفظ أو اتسجّل كغير صالح — بدون تجاهل صامت");
+    assert.equal(db.state.listings.length, first.body.db.inserted);
+    assert.ok(first.body.db.inserted >= 85, `عدد السجلات المحفوظة أقل من المتوقع: ${first.body.db.inserted}`);
+    assert.ok(first.body.invalid_files.length >= 1 && first.body.invalid_files.length <= 12);
+
+    // كل السجلات: مصدر 9، معرّف خارجي، بيع/إيجار، سعر ومساحة موجبان، ومفيش area_id=1 إلا لو المنطقة اتطابقت فعلًا
+    for (const row of db.state.listings) {
+      assert.equal(row.source_id, 9);
+      assert.ok(row.external_id);
+      assert.ok(["sale", "rent"].includes(row.transaction_type));
+      assert.ok(row.property_type);
+      assert.ok(row.price > 0);
+      assert.ok(row.area_m2 > 0);
+      assert.ok(row.content_hash && row.content_hash.length === 64);
+      if (row.area_id !== null && row.area_id !== undefined) {
+        assert.ok(AREAS_ROWS.some((a) => a.id === row.area_id));
+      }
+    }
+    // سطر حقيقي معروف: 10th-district-180m في المنطقة العاشرة (id 26) بسعر 3,700,000
+    const sample = db.state.listings.find((r) => r.external_id === "10th-district-180m");
+    assert.ok(sample, "السطر المعروف مش موجود");
+    assert.equal(sample.area_id, 26);
+    assert.equal(sample.price, 3700000);
+    assert.equal(sample.area_m2, 180);
+    assert.equal(sample.transaction_type, "sale");
+    assert.equal(sample.property_type, "apartment");
+    assert.equal(sample.source_url, "https://nasr-realestate.github.io/properties/10th-district-180m/");
+
+    // تشغيل ثانٍ: صفر قراءات وكتابات (كل الـSHAs مسجّلة والسطور موجودة)
+    const second = await syncViaHttp(env);
+    assert.equal(second.body.github.fetched, 0);
+    assert.equal(second.body.db.inserted, 0);
+    assert.equal(second.body.db.updated, 0);
+    assert.equal(db.state.listings.length, first.body.db.inserted);
+    assert.equal(second.body.db.unchanged + second.body.db.unchanged_invalid, first.body.db.inserted + first.body.db.invalid);
+
+    // وسجل تشغيل واحد لكل تشغيل
+    assert.equal(db.state.ingestionRuns.length, 2);
+  } finally {
+    gh.restore();
+  }
 });
