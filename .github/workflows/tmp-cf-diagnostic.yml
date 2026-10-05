@@ -1,0 +1,45 @@
+# Temporary diagnostic workflow — deleted after use.
+name: TMP Cloudflare Diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-cf-diagnostic.yml'
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Which candidate secrets are present (names only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for n in CLOUDFLARE_API_TOKEN CF_API_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_EMAIL CLOUDFLARE_ACCOUNT_ID; do
+            v="$(eval echo \$$n)"
+            if [ -n "$v" ]; then echo "PRESENT:$n"; else echo "MISSING:$n"; fi
+          done
+
+      - name: wrangler whoami
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 whoami
+
+      - name: D1 schema snapshot
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4 d1 execute nasr-market-db --remote --json \
+            --command "SELECT type, name, sql FROM sqlite_master WHERE type IN ('table','index','view') ORDER BY type, name"
