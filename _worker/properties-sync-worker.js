@@ -66,17 +66,17 @@ const DEFAULT_ALLOWED_ORIGINS = [
 // ── خريطة الأعمدة: كل حقل منطقي → أسماء أعمدة محتملة (أول اسم موجود في D1 يفوز) ──
 // ملاحظة: دي مرشحات للقراءة وقت التشغيل، مش افتراضات. الـschema الفعلي هو الحكم.
 const COLUMN_MAP = {
-  externalId: ["external_id", "externalId", "ref_id", "reference", "external_ref", "listing_ref"],
+  externalId: ["external_id", "externalId", "ref_id", "reference", "external_ref", "listing_ref", "source_listing_id", "source_ref"],
   sourceId: ["source_id", "sourceId"],
   sourceUrl: ["source_url", "url", "listing_url", "link"],
   title: ["title", "title_ar", "name"],
   description: ["description", "description_ar", "details", "notes"],
-  transactionType: ["transaction_type", "transactionType", "deal_type", "purpose"],
+  transactionType: ["transaction_type", "transactionType", "deal_type", "purpose", "transaction", "listing_type", "offer_type"],
   propertyType: ["property_type", "propertyType", "type", "category"],
-  price: ["price", "price_egp", "asking_price", "price_total"],
+  price: ["price", "price_egp", "asking_price", "price_total", "price_amount", "value"],
   pricePeriod: ["price_period", "rent_period"],
   currency: ["currency"],
-  areaM2: ["area_m2", "areaM2", "area_sqm", "size_m2", "area"],
+  areaM2: ["area_m2", "areaM2", "area_sqm", "size_m2", "area", "size", "space_m2"],
   areaId: ["area_id", "areaId", "areaID"],
   rooms: ["rooms", "bedrooms"],
   bathrooms: ["bathrooms", "baths"],
@@ -87,6 +87,8 @@ const COLUMN_MAP = {
   street: ["street", "address", "location"],
   imageUrl: ["image_url", "image", "photo_url", "main_image"],
   publishedAt: ["published_at", "listing_date", "date"],
+  latitude: ["latitude", "lat"],
+  longitude: ["longitude", "lng", "lon"],
   createdAt: ["created_at"],
   updatedAt: ["updated_at", "last_updated", "modified_at"],
   contentHash: ["content_hash", "raw_hash", "source_hash", "hash", "checksum"],
@@ -406,6 +408,14 @@ function buildRecord(fm, file, areaIndex) {
   const locationText = [fm.location, fm.title, fm.description].filter(Boolean).join(" ");
   const areaMatch = matchArea(locationText, areaIndex);
 
+  // إحداثيات: تُكتب فقط لو موجودة في الملف (مفيش أي تخمين)
+  let latitude = toNumber(fm.latitude ?? fm.lat ?? null);
+  let longitude = toNumber(fm.longitude ?? fm.lng ?? fm.lon ?? null);
+  if ((latitude === null || longitude === null) && typeof fm.gps === "string") {
+    const pair = fm.gps.split(/[,;\s]+/).map((v) => toNumber(v));
+    if (pair.length >= 2 && pair[0] !== null && pair[1] !== null) { latitude = pair[0]; longitude = pair[1]; }
+  }
+
   const slug = String(fm.slug || fm.id || "").trim();
   const imageFile = String(fm.image_file || "").trim();
 
@@ -432,8 +442,8 @@ function buildRecord(fm, file, areaIndex) {
     imageUrl: imageFile ? `${SOURCE_BASE_URL}/assets/img/properties/${imageFile}` : null,
     sourceUrl: slug ? `${SOURCE_BASE_URL}/properties/${slug}/` : SOURCE_BASE_URL,
     publishedAt: fm.date ? String(fm.date).trim() : null,
-    lat: null,
-    lng: null,
+    latitude,
+    longitude,
   };
 
   return { record, problems, transactionEvidence };
@@ -505,6 +515,8 @@ function pickRowValues(record, mapping, existingRow) {
   set("street", record.street);
   set("imageUrl", record.imageUrl);
   set("publishedAt", record.publishedAt);
+  set("latitude", record.latitude);
+  set("longitude", record.longitude);
 
   // created_at: لا يُكتب عند التحديث (يبقى كما هو)
   if (!existingRow) set("createdAt", nowIso());
@@ -806,7 +818,16 @@ async function runSync(env, opts = {}) {
         continue;
       }
 
-      const result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash);
+      let result = null;
+      try {
+        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash);
+      } catch (err) {
+        // فشل سطر واحد (مثلاً NOT NULL في عمود خارج الخريطة) لا يوقف بقية الملفات،
+        // ولا تُكتب حالة الملف ⇒ يعاد المحاولة في التشغيل التالي بعد إصلاح السبب.
+        summary.errors.push(`write_failed:${f.path}:${String(err.message || err).slice(0, 160)}`);
+        summary.db.write_failures = (summary.db.write_failures || 0) + 1;
+        continue;
+      }
       if (result.action === "inserted") summary.db.inserted++;
       else if (result.action === "updated") summary.db.updated++;
       else summary.db.unchanged++;

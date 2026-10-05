@@ -710,3 +710,54 @@ test("throttle: التشغيل اليدوي المتكرر فورًا يُرفض
     gh.restore();
   }
 });
+
+test("فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل", async () => {
+  const gh = installGitHubMock([
+    { name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) },
+    { name: "b.md", content: md({ ...FM_BASE, id: '"b-1"', slug: '"b-1"' }) },
+  ]);
+  const db = makeD1();
+  const originalRun = db.prepare;
+  // أول INSERT يفشل مرة واحدة (محاكاة NOT NULL constraint)
+  let failedOnce = false;
+  db.prepare = (sql) => {
+    const stmt = originalRun(sql);
+    if (/^INSERT INTO listings/.test(sql)) {
+      const run = stmt.run.bind(stmt);
+      stmt.run = async () => {
+        if (!failedOnce) { failedOnce = true; throw new Error("NOT NULL constraint failed: listings.city_id"); }
+        return run();
+      };
+    }
+    return stmt;
+  };
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.db.write_failures, 1);
+    assert.equal(res.body.db.inserted, 1, "الملف التاني اتحفظ رغم فشل الأول");
+    assert.equal(db.state.listings.length, 1);
+    assert.match(res.body.errors.join(","), /write_failed:_properties\/a\.md/);
+    // الملف الفاشل مش متسجّل في جدول الحالة ⇒ يتكرر في التشغيل الجاي
+    const stateKeys = [...db.state.syncState.values()].map((r) => r.external_id);
+    assert.ok(!stateKeys.includes("a-1"), "الملف الفاشل مايتسجلش كـsynced");
+    const res2 = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res2.body.db.inserted, 1, "إعادة المحاولة تكتب الملف الفاشل");
+    assert.equal(db.state.listings.length, 2);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)", async () => {
+  const withGps = __test.buildRecord(
+    { ...{ id: "g-1", category: "apartments", priceNumeric: 1, areaNumeric: 100 }, gps: "30.0596,31.3456" },
+    "g.md", []
+  );
+  assert.equal(withGps.record.latitude, 30.0596);
+  assert.equal(withGps.record.longitude, 31.3456);
+  const withoutGps = __test.buildRecord(
+    { id: "g-2", category: "apartments", priceNumeric: 1, areaNumeric: 100 }, "g.md", []
+  );
+  assert.equal(withoutGps.record.latitude, null);
+  assert.equal(withoutGps.record.longitude, null);
+});
