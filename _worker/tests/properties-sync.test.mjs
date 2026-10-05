@@ -631,15 +631,18 @@ test("الـWorker لا يكتب إلا في listings / ingestion_runs / جدو�
   const deletes = [...src.matchAll(/DELETE\s+FROM/gi)];
 
   assert.equal(deletes.length, 0, "ممنوع أي DELETE");
-  const allowedInserts = new Set(["listings", "ingestion_runs", "${STATE_TABLE}"]);
-  const allowedUpdates = new Set(["listings", "${STATE_TABLE}"]);
+  const allowedInserts = new Set(["${listingsTable}", "ingestion_runs", "${stateTable}"]);
+  const allowedUpdates = new Set(["${listingsTable}", "${stateTable}"]);
   for (const t of inserts) assert.ok(allowedInserts.has(t), `INSERT غير مسموح في: ${t}`);
   for (const t of updates) assert.ok(allowedUpdates.has(t), `UPDATE غير مسموح في: ${t}`);
   // لا كتابة على price_snapshots / demand_signals / areas / sources
   assert.doesNotMatch(src, /INSERT\s+INTO\s+(price_snapshots|demand_signals|areas|sources|listing_location_evidence)/i);
   // سجلات المصدر الحالي تُقرأ دائمًا مقيّدة بـ source_id
-  assert.match(src, /FROM listings WHERE \$\{schema\.mapping\.sourceId\} = \?/);
+  assert.match(src, /FROM \$\{listingsTable\} WHERE \$\{schema\.mapping\.sourceId\} = \?/);
   assert.match(src, /\.bind\(SOURCE_ID\)/);
+  // أسماء الجداول الافتراضية ثابتة، وأي تجاوز يمر على تنقية صارمة
+  assert.match(src, /envIdent\(env\.LISTINGS_TABLE, "listings"\)/);
+  assert.match(src, /envIdent\(env\.STATE_TABLE, STATE_TABLE\)/);
 });
 
 test("budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ", async () => {

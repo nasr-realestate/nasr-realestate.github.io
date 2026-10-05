@@ -19,3 +19,5 @@ crons = ["17 * * * *"]
 #    Authorization: Bearer <token> أو ?token=<token> مع POST /sync.
 #  • SYNC_FETCH_BUDGET (اختياري): أقصى عدد ملفات تُقرأ في التشغيل الواحد (الافتراضي 40).
 #  • SYNC_ALLOW_DDL=0 (اختياري): يمنع إنشاء جدول الحالة properties_sync_state.
+#  • LISTINGS_TABLE / STATE_TABLE / GITHUB_BRANCH (اختياري): تجاوز أسماء الجداول أو الفرع
+#    بدون تعديل الكود (يمر على تنقية صارمة للأسماء).

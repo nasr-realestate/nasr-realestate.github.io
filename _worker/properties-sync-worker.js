@@ -45,6 +45,15 @@ const GITHUB = {
 const STATE_TABLE = "properties_sync_state";
 
 const DEFAULT_FETCH_BUDGET = 40;   // حد الملفات المقروءة في التشغيل الواحد (subrequest budget)
+
+// قيم قابلة للتجاوز من إعدادات الـWorker (بدون تغيير كود) — مع تنقية صارمة للأسماء
+const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+function envIdent(value, fallback) {
+  return typeof value === "string" && IDENT_RE.test(value) ? value : fallback;
+}
+function envBranch(value, fallback) {
+  return typeof value === "string" && /^[A-Za-z0-9._\/-]+$/.test(value) ? value : fallback;
+}
 const DEFAULT_MIN_INTERVAL_S = 60; // أقل فاصل بين تشغيلين فعليين متتاليين
 
 const WORKER_UA = `nasr-properties-sync/${WORKER_VERSION}`;
@@ -214,7 +223,8 @@ function propertyTypeFromCategory(category) {
 // GitHub
 // ───────────────────────────────────────────────────────────────────────────
 async function githubTree(env, log) {
-  const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/git/trees/${GITHUB.branch}?recursive=1`;
+  const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
+  const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/git/trees/${branch}?recursive=1`;
   const headers = { "user-agent": WORKER_UA, "accept": "application/vnd.github+json" };
   if (env.GITHUB_TOKEN) headers["authorization"] = `Bearer ${env.GITHUB_TOKEN}`;
   const res = await fetch(url, { headers });
@@ -233,7 +243,8 @@ async function githubTree(env, log) {
 }
 
 async function githubRaw(env, path) {
-  const url = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${GITHUB.branch}/${path}`;
+  const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
+  const url = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${branch}/${path}`;
   const res = await fetch(url, { headers: { "user-agent": WORKER_UA } });
   if (!res.ok) throw new Error(`github_raw_failed:${res.status}:${path}`);
   return await res.text();
@@ -287,13 +298,15 @@ function buildMapping(info, map) {
   return out;
 }
 
-async function readSchemaReport(db) {
+async function readSchemaReport(db, env = {}) {
+  const listingsTable = envIdent(env.LISTINGS_TABLE, "listings");
+  const stateTable = envIdent(env.STATE_TABLE, STATE_TABLE);
   const [listings, ingestionRuns, sources, areas, stateExists] = await Promise.all([
-    tableInfo(db, "listings"),
+    tableInfo(db, listingsTable),
     tableInfo(db, "ingestion_runs"),
     tableInfo(db, "sources"),
     tableInfo(db, "areas"),
-    tableExists(db, STATE_TABLE),
+    tableExists(db, stateTable),
   ]);
   const listingsMap = listings ? buildMapping(listings, COLUMN_MAP) : null;
   const runMap = ingestionRuns ? buildMapping(ingestionRuns, RUN_COLUMN_MAP) : null;
@@ -303,8 +316,10 @@ async function readSchemaReport(db) {
       ingestion_runs: ingestionRuns ? ingestionRuns.map((c) => c.name) : null,
       sources: sources ? sources.map((c) => c.name) : null,
       areas: areas ? areas.map((c) => c.name) : null,
-      [STATE_TABLE]: stateExists,
+      [stateTable]: stateExists,
     },
+    listings_table: listingsTable,
+    state_table: stateTable,
     mapping: listingsMap,
     run_mapping: runMap,
     missing_required: listingsMap
@@ -314,10 +329,10 @@ async function readSchemaReport(db) {
 }
 
 // ── جدول الحالة (additive) ──
-async function ensureStateTable(db) {
+async function ensureStateTable(db, stateTable = STATE_TABLE) {
   await db
     .prepare(
-      `CREATE TABLE IF NOT EXISTS ${STATE_TABLE} (
+      `CREATE TABLE IF NOT EXISTS ${stateTable} (
          source_id INTEGER NOT NULL,
          external_id TEXT NOT NULL,
          file_path TEXT NOT NULL,
@@ -330,12 +345,12 @@ async function ensureStateTable(db) {
     .run();
 }
 
-async function loadState(db) {
+async function loadState(db, stateTable = STATE_TABLE) {
   // المفتاح = مسار الملف (هو اللي بنبحث بيه في كل تشغيل)
   const map = new Map();
   try {
     const { results } = await db
-      .prepare(`SELECT external_id, file_path, blob_sha, content_hash FROM ${STATE_TABLE} WHERE source_id = ?`)
+      .prepare(`SELECT external_id, file_path, blob_sha, content_hash FROM ${stateTable} WHERE source_id = ?`)
       .bind(SOURCE_ID)
       .all();
     for (const r of results || []) map.set(String(r.file_path), r);
@@ -515,14 +530,14 @@ function isSameAsExisting(values, existingRow, mapping) {
   return true;
 }
 
-async function upsertListing(db, mapping, record, existingRow, contentHash) {
+async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash) {
   const values = pickRowValues(record, mapping, existingRow);
   if (mapping.contentHash) values[mapping.contentHash] = contentHash;
   const base = isSameAsExisting(values, existingRow, mapping);
 
   if (!existingRow) {
     const cols = Object.keys(values);
-    const sql = `INSERT INTO listings (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
+    const sql = `INSERT INTO ${listingsTable} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
     const res = await db
       .prepare(sql)
       .bind(...cols.map((c) => values[c]))
@@ -533,7 +548,7 @@ async function upsertListing(db, mapping, record, existingRow, contentHash) {
   if (base) return { action: "unchanged", changes: 0, values };
 
   const cols = Object.keys(values);
-  const sql = `UPDATE listings SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`;
+  const sql = `UPDATE ${listingsTable} SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`;
   const res = await db
     .prepare(sql)
     .bind(...cols.map((c) => values[c]), existingRow.id)
@@ -643,7 +658,9 @@ async function runSync(env, opts = {}) {
 
   try {
     // 1) قراءة الـschema الفعلي قبل أي SQL كتابة
-    const schema = await readSchemaReport(db);
+    const schema = await readSchemaReport(db, env);
+    const listingsTable = schema.listings_table;
+    const stateTable = schema.state_table;
     summary.schema = {
       listings_columns: schema.tables.listings,
       mapping: schema.mapping,
@@ -654,7 +671,7 @@ async function runSync(env, opts = {}) {
 
     if (!schema.tables.listings) {
       summary.status = "schema_mismatch";
-      summary.errors.push("listings_table_not_found");
+      summary.errors.push(`listings_table_not_found:${listingsTable}`);
       summary.db.writes_blocked = true;
       return finalize(summary, startedMs);
     }
@@ -677,7 +694,7 @@ async function runSync(env, opts = {}) {
     let stateEnabled = true;
     if (String(env.SYNC_ALLOW_DDL ?? "1") !== "0") {
       try {
-        await ensureStateTable(db);
+        await ensureStateTable(db, stateTable);
       } catch (err) {
         stateEnabled = false;
         summary.errors.push(`state_table_create_failed:${String(err.message).slice(0, 120)}`);
@@ -685,13 +702,13 @@ async function runSync(env, opts = {}) {
     } else {
       stateEnabled = false;
     }
-    if (stateEnabled) state = await loadState(db);
+    if (stateEnabled) state = await loadState(db, stateTable);
 
     // 3) المناطق الحقيقية + السجلات الحالية للمصدر 9 فقط
     const areaIndex = await loadAreaIndex(db);
     const externalIdCol = schema.mapping.externalId;
     const { results: existingRows } = await db
-      .prepare(`SELECT * FROM listings WHERE ${schema.mapping.sourceId} = ?`)
+      .prepare(`SELECT * FROM ${listingsTable} WHERE ${schema.mapping.sourceId} = ?`)
       .bind(SOURCE_ID)
       .all();
     const existing = new Map();
@@ -775,7 +792,7 @@ async function runSync(env, opts = {}) {
         continue;
       }
 
-      const result = await upsertListing(db, schema.mapping, record, existingRow, contentHash);
+      const result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash);
       if (result.action === "inserted") summary.db.inserted++;
       else if (result.action === "updated") summary.db.updated++;
       else summary.db.unchanged++;
@@ -798,7 +815,7 @@ async function runSync(env, opts = {}) {
       const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
         db
           .prepare(
-            `INSERT INTO ${STATE_TABLE} (source_id, external_id, file_path, blob_sha, content_hash, last_synced_at)
+            `INSERT INTO ${stateTable} (source_id, external_id, file_path, blob_sha, content_hash, last_synced_at)
              VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT(source_id, external_id) DO UPDATE SET
                file_path = excluded.file_path, blob_sha = excluded.blob_sha,
@@ -855,7 +872,7 @@ async function serviceInfo(env, request) {
   let writeAccess = false;
   try {
     if (env.DB) {
-      const full = await readSchemaReport(env.DB);
+      const full = await readSchemaReport(env.DB, env);
       schema = {
         listings_columns: full.tables.listings,
         missing_required: full.missing_required,
@@ -874,7 +891,10 @@ async function serviceInfo(env, request) {
     status: "running",
     version: WORKER_VERSION,
     source: { id: SOURCE_ID, name: SOURCE_NAME, base_url: SOURCE_BASE_URL },
-    github: { owner: GITHUB.owner, repo: GITHUB.repo, branch: GITHUB.branch, dir: GITHUB.dir },
+    github: {
+      owner: GITHUB.owner, repo: GITHUB.repo, dir: GITHUB.dir,
+      branch: envBranch(env.GITHUB_BRANCH, GITHUB.branch),
+    },
     scheduler: "Cloudflare Cron",
     cron: "17 * * * *",
     endpoints: { info: "GET /", schema: "GET /schema", manual: "POST /sync (or GET /sync?dryRun=1)" },
@@ -925,7 +945,7 @@ export default {
 
       if (request.method === "GET" && url.pathname === "/schema") {
         if (!env.DB) return json({ error: "missing_DB_binding" }, 500, cors);
-        return json(await readSchemaReport(env.DB), 200, cors);
+        return json(await readSchemaReport(env.DB, env), 200, cors);
       }
 
       if (url.pathname === "/sync") {
