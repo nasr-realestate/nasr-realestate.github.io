@@ -28,7 +28,7 @@
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.2";
+const WORKER_VERSION = "v1.0.3";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -797,6 +797,7 @@ async function runSync(env, opts = {}) {
     finished_at: null,
     duration_ms: 0,
     status: "running",
+    logic_reprocess: false,
     github: {
       files_total: 0, fetched: 0, skipped_unchanged: 0,
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
@@ -902,6 +903,12 @@ async function runSync(env, opts = {}) {
       }
     }
 
+    // 3c) هل تغيّرت نسخة منطق الـWorker منذ آخر تشغيل؟ (علامة في صف __run__)
+    const runMarker = state.get(RUN_MARKER) || null;
+    const recordedLogic = runMarker ? String(runMarker.content_hash || "") : "";
+    const logicChanged = recordedLogic !== WORKER_VERSION;
+    if (logicChanged) summary.logic_reprocess = true;
+
     // 4) قائمة ملفات GitHub
     const files = await githubTree(env, summary.github);
     summary.github.files_total = files.length;
@@ -920,7 +927,9 @@ async function runSync(env, opts = {}) {
       // ⇒ لا قراءة ولا كتابة
       const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
       const priorOutOfScope = Boolean(priorId && priorId.startsWith(OOS_MARK));
-      if (priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
+      // نسخة جديدة من الـWorker ⇒ إعادة معالجة كل الملفات مرة واحدة (فتطبق أي قاعدة جديدة
+      // على الصفوف القديمة)، ثم يعود المسار السريع كالمعتاد.
+      if (!logicChanged && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
         summary.github.skipped_unchanged++;
         if (priorInvalid) summary.db.unchanged_invalid++;
         else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
@@ -1019,7 +1028,7 @@ async function runSync(env, opts = {}) {
 
     // 6) كتابة جدول الحالة (batch) — دايمًا مع صف علامة وقت آخر تشغيل
     if (stateEnabled && !dryRun) {
-      stateWrites.push([RUN_MARKER, RUN_MARKER, null, null]);
+      stateWrites.push([RUN_MARKER, RUN_MARKER, null, WORKER_VERSION]);
       const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
         db
           .prepare(
@@ -1097,6 +1106,7 @@ async function serviceInfo(env, request) {
   return {
     service: SERVICE_NAME,
     status: "running",
+    logic_reprocess: false,
     version: WORKER_VERSION,
     source: { id: SOURCE_ID, name: SOURCE_NAME, base_url: SOURCE_BASE_URL },
     github: {
@@ -1243,12 +1253,32 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
     );
   };
 
+  let lastRunInfo = null;
+  try {
+    const runCols = await tableInfo(db, "ingestion_runs");
+    if (runCols) {
+      const runMap = buildMapping(runCols, RUN_COLUMN_MAP);
+      const row = await lastRun(db, runMap);
+      if (row) {
+        const notes = row[runMap.details] ?? row.notes ?? null;
+        lastRunInfo = {
+          started_at: runMap.startedAt ? row[runMap.startedAt] : null,
+          status: runMap.status ? row[runMap.status] : null,
+          notes: typeof notes === "string" ? notes.slice(0, 2000) : null,
+        };
+      }
+    }
+  } catch {
+    lastRunInfo = null;
+  }
+
   return {
     service: SERVICE_NAME,
     version: WORKER_VERSION,
     source_id: SOURCE_ID,
     source_name: SOURCE_NAME,
     checked_at: new Date().toISOString(),
+    last_run: lastRunInfo,
     read_only: true,
     listings_table: listingsTable,
     mapping: { sourceId: sourceCol, externalId: externalCol, areaId: areaCol },

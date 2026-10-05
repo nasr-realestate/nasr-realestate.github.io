@@ -1178,3 +1178,42 @@ test("R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف د
     gh.restore();
   }
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// 39) نسخة منطق جديدة ⇒ إعادة معالجة كل الملفات مرة واحدة (ثم يعود المسار السريع)
+// ───────────────────────────────────────────────────────────────────────────
+test("نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة", async () => {
+  const content = md({
+    ...FM_BASE,
+    id: '"null-1"',
+    location: '"جمال عفيفي - النادي الأهلي"',
+    title: '"شقة بجوار النادي الأهلي"',
+    description: '"شقة للبيع بدون أي إشارة لمنطقة فرعية"',
+  });
+  const gh = installGitHubMock([{ name: "no-area.md", content }]);
+  const db = makeD1({
+    listings: [
+      { id: 5, external_id: "null-1", source_id: 9, area_id: 1, price: 3700000, area_m2: 180,
+        transaction_type: "sale", property_type: "apartment", title: "استيراد قديم" },
+    ],
+    syncState: [
+      ["9:null-1", { source_id: 9, external_id: "null-1", file_path: "_properties/no-area.md", blob_sha: fakeSha(content), content_hash: "x", last_synced_at: "2026-10-01T00:00:00Z" }],
+      ["9:__run__", { source_id: 9, external_id: "__run__", file_path: "__run__", blob_sha: null, content_hash: "v0.0.1", last_synced_at: "2026-10-01T00:00:00Z" }],
+    ],
+  });
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "500" };
+  try {
+    const res = await syncViaHttp(env);
+    assert.equal(res.body.logic_reprocess, true, "لازم يعلن إعادة المعالجة عند تغيّر النسخة");
+    assert.equal(res.body.github.fetched, 1, "الملف اتعالج تاني رغم تطابق الـblob SHA");
+    assert.equal(res.body.db.area_cleared, 1);
+    assert.equal(db.state.listings[0].area_id, null);
+
+    // التشغيل التالي (نفس النسخة) يرجع للمسار السريع: صفر قراءات
+    const second = await syncViaHttp(env);
+    assert.equal(second.body.logic_reprocess, false);
+    assert.equal(second.body.github.fetched, 0);
+  } finally {
+    gh.restore();
+  }
+});

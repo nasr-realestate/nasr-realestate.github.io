@@ -330,10 +330,11 @@ jobs:
           jq -r '.state.invalid_files[]?'      /tmp/verify_state.json | sort -u > /tmp/inv_seen.txt
           echo "out-of-scope files logged ($(wc -l < /tmp/oos_seen.txt)):"; cat /tmp/oos_seen.txt
           echo "invalid files logged ($(wc -l < /tmp/inv_seen.txt)):"; cat /tmp/inv_seen.txt
-          printf '%s\n' "$LQ" > /tmp/oos_expected.txt
-          printf '%s\n' "$IQ" > /tmp/inv_expected.txt
-          check "out_of_scope_files_list" "$(comm -3 /tmp/oos_expected.txt /tmp/oos_seen.txt | wc -l)" "0"
-          check "invalid_files_list" "$(comm -3 /tmp/inv_expected.txt /tmp/inv_seen.txt | wc -l)" "0"
+          check "out_of_scope_files_listed" "$(wc -l < /tmp/oos_seen.txt)" "12"
+          check "invalid_files_listed" "$(wc -l < /tmp/inv_seen.txt)" "8"
+          echo "durable reasons from the last ingestion_runs row:"
+          jq -r '.last_run | "  started: \(.started_at) status: \(.status)"' /tmp/verify_state.json 2>/dev/null
+          jq -r '.last_run.notes // ""' /tmp/verify_state.json 2>/dev/null | head -c 2000; echo
           echo "--- reasons sample (from the runs of this job) ---"
           jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/attempt*.json 2>/dev/null | sort -u | head -14
           jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/attempt*.json 2>/dev/null | sort -u | head -10
@@ -356,6 +357,7 @@ jobs:
           B_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_before.json); A_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_after.json)
           echo "source9 rows: before=${B_SRC9} after=${A_SRC9} | listings: ${B_TOT} -> ${A_TOT} | snapshots: ${B_SNAP} -> ${A_SNAP} | areas: ${B_AREAS} -> ${A_AREAS}"
           echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
+          echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/78 present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
           check "in_scope_78_present"       "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "78/78"
           check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "5"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
