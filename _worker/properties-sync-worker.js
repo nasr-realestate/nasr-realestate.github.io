@@ -28,7 +28,7 @@
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.0";
+const WORKER_VERSION = "v1.0.1";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -1088,7 +1088,7 @@ async function serviceInfo(env, request) {
     endpoints: {
       info: "GET /",
       schema: "GET /schema",
-      verify: "GET /verify?out_of_scope=&invalid=&null_area= (read-only D1 report)",
+      verify: "GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)",
       manual: "POST /sync (or GET /sync?dryRun=1)",
     },
     read_only_sources: ["price_snapshots", "areas", "other source rows"],
@@ -1151,7 +1151,7 @@ async function manyRows(db, sql, binds = []) {
   }
 }
 
-async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [] } = {}) {
+async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [], inScopeIds = [], rowLists = [] } = {}) {
   const db = env.DB;
   const listingsTable = envIdent(env.LISTINGS_TABLE, "listings");
   const schema = await readSchemaReport(db, env);
@@ -1191,6 +1191,23 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
 
   const fkRows = await manyRows(db, "PRAGMA foreign_key_check");
   const integrity = await scalar(db, "PRAGMA integrity_check");
+  // quick_check أقل تقييدًا من D1؛ لو مسموح فهو بديل مفيد (integrity_check ممنوع في D1)
+  const quick = await scalar(db, "PRAGMA quick_check");
+
+  // صفوف كاملة لمجموعات محددة صراحةً (تُستخدم لإثبات أن الـWorker لم يلمس صفوفًا خارج نطاقه)
+  const listingsColumns = (schema.tables && schema.tables.listings) || [];
+  const pickup = ["id", map.sourceId, map.externalId, map.title, map.transactionType, map.propertyType, map.price, map.areaM2, map.areaId].filter(Boolean);
+  const selectCols = [];
+  for (const c of pickup) if (listingsColumns.includes(c) && !selectCols.includes(c)) selectCols.push(c);
+  const rowsFor = async (ids, key) => {
+    if (!rowLists.includes(key) || !externalCol || !sourceCol || !ids.length || !selectCols.length) return null;
+    const ph = ids.map(() => "?").join(",");
+    return manyRows(
+      db,
+      `SELECT ${selectCols.join(", ")} FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph}) ORDER BY ${externalCol}`,
+      [SOURCE_ID, ...ids]
+    );
+  };
 
   return {
     service: SERVICE_NAME,
@@ -1207,14 +1224,20 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
       sample: dupRows,
     },
     lists: {
+      in_scope: await inList(inScopeIds),
       out_of_scope: await inList(outOfScopeIds),
       invalid: await inList(invalidIds),
       null_area: await inList(nullAreaIds, areaCol ? ` AND ${areaCol} IS NULL` : ""),
       null_area_checked: Boolean(areaCol),
     },
+    preexisting_rows: {
+      out_of_scope: await rowsFor(outOfScopeIds, "out_of_scope"),
+      invalid: await rowsFor(invalidIds, "invalid"),
+    },
     integrity: {
       foreign_key_check: Array.isArray(fkRows) ? fkRows.length : fkRows,
       integrity_check: integrity,
+      quick_check: quick,
     },
   };
 }
@@ -1275,6 +1298,8 @@ export default {
             outOfScopeIds: parseIdList(url.searchParams.get("out_of_scope")),
             invalidIds: parseIdList(url.searchParams.get("invalid")),
             nullAreaIds: parseIdList(url.searchParams.get("null_area")),
+            inScopeIds: parseIdList(url.searchParams.get("in_scope")),
+            rowLists: (url.searchParams.get("rows") || "").split(",").map((x) => x.trim()).filter((x) => x === "out_of_scope" || x === "invalid"),
           }),
           200,
           cors

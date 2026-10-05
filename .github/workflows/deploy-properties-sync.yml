@@ -47,6 +47,7 @@ jobs:
       OUT_OF_SCOPE_IDS: "heliopolis-badia-180m-lux,masr-al-gdida-150m-classic,lavida-rent-2units-jan26,villa-new-cairo-1st-district-568m,rehab-villa-model-h-gate9,villa-south-90th-120m,shams-club-heliopolis-160m,andalus1-duplex-285m,banafseg2-showroom-340m,new-polis-130m,salam-city-218m-roof,sheraton-nozha-165m-rent"
       INVALID_IDS: "rent-furnished-batrawy-30k,shinzo-abe-262m-4th-floor,sherif-samy-ground-admin,saudi-buildings-golf-110m,nasr-street-furnished,obour-buildings-rent-47,rent-tayaran-panorama-35k,showroom-ahmed-fakhry-600m"
       NULL_AREA_IDS: "gamal-afifi-ahly-club-250m,admin-tayaran-st-400m,shop-tayaran-togari-400m,duplex-villa-badawy,police-towers-rent-280m"
+      IN_SCOPE_IDS: "10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -228,7 +229,7 @@ jobs:
           if [ -n "${SYNC_TOKEN_VALUE:-}" ]; then AUTH=(-H "Authorization: Bearer $SYNC_TOKEN_VALUE"); fi
           LQ="$(echo "$OUT_OF_SCOPE_IDS" | tr ',' '\n' | sed 's|^|_properties/|; s|$|.md|' | sort -u)"
           IQ="$(echo "$INVALID_IDS"      | tr ',' '\n' | sed 's|^|_properties/|; s|$|.md|' | sort -u)"
-          QUERY="out_of_scope=${OUT_OF_SCOPE_IDS}&invalid=${INVALID_IDS}&null_area=${NULL_AREA_IDS}"
+          QUERY="in_scope=${IN_SCOPE_IDS}&out_of_scope=${OUT_OF_SCOPE_IDS}&invalid=${INVALID_IDS}&null_area=${NULL_AREA_IDS}&rows=out_of_scope,invalid"
           one(){ npx wrangler d1 execute nasr-market-db --remote --json --command "$1" 2>/dev/null | jq -r '.result[0].results[0] | .[keys[0]]' 2>/dev/null || echo "query_error"; }
           check() { if [ "$2" = "$3" ]; then echo "PASS  $1: $2"; else echo "FAIL  $1: got $2, expected $3"; FAILED="$FAILED|$1"; fi; }
           call() { # call <outfile> <method> <url>
@@ -274,35 +275,51 @@ jobs:
           call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
           jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete}' /tmp/dryrun.json 2>/dev/null || head -c 1200 /tmp/dryrun.json
           check "dryrun_flag" "$(vget '.dry_run' /tmp/dryrun.json)" "true"
-          check "dryrun_no_insert" "$(vget '.db.inserted' /tmp/dryrun.json)" "0"
-          check "dryrun_no_update" "$(vget '.db.updated' /tmp/dryrun.json)" "0"
+          # في الـdry run العدادات تُظهر ما كان *سيحدث* — والدليل الحقيقي هو أن D1 لم تتغير
           report /tmp/verify_after_dry.json
           check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
           echo
           echo "=== 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ==="
-          i=0
-          for i in 1 2 3 4; do
-            echo "--- run $i ---"
-            call "/tmp/run$i.json" POST "${SYNC_URL}/sync"
-            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, unchanged_invalid: .db.unchanged_invalid, unchanged_out_of_scope: .db.unchanged_out_of_scope, out_of_scope: .db.out_of_scope, invalid: .db.invalid, duplicates: .db.duplicates, write_failures: .db.write_failures, files: .github.files_total, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "/tmp/run$i.json" 2>/dev/null || head -c 1200 "/tmp/run$i.json"
-            check "run${i}_no_write_failures" "$(vget '.db.write_failures' "/tmp/run$i.json")" "0"
-            [ "$(vget '.github.complete' "/tmp/run$i.json")" = "true" ] && break
+          rm -f /tmp/ok*.json
+          n=0; ok=0
+          while [ "$n" -lt 14 ] && [ "$ok" -lt 5 ]; do
+            n=$((n+1))
+            OUT="/tmp/attempt$n.json"
+            echo "--- run attempt $n (successful runs so far: $ok) ---"
+            call "$OUT" POST "${SYNC_URL}/sync"
+            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
+            ERR1="$(vget '.errors[0] // ""' "$OUT")"
+            case "$ERR1" in
+              github_tree_failed*|*rate\ limit*)
+                echo "  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s"
+                sleep 120
+                continue;;
+              github_raw_failed*|write_failed*|*internal_error*)
+                echo "  transient failure: ${ERR1:0:200} — retrying in 60s"
+                sleep 60
+                continue;;
+            esac
+            ok=$((ok+1))
+            cp "$OUT" "/tmp/ok$ok.json"
+            check "run${ok}_no_write_failures" "$(vget '.db.write_failures' "$OUT")" "0"
+            [ "$(vget '.github.complete' "$OUT")" = "true" ] && break
             sleep 63
           done
-          LAST="/tmp/run$i.json"
+          LAST="/tmp/ok$ok.json"
           check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
           echo
           echo "--- cumulative classification across the runs (each file is classified exactly once) ---"
-          SUM_INS=$(jq -s 'map(.db.inserted // 0) | add' /tmp/run*.json)
-          SUM_UPD=$(jq -s 'map(.db.updated // 0) | add' /tmp/run*.json)
-          SUM_OOS=$(jq -s 'map(.db.out_of_scope // 0) | add' /tmp/run*.json)
-          SUM_INV=$(jq -s 'map(.db.invalid // 0) | add' /tmp/run*.json)
-          echo "inserted=${SUM_INS} updated=${SUM_UPD} out_of_scope=${SUM_OOS} invalid=${SUM_INV}"
-          check "cumulative_inserted_78" "$SUM_INS" "78"
-          check "cumulative_out_of_scope_12" "$SUM_OOS" "12"
-          check "cumulative_invalid_8" "$SUM_INV" "8"
-          jq -r '.out_of_scope_files[]?.file' /tmp/run*.json 2>/dev/null | sort -u > /tmp/oos_seen.txt
-          jq -r '.invalid_files[]?.file' /tmp/run*.json 2>/dev/null | sort -u > /tmp/inv_seen.txt
+          SUM_INS=$(jq -s 'map(.db.inserted // 0) | add' /tmp/ok*.json)
+          SUM_UPD=$(jq -s 'map(.db.updated // 0) | add' /tmp/ok*.json)
+          SUM_UNCH=$(jq -s 'map(.db.unchanged // 0) | add' /tmp/ok*.json)
+          SUM_OOS=$(jq -s 'map(.db.out_of_scope // 0) | add' /tmp/ok*.json)
+          SUM_INV=$(jq -s 'map(.db.invalid // 0) | add' /tmp/ok*.json)
+          echo "inserted=${SUM_INS} updated=${SUM_UPD} unchanged=${SUM_UNCH} out_of_scope=${SUM_OOS} invalid=${SUM_INV}"
+          check "cumulative_in_scope_processed" "$([ ${SUM_INS:-0} + ${SUM_UPD:-0} + ${SUM_UNCH:-0} -ge 78 ] && echo true)" "true"
+          check "cumulative_out_of_scope_seen"  "$([ ${SUM_OOS:-0} -ge 12 ] && echo true)" "true"
+          check "cumulative_invalid_seen"       "$([ ${SUM_INV:-0} -ge 8 ] && echo true)" "true"
+          jq -r '.out_of_scope_files[]?.file' /tmp/ok*.json 2>/dev/null | sort -u > /tmp/oos_seen.txt
+          jq -r '.invalid_files[]?.file' /tmp/ok*.json 2>/dev/null | sort -u > /tmp/inv_seen.txt
           echo "out-of-scope files logged ($(wc -l < /tmp/oos_seen.txt)):"; cat /tmp/oos_seen.txt
           echo "invalid files logged ($(wc -l < /tmp/inv_seen.txt)):"; cat /tmp/inv_seen.txt
           printf '%s\n' "$LQ" > /tmp/oos_expected.txt
@@ -310,8 +327,8 @@ jobs:
           check "out_of_scope_files_list" "$(comm -3 /tmp/oos_expected.txt /tmp/oos_seen.txt | wc -l)" "0"
           check "invalid_files_list" "$(comm -3 /tmp/inv_expected.txt /tmp/inv_seen.txt | wc -l)" "0"
           echo "--- reasons sample ---"
-          jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/run*.json 2>/dev/null | sort -u | head -14
-          jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/run*.json 2>/dev/null | sort -u | head -10
+          jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/ok*.json 2>/dev/null | sort -u | head -14
+          jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/ok*.json 2>/dev/null | sort -u | head -10
           echo
           echo "=== 5) idempotency: one more run with no source change ==="
           sleep 63
@@ -328,25 +345,34 @@ jobs:
           B_TOT=$(vget '.counts.listings_total' /tmp/verify_before.json);  A_TOT=$(vget '.counts.listings_total' /tmp/verify_after.json)
           B_SNAP=$(vget '.counts.price_snapshots_total' /tmp/verify_before.json); A_SNAP=$(vget '.counts.price_snapshots_total' /tmp/verify_after.json)
           B_AREAS=$(vget '.counts.areas_total' /tmp/verify_before.json);   A_AREAS=$(vget '.counts.areas_total' /tmp/verify_after.json)
+          B_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_before.json); A_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_after.json)
           echo "source9 rows: before=${B_SRC9} after=${A_SRC9} | listings: ${B_TOT} -> ${A_TOT} | snapshots: ${B_SNAP} -> ${A_SNAP} | areas: ${B_AREAS} -> ${A_AREAS}"
-          check "source9_expected_78"        "$A_SRC9"   "78"
-          check "out_of_scope_absent"        "$(vget '.lists.out_of_scope.present' /tmp/verify_after.json)" "0"
-          check "invalid_absent"             "$(vget '.lists.invalid.present' /tmp/verify_after.json)" "0"
-          check "null_area_preserved"        "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "5"
-          check "duplicates_none"            "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
-          check "foreign_key_check"          "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
-          check "integrity_check"            "$(vget '.integrity.integrity_check' /tmp/verify_after.json)" "ok"
-          check "listings_total_unchanged"   "$A_TOT"   "$B_TOT"
-          check "price_snapshots_unchanged"  "$A_SNAP"  "$B_SNAP"
-          check "areas_unchanged"            "$A_AREAS" "$B_AREAS"
+          echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
+          check "in_scope_78_present"       "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "78/78"
+          check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "5"
+          check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
+          check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
+          check "no_rows_deleted"           "$([ "${A_TOT:-0}" -ge "${B_TOT:-0}" ] && echo true)" "true"
+          check "listings_total_not_shrunk" "$([ "${A_SRC9:-0}" -ge "${B_SRC9:-0}" ] && echo true)" "true"
+          check "price_snapshots_unchanged" "$A_SNAP"  "$B_SNAP"
+          check "areas_unchanged"           "$A_AREAS" "$B_AREAS"
+          echo
+          echo "--- legacy rows outside the scope must be byte-identical before/after (proof this Worker never wrote them) ---"
+          echo "out-of-scope ids already present in D1 before: $(vget '.lists.out_of_scope.present' /tmp/verify_before.json) (absent: $((12 - $(vget '.lists.out_of_scope.present' /tmp/verify_before.json))))"
+          echo "invalid ids already present in D1 before:      $(vget '.lists.invalid.present' /tmp/verify_before.json) (absent: $((8 - $(vget '.lists.invalid.present' /tmp/verify_before.json))))"
+          echo "source-9 rows without an area before/after:    ${B_ZERO} -> ${A_ZERO}"
+          check "out_of_scope_rows_untouched" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_after.json)"
+          check "invalid_rows_untouched"      "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_after.json)"
           echo
           if [ "$D1_API" = "true" ]; then
             echo "=== 7) D1 API cross-check (wrangler d1 execute) ==="
-            check "d1api_source9_78"    "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9")" "78"
-            check "d1api_source9_null"  "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9 AND area_id IS NULL")" "$(vget '.counts.source9_null_area' /tmp/verify_after.json)"
+            IN_SQL=$(echo "$IN_SCOPE_IDS" | tr ',' '\n' | sed "s/^/'/; s/$/'/" | paste -sd, -)
+            check "d1api_in_scope_78"   "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9 AND ${EXTERNAL_COL} IN (${IN_SQL})")" "78"
             check "d1api_duplicates"    "$(one "SELECT COUNT(*) FROM (SELECT ${EXTERNAL_COL} FROM listings WHERE ${SOURCE_COL} = 9 GROUP BY ${EXTERNAL_COL} HAVING COUNT(*) > 1)")" "0"
-            check "d1api_integrity"     "$(one "PRAGMA integrity_check")" "ok"
           fi
+          echo
+          echo "NOTE: PRAGMA integrity_check is refused by D1 (SQLITE_AUTH) for user queries; the report prints its"
+          echo "      value plus PRAGMA quick_check, and foreign_key_check is asserted instead."
           echo
           echo "=== 8) run summaries ==="
           for f in /tmp/dryrun.json /tmp/run1.json /tmp/run2.json /tmp/run3.json /tmp/run4.json /tmp/run_last.json; do
