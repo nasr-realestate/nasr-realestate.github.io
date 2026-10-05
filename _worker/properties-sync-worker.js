@@ -28,7 +28,7 @@
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.3";
+const WORKER_VERSION = "v1.0.4";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -797,6 +797,7 @@ async function runSync(env, opts = {}) {
     finished_at: null,
     duration_ms: 0,
     status: "running",
+    worker_version: WORKER_VERSION,
     logic_reprocess: false,
     github: {
       files_total: 0, fetched: 0, skipped_unchanged: 0,
@@ -903,12 +904,6 @@ async function runSync(env, opts = {}) {
       }
     }
 
-    // 3c) هل تغيّرت نسخة منطق الـWorker منذ آخر تشغيل؟ (علامة في صف __run__)
-    const runMarker = state.get(RUN_MARKER) || null;
-    const recordedLogic = runMarker ? String(runMarker.content_hash || "") : "";
-    const logicChanged = recordedLogic !== WORKER_VERSION;
-    if (logicChanged) summary.logic_reprocess = true;
-
     // 4) قائمة ملفات GitHub
     const files = await githubTree(env, summary.github);
     summary.github.files_total = files.length;
@@ -927,9 +922,15 @@ async function runSync(env, opts = {}) {
       // ⇒ لا قراءة ولا كتابة
       const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
       const priorOutOfScope = Boolean(priorId && priorId.startsWith(OOS_MARK));
-      // نسخة جديدة من الـWorker ⇒ إعادة معالجة كل الملفات مرة واحدة (فتطبق أي قاعدة جديدة
-      // على الصفوف القديمة)، ثم يعود المسار السريع كالمعتاد.
-      if (!logicChanged && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
+      // كل صف حالة يحمل نسخة منطق الـWorker اللي عالجته؛ الملف اللي اتعالج بنسخة أقدم
+      // يُعاد معالجته مرة واحدة (فتُطبَّق القواعد الجديدة على الصفوف القديمة)، والتشغيل
+      // الجزئي يكمّل من حيث انتهى لأن الصفوف المُعاد معالجتها بقت بالنسخة الحالية.
+      const priorLogic = priorByPath && priorByPath.content_hash
+        ? String(priorByPath.content_hash).split(":")[0]
+        : null;
+      const sameLogic = priorLogic === WORKER_VERSION;
+      if (priorByPath && !sameLogic) summary.logic_reprocess = true;
+      if (sameLogic && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
         summary.github.skipped_unchanged++;
         if (priorInvalid) summary.db.unchanged_invalid++;
         else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
@@ -953,7 +954,7 @@ async function runSync(env, opts = {}) {
       if (!fm) {
         summary.invalid_files.push({ file: f.path, reason: "no_front_matter" });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -965,14 +966,14 @@ async function runSync(env, opts = {}) {
         summary.out_of_scope_files.push({ file: f.path, reasons: built.outOfScopeReasons });
         summary.db.out_of_scope++;
         excludedIds.add(record.externalId);
-        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
         continue;
       }
 
       if (built.problems.length) {
         summary.invalid_files.push({ file: f.path, reason: built.problems.join(",") });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -991,7 +992,7 @@ async function runSync(env, opts = {}) {
 
       if (dryRun) {
         summary.db[existingRow ? "updated" : "inserted"]++;
-        if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, contentHash]);
+        if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -1013,7 +1014,7 @@ async function runSync(env, opts = {}) {
       else if (result.action === "updated") summary.db.updated++;
       else summary.db.unchanged++;
 
-      if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, contentHash]);
+      if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
     }
 
     // 5) ملفات موجودة في D1 ومختفية من GitHub ⇒ تُسجَّل فقط، بدون أي حذف.
@@ -1106,6 +1107,7 @@ async function serviceInfo(env, request) {
   return {
     service: SERVICE_NAME,
     status: "running",
+    worker_version: WORKER_VERSION,
     logic_reprocess: false,
     version: WORKER_VERSION,
     source: { id: SOURCE_ID, name: SOURCE_NAME, base_url: SOURCE_BASE_URL },

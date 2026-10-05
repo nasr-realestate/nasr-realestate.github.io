@@ -1217,3 +1217,65 @@ test("نسخة جديدة من الـWorker تُبطل المسار السريع
     gh.restore();
   }
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// 40) تشغيل جزئي (budget) لا يُحدِّث علامة النسخة ⇒ الإكمال في التشغيل التالي
+// ───────────────────────────────────────────────────────────────────────────
+test("budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات", async () => {
+  const files = [];
+  for (let i = 1; i <= 5; i += 1) {
+    files.push({
+      name: `f${i}.md`,
+      content: md({
+        ...FM_BASE,
+        id: `"id-${i}"`,
+        location: '"جمال عفيفي - النادي الأهلي"',
+        title: `"شقة ${i} بجوار النادي الأهلي"`,
+        description: `"شقة للبيع رقم ${i} بدون أي إشارة لمنطقة فرعية"`,
+      }),
+    });
+  }
+  const gh = installGitHubMock(files);
+  const db = makeD1({
+    listings: files.map((f, i) => ({
+      id: i + 1,
+      external_id: `id-${i + 1}`,
+      source_id: 9,
+      area_id: 1,
+      price: 3700000,
+      area_m2: 180,
+      transaction_type: "sale",
+      property_type: "apartment",
+      title: "استيراد قديم",
+    })),
+    // صفوف حالة من نسخة أقدم (بدون بادئة النسخة) للملفين الأولين ⇒ تُعاد معالجتهما أولًا
+    syncState: [
+      ["9:id-1", { source_id: 9, external_id: "id-1", file_path: "_properties/f1.md", blob_sha: fakeSha(files[0].content), content_hash: "oldhash1", last_synced_at: "2026-10-01T00:00:00Z" }],
+      ["9:id-2", { source_id: 9, external_id: "id-2", file_path: "_properties/f2.md", blob_sha: fakeSha(files[1].content), content_hash: "oldhash2", last_synced_at: "2026-10-01T00:00:00Z" }],
+      ["9:__run__", { source_id: 9, external_id: "__run__", file_path: "__run__", blob_sha: null, content_hash: "v0.0.1", last_synced_at: "2026-10-01T00:00:00Z" }],
+    ],
+  });
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "2" };
+  try {
+    const first = await syncViaHttp(env);
+    assert.equal(first.body.logic_reprocess, true);
+    assert.equal(first.body.github.fetched, 2, "budget 2");
+    assert.equal(first.body.github.complete, false);
+
+    const second = await syncViaHttp(env);
+    // الملفان الأولان بقوا بالنسخة الحالية ⇒ مسار سريع، والـbudget راح للملفات اللي بعدهم
+    assert.equal(second.body.github.fetched, 2);
+    assert.equal(db.state.listings.filter((r) => r.area_id === null).length, 4, "4 صفوف اتصفّرت بعد التشغيلين");
+
+    const third = await syncViaHttp(env);
+    assert.equal(third.body.github.complete, true);
+    assert.equal(third.body.github.fetched, 1);
+    assert.equal(db.state.listings.filter((r) => r.area_id === null).length, 5, "كل الصفوف اتصفّرت");
+
+    const fourth = await syncViaHttp(env);
+    assert.equal(fourth.body.logic_reprocess, false, "خلصت إعادة المعالجة ⇒ المسار السريع");
+    assert.equal(fourth.body.github.fetched, 0);
+  } finally {
+    gh.restore();
+  }
+});
