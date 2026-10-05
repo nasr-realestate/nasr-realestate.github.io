@@ -21,13 +21,14 @@
 //   GET  /            → حالة الخدمة + آخر تشغيل
 //   GET  /health      → نفس الشيء (alias)
 //   GET  /schema      → الـschema الفعلي كما قرأه الـWorker + خريطة الأعمدة (قراءة فقط)
+//   GET  /verify?...  → تقرير تحقق قراءة فقط (counts/duplicates/integrity) على D1 الحقيقي
 //   GET  /sync?...    → تشغيل يدوي للتشخيص (dry run افتراضيًا: ?dryRun=1)
 //   POST /sync        → التشغيل الفعلي (يتطلب SYNC_TOKEN إن كان مضبوطًا)
 //
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.0";
+const WORKER_VERSION = "v1.0.3";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -619,7 +620,7 @@ async function loadAreaIndex(db) {
 // ───────────────────────────────────────────────────────────────────────────
 // Upsert (source_id = 9 فقط)
 // ───────────────────────────────────────────────────────────────────────────
-function pickRowValues(record, mapping, existingRow) {
+function pickRowValues(record, mapping, existingRow, clearUnmatchedArea = true) {
   const values = {};
   const set = (field, value) => {
     const col = mapping[field];
@@ -637,6 +638,11 @@ function pickRowValues(record, mapping, existingRow) {
   set("currency", record.currency);
   set("areaM2", record.areaM2);
   if (record.areaId !== null) set("areaId", record.areaId);
+  // R1: ملف داخل النطاق بلا مطابقة منطقة واضحة ⇒ area_id يجب أن يكون NULL،
+  // حتى لو كان في D1 صف قديم بقيمة افتراضية (مدينة نصر) من استيراد سابق — بدون أي تخمين.
+  else if (existingRow && clearUnmatchedArea && mapping.areaId && existingRow[mapping.areaId] !== null && existingRow[mapping.areaId] !== undefined) {
+    values[mapping.areaId] = null;
+  }
   set("rooms", record.rooms);
   set("bathrooms", record.bathrooms);
   set("floor", record.floor);
@@ -661,6 +667,11 @@ function isSameAsExisting(values, existingRow, mapping) {
   for (const [col, value] of Object.entries(values)) {
     if (col === mapping.updatedAt) continue; // updated_at يتغير مع أي write حقيقي
     const current = existingRow[col];
+    if (value === null) {
+      // تصفير قصدًا (مثل area_id عند غياب مطابقة) — ليس "لا تغيير"
+      if (current === null || current === undefined) continue;
+      return false;
+    }
     if (current === null || current === undefined) {
       if (String(value) !== "") return false;
       continue;
@@ -674,8 +685,8 @@ function isSameAsExisting(values, existingRow, mapping) {
   return true;
 }
 
-async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash) {
-  const values = pickRowValues(record, mapping, existingRow);
+async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash, clearUnmatchedArea = true) {
+  const values = pickRowValues(record, mapping, existingRow, clearUnmatchedArea);
   if (mapping.contentHash) values[mapping.contentHash] = contentHash;
   const base = isSameAsExisting(values, existingRow, mapping);
 
@@ -691,13 +702,17 @@ async function upsertListing(db, listingsTable, mapping, record, existingRow, co
 
   if (base) return { action: "unchanged", changes: 0, values };
 
+
   const cols = Object.keys(values);
   const sql = `UPDATE ${listingsTable} SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`;
   const res = await db
     .prepare(sql)
     .bind(...cols.map((c) => values[c]), existingRow.id)
     .run();
-  return { action: "updated", changes: res?.meta?.changes ?? null, values };
+  const cleared = mapping.areaId && values[mapping.areaId] === null && existingRow[mapping.areaId] != null
+    ? existingRow[mapping.areaId]
+    : null;
+  return { action: "updated", changes: res?.meta?.changes ?? null, values, area_cleared: cleared !== null, area_cleared_from: cleared };
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -768,6 +783,7 @@ async function runSync(env, opts = {}) {
   const dryRun = Boolean(opts.dryRun);
   const trigger = opts.trigger || "manual";
   const budget = Number(env.SYNC_FETCH_BUDGET) > 0 ? Number(env.SYNC_FETCH_BUDGET) : DEFAULT_FETCH_BUDGET;
+  const clearUnmatchedArea = String(env.SYNC_CLEAR_UNMATCHED_AREA ?? "1") !== "0";
   const db = env.DB;
 
   const summary = {
@@ -781,15 +797,17 @@ async function runSync(env, opts = {}) {
     finished_at: null,
     duration_ms: 0,
     status: "running",
+    logic_reprocess: false,
     github: {
       files_total: 0, fetched: 0, skipped_unchanged: 0,
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
       complete: true, truncated: false,
     },
     db: {
-      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0,
+      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0, area_cleared: 0,
       invalid: 0, out_of_scope: 0, duplicates: 0, write_failures: 0, writes_blocked: false,
     },
+    area_cleared: [],
     invalid_files: [],
     out_of_scope_files: [],
     duplicate_files: [],
@@ -885,6 +903,12 @@ async function runSync(env, opts = {}) {
       }
     }
 
+    // 3c) هل تغيّرت نسخة منطق الـWorker منذ آخر تشغيل؟ (علامة في صف __run__)
+    const runMarker = state.get(RUN_MARKER) || null;
+    const recordedLogic = runMarker ? String(runMarker.content_hash || "") : "";
+    const logicChanged = recordedLogic !== WORKER_VERSION;
+    if (logicChanged) summary.logic_reprocess = true;
+
     // 4) قائمة ملفات GitHub
     const files = await githubTree(env, summary.github);
     summary.github.files_total = files.length;
@@ -903,7 +927,9 @@ async function runSync(env, opts = {}) {
       // ⇒ لا قراءة ولا كتابة
       const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
       const priorOutOfScope = Boolean(priorId && priorId.startsWith(OOS_MARK));
-      if (priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
+      // نسخة جديدة من الـWorker ⇒ إعادة معالجة كل الملفات مرة واحدة (فتطبق أي قاعدة جديدة
+      // على الصفوف القديمة)، ثم يعود المسار السريع كالمعتاد.
+      if (!logicChanged && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
         summary.github.skipped_unchanged++;
         if (priorInvalid) summary.db.unchanged_invalid++;
         else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
@@ -971,7 +997,11 @@ async function runSync(env, opts = {}) {
 
       let result = null;
       try {
-        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash);
+        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash, clearUnmatchedArea);
+        if (result.area_cleared) {
+          summary.db.area_cleared = (summary.db.area_cleared || 0) + 1;
+          summary.area_cleared.push({ file: f.path, was: result.area_cleared_from });
+        }
       } catch (err) {
         // فشل سطر واحد (مثلاً NOT NULL في عمود خارج الخريطة) لا يوقف بقية الملفات،
         // ولا تُكتب حالة الملف ⇒ يعاد المحاولة في التشغيل التالي بعد إصلاح السبب.
@@ -998,7 +1028,7 @@ async function runSync(env, opts = {}) {
 
     // 6) كتابة جدول الحالة (batch) — دايمًا مع صف علامة وقت آخر تشغيل
     if (stateEnabled && !dryRun) {
-      stateWrites.push([RUN_MARKER, RUN_MARKER, null, null]);
+      stateWrites.push([RUN_MARKER, RUN_MARKER, null, WORKER_VERSION]);
       const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
         db
           .prepare(
@@ -1076,6 +1106,7 @@ async function serviceInfo(env, request) {
   return {
     service: SERVICE_NAME,
     status: "running",
+    logic_reprocess: false,
     version: WORKER_VERSION,
     source: { id: SOURCE_ID, name: SOURCE_NAME, base_url: SOURCE_BASE_URL },
     github: {
@@ -1084,7 +1115,13 @@ async function serviceInfo(env, request) {
     },
     scheduler: "Cloudflare Cron",
     cron: "17 * * * *",
-    endpoints: { info: "GET /", schema: "GET /schema", manual: "POST /sync (or GET /sync?dryRun=1)" },
+    cache_policy: { clear_unmatched_area: true },
+    endpoints: {
+      info: "GET /",
+      schema: "GET /schema",
+      verify: "GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)",
+      manual: "POST /sync (or GET /sync?dryRun=1)",
+    },
     read_only_sources: ["price_snapshots", "areas", "other source rows"],
     write_scope: { table: "listings", filter: "source_id = 9", deletes: false },
     scope_policy: {
@@ -1099,6 +1136,177 @@ async function serviceInfo(env, request) {
 }
 
 // تصدير دوال نقية للاختبار فقط — Cloudflare يستخدم default handler فقط.
+// ───────────────────────────────────────────────────────────────────────────
+// تقرير تحقّق قراءة فقط (GET/POST /verify) — بدون أي كتابة إطلاقًا
+// يستخدمه الـCI لتنفيذ checklist التسليم على D1 الحقيقي من خلال نفس الـbinding،
+// فمش محتاج صلاحية D1 على الـAPI token.
+// ───────────────────────────────────────────────────────────────────────────
+const VERIFY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
+
+function parseIdList(raw) {
+  if (!raw) return [];
+  const seen = new Set();
+  const out = [];
+  for (const part of String(raw).split(",")) {
+    const id = part.trim();
+    if (!VERIFY_ID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= 200) break;
+  }
+  return out;
+}
+
+async function scalar(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    const row = (results || [])[0] || {};
+    const value = Object.values(row)[0];
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number") return value;
+    const n = Number(value);
+    return Number.isFinite(n) && String(value).trim() !== "" ? n : value;
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function manyRows(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    return results || [];
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [], inScopeIds = [], rowLists = [] } = {}) {
+  const db = env.DB;
+  const listingsTable = envIdent(env.LISTINGS_TABLE, "listings");
+  const schema = await readSchemaReport(db, env);
+  const map = schema.mapping || {};
+  const sourceCol = map.sourceId;
+  const externalCol = map.externalId;
+  const areaCol = map.areaId;
+
+  const inList = async (ids, extra = "") => {
+    if (!externalCol || !sourceCol || !ids.length) return { checked: ids.length, present: 0 };
+    const ph = ids.map(() => "?").join(",");
+    const n = await scalar(
+      db,
+      `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph})${extra}`,
+      [SOURCE_ID, ...ids]
+    );
+    return { checked: ids.length, present: n };
+  };
+
+  const counts = {
+    listings_total: await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable}`),
+    source9_total: sourceCol ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ?`, [SOURCE_ID]) : null,
+    source9_null_area: sourceCol && areaCol
+      ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${areaCol} IS NULL`, [SOURCE_ID])
+      : null,
+    areas_total: await scalar(db, "SELECT COUNT(*) AS n FROM areas"),
+    price_snapshots_total: await scalar(db, "SELECT COUNT(*) AS n FROM price_snapshots"),
+  };
+
+  const dupRows = externalCol && sourceCol
+    ? await manyRows(
+        db,
+        `SELECT ${externalCol} AS external_id, COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? GROUP BY ${externalCol} HAVING COUNT(*) > 1 LIMIT 20`,
+        [SOURCE_ID]
+      )
+    : [];
+
+  const stateTable = envIdent(env.STATE_TABLE, STATE_TABLE);
+  const stateRows = await manyRows(db, `SELECT external_id, file_path FROM ${stateTable} WHERE ${sourceCol ? "source_id" : "source_id"} = ?`, [SOURCE_ID]);
+  const stateList = Array.isArray(stateRows) ? stateRows : [];
+  const stateInfo = {
+    rows: stateList.length,
+    files_tracked: stateList.filter((r) => r.external_id !== RUN_MARKER).length,
+    in_scope: stateList.filter((r) => !String(r.external_id || "").startsWith(INVALID_MARK) && !String(r.external_id || "").startsWith(OOS_MARK) && r.external_id !== RUN_MARKER).length,
+    invalid: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).length,
+    out_of_scope: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).length,
+    invalid_files: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).map((r) => r.file_path).sort(),
+    out_of_scope_files: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).map((r) => r.file_path).sort(),
+  };
+
+  const fkRows = await manyRows(db, "PRAGMA foreign_key_check");
+  const integrity = await scalar(db, "PRAGMA integrity_check");
+  // quick_check أقل تقييدًا من D1؛ لو مسموح فهو بديل مفيد (integrity_check ممنوع في D1)
+  const quick = await scalar(db, "PRAGMA quick_check");
+
+  // صفوف كاملة لمجموعات محددة صراحةً (تُستخدم لإثبات أن الـWorker لم يلمس صفوفًا خارج نطاقه)
+  const listingsColumns = (schema.tables && schema.tables.listings) || [];
+  const pickup = ["id", map.sourceId, map.externalId, map.title, map.transactionType, map.propertyType, map.price, map.areaM2, map.areaId].filter(Boolean);
+  const selectCols = [];
+  for (const c of pickup) if (listingsColumns.includes(c) && !selectCols.includes(c)) selectCols.push(c);
+  const rowsFor = async (ids, key) => {
+    if (!rowLists.includes(key) || !externalCol || !sourceCol || !ids.length || !selectCols.length) return null;
+    const ph = ids.map(() => "?").join(",");
+    return manyRows(
+      db,
+      `SELECT ${selectCols.join(", ")} FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph}) ORDER BY ${externalCol}`,
+      [SOURCE_ID, ...ids]
+    );
+  };
+
+  let lastRunInfo = null;
+  try {
+    const runCols = await tableInfo(db, "ingestion_runs");
+    if (runCols) {
+      const runMap = buildMapping(runCols, RUN_COLUMN_MAP);
+      const row = await lastRun(db, runMap);
+      if (row) {
+        const notes = row[runMap.details] ?? row.notes ?? null;
+        lastRunInfo = {
+          started_at: runMap.startedAt ? row[runMap.startedAt] : null,
+          status: runMap.status ? row[runMap.status] : null,
+          notes: typeof notes === "string" ? notes.slice(0, 2000) : null,
+        };
+      }
+    }
+  } catch {
+    lastRunInfo = null;
+  }
+
+  return {
+    service: SERVICE_NAME,
+    version: WORKER_VERSION,
+    source_id: SOURCE_ID,
+    source_name: SOURCE_NAME,
+    checked_at: new Date().toISOString(),
+    last_run: lastRunInfo,
+    read_only: true,
+    listings_table: listingsTable,
+    mapping: { sourceId: sourceCol, externalId: externalCol, areaId: areaCol },
+    counts,
+    duplicates: {
+      count: Array.isArray(dupRows) ? dupRows.length : null,
+      sample: dupRows,
+    },
+    lists: {
+      in_scope: await inList(inScopeIds),
+      out_of_scope: await inList(outOfScopeIds),
+      invalid: await inList(invalidIds),
+      null_area: await inList(nullAreaIds, areaCol ? ` AND ${areaCol} IS NULL` : ""),
+      null_area_checked: Boolean(areaCol),
+    },
+    state: stateInfo,
+    preexisting_rows: {
+      out_of_scope: await rowsFor(outOfScopeIds, "out_of_scope"),
+      invalid: await rowsFor(invalidIds, "invalid"),
+    },
+    integrity: {
+      foreign_key_check: Array.isArray(fkRows) ? fkRows.length : fkRows,
+      integrity_check: integrity,
+      quick_check: quick,
+    },
+  };
+}
+
 export const __test = {
   parseFrontMatter,
   buildRecord,
@@ -1146,6 +1354,23 @@ export default {
         return json(await readSchemaReport(env.DB, env), 200, cors);
       }
 
+      // تقرير تحقق قراءة فقط — يُنفَّذ على D1 الحقيقي بدون أي كتابة (بديل مستقل عن صلاحية D1 API)
+      if ((request.method === "GET" || request.method === "POST") && url.pathname === "/verify") {
+        if (!authorized) return json({ error: "unauthorized" }, 401, cors);
+        if (!env.DB) return json({ error: "missing_DB_binding" }, 500, cors);
+        return json(
+          await verificationReport(env, {
+            outOfScopeIds: parseIdList(url.searchParams.get("out_of_scope")),
+            invalidIds: parseIdList(url.searchParams.get("invalid")),
+            nullAreaIds: parseIdList(url.searchParams.get("null_area")),
+            inScopeIds: parseIdList(url.searchParams.get("in_scope")),
+            rowLists: (url.searchParams.get("rows") || "").split(",").map((x) => x.trim()).filter((x) => x === "out_of_scope" || x === "invalid"),
+          }),
+          200,
+          cors
+        );
+      }
+
       if (url.pathname === "/sync") {
         if (!authorized) return json({ error: "unauthorized" }, 401, cors);
         const dryRun = request.method === "GET"
@@ -1158,7 +1383,7 @@ export default {
         return json(result, status, cors);
       }
 
-      return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "POST /sync"] }, 404, cors);
+      return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "GET /verify", "POST /sync"] }, 404, cors);
     } catch (err) {
       return json({ error: "internal_error", message: String(err.message || err).slice(0, 300) }, 500, cors);
     }
