@@ -3,9 +3,13 @@
 #
 # Required repository secrets:
 #   CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
-#   CLOUDFLARE_ACCOUNT_ID (optional — inferred from the token when unset)
+#   CLOUDFLARE_ACCOUNT_ID (optional — resolved from the token when unset)
 # Optional:
 #   SYNC_TOKEN            (protects POST /sync; stored as a Worker secret when present)
+#
+# NOTE: an account-owned API token cannot call the user-level /memberships endpoint that
+# wrangler uses to guess the account id, so the account id is resolved here through
+# /accounts and exported to CLOUDFLARE_ACCOUNT_ID before any wrangler command runs.
 #
 # This workflow deploys ONLY the sync Worker. The valuation and agent Workers are never
 # touched here (their live builds are ahead of the repository copies on purpose).
@@ -33,6 +37,7 @@ jobs:
   deploy-and-verify:
     runs-on: ubuntu-latest
     env:
+      CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
@@ -54,6 +59,7 @@ jobs:
 
       - name: Start report
         run: |
+          set +e
           mkdir -p _diag
           {
             echo "=== Properties Sync Worker — deploy + verify ==="
@@ -61,7 +67,7 @@ jobs:
             echo "commit:   ${{ github.sha }}"
             echo "run:      ${{ github.run_id }}"
             echo "when:     $(date -u +%FT%TZ)"
-            if [ -n "$CLOUDFLARE_API_TOKEN" ]; then echo "credential: PRESENT"; else echo "credential: MISSING (CLOUDFLARE_API_TOKEN)"; fi
+            if [ -n "$CLOUDFLARE_TOKEN" ]; then echo "credential: PRESENT"; else echo "credential: MISSING (CLOUDFLARE_API_TOKEN)"; fi
             echo
           } > "$REPORT"
 
@@ -69,60 +75,155 @@ jobs:
         run: node --test _worker/tests/properties-sync.test.mjs 2>&1 | tee -a "$REPORT"
 
       - name: Install wrangler
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CLOUDFLARE_TOKEN != ''
         run: npm install --no-save wrangler@4
 
-      - name: Deploy sync Worker
-        if: env.CLOUDFLARE_API_TOKEN != ''
+      # An account-owned API token can't read /memberships, which is where wrangler looks
+      # for the account id. Resolve it here and export it so wrangler never calls it.
+      - name: Preflight (resolve account id, probe token)
+        if: env.CLOUDFLARE_TOKEN != ''
         run: |
+          set +e
+          exec >> "$REPORT" 2>&1
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          echo "=== preflight ==="
+          echo "token verify (/user/tokens/verify): $(curl -sS -m 20 -H "$AUTH" "$API/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null)"
+          ACC="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)}"
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "account id from secrets: ${CLOUDFLARE_ACCOUNT_ID}"
+          else
+            RAW=$(curl -sS -m 20 -H "$AUTH" "$API/accounts")
+            echo "accounts lookup: $(echo "$RAW" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null)"
+            ACC="$ACC"
+            if [ -n "$ACC" ]; then
+              echo "CLOUDFLARE_ACCOUNT_ID=$ACC" >> "$GITHUB_ENV"
+              echo "account id resolved from the token: ${ACC}"
+            else
+              echo "::error title=NO_ACCOUNT::could not resolve a Cloudflare account id from the token"
+            fi
+          fi
+          echo "d1 probe: $(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACC}/d1/database" | jq -c '{success, errors, count: (.result|length)}' 2>/dev/null)"
+          echo
+
+      - name: Deploy sync Worker
+        if: env.CLOUDFLARE_TOKEN != ''
+        run: |
+          set +e
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           {
             echo
             echo "--- wrangler whoami ---"
-            npx wrangler whoami 2>&1 || true
+            npx wrangler whoami 2>&1
             echo
-            echo "--- wrangler deploy ---"
-            npx wrangler deploy --config _worker/wrangler.sync.toml 2>&1 | tee /tmp/deploy.log
-            echo
+            echo "--- wrangler deploy (account ${CLOUDFLARE_ACCOUNT_ID:-<unset>}) ---"
           } >> "$REPORT"
+          npx wrangler deploy --config _worker/wrangler.sync.toml > /tmp/deploy.log 2>&1
+          RC=$?
+          cat /tmp/deploy.log >> "$REPORT"
+          echo "wrangler deploy exit code: $RC" >> "$REPORT"
+          echo "wrangler deploy exit code: $RC"
+          if [ "$RC" -ne 0 ]; then
+            echo "::error title=DEPLOY_FAILED::wrangler deploy exited ${RC} — see the report for the Cloudflare error"
+            exit 1
+          fi
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1 || true)
           echo "deployed URL from wrangler: ${URL:-<none in log>}" >> "$REPORT"
           echo "::notice title=SYNC_URL::${URL:-$SYNC_URL}"
+          echo
 
-      - name: Worker facts (Cloudflare API)
-        if: env.CLOUDFLARE_API_TOKEN != ''
-        continue-on-error: true
+      # Hard evidence that the script now exists, is reachable and has the right triggers.
+      - name: Post-deploy checks (script exists, reachable, cron, D1 binding)
+        if: env.CLOUDFLARE_TOKEN != ''
         run: |
+          set +e
           exec >> "$REPORT" 2>&1
           API=https://api.cloudflare.com/client/v4
-          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
+          FAILED=""
+          check() { if [ "$2" = "$3" ]; then echo "PASS  $1: $2"; else echo "FAIL  $1: got $2, expected $3"; FAILED="$FAILED|$1"; fi; }
+          echo "=== post-deploy checks ==="
+          curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '.result[]?.id' | sed 's/^/script: /'
+          EXISTS=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '[.result[]?.id] | index("nasr-properties-sync") != null' 2>/dev/null)
+          check "script_exists" "${EXISTS:-false}" "true"
+          echo "--- schedules ---"
+          SCHED=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/schedules")
+          echo "$SCHED" | jq -c '.' 2>/dev/null
+          check "cron_17" "$(echo "$SCHED" | jq -r '[.result[]?.cron] | index("17 * * * *") != null' 2>/dev/null)" "true"
+          echo "--- settings (bindings) ---"
+          SET=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/settings")
+          echo "$SET" | jq -c '{bindings: [.result.bindings[]? | {name, type, namespace_id: .id}], compatibility_date: .result.compatibility_date}' 2>/dev/null
+          check "d1_binding_DB" "$(echo "$SET" | jq -r '[.result.bindings[]? | select(.name=="DB" and .type=="d1")] | length > 0' 2>/dev/null)" "true"
+          echo "--- workers.dev routing ---"
+          SUB=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/subdomain")
+          echo "$SUB" | jq -c '.' 2>/dev/null
+          echo "--- public URL (retrying up to 60s for propagation) ---"
+          CODE=000
+          for t in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            CODE=$(curl -sS -m 15 -o /tmp/info.json -w '%{http_code}' "${SYNC_URL}/" || echo 000)
+            echo "attempt $t: / -> $CODE"
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          check "worker_reachable" "$CODE" "200"
+          head -c 1200 /tmp/info.json 2>/dev/null; echo
+          echo
+          if [ -z "$FAILED" ]; then
+            echo "POST-DEPLOY CHECKS PASSED"
+          else
+            echo "POST-DEPLOY FAILED: ${FAILED#|}"
+            echo "::error title=POST_DEPLOY_FAILED::${FAILED#|}"
+            exit 1
+          fi
+
+      - name: Worker facts (Cloudflare API)
+        if: env.CLOUDFLARE_TOKEN != '' && always()
+        continue-on-error: true
+        run: |
+          set +e
+          exec >> "$REPORT" 2>&1
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
           ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
           echo "=== worker facts ==="
           echo "account_id: ${ACCOUNT:-<unknown>}"
           echo "--- account workers.dev subdomain ---"
           curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/subdomain" | jq -c '.result' || true
           echo "--- scripts in the account ---"
           curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '.result[]?.id' || true
-          echo "--- workers.dev settings for nasr-properties-sync ---"
-          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/subdomain" | jq -c '.' || true
-          echo "--- crons of nasr-properties-sync ---"
-          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/schedules" | jq -c '.' || true
-          echo "--- D1 databases in the account ---"
+          echo "--- raw D1 database list ---"
+          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/d1/database" | head -c 800; echo
           curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/d1/database" | jq -c '.result[]? | {name, uuid}' || true
-          echo "--- http status of the public URL ---"
-          curl -sS -o /dev/null -w "GET %{url_effective} -> %{http_code}\n" "${SYNC_URL}/" || true
           echo
 
       - name: Set SYNC_TOKEN worker secret (optional)
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.SYNC_TOKEN_VALUE != ''
+        if: env.CLOUDFLARE_TOKEN != '' && env.SYNC_TOKEN_VALUE != ''
         run: |
+          set +e
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           echo "$SYNC_TOKEN_VALUE" | npx wrangler secret put SYNC_TOKEN --config _worker/wrangler.sync.toml 2>&1 | tee -a "$REPORT"
 
       - name: Live verification (real D1)
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event.inputs.verification != 'false'
+        if: env.CLOUDFLARE_TOKEN != '' && github.event.inputs.verification != 'false'
         run: |
-          set -u
+          set +e
           exec >> "$REPORT" 2>&1
           FAILED=""
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           AUTH=()
           if [ -n "${SYNC_TOKEN_VALUE:-}" ]; then AUTH=(-H "Authorization: Bearer $SYNC_TOKEN_VALUE"); fi
           q()  { npx wrangler d1 execute nasr-market-db --remote --json --command "$1" 2>/dev/null | jq -c '.result[0].results' 2>/dev/null || echo "query_error"; }
@@ -143,6 +244,14 @@ jobs:
           IQ="'$(echo "$INVALID_IDS" | tr ',' "','")'"
           NQ="'$(echo "$NULL_AREA_IDS" | tr ',' "','")'"
 
+          echo "=== 0) D1 access check ==="
+          D1_PROBE=$(one "SELECT 1")
+          echo "SELECT 1 -> ${D1_PROBE}"
+          if [ "$D1_PROBE" != "1" ]; then
+            echo "::error title=D1_ACCESS::wrangler d1 execute could not read nasr-market-db — the token needs the D1 permission"
+            exit 1
+          fi
+          echo
           echo "--- target: ${SYNC_URL} ---"
           call /tmp/info.json GET "${SYNC_URL}/"
           head -c 2000 /tmp/info.json 2>/dev/null; echo
@@ -176,6 +285,7 @@ jobs:
             [ "$(jq -r '.github.complete // false' "/tmp/run$i.json" 2>/dev/null)" = "true" ] && break
             sleep 63
           done
+          check "final_pass_complete" "$(jq -r '.github.complete // false' "/tmp/run$i.json" 2>/dev/null)" "true"
           echo
           echo "=== 5) idempotency: one more run with no source change ==="
           sleep 63
@@ -233,6 +343,7 @@ jobs:
       - name: Print report to the run log and annotate the summary
         if: always()
         run: |
+          set +e
           cat "$REPORT" || true
           sed ':a;N;$!ba;s/\n/ ~ /g' "$REPORT" | fold -w 700 > /tmp/report-one-line.txt || true
           i=0
@@ -258,7 +369,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -u
+          set +e
           BRANCH="ci/sync-report"
           PATH_IN_REPO="ci/sync-deploy-report.txt"
           SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq .object.sha 2>/dev/null || true)
@@ -282,8 +393,9 @@ jobs:
           fi
 
       - name: Missing credential notice
-        if: env.CLOUDFLARE_API_TOKEN == ''
+        if: env.CLOUDFLARE_TOKEN == ''
         run: |
+          set +e
           {
             echo "CLOUDFLARE_API_TOKEN is not set for this repository."
             echo "Add it under Settings → Secrets and variables → Actions (Workers Scripts: Edit + D1: Edit),"
