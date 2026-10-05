@@ -92,7 +92,9 @@ function makeD1(config = {}) {
 
   const forbidden = (sql) => {
     if (/^\s*(DELETE|DROP|ALTER)\b/i.test(sql)) throw new Error(`FORBIDDEN SQL: ${sql}`);
-    if (/price_snapshots/i.test(sql)) throw new Error(`TOUCHED price_snapshots: ${sql}`);
+    // قراءة COUNT فقط — وبإذن صريح من الاختبار — مسموحة في /verify؛ أي كتابة ممنوعة دائمًا
+    const readOnlySnapshots = config.allowSnapshotReads && /^SELECT COUNT\(\*\) AS n FROM price_snapshots$/.test(sql.trim());
+    if (/price_snapshots/i.test(sql) && !readOnlySnapshots) throw new Error(`TOUCHED price_snapshots: ${sql}`);
   };
 
   function exec(sql, binds) {
@@ -122,6 +124,52 @@ function makeD1(config = {}) {
     }
     if (/^SELECT id, name(, name_ar)?(, name_en)? FROM areas/.test(sql) || /^SELECT id, name/.test(sql)) {
       return { results: state.areas.map((a) => ({ ...a })) };
+    }
+    if (/^SELECT COUNT\(\*\) AS n FROM listings$/.test(sql)) {
+      return { results: [{ n: state.listings.length }] };
+    }
+    if (/^SELECT COUNT\(\*\) AS n FROM areas$/.test(sql)) {
+      return { results: [{ n: state.areas.length }] };
+    }
+    if (/^SELECT COUNT\(\*\) AS n FROM price_snapshots$/.test(sql)) {
+      return { results: [{ n: config.priceSnapshots ?? 17 }] };
+    }
+    if (/^PRAGMA foreign_key_check$/.test(sql)) {
+      return { results: config.foreignKeyIssues ? [{ table: "listings", rowid: 1 }] : [] };
+    }
+    if (/^PRAGMA integrity_check$/.test(sql)) {
+      return { results: [{ integrity_check: config.integrity || "ok" }] };
+    }
+    if ((m = sql.match(/^SELECT COUNT\(\*\) AS n FROM listings WHERE (\w+) = \?(.*)$/))) {
+      const col = m[1];
+      const rest = m[2] || "";
+      let rows = state.listings.filter((r) => String(r[col]) === String(binds[0]));
+      let next = 1;
+      const inMatch = rest.match(/ AND (\w+) IN \(([^)]*)\)/);
+      if (inMatch) {
+        const inCol = inMatch[1];
+        const placeholders = inMatch[2].split(",").length;
+        const ids = binds.slice(next, next + placeholders).map(String);
+        next += placeholders;
+        rows = rows.filter((r) => ids.includes(String(r[inCol])));
+      }
+      const nullMatch = rest.match(/ AND (\w+) IS NULL/);
+      if (nullMatch) {
+        const nullCol = nullMatch[1];
+        rows = rows.filter((r) => r[nullCol] === null || r[nullCol] === undefined);
+      }
+      return { results: [{ n: rows.length }] };
+    }
+    if (/^SELECT (\w+) AS external_id, COUNT\(\*\) AS n FROM listings WHERE \w+ = \? GROUP BY \1 HAVING COUNT\(\*\) > 1 LIMIT 20$/.test(sql)) {
+      const extCol = sql.match(/^SELECT (\w+) AS external_id/)[1];
+      const counts = new Map();
+      for (const r of state.listings) {
+        const key = String(r[extCol]);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      return {
+        results: [...counts.entries()].filter(([, n]) => n > 1).map(([external_id, n]) => ({ external_id, n })),
+      };
     }
     if ((m = sql.match(/^SELECT \* FROM listings WHERE (\w+) = \?/))) {
       const col = m[1];
@@ -253,6 +301,12 @@ const FM_BASE = {
 async function syncViaHttp(env, { method = "POST", query = "" } = {}) {
   const res = await worker.fetch(new Request(`https://sync.test/sync${query}`, { method }), env);
   return { status: res.status, body: await res.json() };
+}
+
+async function getViaHttp(env, pathname) {
+  const res = await worker.fetch(new Request(`https://sync.test${pathname}`, { method: "GET" }), env);
+  const body = await res.json();
+  return { status: res.status, body };
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -1012,4 +1066,57 @@ test("containsToken: الكلمة الكاملة مع الحروف الملتص�
   assert.equal(__test.containsToken(hay, __test.normalizeArabic("الحي الثامن")), true);
   assert.equal(__test.containsToken(hay, __test.normalizeArabic("الحي التاسع")), false);
   assert.equal(__test.containsToken(` ${__test.normalizeArabic("بدروم وبدريسنج")} `, "بدر"), false);
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 37) GET /verify: تقرير قراءة فقط يستخدمه الـCI لتنفيذ checklist D1
+// ───────────────────────────────────────────────────────────────────────────
+test("GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة", async () => {
+  const gh = installGitHubMock([
+    { name: "in-scope.md", content: md({ ...FM_BASE, id: '"in-1"' }) },
+    {
+      name: "no-area.md",
+      content: md({
+        ...FM_BASE,
+        id: '"null-1"',
+        location: '"جمال عفيفي - النادي الأهلي"',
+        title: '"شقة بجوار النادي الأهلي"',
+        description: '"شقة للبيع بدون أي إشارة لمنطقة فرعية"',
+      }),
+    },
+  ]);
+  const db = makeD1({ allowSnapshotReads: true, priceSnapshots: 42 });
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "500" };
+  try {
+    const sync = await syncViaHttp(env);
+    assert.equal(sync.body.db.inserted, 2);
+
+    const sqlBefore = db.state.sqlLog.length;
+    const res = await getViaHttp(env, "/verify?out_of_scope=out-1,out-2&invalid=bad-1&null_area=null-1");
+    assert.equal(res.status, 200);
+    const body = res.body;
+    assert.equal(body.read_only, true);
+    assert.equal(body.source_id, 9);
+    assert.equal(body.counts.listings_total, 2);
+    assert.equal(body.counts.source9_total, 2);
+    assert.equal(body.counts.source9_null_area, 1);
+    assert.equal(body.counts.price_snapshots_total, 42);
+    assert.equal(body.counts.areas_total, AREAS_ROWS.length);
+    assert.equal(body.duplicates.count, 0);
+    assert.equal(body.integrity.integrity_check, "ok");
+    assert.equal(body.integrity.foreign_key_check, 0);
+    assert.equal(body.lists.out_of_scope.checked, 2);
+    assert.equal(body.lists.out_of_scope.present, 0, "الملفات خارج النطاق يجب ألا تكون في listings");
+    assert.equal(body.lists.invalid.present, 0);
+    assert.equal(body.lists.null_area.checked, 1);
+    assert.equal(body.lists.null_area.present, 1, "السطر بلا منطقة واضحة يظل area_id = NULL");
+
+    // لا كتابة إطلاقًا من /verify
+    const writes = db.state.sqlLog
+      .slice(sqlBefore)
+      .filter(({ sql }) => /^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/i.test(sql));
+    assert.equal(writes.length, 0, `verify must stay read-only: ${JSON.stringify(writes)}`);
+  } finally {
+    gh.restore();
+  }
 });

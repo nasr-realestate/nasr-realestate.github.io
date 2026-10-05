@@ -20,6 +20,7 @@ Source of truth for published listings is GitHub (`_properties/*.md`); D1 keeps 
 | --- | --- |
 | `GET /` or `GET /health` | service info + real schema summary + last `ingestion_runs` row |
 | `GET /schema` | the D1 schema as read at runtime + the column mapping |
+| `GET /verify?out_of_scope=&invalid=&null_area=` | read-only D1 report used by CI: total/source-9 row counts, duplicates, per-list presence checks, `PRAGMA foreign_key_check` + `integrity_check`. Runs the same fixed `SELECT`/`PRAGMA` statements through the `DB` binding, never writes, and requires `SYNC_TOKEN` when that binding is set |
 | `GET /` (`scope_policy`) | explains the in-scope rule: Nasr City only, out-of-scope files are never written, most-specific area wins |
 | `GET /sync?dryRun=1` | manual **dry run** (default for GET): parses and reports, writes nothing |
 | `POST /sync` | real run (requires `SYNC_TOKEN` as `Authorization: Bearer …` or `?token=…` when that binding is set; two manual runs inside `SYNC_MIN_INTERVAL_S`, default 60 s, answer `429 throttled` — Cron is never throttled) |

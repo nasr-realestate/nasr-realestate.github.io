@@ -21,6 +21,7 @@
 //   GET  /            → حالة الخدمة + آخر تشغيل
 //   GET  /health      → نفس الشيء (alias)
 //   GET  /schema      → الـschema الفعلي كما قرأه الـWorker + خريطة الأعمدة (قراءة فقط)
+//   GET  /verify?...  → تقرير تحقق قراءة فقط (counts/duplicates/integrity) على D1 الحقيقي
 //   GET  /sync?...    → تشغيل يدوي للتشخيص (dry run افتراضيًا: ?dryRun=1)
 //   POST /sync        → التشغيل الفعلي (يتطلب SYNC_TOKEN إن كان مضبوطًا)
 //
@@ -1084,7 +1085,12 @@ async function serviceInfo(env, request) {
     },
     scheduler: "Cloudflare Cron",
     cron: "17 * * * *",
-    endpoints: { info: "GET /", schema: "GET /schema", manual: "POST /sync (or GET /sync?dryRun=1)" },
+    endpoints: {
+      info: "GET /",
+      schema: "GET /schema",
+      verify: "GET /verify?out_of_scope=&invalid=&null_area= (read-only D1 report)",
+      manual: "POST /sync (or GET /sync?dryRun=1)",
+    },
     read_only_sources: ["price_snapshots", "areas", "other source rows"],
     write_scope: { table: "listings", filter: "source_id = 9", deletes: false },
     scope_policy: {
@@ -1099,6 +1105,120 @@ async function serviceInfo(env, request) {
 }
 
 // تصدير دوال نقية للاختبار فقط — Cloudflare يستخدم default handler فقط.
+// ───────────────────────────────────────────────────────────────────────────
+// تقرير تحقّق قراءة فقط (GET/POST /verify) — بدون أي كتابة إطلاقًا
+// يستخدمه الـCI لتنفيذ checklist التسليم على D1 الحقيقي من خلال نفس الـbinding،
+// فمش محتاج صلاحية D1 على الـAPI token.
+// ───────────────────────────────────────────────────────────────────────────
+const VERIFY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
+
+function parseIdList(raw) {
+  if (!raw) return [];
+  const seen = new Set();
+  const out = [];
+  for (const part of String(raw).split(",")) {
+    const id = part.trim();
+    if (!VERIFY_ID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= 200) break;
+  }
+  return out;
+}
+
+async function scalar(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    const row = (results || [])[0] || {};
+    const value = Object.values(row)[0];
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number") return value;
+    const n = Number(value);
+    return Number.isFinite(n) && String(value).trim() !== "" ? n : value;
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function manyRows(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    return results || [];
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [] } = {}) {
+  const db = env.DB;
+  const listingsTable = envIdent(env.LISTINGS_TABLE, "listings");
+  const schema = await readSchemaReport(db, env);
+  const map = schema.mapping || {};
+  const sourceCol = map.sourceId;
+  const externalCol = map.externalId;
+  const areaCol = map.areaId;
+
+  const inList = async (ids, extra = "") => {
+    if (!externalCol || !sourceCol || !ids.length) return { checked: ids.length, present: 0 };
+    const ph = ids.map(() => "?").join(",");
+    const n = await scalar(
+      db,
+      `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph})${extra}`,
+      [SOURCE_ID, ...ids]
+    );
+    return { checked: ids.length, present: n };
+  };
+
+  const counts = {
+    listings_total: await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable}`),
+    source9_total: sourceCol ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ?`, [SOURCE_ID]) : null,
+    source9_null_area: sourceCol && areaCol
+      ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${areaCol} IS NULL`, [SOURCE_ID])
+      : null,
+    areas_total: await scalar(db, "SELECT COUNT(*) AS n FROM areas"),
+    price_snapshots_total: await scalar(db, "SELECT COUNT(*) AS n FROM price_snapshots"),
+  };
+
+  const dupRows = externalCol && sourceCol
+    ? await manyRows(
+        db,
+        `SELECT ${externalCol} AS external_id, COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? GROUP BY ${externalCol} HAVING COUNT(*) > 1 LIMIT 20`,
+        [SOURCE_ID]
+      )
+    : [];
+
+  const fkRows = await manyRows(db, "PRAGMA foreign_key_check");
+  const integrity = await scalar(db, "PRAGMA integrity_check");
+
+  return {
+    service: SERVICE_NAME,
+    version: WORKER_VERSION,
+    source_id: SOURCE_ID,
+    source_name: SOURCE_NAME,
+    checked_at: new Date().toISOString(),
+    read_only: true,
+    listings_table: listingsTable,
+    mapping: { sourceId: sourceCol, externalId: externalCol, areaId: areaCol },
+    counts,
+    duplicates: {
+      count: Array.isArray(dupRows) ? dupRows.length : null,
+      sample: dupRows,
+    },
+    lists: {
+      out_of_scope: await inList(outOfScopeIds),
+      invalid: await inList(invalidIds),
+      null_area: await inList(nullAreaIds, areaCol ? ` AND ${areaCol} IS NULL` : ""),
+      null_area_checked: Boolean(areaCol),
+    },
+    integrity: {
+      foreign_key_check: Array.isArray(fkRows) ? fkRows.length : fkRows,
+      integrity_check: integrity,
+    },
+  };
+}
+
 export const __test = {
   parseFrontMatter,
   buildRecord,
@@ -1146,6 +1266,21 @@ export default {
         return json(await readSchemaReport(env.DB, env), 200, cors);
       }
 
+      // تقرير تحقق قراءة فقط — يُنفَّذ على D1 الحقيقي بدون أي كتابة (بديل مستقل عن صلاحية D1 API)
+      if ((request.method === "GET" || request.method === "POST") && url.pathname === "/verify") {
+        if (!authorized) return json({ error: "unauthorized" }, 401, cors);
+        if (!env.DB) return json({ error: "missing_DB_binding" }, 500, cors);
+        return json(
+          await verificationReport(env, {
+            outOfScopeIds: parseIdList(url.searchParams.get("out_of_scope")),
+            invalidIds: parseIdList(url.searchParams.get("invalid")),
+            nullAreaIds: parseIdList(url.searchParams.get("null_area")),
+          }),
+          200,
+          cors
+        );
+      }
+
       if (url.pathname === "/sync") {
         if (!authorized) return json({ error: "unauthorized" }, 401, cors);
         const dryRun = request.method === "GET"
@@ -1158,7 +1293,7 @@ export default {
         return json(result, status, cors);
       }
 
-      return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "POST /sync"] }, 404, cors);
+      return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "GET /verify", "POST /sync"] }, 404, cors);
     } catch (err) {
       return json({ error: "internal_error", message: String(err.message || err).slice(0, 300) }, 500, cors);
     }
