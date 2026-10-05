@@ -28,7 +28,7 @@
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.1";
+const WORKER_VERSION = "v1.0.2";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -620,7 +620,7 @@ async function loadAreaIndex(db) {
 // ───────────────────────────────────────────────────────────────────────────
 // Upsert (source_id = 9 فقط)
 // ───────────────────────────────────────────────────────────────────────────
-function pickRowValues(record, mapping, existingRow) {
+function pickRowValues(record, mapping, existingRow, clearUnmatchedArea = true) {
   const values = {};
   const set = (field, value) => {
     const col = mapping[field];
@@ -638,6 +638,11 @@ function pickRowValues(record, mapping, existingRow) {
   set("currency", record.currency);
   set("areaM2", record.areaM2);
   if (record.areaId !== null) set("areaId", record.areaId);
+  // R1: ملف داخل النطاق بلا مطابقة منطقة واضحة ⇒ area_id يجب أن يكون NULL،
+  // حتى لو كان في D1 صف قديم بقيمة افتراضية (مدينة نصر) من استيراد سابق — بدون أي تخمين.
+  else if (existingRow && clearUnmatchedArea && mapping.areaId && existingRow[mapping.areaId] !== null && existingRow[mapping.areaId] !== undefined) {
+    values[mapping.areaId] = null;
+  }
   set("rooms", record.rooms);
   set("bathrooms", record.bathrooms);
   set("floor", record.floor);
@@ -662,6 +667,11 @@ function isSameAsExisting(values, existingRow, mapping) {
   for (const [col, value] of Object.entries(values)) {
     if (col === mapping.updatedAt) continue; // updated_at يتغير مع أي write حقيقي
     const current = existingRow[col];
+    if (value === null) {
+      // تصفير قصدًا (مثل area_id عند غياب مطابقة) — ليس "لا تغيير"
+      if (current === null || current === undefined) continue;
+      return false;
+    }
     if (current === null || current === undefined) {
       if (String(value) !== "") return false;
       continue;
@@ -675,8 +685,8 @@ function isSameAsExisting(values, existingRow, mapping) {
   return true;
 }
 
-async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash) {
-  const values = pickRowValues(record, mapping, existingRow);
+async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash, clearUnmatchedArea = true) {
+  const values = pickRowValues(record, mapping, existingRow, clearUnmatchedArea);
   if (mapping.contentHash) values[mapping.contentHash] = contentHash;
   const base = isSameAsExisting(values, existingRow, mapping);
 
@@ -692,13 +702,17 @@ async function upsertListing(db, listingsTable, mapping, record, existingRow, co
 
   if (base) return { action: "unchanged", changes: 0, values };
 
+
   const cols = Object.keys(values);
   const sql = `UPDATE ${listingsTable} SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`;
   const res = await db
     .prepare(sql)
     .bind(...cols.map((c) => values[c]), existingRow.id)
     .run();
-  return { action: "updated", changes: res?.meta?.changes ?? null, values };
+  const cleared = mapping.areaId && values[mapping.areaId] === null && existingRow[mapping.areaId] != null
+    ? existingRow[mapping.areaId]
+    : null;
+  return { action: "updated", changes: res?.meta?.changes ?? null, values, area_cleared: cleared !== null, area_cleared_from: cleared };
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -769,6 +783,7 @@ async function runSync(env, opts = {}) {
   const dryRun = Boolean(opts.dryRun);
   const trigger = opts.trigger || "manual";
   const budget = Number(env.SYNC_FETCH_BUDGET) > 0 ? Number(env.SYNC_FETCH_BUDGET) : DEFAULT_FETCH_BUDGET;
+  const clearUnmatchedArea = String(env.SYNC_CLEAR_UNMATCHED_AREA ?? "1") !== "0";
   const db = env.DB;
 
   const summary = {
@@ -788,9 +803,10 @@ async function runSync(env, opts = {}) {
       complete: true, truncated: false,
     },
     db: {
-      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0,
+      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0, area_cleared: 0,
       invalid: 0, out_of_scope: 0, duplicates: 0, write_failures: 0, writes_blocked: false,
     },
+    area_cleared: [],
     invalid_files: [],
     out_of_scope_files: [],
     duplicate_files: [],
@@ -972,7 +988,11 @@ async function runSync(env, opts = {}) {
 
       let result = null;
       try {
-        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash);
+        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash, clearUnmatchedArea);
+        if (result.area_cleared) {
+          summary.db.area_cleared = (summary.db.area_cleared || 0) + 1;
+          summary.area_cleared.push({ file: f.path, was: result.area_cleared_from });
+        }
       } catch (err) {
         // فشل سطر واحد (مثلاً NOT NULL في عمود خارج الخريطة) لا يوقف بقية الملفات،
         // ولا تُكتب حالة الملف ⇒ يعاد المحاولة في التشغيل التالي بعد إصلاح السبب.
@@ -1085,6 +1105,7 @@ async function serviceInfo(env, request) {
     },
     scheduler: "Cloudflare Cron",
     cron: "17 * * * *",
+    cache_policy: { clear_unmatched_area: true },
     endpoints: {
       info: "GET /",
       schema: "GET /schema",
@@ -1189,6 +1210,19 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
       )
     : [];
 
+  const stateTable = envIdent(env.STATE_TABLE, STATE_TABLE);
+  const stateRows = await manyRows(db, `SELECT external_id, file_path FROM ${stateTable} WHERE ${sourceCol ? "source_id" : "source_id"} = ?`, [SOURCE_ID]);
+  const stateList = Array.isArray(stateRows) ? stateRows : [];
+  const stateInfo = {
+    rows: stateList.length,
+    files_tracked: stateList.filter((r) => r.external_id !== RUN_MARKER).length,
+    in_scope: stateList.filter((r) => !String(r.external_id || "").startsWith(INVALID_MARK) && !String(r.external_id || "").startsWith(OOS_MARK) && r.external_id !== RUN_MARKER).length,
+    invalid: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).length,
+    out_of_scope: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).length,
+    invalid_files: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).map((r) => r.file_path).sort(),
+    out_of_scope_files: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).map((r) => r.file_path).sort(),
+  };
+
   const fkRows = await manyRows(db, "PRAGMA foreign_key_check");
   const integrity = await scalar(db, "PRAGMA integrity_check");
   // quick_check أقل تقييدًا من D1؛ لو مسموح فهو بديل مفيد (integrity_check ممنوع في D1)
@@ -1230,6 +1264,7 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
       null_area: await inList(nullAreaIds, areaCol ? ` AND ${areaCol} IS NULL` : ""),
       null_area_checked: Boolean(areaCol),
     },
+    state: stateInfo,
     preexisting_rows: {
       out_of_scope: await rowsFor(outOfScopeIds, "out_of_scope"),
       invalid: await rowsFor(invalidIds, "invalid"),

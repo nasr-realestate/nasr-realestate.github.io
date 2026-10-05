@@ -272,9 +272,20 @@ jobs:
           fi
           echo
           echo "=== 3) dry run (GET /sync?dryRun=1) — must not write anything ==="
-          call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
-          jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete}' /tmp/dryrun.json 2>/dev/null || head -c 1200 /tmp/dryrun.json
+          dn=0
+          while [ "$dn" -lt 6 ]; do
+            dn=$((dn+1))
+            call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
+            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
+            DERR="$(vget '.errors[0] // ""' /tmp/dryrun.json)"
+            case "$DERR" in
+              github_tree_failed*|*rate\ limit*) echo "  GitHub tree API rate limit — retrying in 120s"; sleep 120; continue;;
+            esac
+            [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "98" ] && break
+            sleep 60
+          done
           check "dryrun_flag" "$(vget '.dry_run' /tmp/dryrun.json)" "true"
+          check "dryrun_read_the_tree" "$(vget '.github.files_total' /tmp/dryrun.json)" "98"
           # في الـdry run العدادات تُظهر ما كان *سيحدث* — والدليل الحقيقي هو أن D1 لم تتغير
           report /tmp/verify_after_dry.json
           check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
@@ -308,27 +319,24 @@ jobs:
           LAST="/tmp/ok$ok.json"
           check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
           echo
-          echo "--- cumulative classification across the runs (each file is classified exactly once) ---"
-          SUM_INS=$(jq -s 'map(.db.inserted // 0) | add' /tmp/ok*.json)
-          SUM_UPD=$(jq -s 'map(.db.updated // 0) | add' /tmp/ok*.json)
-          SUM_UNCH=$(jq -s 'map(.db.unchanged // 0) | add' /tmp/ok*.json)
-          SUM_OOS=$(jq -s 'map(.db.out_of_scope // 0) | add' /tmp/ok*.json)
-          SUM_INV=$(jq -s 'map(.db.invalid // 0) | add' /tmp/ok*.json)
-          echo "inserted=${SUM_INS} updated=${SUM_UPD} unchanged=${SUM_UNCH} out_of_scope=${SUM_OOS} invalid=${SUM_INV}"
-          check "cumulative_in_scope_processed" "$([ ${SUM_INS:-0} + ${SUM_UPD:-0} + ${SUM_UNCH:-0} -ge 78 ] && echo true)" "true"
-          check "cumulative_out_of_scope_seen"  "$([ ${SUM_OOS:-0} -ge 12 ] && echo true)" "true"
-          check "cumulative_invalid_seen"       "$([ ${SUM_INV:-0} -ge 8 ] && echo true)" "true"
-          jq -r '.out_of_scope_files[]?.file' /tmp/ok*.json 2>/dev/null | sort -u > /tmp/oos_seen.txt
-          jq -r '.invalid_files[]?.file' /tmp/ok*.json 2>/dev/null | sort -u > /tmp/inv_seen.txt
+          echo "--- classification recorded in properties_sync_state (durable, across all runs) ---"
+          report /tmp/verify_state.json
+          jq -c '.state' /tmp/verify_state.json 2>/dev/null
+          echo "state: $(vget '.state.files_tracked' /tmp/verify_state.json) files tracked · in-scope $(vget '.state.in_scope' /tmp/verify_state.json) · out-of-scope $(vget '.state.out_of_scope' /tmp/verify_state.json) · invalid $(vget '.state.invalid' /tmp/verify_state.json)"
+          check "state_in_scope_78"     "$(vget '.state.in_scope' /tmp/verify_state.json)" "78"
+          check "state_out_of_scope_12" "$(vget '.state.out_of_scope' /tmp/verify_state.json)" "12"
+          check "state_invalid_8"       "$(vget '.state.invalid' /tmp/verify_state.json)" "8"
+          jq -r '.state.out_of_scope_files[]?' /tmp/verify_state.json | sort -u > /tmp/oos_seen.txt
+          jq -r '.state.invalid_files[]?'      /tmp/verify_state.json | sort -u > /tmp/inv_seen.txt
           echo "out-of-scope files logged ($(wc -l < /tmp/oos_seen.txt)):"; cat /tmp/oos_seen.txt
           echo "invalid files logged ($(wc -l < /tmp/inv_seen.txt)):"; cat /tmp/inv_seen.txt
           printf '%s\n' "$LQ" > /tmp/oos_expected.txt
           printf '%s\n' "$IQ" > /tmp/inv_expected.txt
           check "out_of_scope_files_list" "$(comm -3 /tmp/oos_expected.txt /tmp/oos_seen.txt | wc -l)" "0"
           check "invalid_files_list" "$(comm -3 /tmp/inv_expected.txt /tmp/inv_seen.txt | wc -l)" "0"
-          echo "--- reasons sample ---"
-          jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/ok*.json 2>/dev/null | sort -u | head -14
-          jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/ok*.json 2>/dev/null | sort -u | head -10
+          echo "--- reasons sample (from the runs of this job) ---"
+          jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/attempt*.json 2>/dev/null | sort -u | head -14
+          jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/attempt*.json 2>/dev/null | sort -u | head -10
           echo
           echo "=== 5) idempotency: one more run with no source change ==="
           sleep 63
@@ -361,6 +369,8 @@ jobs:
           echo "out-of-scope ids already present in D1 before: $(vget '.lists.out_of_scope.present' /tmp/verify_before.json) (absent: $((12 - $(vget '.lists.out_of_scope.present' /tmp/verify_before.json))))"
           echo "invalid ids already present in D1 before:      $(vget '.lists.invalid.present' /tmp/verify_before.json) (absent: $((8 - $(vget '.lists.invalid.present' /tmp/verify_before.json))))"
           echo "source-9 rows without an area before/after:    ${B_ZERO} -> ${A_ZERO}"
+          echo "legacy area_id values cleared by the R1 rule: $(jq -s 'map(.db.area_cleared // 0) | add' /tmp/attempt*.json)"
+          check "null_area_preserved_final" "$(vget '.counts.source9_null_area' /tmp/verify_after.json)" "5"
           check "out_of_scope_rows_untouched" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_after.json)"
           check "invalid_rows_untouched"      "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_after.json)"
           echo

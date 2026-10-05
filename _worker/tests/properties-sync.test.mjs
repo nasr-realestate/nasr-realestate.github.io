@@ -119,6 +119,9 @@ function makeD1(config = {}) {
       state.createdTables.push("properties_sync_state");
       return { results: [], meta: { changes: 0 } };
     }
+    if (/^SELECT external_id, file_path FROM properties_sync_state WHERE source_id = \?/.test(sql)) {
+      return { results: [...state.syncState.values()].map((v) => ({ external_id: v.external_id, file_path: v.file_path })) };
+    }
     if (/^SELECT external_id, file_path, blob_sha, content_hash FROM properties_sync_state/.test(sql)) {
       return { results: [...state.syncState.values()].map((v) => ({ ...v })) };
     }
@@ -1105,6 +1108,11 @@ test("GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) ب
     assert.equal(body.duplicates.count, 0);
     assert.equal(body.integrity.integrity_check, "ok");
     assert.equal(body.integrity.foreign_key_check, 0);
+    assert.equal(body.state.rows, 3, "صفّا الملفين + صف علامة آخر تشغيل");
+    assert.equal(body.state.files_tracked, 2, "الملفات المتتبَّعة في جدول الحالة");
+    assert.equal(body.state.in_scope, 2);
+    assert.equal(body.state.invalid, 0);
+    assert.equal(body.state.out_of_scope, 0);
     assert.equal(body.lists.out_of_scope.checked, 2);
     assert.equal(body.lists.out_of_scope.present, 0, "الملفات خارج النطاق يجب ألا تكون في listings");
     assert.equal(body.lists.invalid.present, 0);
@@ -1116,6 +1124,56 @@ test("GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) ب
       .slice(sqlBefore)
       .filter(({ sql }) => /^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/i.test(sql));
     assert.equal(writes.length, 0, `verify must stay read-only: ${JSON.stringify(writes)}`);
+  } finally {
+    gh.restore();
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 38) R1: صف قديم بقيمة افتراضية (مدينة نصر) يُصفَّر إلى NULL لملف بلا مطابقة واضحة
+// ───────────────────────────────────────────────────────────────────────────
+test("R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة", async () => {
+  const gh = installGitHubMock([
+    {
+      name: "no-area.md",
+      content: md({
+        ...FM_BASE,
+        id: '"null-1"',
+        location: '"جمال عفيفي - النادي الأهلي"',
+        title: '"شقة بجوار النادي الأهلي"',
+        description: '"شقة للبيع بدون أي إشارة لمنطقة فرعية"',
+      }),
+    },
+  ]);
+  const db = makeD1({
+    listings: [
+      {
+        id: 7, external_id: "null-1", source_id: 9, area_id: 1, price: 3700000, area_m2: 180,
+        transaction_type: "sale", property_type: "apartment", title: "استيراد قديم",
+      },
+    ],
+  });
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "500" };
+  try {
+    const res = await syncViaHttp(env);
+    assert.equal(res.body.db.inserted, 0, "السطر موجود مسبقًا ⇒ تحديث وليس إدخالًا");
+    assert.equal(res.body.db.area_cleared, 1, "لازم يُبلَّغ عن تصفير area_id");
+    assert.equal(res.body.db.duplicates, 0);
+    const row = db.state.listings.find((r) => r.external_id === "null-1");
+    assert.equal(row.area_id, null, "area_id ممنوع يفضل 1 (مدينة نصر) بدون مطابقة واضحة");
+    assert.equal(db.state.listings.length, 1, "بدون أي سطر جديد");
+
+    // تعطيل التصفير صراحةً يعيد السلوك القديم (بدون أي كتابة)
+    const db2 = makeD1({
+      listings: [
+        { id: 7, external_id: "null-1", source_id: 9, area_id: 1, price: 3700000, area_m2: 180,
+          transaction_type: "sale", property_type: "apartment", title: "استيراد قديم" },
+      ],
+    });
+    const env2 = { DB: db2, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "500", SYNC_CLEAR_UNMATCHED_AREA: "0" };
+    const res2 = await syncViaHttp(env2);
+    assert.equal(res2.body.db.area_cleared, 0);
+    assert.equal(db2.state.listings[0].area_id, 1);
   } finally {
     gh.restore();
   }
