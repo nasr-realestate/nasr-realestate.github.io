@@ -359,7 +359,7 @@ jobs:
           echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
           echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/78 present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
           check "in_scope_78_present"       "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "78/78"
-          check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "5"
+          check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "$B_ZERO"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
           check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
           check "no_rows_deleted"           "$([ "${A_TOT:-0}" -ge "${B_TOT:-0}" ] && echo true)" "true"
@@ -372,7 +372,7 @@ jobs:
           echo "invalid ids already present in D1 before:      $(vget '.lists.invalid.present' /tmp/verify_before.json) (absent: $((8 - $(vget '.lists.invalid.present' /tmp/verify_before.json))))"
           echo "source-9 rows without an area before/after:    ${B_ZERO} -> ${A_ZERO}"
           echo "legacy area_id values cleared by the R1 rule: $(jq -s 'map(.db.area_cleared // 0) | add' /tmp/attempt*.json)"
-          check "null_area_preserved_final" "$(vget '.counts.source9_null_area' /tmp/verify_after.json)" "5"
+          check "null_area_preserved_final" "$A_ZERO" "$B_ZERO"
           check "out_of_scope_rows_untouched" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_after.json)"
           check "invalid_rows_untouched"      "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_after.json)"
           echo
