@@ -1,0 +1,36 @@
+# ⚠️ ملف مؤقّت (جلسة Arena): يبني الموقع بـJekyll ويرفع _site كـartifact
+# عشان نتأكد من الإصلاح قبل الدمج — بيتشال من الفرع قبل الدمج/النشر.
+name: Arena preview build (temporary)
+
+on:
+  push:
+    branches:
+      - arena/f904aa87-nasr-realestate-github-io
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+
+      - name: Build with Jekyll
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: Upload built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview
+          path: _site
+          retention-days: 1
