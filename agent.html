@@ -740,12 +740,12 @@ extra_scripts: |
     <div class="toast" id="toast"></div>
 
     <div class="input-glass">
-      <button class="input-icon-btn" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
+      <button class="input-icon-btn" type="button" onmousedown="event.preventDefault()" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
         <i class="fas fa-plus"></i>
       </button>
       <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(event)">
       <input type="text" class="input-field" id="msgInput" placeholder="رسالة..." autocomplete="off" inputmode="text">
-      <button class="send-btn-glass" id="sendBtn" onclick="sendMsg()" aria-label="إرسال">
+      <button class="send-btn-glass" id="sendBtn" type="button" onmousedown="event.preventDefault()" onclick="sendMsg()" aria-label="إرسال">
         <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
       </button>
     </div>
@@ -1181,6 +1181,19 @@ function forceScrollToBottom() {
     scrollBtn.classList.remove("show");
   });
 }
+// ⭐ نزول متعدد المحاولات — يعالج الـreflow المتأخر بعد الرسم (خصوصًا لما الكيبورد مفتوح)
+function forceScrollToBottomWithRetries() {
+  stickToBottom = true;
+  const go = () => {
+    if (!chatArea) return;
+    chatArea.scrollTop = chatArea.scrollHeight;
+    scrollBtn.classList.remove("show");
+  };
+  requestAnimationFrame(go);
+  setTimeout(go, 60);
+  setTimeout(go, 200);
+  setTimeout(go, 400);
+}
 function setTyping(on, customText) {
   if (on) { statusText.textContent = customText || "يكتب..."; statusLine.classList.add("typing"); }
   else { statusText.textContent = STATUS_ONLINE; statusLine.classList.remove("typing"); }
@@ -1218,8 +1231,14 @@ function renderMsg(text, type = "bot", images) {
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
   div.innerHTML = html;
   chatArea.insertBefore(div, typingBubble);
-  // رسالة المستخدم نفسه دايمًا تظهر؛ ردود البوت بتنزّل بس لو القارئ قريب من الآخر
-  if (type === "user") forceScrollToBottom(); else scrollToBottom();
+  // ⭐ المستخدم: نزول فوري. البوت: لو الكيبورد مفتوح → نزول بالقوة (زي واتساب)، وإلا السلوك الذكي القديم
+  if (type === "user") {
+    forceScrollToBottom();
+  } else {
+    const keyboardOpen = document.documentElement.classList.contains("vv-keyboard");
+    if (keyboardOpen || stickToBottom) forceScrollToBottomWithRetries();
+    else scrollToBottom();
+  }
 }
 
 function renderButtons(opts) {
@@ -1542,8 +1561,13 @@ async function sendMsg() {
   } finally {
     isSending = false;
     sendBtn.disabled = false;
-    // على اللمس ما نفتحش الكيبورد تاني بعد ضغطة زرار (كان بيزقّ الشاشة)؛ الكتابة العادية بتفضل زي ما هي
-    if (!(IS_TOUCH && quick)) msgInput.focus({ preventScroll: true });
+    // ⭐ لو الكيبورد أصلاً مفتوح، نحافظ على التركيز (زي واتساب) — مش نفتحه من الصفر
+    const keyboardOpen = document.documentElement.classList.contains("vv-keyboard");
+    if (keyboardOpen || !(IS_TOUCH && quick)) {
+      msgInput.focus({ preventScroll: true });
+    }
+    // ⭐ تأكيد نهائي إن الرد/الرسالة ظاهرين فوق الكيبورد
+    forceScrollToBottomWithRetries();
   }
 }
 
@@ -1672,6 +1696,8 @@ function deleteChat() {
 // ═══ SCROLL BTN ═══
 // بيحدّث «وضع القارئ» (قريب من آخر المحادثة ولا لأ) وبيظهر/يخفي زر «للأسفل» على أساسه
 chatArea.addEventListener("scroll", () => {
+  // ⭐ أثناء فتح/قفل الكيبورد، الـreflow بيطلق scroll وهمي — نتجاهله عشان ما نقلبش stickToBottom غلط
+  if (window.__vpTransitioning && window.__vpTransitioning()) return;
   stickToBottom = distanceFromBottom() < NEAR_BOTTOM_PX;
   scrollBtn.classList.toggle("show", !stickToBottom);
 }, { passive: true });
@@ -1686,9 +1712,20 @@ chatArea.addEventListener("scroll", () => {
   if (!vv) return;
   const root = document.documentElement;
   let raf = 0;
+  // ⭐ علَم "الانتقال الحالي" — بيمنع scroll handler من قلب stickToBottom أثناء الـreflow
+  let _vpTransitioning = false;
+  let _vpTransitionTimer = 0;
+  window.__vpTransitioning = () => _vpTransitioning;
+  function markVpTransition() {
+    _vpTransitioning = true;
+    clearTimeout(_vpTransitionTimer);
+    _vpTransitionTimer = setTimeout(() => { _vpTransitioning = false; }, 420);
+  }
 
   function apply() {
     raf = 0;
+    // ⭐ نحفظ حالة "القارئ مع القاع" قبل أي تعديل
+    const wasSticky = stickToBottom;
     const hidden = Math.round(window.innerHeight - vv.height); // الجزء المغطّى (الكيبورد غالبًا)
     const active = !(vv.scale > 1.01) && hidden >= 80;
     if (active) {
@@ -1701,13 +1738,16 @@ chatArea.addEventListener("scroll", () => {
       root.style.removeProperty("--vv-h");
       root.style.removeProperty("--vv-tf");
     }
-    if (stickToBottom) forceScrollToBottom();
+    // ⭐ نرجّع stickToBottom لحالتها لو كانت true — التقلّب كان بيحصل بسبب reflow مش تمرير حقيقي
+    if (wasSticky) stickToBottom = true;
+    if (stickToBottom) forceScrollToBottomWithRetries();
   }
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
+  const scheduleWithFlag = () => { markVpTransition(); schedule(); };
 
-  vv.addEventListener("resize", schedule);
-  vv.addEventListener("scroll", schedule);
-  msgInput.addEventListener("blur", () => setTimeout(schedule, 150)); // iOS مش دايمًا بيبعت resize عند قفل الكيبورد
+  vv.addEventListener("resize", scheduleWithFlag);
+  vv.addEventListener("scroll", scheduleWithFlag);
+  msgInput.addEventListener("blur", () => setTimeout(scheduleWithFlag, 150)); // iOS مش دايمًا بيبعت resize عند قفل الكيبورد
 })();
 
 // ═══ INPUT HANDLERS ═══
