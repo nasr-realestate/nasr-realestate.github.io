@@ -1,210 +1,210 @@
 === Properties Sync Worker — deploy + verify ===
-ref:      arena/7f9b48da-nasr-realestate-github-io
-commit:   62729daff9db2cfde4b1129d561070d7c65e0572
-run:      37458158722
-when:     2026-10-06T11:42:22Z
+ref:      master
+commit:   7d09e459d89425ee4d907700b27ea40b4013ac7b
+run:      37459940870
+when:     2026-10-06T11:58:48Z
 credential: PRESENT
 
 TAP version 13
 # Subtest: parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
 ok 1 - parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
   ---
-  duration_ms: 2.015152
+  duration_ms: 1.99382
   ...
 # Subtest: toNumber: أرقام عربية/فواصل/نصوص
 ok 2 - toNumber: أرقام عربية/فواصل/نصوص
   ---
-  duration_ms: 0.332143
+  duration_ms: 0.327866
   ...
 # Subtest: تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
 ok 3 - تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
   ---
-  duration_ms: 3.398427
+  duration_ms: 3.248915
   ...
 # Subtest: تصنيف نوع العقار من category
 ok 4 - تصنيف نوع العقار من category
   ---
-  duration_ms: 0.177793
+  duration_ms: 0.212048
   ...
 # Subtest: مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
 ok 5 - مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
   ---
-  duration_ms: 0.888106
+  duration_ms: 0.876775
   ...
 # Subtest: الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
 ok 6 - الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
   ---
-  duration_ms: 169.84221
+  duration_ms: 158.196958
   ...
 # Subtest: التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
 ok 7 - التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
   ---
-  duration_ms: 49.09205
+  duration_ms: 43.920318
   ...
 # Subtest: تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
 ok 8 - تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
   ---
-  duration_ms: 18.654258
+  duration_ms: 10.119344
   ...
 # Subtest: ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
 ok 9 - ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
   ---
-  duration_ms: 10.092736
+  duration_ms: 8.090879
   ...
 # Subtest: ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
 ok 10 - ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
   ---
-  duration_ms: 6.559919
+  duration_ms: 4.61626
   ...
 # Subtest: لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
 ok 11 - لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
   ---
-  duration_ms: 6.969228
+  duration_ms: 4.772874
   ...
 # Subtest: ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
 ok 12 - ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
   ---
-  duration_ms: 9.828721
+  duration_ms: 9.867773
   ...
 # Subtest: schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
 ok 13 - schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
   ---
-  duration_ms: 1.26832
+  duration_ms: 1.395507
   ...
 # Subtest: schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
 ok 14 - schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
   ---
-  duration_ms: 4.344702
+  duration_ms: 4.113878
   ...
 # Subtest: GET /sync افتراضيًا dry run: لا يكتب أي شيء
 ok 15 - GET /sync افتراضيًا dry run: لا يكتب أي شيء
   ---
-  duration_ms: 6.794095
+  duration_ms: 5.356499
   ...
 # Subtest: SYNC_TOKEN: يحمي التشغيل اليدوي
 ok 16 - SYNC_TOKEN: يحمي التشغيل اليدوي
   ---
-  duration_ms: 3.390812
+  duration_ms: 3.275726
   ...
 # Subtest: budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
 ok 17 - budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
   ---
-  duration_ms: 22.61394
+  duration_ms: 18.280105
   ...
 # Subtest: scheduled: يشغّل المزامنة عبر ctx.waitUntil
 ok 18 - scheduled: يشغّل المزامنة عبر ctx.waitUntil
   ---
-  duration_ms: 3.750046
+  duration_ms: 3.046545
   ...
 # Subtest: GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
 ok 19 - GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
   ---
-  duration_ms: 2.352304
+  duration_ms: 1.788916
   ...
 # Subtest: wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
 ok 20 - wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
   ---
-  duration_ms: 0.422152
+  duration_ms: 0.46911
   ...
 # Subtest: الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
 ok 21 - الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
   ---
-  duration_ms: 2.954874
+  duration_ms: 1.427748
   ...
 # Subtest: budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
 ok 22 - budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
   ---
-  duration_ms: 22.734566
+  duration_ms: 14.346695
   ...
 # Subtest: تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
 ok 23 - تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
   ---
-  duration_ms: 7.134857
+  duration_ms: 6.896708
   ...
 # Subtest: throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
 ok 24 - throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
   ---
-  duration_ms: 7.065487
+  duration_ms: 6.267097
   ...
 # Subtest: فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
 ok 25 - فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
   ---
-  duration_ms: 9.944979
+  duration_ms: 10.289965
   ...
 # Subtest: إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
 ok 26 - إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
   ---
-  duration_ms: 1.3218
+  duration_ms: 1.462204
   ...
 # Subtest: تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
 ok 27 - تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
   ---
-  duration_ms: 267.477434
+  duration_ms: 228.555106
   ...
 # Subtest: R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
 ok 28 - R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
   ---
-  duration_ms: 2.93166
+  duration_ms: 3.113822
   ...
 # Subtest: R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
 ok 29 - R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
   ---
-  duration_ms: 5.706737
+  duration_ms: 6.312513
   ...
 # Subtest: R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
 ok 30 - R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
   ---
-  duration_ms: 2.117223
+  duration_ms: 1.996696
   ...
 # Subtest: scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
 ok 31 - scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
   ---
-  duration_ms: 4.912427
+  duration_ms: 4.874054
   ...
 # Subtest: R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
 ok 32 - R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
   ---
-  duration_ms: 1.856804
+  duration_ms: 2.267734
   ...
 # Subtest: R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
 ok 33 - R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
   ---
-  duration_ms: 3.830247
+  duration_ms: 3.350846
   ...
 # Subtest: R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
 ok 34 - R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
   ---
-  duration_ms: 0.14933
+  duration_ms: 0.137387
   ...
 # Subtest: R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص الـ98 ملفًا)
 ok 35 - R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص الـ98 ملفًا)
   ---
-  duration_ms: 217.148075
+  duration_ms: 150.219875
   ...
 # Subtest: containsToken: الكلمة الكاملة مع الحروف الملتصقة
 ok 36 - containsToken: الكلمة الكاملة مع الحروف الملتصقة
   ---
-  duration_ms: 0.311113
+  duration_ms: 0.225183
   ...
 # Subtest: GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
 ok 37 - GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
   ---
-  duration_ms: 12.467873
+  duration_ms: 12.716468
   ...
 # Subtest: R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
 ok 38 - R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
   ---
-  duration_ms: 8.599615
+  duration_ms: 4.433928
   ...
 # Subtest: نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
 ok 39 - نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
   ---
-  duration_ms: 3.877325
+  duration_ms: 2.846049
   ...
 # Subtest: budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
 ok 40 - budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
   ---
-  duration_ms: 14.397544
+  duration_ms: 10.709852
   ...
 1..40
 # tests 40
@@ -214,7 +214,7 @@ ok 40 - budget: إعادة المعالجة تستمر عبر التشغيلات
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 988.547286
+# duration_ms 820.493501
 === preflight ===
 token verify (/user/tokens/verify): {"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}
 accounts lookup: {"success":true,"errors":[],"accounts":[{"id":"717c46b0d78a6f06589b8367a1a3cc5b","name":"Footcai.555@gmail.com's Account"}]}
@@ -248,11 +248,11 @@ Your Worker has access to the following bindings:
 Binding                      Resource         
 env.DB (nasr-market-db)      D1 Database      
 
-Uploaded nasr-properties-sync (3.52 sec)
-Deployed nasr-properties-sync triggers (1.04 sec)
+Uploaded nasr-properties-sync (1.99 sec)
+Deployed nasr-properties-sync triggers (0.45 sec)
   https://nasr-properties-sync.footcai-555.workers.dev
   schedule: 17 * * * *
-Current Version ID: 21a1e2d7-59a8-4b62-82c9-21bad17865f1
+Current Version ID: 426683d1-0ef3-4b4c-948b-c72d25d4e748
 wrangler deploy exit code: 0
 deployed URL from wrangler: https://nasr-properties-sync.footcai-555.workers.dev
 account: 717c46b0d78a6f06589b8367a1a3cc5b
@@ -262,7 +262,7 @@ script: noisy-bush-fd84
 script: royal-snow-ea32
 PASS  script_exists: true
 --- schedules ---
-{"result":{"schedules":[{"cron":"17 * * * *","created_on":"2026-10-05T21:28:40.761503Z","modified_on":"2026-10-06T11:42:37.29334Z"}]},"success":true,"errors":[],"messages":[]}
+{"result":{"schedules":[{"cron":"17 * * * *","created_on":"2026-10-05T21:28:40.761503Z","modified_on":"2026-10-06T11:59:00.081574Z"}]},"success":true,"errors":[],"messages":[]}
 PASS  cron_17: true
 --- settings (bindings) ---
 {"bindings":[{"name":"DB","type":"d1","namespace_id":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"}],"compatibility_date":"2026-09-01"}
@@ -303,15 +303,6 @@ wrangler d1 execute usable: false (informational; the checklist uses the Worker 
 
 === 3) dry run (GET /sync?dryRun=1) — must not write anything ===
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.68.23.212. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
-  http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.68.23.211. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
-  http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.160.61. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
-  http 200 (attempt 1)
 {"status":"success","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":98,"fetched":0,"complete":true,"errors":[]}
 PASS  dryrun_flag: true
 PASS  dryrun_read_the_tree: 98
@@ -319,10 +310,6 @@ PASS  dryrun_wrote_nothing: 102/102
 
 === 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ===
 --- run attempt 1 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.68.23.211. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 2 (successful runs so far: 0) ---
   http 200 (attempt 1)
 {"status":"success","dry_run":false,"inserted":0,"updated":0,"unchanged":78,"out_of_scope":0,"invalid":0,"files":98,"fetched":0,"budget_skipped":0,"complete":true,"missing":24,"errors":[]}
 PASS  run1_no_write_failures: 0
@@ -359,8 +346,8 @@ _properties/showroom-ahmed-fakhry-600m.md
 PASS  out_of_scope_files_listed: 12
 PASS  invalid_files_listed: 8
 durable reasons from the last ingestion_runs row:
-  started: 2026-10-06 11:51:02 status: success
-{"version":"v1.0.4","trigger":"manual","dry_run":false,"fetched":0,"missing":24,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":[],"area_unmatched":[],"duration_ms":1891}
+  started: 2026-10-06 11:59:14 status: success
+{"version":"v1.0.4","trigger":"manual","dry_run":false,"fetched":0,"missing":24,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":[],"area_unmatched":[],"duration_ms":1284}
 
 --- reasons sample (from the runs of this job) ---
 
