@@ -64,9 +64,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _arena-preview
-          cp _site/agent.html _arena-preview/agent.html
-          cp _site/add-your-property.html _arena-preview/add-your-property.html
-          cp _site/index.html _arena-preview/index.html
+          for f in _site/*.html; do cp "$f" _arena-preview/; done
+          for d in properties requests; do
+            [ -f "_site/$d/index.html" ] && cp "_site/$d/index.html" "_arena-preview/$d-index.html"
+          done
           {
             echo "# Jekyll build verification"
             echo
