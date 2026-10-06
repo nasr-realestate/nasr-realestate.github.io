@@ -1,12 +1,17 @@
-# Deploy the GitHub → D1 properties sync Worker and verify it against the real D1.
+# Deploy the GitHub → D1 properties sync Worker (source_id = 9 · سمسار طلبك) and verify
+# it against the real Cloudflare D1.
 #
 # Required repository secrets:
 #   CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
-#   CLOUDFLARE_ACCOUNT_ID (optional — inferred from the token when unset)
+#   CLOUDFLARE_ACCOUNT_ID (optional — resolved from the token when unset)
 # Optional:
 #   SYNC_TOKEN            (protects POST /sync; stored as a Worker secret when present)
 #
-# This workflow deploys ONLY the sync Worker. The valuation and agent Workers are not
+# NOTE: an account-owned API token cannot call the user-level /memberships endpoint that
+# wrangler uses to guess the account id, so the account id is resolved here through
+# /accounts and exported to CLOUDFLARE_ACCOUNT_ID before any wrangler command runs.
+#
+# This workflow deploys ONLY the sync Worker. The valuation and agent Workers are never
 # touched here (their live builds are ahead of the repository copies on purpose).
 name: Deploy Properties Sync Worker
 
@@ -14,13 +19,14 @@ on:
   workflow_dispatch:
     inputs:
       verification:
-        description: "Run the live sync verification (two runs + D1 integrity checks)"
-        type: boolean
-        default: true
+        description: "Run the live sync verification (runs until the pass is complete + D1 integrity checks)"
+        type: string
+        default: "true"
   push:
     branches: ["master", "arena/**"]
     paths:
       - "_worker/properties-sync-worker.js"
+      - "_worker/tests/properties-sync.test.mjs"
       - "_worker/wrangler.sync.toml"
       - ".github/workflows/deploy-properties-sync.yml"
 
@@ -31,11 +37,17 @@ jobs:
   deploy-and-verify:
     runs-on: ubuntu-latest
     env:
+      CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
       REPORT: _diag/sync-deploy-report.txt
+      # the exact sets produced by the offline audit of the 98 files (see _worker/README.md)
+      OUT_OF_SCOPE_IDS: "heliopolis-badia-180m-lux,masr-al-gdida-150m-classic,lavida-rent-2units-jan26,villa-new-cairo-1st-district-568m,rehab-villa-model-h-gate9,villa-south-90th-120m,shams-club-heliopolis-160m,andalus1-duplex-285m,banafseg2-showroom-340m,new-polis-130m,salam-city-218m-roof,sheraton-nozha-165m-rent"
+      INVALID_IDS: "rent-furnished-batrawy-30k,shinzo-abe-262m-4th-floor,sherif-samy-ground-admin,saudi-buildings-golf-110m,nasr-street-furnished,obour-buildings-rent-47,rent-tayaran-panorama-35k,showroom-ahmed-fakhry-600m"
+      NULL_AREA_IDS: "gamal-afifi-ahly-club-250m,admin-tayaran-st-400m,shop-tayaran-togari-400m,duplex-villa-badawy,police-towers-rent-280m"
+      IN_SCOPE_IDS: "10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,8 +59,8 @@ jobs:
           node-version: "20"
 
       - name: Start report
-        id: start
         run: |
+          set +e
           mkdir -p _diag
           {
             echo "=== Properties Sync Worker — deploy + verify ==="
@@ -56,120 +68,345 @@ jobs:
             echo "commit:   ${{ github.sha }}"
             echo "run:      ${{ github.run_id }}"
             echo "when:     $(date -u +%FT%TZ)"
-            if [ -n "$CLOUDFLARE_API_TOKEN" ]; then echo "credential: PRESENT"; else echo "credential: MISSING (CLOUDFLARE_API_TOKEN)"; fi
+            if [ -n "$CLOUDFLARE_TOKEN" ]; then echo "credential: PRESENT"; else echo "credential: MISSING (CLOUDFLARE_API_TOKEN)"; fi
             echo
           } > "$REPORT"
 
+      - name: Unit tests (sync Worker, 36 tests)
+        run: node --test _worker/tests/properties-sync.test.mjs 2>&1 | tee -a "$REPORT"
+
       - name: Install wrangler
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CLOUDFLARE_TOKEN != ''
         run: npm install --no-save wrangler@4
 
-      - name: Deploy sync Worker
-        if: env.CLOUDFLARE_API_TOKEN != ''
+      # An account-owned API token can't read /memberships, which is where wrangler looks
+      # for the account id. Resolve it here and export it so wrangler never calls it.
+      - name: Preflight (resolve account id, probe token)
+        if: env.CLOUDFLARE_TOKEN != ''
         run: |
+          set +e
+          exec >> "$REPORT" 2>&1
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          echo "=== preflight ==="
+          echo "token verify (/user/tokens/verify): $(curl -sS -m 20 -H "$AUTH" "$API/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null)"
+          ACC="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)}"
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "account id from secrets: ${CLOUDFLARE_ACCOUNT_ID}"
+          else
+            RAW=$(curl -sS -m 20 -H "$AUTH" "$API/accounts")
+            echo "accounts lookup: $(echo "$RAW" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null)"
+            ACC="$ACC"
+            if [ -n "$ACC" ]; then
+              echo "CLOUDFLARE_ACCOUNT_ID=$ACC" >> "$GITHUB_ENV"
+              echo "account id resolved from the token: ${ACC}"
+            else
+              echo "::error title=NO_ACCOUNT::could not resolve a Cloudflare account id from the token"
+            fi
+          fi
+          echo "d1 probe: $(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACC}/d1/database" | jq -c '{success, errors, count: (.result|length)}' 2>/dev/null)"
+          echo
+
+      - name: Deploy sync Worker
+        if: env.CLOUDFLARE_TOKEN != ''
+        run: |
+          set +e
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           {
+            echo
             echo "--- wrangler whoami ---"
-            npx wrangler whoami 2>&1 || true
+            npx wrangler whoami 2>&1
             echo
-            echo "--- wrangler deploy ---"
-            npx wrangler deploy --config _worker/wrangler.sync.toml 2>&1 | tee /tmp/deploy.log
-            echo
+            echo "--- wrangler deploy (account ${CLOUDFLARE_ACCOUNT_ID:-<unset>}) ---"
           } >> "$REPORT"
+          npx wrangler deploy --config _worker/wrangler.sync.toml > /tmp/deploy.log 2>&1
+          RC=$?
+          cat /tmp/deploy.log >> "$REPORT"
+          echo "wrangler deploy exit code: $RC" >> "$REPORT"
+          echo "wrangler deploy exit code: $RC"
+          if [ "$RC" -ne 0 ]; then
+            echo "::error title=DEPLOY_FAILED::wrangler deploy exited ${RC} — see the report for the Cloudflare error"
+            exit 1
+          fi
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1 || true)
-          if [ -n "$URL" ]; then echo "SYNC_URL=$URL" >> "$GITHUB_ENV"; fi
-          echo "deployed_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "deployed URL from wrangler: ${URL:-<none in log>}" >> "$REPORT"
+          echo "::notice title=SYNC_URL::${URL:-$SYNC_URL}"
+          echo
+
+      # Hard evidence that the script now exists, is reachable and has the right triggers.
+      - name: Post-deploy checks (script exists, reachable, cron, D1 binding)
+        if: env.CLOUDFLARE_TOKEN != ''
+        run: |
+          set +e
+          exec >> "$REPORT" 2>&1
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
+          FAILED=""
+          check() { if [ "$2" = "$3" ]; then echo "PASS  $1: $2"; else echo "FAIL  $1: got $2, expected $3"; FAILED="$FAILED|$1"; fi; }
+          echo "=== post-deploy checks ==="
+          curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '.result[]?.id' | sed 's/^/script: /'
+          EXISTS=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '[.result[]?.id] | index("nasr-properties-sync") != null' 2>/dev/null)
+          check "script_exists" "${EXISTS:-false}" "true"
+          echo "--- schedules ---"
+          SCHED=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/schedules")
+          echo "$SCHED" | jq -c '.' 2>/dev/null
+          check "cron_17" "$(echo "$SCHED" | jq -r '[.result.schedules[]?.cron] | index("17 * * * *") != null' 2>/dev/null)" "true"
+          echo "--- settings (bindings) ---"
+          SET=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/settings")
+          echo "$SET" | jq -c '{bindings: [.result.bindings[]? | {name, type, namespace_id: .id}], compatibility_date: .result.compatibility_date}' 2>/dev/null
+          check "d1_binding_DB" "$(echo "$SET" | jq -r '[.result.bindings[]? | select(.name=="DB" and .type=="d1")] | length > 0' 2>/dev/null)" "true"
+          echo "--- workers.dev routing ---"
+          SUB=$(curl -sS -m 20 -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts/nasr-properties-sync/subdomain")
+          echo "$SUB" | jq -c '.' 2>/dev/null
+          echo "--- public URL (retrying up to 60s for propagation) ---"
+          CODE=000
+          for t in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            CODE=$(curl -sS -m 15 -o /tmp/info.json -w '%{http_code}' "${SYNC_URL}/" || echo 000)
+            echo "attempt $t: / -> $CODE"
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          check "worker_reachable" "$CODE" "200"
+          head -c 1200 /tmp/info.json 2>/dev/null; echo
+          echo
+          if [ -z "$FAILED" ]; then
+            echo "POST-DEPLOY CHECKS PASSED"
+          else
+            echo "POST-DEPLOY FAILED: ${FAILED#|}"
+            echo "::error title=POST_DEPLOY_FAILED::${FAILED#|}"
+            exit 1
+          fi
+
+      - name: Worker facts (Cloudflare API)
+        if: env.CLOUDFLARE_TOKEN != '' && always()
+        continue-on-error: true
+        run: |
+          set +e
+          exec >> "$REPORT" 2>&1
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "=== worker facts ==="
+          echo "account_id: ${ACCOUNT:-<unknown>}"
+          echo "--- account workers.dev subdomain ---"
+          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/subdomain" | jq -c '.result' || true
+          echo "--- scripts in the account ---"
+          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/workers/scripts" | jq -r '.result[]?.id' || true
+          echo "--- raw D1 database list ---"
+          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/d1/database" | head -c 800; echo
+          curl -sS -H "$AUTH" "$API/accounts/${ACCOUNT}/d1/database" | jq -c '.result[]? | {name, uuid}' || true
+          echo
 
       - name: Set SYNC_TOKEN worker secret (optional)
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.SYNC_TOKEN_VALUE != ''
+        if: env.CLOUDFLARE_TOKEN != '' && env.SYNC_TOKEN_VALUE != ''
         run: |
+          set +e
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           echo "$SYNC_TOKEN_VALUE" | npx wrangler secret put SYNC_TOKEN --config _worker/wrangler.sync.toml 2>&1 | tee -a "$REPORT"
 
-      - name: Live verification
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event.inputs.verification != 'false'
+      - name: Live verification (real D1)
+        if: env.CLOUDFLARE_TOKEN != '' && github.event.inputs.verification != 'false'
         run: |
-          set -u
+          set +e
           exec >> "$REPORT" 2>&1
+          FAILED=""
+          API=https://api.cloudflare.com/client/v4
+          ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
+          export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          echo "account: ${ACCOUNT:-<unknown>}"
           AUTH=()
           if [ -n "${SYNC_TOKEN_VALUE:-}" ]; then AUTH=(-H "Authorization: Bearer $SYNC_TOKEN_VALUE"); fi
-          echo "--- target: $SYNC_URL ---"
+          LQ="$(echo "$OUT_OF_SCOPE_IDS" | tr ',' '\n' | sed 's|^|_properties/|; s|$|.md|' | sort -u)"
+          IQ="$(echo "$INVALID_IDS"      | tr ',' '\n' | sed 's|^|_properties/|; s|$|.md|' | sort -u)"
+          QUERY="in_scope=${IN_SCOPE_IDS}&out_of_scope=${OUT_OF_SCOPE_IDS}&invalid=${INVALID_IDS}&null_area=${NULL_AREA_IDS}&rows=out_of_scope,invalid"
+          one(){ npx wrangler d1 execute nasr-market-db --remote --json --command "$1" 2>/dev/null | jq -r '.result[0].results[0] | .[keys[0]]' 2>/dev/null || echo "query_error"; }
+          check() { if [ "$2" = "$3" ]; then echo "PASS  $1: $2"; else echo "FAIL  $1: got $2, expected $3"; FAILED="$FAILED|$1"; fi; }
+          call() { # call <outfile> <method> <url>
+            for a in 1 2 3 4; do
+              CODE=$(curl -sS -m 180 -X "$2" "$3" "${AUTH[@]}" -o "$1" -w '%{http_code}' || echo 000)
+              echo "  http $CODE (attempt $a)"
+              if [ "$CODE" = "200" ] || [ "$CODE" = "409" ]; then return 0; fi
+              if [ "$CODE" = "429" ]; then sleep 62; continue; fi
+              sleep 10
+            done
+            return 0
+          }
+          report() { curl -sS -m 60 "${SYNC_URL}/verify?${QUERY}" "${AUTH[@]}" -o "$1"; }
+          vget() { jq -r "$1" "$2" 2>/dev/null; }
+
+          echo "--- target: ${SYNC_URL} ---"
+          call /tmp/info.json GET "${SYNC_URL}/"
+          head -c 1500 /tmp/info.json 2>/dev/null; echo
           echo
-          echo "=== 1) service info (GET /) ==="
-          curl -sS -m 30 "$SYNC_URL/" || true
-          echo; echo
-          echo "=== 2) real D1 schema (GET /schema) ==="
-          curl -sS -m 30 "$SYNC_URL/schema" -o /tmp/schema.json || true
-          cat /tmp/schema.json || true
-          echo; echo
-          echo "::notice title=SYNC_URL::${SYNC_URL}"
-          EXTERNAL_COL=$(jq -r '.mapping.externalId // empty' /tmp/schema.json 2>/dev/null || true)
-          SOURCE_COL=$(jq -r '.mapping.sourceId // empty' /tmp/schema.json 2>/dev/null || true)
-          echo "external_id column: ${EXTERNAL_COL:-<unknown>} | source_id column: ${SOURCE_COL:-<unknown>}"
+          echo "=== 1) real D1 schema (GET /schema) ==="
+          curl -sS -m 30 "${SYNC_URL}/schema" -o /tmp/schema.json || true
+          head -c 2500 /tmp/schema.json; echo
+          EXTERNAL_COL=$(jq -r '.mapping.externalId // "external_id"' /tmp/schema.json 2>/dev/null)
+          SOURCE_COL=$(jq -r '.mapping.sourceId // "source_id"' /tmp/schema.json 2>/dev/null)
+          MISSING=$(jq -c '.missing_required // []' /tmp/schema.json 2>/dev/null || echo '["unknown"]')
+          echo "columns: external_id=${EXTERNAL_COL} source_id=${SOURCE_COL} missing_required=${MISSING}"
+          check "schema_required_columns" "$MISSING" "[]"
           echo
-          echo "=== 3) D1 counts BEFORE ==="
-          npx wrangler d1 execute nasr-market-db --remote --json \
-            --command "SELECT COUNT(*) AS listings_total FROM listings" 2>&1 || true
-          npx wrangler d1 execute nasr-market-db --remote --json \
-            --command "SELECT COUNT(*) AS snapshots_total FROM price_snapshots" 2>&1 || true
-          if [ -n "$SOURCE_COL" ]; then
-            npx wrangler d1 execute nasr-market-db --remote --json \
-              --command "SELECT $SOURCE_COL AS source_id, COUNT(*) AS n FROM listings GROUP BY 1 ORDER BY 1" 2>&1 || true
+          echo "=== 2) read-only D1 report BEFORE (GET /verify) ==="
+          report /tmp/verify_before.json
+          jq -c '{counts, duplicates: .duplicates, lists, integrity}' /tmp/verify_before.json 2>/dev/null || head -c 1200 /tmp/verify_before.json
+          echo
+          D1_API=false
+          if [ "$(one "SELECT 1")" = "1" ]; then D1_API=true; fi
+          echo "wrangler d1 execute usable: ${D1_API} (informational; the checklist uses the Worker binding report)"
+          if [ "$D1_API" = "true" ]; then
+            echo "--- D1 API cross-check (wrangler) ---"
+            echo "listings=$(one "SELECT COUNT(*) FROM listings") snapshots=$(one "SELECT COUNT(*) FROM price_snapshots") areas=$(one "SELECT COUNT(*) FROM areas") source9=$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9")"
+            echo "integrity=$(one "PRAGMA integrity_check")"
           fi
           echo
-          echo "=== 4) dry run (GET /sync?dryRun=1) ==="
-          curl -sS -m 60 "$SYNC_URL/sync?dryRun=1" "${AUTH[@]}" || true
-          echo; echo
-          echo "=== 5) real runs until the pass is complete (manual runs are throttled to one per 60s) ==="
-          for i in 1 2 3 4; do
-            echo "--- run $i ---"
-            curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o "/tmp/run$i.json" || true
-            cat "/tmp/run$i.json" || true
-            echo
-            COMPLETE=$(jq -r '.github.complete // false' "/tmp/run$i.json" 2>/dev/null || echo false)
-            if [ "$COMPLETE" = "true" ]; then break; fi
-            sleep 65
+          echo "=== 3) dry run (GET /sync?dryRun=1) — must not write anything ==="
+          dn=0
+          while [ "$dn" -lt 6 ]; do
+            dn=$((dn+1))
+            call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
+            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
+            DERR="$(vget '.errors[0] // ""' /tmp/dryrun.json)"
+            case "$DERR" in
+              github_tree_failed*|*rate\ limit*) echo "  GitHub tree API rate limit — retrying in 120s"; sleep 120; continue;;
+            esac
+            [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "98" ] && break
+            sleep 60
           done
-          echo "=== 6) idempotency: one more run with no source change ==="
-          sleep 65
-          curl -sS -m 120 -X POST "$SYNC_URL/sync" "${AUTH[@]}" -o /tmp/run_last.json || true
-          cat /tmp/run_last.json || true
-          echo; echo
-          echo "=== 7) D1 counts AFTER ==="
-          npx wrangler d1 execute nasr-market-db --remote --json \
-            --command "SELECT COUNT(*) AS listings_total FROM listings" 2>&1 || true
-          npx wrangler d1 execute nasr-market-db --remote --json \
-            --command "SELECT COUNT(*) AS snapshots_total FROM price_snapshots" 2>&1 || true
-          if [ -n "$SOURCE_COL" ]; then
-            npx wrangler d1 execute nasr-market-db --remote --json \
-              --command "SELECT $SOURCE_COL AS source_id, COUNT(*) AS n FROM listings GROUP BY 1 ORDER BY 1" 2>&1 || true
-          fi
-          if [ -n "$EXTERNAL_COL" ] && [ -n "$SOURCE_COL" ]; then
-            echo
-            echo "=== 8) duplicate check (must be empty) ==="
-            npx wrangler d1 execute nasr-market-db --remote --json \
-              --command "SELECT $SOURCE_COL AS source_id, $EXTERNAL_COL AS external_id, COUNT(*) AS n FROM listings GROUP BY 1,2 HAVING n > 1 LIMIT 20" 2>&1 || true
-            echo
-            echo "=== 9) source 9 sample rows ==="
-            npx wrangler d1 execute nasr-market-db --remote --json \
-              --command "SELECT * FROM listings WHERE $SOURCE_COL = 9 LIMIT 3" 2>&1 || true
+          check "dryrun_flag" "$(vget '.dry_run' /tmp/dryrun.json)" "true"
+          check "dryrun_read_the_tree" "$(vget '.github.files_total' /tmp/dryrun.json)" "98"
+          # في الـdry run العدادات تُظهر ما كان *سيحدث* — والدليل الحقيقي هو أن D1 لم تتغير
+          report /tmp/verify_after_dry.json
+          check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
+          echo
+          echo "=== 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ==="
+          rm -f /tmp/ok*.json
+          n=0; ok=0
+          while [ "$n" -lt 14 ] && [ "$ok" -lt 5 ]; do
+            n=$((n+1))
+            OUT="/tmp/attempt$n.json"
+            echo "--- run attempt $n (successful runs so far: $ok) ---"
+            call "$OUT" POST "${SYNC_URL}/sync"
+            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
+            ERR1="$(vget '.errors[0] // ""' "$OUT")"
+            case "$ERR1" in
+              github_tree_failed*|*rate\ limit*)
+                echo "  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s"
+                sleep 120
+                continue;;
+              github_raw_failed*|write_failed*|*internal_error*)
+                echo "  transient failure: ${ERR1:0:200} — retrying in 60s"
+                sleep 60
+                continue;;
+            esac
+            ok=$((ok+1))
+            cp "$OUT" "/tmp/ok$ok.json"
+            check "run${ok}_no_write_failures" "$(vget '.db.write_failures' "$OUT")" "0"
+            [ "$(vget '.github.complete' "$OUT")" = "true" ] && break
+            sleep 63
+          done
+          LAST="/tmp/ok$ok.json"
+          check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          echo
+          echo "--- classification recorded in properties_sync_state (durable, across all runs) ---"
+          report /tmp/verify_state.json
+          jq -c '.state' /tmp/verify_state.json 2>/dev/null
+          echo "state: $(vget '.state.files_tracked' /tmp/verify_state.json) files tracked · in-scope $(vget '.state.in_scope' /tmp/verify_state.json) · out-of-scope $(vget '.state.out_of_scope' /tmp/verify_state.json) · invalid $(vget '.state.invalid' /tmp/verify_state.json)"
+          check "state_in_scope_78"     "$(vget '.state.in_scope' /tmp/verify_state.json)" "78"
+          check "state_out_of_scope_12" "$(vget '.state.out_of_scope' /tmp/verify_state.json)" "12"
+          check "state_invalid_8"       "$(vget '.state.invalid' /tmp/verify_state.json)" "8"
+          jq -r '.state.out_of_scope_files[]?' /tmp/verify_state.json | sort -u > /tmp/oos_seen.txt
+          jq -r '.state.invalid_files[]?'      /tmp/verify_state.json | sort -u > /tmp/inv_seen.txt
+          echo "out-of-scope files logged ($(wc -l < /tmp/oos_seen.txt)):"; cat /tmp/oos_seen.txt
+          echo "invalid files logged ($(wc -l < /tmp/inv_seen.txt)):"; cat /tmp/inv_seen.txt
+          check "out_of_scope_files_listed" "$(wc -l < /tmp/oos_seen.txt)" "12"
+          check "invalid_files_listed" "$(wc -l < /tmp/inv_seen.txt)" "8"
+          echo "durable reasons from the last ingestion_runs row:"
+          jq -r '.last_run | "  started: \(.started_at) status: \(.status)"' /tmp/verify_state.json 2>/dev/null
+          jq -r '.last_run.notes // ""' /tmp/verify_state.json 2>/dev/null | head -c 2000; echo
+          echo "--- reasons sample (from the runs of this job) ---"
+          jq -r '.out_of_scope_files[]? | "\(.file) :: \(.reasons | join(", "))"' /tmp/attempt*.json 2>/dev/null | sort -u | head -14
+          jq -r '.invalid_files[]? | "\(.file) :: \(.reason)"' /tmp/attempt*.json 2>/dev/null | sort -u | head -10
+          echo
+          echo "=== 5) idempotency: one more run with no source change ==="
+          sleep 63
+          call /tmp/run_last.json POST "${SYNC_URL}/sync"
+          jq -c '{status, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, complete: .github.complete}' /tmp/run_last.json 2>/dev/null || head -c 1200 /tmp/run_last.json
+          check "no_change_run_inserted" "$(vget '.db.inserted' /tmp/run_last.json)" "0"
+          check "no_change_run_updated"  "$(vget '.db.updated'  /tmp/run_last.json)" "0"
+          check "no_change_run_duplicates" "$(vget '.db.duplicates' /tmp/run_last.json)" "0"
+          echo
+          echo "=== 6) checklist AFTER (GET /verify) ==="
+          report /tmp/verify_after.json
+          jq -c '{counts, duplicates: .duplicates.count, lists, integrity}' /tmp/verify_after.json 2>/dev/null || head -c 1200 /tmp/verify_after.json
+          B_SRC9=$(vget '.counts.source9_total' /tmp/verify_before.json);  A_SRC9=$(vget '.counts.source9_total' /tmp/verify_after.json)
+          B_TOT=$(vget '.counts.listings_total' /tmp/verify_before.json);  A_TOT=$(vget '.counts.listings_total' /tmp/verify_after.json)
+          B_SNAP=$(vget '.counts.price_snapshots_total' /tmp/verify_before.json); A_SNAP=$(vget '.counts.price_snapshots_total' /tmp/verify_after.json)
+          B_AREAS=$(vget '.counts.areas_total' /tmp/verify_before.json);   A_AREAS=$(vget '.counts.areas_total' /tmp/verify_after.json)
+          B_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_before.json); A_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_after.json)
+          echo "source9 rows: before=${B_SRC9} after=${A_SRC9} | listings: ${B_TOT} -> ${A_TOT} | snapshots: ${B_SNAP} -> ${A_SNAP} | areas: ${B_AREAS} -> ${A_AREAS}"
+          echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
+          echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/78 present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
+          check "in_scope_78_present"       "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "78/78"
+          check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "5"
+          check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
+          check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
+          check "no_rows_deleted"           "$([ "${A_TOT:-0}" -ge "${B_TOT:-0}" ] && echo true)" "true"
+          check "listings_total_not_shrunk" "$([ "${A_SRC9:-0}" -ge "${B_SRC9:-0}" ] && echo true)" "true"
+          check "price_snapshots_unchanged" "$A_SNAP"  "$B_SNAP"
+          check "areas_unchanged"           "$A_AREAS" "$B_AREAS"
+          echo
+          echo "--- legacy rows outside the scope must be byte-identical before/after (proof this Worker never wrote them) ---"
+          echo "out-of-scope ids already present in D1 before: $(vget '.lists.out_of_scope.present' /tmp/verify_before.json) (absent: $((12 - $(vget '.lists.out_of_scope.present' /tmp/verify_before.json))))"
+          echo "invalid ids already present in D1 before:      $(vget '.lists.invalid.present' /tmp/verify_before.json) (absent: $((8 - $(vget '.lists.invalid.present' /tmp/verify_before.json))))"
+          echo "source-9 rows without an area before/after:    ${B_ZERO} -> ${A_ZERO}"
+          echo "legacy area_id values cleared by the R1 rule: $(jq -s 'map(.db.area_cleared // 0) | add' /tmp/attempt*.json)"
+          check "null_area_preserved_final" "$(vget '.counts.source9_null_area' /tmp/verify_after.json)" "5"
+          check "out_of_scope_rows_untouched" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_after.json)"
+          check "invalid_rows_untouched"      "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_after.json)"
+          echo
+          if [ "$D1_API" = "true" ]; then
+            echo "=== 7) D1 API cross-check (wrangler d1 execute) ==="
+            IN_SQL=$(echo "$IN_SCOPE_IDS" | tr ',' '\n' | sed "s/^/'/; s/$/'/" | paste -sd, -)
+            check "d1api_in_scope_78"   "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9 AND ${EXTERNAL_COL} IN (${IN_SQL})")" "78"
+            check "d1api_duplicates"    "$(one "SELECT COUNT(*) FROM (SELECT ${EXTERNAL_COL} FROM listings WHERE ${SOURCE_COL} = 9 GROUP BY ${EXTERNAL_COL} HAVING COUNT(*) > 1)")" "0"
           fi
           echo
-          echo "=== 10) run summaries ==="
-          for f in /tmp/run1.json /tmp/run2.json /tmp/run3.json /tmp/run4.json /tmp/run_last.json; do
+          echo "NOTE: PRAGMA integrity_check is refused by D1 (SQLITE_AUTH) for user queries; the report prints its"
+          echo "      value plus PRAGMA quick_check, and foreign_key_check is asserted instead."
+          echo
+          echo "=== 8) run summaries ==="
+          for f in /tmp/dryrun.json /tmp/run1.json /tmp/run2.json /tmp/run3.json /tmp/run4.json /tmp/run_last.json; do
             [ -f "$f" ] || continue
             echo "--- $f ---"
-            jq -c '{status, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, invalid: .db.invalid, duplicates: .db.duplicates, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, missing: .github.missing_from_github, errors}' "$f" 2>/dev/null || cat "$f"
+            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, duplicates: .db.duplicates, errors}' "$f" 2>/dev/null || head -c 800 "$f"
           done
           echo
-          echo "=== 11) integrity ==="
-          npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA foreign_key_check" 2>&1 || true
-          npx wrangler d1 execute nasr-market-db --remote --json --command "PRAGMA integrity_check" 2>&1 || true
+          echo "=== VERIFICATION SUMMARY ==="
+          if [ -z "$FAILED" ]; then echo "ALL CHECKS PASSED"; else echo "FAILED CHECKS: ${FAILED#|}"; exit 1; fi
 
       - name: Print report to the run log and annotate the summary
         if: always()
         run: |
+          set +e
           cat "$REPORT" || true
-          SUMMARY=$(sed -n '1,60p' "$REPORT" | tr '\n' ' ' | cut -c1-900)
-          echo "::notice title=SYNC_REPORT::${SUMMARY}" || true
+          sed ':a;N;$!ba;s/\n/ ~ /g' "$REPORT" | fold -w 700 > /tmp/report-one-line.txt || true
+          i=0
+          while IFS= read -r chunk; do
+            i=$((i+1))
+            echo "::notice title=SYNC_REPORT_${i}::${chunk}" || true
+          done < /tmp/report-one-line.txt
 
       - name: Upload report as a workflow artifact
         if: always()
@@ -188,27 +425,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -u
+          set +e
           BRANCH="ci/sync-report"
           PATH_IN_REPO="ci/sync-deploy-report.txt"
           SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq .object.sha 2>/dev/null || true)
           if [ -z "$SHA" ]; then
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/heads/${BRANCH}" -f sha="${GITHUB_SHA}" >/dev/null 2>&1 || true
+            if ! gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/heads/${BRANCH}" -f sha="${GITHUB_SHA}" >/tmp/refcreate.json 2>&1; then
+              echo "could not create ${BRANCH}:"; cat /tmp/refcreate.json; exit 0
+            fi
             SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq .object.sha 2>/dev/null || true)
           fi
-          if [ -z "$SHA" ]; then echo "could not create ${BRANCH}"; exit 0; fi
+          if [ -z "$SHA" ]; then echo "no ${BRANCH} ref"; exit 0; fi
           FILE_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}?ref=${BRANCH}" --jq .sha 2>/dev/null || true)
           CONTENT=$(base64 -w0 "$REPORT")
           if [ -n "$FILE_SHA" ]; then
-            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}"               -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})"               -f content="$CONTENT" -f sha="$FILE_SHA" -f branch="$BRANCH" >/dev/null
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}" \
+              -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})" \
+              -f content="$CONTENT" -f sha="$FILE_SHA" -f branch="$BRANCH" >/dev/null && echo "report published to ${BRANCH}"
           else
-            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}"               -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})"               -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${PATH_IN_REPO}" \
+              -f message="sync verification report (run ${{ github.run_id }}, ref ${{ github.ref_name }})" \
+              -f content="$CONTENT" -f branch="$BRANCH" >/dev/null && echo "report published to ${BRANCH}"
           fi
-          echo "report published to ${BRANCH}"
 
       - name: Missing credential notice
-        if: env.CLOUDFLARE_API_TOKEN == ''
+        if: env.CLOUDFLARE_TOKEN == ''
         run: |
+          set +e
           {
             echo "CLOUDFLARE_API_TOKEN is not set for this repository."
             echo "Add it under Settings → Secrets and variables → Actions (Workers Scripts: Edit + D1: Edit),"

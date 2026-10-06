@@ -21,13 +21,14 @@
 //   GET  /            → حالة الخدمة + آخر تشغيل
 //   GET  /health      → نفس الشيء (alias)
 //   GET  /schema      → الـschema الفعلي كما قرأه الـWorker + خريطة الأعمدة (قراءة فقط)
+//   GET  /verify?...  → تقرير تحقق قراءة فقط (counts/duplicates/integrity) على D1 الحقيقي
 //   GET  /sync?...    → تشغيل يدوي للتشخيص (dry run افتراضيًا: ?dryRun=1)
 //   POST /sync        → التشغيل الفعلي (يتطلب SYNC_TOKEN إن كان مضبوطًا)
 //
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.0";
+const WORKER_VERSION = "v1.0.4";
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;
@@ -516,4 +517,881 @@ function buildRecord(fm, file, areaIndex) {
     if (pair.length >= 2 && pair[0] !== null && pair[1] !== null) { latitude = pair[0]; longitude = pair[1]; }
   }
 
-  const slug = String(fm.slug || fm.id |
+  const slug = String(fm.slug || fm.id || "").trim();
+  const imageFile = String(fm.image_file || "").trim();
+
+  const record = {
+    externalId,
+    transactionType,
+    transactionEvidence,
+    propertyType,
+    price: price > 0 ? Math.round(price) : null,
+    pricePeriod: transactionType === "rent" ? "monthly" : null,
+    currency: "EGP",
+    areaM2: areaM2 > 0 ? areaM2 : null,
+    areaId: areaMatch ? areaMatch.id : null,
+    areaMatchName: areaMatch ? areaMatch.name : null,
+    title: fm.title ? String(fm.title).trim() : null,
+    description: fm.description ? String(fm.description).trim() : null,
+    rooms: toNumber(fm.roomsNumeric) ?? null,
+    bathrooms: toNumber(fm.bathsNumeric) ?? null,
+    floor: fm.floor ? String(fm.floor).trim() : null,
+    finish: fm.finish ? String(fm.finish).trim() : null,
+    status: fm.status ? String(fm.status).trim() : null,
+    category: fm.category ? String(fm.category).trim() : null,
+    street: fm.location ? String(fm.location).trim() : null,
+    imageUrl: imageFile ? `${SOURCE_BASE_URL}/assets/img/properties/${imageFile}` : null,
+    sourceUrl: slug ? `${SOURCE_BASE_URL}/properties/${slug}/` : SOURCE_BASE_URL,
+    publishedAt: fm.date ? String(fm.date).trim() : null,
+    latitude,
+    longitude,
+  };
+
+  return { record, problems, outOfScope: false, outOfScopeReasons: [], transactionEvidence };
+}
+
+// أسماء بديلة آمنة: مشتقة من اسم المنطقة نفسه فقط (بدون أي تخمين)
+// «ممر مكرم عبيد» ⇒ «مكرم عبيد» حتى تُطابق الصياغات الشائعة «شارع مكرم عبيد».
+function areaAliases(area) {
+  const out = new Set();
+  for (const raw of area.names || []) {
+    const name = String(raw || "").trim();
+    if (!name) continue;
+    out.add(name);
+    const stripped = name.replace(/^ممر\s+/, "").trim();
+    if (stripped && stripped !== name) out.add(stripped);
+  }
+  return [...out];
+}
+
+function isCityArea(area) {
+  if (area && area.scope) return String(area.scope).toLowerCase() === "city";
+  const name = normalizeArabic(area && area.name);
+  return name === normalizeArabic(IN_SCOPE_MARKER) || name.startsWith(`${normalizeArabic(IN_SCOPE_MARKER)} `);
+}
+
+// R3: قاعدة «الأخص يفوز» — أي منطقة فرعية واضحة تتغلب على عقدة المدينة.
+// وفي داخل كل مجموعة (فرعية / مدينة) الأطول يفوز، والمطابقة على كلمات كاملة.
+function matchArea(text, areaIndex) {
+  if (!text || !areaIndex.length) return null;
+  const hay = ` ${normalizeArabic(text)} `;
+  const subAreas = areaIndex.filter((a) => !isCityArea(a));
+  const cityAreas = areaIndex.filter((a) => isCityArea(a));
+  return bestAreaMatch(hay, subAreas) || bestAreaMatch(hay, cityAreas);
+}
+
+function bestAreaMatch(hay, areas) {
+  let best = null;
+  for (const area of areas) {
+    for (const name of areaAliases(area)) {
+      const needle = normalizeArabic(name);
+      if (!needle || needle.length < 4) continue;
+      if (containsToken(hay, needle)) {
+        if (!best || needle.length > best.length) best = { id: area.id, name: area.name, length: needle.length };
+      }
+    }
+  }
+  return best;
+}
+
+async function loadAreaIndex(db) {
+  try {
+    const info = await tableInfo(db, "areas");
+    if (!info) return [];
+    const cols = new Set(info.map((c) => String(c.name).toLowerCase()));
+    const idCol = cols.has("id") ? "id" : null;
+    if (!idCol) return [];
+    const nameCols = ["name", "name_ar", "name_en"].filter((c) => cols.has(c));
+    if (!nameCols.length) return [];
+    const scopeCol = cols.has("scope") ? "scope" : null;
+    const select = ["id", ...nameCols, ...(scopeCol ? [scopeCol] : [])];
+    const { results } = await db.prepare(`SELECT ${select.join(", ")} FROM areas`).all();
+    return (results || []).map((r) => ({
+      id: r.id,
+      name: r[nameCols[0]],
+      names: nameCols.map((c) => r[c]).filter(Boolean),
+      scope: scopeCol ? r[scopeCol] : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Upsert (source_id = 9 فقط)
+// ───────────────────────────────────────────────────────────────────────────
+function pickRowValues(record, mapping, existingRow, clearUnmatchedArea = true) {
+  const values = {};
+  const set = (field, value) => {
+    const col = mapping[field];
+    if (col && value !== undefined && value !== null && value !== "") values[col] = value;
+  };
+  set("externalId", record.externalId);
+  set("sourceId", SOURCE_ID);
+  set("sourceUrl", record.sourceUrl);
+  set("title", record.title);
+  set("description", record.description);
+  set("transactionType", record.transactionType);
+  set("propertyType", record.propertyType);
+  set("price", record.price);
+  if (record.pricePeriod) set("pricePeriod", record.pricePeriod);
+  set("currency", record.currency);
+  set("areaM2", record.areaM2);
+  if (record.areaId !== null) set("areaId", record.areaId);
+  // R1: ملف داخل النطاق بلا مطابقة منطقة واضحة ⇒ area_id يجب أن يكون NULL،
+  // حتى لو كان في D1 صف قديم بقيمة افتراضية (مدينة نصر) من استيراد سابق — بدون أي تخمين.
+  else if (existingRow && clearUnmatchedArea && mapping.areaId && existingRow[mapping.areaId] !== null && existingRow[mapping.areaId] !== undefined) {
+    values[mapping.areaId] = null;
+  }
+  set("rooms", record.rooms);
+  set("bathrooms", record.bathrooms);
+  set("floor", record.floor);
+  set("finish", record.finish);
+  set("status", record.status);
+  set("category", record.category);
+  set("street", record.street);
+  set("imageUrl", record.imageUrl);
+  set("publishedAt", record.publishedAt);
+  set("latitude", record.latitude);
+  set("longitude", record.longitude);
+
+  // created_at: لا يُكتب عند التحديث (يبقى كما هو)
+  if (!existingRow) set("createdAt", nowIso());
+  set("updatedAt", nowIso());
+  return values;
+}
+
+// هل القيم المستهدفة مطابقة للموجود فعلًا؟ (لو نعم ⇒ لا write)
+function isSameAsExisting(values, existingRow, mapping) {
+  if (!existingRow) return false;
+  for (const [col, value] of Object.entries(values)) {
+    if (col === mapping.updatedAt) continue; // updated_at يتغير مع أي write حقيقي
+    const current = existingRow[col];
+    if (value === null) {
+      // تصفير قصدًا (مثل area_id عند غياب مطابقة) — ليس "لا تغيير"
+      if (current === null || current === undefined) continue;
+      return false;
+    }
+    if (current === null || current === undefined) {
+      if (String(value) !== "") return false;
+      continue;
+    }
+    if (typeof value === "number") {
+      if (Number(current) !== value) return false;
+    } else if (String(current) !== String(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function upsertListing(db, listingsTable, mapping, record, existingRow, contentHash, clearUnmatchedArea = true) {
+  const values = pickRowValues(record, mapping, existingRow, clearUnmatchedArea);
+  if (mapping.contentHash) values[mapping.contentHash] = contentHash;
+  const base = isSameAsExisting(values, existingRow, mapping);
+
+  if (!existingRow) {
+    const cols = Object.keys(values);
+    const sql = `INSERT INTO ${listingsTable} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
+    const res = await db
+      .prepare(sql)
+      .bind(...cols.map((c) => values[c]))
+      .run();
+    return { action: "inserted", changes: res?.meta?.changes ?? null, values };
+  }
+
+  if (base) return { action: "unchanged", changes: 0, values };
+
+
+  const cols = Object.keys(values);
+  const sql = `UPDATE ${listingsTable} SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`;
+  const res = await db
+    .prepare(sql)
+    .bind(...cols.map((c) => values[c]), existingRow.id)
+    .run();
+  const cleared = mapping.areaId && values[mapping.areaId] === null && existingRow[mapping.areaId] != null
+    ? existingRow[mapping.areaId]
+    : null;
+  return { action: "updated", changes: res?.meta?.changes ?? null, values, area_cleared: cleared !== null, area_cleared_from: cleared };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// ingestion_runs (لو الجدول موجود ومصمم للعمليات دي)
+// ───────────────────────────────────────────────────────────────────────────
+async function writeRunLog(db, runMap, summary) {
+  if (!runMap || !runMap.startedAt) return false;
+  const values = {};
+  const set = (field, value) => {
+    const col = runMap[field];
+    if (col && value !== undefined && value !== null) values[col] = value;
+  };
+  set("sourceId", SOURCE_ID);
+  set("runType", summary.trigger === "cron" ? "properties_sync_cron" : "properties_sync_manual");
+  set("status", summary.status);
+  set("startedAt", summary.startedAt);
+  set("finishedAt", summary.finishedAt);
+  set("filesTotal", summary.github.files_total);
+  set("inserted", summary.db.inserted);
+  set("updated", summary.db.updated);
+  set("unchanged", summary.db.unchanged);
+  set("invalid", summary.db.invalid);
+  set("errorsCount", summary.errors.length);
+  if (runMap.details) {
+    values[runMap.details] = JSON.stringify({
+      version: WORKER_VERSION,
+      trigger: summary.trigger,
+      dry_run: summary.dry_run,
+      fetched: summary.github.fetched,
+      missing: summary.github.missing_from_github,
+      duplicates: summary.db.duplicates,
+      out_of_scope: summary.db.out_of_scope,
+      out_of_scope_files: summary.out_of_scope_files.slice(0, 25),
+      invalid_files: summary.invalid_files.slice(0, 25),
+      errors: summary.errors.slice(0, 10),
+      area_unmatched: summary.area_unmatched.slice(0, 25),
+      duration_ms: summary.duration_ms,
+    }).slice(0, 4000);
+  }
+  const cols = Object.keys(values);
+  if (!cols.length) return false;
+  try {
+    await db
+      .prepare(`INSERT INTO ingestion_runs (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`)
+      .bind(...cols.map((c) => values[c]))
+      .run();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function lastRun(db, runMap) {
+  try {
+    const sql = `SELECT * FROM ingestion_runs WHERE source_id = ? ORDER BY rowid DESC LIMIT 1`;
+    return await db.prepare(sql).bind(SOURCE_ID).first();
+  } catch {
+    return null;
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// التشغيل الأساسي
+// ───────────────────────────────────────────────────────────────────────────
+async function runSync(env, opts = {}) {
+  const startedAt = nowIso();
+  const startedMs = Date.now();
+  const dryRun = Boolean(opts.dryRun);
+  const trigger = opts.trigger || "manual";
+  const budget = Number(env.SYNC_FETCH_BUDGET) > 0 ? Number(env.SYNC_FETCH_BUDGET) : DEFAULT_FETCH_BUDGET;
+  const clearUnmatchedArea = String(env.SYNC_CLEAR_UNMATCHED_AREA ?? "1") !== "0";
+  const db = env.DB;
+
+  const summary = {
+    service: SERVICE_NAME,
+    version: WORKER_VERSION,
+    trigger,
+    dry_run: dryRun,
+    source_id: SOURCE_ID,
+    source_name: SOURCE_NAME,
+    started_at: startedAt,
+    finished_at: null,
+    duration_ms: 0,
+    status: "running",
+    worker_version: WORKER_VERSION,
+    logic_reprocess: false,
+    github: {
+      files_total: 0, fetched: 0, skipped_unchanged: 0,
+      missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
+      complete: true, truncated: false,
+    },
+    db: {
+      inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0, area_cleared: 0,
+      invalid: 0, out_of_scope: 0, duplicates: 0, write_failures: 0, writes_blocked: false,
+    },
+    area_cleared: [],
+    invalid_files: [],
+    out_of_scope_files: [],
+    duplicate_files: [],
+    area_unmatched: [],
+    errors: [],
+    schema: null,
+  };
+
+  if (!db) {
+    summary.status = "error";
+    summary.errors.push("missing_DB_binding");
+    summary.finished_at = nowIso();
+    summary.duration_ms = Date.now() - startedMs;
+    return summary;
+  }
+
+  try {
+    // 1) قراءة الـschema الفعلي قبل أي SQL كتابة
+    const schema = await readSchemaReport(db, env);
+    const listingsTable = schema.listings_table;
+    const stateTable = schema.state_table;
+    summary.schema = {
+      listings_columns: schema.tables.listings,
+      mapping: schema.mapping,
+      missing_required: schema.missing_required,
+      ingestion_runs_columns: schema.tables.ingestion_runs,
+      state_table: schema.tables[STATE_TABLE],
+    };
+
+    if (!schema.tables.listings) {
+      summary.status = "schema_mismatch";
+      summary.errors.push(`listings_table_not_found:${listingsTable}`);
+      summary.db.writes_blocked = true;
+      return finalize(summary, startedMs);
+    }
+    if (schema.missing_required.length) {
+      summary.status = "schema_mismatch";
+      summary.errors.push(`missing_required_columns:${schema.missing_required.join(",")}`);
+      summary.db.writes_blocked = true;
+      return finalize(summary, startedMs);
+    }
+    if (!schema.mapping.sourceId) {
+      // بدون source_id لا يمكن عزل المصادر ⇒ نرفض الكتابة (حماية للمصادر الأخرى)
+      summary.status = "schema_mismatch";
+      summary.errors.push("source_id_column_not_found");
+      summary.db.writes_blocked = true;
+      return finalize(summary, startedMs);
+    }
+
+    // 2) جدول الحالة (إضافة فقط) — لو ممنوع نكمل بوضع degraded آمن
+    let state = new Map();
+    let stateEnabled = true;
+    if (String(env.SYNC_ALLOW_DDL ?? "1") !== "0") {
+      try {
+        await ensureStateTable(db, stateTable);
+      } catch (err) {
+        stateEnabled = false;
+        summary.errors.push(`state_table_create_failed:${String(err.message).slice(0, 120)}`);
+      }
+    } else {
+      stateEnabled = false;
+    }
+    if (stateEnabled) state = await loadState(db, stateTable);
+
+    // 3) المناطق الحقيقية + السجلات الحالية للمصدر 9 فقط
+    const areaIndex = await loadAreaIndex(db);
+    const externalIdCol = schema.mapping.externalId;
+    const { results: existingRows } = await db
+      .prepare(`SELECT * FROM ${listingsTable} WHERE ${schema.mapping.sourceId} = ?`)
+      .bind(SOURCE_ID)
+      .all();
+    const existing = new Map();
+    const preexistingDuplicates = [];
+    for (const row of existingRows || []) {
+      const key = String(row[externalIdCol] ?? "");
+      if (!key) continue;
+      if (existing.has(key)) preexistingDuplicates.push(key); // تكرار موجود قبل المزامنة — يُبلَّغ عنه ولا يُلمس
+      else existing.set(key, row);
+    }
+    summary.db.preexisting_duplicate_ids = preexistingDuplicates.length;
+    if (preexistingDuplicates.length) summary.db.preexisting_duplicate_sample = preexistingDuplicates.slice(0, 5);
+
+    // 3b) حماية من الطرق المتكرر على التشغيل اليدوي (cron مستثنى)
+    const minIntervalS = Number(env.SYNC_MIN_INTERVAL_S) >= 0 ? Number(env.SYNC_MIN_INTERVAL_S) : DEFAULT_MIN_INTERVAL_S;
+    if (trigger === "manual" && minIntervalS > 0) {
+      const lastMarker = state.get(RUN_MARKER);
+      const lastMs = lastMarker ? Date.parse(String(lastMarker.last_synced_at)) : NaN;
+      const sinceMs = Date.now() - lastMs;
+      if (Number.isFinite(lastMs) && sinceMs < minIntervalS * 1000) {
+        summary.status = "throttled";
+        summary.errors.push(`manual_run_throttled:retry_after_s=${Math.ceil((minIntervalS * 1000 - sinceMs) / 1000)}`);
+        return finalize(summary, startedMs);
+      }
+    }
+
+    // 4) قائمة ملفات GitHub
+    const files = await githubTree(env, summary.github);
+    summary.github.files_total = files.length;
+    summary.github.truncated = Boolean(summary.github.githubTruncated);
+
+    const seenIds = new Set();      // external_ids اللي اتعالجت في التشغيل ده
+    const excludedIds = new Set();  // external_ids الملفات خارج النطاق (R2) — مش «مختفية»
+    const stateWrites = [];
+    let fetchCount = 0;
+
+    for (const f of files) {
+      const priorByPath = state.get(f.path) || null;
+      const priorId = priorByPath && priorByPath.external_id ? String(priorByPath.external_id) : null;
+
+      // المسار السريع: نفس الـblob SHA والسطر موجود في D1 (أو الملف معروف كمستبعد بنفس المحتوى)
+      // ⇒ لا قراءة ولا كتابة
+      const priorInvalid = Boolean(priorId && priorId.startsWith(INVALID_MARK));
+      const priorOutOfScope = Boolean(priorId && priorId.startsWith(OOS_MARK));
+      // كل صف حالة يحمل نسخة منطق الـWorker اللي عالجته؛ الملف اللي اتعالج بنسخة أقدم
+      // يُعاد معالجته مرة واحدة (فتُطبَّق القواعد الجديدة على الصفوف القديمة)، والتشغيل
+      // الجزئي يكمّل من حيث انتهى لأن الصفوف المُعاد معالجتها بقت بالنسخة الحالية.
+      const priorLogic = priorByPath && priorByPath.content_hash
+        ? String(priorByPath.content_hash).split(":")[0]
+        : null;
+      const sameLogic = priorLogic === WORKER_VERSION;
+      if (priorByPath && !sameLogic) summary.logic_reprocess = true;
+      if (sameLogic && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
+        summary.github.skipped_unchanged++;
+        if (priorInvalid) summary.db.unchanged_invalid++;
+        else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
+        else { summary.db.unchanged++; seenIds.add(priorId); }
+        continue;
+      }
+
+      if (fetchCount >= budget) {
+        // تشغيل جزئي مقصود: باقي الملفات في التشغيل الجاي (جدول الحالة = المؤشر)
+        summary.github.budget_skipped++;
+        summary.github.budget_exhausted = true;
+        summary.github.complete = false;
+        continue;
+      }
+      fetchCount++;
+      const raw = await githubRaw(env, f.path);
+      summary.github.fetched++;
+      const contentHash = await sha256Hex(raw);
+
+      const fm = parseFrontMatter(raw);
+      if (!fm) {
+        summary.invalid_files.push({ file: f.path, reason: "no_front_matter" });
+        summary.db.invalid++;
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        continue;
+      }
+
+      const built = buildRecord(fm, f.file, areaIndex);
+      const record = built.record;
+
+      // R1 + R2: خارج نطاق مدينة نصر ⇒ لا INSERT ولا UPDATE إطلاقًا
+      if (built.outOfScope) {
+        summary.out_of_scope_files.push({ file: f.path, reasons: built.outOfScopeReasons });
+        summary.db.out_of_scope++;
+        excludedIds.add(record.externalId);
+        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        continue;
+      }
+
+      if (built.problems.length) {
+        summary.invalid_files.push({ file: f.path, reason: built.problems.join(",") });
+        summary.db.invalid++;
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        continue;
+      }
+
+      if (seenIds.has(record.externalId)) {
+        summary.duplicate_files.push({ file: f.path, external_id: record.externalId });
+        summary.db.duplicates++;
+        continue;
+      }
+      seenIds.add(record.externalId);
+
+      if (!record.areaId && record.street) {
+        summary.area_unmatched.push({ file: f.path, location: record.street });
+      }
+
+      const existingRow = existing.get(record.externalId) || null;
+
+      if (dryRun) {
+        summary.db[existingRow ? "updated" : "inserted"]++;
+        if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        continue;
+      }
+
+      let result = null;
+      try {
+        result = await upsertListing(db, listingsTable, schema.mapping, record, existingRow, contentHash, clearUnmatchedArea);
+        if (result.area_cleared) {
+          summary.db.area_cleared = (summary.db.area_cleared || 0) + 1;
+          summary.area_cleared.push({ file: f.path, was: result.area_cleared_from });
+        }
+      } catch (err) {
+        // فشل سطر واحد (مثلاً NOT NULL في عمود خارج الخريطة) لا يوقف بقية الملفات،
+        // ولا تُكتب حالة الملف ⇒ يعاد المحاولة في التشغيل التالي بعد إصلاح السبب.
+        summary.errors.push(`write_failed:${f.path}:${String(err.message || err).slice(0, 160)}`);
+        summary.db.write_failures = (summary.db.write_failures || 0) + 1;
+        continue;
+      }
+      if (result.action === "inserted") summary.db.inserted++;
+      else if (result.action === "updated") summary.db.updated++;
+      else summary.db.unchanged++;
+
+      if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+    }
+
+    // 5) ملفات موجودة في D1 ومختفية من GitHub ⇒ تُسجَّل فقط، بدون أي حذف.
+    //    لو التشغيل ده ما استوعبش كل الملفات (budget) النتيجة تبقى «غير معروفة» بدل تقرير خاطئ.
+    if (summary.github.budget_exhausted) {
+      summary.github.missing_from_github = null;
+    } else {
+      for (const key of existing.keys()) {
+        if (key && !seenIds.has(key) && !excludedIds.has(key)) summary.github.missing_from_github++;
+      }
+    }
+
+    // 6) كتابة جدول الحالة (batch) — دايمًا مع صف علامة وقت آخر تشغيل
+    if (stateEnabled && !dryRun) {
+      stateWrites.push([RUN_MARKER, RUN_MARKER, null, WORKER_VERSION]);
+      const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
+        db
+          .prepare(
+            `INSERT INTO ${stateTable} (source_id, external_id, file_path, blob_sha, content_hash, last_synced_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(source_id, external_id) DO UPDATE SET
+               file_path = excluded.file_path, blob_sha = excluded.blob_sha,
+               content_hash = excluded.content_hash, last_synced_at = excluded.last_synced_at`
+          )
+          .bind(SOURCE_ID, externalId || `__file__:${path}`, path, sha, hash, nowIso())
+      );
+      try {
+        // D1 batch على دفعات (حدود D1) — بدون أي تأثير على السلوك
+        for (let i = 0; i < stmts.length; i += 40) {
+          await db.batch(stmts.slice(i, i + 40));
+        }
+      } catch (err) {
+        summary.errors.push(`state_write_failed:${String(err.message).slice(0, 120)}`);
+      }
+    }
+
+    summary.status = summary.errors.length ? "partial_success" : "success";
+  } catch (err) {
+    summary.status = "error";
+    summary.errors.push(`${String(err.message || err).slice(0, 300)}`);
+  }
+
+  const finalSummary = finalize(summary, startedMs);
+
+  // سجل التشغيل (best-effort، لا يكسر التشغيل لو الجدول مختلف)
+  try {
+    const runInfo = await tableInfo(env.DB, "ingestion_runs");
+    if (runInfo) {
+      const runMap = buildMapping(runInfo, RUN_COLUMN_MAP);
+      finalSummary.logged_to_ingestion_runs = await writeRunLog(env.DB, runMap, finalSummary);
+    }
+  } catch {
+    finalSummary.logged_to_ingestion_runs = false;
+  }
+
+  return finalSummary;
+}
+
+function finalize(summary, startedMs) {
+  summary.finished_at = nowIso();
+  summary.duration_ms = Date.now() - startedMs;
+  // إزالة الحقول المؤقتة
+  delete summary.github.githubTruncated;
+  return summary;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// HTTP
+// ───────────────────────────────────────────────────────────────────────────
+async function serviceInfo(env, request) {
+  let schema = null;
+  let last = null;
+  let writeAccess = false;
+  try {
+    if (env.DB) {
+      const full = await readSchemaReport(env.DB, env);
+      schema = {
+        listings_columns: full.tables.listings,
+        missing_required: full.missing_required,
+        state_table_exists: full.tables[STATE_TABLE],
+        ingestion_runs_columns: full.tables.ingestion_runs,
+      };
+      writeAccess = Boolean(full.tables.listings) && full.missing_required.length === 0 && Boolean(full.mapping?.sourceId);
+      const runInfo = await tableInfo(env.DB, "ingestion_runs");
+      if (runInfo) last = await lastRun(env.DB, buildMapping(runInfo, RUN_COLUMN_MAP));
+    }
+  } catch (err) {
+    schema = { error: String(err.message || err).slice(0, 200) };
+  }
+  return {
+    service: SERVICE_NAME,
+    status: "running",
+    worker_version: WORKER_VERSION,
+    logic_reprocess: false,
+    version: WORKER_VERSION,
+    source: { id: SOURCE_ID, name: SOURCE_NAME, base_url: SOURCE_BASE_URL },
+    github: {
+      owner: GITHUB.owner, repo: GITHUB.repo, dir: GITHUB.dir,
+      branch: envBranch(env.GITHUB_BRANCH, GITHUB.branch),
+    },
+    scheduler: "Cloudflare Cron",
+    cron: "17 * * * *",
+    cache_policy: { clear_unmatched_area: true },
+    endpoints: {
+      info: "GET /",
+      schema: "GET /schema",
+      verify: "GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)",
+      manual: "POST /sync (or GET /sync?dryRun=1)",
+    },
+    read_only_sources: ["price_snapshots", "areas", "other source rows"],
+    write_scope: { table: "listings", filter: "source_id = 9", deletes: false },
+    scope_policy: {
+      in_scope: "مدينة نصر فقط",
+      out_of_scope_action: "لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files",
+      area_rule: "المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، ولا area_id عند غياب مطابقة واضحة",
+    },
+    write_ready: writeAccess,
+    schema,
+    last_run: last,
+  };
+}
+
+// تصدير دوال نقية للاختبار فقط — Cloudflare يستخدم default handler فقط.
+// ───────────────────────────────────────────────────────────────────────────
+// تقرير تحقّق قراءة فقط (GET/POST /verify) — بدون أي كتابة إطلاقًا
+// يستخدمه الـCI لتنفيذ checklist التسليم على D1 الحقيقي من خلال نفس الـbinding،
+// فمش محتاج صلاحية D1 على الـAPI token.
+// ───────────────────────────────────────────────────────────────────────────
+const VERIFY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
+
+function parseIdList(raw) {
+  if (!raw) return [];
+  const seen = new Set();
+  const out = [];
+  for (const part of String(raw).split(",")) {
+    const id = part.trim();
+    if (!VERIFY_ID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= 200) break;
+  }
+  return out;
+}
+
+async function scalar(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    const row = (results || [])[0] || {};
+    const value = Object.values(row)[0];
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number") return value;
+    const n = Number(value);
+    return Number.isFinite(n) && String(value).trim() !== "" ? n : value;
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function manyRows(db, sql, binds = []) {
+  try {
+    const stmt = binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql);
+    const { results } = await stmt.all();
+    return results || [];
+  } catch (err) {
+    return { error: String(err.message || err).slice(0, 160) };
+  }
+}
+
+async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [], inScopeIds = [], rowLists = [] } = {}) {
+  const db = env.DB;
+  const listingsTable = envIdent(env.LISTINGS_TABLE, "listings");
+  const schema = await readSchemaReport(db, env);
+  const map = schema.mapping || {};
+  const sourceCol = map.sourceId;
+  const externalCol = map.externalId;
+  const areaCol = map.areaId;
+
+  const inList = async (ids, extra = "") => {
+    if (!externalCol || !sourceCol || !ids.length) return { checked: ids.length, present: 0 };
+    const ph = ids.map(() => "?").join(",");
+    const n = await scalar(
+      db,
+      `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph})${extra}`,
+      [SOURCE_ID, ...ids]
+    );
+    return { checked: ids.length, present: n };
+  };
+
+  const counts = {
+    listings_total: await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable}`),
+    source9_total: sourceCol ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ?`, [SOURCE_ID]) : null,
+    source9_null_area: sourceCol && areaCol
+      ? await scalar(db, `SELECT COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${areaCol} IS NULL`, [SOURCE_ID])
+      : null,
+    areas_total: await scalar(db, "SELECT COUNT(*) AS n FROM areas"),
+    price_snapshots_total: await scalar(db, "SELECT COUNT(*) AS n FROM price_snapshots"),
+  };
+
+  const dupRows = externalCol && sourceCol
+    ? await manyRows(
+        db,
+        `SELECT ${externalCol} AS external_id, COUNT(*) AS n FROM ${listingsTable} WHERE ${sourceCol} = ? GROUP BY ${externalCol} HAVING COUNT(*) > 1 LIMIT 20`,
+        [SOURCE_ID]
+      )
+    : [];
+
+  const stateTable = envIdent(env.STATE_TABLE, STATE_TABLE);
+  const stateRows = await manyRows(db, `SELECT external_id, file_path FROM ${stateTable} WHERE ${sourceCol ? "source_id" : "source_id"} = ?`, [SOURCE_ID]);
+  const stateList = Array.isArray(stateRows) ? stateRows : [];
+  const stateInfo = {
+    rows: stateList.length,
+    files_tracked: stateList.filter((r) => r.external_id !== RUN_MARKER).length,
+    in_scope: stateList.filter((r) => !String(r.external_id || "").startsWith(INVALID_MARK) && !String(r.external_id || "").startsWith(OOS_MARK) && r.external_id !== RUN_MARKER).length,
+    invalid: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).length,
+    out_of_scope: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).length,
+    invalid_files: stateList.filter((r) => String(r.external_id || "").startsWith(INVALID_MARK)).map((r) => r.file_path).sort(),
+    out_of_scope_files: stateList.filter((r) => String(r.external_id || "").startsWith(OOS_MARK)).map((r) => r.file_path).sort(),
+  };
+
+  const fkRows = await manyRows(db, "PRAGMA foreign_key_check");
+  const integrity = await scalar(db, "PRAGMA integrity_check");
+  // quick_check أقل تقييدًا من D1؛ لو مسموح فهو بديل مفيد (integrity_check ممنوع في D1)
+  const quick = await scalar(db, "PRAGMA quick_check");
+
+  // صفوف كاملة لمجموعات محددة صراحةً (تُستخدم لإثبات أن الـWorker لم يلمس صفوفًا خارج نطاقه)
+  const listingsColumns = (schema.tables && schema.tables.listings) || [];
+  const pickup = ["id", map.sourceId, map.externalId, map.title, map.transactionType, map.propertyType, map.price, map.areaM2, map.areaId].filter(Boolean);
+  const selectCols = [];
+  for (const c of pickup) if (listingsColumns.includes(c) && !selectCols.includes(c)) selectCols.push(c);
+  const rowsFor = async (ids, key) => {
+    if (!rowLists.includes(key) || !externalCol || !sourceCol || !ids.length || !selectCols.length) return null;
+    const ph = ids.map(() => "?").join(",");
+    return manyRows(
+      db,
+      `SELECT ${selectCols.join(", ")} FROM ${listingsTable} WHERE ${sourceCol} = ? AND ${externalCol} IN (${ph}) ORDER BY ${externalCol}`,
+      [SOURCE_ID, ...ids]
+    );
+  };
+
+  let lastRunInfo = null;
+  try {
+    const runCols = await tableInfo(db, "ingestion_runs");
+    if (runCols) {
+      const runMap = buildMapping(runCols, RUN_COLUMN_MAP);
+      const row = await lastRun(db, runMap);
+      if (row) {
+        const notes = row[runMap.details] ?? row.notes ?? null;
+        lastRunInfo = {
+          started_at: runMap.startedAt ? row[runMap.startedAt] : null,
+          status: runMap.status ? row[runMap.status] : null,
+          notes: typeof notes === "string" ? notes.slice(0, 2000) : null,
+        };
+      }
+    }
+  } catch {
+    lastRunInfo = null;
+  }
+
+  return {
+    service: SERVICE_NAME,
+    version: WORKER_VERSION,
+    source_id: SOURCE_ID,
+    source_name: SOURCE_NAME,
+    checked_at: new Date().toISOString(),
+    last_run: lastRunInfo,
+    read_only: true,
+    listings_table: listingsTable,
+    mapping: { sourceId: sourceCol, externalId: externalCol, areaId: areaCol },
+    counts,
+    duplicates: {
+      count: Array.isArray(dupRows) ? dupRows.length : null,
+      sample: dupRows,
+    },
+    lists: {
+      in_scope: await inList(inScopeIds),
+      out_of_scope: await inList(outOfScopeIds),
+      invalid: await inList(invalidIds),
+      null_area: await inList(nullAreaIds, areaCol ? ` AND ${areaCol} IS NULL` : ""),
+      null_area_checked: Boolean(areaCol),
+    },
+    state: stateInfo,
+    preexisting_rows: {
+      out_of_scope: await rowsFor(outOfScopeIds, "out_of_scope"),
+      invalid: await rowsFor(invalidIds, "invalid"),
+    },
+    integrity: {
+      foreign_key_check: Array.isArray(fkRows) ? fkRows.length : fkRows,
+      integrity_check: integrity,
+      quick_check: quick,
+    },
+  };
+}
+
+export const __test = {
+  parseFrontMatter,
+  buildRecord,
+  matchArea,
+  detectOutOfScope,
+  containsToken,
+  areaAliases,
+  isCityArea,
+  OUT_OF_SCOPE_MARKERS,
+  CONDITIONAL_OUT_OF_SCOPE_MARKERS,
+  normalizeArabic,
+  toNumber,
+  propertyTypeFromCategory,
+  buildMapping,
+  isSameAsExisting,
+  runSync,
+  COLUMN_MAP,
+  REQUIRED_FIELDS,
+};
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const cors = corsHeaders(request);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: cors });
+    }
+
+    // حماية التشغيل اليدوي: لو SYNC_TOKEN مضبوط، فهو مطلوب
+    const authorized = (() => {
+      if (!env.SYNC_TOKEN) return true;
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7) : url.searchParams.get("token") || "";
+      return token === env.SYNC_TOKEN;
+    })();
+
+    try {
+      if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+        return json(await serviceInfo(env, request), 200, cors);
+      }
+
+      if (request.method === "GET" && url.pathname === "/schema") {
+        if (!env.DB) return json({ error: "missing_DB_binding" }, 500, cors);
+        return json(await readSchemaReport(env.DB, env), 200, cors);
+      }
+
+      // تقرير تحقق قراءة فقط — يُنفَّذ على D1 الحقيقي بدون أي كتابة (بديل مستقل عن صلاحية D1 API)
+      if ((request.method === "GET" || request.method === "POST") && url.pathname === "/verify") {
+        if (!authorized) return json({ error: "unauthorized" }, 401, cors);
+        if (!env.DB) return json({ error: "missing_DB_binding" }, 500, cors);
+        return json(
+          await verificationReport(env, {
+            outOfScopeIds: parseIdList(url.searchParams.get("out_of_scope")),
+            invalidIds: parseIdList(url.searchParams.get("invalid")),
+            nullAreaIds: parseIdList(url.searchParams.get("null_area")),
+            inScopeIds: parseIdList(url.searchParams.get("in_scope")),
+            rowLists: (url.searchParams.get("rows") || "").split(",").map((x) => x.trim()).filter((x) => x === "out_of_scope" || x === "invalid"),
+          }),
+          200,
+          cors
+        );
+      }
+
+      if (url.pathname === "/sync") {
+        if (!authorized) return json({ error: "unauthorized" }, 401, cors);
+        const dryRun = request.method === "GET"
+          ? url.searchParams.get("dryRun") !== "0"
+          : url.searchParams.get("dryRun") === "1";
+        const result = await runSync(env, { trigger: "manual", dryRun });
+        const status = result.status === "schema_mismatch" ? 409
+          : result.status === "throttled" ? 429
+          : 200;
+        return json(result, status, cors);
+      }
+
+      return json({ error: "not_found", endpoints: ["GET /", "GET /schema", "GET /verify", "POST /sync"] }, 404, cors);
+    } catch (err) {
+      return json({ error: "internal_error", message: String(err.message || err).slice(0, 300) }, 500, cors);
+    }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runSync(env, { trigger: "cron", dryRun: false }));
+  },
+};
