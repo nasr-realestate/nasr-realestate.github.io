@@ -52,12 +52,20 @@ permalink: /luxury-gallery.html
 </head>
 <body class="page-luxury">
 
+    <!-- ═══ تنقّل الموقع الموحّد (2026-10-07): نفس _includes/floating-menu.html
+         المستخدم في كل صفحات الموقع. كانت هذه الصفحة — و هي الوحيدة — بلا قائمة،
+         ولا تملك في أعلاها سوى زر «إغلاق» يرمي الزائر على / وحده، فيتنقّل داخل
+         الموقع بطريقة مختلفة عن باقي الصفحات. ═══ -->
+    {% include floating-menu.html %}
+
     <div class="ui-overlay">
         <div class="ui-brand">
             <i class="fas fa-crown"></i> سمسار طلبك | ELITE
         </div>
-        <a href="/" class="ui-exit">
-            <i class="fas fa-times"></i> إغلاق
+        <!-- ⚠️ إصلاح (2026-10-07): كان href="/" مكتوباً يدوياً (يتكسر مع baseurl)
+             والوصف «إغلاق» بينما الزر في الحقيقة «عودة للموقع» → تصحيح النص والـ aria. -->
+        <a href="{{ '/' | relative_url }}" class="ui-exit" aria-label="الخروج من المعرض إلى الموقع" title="الخروج إلى الموقع">
+            <i class="fas fa-arrow-right"></i> الخروج إلى الموقع
         </a>
     </div>
 
@@ -67,6 +75,10 @@ permalink: /luxury-gallery.html
         <p class="intro-sub">تجربة سينمائية لأفخم العقارات</p>
         <div class="load-indicator"></div>
     </div>
+
+    <!-- ⚠️ إصلاح (2026-10-07): شاشة الترحيب تُخفى من JavaScript وحده — مع تعطّل
+         JS أو امتداد مانع للسكربتات يبقى الزائر محبوساً خلف غطاء لا يمرّر النقر. -->
+    <noscript><style>body.page-luxury #introLayer { display: none !important; }</style></noscript>
 
     <main class="stage">
         <div class="track" id="mainTrack"></div>
@@ -203,6 +215,7 @@ permalink: /luxury-gallery.html
         }
 
         function goToSlide(idx) {
+            if (!properties.length) return;
             currentIdx = (idx + properties.length) % properties.length;
             document.getElementById('mainTrack').style.transform = `translateX(${currentIdx * 100}%)`;
             document.querySelectorAll('.slide').forEach((s, i) => {
@@ -212,15 +225,23 @@ permalink: /luxury-gallery.html
             document.getElementById('progressBar').style.width = '0%';
         }
 
+        // ═══ القائمة الموحّدة ☰ — إن كانت مفتوحة فهي الأولى بالمفاتيح والسحب ═══
+        function menuIsOpen() {
+            const p = document.getElementById('floatingMenuPanel');
+            return !!(p && p.classList.contains('open'));
+        }
+
         // ═══ دعم التنقل بالسحب ═══
         let touchStartX = 0;
         let touchEndX = 0;
         
         document.addEventListener('touchstart', (e) => {
+            if (menuIsOpen()) return;
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
         
         document.addEventListener('touchend', (e) => {
+            if (menuIsOpen()) return;
             touchEndX = e.changedTouches[0].screenX;
             const diff = touchStartX - touchEndX;
             
@@ -235,12 +256,38 @@ permalink: /luxury-gallery.html
 
         // ═══ دعم لوحة المفاتيح ═══
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') window.location.href = '/';
+            // Escape أثناء فتح القائمة تلتقطه قائمة الموقع أولاً — لا نغادر الصفحة (2026-10-07)
+            if (e.key === 'Escape') {
+                if (menuIsOpen()) return;
+                window.location.href = document.querySelector('.ui-exit')?.getAttribute('href') || '/';
+                return;
+            }
+            if (menuIsOpen()) return;
             if (e.key === 'ArrowLeft') goToSlide(currentIdx + 1);
             if (e.key === 'ArrowRight') goToSlide(currentIdx - 1);
         });
 
-        window.onload = build;
+        // ⚠️ إصلاح (2026-10-07): كان الإطلاق على window.onload وحده — أي مورد خارجي
+        // بطيء (الصور/الخطوط/Font Awesome على الجوال) يُبقي شاشة الترحيب غطاءً
+        // كاملاً على الشاشة (z-index:10000) فلا يُنقر زر الخروج في الأعلى ولا
+        // يبدأ المعرض إطلاقاً. الآن: البناء عند جاهزية DOM + سقف زمني يُغلق الشاشة دائماً.
+        const INTRO_MAX_MS = 2600;
+        let started = false;
+
+        function start() {
+            if (started) return;
+            started = true;
+            build();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start, { once: true });
+        } else {
+            start();
+        }
+        // شبكة متهتكة؟ لا نترك الزائر محبوساً داخل المعرض
+        setTimeout(start, INTRO_MAX_MS);
+        window.addEventListener('load', start);
     </script>
 </body>
 </html>
