@@ -75,20 +75,29 @@ let filteredProperties = [];
 let currentFilter = "all";
 let searchQuery = "";
 
+// ⚠️ إصلاح (2026-10-07): كانت الصفحة الرئيسية مكتوبة يدوياً "/" داخل الكود
+// (تتكسر مع أي baseurl) وكان فحص «نفس الموقع» يعمل بـ includes() فيكفي أن يظهر
+// اسم النطاق في أي جزء من رابط المُحيل (referrer) ليُقبل — فحص origin أدق.
+const SITE_HOME = "{{ '/' | relative_url }}";
+const SAME_ORIGIN = window.location.origin;
+
 // ═══ SMART BACK ═══
 function goBackSmart() {
-  // نحاول الرجوع للصفحة السابقة
-  const referrer = document.referrer;
-  const currentHost = window.location.host;
+  try {
+    if (document.referrer) {
+      const ref = new URL(document.referrer);
+      const cameFromSameSite = ref.origin === SAME_ORIGIN;
+      const cameFromThisPage = ref.pathname === window.location.pathname;
+      // رجوع حقيقي فقط لو جئنا من نفس الموقع ولم تكن الصفحة نفسها (حتى لا نلفّ في حلقة)
+      if (cameFromSameSite && !cameFromThisPage && window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+    }
+  } catch (err) { /* رابط مُحيل غير صالح → نتصرّف كأننا بلا تاريخ */ }
 
-  // إذا كان هناك تاريخ تصفح وجاء من نفس الموقع → ارجع للخلف
-  if (document.referrer && referrer.includes(currentHost) && window.history.length > 1) {
-    window.history.back();
-    return;
-  }
-
-  // وإلا → اذهب للصفحة الرئيسية
-  window.location.href = "/";
+  // لا تاريخ تصفح داخل الموقع → الصفحة الرئيسية
+  window.location.href = SITE_HOME;
 }
 
 // ═══ LOAD DATA ═══

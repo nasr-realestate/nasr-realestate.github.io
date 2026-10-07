@@ -4467,6 +4467,42 @@ body.page-luxury .ui-exit:hover {
             background: rgba(212,175,55,0.2);
             transform: scale(1.05);
         }
+/* ═══════════════════════════════════════════════
+   ⚠️ إصلاح (2026-10-07): الشريط العلوي في «بوابة النخبة» كان يعيد اختراع
+   تنقّل الموقع — زر واحد «إغلاق» يرمي الزائر على / ولا يُظهر أي عنصر من عناصر
+   التنقل المشتركة (☰)، إضافة إلى ثلاث علل عملية:
+     1) #introLayer ز-إنديكسها 10000 أعلى من .ui-overlay (9999) وتغطي الشاشة
+        كلها (inset:0)، فالزر العلوي يكون محجوباً عن النقر طوال شاشة الترحيب —
+        وإذا تأخّر window.onload (خطأ صورة/شبكة) بقي الزائر محبوساً في المعرض
+        بلا أي مخرج.
+     2) زر ☰ المشترك موضعه fixed · top:16px · left:16px — وهو بالضبط مكان
+        .ui-exit (آخر عنصر في شريط RTL) فكانت القائمة ستُغطي الزر لو أُضيفت،
+        وكذلك .floating-logo (right:16px) كان سيغطي نص «سمسار طلبك | ELITE».
+     3) الشاشة لا تُغلق إطلاقاً إن تعطّل JS لأن introLayer لا تُخفى إلا من JS.
+   الحل: الشريط العلوي يحتفظ بهوية الصفحة لكن يعيد استخدام تنقّل الموقع نفسه
+   (نفس _includes/floating-menu.html في كل الصفحات)، مع إخلاء زاوية ☰، ورفع
+   الشريط فوق شاشة الترحيب ليظل المخرج متاحاً دائماً.
+   ═══════════════════════════════════════════════ */
+body.page-luxury .ui-overlay {
+            /* يسار: مساحة محفوظة لزر ☰ المشترك (48px + 16px inset + 12px هامش) */
+            left: 76px;
+            /* فوق شاشة الترحيب (10000) وتحت طبقة/لوحة القائمة المشتركة (99998/99999) */
+            z-index: 99990;
+        }
+/* اللوجو العائم مكرر هنا — نص الهوية الذهبي في الركن الأيمن نفسه */
+body.page-luxury .floating-logo { display: none !important; }
+/* body.page-luxury مقفل على overflow:hidden !important (تجربة سينمائية) →
+   لوحة القائمة المشتركة تحتاج شريط تمرير خاصاً بها.
+   (حشو اللوحة نفسه مُسترجَع في «إصلاح 5» بنهاية الملف لعناصر القائمة المشتركة) */
+body.page-luxury .floating-menu-panel {
+            max-height: calc(100dvh - 88px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+body.page-luxury .ui-exit { min-height: 34px; }
+@media (max-width: 640px) {
+body.page-luxury .ui-overlay { left: 72px; }
+}
 /* ═══ شاشة الترحيب ═══ */body.page-luxury #introLayer { 
             position: fixed; 
             inset: 0; 
@@ -5590,6 +5626,39 @@ body.page-pgimages .pg-empty i {
   }
 body.page-pgimages .pg-top.show { display: flex; }
 body.page-pgimages .pg-top:active { transform: scale(0.92); }
+
+/* ═══════════════════════════════════════════════
+   ⚠️ إصلاح (2026-10-07): تصادم الشريط العلوي/السفلي مع عناصر التنقل الموحّدة
+   –––––––––––––––––––––––––––––––––––––––––––––––
+   هذه الصفحة تُحمّل قالب default → أي أنها تحصل على عناصر التنقل المشتركة:
+     .floating-menu-btn  (☰)  fixed · top:16px · left:16px  · 48×48 · z-index:99999
+     .floating-logo           fixed · top:16px · right:16px · 48×48 · z-index:99999
+     .agent-float-btn         fixed · bottom:24px · left:24px · 64×64 · z-index:999
+   لكن رأس الصفحة أضاف أزراره الخاصة في نفس الزوايا تماماً:
+     .pg-back   (رجوع) → يمين الرأس (RTL) = right:16px/y≈14 → تحت .floating-logo
+     .pg-count  (العدد) → يسار الرأس = left:16px            → تحت زر ☰
+     .pg-top    (للأعلى) → bottom:24px/left:24px             → تحت زر الوكيل
+   النتيجة: زر «رجوع» كان غير قابل للنقر إطلاقاً — النقرة كانت تقع على اللوجو
+   العائم (رابطه «/») فيُرمى الزائر للرئيسية بدل الرجوع، وشارة العدد كانت
+   مخفيّة. لذلك صارت صفحة معرض الصور «تتنقّل» بطريقة مختلفة عن باقي الموقع.
+   الحل (نفس سابقة body.page-agent التي تُخفي اللوجو العائم لأن لها رأسها):
+   1) إخفاء اللوجو العائم المكرر في هذه الصفحة فقط → يُخلي الركن الأيمن لزر «رجوع».
+   2) إخلاء يسار الرأس بعرض زر ☰ + هامش → شارة العدد صارت مقروءة.
+      (لا يُجدي رفع .pg-back بـ z-index: الرأس sticky سياقُ تكديس مستقل z-index:100،
+       فالمنافس fixed خارج هذا السياق — الطريق الوحيد هو عدم تكرار العنصر في الزاوية.)
+   3) نقل زر «للأعلى» فوق زر الوكيل بالارتفاع — لا يكفي رفع z-index لأن الزر
+      داخل main (سياق تكديس z-index:2) وزر الوكيل أخ منه (999) فيبقى تحته أبداً.
+   (أما حشو لوحة القائمة ☰ نفسه فيُصلَح مركزياً في «إصلاح 5» بنهاية الملف.)
+   ═══════════════════════════════════════════════ */
+body.page-pgimages .floating-logo { display: none !important; }
+body.page-pgimages .pg-header {
+    padding-left: 76px; /* يسار: مساحة محفوظة لزر ☰ المشترك */
+  }
+body.page-pgimages .pg-top { bottom: 104px; }
+@media (max-width: 480px) {
+    body.page-pgimages .pg-header { padding-left: 72px; }
+    body.page-pgimages .pg-top { bottom: 92px; }
+  }
 
 
 /* ┄┄┄ صفحة: أرشيف الطلبات — النطاق: body.page-requests ┄┄┄ */
@@ -7189,3 +7258,24 @@ body.page-add .valuation-cta-arrow { color: #d4af37; font-size: 1.1rem; flex-shr
   box-shadow: 0 4px 16px rgba(212,175,55,0.3);
 }
 .footer-toggle-label { white-space: nowrap; }
+
+
+/* ── 5) ⚠️ إصلاح (2026-10-07): قائمة التنقل المشتركة ☰ كانت تُعرَض مكسورة في صفحة المعرض ──
+   التنقّل الفعلي للموقع هو .floating-menu-panel / .floating-menu-item / .floating-menu-sep
+   — يُحقن _includes/floating-menu.html في قالبَي default و app (أي كل صفحات الموقع).
+   لكن ثلاث صفحات تفتح نطاقها بإعادة ضبط شاملة على كل العناصر:
+       body.page-add *, body.page-luxury *, body.page-pgimages *  { margin: 0; padding: 0; … }
+   (وتوجد نفس القاعدتين مكتوبتين لـ page-valuation و page-generator لكن لا صفحة
+    اليوم تُصدر هذين الـ body_class)
+   وخصيصة «body.صفحة *» = (0-1-1) تَغلب خصيصة قواعد القائمة العامة
+   «.floating-menu-item» = (0-1-0) → فيُصفَّر حشو اللوحة (8px) وحشو عناصرها
+   (12px 16px) وهامش الفواصل (6px 12px) في تلك الصفحات وحدها.
+   النتيجة التي يراها الزائر في أعلى «صفحة معرض الصور» و«اعرض عقارك»: قائمة
+   التنقل تظهر ملتصقة بلا حشو ولا فواصل — مختلفة عن باقي الموقع — بينما هي
+   سليمة في بقية الصفحات.
+   الحل: استرجاع المقاسات في نهاية الملف بخصيصة (0-1-1) تتعادل مع إعادة الضبط
+   وتفوز بالتتابع (موضعها الأخير)، أمام أي إعادة ضبط موجودة أو مستقبلية، وبدون
+   !important — القيم مطابقة للأساس تماماً فلا تنقلب على أي صفحة سليمة. */
+body .floating-menu-panel { padding: 8px; }
+body .floating-menu-item  { padding: 12px 16px; }
+body .floating-menu-sep   { margin: 6px 12px; }
