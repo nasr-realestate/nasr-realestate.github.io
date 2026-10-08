@@ -79,45 +79,53 @@ jobs:
           jq -c '{success, errors: [.errors[]?.message]}' /tmp/uv.json 2>/dev/null || true
 
           say "3) live script content vs the repo build (byte-level)"
-          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live.js
-          python3 - <<'PY'
-          import hashlib, re, sys
-          live = open('live.js','rb').read()
+          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live.raw
+          python3 - <<'PYEOF'
+          import hashlib, re, difflib
+          raw = open('live.raw','rb').read()
           repo = open('_worker/worker.js','rb').read()
           def sha(x): return hashlib.sha256(x).hexdigest()
-          def norm_crlf(x): return x.replace(b'\r\n', b'\n')
-          def norm_eol(x):  return re.sub(rb'\n+\Z', b'', norm_crlf(x))
-          def norm_lines(x): return b'\n'.join(l.rstrip() for l in norm_eol(x).split(b'\n'))
-          def norm_ws(x): return re.sub(rb'[ \t]+', b' ', norm_lines(x))
-          def norm_all(x): return re.sub(rb'\n', b' ', norm_ws(x)).strip()
-          print('live bytes = %d | repo bytes = %d | delta = %+d' % (len(live), len(repo), len(live)-len(repo)))
-          print('live sha256 = %s' % sha(live))
-          print('repo sha256 = %s' % sha(repo))
-          for name, f in [('raw', lambda x: x), ('crlf→lf', norm_crlf), ('+trailing-eol-strip', norm_eol),
-                          ('+per-line-rstrip', norm_lines), ('+ws-collapse', norm_ws), ('+all-collapse', norm_all)]:
-            lv, rv = f(live), f(repo)
-            print('  normalized [%-20s] equal=%s  live=%s repo=%s' % (name, lv == rv, sha(lv)[:16], sha(rv)[:16]))
-          if live != repo:
-            n = min(len(live), len(repo)); i = 0
-            while i < n and live[i] == repo[i]: i += 1
-            print('first differing byte at offset %d (of %d live / %d repo)' % (i, len(live), len(repo)))
-            print('  live ctx: %r' % live[max(0,i-60):i+90])
-            print('  repo ctx: %r' % repo[max(0,i-60):i+90])
-            print('  live tail: %r' % live[-80:])
-            print('  repo tail: %r' % repo[-80:])
-            print('  live head: %r' % live[:80])
-            print('  repo head: %r' % repo[:80])
-            import difflib
-            dl = list(difflib.unified_diff(live.decode('utf-8','replace').splitlines(), repo.decode('utf-8','replace').splitlines(), 'live', 'repo', n=1, lineterm=''))
-            print('diff lines: %d (showing up to 40)' % len(dl))
-            for line in dl[:40]: print('  ' + line[:200])
+          print('API response bytes = %d' % len(raw))
+          print('repo bytes         = %d | repo sha256 = %s' % (len(repo), sha(repo)))
+
+          # Module Workers: the API returns a multipart/form-data envelope (boundary + Content-Disposition + module).
+          inner = None
+          if raw.startswith(b'--'):
+              boundary = raw[2:raw.index(b'\r\n')]
+              print('detected multipart envelope | boundary length = %d | envelope overhead = %d bytes'
+                    % (len(boundary), len(raw) - len(repo)))
+              for part in raw.split(b'--' + boundary):
+                  if b'name="worker.js"' in part:
+                      body = part.split(b'\r\n\r\n', 1)[1]
+                      inner = body[:-2] if body.endswith(b'\r\n') else body
+                      break
+              if inner is None:
+                  print('WARNING: could not locate the worker.js part inside the envelope')
+          else:
+              inner = raw
+
+          if inner is not None:
+              print('module body bytes  = %d | module sha256 = %s' % (len(inner), sha(inner)))
+              print('module body == repo file (byte-for-byte): %s' % (inner == repo))
+              if inner != repo:
+                  n = min(len(inner), len(repo)); k = 0
+                  while k < n and inner[k] == repo[k]: k += 1
+                  print('first differing byte at %d | live ctx %r | repo ctx %r' % (k, inner[max(0,k-50):k+80], repo[max(0,k-50):k+80]))
+                  dl = list(difflib.unified_diff(inner.decode('utf-8','replace').splitlines(), repo.decode('utf-8','replace').splitlines(), 'live-module','repo', n=1, lineterm=''))
+                  print('line-diff count: %d (up to 30 shown)' % len(dl))
+                  for line in dl[:30]: print('  ' + line[:200])
+              print('VERDICT line: deployed module sha256 == repo sha256 : %s'
+                    % ('YES' if sha(inner) == sha(repo) else 'NO'))
+
           syms = [b'guardGeminiPayload', b'scrubDynamicText', b'splitDynamic', b'payloadHasRawAddress',
                   b'maskAddressSpans', b'scrubAddresses', b'ADDR_SPAN_RES', b'GEMINI_MODEL', b'FORM_VERSION']
-          for s in syms:
-            print('symbol %-22s live=%d repo=%d' % (s.decode(), live.count(s), repo.count(s)))
-          v = re.findall(rb'FORM_VERSION\s*=\s*"([^"]+)"', live) + re.findall(rb"FORM_VERSION\s*=\s*'([^']+)'", live)
+          src = inner if inner is not None else raw
+          for s2 in syms:
+              print('symbol %-22s live=%d repo=%d  %s' % (s2.decode(), src.count(s2), repo.count(s2),
+                    'OK' if src.count(s2) == repo.count(s2) else 'MISMATCH'))
+          v = re.findall(rb'FORM_VERSION\s*=\s*"([^"]+)"', src)
           print('live FORM_VERSION = %s' % [x.decode() for x in v])
-          PY
+          PYEOF
 
           say "4) live version/deployment history (read-only)"
           curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/deployments" -o dep.json
