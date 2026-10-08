@@ -1,0 +1,173 @@
+# TEMPORARY, READ-ONLY Cloudflare probe — created by an Arena session to compare GitHub
+# against the *deployed* state of the agent Worker (royal-snow-ea32).
+#
+# It performs GET requests only. It never deploys, never rolls back, never deletes a
+# version/deployment, never touches D1, secrets or webhooks. The API token is only read
+# from the repository secret and is never printed.
+name: TMP Cloudflare read-only probe
+
+on:
+  push:
+    paths:
+      - ".github/workflows/arena-cf-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # only to publish the probe report onto this session branch
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 1
+
+      - name: Read-only Cloudflare probe → _diag/cf-agent-probe.txt
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p _diag
+          R=_diag/cf-agent-probe.txt
+          API=https://api.cloudflare.com/client/v4
+          ACC="${CF_ACCOUNT}"
+
+          {
+            echo "=== TMP Cloudflare read-only probe ==="
+            echo "when:        $(date -u +%FT%TZ)"
+            echo "commit:      ${GITHUB_SHA}"
+            echo "ref:         ${GITHUB_REF_NAME}"
+            echo "token:       $([ -n "$CF_TOKEN" ] && echo PRESENT || echo MISSING)"
+            echo "account env: ${ACC:-<unset>}"
+            echo
+          } >> "$R"
+
+          if [ -z "$CF_TOKEN" ]; then
+            echo "no token — nothing to probe" >> "$R"
+            exit 0
+          fi
+
+          AUTH="Authorization: Bearer ${CF_TOKEN}"
+          g() { curl -sS -m 30 -H "$AUTH" "$API$1"; }
+
+          {
+            echo "=== 1) token verify (needs a user-scoped token; may legitimately fail) ==="
+            g "/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null
+            echo
+            echo "=== 2) accounts ==="
+            g "/accounts" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null
+          } >> "$R"
+
+          if [ -z "$ACC" ]; then
+            ACC=$(g "/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)
+            echo "resolved account from token: ${ACC:-<none>}" >> "$R"
+          fi
+
+          {
+            echo
+            echo "=== 3) ALL workers scripts in the account (id + created_on + modified_on + etag) ==="
+            g "/accounts/${ACC}/workers/scripts" | jq -c '{success, errors, scripts: [.result[]? | {id, created_on, modified_on, etag, handlers}]}' 2>/dev/null
+            echo
+            echo "=== 4) royal-snow-ea32 — script metadata ==="
+            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag, usage_model, handlers, compatibility_date, last_deployed_from} else null end)}' 2>/dev/null
+            echo
+            echo "=== 5) royal-snow-ea32 — settings (bindings/compat; secret values are never returned) ==="
+            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/settings" | jq -c '{success, errors, result: (.result | if . then {bindings, compatibility_date, compatibility_flags, observability, placement, tail_consumers} else null end)}' 2>/dev/null
+            echo
+            echo "=== 6) royal-snow-ea32 — schedules ==="
+            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/schedules" | jq -c '{success, errors, result}' 2>/dev/null
+            echo
+            echo "=== 7) royal-snow-ea32 — deployments (legacy scripts endpoint) ==="
+            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
+            echo
+            echo "=== 8) royal-snow-ea32 — deployments (services/environments endpoint) ==="
+            g "/accounts/${ACC}/workers/services/royal-snow-ea32/environments/production/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
+            echo
+            echo "=== 9) royal-snow-ea32 — versions ==="
+            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/versions" | jq -c '{success, errors, versions: [.result[]? | {id, number, created_on, author_email, annotations}]}' 2>/dev/null
+            echo
+            echo "=== 10) royal-snow-ea32 — service metadata (services endpoint) ==="
+            g "/accounts/${ACC}/workers/services/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, default_environment: (.default_environment // {} | {environment, script: (.script // {} | {id, created_on, modified_on, etag, handlers})})} else null end)}' 2>/dev/null
+            echo
+            echo "=== 11) the other two production Workers — metadata only ==="
+            for s in noisy-bush-fd84 nasr-properties-sync; do
+              echo "--- $s ---"
+              g "/accounts/${ACC}/workers/scripts/${s}" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag} else null end)}' 2>/dev/null
+              g "/accounts/${ACC}/workers/scripts/${s}/deployments" | jq -c '{success, errors, count: (.result.deployments | length)}' 2>/dev/null
+            done
+            echo
+            echo "=== 12) account workers.dev subdomain ==="
+            g "/accounts/${ACC}/workers/subdomain" | jq -c '{success, errors, result}' 2>/dev/null
+          } >> "$R" 2>&1
+
+          # ── the deployed agent source itself (read-only download) ───────────────
+          {
+            echo
+            echo "=== 13) royal-snow-ea32 — deployed source download ==="
+          } >> "$R"
+          curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker.js -w "content/v2 http=%{http_code} bytes=%{size_download}\n" \
+            "$API/accounts/${ACC}/workers/scripts/royal-snow-ea32/content/v2" >> "$R" 2>&1
+          if ! head -c 40 _diag/live-agent-worker.js 2>/dev/null | grep -q .; then
+            curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker.js.raw -w "content(v1) http=%{http_code} bytes=%{size_download}\n" \
+              "$API/accounts/${ACC}/workers/scripts/royal-snow-ea32/content" >> "$R" 2>&1
+          fi
+          {
+            if [ -s _diag/live-agent-worker.js ]; then
+              echo "downloaded bytes: $(wc -c < _diag/live-agent-worker.js)  lines: $(wc -l < _diag/live-agent-worker.js)"
+              echo "sha256: $(sha256sum _diag/live-agent-worker.js | cut -d' ' -f1)"
+              echo "md5:    $(md5sum _diag/live-agent-worker.js | cut -d' ' -f1)"
+              echo "--- first 3 lines of the deployed source ---"
+              head -3 _diag/live-agent-worker.js
+              echo "--- version markers found in the deployed source ---"
+              grep -oE 'v[0-9]+\.[0-9]+[A-Za-z0-9.-]*' _diag/live-agent-worker.js | sort | uniq -c | sort -rn | head -12
+              echo "--- FORM_VERSION in the deployed source ---"
+              grep -m3 -n 'FORM_VERSION' _diag/live-agent-worker.js | head -3
+              echo "--- form-version literal ---"
+              grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _diag/live-agent-worker.js
+              echo "--- marker counts (deployed) ---"
+              for m in redactPII scrubAddresses initAgentState waURL webhook hub.challenge X-Hub-Signature phone_number_id verify_token twilio ultramsg callmebot 360dialog WATI; do
+                printf '%-22s %s\n' "$m" "$(grep -c -- "$m" _diag/live-agent-worker.js)"
+              done
+            else
+              echo "no source downloaded (the token probably lacks Workers Scripts:Read)"; ls -la _diag | head
+            fi
+            echo
+            echo "=== 14) public endpoint probes (no auth, no Cloudflare state touched) ==="
+            echo "--- OPTIONS / (CORS preflight) ---"
+            curl -sS -m 20 -i -X OPTIONS https://royal-snow-ea32.footcai-555.workers.dev/ \
+              -H "Origin: https://nasr-realestate.github.io" -H "Access-Control-Request-Method: POST" \
+              -H "Access-Control-Request-Headers: content-type" | sed -n '1,12p'
+            echo "--- GET / (expect 405) ---"
+            curl -sS -m 20 -o /tmp/get.txt -w "http=%{http_code}\n" https://royal-snow-ea32.footcai-555.workers.dev/
+            head -c 300 /tmp/get.txt; echo
+            echo "--- POST / one greeting (the worker's own live version stamps formState._version) ---"
+            curl -sS -m 40 -o /tmp/post.json -w "http=%{http_code}\n" -X POST \
+              https://royal-snow-ea32.footcai-555.workers.dev/ \
+              -H "Origin: https://nasr-realestate.github.io" -H "Content-Type: application/json" \
+              -d '{"message":"السلام عليكم","formState":{},"history":[]}'
+            jq -c '{keys: (keys), response: (.response // "" | .[0:160]), formState_version: (.formState._version // null), typingDelay: (.typingDelay // null), options: ((.options // []) | length), error: (.error // null)}' /tmp/post.json 2>/dev/null || head -c 400 /tmp/post.json
+            echo
+            echo "--- valuation worker GET /areas (version) ---"
+            curl -sS -m 20 https://noisy-bush-fd84.footcai-555.workers.dev/areas | jq -c '{service, status, version, api_contract, areas: ((.available_areas // []) | length)}' 2>/dev/null
+            echo "--- sync worker GET / (version) ---"
+            curl -sS -m 20 https://nasr-properties-sync.footcai-555.workers.dev/ | jq -c '{service, status, worker_version, version}' 2>/dev/null
+          } >> "$R" 2>&1
+
+          echo "----- report written: $(wc -l < "$R") lines -----"
+          sed -n '1,40p' "$R"
+
+      - name: Publish the probe outputs to this session branch
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          git config user.name "Arena Probe Bot"
+          git config user.email "probe@users.noreply.github.com"
+          git add -f _diag/cf-agent-probe.txt _diag/live-agent-worker.js _diag/live-agent-worker.js.raw 2>/dev/null
+          git status --short | head -10
+          git commit -m "chore(diag): read-only Cloudflare probe of royal-snow-ea32 [skip ci]" || echo "nothing to commit"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "push failed"
