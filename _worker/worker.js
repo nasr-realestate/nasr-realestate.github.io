@@ -1160,10 +1160,19 @@ function safeDataForPrompt(data){
   }
   return redactPII(JSON.stringify(out)).slice(0,500);
 }
+// العنوان الخام اللي العميل كتبه بنفسه — بيتحفظ قبل أي تطبيع لمنطقة عشان التنقية تلاقيه
+function rememberRawLocation(data, raw){
+  const t = String(raw||"").trim();
+  if(t.length<6) return data;
+  const list = Array.isArray(data?._rawLocations) ? data._rawLocations : [];
+  if(list.includes(t)) return data;
+  return { ...data, _rawLocations: [...list, t].slice(-5) };
+}
 function scrubAddresses(text,data){
   let t = String(text||"");
-  const known = [data?.location, data?.gps?.address].map(x=>String(x||"").trim()).filter(x=>x.length>=6);
-  for(const a of new Set(known)) t = t.split(a).join("[عنوان]");
+  const raw = Array.isArray(data?._rawLocations) ? data._rawLocations : [];
+  const known = [...new Set([data?.location, data?.gps?.address, ...raw].map(x=>String(x||"").trim()).filter(x=>x.length>=6))].sort((a,b)=>b.length-a.length);
+  for(const a of known) t = t.split(a).join("[عنوان]");
   return t;
 }
 async function callGemini(env, sys, msgs, maxTok=150, temp=0.6){
@@ -1474,7 +1483,8 @@ async function processOwner(fs, msg, env, history, lms){
   }
   if(isCancel(msg)) return cancelFlow(fs);
   if(isSendNow(msg)) return completeOwnerCheck(fs, fs.data||{});
-  const data = {...(fs.data||{})};
+  let data = {...(fs.data||{})};
+  if(ADDRESS_STEP_IDS.has(step.id)) data = rememberRawLocation(data, msg);
   if(isSkip(msg)){
     if(CORE_OWNER.has(step.id)) return askOwnerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
     data[step.id]="—"; markFilled(data,step);
@@ -1544,7 +1554,8 @@ async function processBuyer(fs, msg, env, history, lms){
     return askBuyerStep(getBuyerSteps(bs.type), bs.stepIndex, bs, "تمام، رجعنا خطوة.", lms);
   }
   if(isCancel(msg)) return cancelFlow(fs);
-  const data = {...(fs.data||{})};
+  let data = {...(fs.data||{})};
+  if(ADDRESS_STEP_IDS.has(step.id)) data = rememberRawLocation(data, msg);
   if(isSkip(msg)&&CORE_BUYER.has(step.id)){
     return askBuyerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
   }
@@ -2247,6 +2258,7 @@ export default {
           if(!key) continue;
           const prev = fs.data?.[key];
           if(hasVal(prev) && String(prev) !== String(v)){
+            if(ADDRESS_STEP_IDS.has(key)) fs.data = rememberRawLocation(fs.data, prev);
             fs.data = { ...fs.data, [key]: v };
             fs.agentState.corrections = [...(fs.agentState.corrections||[]), { field:key, from:prev, to:v, at:Date.now() }].slice(-20);
           }

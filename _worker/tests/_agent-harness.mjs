@@ -69,7 +69,7 @@ export function rawAgentRequest(path, init = {}, env) {
 // ───────── حالة مالك مكتملة (مسار «ابعت البيانات دلوقتي ✅») — بتستخدم لاختبار valuationResult بسرعة ─────────
 export function qualifiedOwnerState(over = {}) {
   return {
-    active: true, lifecycle: "active", type: "sale", stepIndex: 0, flowType: "owner", awaitingQ: true, imageUrls: [], _version: "v87",
+    active: true, lifecycle: "active", type: "sale", stepIndex: 0, flowType: "owner", awaitingQ: true, imageUrls: [], _version: "v92",
     data: {
       propertyType: "شقة", location: "المنطقة السادسة - شارع عباس العقاد", area: 180, price: 9500000, rooms: "3", baths: "2",
       floor: "ثالث", finishing: "سوبر لوكس", notes: "لا", ownerName: "أحمد محمد", ownerPhone: "01012345678",
