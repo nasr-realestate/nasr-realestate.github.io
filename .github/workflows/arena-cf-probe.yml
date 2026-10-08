@@ -168,6 +168,43 @@ jobs:
 
           echo "--- report lines: $(wc -l < "$R") ---"
 
+      - name: LIVE production flow (public endpoint, read-only)
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          RID="${GITHUB_RUN_ID}"
+          node _diag/evidence/live-flow.mjs 2>&1 | tee _diag/live-flow-$RID.txt
+          echo
+          echo "=== credential matrix (names only) ==="
+          TOKEN=""
+          for v in "$C_T1" "$C_T2" "$C_T3" "$C_T5" "$C_T6" "$C_T4"; do [ -n "$v" ] && { TOKEN="$v"; break; }; done
+          [ -n "$C_T1" ] && echo "PRESENT:CLOUDFLARE_API_TOKEN" || echo "MISSING:CLOUDFLARE_API_TOKEN"
+          [ -n "$C_T2" ] && echo "PRESENT:CLOUDFLARE_TOKEN"    || echo "MISSING:CLOUDFLARE_TOKEN"
+          [ -n "$C_T4" ] && echo "PRESENT:CLOUDFLARE_D1_TOKEN" || echo "MISSING:CLOUDFLARE_D1_TOKEN"
+          [ -n "$C_T5" ] && echo "PRESENT:CF_API_TOKEN"        || echo "MISSING:CF_API_TOKEN"
+          [ -n "$TOKEN" ] && echo "→ a Cloudflare credential IS available" || echo "→ NO Cloudflare credential available"
+          echo "DEPLOY_GATE_CREDENTIAL=$([ -n "$TOKEN" ] && echo yes || echo no)" >> "$GITHUB_ENV"
+          exit 0
+      - name: Publish live-flow output
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          RID="${GITHUB_RUN_ID}"
+          f="_diag/live-flow-$RID.txt"
+          [ -s "$f" ] || { echo "no live-flow output"; exit 0; }
+          B64=$(base64 -w0 "$f")
+          jq -n --arg m "live-flow $RID [skip ci]" --arg c "$B64" --arg b "$BRANCH" '{message:$m,content:$c,branch:$b}' \
+            | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/_diag/live-flow-$RID.txt" --input - >/dev/null 2>&1 \
+            && echo "published" || echo "publish failed"
+          S=$(tr '\n' '~' < "$f" | head -c 34000)
+          i=0
+          while [ -n "$S" ] && [ $i -lt 12 ]; do
+            chunk=$(printf '%s' "$S" | cut -c1-3400); S=$(printf '%s' "$S" | cut -c3401-)
+            i=$((i+1)); echo "::error title=LIVEFLOW_${i}::${chunk}"
+          done
+
       - name: Publish results (Contents API + annotations)
         if: always()
         continue-on-error: true
