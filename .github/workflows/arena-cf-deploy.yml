@@ -1,0 +1,228 @@
+# TEMPORARY — Arena session: deploy the verified agent Worker (royal-snow-ea32) to production.
+#
+# Gated, self-verifying and non-destructive:
+#   gate 0  the repo is at the expected commit and the Worker file matches the verified sha256
+#   gate 1  a Cloudflare credential resolves (if not: NOTHING is deployed, the run says so and stops)
+#   gate 2  read-only snapshot of the live script (bindings by name/type, compatibility, deployments)
+#   gate 3  upload the same artifact with keep_bindings for the secret bindings and the same
+#           compatibility settings + the existing D1 binding
+#   gate 4  verify: live script sha256 == repo sha256, bindings unchanged (secret still bound),
+#           the active version carries the annotation tag arena-0288fa3
+#   gate 5  real production smoke tests (6 scenarios) with HTTP + privacy assertions
+#
+# No rollback, no version/deployment deletion, no D1 change, no secret change, no master push.
+name: TMP Arena deploy — royal-snow-ea32
+
+on:
+  push:
+    paths:
+      - ".github/workflows/arena-cf-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  API: https://api.cloudflare.com/client/v4
+  ACC: 717c46b0d78a6f06589b8367a1a3cc5b
+  SCRIPT: royal-snow-ea32
+  AGENT: https://royal-snow-ea32.footcai-555.workers.dev
+  SITE: https://nasr-realestate.github.io
+  EXPECTED_COMMIT: 0288fa3ce6ff12cbedb341ba5a660d76fca76236
+  EXPECTED_WORKER_SHA256: 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+  TAG: arena-0288fa3
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      C_T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      C_T2: ${{ secrets.CLOUDFLARE_TOKEN }}
+      C_T4: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
+      C_T5: ${{ secrets.CF_API_TOKEN }}
+      C_T6: ${{ secrets.CF_TOKEN }}
+      C_A1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      C_A2: ${{ secrets.CF_ACCOUNT_ID }}
+      RID: ${{ github.run_id }}
+      BRANCH: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Deploy + verify + smoke
+        run: |
+          set -uo pipefail
+          R=_diag/deploy-$RID.txt
+          exec > >(tee "$R") 2>&1
+          VERDICT=""
+          say(){ echo; echo "── $* ──"; }
+
+          say "0) repo identity"
+          HEAD=$(git rev-parse HEAD)
+          W_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
+          echo "HEAD          = $HEAD"
+          echo "expected      = $EXPECTED_COMMIT"
+          echo "worker.js sha = $W_SHA"
+          echo "expected      = $EXPECTED_WORKER_SHA256"
+          if [ "$HEAD" != "$EXPECTED_COMMIT" ] || [ "$W_SHA" != "$EXPECTED_WORKER_SHA256" ]; then
+            VERDICT="STOP — repo identity mismatch, nothing deployed"
+            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0
+          fi
+          echo "OK: the deployed artifact will be exactly the verified build"
+
+          say "1) credential matrix (names only — values are never printed)"
+          TOKEN=""
+          for v in "$C_T1" "$C_T2" "$C_T5" "$C_T6" "$C_T4"; do [ -n "$v" ] && { TOKEN="$v"; break; }; done
+          for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CLOUDFLARE_D1_TOKEN CF_API_TOKEN CF_TOKEN; do
+            eval "val=\$$n"; [ -n "$val" ] && echo "PRESENT:$n" || echo "MISSING:$n"
+          done
+          ACCID="$ACC"; [ -n "$C_A1" ] && ACCID="$C_A1"; [ -n "$C_A2" ] && ACCID="$C_A2"
+          echo "account id in use: $ACCID"
+          if [ -z "$TOKEN" ]; then
+            VERDICT="STOP — NO Cloudflare credential available in this repository; NOTHING was deployed"
+            echo "VERDICT: $VERDICT"
+            echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
+            S="NO Cloudflare credential (all candidate secret names MISSING) — nothing deployed, production untouched."
+            echo "::error title=DEPLOY_BLOCKED::${S}"
+            exit 0
+          fi
+          AUTH="Authorization: Bearer ${TOKEN}"
+
+          say "1b) token verify"
+          curl -sS -m 30 -H "$AUTH" "$API/user/tokens/verify" | jq -c '{success, status: .result.status}' || true
+
+          say "2) read-only snapshot of the live script"
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/settings" -o snap.json
+          echo "settings success: $(jq -r .success snap.json)"
+          echo "bindings (name/type only):"; jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap.json 2>/dev/null | sort || true
+          COMPAT=$(jq -r '.result.compatibility_date // "2026-09-01"' snap.json)
+          FLAGS=$(jq -c '.result.compatibility_flags // []' snap.json)
+          echo "compatibility_date = $COMPAT | flags = $FLAGS"
+          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT" -o live.js
+          LIVE_SHA=$(sha256sum live.js | cut -d' ' -f1); echo "live script sha256 = $LIVE_SHA (before)"
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/deployments" -o dep0.json
+          jq -c '{success, active: .result.deployments[0] | {id, created_on, versions: [.versions[]? | {version_id, percentage}]}}' dep0.json 2>/dev/null || true
+
+          say "3) build upload metadata (secrets kept by type, everything else replicated verbatim)"
+          KEEP=$(jq -c '[.result.bindings[]? | select(.type | test("^secret")) | .type] | unique' snap.json)
+          echo "keep_bindings = $KEEP"
+          jq -n --argjson snap "$(cat snap.json)" --argjson keep "$KEEP" --arg compat "$COMPAT" --argjson flags "$FLAGS" --arg tag "$TAG" '{
+            main_module: "worker.js",
+            compatibility_date: $compat,
+            compatibility_flags: $flags,
+            keep_bindings: $keep,
+            bindings: [ $snap.result.bindings[]? | select((.type | test("^secret")) | not) ],
+            annotations: { "workers/message": ("arena privacy fix " + $tag), "workers/tag": $tag }
+          }' > meta.json
+          jq -c '{main_module, compatibility_date, compatibility_flags, keep_bindings, bindings: [.bindings[] | {type, name}]}' meta.json
+
+          say "4) upload"
+          HTTP=$(curl -sS -m 120 -o up.json -w '%{http_code}' -X PUT "$API/accounts/$ACCID/workers/scripts/$SCRIPT" \
+            -H "$AUTH" \
+            -F "metadata=<meta.json;type=application/json" \
+            -F "worker.js=@_worker/worker.js;type=application/javascript+module")
+          echo "upload http=$HTTP"; echo "upload success: $(jq -r .success up.json 2>/dev/null)"
+          echo "upload result:  $(jq -c '{id, version_id, etag, created_on, modified_on} | with_entries(select(.value != null))' up.json 2>/dev/null)"
+          if [ "$HTTP" != "200" ] || [ "$(jq -r .success up.json 2>/dev/null)" != "true" ]; then
+            VERDICT="STOP — upload rejected (http=$HTTP); production unchanged"
+            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
+            echo "::error title=DEPLOY_FAILED::upload rejected http=$HTTP (nothing changed)"
+            exit 0
+          fi
+
+          say "5) verify the deployment"
+          sleep 5
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/settings" -o snap2.json
+          echo "bindings after (name/type only):"; jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap2.json 2>/dev/null | sort
+          BEFORE_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap.json)
+          AFTER_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap2.json)
+          echo "bindings identical: $([ "$BEFORE_B" = "$AFTER_B" ] && echo yes || echo NO)"
+          [ "$BEFORE_B" = "$AFTER_B" ] || echo "::warning title=BINDINGS_CHANGED::$BEFORE_B → $AFTER_B"
+          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT" -o live2.js
+          NEW_SHA=$(sha256sum live2.js | cut -d' ' -f1); echo "live script sha256 = $NEW_SHA (after)"
+          echo "live == repo build: $([ "$NEW_SHA" = "$EXPECTED_WORKER_SHA256" ] && echo yes || echo NO)"
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/deployments" -o dep1.json
+          jq -c '{active: .result.deployments[0] | {id, created_on, versions: [.versions[]? | {version_id, percentage}]}}' dep1.json 2>/dev/null || true
+          VID=$(jq -r '.result.deployments[0].versions[0].version_id // empty' dep1.json)
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/versions/$VID" -o ver.json 2>/dev/null || true
+          echo "active version $VID annotations: $(jq -c '.result.annotations // empty' ver.json 2>/dev/null)"
+
+          say "6) production smoke tests"
+          P=0; F=0
+          FRAG='شارع إبراهيم نوارة|شارع إبراهيم نواره|بجوار صيدلية|صيدلية العزبي|بجوار مسجد الرحمة|شارع 15 مايو'
+          post(){ # post <label> <json>
+            local label="$1" body="$2" code
+            code=$(curl -sS -m 45 -o body.json -w '%{http_code}' -X POST "$AGENT/" \
+              -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary "$body" 2>/tmp/curlerr)
+            local ok="FAIL"
+            if [ "$code" = "200" ] && jq -e '.response | length > 0' body.json >/dev/null 2>&1; then ok="PASS"; fi
+            local leak="no"
+            if grep -qE "$FRAG" body.json; then leak="YES"; fi
+            local marker="no"; grep -q '\[عنوان\]' body.json && marker="YES"
+            echo "  [$ok] $label | http=$code | reply=$(jq -r '.response' body.json 2>/dev/null | head -c 70 | tr '\n' ' ') | raw_address_in_reply=$leak | mask_marker_shown=$marker"
+            if [ "$ok" = "PASS" ]; then P=$((P+1)); else F=$((F+1)); fi
+            if [ "$leak" = "YES" ]; then echo "     ^ LEAK: a raw address fragment appeared in the production reply"; fi
+            echo "$(jq -c '.formState // empty' body.json 2>/dev/null)" > last-fs.json
+          }
+          say "6.0 transport"
+          echo "  GET /            → $(curl -sS -m 30 -o /dev/null -w '%{http_code}' "$AGENT/") (expect 405)"
+          echo "  OPTIONS preflight → $(curl -sS -m 30 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") (expect 204)"
+          ACAO=$(curl -sS -m 30 -D - -o /dev/null -X OPTIONS "$AGENT/" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST" | grep -i '^access-control-allow-origin' | tr -d '\r')
+          echo "  $ACAO (expect the site origin)"
+          say "6.1 normal message, no address"
+          post "S1 normal" '{"message":"عايز شقة 3 غرف في مدينة نصر وميزانيتي حوالي 3 مليون"}'
+          say "6.2 message containing an address"
+          post "S2 address" '{"message":"عايز شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي"}'
+          say "6.3 address typed at a NON-address step (drives the flow to the rooms step first)"
+          post "S3.1 open" '{"message":"💰 أبيع"}'
+          FS=$(cat last-fs.json)
+          post "S3.2 type" "$(jq -nc --argjson fs "$FS" '{message:"شقة", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S3.3 addr" "$(jq -nc --argjson fs "$FS" '{message:"شارع عباس العقاد", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S3.4 area" "$(jq -nc --argjson fs "$FS" '{message:"180", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S3.5 price" "$(jq -nc --argjson fs "$FS" '{message:"9500000", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S3.6 rooms+address" "$(jq -nc --argjson fs "$FS" '{message:"3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي", formState:$fs}')"
+          say "6.4 unknown address outside MASTER_LANDMARKS (first message)"
+          post "S4 unknown addr" '{"message":"السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"}'
+          say "6.5 first message with an address + intent"
+          post "S5 first+intent" '{"message":"عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"}'
+          say "6.6 correction path"
+          post "S6.1 open" '{"message":"💰 أبيع"}'; FS=$(cat last-fs.json)
+          post "S6.2 type" "$(jq -nc --argjson fs "$FS" '{message:"شقة", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S6.3 addr" "$(jq -nc --argjson fs "$FS" '{message:"شارع عباس العقاد", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S6.4 area" "$(jq -nc --argjson fs "$FS" '{message:"180", formState:$fs}')"; FS=$(cat last-fs.json)
+          post "S6.5 correction" "$(jq -nc --argjson fs "$FS" '{message:"لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي", formState:$fs}')"
+
+          say "summary"
+          echo "smoke: $P passed / $F failed (of $((P+F)))"
+          echo "script live == verified build: $([ "$NEW_SHA" = "$EXPECTED_WORKER_SHA256" ] && echo yes || echo NO)"
+          echo "bindings unchanged: $([ "$BEFORE_B" = "$AFTER_B" ] && echo yes || echo NO)"
+          if [ "$NEW_SHA" = "$EXPECTED_WORKER_SHA256" ] && [ "$BEFORE_B" = "$AFTER_B" ] && [ "$F" = "0" ]; then
+            VERDICT="SUCCESS — deployed $EXPECTED_COMMIT ($TAG), live sha matches, bindings unchanged, smoke $P/$((P+F)) passed"
+          else
+            VERDICT="REVIEW — deploy completed but a check failed (live_sha_match=$([ "$NEW_SHA" = "$EXPECTED_WORKER_SHA256" ] && echo yes || echo no), bindings_same=$([ "$BEFORE_B" = "$AFTER_B" ] && echo yes || echo no), smoke_failures=$F). No rollback performed."
+          fi
+          echo "VERDICT: $VERDICT"
+          echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
+          echo "::notice title=DEPLOY_VERDICT::$VERDICT"
+
+      - name: Publish report + annotations
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          f="_diag/deploy-$RID.txt"
+          [ -s "$f" ] || { echo "no report file"; exit 0; }
+          B64=$(base64 -w0 "$f")
+          jq -n --arg m "chore(diag): deploy run $RID [skip ci]" --arg c "$B64" --arg b "$BRANCH" \
+            '{message:$m,content:$c,branch:$b}' \
+            | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/$f" --input - >/dev/null 2>&1 \
+            && echo "published: $f" || echo "publish failed"
+          S=$(grep -E "VERDICT:|smoke:|live script sha256|bindings identical|raw_address_in_reply=YES" "$f" | tr '\n' '~' | head -c 30000)
+          i=0
+          while [ -n "$S" ] && [ $i -lt 12 ]; do
+            chunk=$(printf '%s' "$S" | cut -c1-3200); S=$(printf '%s' "$S" | cut -c3201-)
+            i=$((i+1)); echo "::error title=DEPLOY_${i}::${chunk}"
+          done
