@@ -1,0 +1,474 @@
+════════════════════════════════════════════════════════════════════
+RESIDUAL PAYLOAD TRACE — canary: شارع إبراهيم نوارة بجوار صيدلية العزبي
+════════════════════════════════════════════════════════════════════
+
+═══ S1 · reference: canary typed AT the location step, then a side question (the fixed path)
+
+── turn 1 · owner: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 2 · owner: canary typed AT the location step
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع إبراهيم نوارة بجوار صيدلية العزبي"] | location="إبراهيم نواره"
+   gemini : 0 call(s) — nothing sent
+
+── turn 3 · owner: side question at the area step
+   sent   : "المنطقة دي كويسة للاستثمار؟"
+   reply  : "اكتب المساحة بالمتر."
+   stored : _rawLocations=1 ["شارع إبراهيم نوارة بجوار صيدلية العزبي"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: clean
+
+═══ S2 · canary typed at a NON-address step (normal path, same turn)
+
+── turn 4 · SELLER: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 5 · SELLER: a different address at the location step
+   sent   : "شارع عباس العقاد"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 6 · SELLER: area
+   sent   : "180"
+   reply  : "السعر المطلوب كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 7 · SELLER: price
+   sent   : "9500000"
+   reply  : "عدد الغرف كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 8 · SELLER: owner at the rooms step — canary inside a longer answer
+   sent   : "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "عدد الحمامات كام؟"
+   stored : _rawLocations=2 ["شارع عباس العقاد","عباس العقاد"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … "ي.
+
+إجابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [street] in system … "ي.
+
+إجابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "جابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [pharmacy] in system … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [pharmacy-short] in system … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [next-to] in system … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+── turn 9 · LESSOR: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 10 · LESSOR: a different address at the location step
+   sent   : "شارع عباس العقاد"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 11 · LESSOR: area
+   sent   : "180"
+   reply  : "الإيجار الشهري كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 12 · LESSOR: price
+   sent   : "9000"
+   reply  : "عدد الغرف كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 13 · LESSOR: owner(rent) at the rooms step — canary inside a longer answer
+   sent   : "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "عدد الحمامات كام؟"
+   stored : _rawLocations=2 ["شارع عباس العقاد","عباس العقاد"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … "ي.
+
+إجابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [street] in system … "ي.
+
+إجابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "جابة العميل: "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [pharmacy] in system … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [pharmacy-short] in system … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "عد"
+     call 1: ❌ LEAK [next-to] in system … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+── turn 14 · BUYER: property type
+   sent   : "شقة"
+   reply  : "عايز العقار في أنهي منطقة؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 15 · BUYER: landmark step
+   sent   : "المنطقة السادسة"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["المنطقة السادسة"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 16 · BUYER: at the area step — canary as the answer
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "معلش، ممكن توضح تاني؟"
+   stored : _rawLocations=1 ["المنطقة السادسة"] | landmark="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "مع"
+     call 1: ❌ LEAK [street] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "ال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name-norm] in system … "{"propertyType":"شقة","landmark":"إبراهيم نواره"}"
+     call 1: ❌ LEAK [pharmacy] in system … "العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "مع"
+     call 1: ❌ LEAK [pharmacy-short] in system … " "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "مع"
+     call 1: ❌ LEAK [next-to] in system … "إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+── turn 17 · TENANT: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 18 · TENANT: landmark step
+   sent   : "المنطقة السادسة"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["المنطقة السادسة"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 19 · TENANT: at the area step — canary as the answer
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "اكتب المساحة بالمتر."
+   stored : _rawLocations=1 ["المنطقة السادسة"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [street] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "ال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [pharmacy] in system … "العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [pharmacy-short] in system … " "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [next-to] in system … "إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+═══ S3 · correction path: canary as a correction at a later step
+
+── turn 20 · owner: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 21 · owner: address at the location step
+   sent   : "شارع عباس العقاد"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 22 · owner: area
+   sent   : "180"
+   reply  : "السعر المطلوب كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 23 · owner: correction at the price step
+   sent   : "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "اكتب السعر رقم."
+   stored : _rawLocations=2 ["شارع عباس العقاد","عباس العقاد"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … "
+
+إجابة العميل: "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [street] in system … "
+
+إجابة العميل: "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "بة العميل: "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [pharmacy] in system … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [pharmacy-short] in system … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "اك"
+     call 1: ❌ LEAK [next-to] in system … "، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "لأ، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … " العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "ن شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "، قصدي العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+═══ S4 · free-text step: canary stored in notes, then a later Gemini call
+
+── turn 24 · owner: walking to the notes step ("شقة")
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 25 · owner: walking to the notes step ("شارع عباس العقاد")
+   sent   : "شارع عباس العقاد"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 26 · owner: walking to the notes step ("180")
+   sent   : "180"
+   reply  : "السعر المطلوب كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 27 · owner: walking to the notes step ("9500000")
+   sent   : "9500000"
+   reply  : "عدد الغرف كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 28 · owner: walking to the notes step ("3")
+   sent   : "3"
+   reply  : "عدد الحمامات كام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 29 · owner: walking to the notes step ("2")
+   sent   : "2"
+   reply  : "الدور الكام؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 30 · owner: walking to the notes step ("ثالث")
+   sent   : "ثالث"
+   reply  : "التشطيب إيه؟"
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 31 · owner: walking to the notes step ("سوبر لوكس")
+   sent   : "سوبر لوكس"
+   reply  : "في أي تفاصيل مهمة تانية؟ ولو مفيش اكتب لا."
+   stored : _rawLocations=1 ["شارع عباس العقاد"]
+   gemini : 0 call(s) — nothing sent
+
+── turn 32 · owner: notes step («في أي تفاصيل مهمة تانية؟») — canary stored in data.notes
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "تمام، خلصنا البيانات الأساسية 👌"
+   stored : _rawLocations=2 ["شارع عباس العقاد","عباس العقاد"] | location="إبراهيم نواره" | notes="شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "تم"
+     call 1: ❌ LEAK [street] in system … " السؤال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [name] in system … "ال اللي جاي.
+
+إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+"
+     call 1: ❌ LEAK [pharmacy] in system … "العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "تم"
+     call 1: ❌ LEAK [pharmacy-short] in system … " "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال اللي جاي: "تم"
+     call 1: ❌ LEAK [next-to] in system … "إجابة العميل: "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+السؤال"
+     call 1: ❌ LEAK [full] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [street] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [name] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+
+── turn 33 · owner: a longer answer at the next step (a comment carries the data snapshot)
+   sent   : "اسمي أحمد وعايز أعرف لو فيه رسوم إضافية"
+   reply  : "اسم حضرتك إيه؟"
+   stored : _rawLocations=2 ["شارع عباس العقاد","عباس العقاد"] | location="إبراهيم نواره" | notes="شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … ","finishing":"سوبر لوكس","notes":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+     call 1: ❌ LEAK [street] in system … ","finishing":"سوبر لوكس","notes":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+     call 1: ❌ LEAK [name] in system … "ishing":"سوبر لوكس","notes":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+     call 1: ❌ LEAK [pharmacy] in system … ""notes":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+     call 1: ❌ LEAK [pharmacy-short] in system … ":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+     call 1: ❌ LEAK [next-to] in system … "لوكس","notes":"شارع إبراهيم نوارة بجوار صيدلية العزبي"}"
+
+═══ S1b · control: the same sentence at the area step, after the canary passed the location step
+
+── turn 34 · control: property type
+   sent   : "شقة"
+   reply  : "العقار فين بالضبط؟ اكتب الشارع والمنطقة."
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 35 · control: canary typed AT the location step
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع إبراهيم نوارة بجوار صيدلية العزبي"] | location="إبراهيم نواره"
+   gemini : 0 call(s) — nothing sent
+
+── turn 36 · control: the same canary repeated at the area step
+   sent   : "هو العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي صح؟"
+   reply  : "اكتب المساحة بالمتر."
+   stored : _rawLocations=1 ["شارع إبراهيم نوارة بجوار صيدلية العزبي"] | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: clean
+
+═══ S7 · buyer landmark step with an unmatched raw address (stored as-is in data.landmark)
+
+── turn 37 · buyer: property type
+   sent   : "شقة"
+   reply  : "عايز العقار في أنهي منطقة؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 38 · buyer: landmark step — unmatched raw address
+   sent   : "شارع 15 مايو بجوار مسجد الرحمة"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=1 ["شارع 15 مايو بجوار مسجد الرحمة"] | landmark="شارع 15 مايو بجوار مسجد الرحمة"
+   gemini : 0 call(s) — nothing sent
+   data.landmark now: "شارع 15 مايو بجوار مسجد الرحمة" | _rawLocations: ["شارع 15 مايو بجوار مسجد الرحمة"]
+
+── turn 39 · buyer: area answer
+   sent   : "150"
+   reply  : "ميزانيتك لحد كام؟"
+   stored : _rawLocations=1 ["شارع 15 مايو بجوار مسجد الرحمة"] | landmark="شارع 15 مايو بجوار مسجد الرحمة"
+   gemini : 0 call(s) — nothing sent
+
+── turn 40 · buyer: a longer answer at the budget step (a comment carries the data snapshot)
+   sent   : "ميزانيتي حوالي 3 مليون وعايز مساحة كبيرة"
+   reply  : "محتاج كام غرفة؟"
+   stored : _rawLocations=1 ["شارع 15 مايو بجوار مسجد الرحمة"] | landmark="شارع 15 مايو بجوار مسجد الرحمة"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [next-to] in system … "e":"شقة","landmark":"شارع 15 مايو بجوار مسجد الرحمة","area":1"
+     call 1: ❌ LEAK [S7-full] in system … "{"propertyType":"شقة","landmark":"شارع 15 مايو بجوار مسجد الرحمة","area":150,"budget":"
+     call 1: ❌ LEAK [S7-street] in system … "pertyType":"شقة","landmark":"شارع 15 مايو بجوار مسجد الرحمة","a"
+     call 1: ❌ LEAK [S7-mosque] in system … "ة","landmark":"شارع 15 مايو بجوار مسجد الرحمة","area":150,"budget":"
+
+═══ S8 · first message with an address only (nothing extractable ⇒ first-message Gemini path)
+
+── turn 41 · first message: greeting + unmatched address
+   sent   : "السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+   reply  : "-"
+   stored : _rawLocations=0
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [next-to] in contents[0].user … "م عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+     call 1: ❌ LEAK [S7-full] in contents[0].user … "السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+     call 1: ❌ LEAK [S7-street] in contents[0].user … "السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+     call 1: ❌ LEAK [S7-mosque] in contents[0].user … "م، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+
+═══ S5 · the canary in the FIRST message (no flow, no _rawLocations at all)
+
+── turn 42 · first message with a greeting + the canary
+   sent   : "السلام عليكم، أنا في شارع إبراهيم نوارة بجوار صيدلية العزب"
+   reply  : "تمام، في إبراهيم نواره. للشراء ولا للإيجار؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 43 · first message, address only
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "تمام، في إبراهيم نواره. للشراء ولا للإيجار؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 44 · first message, address + real-estate intent
+   sent   : "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أ"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=0 | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in system … " جاي.
+
+إجابة العميل: "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+السؤال "
+     call 1: ❌ LEAK [street] in system … " جاي.
+
+إجابة العميل: "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [name] in system … "
+
+إجابة العميل: "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [pharmacy] in system … "ي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+السؤال "
+     call 1: ❌ LEAK [pharmacy-short] in system … "ي شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+السؤال "
+     call 1: ❌ LEAK [next-to] in system … ": "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أ"
+     call 1: ❌ LEAK [full] in contents[0].user … "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+     call 1: ❌ LEAK [street] in contents[0].user … "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [name] in contents[0].user … "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … "ي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "ي شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أ"
+
+═══ S6 · documented synthetic case: raw address only in the client history, state has no _rawLocations
+
+── turn (synthetic) · side question with the canary only in history
+   reply  : "-"
+   gemini : 1 call(s)
+     call 1: ❌ LEAK [full] in contents[0].user … "أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أعرف المنطقة"
+     call 1: ❌ LEAK [street] in contents[0].user … "أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [name] in contents[0].user … "أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي و"
+     call 1: ❌ LEAK [pharmacy] in contents[0].user … " ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أعرف المنطقة"
+     call 1: ❌ LEAK [pharmacy-short] in contents[0].user … "ي شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أعرف المنطقة"
+     call 1: ❌ LEAK [next-to] in contents[0].user … "أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أ"
+
+════════════════════════════════════════════════════════════════════
