@@ -1,7 +1,8 @@
 // EVIDENCE SUITE 4 — Differential regression proof.
-// Runs the SAME battery against the pre-patch worker (6220d90^) and the patched worker (6220d90)
-// and diffs the observable responses. The only tolerated difference is the D-4b addition itself
-// (data._rawLocations). Anything else differing is a real regression.
+// Runs the SAME battery against two worker builds and diffs the observable responses.
+// Tolerated differences are listed explicitly below (INTENDED = the D-4b addition itself,
+// INPUT_LOGIC = the input-logic phase's pinned improvements). Anything else differing is a real
+// regression — the tolerated entries can never be widened into a blanket ignore.
 // Usage: node 04-differential.mjs <beforeWorker.js> <afterWorker.js>   (each in its own dir with tests/)
 import fs from "node:fs";
 import path from "node:path";
@@ -136,7 +137,9 @@ function runWith(workerPath, tag) {
 
 const before = runWith(beforePath, "before");
 const after = runWith(afterPath, "after");
-console.log("=== EVIDENCE 4 — DIFFERENTIAL REGRESSION PROOF (6220d90^ vs 6220d90) ===\n");
+console.log(`=== EVIDENCE 4 — DIFFERENTIAL REGRESSION PROOF ===`);
+console.log(`before: ${beforePath}`);
+console.log(`after : ${afterPath}\n`);
 console.log(`battery cases: ${before.length} vs ${after.length}\n`);
 
 // volatile fields (clocks) carry no behaviour — normalise them before comparing
@@ -145,6 +148,20 @@ const stripTS = o => Array.isArray(o) ? o.map(stripTS)
   : (o && typeof o === "object" ? Object.fromEntries(Object.entries(o).filter(([k]) => !TS.has(k)).map(([k, v]) => [k, stripTS(v)])) : o);
 
 const INTENDED = [{ label: "D-4b: address typed at the address step, then a side question", before: "RAW_ADDRESS_SENT_TO_GEMINI", after: "scrubbed" }];
+// ── the input-logic phase: two differences that ARE the fix. Each is pinned to an exact,
+//    falsifiable predicate on both sides — anything else still counts as unexplained. ──
+const INPUT_LOGIC = [
+  {
+    label: "route: عايز شقة في مدينة نصر بـ 3 مليون",
+    why: "«3 مليون» لم تعد تُقرأ كمساحة 3 م² (رقم المال ≠ رقم المساحة)",
+    test: (b, a) => b?.body?.formState?.data?.pendingFacts?.area === 3 && a?.body?.formState?.data?.pendingFacts?.area === undefined && a?.body?.formState?.data?.pendingFacts?.budget === 3000000,
+  },
+  {
+    label: "flow: completion",
+    why: "الموبايل لم يعد يستبدل السعر: 1,512,345,678 → 9,500,000",
+    test: (b, a) => b?.body?.data?.price === 1512345678 && a?.body?.data?.price === 9500000 && a?.body?.done === true,
+  },
+];
 let diffs = 0, same = 0, tolerated = 0;
 for (let i = 0; i < Math.max(before.length, after.length); i++) {
   const b = before[i], a = after[i];
@@ -158,6 +175,13 @@ for (let i = 0; i < Math.max(before.length, after.length); i++) {
     console.log(`             before: ${intend.before}  →  after: ${intend.after}   (${JSON.stringify(a.body)})`);
     continue;
   }
+  const intended2 = INPUT_LOGIC.find(x => x.label === label && x.test(b, a));
+  if (intended2) {
+    tolerated++;
+    console.log(`FIXED      | ${label}`);
+    console.log(`             ${intended2.why}`);
+    continue;
+  }
   diffs++;
   console.log(`DIFFERS   | ${label}`);
   const lb = jb.split("\n"), la = ja.split("\n");
@@ -166,6 +190,6 @@ for (let i = 0; i < Math.max(before.length, after.length); i++) {
     console.log(`    after : ${String(la[k]).slice(0, 150)}`);
   }
 }
-console.log(`\nidentical: ${same} | intended D-4b fix: ${tolerated} | unexplained differences: ${diffs}`);
+console.log(`\nidentical: ${same} | intended fixes: ${tolerated} | unexplained differences: ${diffs}`);
 console.log(diffs === 0 ? "\n=== EVIDENCE 4 COMPLETE — ZERO REGRESSIONS ===" : `\n=== EVIDENCE 4 — ${diffs} DIFFERENCE(S) TO REVIEW ===`);
 process.exit(diffs ? 1 : 0);
