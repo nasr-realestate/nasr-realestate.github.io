@@ -81,11 +81,16 @@ jobs:
 
           say "1) credential matrix (names only — values are never printed)"
           TOKEN=""
-          for v in "$C_T1" "$C_T2" "$C_T5" "$C_T6" "$C_T4"; do [ -n "$v" ] && { TOKEN="$v"; break; }; done
-          for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CLOUDFLARE_D1_TOKEN CF_API_TOKEN CF_TOKEN; do
-            eval "val=\$$n"; [ -n "$val" ] && echo "PRESENT:$n" || echo "MISSING:$n"
+          for k in C_T1 C_T2 C_T5 C_T6 C_T4; do
+            case "$k" in
+              C_T1) nm=CLOUDFLARE_API_TOKEN ;; C_T2) nm=CLOUDFLARE_TOKEN ;;
+              C_T4) nm=CLOUDFLARE_D1_TOKEN ;; C_T5) nm=CF_API_TOKEN ;; C_T6) nm=CF_TOKEN ;;
+            esac
+            v="${!k:-}"
+            if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && TOKEN="$v"; else echo "MISSING:$nm"; fi
           done
-          ACCID="$ACC"; [ -n "$C_A1" ] && ACCID="$C_A1"; [ -n "$C_A2" ] && ACCID="$C_A2"
+          echo "ACCOUNT_ID secret: $([ -n "${C_A1:-}" ] && echo PRESENT:CLOUDFLARE_ACCOUNT_ID || echo MISSING:CLOUDFLARE_ACCOUNT_ID) / $([ -n "${C_A2:-}" ] && echo PRESENT:CF_ACCOUNT_ID || echo MISSING:CF_ACCOUNT_ID)"
+          ACCID="$ACC"; [ -n "${C_A1:-}" ] && ACCID="$C_A1"; [ -n "${C_A2:-}" ] && ACCID="$C_A2"
           echo "account id in use: $ACCID"
           if [ -z "$TOKEN" ]; then
             VERDICT="STOP — NO Cloudflare credential available in this repository; NOTHING was deployed"
@@ -171,7 +176,7 @@ jobs:
             echo "  [$ok] $label | http=$code | reply=$(jq -r '.response' body.json 2>/dev/null | head -c 70 | tr '\n' ' ') | raw_address_in_reply=$leak | mask_marker_shown=$marker"
             if [ "$ok" = "PASS" ]; then P=$((P+1)); else F=$((F+1)); fi
             if [ "$leak" = "YES" ]; then echo "     ^ LEAK: a raw address fragment appeared in the production reply"; fi
-            echo "$(jq -c '.formState // empty' body.json 2>/dev/null)" > last-fs.json
+            jq -c '.formState // {}' body.json > last-fs.json 2>/dev/null || echo '{}' > last-fs.json
           }
           say "6.0 transport"
           echo "  GET /            → $(curl -sS -m 30 -o /dev/null -w '%{http_code}' "$AGENT/") (expect 405)"
