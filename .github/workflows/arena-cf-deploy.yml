@@ -1,4 +1,4 @@
-# TEMPORARY — Arena session: deploy the verified agent Worker (royal-snow-ea32) to production. (run 2 — credential re-checked)
+# TEMPORARY — Arena session: deploy the verified agent Worker (royal-snow-ea32) to production. (run 3 — owner-stated secret name ARENA_CLOUDFLARE added to the candidates)
 #
 # Gated, self-verifying and non-destructive:
 #   gate 0  the repo is at the expected commit and the Worker file matches the verified sha256
@@ -36,6 +36,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
+      S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
+      S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      S_ARENA_CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_API_TOKEN }}
+      S_ARENA_CLOUDFLARE_KEY: ${{ secrets.ARENA_CLOUDFLARE_KEY }}
+      S_ARENA_CLOUDFLARE_SECRET: ${{ secrets.ARENA_CLOUDFLARE_SECRET }}
+      S_ARENA_CF: ${{ secrets.ARENA_CF }}
+      S_ARENA_CF_TOKEN: ${{ secrets.ARENA_CF_TOKEN }}
+      S_ARENA_CF_API_TOKEN: ${{ secrets.ARENA_CF_API_TOKEN }}
+      S_ARENA_CF_KEY: ${{ secrets.ARENA_CF_KEY }}
+      S_ARENA_TOKEN: ${{ secrets.ARENA_TOKEN }}
+      S_ARENA_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ARENA_CLOUDFLARE_ACCOUNT_ID }}
+      S_ARENA_CLOUDFLARE_ACCOUNT: ${{ secrets.ARENA_CLOUDFLARE_ACCOUNT }}
+      S_ARENA_CF_ACCOUNT_ID: ${{ secrets.ARENA_CF_ACCOUNT_ID }}
+      S_ARENA_CLOUDFLARE_EMAIL: ${{ secrets.ARENA_CLOUDFLARE_EMAIL }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       S_CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
@@ -65,6 +79,11 @@ jobs:
       S_CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       S_CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
       S_CF_EMAIL: ${{ secrets.CF_EMAIL }}
+      V_ARENA_CLOUDFLARE: ${{ vars.ARENA_CLOUDFLARE }}
+      V_ARENA_CLOUDFLARE_TOKEN: ${{ vars.ARENA_CLOUDFLARE_TOKEN }}
+      V_ARENA_CLOUDFLARE_API_TOKEN: ${{ vars.ARENA_CLOUDFLARE_API_TOKEN }}
+      V_ARENA_CF_TOKEN: ${{ vars.ARENA_CF_TOKEN }}
+      V_ARENA_CLOUDFLARE_ACCOUNT_ID: ${{ vars.ARENA_CLOUDFLARE_ACCOUNT_ID }}
       V_CLOUDFLARE_API_TOKEN: ${{ vars.CLOUDFLARE_API_TOKEN }}
       V_CLOUDFLARE_TOKEN: ${{ vars.CLOUDFLARE_TOKEN }}
       V_CLOUDFLARE_WORKERS_TOKEN: ${{ vars.CLOUDFLARE_WORKERS_TOKEN }}
@@ -109,18 +128,23 @@ jobs:
           echo "OK: worker.js is byte-identical to the verified build (no change since the fix commit)"
 
           say "1) credential matrix (names only — values are never printed)"
-          TOKEN=""; TKNAME=""; ACCID="$ACC"
-          for k in $(env | cut -d= -f1 | grep -E '^S_|^V_' | sort); do
-            v="${!k:-}"; nm="${k#S_}"; nm="${nm#V_}"
-            case "$nm" in
-              *_ACCOUNT_ID|*_ACCOUNT) [ -n "$v" ] && { ACCID="$v"; echo "PRESENT:$nm (account id)"; } ;;
-              *_EMAIL|*_ZONE_ID) [ -n "$v" ] && echo "PRESENT:$nm (ignored for auth)";;
-              *) if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && { TOKEN="$v"; TKNAME="$nm"; }; fi ;;
-            esac
+          TOKEN=""; TKNAME=""; ACCID="$ACC"; ASRC=""
+          for nm in ARENA_CLOUDFLARE ARENA_CLOUDFLARE_TOKEN ARENA_CLOUDFLARE_API_TOKEN ARENA_CLOUDFLARE_KEY ARENA_CLOUDFLARE_SECRET ARENA_CF ARENA_CF_TOKEN ARENA_CF_API_TOKEN ARENA_CF_KEY ARENA_TOKEN                     CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_API CLOUDFLARE_APIKEY CLOUDFLARE_GLOBAL_API_KEY CLOUDFLARE_WORKERS_TOKEN CLOUDFLARE_DEPLOY_TOKEN CLOUDFLARE_SECRET CLOUDFLARE                     CF_API_TOKEN CF_TOKEN CF_API_KEY CF_APIKEY CF_WORKERS_TOKEN CF_DEPLOY_TOKEN CF WORKERS_TOKEN WRANGLER_TOKEN WRANGLER_API_TOKEN AGENT_WORKER_TOKEN; do
+            found=""
+            for pre in S_ V_; do
+              key="${pre}${nm}"; v="${!key:-}"
+              if [ -n "$v" ]; then echo "PRESENT:$nm (${pre%_})"; found=1; [ -z "$TOKEN" ] && { TOKEN="$v"; TKNAME="$nm"; }; fi
+            done
+            [ -n "$found" ] || echo "MISSING:$nm"
           done
-          [ -n "$TOKEN" ] && echo "→ using credential from: $TKNAME" || echo "MISSING: every candidate secret/variable name"
-          echo "account id in use: $ACCID"
-          echo "account id in use: $ACCID"
+          for nm in ARENA_CLOUDFLARE_ACCOUNT_ID ARENA_CF_ACCOUNT_ID ARENA_CLOUDFLARE_ACCOUNT CLOUDFLARE_ACCOUNT_ID CF_ACCOUNT_ID CLOUDFLARE_ACCOUNT CF_ACCOUNT; do
+            for pre in S_ V_; do
+              key="${pre}${nm}"; v="${!key:-}"
+              if [ -n "$v" ]; then echo "PRESENT:$nm (account id)"; [ -z "$ASRC" ] && { ACCID="$v"; ASRC="$nm"; }; fi
+            done
+          done
+          echo "→ using credential from: ${TKNAME:-NONE} | account id from: ${ASRC:-default}"
+          [ -n "$TOKEN" ] || echo "MISSING: every candidate secret/variable name"
           if [ -z "$TOKEN" ]; then
             VERDICT="STOP — NO Cloudflare credential available in this repository; NOTHING was deployed"
             echo "VERDICT: $VERDICT"
@@ -134,6 +158,8 @@ jobs:
           say "1b) token verify"
           curl -sS -m 30 -H "$AUTH" "$API/user/tokens/verify" -o /tmp/tv.json -w "verify http=%{http_code}\n" || true
           jq -c '{success, status: .result.status, errors: [.errors[]?.message]}' /tmp/tv.json 2>/dev/null || head -c 200 /tmp/tv.json
+          TV_ID=$(jq -r '.result.id // empty' /tmp/tv.json 2>/dev/null)
+          if [ -n "$TV_ID" ]; then echo "token id: ${TV_ID:0:8}… (owner-stated id for ARENA_CLOUDFLARE: 32dadcdc…; match=$([ "$TV_ID" = "32dadcdccd25e7cb56b721b2e4d669ce" ] && echo yes || echo no))"; fi
 
           say "2) read-only snapshot of the live script"
           curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/settings" -o snap.json
