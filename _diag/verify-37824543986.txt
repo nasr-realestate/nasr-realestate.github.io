@@ -1,0 +1,89 @@
+
+── 0) repo artifact identity ──
+HEAD          = 7f90b427227c5d87a15fd4ea4cca18952910bf97
+worker.js sha = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+expected      = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+repo bytes    = 157354
+OK: repo build is the verified artifact
+
+── 1) credential (name only — the value is never printed) ──
+PRESENT:ARENA_CLOUDFLARE
+MISSING:ARENA_CLOUDFLARE_TOKEN
+MISSING:ARENA_CLOUDFLARE_API_TOKEN
+MISSING:ARENA_CF
+MISSING:ARENA_CF_TOKEN
+MISSING:CLOUDFLARE_API_TOKEN
+MISSING:CLOUDFLARE_TOKEN
+MISSING:CF_API_TOKEN
+MISSING:CF_TOKEN
+→ using credential from: ARENA_CLOUDFLARE
+
+── 2) account-scoped token verify (read-only) ──
+account verify http=200
+{"success":true,"status":"active","errors":[]}
+token id: 32dadcdc… | matches owner-stated id: yes
+user verify http=401
+{"success":false,"errors":["Invalid API Token"]}
+
+── 3) live script content vs the repo build (byte-level) ──
+live bytes = 157538 | repo bytes = 157354 | delta = +184
+live sha256 = 640516445ec08618b89693d2b5cdca0b7a384846087ebd4dc7a634bad0ec36ea
+repo sha256 = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+  normalized [raw                 ] equal=False  live=640516445ec08618 repo=4ca2fac9cd9e5fa6
+  normalized [crlf→lf             ] equal=False  live=f70575925e44e914 repo=4ca2fac9cd9e5fa6
+  normalized [+trailing-eol-strip ] equal=False  live=ae498721087a04dc repo=5f62d245679e6608
+  normalized [+per-line-rstrip    ] equal=False  live=ae498721087a04dc repo=5f62d245679e6608
+  normalized [+ws-collapse        ] equal=False  live=7ca2835369123149 repo=5456a28f7b29a82b
+  normalized [+all-collapse       ] equal=False  live=bdd2490b11f71063 repo=bf24a167376602ac
+first differing byte at offset 0 (of 157538 live / 157354 repo)
+  live ctx: b'--bb8c3917873d5215cf1edf4be7191227bccf025f04bf9f5ee095faacb54c\r\nContent-Disposition: form-'
+  repo ctx: b'// ============================================================\n// \xd8\xb3\xd9\x85\xd8\xb3\xd8\xa7\xd8\xb1 \xd8\xb7\xd9\x84\xd8\xa8\xd9\x83 \xe2\x80\x94'
+  live tail: b'\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\n\r\n--bb8c3917873d5215cf1edf4be7191227bccf025f04bf9f5ee095faacb54c--\r\n'
+  repo tail: b'\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\n'
+  live head: b'--bb8c3917873d5215cf1edf4be7191227bccf025f04bf9f5ee095faacb54c\r\nContent-Disposit'
+  repo head: b'// ============================================================\n// \xd8\xb3\xd9\x85\xd8\xb3\xd8\xa7\xd8\xb1 \xd8\xb7'
+diff lines: 11 (showing up to 40)
+  --- live
+  +++ repo
+  @@ -1,4 +1 @@
+  ---bb8c3917873d5215cf1edf4be7191227bccf025f04bf9f5ee095faacb54c
+  -Content-Disposition: form-data; name="worker.js"
+  -
+   // ============================================================
+  @@ -2658,3 +2655 @@
+   // ═══════════════════════════════════════════════════
+  -
+  ---bb8c3917873d5215cf1edf4be7191227bccf025f04bf9f5ee095faacb54c--
+symbol guardGeminiPayload     live=2 repo=2
+symbol scrubDynamicText       live=2 repo=2
+symbol splitDynamic           live=3 repo=3
+symbol payloadHasRawAddress   live=3 repo=3
+symbol maskAddressSpans       live=2 repo=2
+symbol scrubAddresses         live=7 repo=7
+symbol ADDR_SPAN_RES          live=3 repo=3
+symbol GEMINI_MODEL           live=2 repo=2
+symbol FORM_VERSION           live=4 repo=4
+live FORM_VERSION = ['v92']
+
+── 4) live version/deployment history (read-only) ──
+{"id":"71ff7f85-1562-471e-9f1c-7b05cd990d48","created_on":"2026-10-08T18:26:01.088984Z","versions":[{"version_id":"6caaf202-7232-4d7f-a10b-f2c15aff46ad","percentage":100}]}
+{"id":"add2e5ef-4c77-4e1a-bd52-3ae4bf29ee96","created_on":"2026-10-08T11:36:19.521734Z","versions":[{"version_id":"382f8934-e4cb-4582-8012-f4eeadc75039","percentage":100}]}
+{"id":"a2d5c90e-4031-4932-9b0c-6a96eac62547","created_on":"2026-10-08T11:23:02.7308Z","versions":[{"version_id":"1f422275-736d-4647-870f-40991d972c77","percentage":100}]}
+{"id":"3d45fc2b-a1bd-490e-bac9-a7657673191d","created_on":"2026-10-08T11:22:47.420015Z","versions":[{"version_id":"1d0ca00d-f17e-4c38-9992-6e2ff2847d7c","percentage":100}]}
+active version 6caaf202-7232-4d7f-a10b-f2c15aff46ad:
+{"annotations":{"workers/message":"arena privacy fix arena-0288fa3","workers/tag":"arena-0288fa3","workers/triggered_by":"upload"},"created_on":null,"compatibility_date":null,"bindings":[],"modules":[]}
+live settings: compatibility_date=2026-09-04 | bindings: d1/DB, secret_text/GEMINI_API_KEY, plain_text/GEMINI_MODEL, secret_text/IMGBB_API_KEY
+
+── 5) production HTTP fingerprint (read-only requests) ──
+transport: GET / → 405 (expect 405)
+transport: OPTIONS → 204 (expect 204) | access-control-allow-origin: https://nasr-realestate.github.io
+  [V1 open] http=200 | step=0 | _rawLocations="none" | reply=العقار شقة ولا فيلا ولا دوبلكس ول
+  [V2 type] http=200 | step=1 | _rawLocations="none" | reply=العقار فين بالضبط؟ اكتب الشارع و�
+  [V3 addr] http=200 | step=2 | _rawLocations=["شارع عباس العقاد"] | reply=المساحة كام متر؟  (3/13) 
+  [V4 area] http=200 | step=3 | _rawLocations=["شارع عباس العقاد"] | reply=السعر المطلوب كام؟  (4/13) 
+  [V5 rooms+address] http=200 | step=3 | _rawLocations=["شارع عباس العقاد","عباس العقاد"] | reply=اكتب السعر رقم.  السعر المطلوب كا�
+  [P1 addr-in-message] http=200 | step=-1 | _rawLocations="none" | reply=تمام، شقة في إبراهيم نواره. للشرا
+  [P2 first-msg-intent] http=200 | step=2 | _rawLocations="none" | reply=المساحة كام متر؟  (3/13) 
+
+VERDICT: READ-ONLY verification completed (nothing was deployed or modified)
+::notice title=VERIFY_DONE::read-only verification completed
