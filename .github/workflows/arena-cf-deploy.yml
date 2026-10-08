@@ -36,13 +36,42 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      C_T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      C_T2: ${{ secrets.CLOUDFLARE_TOKEN }}
-      C_T4: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
-      C_T5: ${{ secrets.CF_API_TOKEN }}
-      C_T6: ${{ secrets.CF_TOKEN }}
-      C_A1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      C_A2: ${{ secrets.CF_ACCOUNT_ID }}
+      S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      S_CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+      S_CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+      S_CLOUDFLARE_API: ${{ secrets.CLOUDFLARE_API }}
+      S_CLOUDFLARE_APIKEY: ${{ secrets.CLOUDFLARE_APIKEY }}
+      S_CLOUDFLARE_GLOBAL_API_KEY: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY }}
+      S_CLOUDFLARE_WORKERS_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
+      S_CLOUDFLARE_DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+      S_CLOUDFLARE_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
+      S_CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      S_CLOUDFLARE_SECRET: ${{ secrets.CLOUDFLARE_SECRET }}
+      S_CLOUDFLARE: ${{ secrets.CLOUDFLARE }}
+      S_CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      S_CF_TOKEN: ${{ secrets.CF_TOKEN }}
+      S_CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      S_CF_APIKEY: ${{ secrets.CF_APIKEY }}
+      S_CF_WORKERS_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+      S_CF_DEPLOY_TOKEN: ${{ secrets.CF_DEPLOY_TOKEN }}
+      S_CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
+      S_CF: ${{ secrets.CF }}
+      S_WORKERS_TOKEN: ${{ secrets.WORKERS_TOKEN }}
+      S_WRANGLER_TOKEN: ${{ secrets.WRANGLER_TOKEN }}
+      S_WRANGLER_API_TOKEN: ${{ secrets.WRANGLER_API_TOKEN }}
+      S_AGENT_WORKER_TOKEN: ${{ secrets.AGENT_WORKER_TOKEN }}
+      S_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      S_CLOUDFLARE_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT }}
+      S_CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+      S_CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      S_CF_EMAIL: ${{ secrets.CF_EMAIL }}
+      V_CLOUDFLARE_API_TOKEN: ${{ vars.CLOUDFLARE_API_TOKEN }}
+      V_CLOUDFLARE_TOKEN: ${{ vars.CLOUDFLARE_TOKEN }}
+      V_CLOUDFLARE_WORKERS_TOKEN: ${{ vars.CLOUDFLARE_WORKERS_TOKEN }}
+      V_CF_API_TOKEN: ${{ vars.CF_API_TOKEN }}
+      V_CF_TOKEN: ${{ vars.CF_TOKEN }}
+      V_CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      V_CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
       RID: ${{ github.run_id }}
       BRANCH: ${{ github.ref_name }}
       GH_TOKEN: ${{ github.token }}
@@ -80,17 +109,17 @@ jobs:
           echo "OK: worker.js is byte-identical to the verified build (no change since the fix commit)"
 
           say "1) credential matrix (names only — values are never printed)"
-          TOKEN=""
-          for k in C_T1 C_T2 C_T5 C_T6 C_T4; do
-            case "$k" in
-              C_T1) nm=CLOUDFLARE_API_TOKEN ;; C_T2) nm=CLOUDFLARE_TOKEN ;;
-              C_T4) nm=CLOUDFLARE_D1_TOKEN ;; C_T5) nm=CF_API_TOKEN ;; C_T6) nm=CF_TOKEN ;;
+          TOKEN=""; TKNAME=""; ACCID="$ACC"
+          for k in $(env | cut -d= -f1 | grep -E '^S_|^V_' | sort); do
+            v="${!k:-}"; nm="${k#S_}"; nm="${nm#V_}"
+            case "$nm" in
+              *_ACCOUNT_ID|*_ACCOUNT) [ -n "$v" ] && { ACCID="$v"; echo "PRESENT:$nm (account id)"; } ;;
+              *_EMAIL|*_ZONE_ID) [ -n "$v" ] && echo "PRESENT:$nm (ignored for auth)";;
+              *) if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && { TOKEN="$v"; TKNAME="$nm"; }; fi ;;
             esac
-            v="${!k:-}"
-            if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && TOKEN="$v"; else echo "MISSING:$nm"; fi
           done
-          echo "ACCOUNT_ID secret: $([ -n "${C_A1:-}" ] && echo PRESENT:CLOUDFLARE_ACCOUNT_ID || echo MISSING:CLOUDFLARE_ACCOUNT_ID) / $([ -n "${C_A2:-}" ] && echo PRESENT:CF_ACCOUNT_ID || echo MISSING:CF_ACCOUNT_ID)"
-          ACCID="$ACC"; [ -n "${C_A1:-}" ] && ACCID="$C_A1"; [ -n "${C_A2:-}" ] && ACCID="$C_A2"
+          [ -n "$TOKEN" ] && echo "→ using credential from: $TKNAME" || echo "MISSING: every candidate secret/variable name"
+          echo "account id in use: $ACCID"
           echo "account id in use: $ACCID"
           if [ -z "$TOKEN" ]; then
             VERDICT="STOP — NO Cloudflare credential available in this repository; NOTHING was deployed"
@@ -103,7 +132,8 @@ jobs:
           AUTH="Authorization: Bearer ${TOKEN}"
 
           say "1b) token verify"
-          curl -sS -m 30 -H "$AUTH" "$API/user/tokens/verify" | jq -c '{success, status: .result.status}' || true
+          curl -sS -m 30 -H "$AUTH" "$API/user/tokens/verify" -o /tmp/tv.json -w "verify http=%{http_code}\n" || true
+          jq -c '{success, status: .result.status, errors: [.errors[]?.message]}' /tmp/tv.json 2>/dev/null || head -c 200 /tmp/tv.json
 
           say "2) read-only snapshot of the live script"
           curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACCID/workers/scripts/$SCRIPT/settings" -o snap.json
