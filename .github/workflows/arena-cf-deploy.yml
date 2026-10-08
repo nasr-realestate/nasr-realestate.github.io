@@ -60,18 +60,24 @@ jobs:
           VERDICT=""
           say(){ echo; echo "── $* ──"; }
 
-          say "0) repo identity"
+          say "0) artifact identity (the Worker file must be untouched since the verified commit)"
           HEAD=$(git rev-parse HEAD)
           W_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
-          echo "HEAD          = $HEAD"
-          echo "expected      = $EXPECTED_COMMIT"
+          echo "HEAD          = $HEAD  (workflow/doc commits after the fix are allowed)"
+          echo "verified at   = $EXPECTED_COMMIT"
           echo "worker.js sha = $W_SHA"
           echo "expected      = $EXPECTED_WORKER_SHA256"
-          if [ "$HEAD" != "$EXPECTED_COMMIT" ] || [ "$W_SHA" != "$EXPECTED_WORKER_SHA256" ]; then
-            VERDICT="STOP — repo identity mismatch, nothing deployed"
+          git cat-file -e "$EXPECTED_COMMIT" 2>/dev/null && echo "verified commit present in the clone: yes" || echo "verified commit present in the clone: NO"
+          if ! git diff --quiet "$EXPECTED_COMMIT" -- _worker/worker.js; then
+            echo "worker.js differs from the verified commit:"; git diff --stat "$EXPECTED_COMMIT" -- _worker/worker.js
+            VERDICT="STOP — _worker/worker.js changed since $EXPECTED_COMMIT, nothing deployed"
             echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0
           fi
-          echo "OK: the deployed artifact will be exactly the verified build"
+          if [ "$W_SHA" != "$EXPECTED_WORKER_SHA256" ]; then
+            VERDICT="STOP — worker.js sha256 mismatch, nothing deployed"
+            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0
+          fi
+          echo "OK: worker.js is byte-identical to the verified build (no change since the fix commit)"
 
           say "1) credential matrix (names only — values are never printed)"
           TOKEN=""
