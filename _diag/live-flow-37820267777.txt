@@ -1,0 +1,51 @@
+=== LIVE PRODUCTION FLOW — https://royal-snow-ea32.footcai-555.workers.dev/ ===
+
+1) "💰 أبيع"            → 200 | العقار شقة ولا فيلا ولا دوبلكس ولا محل ولا مكتب ولا مخزن ولا روف؟  (1/9)
+2) "شقة"                → 200 | العقار فين بالضبط؟ اكتب الشارع والمنطقة.  (2/13)
+3) "<raw address>"      → 200 | المساحة كام متر؟  (3/13)
+   live data.location      = "المنطقة السادسة"
+   live data._rawLocations = null   ← created by the new patch only
+4.0) sent "180" → 200 | step=3 done=false
+4.1) sent "9500000" → 200 | step=4 done=false   ⚠ price CHANGED undefined → 9500000
+4.2) sent "3" → 200 | step=5 done=false
+4.3) sent "2" → 200 | step=6 done=false
+4.4) sent "ثالث" → 200 | step=13 done=false
+4.5) sent "سوبر لوكس" → 200 | step=25 done=false
+4.6) sent "لا" → 200 | step=26 done=false
+4.7) sent "تمام" → 200 | step=27 done=false
+4.8) sent "أحمد" → 200 | step=28 done=false
+4.9) sent "01512345678" → 200 | step=29 done=false   ⚠ price CHANGED 9500000 → 1512345678
+4.10) sent "⏭ تخطي (بدون صور)" → 200 | step=-1 done=true
+
+FINAL: done=true | waMessage=true | canShareWhatsapp=true
+final data.price = 1512345678 | data.area = 180 | ownerPhone = 01512345678
+
+--- the lead the client sends on WhatsApp ---
+   ━━━━━━━━━━━━━━━━━━━━
+   *🏠 عرض بيع شقة*
+   ━━━━━━━━━━━━━━━━━━━━
+   السلام عليكم أ. طارق،
+   أنا عميل من موقع "سمسار طلبك".
+   📋 *المواصفات المطلوبة:*
+   ┌───────────────────
+   │ 🏷️ النوع: شقة
+   │ 📍 الموقع: أحمد فؤاد نسيم
+   │ 📐 المساحة: 180 م²
+   │ 💰 السعر المطلوب: 1,512,345,678 ج.م
+   │ 🛏️ الغرف: 3
+   │ 🛁 الحمامات: 2
+   │ 🏢 الدور: ثالث
+   │ ✨ التشطيب: سوبر لوكس
+   └───────────────────
+   👤 *بيانات العميل:*
+   • الاسم: أحمد
+   • الرقم: 01512345678
+   ━━━━━━━━━━━━━━━━━━━━
+   🏆 *طارق طنطاوي* — Google Local Guide Level 7
+   📸 468 صورة | ⭐ 195 مراجعة
+   👁️ 16.3 مليون مشاهدة على Google Maps
+   🗺️ https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7
+   ━━━━━━━━━━━━━━━━━━━━
+   _تم تجهيز الطلب من موقع سمسار طلبك — طارق طنطاوي_
+
+LEAD PRICE CHECK: expected 9,500,000 | found in lead: "السعر المطلوب: 1,512,345,678 ج.م"

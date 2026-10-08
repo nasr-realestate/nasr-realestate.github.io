@@ -1,0 +1,11 @@
+
+── 0) artifact identity (the Worker file must be untouched since the verified commit) ──
+HEAD          = 7ca023b337e7019c320c3fe2555514c72d4706ce  (workflow/doc commits after the fix are allowed)
+verified at   = 0288fa3ce6ff12cbedb341ba5a660d76fca76236
+worker.js sha = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+expected      = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+verified commit present in the clone: yes
+OK: worker.js is byte-identical to the verified build (no change since the fix commit)
+
+── 1) credential matrix (names only — values are never printed) ──
+/home/runner/work/_temp/6c391470-643c-42f4-b0e5-39776eca7acf.sh: line 30: CLOUDFLARE_API_TOKEN: unbound variable

@@ -1,0 +1,143 @@
+═══ INPUT-LOGIC PHASE — RAW EVIDENCE ═══
+generated: 2026-10-08T17:07:23Z (UTC)
+worker.js      : 2515 lines, 148421 bytes, sha256 8e8a36933c13b8e73ba9370b815ceee25b627b141b6460c3959389fda8d7b3b5
+pre-patch file : /tmp/cmp/worker-before.js (sha256 95b1f39d6f7e90c385ee024c8caab68692e6b8ed1a5ced36e2992f20623a7837)
+
+─── 1. the new regression suite vs the PATCHED worker (must be 24/0) ───
+ok 1 - A-1: a correct price and a later phone answer keep the price untouched (the reported defect)
+ok 2 - A-2: at the price question a phone number is refused, never stored as a price
+ok 3 - A-3: a bare big number in an unrelated message never overwrites a stored price
+ok 4 - A-4: a buyer's budget survives a later phone answer
+ok 5 - B-1: the common Arabic/English amount forms are understood at the price question
+ok 6 - B-2: a plain number with spaces and Arabic digits is understood too
+ok 7 - B-4: a rent amount below the sale threshold is accepted, and a monthly figure in words too
+ok 8 - B-3: the buyer's budget question understands the same forms
+ok 9 - C-1: an explicit choice/range is never collapsed into one invented number
+ok 10 - C-2: an ambiguous answer never overwrites an already stored price
+ok 11 - C-3: the same rule applies at the buyer's budget question
+ok 12 - D-1: «3 غرف 2 حمام 180 متر 5 مليون» lands in the right fields
+ok 13 - D-2: a bundle with a phone number does not turn the phone into a price
+ok 14 - E-1: an implausible area (a price typed at the area question) is refused
+ok 15 - E-2: a phone number at the area question is refused
+ok 16 - E-3: a year-like number is not a price and not a correction
+ok 17 - F-1: names that look like person names are accepted (including single and unusual ones)
+ok 18 - F-2: phones, amounts, addresses, digits and random answers are not saved as a name
+ok 19 - F-3: the saved name survives a session round-trip and is not replaced by a later number
+ok 20 - F-4: a corrected name replaces the old one
+ok 21 - F-5: the buyer's name is stored in buyerName (not in notes) and validated
+ok 22 - F-6: the name never reaches Gemini and no identity claim is made
+ok 23 - G-1: the explicit money forms still seed a brand-new flow and the bare number does not
+ok 24 - G-2: rooms/baths/area keep flowing from a plain answer
+# tests 24
+# pass 24
+# fail 0
+
+─── 2. the new regression suite vs the PRE-PATCH worker (must be RED — proves it tests the fix) ───
+not ok 1 - A-1: a correct price and a later phone answer keep the price untouched (the reported defect)
+not ok 2 - A-2: at the price question a phone number is refused, never stored as a price
+not ok 3 - A-3: a bare big number in an unrelated message never overwrites a stored price
+not ok 4 - A-4: a buyer's budget survives a later phone answer
+not ok 5 - B-1: the common Arabic/English amount forms are understood at the price question
+not ok 7 - B-4: a rent amount below the sale threshold is accepted, and a monthly figure in words too
+not ok 9 - C-1: an explicit choice/range is never collapsed into one invented number
+not ok 10 - C-2: an ambiguous answer never overwrites an already stored price
+not ok 11 - C-3: the same rule applies at the buyer's budget question
+not ok 14 - E-1: an implausible area (a price typed at the area question) is refused
+not ok 15 - E-2: a phone number at the area question is refused
+not ok 17 - F-1: names that look like person names are accepted (including single and unusual ones)
+not ok 18 - F-2: phones, amounts, addresses, digits and random answers are not saved as a name
+not ok 19 - F-3: the saved name survives a session round-trip and is not replaced by a later number
+not ok 21 - F-5: the buyer's name is stored in buyerName (not in notes) and validated
+not ok 23 - G-1: the explicit money forms still seed a brand-new flow and the bare number does not
+# tests 24
+# pass 8
+# fail 16
+
+─── 3. D-4b privacy suite vs the PRE-PATCH worker (red before) ───
+=== EVIDENCE 2 COMPLETE — 42 PASS / 7 FAIL ===
+
+─── 4. D-4b privacy suite vs the PATCHED worker (green after) ───
+=== EVIDENCE 2 COMPLETE — 49 PASS / 0 FAIL ===
+
+─── 5. worker-safety before / after ───
+before: # pass 16 # fail 1 
+after : # pass 17 # fail 0 
+
+─── 6. the full suite matrix, before / after ───
+worker-safety        before: # pass 16 # fail 1 worker-safety        after : # pass 17 # fail 0 
+agent-page           before: # pass 12 # fail 6 agent-page           after : # pass 12 # fail 6 
+market-integration   before: # pass 4 # fail 1 market-integration   after : # pass 4 # fail 1 
+valuation-gift       before: # pass 2 # fail 4 valuation-gift       after : # pass 3 # fail 3 
+valuation-handoff    before: # pass 9 # fail 7 valuation-handoff    after : # pass 9 # fail 7 
+valuation-page       before: # pass 19 # fail 0 valuation-page       after : # pass 19 # fail 0 
+valuation-worker     before: # pass 16 # fail 0 valuation-worker     after : # pass 16 # fail 0 
+properties-sync      before: # pass 39 # fail 1 properties-sync      after : # pass 39 # fail 1 
+
+─── 7. evidence 01 (session persistence) vs the patched worker ───
+=== EVIDENCE 1 COMPLETE ===
+─── 8. evidence 03 (brain expansion) vs the patched worker ───
+=== EVIDENCE 3 COMPLETE — 23 PASS / 0 FAIL ===
+
+─── 9. differential (suite 04): pre-patch vs patched ───
+=== EVIDENCE 4 — DIFFERENTIAL REGRESSION PROOF ===
+
+battery cases: 24 vs 24
+
+IDENTICAL  | route: 🏠 عايز أشتري
+IDENTICAL  | route: 🔑 عايز أأجر
+IDENTICAL  | route: 💰 أبيع
+IDENTICAL  | route: 🔑 أأجر
+IDENTICAL  | route: عندي شقة وعايز أعرف سعرها
+FIXED      | route: عايز شقة في مدينة نصر بـ 3 مليون
+             «3 مليون» لم تعد تُقرأ كمساحة 3 م² (رقم المال ≠ رقم المساحة)
+IDENTICAL  | smalltalk: انت مين؟
+IDENTICAL  | smalltalk: السلام عليكم
+IDENTICAL  | smalltalk: الجو حلو النهاردة
+IDENTICAL  | smalltalk: فين المكتب؟
+IDENTICAL  | handoff: valuation announced
+IDENTICAL  | handoff: no active flow
+IDENTICAL  | handoff: tampered
+IDENTICAL  | flow: up to the gift step
+FIXED      | flow: completion
+             الموبايل لم يعد يستبدل السعر: 1,512,345,678 → 9,500,000
+IDENTICAL  | side question
+IDENTICAL  | GET /
+IDENTICAL  | upload 415
+IDENTICAL  | oversize 413
+IDENTICAL  | rate limit sequence
+IDENTICAL  | CORS foreign
+FIXED      | D-4b: address typed at the address step, then a side question
+IDENTICAL  | RESIDUAL: raw address typed outside an address step (pre-existing gap)
+IDENTICAL  | gemini payloads
+
+identical: 21 | intended fixes: 3 | unexplained differences: 0
+
+=== EVIDENCE 4 COMPLETE — ZERO REGRESSIONS ===
+
+─── 10. lead-level proof of the reported defect (the WhatsApp message the owner gets) ───
+before: │ 💰 السعر المطلوب: 1,512,345,678 ج.م
+after : │ 💰 السعر المطلوب: 9,500,000 ج.م
+
+─── 11. what the customer can now type at «السعر المطلوب كام؟» / «ميزانيتك كام؟» ───
+  "٩٥٠٠٠٠٠"                                    → price=9500000      
+  "500 ألف"                                    → price=500000       
+  "نص مليون"                                   → price=500000       
+  "3 غرف 2 حمام 180 متر 5 مليون"               → price=5000000      
+  "شقة 180 متر 5 مليون، كلمني 01512345678"     → price=5000000      
+  "3.5 او 4 مليون"                             → price=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. السعر كام 
+  "5000000 أو 5500000"                         → price=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. السعر كام 
+  "7م و 8م"                                    → price=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. السعر كام 
+  "1200000 1500000"                            → price=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. السعر كام 
+  "من 3 ل 4 مليون"                             → price=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. السعر كام 
+  "مليونين وخمسين ألف"                         → price=(not stored) clarify: معلش، عايز المبلغ بالأرقام بالظبط عشان أنقله
+  "01512345678"                                → price=(not stored) clarify: الرقم ده شكله رقم موبايل مش سعر. السعر كام ب
+  "1500000000"                                 → price=(not stored) clarify: الرقم ده شكله رقم موبايل مش سعر. السعر كام ب
+  "+966501234567"                              → price=(not stored) 
+  "مش عارف"                                    → price=(not stored) 
+at «ميزانيتك كام؟» (buyer, sale):
+  "3 مليون"                                    → budget=3000000      
+  "3.5 أو 4 مليون"                             → budget=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. الميزانية 
+  "3000000 أو 3500000"                         → budget=(not stored) clarify: معلش، فيه أكتر من رقم في الرسالة. الميزانية 
+  "01512345678"                                → budget=(not stored) clarify: الرقم ده شكله رقم موبايل مش ميزانية. الميزان
+
+═══ END ═══

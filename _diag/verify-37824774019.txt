@@ -1,0 +1,67 @@
+
+── 0) repo artifact identity ──
+HEAD          = c9c9fcecf8abf8f080ae9ffe7a0c600194f4449c
+worker.js sha = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+expected      = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+repo bytes    = 157354
+OK: repo build is the verified artifact
+
+── 1) credential (name only — the value is never printed) ──
+PRESENT:ARENA_CLOUDFLARE
+MISSING:ARENA_CLOUDFLARE_TOKEN
+MISSING:ARENA_CLOUDFLARE_API_TOKEN
+MISSING:ARENA_CF
+MISSING:ARENA_CF_TOKEN
+MISSING:CLOUDFLARE_API_TOKEN
+MISSING:CLOUDFLARE_TOKEN
+MISSING:CF_API_TOKEN
+MISSING:CF_TOKEN
+→ using credential from: ARENA_CLOUDFLARE
+
+── 2) account-scoped token verify (read-only) ──
+account verify http=200
+{"success":true,"status":"active","errors":[]}
+token id: 32dadcdc… | matches owner-stated id: yes
+user verify http=401
+{"success":false,"errors":["Invalid API Token"]}
+
+── 3) live script content vs the repo build (byte-level) ──
+API response bytes = 157538
+repo bytes         = 157354 | repo sha256 = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+detected multipart envelope | boundary length = 60 | envelope overhead = 184 bytes
+module body bytes  = 157354 | module sha256 = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+module body == repo file (byte-for-byte): True
+VERDICT line: deployed module sha256 == repo sha256 : YES
+symbol guardGeminiPayload     live=2 repo=2  OK
+symbol scrubDynamicText       live=2 repo=2  OK
+symbol splitDynamic           live=3 repo=3  OK
+symbol payloadHasRawAddress   live=3 repo=3  OK
+symbol maskAddressSpans       live=2 repo=2  OK
+symbol scrubAddresses         live=7 repo=7  OK
+symbol ADDR_SPAN_RES          live=3 repo=3  OK
+symbol GEMINI_MODEL           live=2 repo=2  OK
+symbol FORM_VERSION           live=4 repo=4  OK
+live FORM_VERSION = ['v92']
+
+── 4) live version/deployment history (read-only) ──
+{"id":"71ff7f85-1562-471e-9f1c-7b05cd990d48","created_on":"2026-10-08T18:26:01.088984Z","versions":[{"version_id":"6caaf202-7232-4d7f-a10b-f2c15aff46ad","percentage":100}]}
+{"id":"add2e5ef-4c77-4e1a-bd52-3ae4bf29ee96","created_on":"2026-10-08T11:36:19.521734Z","versions":[{"version_id":"382f8934-e4cb-4582-8012-f4eeadc75039","percentage":100}]}
+{"id":"a2d5c90e-4031-4932-9b0c-6a96eac62547","created_on":"2026-10-08T11:23:02.7308Z","versions":[{"version_id":"1f422275-736d-4647-870f-40991d972c77","percentage":100}]}
+{"id":"3d45fc2b-a1bd-490e-bac9-a7657673191d","created_on":"2026-10-08T11:22:47.420015Z","versions":[{"version_id":"1d0ca00d-f17e-4c38-9992-6e2ff2847d7c","percentage":100}]}
+active version 6caaf202-7232-4d7f-a10b-f2c15aff46ad:
+{"annotations":{"workers/message":"arena privacy fix arena-0288fa3","workers/tag":"arena-0288fa3","workers/triggered_by":"upload"},"created_on":null,"compatibility_date":null,"bindings":[],"modules":[]}
+live settings: compatibility_date=2026-09-04 | bindings: d1/DB, secret_text/GEMINI_API_KEY, plain_text/GEMINI_MODEL, secret_text/IMGBB_API_KEY
+
+── 5) production HTTP fingerprint (read-only requests) ──
+transport: GET / → 405 (expect 405)
+transport: OPTIONS → 204 (expect 204) | access-control-allow-origin: https://nasr-realestate.github.io
+  [V1 open] http=200 | step=0 | _rawLocations="none" | reply=العقار شقة ولا فيلا ولا دوبلكس ول
+  [V2 type] http=200 | step=1 | _rawLocations="none" | reply=العقار فين بالضبط؟ اكتب الشارع و�
+  [V3 addr] http=200 | step=2 | _rawLocations=["شارع عباس العقاد"] | reply=المساحة كام متر؟  (3/13) 
+  [V4 area] http=200 | step=3 | _rawLocations=["شارع عباس العقاد"] | reply=السعر المطلوب كام؟  (4/13) 
+  [V5 rooms+address] http=200 | step=3 | _rawLocations=["شارع عباس العقاد","عباس العقاد"] | reply=اكتب السعر رقم.  السعر المطلوب كا�
+  [P1 addr-in-message] http=200 | step=-1 | _rawLocations="none" | reply=تمام، شقة في إبراهيم نواره. للشرا
+  [P2 first-msg-intent] http=200 | step=2 | _rawLocations="none" | reply=المساحة كام متر؟  (3/13) 
+
+VERDICT: READ-ONLY verification completed (nothing was deployed or modified)
+::notice title=VERIFY_DONE::read-only verification completed

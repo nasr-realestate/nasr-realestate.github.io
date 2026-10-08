@@ -188,7 +188,7 @@ function extractRequestFacts(msg){
   const landmark = matchLandmark(t, MASTER_LANDMARKS);
   if(landmark) facts.landmark = landmark;
 
-  const sizeMatch = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م(?:\s*²)?|م٢|m2|sqm)/i);
+  const sizeMatch = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م٢|m2|sqm|م(?=\s*(?:\d|²|٢|$)))/i);
   if(sizeMatch) facts.area = Number(sizeMatch[1]);
 
   const price = extractPrice(t);
@@ -320,14 +320,160 @@ function normPhone(s){
   return d;
 }
 function extractPrice(text){
-  const c = toEnNum(String(text||""));
+  const c = stripThousands(toEnNum(String(text||"")));
   const m = c.match(/(\d+\.?\d*)\s*(مليون|مليون جنيه)/);
-  if(m) return parseFloat(m[1])*1000000;
+  if(m){
+    const base = parseFloat(m[1])*1000000;
+    const rest = c.slice(m.index + m[0].length);
+    const add = rest.match(/^\s*و\s*(\d{1,3})(?!\d)/);
+    return add ? base + parseFloat(add[1])*1000 : base;
+  }
   const k = c.match(/(\d+\.?\d*)\s*(الف|ألف|k)(?!\w)/i);
   if(k) return parseFloat(k[1])*1000;
   const d = c.match(/(\d{4,})/);
-  if(d && parseFloat(d[1])>=10000) return parseFloat(d[1]);
+  // رقم مجرد يقبل كسعر فقط لو مش شبيه بموبايل/رقم قومي وطوله منطقي للسعر (4..9)
+  if(d && parseFloat(d[1])>=10000 && d[1].length<=9 && !isPhoneRun(d[1])) return parseFloat(d[1]);
   return null;
+}
+// ═══ تمييز أنواع الأرقام: هاتف / سعر / ميزانية / مساحة / غرف / حمامات / دور / سنة / غير ذلك ═══
+const MONEY_STEP_IDS = new Set(["price","priceWeekly","priceMonthly","priceYearly","budget"]);
+const NAME_STEP_IDS  = new Set(["ownerName","buyerName"]);
+const NAME_ERR = "معلش، محتاج اسم حضرتك بس من غير أرقام أو عنوان.";
+function stripThousands(c){ return String(c||"").replace(/(\d)[,\u066C](\d{3})(?!\d)/g,"$1$2").replace(/(\d)[,\u066C](\d{3})(?!\d)/g,"$1$2"); }
+function digitTokens(t){
+  const c = toEnNum(String(t||"")), out = []; const re = /\d+(?:[.,]\d+)?/g; let m;
+  while((m = re.exec(c))) out.push({ raw:m[0], i:m.index, end:m.index+m[0].length });
+  return out;
+}
+function isPhoneRun(run){ return /^01[0-9]{9}$/.test(run) || /^1[0125][0-9]{8}$/.test(run) || /^201[0125][0-9]{8}$/.test(run); }
+function isPhoneLikeText(t){
+  const c = toEnNum(String(t||"")).replace(/[\s\-()]/g,"");
+  const runs = c.match(/\d{8,}/g) || [];
+  return runs.some(isPhoneRun);
+}
+// أرقام مربوطة بوحدة (مساحة/غرف/حمامات/دور/سنة) مش مرشحة تكون سعر
+const UNIT_AFTER_RE = /^\s*(?:متر|م(?![\u0600-\u06FF²2٢])|م٢|م²|m2|sqm|غرف|غرفة|أوض|اوض|غرفه|حمام|حمامات|سن[ةه]|سنين|دور|طابق|أدوار)/i;
+function isUnitLabeled(c, tok){
+  return UNIT_AFTER_RE.test(c.slice(tok.end, tok.end + 14));
+}
+// مرشحات السعر الصريحة: 5 مليون / 5م / مليونين / 5.5 مليون / 3 مليون و200 / 500 ألف
+function moneyCandidates(text){
+  const c = stripThousands(toEnNum(String(text||"")));
+  const out = [];
+  const re = /(?:(\d+(?:[.,]\d+)?)\s*)?(?:مليون|ملیون)(?!ين)|مليونين|ألفين|(\d+(?:[.,]\d+)?)\s*(?:ألف|الف|k)(?!\w)|(\d+(?:[.,]\d+)?)\s*م(?![\u0600-\u06FF²2٢])|(?:نص|نصف)\s*مليون|ربع\s*مليون/gi;
+  let m;
+  while((m = re.exec(c))){
+    const num = v => parseFloat(String(v).replace(",", "."));
+    const s = m[0];
+    if(/^مليونين/.test(s)) { out.push({ value: 2000000, i:m.index, form:"million" }); continue; }
+    if(/^ألفين/.test(s)) { out.push({ value: 2000, i:m.index, form:"thousand" }); continue; }
+    if(/^(?:نص|نصف)/.test(s)) { out.push({ value: 500000, i:m.index, form:"million" }); continue; }
+    if(/^ربع/.test(s)) { out.push({ value: 250000, i:m.index, form:"million" }); continue; }
+    if(/مليون|ملیون/.test(s)) { out.push({ value: (m[1] ? num(m[1]) : 1) * 1000000, i:m.index, form:"million" }); continue; }
+    if(m[2] !== undefined) { out.push({ value: num(m[2]) * 1000, i:m.index, form:"thousand" }); continue; }
+    if(m[3] !== undefined) { out.push({ value: num(m[3]) * 1000000, i:m.index, form:"million" }); continue; }
+  }
+  // "3 مليون و200" = 3,200,000 (إضافة مشتركة، مش خيارين)
+  const add = c.match(/(\d+(?:[.,]\d+)?)\s*(?:مليون|ملیون)\s*و\s*(\d{1,3})(?!\d)/);
+  if(add){
+    const base = parseFloat(add[1].replace(",", ".")) * 1000000 + parseFloat(add[2]) * 1000;
+    const at = c.indexOf(add[0]);
+    const spanEnd = at + add[0].length;
+    const hit = out.find(o => o.i === at);
+    if(hit) hit.value = base; else out.push({ value: base, i: at, form: "million" });
+    for(let x = out.length - 1; x >= 0; x--) if(out[x].i > at && out[x].i < spanEnd) out.splice(x, 1);
+  }
+  return out;
+}
+function numberTokens(t){ return digitTokens(t); }
+// هل الرسالة فيها خيارين/نطاق (رقمين بينهم "أو/إلى/لحد/حتى/-")؟
+function isAmbiguousChoice(t){
+  const c = stripThousands(toEnNum(String(t||"")));
+  const toks = numberTokens(c);
+  if(toks.length < 2) return false;
+  for(let k = 0; k < toks.length - 1; k++){
+    const between = c.slice(toks[k].end, toks[k+1].i).trim();
+    if(!between) return true;                                   // رقمين متجاورين بدون سياق
+    if(/(?:^|[\s(])(?:أو|او|إلى|الى|لحد|لحاية|حتى|~|–|—|-)(?:[\s(]|$)/.test(between)) return true;
+    if(/(?:^|\s)لـ?$/.test(between)) return true;
+    if(between.indexOf("و") !== -1){
+      const left = c.slice(toks[k].i, toks[k+1].i);
+      const smallAdd = /مليون|ملیون|ألف|الف/.test(left) && parseFloat(String(toks[k+1].raw).replace(",", ".")) < 1000;
+      if(!smallAdd) return true;
+    }
+  }
+  return false;
+}
+// قرار السعر في سياق خطوة: OK بقيمة واحدة / توضيح / رقم غير صالح
+function parseMoneyAnswer(text){
+  const c = stripThousands(toEnNum(String(text||"")));
+  // ⭐ رقم الموبايل مش رقم منافس: بنشيله قبل فحص الالتباس
+  const noPhone = c.replace(/(?:\+?20|0)?1[0125]\d{8}(?!\d)|(?:\d[\s-]?){9,}\d/g, " ");
+  if(isAmbiguousChoice(noPhone)) return { ok:false, reason:"ambiguous" };
+  const explicit = moneyCandidates(c);
+  if(explicit.length > 1) return { ok:false, reason:"ambiguous" };
+  if(explicit.length === 1){
+    // ⭐ إضافة مكتوبة بالحروف ("مليونين وخمسين ألف") مش مفهومة بالكامل ⇒ توضيح بدل قراءة ناقصة
+    if(/(?:مليون|ملیون|ألف|الف)(?:ين|ان)?\s*و\s*(?:نص|ربع|عشر|عشرين|تلاتين|ثلاثين|أربعين|اربعين|خمسين|ستين|سبعين|تمانين|ثمانين|تسعين|م[ئي]ة|مائة|م[ئي]تين|ألف|الف)/.test(noPhone)) return { ok:false, reason:"unclear" };
+    return { ok:true, value: explicit[0].value };
+  }
+  if(isPhoneLikeText(c)) return { ok:false, reason:"phone" };
+  const toks = numberTokens(c);
+  const bare = toks.filter(tk => /^\d{4,9}$/.test(tk.raw) && parseFloat(tk.raw) >= 10000 && !isPhoneRun(tk.raw) && !isUnitLabeled(c, tk));
+  if(bare.length === 0) return { ok:false, reason:"none" };
+  if(bare.length > 1) return { ok:false, reason:"ambiguous" };
+  return { ok:true, value: parseFloat(bare[0].raw) };
+}
+function plainMoneyValue(text, type){
+  const rent = String(type||"") === "rent";
+  const floor = rent ? 100 : 10000;
+  const c = stripThousands(toEnNum(String(text||"")));
+  const runs = c.match(/\d{1,9}/g) || [];
+  if(runs.length !== 1) return null;
+  const n = Number(runs[0]);
+  if(!Number.isFinite(n) || n < floor || n > 1000000000) return null;
+  return n;
+}
+function moneyClarifyQ(stepId, reason){
+  const what = stepId === "budget" ? "الميزانية" : "السعر";
+  if(reason === "phone") return `الرقم ده شكله رقم موبايل مش ${what === "الميزانية" ? "ميزانية" : "سعر"}. ${what} كام بالظبط؟ (مثال: 5 مليون)`;
+  if(reason === "unclear") return `معلش، عايز المبلغ بالأرقام بالظبط عشان أنقله صح. ${what} كام؟ (مثال: 2,050,000)`;
+  void what;
+  return `معلش، فيه أكتر من رقم في الرسالة. ${what} كام بالظبط؟ اكتب رقم واحد (مثال: 5 مليون).`;
+}
+// هل الرسالة تصريح سعر واضح (يسمح بتصحيح السعر/الميزانية)؟ الرقم المجرد لا يكفي.
+function isClearPriceStatement(msg, stepId){
+  const c = stripThousands(toEnNum(String(msg||"")));
+  if(isPhoneLikeText(c) && !/(?:مليون|ملیون|ألف|الف|جنيه)/.test(c)) return false;
+  if(isAmbiguousChoice(c)) return false;
+  const explicit = moneyCandidates(c);
+  if(explicit.length === 1) return true;
+  if(explicit.length > 1) return false;
+  return MONEY_STEP_IDS.has(String(stepId||""));
+}
+// ═══ الاسم: فحص شكلي/دلالي — اسم محتمل بشري، مش رقم/سعر/عنوان/نص عشوائي ═══
+const NAME_FILLER_RE = /^(?:لا|لأ|تمام|طيب|ماشي|ماشى|اوك|أوك|ok|حاضر|معلش|مش|عارف|فاهم|مشكله|مشكلة|خلاص|كده|شكرا|شكرًا|any|ايوة|أيوه|ايوه|اه|اها|اها|مفيش|لسه|كمان|برضه|برضو|ممكن|فين|ازاي|ايه|ايه|test|تجربه|تجربة|asdf|qwerty|unknown|null|none|xxx|zzz|ههه+|هههه+)$/;
+function cleanPersonName(raw){
+  let t = String(raw||"").trim().replace(/\s+/g," ");
+  if(!t) return null;
+  t = t.replace(/^[\s،,.:!?؟\-]+/,"").replace(/[\s،,.:!?؟\-]+$/,"");
+  t = t.replace(/^(?:أ\.|ا\.|الأستاذ(?:ة)?|أستاذ(?:ة)?|استاذ(?:ة)?|م\.|د\.|مهندس(?:ة)?)\s+/,"");
+  t = t.replace(/^(?:(?:لأ|لا|قصدي|اقصد|أقصد|بالعكس)[\s،,]+)+/,"");
+  t = t.replace(/^(?:أنا\s+اسمي|انا\s+اسمي|اسمي|اسمى|أنا|انا)\s+/,"");
+  t = t.replace(/[\s،,.:!?؟\-]+$/,"");
+  if(!t || t.length > 40) return null;
+  if(/[\d٠-٩۰-۹]/.test(t)) return null;                                  // أرقام: هاتف/سعر/سنة/مساحة ⇒ ليس اسمًا
+  if(/(?:مليون|ملیون|ألف|الف|جنيه|ج\.م|دولار|متر|م2|م²|م٢|قرش)/.test(t)) return null;
+  if(/(?:شارع|ش\.|منطقة|مدينة|ميدان|مربع|عمارة|برج|كمبوند|الحي|حي\b|عقار|شقة|شقه|فيلا|محل|مكتب|مخزن|روف|دور|الدور|مبنى|عايز|عاوز|محتاج|سعر|ميزانية)/.test(t)) return null;
+  const words = t.split(" ").filter(Boolean);
+  if(words.length < 1 || words.length > 4) return null;
+  // ⭐ أسماء الشوارع بتتصادم مع أسماء أشخاص شائعة ("أحمد" = شارع أحمد فؤاد نسيم):
+  //    الفحص ده للردود المتعددة الكلمات فقط، عشان ما نرفضش اسم حقيقي من كلمة واحدة
+  if(words.length >= 2){ try { if(matchLandmark(t, MASTER_LANDMARKS)) return null; } catch {} }
+  const okWord = w => /^[\u0600-\u06FF]{2,15}$/.test(w) || /^[A-Za-z][A-Za-z'’\-]{1,19}$/.test(w);
+  if(!words.every(okWord)) return null;
+  if(words.every(w => NAME_FILLER_RE.test(normAr(w)))) return null;       // "تمام تمام"/"مش عارف"
+  return t;
 }
 
 // ═══ GOOGLE AUTHORITY ═══
@@ -740,21 +886,27 @@ function detectCorrection(as, newFacts){
   return corrections;
 }
 
+function currentStepIdOf(fs){
+  try { return getSteps(fs?.type, fs?.flowType)[fs?.stepIndex]?.id || null; } catch { return null; }
+}
+function plausibleArea(n){ const v = Number(n); return Number.isFinite(v) && v >= 1 && v <= 100000; }
 function applyUnderstandingToFlowData(fs, understanding){
   if(!fs||!understanding) return fs;
   const d = {...(fs.data||{})};
   const f = understanding.entities||{};
   const owner = String(fs.flowType||"").startsWith("owner");
+  const stepId = currentStepIdOf(fs);
+  const raw = understanding.raw || "";
   if(!d._filled) d._filled = {};
   if(!hasVal(d.propertyType) && hasVal(f.propertyType)) d.propertyType = f.propertyType;
   if(owner){
     if(!hasVal(d.location) && hasVal(f.landmark)) d.location = f.landmark;
-    if(!hasVal(d.price) && hasVal(f.budget)) d.price = f.budget;
+    if(!hasVal(d.price) && hasVal(f.budget) && isClearPriceStatement(raw, stepId)) d.price = f.budget;
   } else {
     if(!hasVal(d.landmark) && hasVal(f.landmark)) d.landmark = f.landmark;
-    if(!hasVal(d.budget) && hasVal(f.budget)) d.budget = f.budget;
+    if(!hasVal(d.budget) && hasVal(f.budget) && isClearPriceStatement(raw, stepId)) d.budget = f.budget;
   }
-  if(!hasVal(d.area) && hasVal(f.area)) d.area = f.area;
+  if(!hasVal(d.area) && hasVal(f.area) && plausibleArea(f.area)) d.area = f.area;
   if(!hasVal(d.rooms) && hasVal(f.rooms)) d.rooms = f.rooms;
   if(!hasVal(d.baths) && hasVal(f.baths)) d.baths = f.baths;
   if(!hasVal(d.furnished) && hasVal(f.furnished)) d.furnished = f.furnished;
@@ -1148,6 +1300,8 @@ const PII_KEYS = new Set(["ownerName","ownerPhone","buyerName","buyerPhone","pho
 const LOCATION_KEYS = new Set(["gps","location","address","lat","lng","lon","latitude","longitude","coords","coordinates","mapUrl","mapsUrl","googleMapsUrl"]);
 function safeDataForPrompt(data){
   const out = {};
+  const rawCanon = (Array.isArray(data?._rawLocations) ? data._rawLocations : [])
+    .map(x => addrCanon(String(x||"")).s).filter(x => x.length >= 6);
   for(const [k,v] of Object.entries(data||{})){
     if(PII_KEYS.has(k)||LOCATION_KEYS.has(k)) continue;
     if(k.startsWith("_")||k.startsWith("selected")) continue;
@@ -1156,25 +1310,172 @@ function safeDataForPrompt(data){
       continue;
     }
     if(!hasVal(v)) continue;
-    out[k] = typeof v==="string" ? sanitizeForPrompt(v,60) : v;
+    // ⭐ F2: أي قيمة نصية (notes/landmark/أي حقل مستقبلي) تُنقّى قبل الـprompt،
+    //    وأي قيمة هي جزء من عنوان خام كتبه العميل بنفسه تُستبدل بالكامل
+    if(typeof v === "string"){
+      const cv = addrCanon(v).s;
+      out[k] = (cv.length>=3 && rawCanon.some(r => r.includes(cv))) ? "[عنوان]" : sanitizeForPrompt(scrubAddresses(v, data),60);
+    } else out[k] = v;
   }
   return redactPII(JSON.stringify(out)).slice(0,500);
 }
-function scrubAddresses(text,data){
+// العنوان الخام اللي العميل كتبه بنفسه — بيتحفظ قبل أي تطبيع لمنطقة عشان التنقية تلاقيه
+function rememberRawLocation(data, raw){
+  const t = String(raw||"").trim();
+  if(t.length<6) return data;
+  const list = Array.isArray(data?._rawLocations) ? data._rawLocations : [];
+  if(list.includes(t)) return data;
+  return { ...data, _rawLocations: [...list, t].slice(-5) };
+}
+// ═══ F3: تطبيع عربي خفيف (ه/ة · ي/ى · الهمزات · التشكيل · المسافات · الترقيم) — بلا false positives واسعة ═══
+const AR_DIACRITIC = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/;
+const AR_CANON_MAP = { "ة":"ه", "ى":"ي", "أ":"ا", "إ":"ا", "آ":"ا", "ٱ":"ا", "ؤ":"و", "ئ":"ي" };
+function addrCanon(text){
+  const src = String(text||""); let s = ""; const map = [];
+  for(let i=0;i<src.length;i++){
+    const ch = src[i];
+    if(AR_DIACRITIC.test(ch)) continue;
+    s += (AR_CANON_MAP[ch] || ch); map.push(i);
+  }
+  return { s, map };
+}
+// مطابقة متحمّلة: كلمات العنوان بينها مسافات/ترقيم مرن (المقارنة على النص المُطبَّع)
+function addrRegex(needle){
+  const { s } = addrCanon(needle);
+  const words = s.split(/[\s،,.!؟\-–—|]+/).filter(Boolean);
+  if(words.join("").length < 6) return null;
+  const body = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s،,.\\-–—]*");
+  return new RegExp(body, "g");
+}
+// أنماط أرضية للعنوان داخل أي نص حر — لا تعتمد على خطوة العنوان ولا على أي قائمة
+const ADDR_SPAN_RES = [
+  /(?<![\u0600-\u06FF])(?:صيدلية|مسجد|مستشفى|مدرسه|مدرسة|مول|كافيه|مطعم|بنك|محطه|محطة|كوبري|كوبرى|برج|عمارة|كمبوند|كومباوند|فندق|سوبر\s*ماركت)(?:\s+[^\s،,.!؟|]+){1,2}/g,
+  /(?<![\u0600-\u06FF])(?:بجوار|بجانب|جنب|أمام|امام|خلف|مقابل|ناصية)\s+(?:[^\s،,.!؟|]+\s+){0,2}[^\s،,.!؟|]+/g,
+  /(?<![\u0600-\u06FF])(?:شارع|شوارع|ش\.)\s*(?:[^\s،,.!؟|]+\s+){0,3}[^\s،,.!؟|]+/g,
+];
+// كلمات تدل على أن العنوان انتهى وبدأ كلام/سؤال — تُقصّ من آخر المقطع فقط (ما تمنعش اكتشاف العنوان)
+const AR_SPAN_STOP = new Set(["في","على","من","إلى","الى","عند","عندك","عندنا","قريب","قريبة","زي","نفس","بعد","قبل","كل","أي","اي","بتاع","بتاعة","وفيها","وفيه","وفي","وفى","والمساحة","والميزانية","والسعر","والمكان","وكمان","وكان","وكانت","وبعدين","ومش","ولسه","ولسا","وعايز","وعاوز","وعايزه","وعايزة","وعاوزة","وأريد","واريد","وأعرف","واعرف","عايز","عاوز","عايزه","عايزة","عاوزة","أريد","اريد","أعرف","اعرف","ممكن","تقولي","تقول","قولي","فين","إزاي","ازاي","كام","ليه","إيه","ايه","مش","بس","ده","دي","دا","دول","أنا","انا","هو","هي","احنا","إحنا","كمان","برضو","بردو","عشان","علشان","لو","أو","او","اللي","إللي","اللى","التي","الذي","امبارح","النهارده","النهاردة","بكره","بكرة"]);
+function spanTailTrim(span){
+  let v = String(span||"");
+  for(;;){
+    const m = v.match(/(\S+)\s*$/);          // آخر كلمة فعليّة (بتتخطّى المسافات في الآخر)
+    if(!m) break;
+    const key = m[1].replace(/[^\u0600-\u06FF0-9A-Za-z]/g,"");
+    if(key && AR_SPAN_STOP.has(key)){ v = v.slice(0, m.index); continue; }
+    break;
+  }
+  return v.replace(/\s+$/,"");
+}
+function maskAddressSpans(text){
   let t = String(text||"");
-  const known = [data?.location, data?.gps?.address].map(x=>String(x||"").trim()).filter(x=>x.length>=6);
-  for(const a of new Set(known)) t = t.split(a).join("[عنوان]");
+  for(const re of ADDR_SPAN_RES)
+    t = t.replace(re, (sp) => {
+      const v = spanTailTrim(sp);
+      return (v.length>=6 ? "[عنوان]" : "") + sp.slice(v.length);
+    });
   return t;
 }
-async function callGemini(env, sys, msgs, maxTok=150, temp=0.6){
+function addressSpans(text){
+  const out = []; const t = String(text||"");
+  for(const re of ADDR_SPAN_RES){
+    re.lastIndex = 0; let m;
+    while((m = re.exec(t))){ const v = spanTailTrim(m[0]); if(v.length>=6) out.push(v); if(m.index === re.lastIndex) re.lastIndex++; }
+  }
+  return [...new Set(out)];
+}
+function scrubAddresses(text,data){
+  let t = String(text||"");
+  const raw = Array.isArray(data?._rawLocations) ? data._rawLocations : [];
+  const known = [...new Set([data?.location, data?.gps?.address, ...raw].map(x=>String(x||"").trim()).filter(x=>x.length>=6))].sort((a,b)=>b.length-a.length);
+  for(const a of known){
+    const re = addrRegex(a);
+    if(!re) continue;
+    const { s, map } = addrCanon(t);
+    const parts = []; let last = 0, m;
+    while((m = re.exec(s))){
+      const st = map[m.index] ?? 0;
+      const lastIdx = m.index + m[0].length - 1;
+      const end = lastIdx < map.length ? map[lastIdx] + 1 : t.length;
+      parts.push(t.slice(last, st), "[عنوان]"); last = end;
+      if(m.index === re.lastIndex) re.lastIndex++;
+    }
+    if(parts.length){ parts.push(t.slice(last)); t = parts.join(""); }
+  }
+  return maskAddressSpans(t);
+}
+// ═══ F1 + الحاجز النهائي: لا يخرج أي payload فيه عنوان خام إلى Gemini ═══
+function rememberAddressSpans(data, spans){
+  if(!data || !Array.isArray(spans) || !spans.length) return;
+  const list = Array.isArray(data._rawLocations) ? data._rawLocations : (data._rawLocations = []);
+  for(const s of spans){ const v = String(s||"").trim(); if(v.length>=6 && !list.includes(v)) list.push(v); }
+  if(list.length>5) list.splice(0, list.length-5);
+}
+// الحاجز بينقّي النصوص الديناميكية فقط (رسائل العميل + بيانات الحالة + أي نص متغيّر).
+// القوالب الثابتة (الشخصية/المزاج) ما بتتغيّرش — ما ينفعش يبقى فيها عنوان أصلًا، وفحص المنع
+// (payloadHasRawAddress) بيفحص الحمولة كلها بما فيها القوالب، فلو حصل حاجة غريبة الإرسال يتوقف.
+const GUARD_TEMPLATES = [() => TAREK_PERSONA, () => MOOD_GUIDE];
+// يقسّم النص لمقاطع {text, dynamic} — القالب الثابت يفضل كما هو وما بيتحسبش تسريب
+function splitDynamic(text){
+  const t = String(text||"");
+  const spans = [];
+  for(const get of GUARD_TEMPLATES){
+    const c = get(); if(!c) continue;
+    let i = 0;
+    while((i = t.indexOf(c, i)) >= 0){ spans.push([i, i + c.length]); i += c.length; }
+  }
+  if(!spans.length) return [{ text: t, dynamic: true }];
+  spans.sort((a,b)=>a[0]-b[0]);
+  const out = []; let last = 0;
+  for(const [a,b] of spans){
+    if(a < last) continue;
+    if(a > last) out.push({ text: t.slice(last, a), dynamic: true });
+    out.push({ text: t.slice(a, b), dynamic: false });     // القالب الثابت
+    last = b;
+  }
+  if(last < t.length) out.push({ text: t.slice(last), dynamic: true });
+  return out;
+}
+function scrubDynamicText(text, data){
+  return splitDynamic(text).map(p => p.dynamic ? scrubAddresses(p.text, data) : p.text).join("");
+}
+function guardGeminiPayload(body, data){
+  const clean = JSON.parse(JSON.stringify(body));
+  const fix = t => {
+    if(typeof t !== "string") return t;
+    const spans = addressSpans(t);
+    if(spans.length) rememberAddressSpans(data, spans);   // يُسجَّل فورًا: أي نص عنواني يُلتقط بعد كده بالمطابقة المتحمّلة
+    return scrubDynamicText(t, data);
+  };
+  if(clean?.system_instruction?.parts) for(const p of clean.system_instruction.parts) p.text = fix(p.text);
+  for(const c of clean?.contents||[]) for(const p of c.parts||[]) p.text = fix(p.text);
+  return clean;
+}
+// الفحص النهائي: أي عنوان خام كتبه العميل لسه موجود في الأجزاء الديناميكية من الحمولة؟ ⇒ امنع الإرسال
+function payloadPartsText(body){
+  const out = [];
+  if(body?.system_instruction?.parts) for(const p of body.system_instruction.parts) out.push(String(p?.text ?? ""));
+  for(const c of body?.contents||[]) for(const p of c.parts||[]) out.push(String(p?.text ?? ""));
+  return out;
+}
+function payloadHasRawAddress(body, data){
+  const raw = (Array.isArray(data?._rawLocations) ? data._rawLocations : [])
+    .map(x => addrCanon(String(x||"").trim()).s).filter(x => x.length >= 6);
+  if(!raw.length) return false;
+  const dynamic = payloadPartsText(body).flatMap(t => splitDynamic(t).filter(p => p.dynamic).map(p => p.text)).map(addrCanon).join("\n");
+  return raw.some(r => dynamic.includes(r));
+}
+async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data){
   if(!env?.GEMINI_API_KEY) return null;
   try {
     const url = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`;
     const body = { system_instruction:{parts:[{text:sys}]}, contents:msgs, generationConfig:{temperature:temp,maxOutputTokens:maxTok} };
+    // ⭐ الحاجز النهائي قبل أي fetch لـGoogle: تنقية كل النصوص، ومنع الإرسال لو بقي عنوان خام معروف
+    const guarded = guardGeminiPayload(body, data);
+    if(payloadHasRawAddress(guarded, data)){ console.warn("[gemini] payload blocked: raw address"); return null; }
     const r = await fetchWithTimeout(url,{
       method:"POST",
       headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
-      body:JSON.stringify(body)
+      body:JSON.stringify(guarded)
     }, FETCH_TIMEOUT_GEMINI);
     if(!r.ok){ console.warn("[gemini] non-ok status:",r.status); return null; }
     const j = await r.json();
@@ -1205,9 +1506,9 @@ function timeContext(now = cairoNow()){
   if(!bits.length) return "";
   return `الوقت دلوقتي: ${bits.join("، ")}.\nاذكر ده بشكل عابر وطبيعي لو كان له لازمة، من غير ما تعتذر كتير ومن غير ما تكرره في كل رد.`;
 }
-async function geminiFirstMsg(env, userMsg, history){
+async function geminiFirstMsg(env, userMsg, history, data){
   const sys = `${TAREK_PERSONA}\n\nالموقف: حد لسه داخل على الشات دلوقتي وكتبلك حاجة.\nانت عايز تعرف هو عايز يشتري ولا يأجر ولا عنده عقار عايز يبيعه أو يأجره.\nتحت الشات في أزرار جاهزة، وجّهه ليها بكلامك من غير ما تسرد الاختيارات كأنها قايمة.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nرد بسطر أو اتنين بالكتير. متسألش عن تفاصيل العقار دلوقتي ومتتكلمش في أسعار.`;
-  return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(userMsg)}]}], 150, 0.85);
+  return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(scrubAddresses(userMsg, data))}]}], 150, 0.85, data);
 }
 async function geminiComment(env, userMsg, nextQ, fsData){
   const safeMsg = sanitizeForPrompt(scrubAddresses(userMsg, fsData));
@@ -1218,7 +1519,7 @@ async function geminiComment(env, userMsg, nextQ, fsData){
     return cached.variants[Math.floor(Math.random()*cached.variants.length)];
   }
   const sys = `${TAREK_PERSONA}\n\nالموقف: العميل لسه جاوبك على سؤال، وانت هتسأله السؤال اللي بعده على طول.\nعايز منك رد فعل قصير جدا على إجابته.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nمهم جدا: مش كل إجابة محتاجة رد.\nلو إجابته عادية خالص (رقم، اختيار من زرار، كلمة واحدة) — مترّدش خالص واكتب: -\nالرد الفاضي ده طبيعي.\nعلّق بس لما يكون في حاجة فعلا تستاهل.\nلو هتعلّق: كلمتين أو تلاتة بالكتير. متعيدش السؤال اللي جاي.\n\nإجابة العميل: "${safeMsg}"\nالسؤال اللي جاي: "${sanitizeForPrompt(nextQ,200)}"\nاللي عارفه عنه: ${safeDataForPrompt(fsData)}`;
-  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95);
+  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95, fsData);
   const cleaned = String(reply||"").trim();
   if(!cleaned||cleaned==="-"||/^[-–—.]+$/.test(cleaned)) return null;
   const variants = cached?.variants ? [...new Set([...cached.variants, cleaned])].slice(-4) : [cleaned];
@@ -1233,7 +1534,7 @@ async function geminiContextual(env, userMsg, formState, currentStep, history){
   if(convHistory[convHistory.length-1]?.role==="user") convHistory.pop();
   convHistory.push({role:"user",parts:[{text:sanitizeForPrompt(scrubAddresses(userMsg, formState?.data))}]});
   const sys = `${TAREK_PERSONA}\n\nالموقف: انت كنت سألته سؤال، وهو بدل ما يجاوب سألك انت سؤال تاني.\nجاوب على سؤاله بسرعة وبعدين رجّعه للسؤال بتاعك.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nالسؤال اللي انت مستنيه منه: "${sanitizeForPrompt(q,200)}"\nاللي عارفه عنه: ${safeDataForPrompt(formState?.data)}\n\nجاوب سؤاله في سطر واحد بس، وبعدين اسأله سؤالك تاني.\nالسؤال ترجّعه بمعناه وبكلامك انت، مش نسخ لصق حرفي.`;
-  return callGemini(env, sys, convHistory, 150, 0.75);
+  return callGemini(env, sys, convHistory, 150, 0.75, formState?.data);
 }
 function deservesComment(userMsg){
   const t = String(userMsg||"").trim();
@@ -1474,7 +1775,8 @@ async function processOwner(fs, msg, env, history, lms){
   }
   if(isCancel(msg)) return cancelFlow(fs);
   if(isSendNow(msg)) return completeOwnerCheck(fs, fs.data||{});
-  const data = {...(fs.data||{})};
+  let data = {...(fs.data||{})};
+  if(ADDRESS_STEP_IDS.has(step.id)) data = rememberRawLocation(data, msg);
   if(isSkip(msg)){
     if(CORE_OWNER.has(step.id)) return askOwnerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
     data[step.id]="—"; markFilled(data,step);
@@ -1495,7 +1797,8 @@ async function processOwner(fs, msg, env, history, lms){
   if(!hasVal(data.propertyType)&&hasVal(extracted.propertyType)) data.propertyType = extracted.propertyType;
   if(!hasVal(data.location)&&hasVal(extracted.landmark)) data.location = extracted.landmark;
   if(!hasVal(data.area)&&hasVal(extracted.area)) data.area = extracted.area;
-  if(!hasVal(data.price)&&hasVal(extracted.budget)) data.price = extracted.budget;
+  // ⭐ السعر من رسالة مجردة/ملتبسة لا يُعبّأ من الـfacts، ولو السؤال الحالي هو السعر فالـparser بتاعه هو المرجع
+  if(!hasVal(data.price)&&hasVal(extracted.budget)&&!MONEY_STEP_IDS.has(step.id)&&isClearPriceStatement(msg, step.id)) data.price = extracted.budget;
   for(const key of ["rooms","baths","furnished"]){
     if(!hasVal(data[key])&&hasVal(extracted[key])) data[key] = extracted[key];
   }
@@ -1516,10 +1819,24 @@ async function processOwner(fs, msg, env, history, lms){
     return askOwnerStep(steps,fs.stepIndex,fs,"معلش، اختار من الأزرار اللي تحت.",lms);
   }
   const txt = String(msg||"").trim();
-  if(step.type==="number"){
-    const n = parseNum(txt);
-    if(!n||n<=0) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
-    data[step.id]=n;
+  if(NAME_STEP_IDS.has(step.id)){
+    const nm = cleanPersonName(txt);
+    if(!nm) return askOwnerStep(steps,fs.stepIndex,fs,NAME_ERR,lms);
+    data[step.id]=nm;
+  } else if(step.type==="number"){
+    if(MONEY_STEP_IDS.has(step.id)){
+      const money = parseMoneyAnswer(txt);
+      if(money.reason && money.reason !== "none") return askOwnerStep(steps,fs.stepIndex,fs,moneyClarifyQ(step.id,money.reason),lms);
+      const plain = money.ok ? null : plainMoneyValue(txt, fs.type);
+      if(!money.ok && plain===null) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
+      data[step.id]= money.ok ? money.value : plain;
+    } else {
+      if(isPhoneLikeText(txt)) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
+      const n = parseNum(txt);
+      if(!n||n<=0) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
+      if(step.id==="area"&&n>100000) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
+      data[step.id]=n;
+    }
   } else if(step.type==="phone"){
     const ph = normPhone(txt);
     if(!/^01[0-9]{9}$/.test(ph)) return askOwnerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم موبايل 11 رقم يبدأ بـ01.",lms);
@@ -1544,13 +1861,17 @@ async function processBuyer(fs, msg, env, history, lms){
     return askBuyerStep(getBuyerSteps(bs.type), bs.stepIndex, bs, "تمام، رجعنا خطوة.", lms);
   }
   if(isCancel(msg)) return cancelFlow(fs);
-  const data = {...(fs.data||{})};
+  let data = {...(fs.data||{})};
+  if(ADDRESS_STEP_IDS.has(step.id)) data = rememberRawLocation(data, msg);
   if(isSkip(msg)&&CORE_BUYER.has(step.id)){
     return askBuyerStep(steps, fs.stepIndex, fs, "دي معلومة أساسية عشان أرتبلك الطلب.", lms);
   }
   const extracted = extractBuyerFields(msg);
   for(const [k,v] of Object.entries(extracted)){
-    if(hasVal(v)&&!hasVal(data[k])){ data[k]=v; if(!data._filled) data._filled={}; data._filled[k]=true; }
+    if(!hasVal(v)||hasVal(data[k])) continue;
+    // ⭐ الميزانية من رسالة مجردة/ملتبسة لا تُعبّأ من الـfacts، ولو السؤال الحالي هو الميزانية فالـparser بتاعه هو المرجع
+    if(k==="budget" && (MONEY_STEP_IDS.has(step.id) || !isClearPriceStatement(msg, step.id))) continue;
+    data[k]=v; if(!data._filled) data._filled={}; data._filled[k]=true;
   }
   if(step.type==="dynamic_buttons"&&step.id==="landmark"){
     if(isMore(msg)){
@@ -1600,10 +1921,31 @@ async function processBuyer(fs, msg, env, history, lms){
       return askBuyerStep(steps,ni,{...fs,stepIndex:ni,data},null,lms);
     }
   }
+  const txtN = String(msg||"").trim();
+  if(NAME_STEP_IDS.has(step.id)){
+    const nm = cleanPersonName(txtN);
+    if(!nm) return askBuyerStep(steps,fs.stepIndex,fs,NAME_ERR,lms);
+    data[step.id]=nm; markFilled(data,step);
+    const ni = nextStep(steps,data,fs.stepIndex+1);
+    if(ni===-1) return completeBuyer({...fs,data},data);
+    return askBuyerStep(steps,ni,{...fs,stepIndex:ni,data},null,lms);
+  }
   const txt = String(msg||"").trim();
   if(step.type==="number"){
+    if(MONEY_STEP_IDS.has(step.id)){
+      const money = parseMoneyAnswer(txt);
+      if(money.reason && money.reason !== "none") return askBuyerStep(steps,fs.stepIndex,fs,moneyClarifyQ(step.id,money.reason),lms);
+      const plain = money.ok ? null : plainMoneyValue(txt, fs.type);
+      if(!money.ok && plain===null) return askBuyerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
+      data[step.id]= money.ok ? money.value : plain; markFilled(data,step);
+      const niM = nextStep(steps,data,fs.stepIndex+1);
+      if(niM===-1) return completeBuyer({...fs,data},data);
+      return askBuyerStep(steps,niM,{...fs,stepIndex:niM,data},null,lms);
+    }
+    if(isPhoneLikeText(txt)) return askBuyerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
     const n = parseNum(txt);
     if(n>0){
+      if(step.id==="area"&&n>100000) return askBuyerStep(steps,fs.stepIndex,fs,step.err||"اكتب رقم صحيح.",lms);
       data[step.id]=n; markFilled(data,step);
       const ni = nextStep(steps,data,fs.stepIndex+1);
       if(ni===-1) return completeBuyer({...fs,data},data);
@@ -1644,7 +1986,7 @@ function extractBuyerFields(msg){
   if(lm) out.landmark = lm;
   const budget = extractPrice(t);
   if(budget>0) out.budget = budget;
-  const size = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م(?:\s*²)?|م٢|m2|sqm)/i);
+  const size = toEnNum(t).match(/(?:مساح(?:ة|ه)\s*)?(\d{1,6})\s*(?:متر|م٢|m2|sqm|م(?=\s*(?:\d|²|٢|$)))/i);
   if(size) out.area = Number(size[1]);
   const rm = t.match(/(\d+)\s*(غرف|غرفة|أوض|اوض)/);
   if(rm) out.rooms = rm[1];
@@ -2134,7 +2476,10 @@ export default {
           const owner = !isBuyer;
           const lms = await fetchLandmarks({ transaction: type });
           const steps = isBuyer ? getBuyerSteps(type) : getOwnerSteps(type);
-          const data = seedFlowData(seedFacts, owner);
+          const safeFacts = {...(seedFacts||{})};
+          // ⭐ رقم مجرد/ملتبس/هاتف في أول رسالة لا يُبذر كسعر
+          if(!isClearPriceStatement(userMsg, null)) delete safeFacts.budget;
+          const data = seedFlowData(safeFacts, owner);
           const newFs = {
             active: true, lifecycle: LC.ACTIVE, type, stepIndex: 0, data,
             awaitingQ: true, flowType: isBuyer ? (type === "sale" ? "buyer" : "tenant") : "owner",
@@ -2220,7 +2565,7 @@ export default {
         }
 
         if(!env?.GEMINI_API_KEY) return jsonRes({response:"تمام، أساعدك في عقارات مدينة نصر. شراء ولا إيجار؟",options:ROUTE_BTNS,formState:fs});
-        const reply = await geminiFirstMsg(env, userMsg, history);
+        const reply = await geminiFirstMsg(env, userMsg, history, fs?.data);
         if(reply) return jsonRes({response:reply,options:ROUTE_BTNS,formState:fs});
         return jsonRes(newRequest());
       }
@@ -2240,13 +2585,21 @@ export default {
           area: "area", rooms: "rooms", baths: "baths",
           furnished: "furnished", propertyType: "propertyType"
         };
+        // سياق الخطوة الحالية: هو الحاكم في التفريق بين رقم مجرد وسعر
+        let currentStepId = null;
+        try { currentStepId = getSteps(fs.type, flowType)[fs.stepIndex]?.id || null; } catch {}
         const newFacts = understanding.entities || {};
         for(const [k,v] of Object.entries(newFacts)){
           if(!hasVal(v)) continue;
           const key = factKeyMap[k];
           if(!key) continue;
+          // ⭐ رقم مجرد لا يصحّح السعر/الميزانية: لازم تصريح سعر واضح أو السؤال الحالي هو السعر/الميزانية
+          if((key === "price" || key === "budget") && !isClearPriceStatement(userMsg, currentStepId)) continue;
+          // ⭐ ومفيش مساحة غير معقولة تستبدل مساحة صحيحة
+          if(key === "area" && !plausibleArea(v)) continue;
           const prev = fs.data?.[key];
           if(hasVal(prev) && String(prev) !== String(v)){
+            if(ADDRESS_STEP_IDS.has(key)) fs.data = rememberRawLocation(fs.data, prev);
             fs.data = { ...fs.data, [key]: v };
             fs.agentState.corrections = [...(fs.agentState.corrections||[]), { field:key, from:prev, to:v, at:Date.now() }].slice(-20);
           }

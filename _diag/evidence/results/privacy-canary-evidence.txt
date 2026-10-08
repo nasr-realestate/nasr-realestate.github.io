@@ -1,0 +1,590 @@
+=== PRIVACY CANARY EVIDENCE — 2026-10-08T17:34:36Z ===
+before (pre-fix) worker: /tmp/worker-pre-privacyfix.js
+  sha256 8e8a36933c13b8e73ba9370b815ceee25b627b141b6460c3959389fda8d7b3b5
+after  (fixed)   worker: /home/user/nasr-realestate.github.io/_worker/worker.js
+  sha256 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+
+─── 1. privacy-canary suite — BEFORE (pre-fix build) ───
+TAP version 13
+# ── M-1 · false positives (0/10 altered · 0 unproven · 10 payloads captured) ──
+#    natural  | عايز شقة 3 غرف
+#    natural  | ميزانيتي حوالي 3 مليون
+#    natural  | ممكن تفاصيل أكتر عن الشقة؟
+#    natural  | السعر ده نهائي ولا فيه تفاوض؟
+#    natural  | التشطيب إيه؟
+#    natural  | محتاج أعرف الرسوم كمان
+#    natural  | عايز أعرف المميزات والعيوب
+#    natural  | المنطقة هادية؟
+#    natural  | ممكن أعرف متوسط الأسعار؟
+#    natural  | شكرًا جزيلًا على المساعدة
+# ── M-2 · false negatives (6/6 leaked · 6 unproven · 6 payloads captured) ──
+#    LEAKED    | شارع 15 مايو بجوار مسجد الرحمة
+#    LEAKED    | شارع الترعة البولاقية بجوار كوبري الساحل
+#    LEAKED    | شارع العروبة بجوار مستشفى هليوبوليس
+#    LEAKED    | أنا ساكن في شارع مصطفى النحاس
+#    LEAKED    | شقة في شارع عباس العقاد
+#    LEAKED    | شارع الترعة البولاقية بجوار كوبري الساحل
+# ── M-3 · measurements (this build) ──
+#    turns=223  gemini_calls=46  payload_chars=63650  canary_hits=80
+#    · 1 · canary at the address step + side question → turns=4 calls=1 chars=1258 hits=0
+#    · 2 · canary at the rooms step → turns=6 calls=1 chars=1329 hits=12
+#    · 3 · canary stored in notes → turns=11 calls=2 chars=2924 hits=18
+#    · 4 · canary as an unmatched landmark → turns=5 calls=1 chars=1316 hits=1
+#    · 5 · canary inside a correction → turns=5 calls=1 chars=1322 hits=12
+#    · 6 · first message with intent → turns=1 calls=1 chars=1309 hits=12
+#    · 7 · first message without facts → turns=2 calls=1 chars=1280 hits=6
+#    · 8 · side question with the address only in history → turns=1 calls=1 chars=1222 hits=6
+#    · 9 · the ه spelling of the same address → turns=5 calls=2 chars=2556 hits=6
+#    · 10a · outside the landmark list — buyer landmark step → turns=5 calls=1 chars=1307 hits=4
+#    · 10b · outside the landmark list — first message → turns=1 calls=1 chars=1080 hits=3
+#    · R-1 · reverse test (naturalness) → turns=1 calls=1 chars=1276 hits=0
+#    · FP · عايز شقة 3 غرف → turns=11 calls=2 chars=2808 hits=0
+#    · FP · ميزانيتي حوالي 3 مليون → turns=11 calls=2 chars=2832 hits=0
+#    · FP · ممكن تفاصيل أكتر عن الشقة؟ → turns=11 calls=2 chars=2844 hits=0
+#    · FP · السعر ده نهائي ولا فيه تفاوض؟ → turns=11 calls=2 chars=2853 hits=0
+#    · FP · التشطيب إيه؟ → turns=11 calls=2 chars=2802 hits=0
+#    · FP · محتاج أعرف الرسوم كمان → turns=11 calls=2 chars=2832 hits=0
+#    · FP · عايز أعرف المميزات والعيوب → turns=11 calls=2 chars=2844 hits=0
+#    · FP · المنطقة هادية؟ → turns=11 calls=2 chars=2808 hits=0
+#    · FP · ممكن أعرف متوسط الأسعار؟ → turns=11 calls=2 chars=2838 hits=0
+#    · FP · شكرًا جزيلًا على المساعدة → turns=11 calls=2 chars=2841 hits=0
+#    · FN · شارع 15 مايو بجوار مسجد الرحمة → turns=11 calls=2 chars=2856 hits=0
+#    · FN · شارع الترعة البولاقية بجوار كو → turns=11 calls=2 chars=2886 hits=0
+#    · FN · شارع العروبة بجوار مستشفى هليو → turns=11 calls=2 chars=2871 hits=0
+#    · FN · أنا ساكن في شارع مصطفى النحاس → turns=11 calls=2 chars=2843 hits=0
+#    · FN · شقة في شارع عباس العقاد → turns=11 calls=2 chars=2827 hits=0
+#    · FN · شارع الترعة البولاقية بجوار كو → turns=11 calls=2 chars=2886 hits=0
+# Subtest: P-1: the canary typed AT the address step, then a side question
+ok 1 - P-1: the canary typed AT the address step, then a side question
+  ---
+  duration_ms: 47.967771
+  type: 'test'
+  ...
+# Subtest: P-2: the canary typed at the rooms step (a non-address step)
+not ok 2 - P-2: the canary typed at the rooms step (a non-address step)
+  ---
+  duration_ms: 9.998535
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:114:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    2 · canary at the rooms step: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:119:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-3: the canary stored in notes, then a later comment carries the data
+not ok 3 - P-3: the canary stored in notes, then a later comment carries the data
+  ---
+  duration_ms: 8.167678
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:122:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    3 · canary stored in notes: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:128:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-4: the canary as an unmatched landmark (stored raw)
+not ok 4 - P-4: the canary as an unmatched landmark (stored raw)
+  ---
+  duration_ms: 5.010324
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:131:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    4 · canary as an unmatched landmark: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"إبراهيم نوارة","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:138:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-5: the canary inside a correction at a later step
+not ok 5 - P-5: the canary inside a correction at a later step
+  ---
+  duration_ms: 3.029515
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:141:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    5 · canary inside a correction: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:149:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-6: the first message carries the address together with real-estate intent
+not ok 6 - P-6: the first message carries the address together with real-estate intent
+  ---
+  duration_ms: 1.214322
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:152:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    6 · first message with intent: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"شارع إبراهيم نوارة","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:156:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-7: the first message carries nothing but the address
+not ok 7 - P-7: the first message carries nothing but the address
+  ---
+  duration_ms: 2.13848
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    7 · first message without facts: raw address in the final payload → [{"call":1,"where":"contents[0].user","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"السلام عليكم، أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي"},{"call":1,"where":"contents[0].user","frag":"شارع إبراهيم نوارة","ctx":"السلام عليكم، أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:167:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-8: the address exists only in the client history (no _rawLocations in state)
+not ok 8 - P-8: the address exists only in the client history (no _rawLocations in state)
+  ---
+  duration_ms: 1.380243
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:170:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    8 · side question with the address only in history: raw address in the final payload → [{"call":1,"where":"contents[0].user","frag":"شارع إبراهيم نوارة بجوار صيدلية العزبي","ctx":"أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أعرف المنطقة"},{"call":1,"where":"contents[0].user","frag":"شارع إبراهيم نوارة","ctx":"أنا ساكن في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أعرف المنطقة"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:176:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-9: the same address written with ه instead of ة
+not ok 9 - P-9: the same address written with ه instead of ة
+  ---
+  duration_ms: 4.124873
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:179:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    9 · the ه spelling of the same address: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"بجوار صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"صيدلية العزبي","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:187:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: P-10: an address wholly outside MASTER_LANDMARKS (protection is not list-dependent)
+not ok 10 - P-10: an address wholly outside MASTER_LANDMARKS (protection is not list-dependent)
+  ---
+  duration_ms: 5.981938
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:190:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    privacy canary failures:
+    10a · outside the landmark list — buyer landmark step: raw address in the final payload → [{"call":1,"where":"system_instruction","frag":"شارع الترعة البولاقية بجوار كوبري الساحل","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"},{"call":1,"where":"system_instruction","frag":"الترعة البولاقية","ctx":"أنت طارق طنطاوي، وكيل عقاري في مدينة نصر.\nخبرتك 15 سنة، عمرك 48 سنة، وGoogle Local Guide L"}]
+    10b · outside the landmark list — first message: raw address in the final payload → [{"call":1,"where":"contents[0].user","frag":"شارع 15 مايو بجوار مسجد الرحمة","ctx":"السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"},{"call":1,"where":"contents[0].user","frag":"15 مايو","ctx":"السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"}]
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    assertClean (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:72:10)
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:201:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: R-1: an address-free message reaches Gemini natural and undistorted
+ok 11 - R-1: an address-free message reaches Gemini natural and undistorted
+  ---
+  duration_ms: 1.177971
+  type: 'test'
+  ...
+# Subtest: M-1: false positives — address-free text keeps its exact words in the payload
+ok 12 - M-1: false positives — address-free text keeps its exact words in the payload
+  ---
+  duration_ms: 59.747143
+  type: 'test'
+  ...
+# Subtest: M-2: false negatives — unmatched addresses never reach the payload
+not ok 13 - M-2: false negatives — unmatched addresses never reach the payload
+  ---
+  duration_ms: 29.370851
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:251:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    an address was neither found nor provably masked — the probe proves nothing
+    
+    6 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:278:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M-3: payload-size / call-count report
+not ok 14 - M-3: payload-size / call-count report
+  ---
+  duration_ms: 0.388592
+  type: 'test'
+  location: '/tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:283:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    no scenario may carry a canary fragment in its final payload
+    
+    80 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 80
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/privacy-canary-wcPF/_worker/tests/privacy-canary.test.mjs:288:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 3
+# fail 11
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.380075
+
+─── 2. privacy-canary suite — AFTER (fixed build) ───
+TAP version 13
+# ── M-1 · false positives (0/10 altered · 0 unproven · 10 payloads captured) ──
+#    natural  | عايز شقة 3 غرف
+#    natural  | ميزانيتي حوالي 3 مليون
+#    natural  | ممكن تفاصيل أكتر عن الشقة؟
+#    natural  | السعر ده نهائي ولا فيه تفاوض؟
+#    natural  | التشطيب إيه؟
+#    natural  | محتاج أعرف الرسوم كمان
+#    natural  | عايز أعرف المميزات والعيوب
+#    natural  | المنطقة هادية؟
+#    natural  | ممكن أعرف متوسط الأسعار؟
+#    natural  | شكرًا جزيلًا على المساعدة
+# ── M-2 · false negatives (0/6 leaked · 0 unproven · 6 payloads captured) ──
+#    masked    | شارع 15 مايو بجوار مسجد الرحمة
+#    masked    | شارع الترعة البولاقية بجوار كوبري الساحل
+#    masked    | شارع العروبة بجوار مستشفى هليوبوليس
+#    masked    | أنا ساكن في شارع مصطفى النحاس
+#    masked    | شقة في شارع عباس العقاد
+#    masked    | شارع الترعة البولاقية بجوار كوبري الساحل
+# ── M-3 · measurements (this build) ──
+#    turns=223  gemini_calls=46  payload_chars=62749  canary_hits=0
+#    · 1 · canary at the address step + side question → turns=4 calls=1 chars=1258 hits=0
+#    · 2 · canary at the rooms step → turns=6 calls=1 chars=1267 hits=0
+#    · 3 · canary stored in notes → turns=11 calls=2 chars=2831 hits=0
+#    · 4 · canary as an unmatched landmark → turns=5 calls=1 chars=1310 hits=0
+#    · 5 · canary inside a correction → turns=5 calls=1 chars=1260 hits=0
+#    · 6 · first message with intent → turns=1 calls=1 chars=1221 hits=0
+#    · 7 · first message without facts → turns=2 calls=1 chars=1249 hits=0
+#    · 8 · side question with the address only in history → turns=1 calls=1 chars=1191 hits=0
+#    · 9 · the ه spelling of the same address → turns=5 calls=2 chars=2506 hits=0
+#    · 10a · outside the landmark list — buyer landmark step → turns=5 calls=1 chars=1274 hits=0
+#    · 10b · outside the landmark list — first message → turns=1 calls=1 chars=1057 hits=0
+#    · R-1 · reverse test (naturalness) → turns=1 calls=1 chars=1276 hits=0
+#    · FP · عايز شقة 3 غرف → turns=11 calls=2 chars=2806 hits=0
+#    · FP · ميزانيتي حوالي 3 مليون → turns=11 calls=2 chars=2830 hits=0
+#    · FP · ممكن تفاصيل أكتر عن الشقة؟ → turns=11 calls=2 chars=2842 hits=0
+#    · FP · السعر ده نهائي ولا فيه تفاوض؟ → turns=11 calls=2 chars=2851 hits=0
+#    · FP · التشطيب إيه؟ → turns=11 calls=2 chars=2800 hits=0
+#    · FP · محتاج أعرف الرسوم كمان → turns=11 calls=2 chars=2830 hits=0
+#    · FP · عايز أعرف المميزات والعيوب → turns=11 calls=2 chars=2842 hits=0
+#    · FP · المنطقة هادية؟ → turns=11 calls=2 chars=2806 hits=0
+#    · FP · ممكن أعرف متوسط الأسعار؟ → turns=11 calls=2 chars=2836 hits=0
+#    · FP · شكرًا جزيلًا على المساعدة → turns=11 calls=2 chars=2839 hits=0
+#    · FN · شارع 15 مايو بجوار مسجد الرحمة → turns=11 calls=2 chars=2785 hits=0
+#    · FN · شارع الترعة البولاقية بجوار كو → turns=11 calls=2 chars=2785 hits=0
+#    · FN · شارع العروبة بجوار مستشفى هليو → turns=11 calls=2 chars=2785 hits=0
+#    · FN · أنا ساكن في شارع مصطفى النحاس → turns=11 calls=2 chars=2821 hits=0
+#    · FN · شقة في شارع عباس العقاد → turns=11 calls=2 chars=2806 hits=0
+#    · FN · شارع الترعة البولاقية بجوار كو → turns=11 calls=2 chars=2785 hits=0
+# Subtest: P-1: the canary typed AT the address step, then a side question
+ok 1 - P-1: the canary typed AT the address step, then a side question
+  ---
+  duration_ms: 49.695024
+  type: 'test'
+  ...
+# Subtest: P-2: the canary typed at the rooms step (a non-address step)
+ok 2 - P-2: the canary typed at the rooms step (a non-address step)
+  ---
+  duration_ms: 9.154975
+  type: 'test'
+  ...
+# Subtest: P-3: the canary stored in notes, then a later comment carries the data
+ok 3 - P-3: the canary stored in notes, then a later comment carries the data
+  ---
+  duration_ms: 9.049457
+  type: 'test'
+  ...
+# Subtest: P-4: the canary as an unmatched landmark (stored raw)
+ok 4 - P-4: the canary as an unmatched landmark (stored raw)
+  ---
+  duration_ms: 5.466198
+  type: 'test'
+  ...
+# Subtest: P-5: the canary inside a correction at a later step
+ok 5 - P-5: the canary inside a correction at a later step
+  ---
+  duration_ms: 3.667139
+  type: 'test'
+  ...
+# Subtest: P-6: the first message carries the address together with real-estate intent
+ok 6 - P-6: the first message carries the address together with real-estate intent
+  ---
+  duration_ms: 1.321524
+  type: 'test'
+  ...
+# Subtest: P-7: the first message carries nothing but the address
+ok 7 - P-7: the first message carries nothing but the address
+  ---
+  duration_ms: 2.824738
+  type: 'test'
+  ...
+# Subtest: P-8: the address exists only in the client history (no _rawLocations in state)
+ok 8 - P-8: the address exists only in the client history (no _rawLocations in state)
+  ---
+  duration_ms: 1.442591
+  type: 'test'
+  ...
+# Subtest: P-9: the same address written with ه instead of ة
+ok 9 - P-9: the same address written with ه instead of ة
+  ---
+  duration_ms: 4.177366
+  type: 'test'
+  ...
+# Subtest: P-10: an address wholly outside MASTER_LANDMARKS (protection is not list-dependent)
+ok 10 - P-10: an address wholly outside MASTER_LANDMARKS (protection is not list-dependent)
+  ---
+  duration_ms: 5.594833
+  type: 'test'
+  ...
+# Subtest: R-1: an address-free message reaches Gemini natural and undistorted
+ok 11 - R-1: an address-free message reaches Gemini natural and undistorted
+  ---
+  duration_ms: 1.311385
+  type: 'test'
+  ...
+# Subtest: M-1: false positives — address-free text keeps its exact words in the payload
+ok 12 - M-1: false positives — address-free text keeps its exact words in the payload
+  ---
+  duration_ms: 65.253318
+  type: 'test'
+  ...
+# Subtest: M-2: false negatives — unmatched addresses never reach the payload
+ok 13 - M-2: false negatives — unmatched addresses never reach the payload
+  ---
+  duration_ms: 37.695139
+  type: 'test'
+  ...
+# Subtest: M-3: payload-size / call-count report
+ok 14 - M-3: payload-size / call-count report
+  ---
+  duration_ms: 0.317658
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 253.231439
+
+─── 3. differential (pre-fix vs fixed) ───
+=== EVIDENCE 4 — DIFFERENTIAL REGRESSION PROOF ===
+before: /tmp/worker-pre-privacyfix.js
+after : /home/user/nasr-realestate.github.io/_worker/worker.js
+
+battery cases: 24 vs 24
+
+IDENTICAL  | route: 🏠 عايز أشتري
+IDENTICAL  | route: 🔑 عايز أأجر
+IDENTICAL  | route: 💰 أبيع
+IDENTICAL  | route: 🔑 أأجر
+IDENTICAL  | route: عندي شقة وعايز أعرف سعرها
+IDENTICAL  | route: عايز شقة في مدينة نصر بـ 3 مليون
+IDENTICAL  | smalltalk: انت مين؟
+IDENTICAL  | smalltalk: السلام عليكم
+IDENTICAL  | smalltalk: الجو حلو النهاردة
+IDENTICAL  | smalltalk: فين المكتب؟
+IDENTICAL  | handoff: valuation announced
+IDENTICAL  | handoff: no active flow
+IDENTICAL  | handoff: tampered
+IDENTICAL  | flow: up to the gift step
+IDENTICAL  | flow: completion
+IDENTICAL  | side question
+IDENTICAL  | GET /
+IDENTICAL  | upload 415
+IDENTICAL  | oversize 413
+IDENTICAL  | rate limit sequence
+IDENTICAL  | CORS foreign
+IDENTICAL  | D-4b: address typed at the address step, then a side question
+FIXED      | RESIDUAL: raw address typed outside an address step (pre-existing gap)
+             الإصلاح: العنوان الخام لم يعد يوصل Gemini — الحمولة صارت scrubbed
+FIXED      | gemini payloads
+             أثر الإصلاح على الحمولات: كانت تحمل العنوان الخام قبل الإصلاح، ولا تحمله بعده
+
+identical: 22 | intended fixes: 2 | unexplained differences: 0
+
+=== EVIDENCE 4 COMPLETE — ZERO REGRESSIONS ===
+
+─── 4. residual payload trace — AFTER (fixed build) ───
+── turn 40 · buyer: a longer answer at the budget step (a comment carries the data snapshot)
+   sent   : "ميزانيتي حوالي 3 مليون وعايز مساحة كبيرة"
+   reply  : "محتاج كام غرفة؟"
+   stored : _rawLocations=1 ["شارع 15 مايو بجوار مسجد الرحمة"] | landmark="شارع 15 مايو بجوار مسجد الرحمة"
+   gemini : 1 call(s)
+     call 1: clean
+
+═══ S8 · first message with an address only (nothing extractable ⇒ first-message Gemini path)
+
+── turn 41 · first message: greeting + unmatched address
+   sent   : "السلام عليكم، أنا ساكن في شارع 15 مايو بجوار مسجد الرحمة"
+   reply  : "-"
+   stored : _rawLocations=0
+   gemini : 1 call(s)
+     call 1: clean
+
+═══ S5 · the canary in the FIRST message (no flow, no _rawLocations at all)
+
+── turn 42 · first message with a greeting + the canary
+   sent   : "السلام عليكم، أنا في شارع إبراهيم نوارة بجوار صيدلية العزب"
+   reply  : "تمام، في إبراهيم نواره. للشراء ولا للإيجار؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 43 · first message, address only
+   sent   : "شارع إبراهيم نوارة بجوار صيدلية العزبي"
+   reply  : "تمام، في إبراهيم نواره. للشراء ولا للإيجار؟"
+   stored : _rawLocations=0
+   gemini : 0 call(s) — nothing sent
+
+── turn 44 · first message, address + real-estate intent
+   sent   : "عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أ"
+   reply  : "المساحة كام متر؟"
+   stored : _rawLocations=0 | location="إبراهيم نواره"
+   gemini : 1 call(s)
+     call 1: clean
+
+═══ S6 · documented synthetic case: raw address only in the client history, state has no _rawLocations
+
+── turn (synthetic) · side question with the canary only in history
+   reply  : "-"
+   gemini : 1 call(s)
+     call 1: clean
+
+════════════════════════════════════════════════════════════════════
+
+─── 5. gate matrix on the fixed tree ───
+worker-safety        # pass 17 # fail 0 
+input-logic          # pass 24 # fail 0 
+privacy-canary       # pass 14 # fail 0 
+agent-page           # pass 12 # fail 6 
+market-integration   # pass 4 # fail 1 
+valuation-gift       # pass 3 # fail 3 
+valuation-handoff    # pass 9 # fail 7 
+valuation-page       # pass 19 # fail 0 
+valuation-worker     # pass 16 # fail 0 
+properties-sync      # pass 39 # fail 1 
+
+01-session-persistence   === EVIDENCE 1 COMPLETE ===
+02-privacy-d4b           === EVIDENCE 2 COMPLETE — 49 PASS / 0 FAIL ===
+03-brain-expansion       === EVIDENCE 3 COMPLETE — 23 PASS / 0 FAIL ===
