@@ -6,18 +6,36 @@ const SITE = "https://nasr-realestate.github.io";
 const RAW = "شارع إبراهيم نوارة بجوار صيدلية العزبي المنطقة السادسة";
 
 const t = (s, n = 78) => String(s || "").replace(/\n/g, " ").slice(0, n);
-async function chat(body) {
-  const r = await fetch(URL_BASE, {
-    method: "POST",
-    headers: { Origin: SITE, "Content-Type": "application/json", "CF-Connecting-IP": `live-${Math.random().toString(36).slice(2, 10)}` },
-    body: JSON.stringify(body),
-  });
-  return { status: r.status, json: await r.json() };
+let diagShown = false;
+async function chat(body, { attempts = 3, withIp = false } = {}) {
+  let last = null;
+  for (let a = 0; a < attempts; a++) {
+    const headers = { "Content-Type": "application/json" };
+    if (withIp) headers["CF-Connecting-IP"] = `1.2.3.${(a % 200) + 10}`;
+    const r = await fetch(URL_BASE, { method: "POST", headers, body: JSON.stringify(body) });
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch {}
+    if (json) return { status: r.status, json, headers: r.headers };
+    last = { status: r.status, text, headers: r.headers };
+    if (!diagShown) {
+      diagShown = true;
+      console.log("!! non-JSON response — diagnostics:");
+      console.log(`   status      = ${r.status}`);
+      console.log(`   content-type= ${r.headers.get("content-type")}`);
+      console.log(`   cf-ray      = ${r.headers.get("cf-ray")}`);
+      console.log(`   server      = ${r.headers.get("server")}`);
+      console.log(`   body[0:160] = ${JSON.stringify(text.slice(0, 160))}`);
+      console.log(`   attempt     = ${a + 1} of ${attempts}`);
+      console.log(`   (retrying with backoff)\n`);
+    }
+    await new Promise(res => setTimeout(res, 1500 * (a + 1)));
+  }
+  return { status: last?.status ?? 0, json: null, failed: true, headers: last?.headers };
 }
-
 console.log("=== LIVE PRODUCTION FLOW — " + URL_BASE + " ===\n");
 let r = await chat({ message: "💰 أبيع", formState: {}, history: [] });
-console.log(`1) "💰 أبيع"            → ${r.status} | ${t(r.json.response)}`);
+console.log(`1) "💰 أبيع"            → ${r.status} | ${t(r.json?.response ?? "(non-JSON: " + r.status + ")")}`);
 let fs = r.json.formState;
 
 r = await chat({ message: "شقة", formState: fs, history: [] });
@@ -48,6 +66,7 @@ for (i = 0; i < 14 && !last.done; i++) {
   const q = String(last.response || "");
   const hit = ANSWERS.find(([re]) => re.test(q));
   if (!hit) { console.log(`   !! no scripted answer for: "${t(q, 60)}"`); break; }
+  if (r.failed) { console.log("   !! the endpoint stopped answering JSON — aborting"); break; }
   const sent = hit[1];
   const priceBefore = fs?.data?.price;
   r = await chat({ message: sent, formState: fs, history: [] });
