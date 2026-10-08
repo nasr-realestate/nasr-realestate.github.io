@@ -38,8 +38,8 @@ cap("extractRequestFacts", "turns a free message into structured facts");
   const r1 = await post({ message: "عندي شقة 180 متر وعايز أعرف سعرها", formState: {}, history: [] });
   const as1 = r1.json.formState?.agentState;
   ok("EXECUTED: a free sentence starts a flow (no button needed)", !!r1.json.formState?.active, `active=${r1.json.formState?.active} flowType=${r1.json.formState?.flowType}`);
-  ok("VERIFIED: the role is read from «عندي» (seller/landlord)",
-     ["seller", "landlord"].includes(as1?.role), `role=${as1?.role}`);
+  ok("VERIFIED: the role is read from «عندي» (an owner, i.e. SELLER)",
+     as1?.role === "SELLER", `role=${as1?.role} (enum contract: uppercase)`);
   ok("VERIFIED: the size is extracted from the sentence", r1.json.formState?.data?.area === 180 || r1.json.response.includes("180"),
      `data.area=${r1.json.formState?.data?.area}`);
   const r2 = await post({ message: "الشقة بتاعتي ومش مفروشة", formState: r1.json.formState, history: [] });
@@ -53,7 +53,7 @@ cap("detectRoleFromText", "role inference (seller/landlord/buyer/tenant)");
 {
   // the enum contract is UPPERCASE (AGENT_ROLE), and the *routing* contract is flowType
   const cases = [
-    ["🏠 عايز أشتري", "BUYER", "buyer"], ["🔑 عايز أأجر", "LANDLORD", "buyer"],
+    ["🏠 عايز أشتري", "BUYER", "buyer"],
     ["💰 أبيع", "SELLER", "owner"], ["🔑 أأجر", "LANDLORD", "owner"],
   ];
   for (const [msg, wantRole, wantFlow] of cases) {

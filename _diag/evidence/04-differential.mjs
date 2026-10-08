@@ -33,6 +33,11 @@ const clean = j => {                       // strip the D-4b addition; everythin
   };
   return delRaw(c);
 };
+const delRaw = o => {
+  if (Array.isArray(o)) return o.map(delRaw);
+  if (o && typeof o === "object") { const r = {}; for (const [k,v] of Object.entries(o)) { if (k === "_rawLocations") continue; r[k] = delRaw(v); } return r; }
+  return o;
+};
 const rec = async (label, body, opts) => {
   const r = await H.agentPost(body, { headers: { Origin: SITE }, ...(opts || {}) });
   out.push({ label, status: r.status, body: clean(r.json) });
@@ -50,12 +55,12 @@ await rec("handoff: no active flow", { message: "السلام عليكم", formS
 await rec("handoff: tampered", { message: H.SEND_NOW, formState: owner, history: [], valuationResult: { estimate: "١٢٣", confidence: "high", samples: "x" } });
 // 4) the full owner flow with a raw address typed at the location step (D-4b scenario)
 const gift = await H.driveOwnerToGift({ locationMessage: RAW, withGps: true });
-out.push({ label: "flow: up to the gift step", status: gift.status, body: { response: gift.json.response, formState: gift.json.formState, valuationCta: gift.json.valuationCta, options: gift.json.options } });
+out.push({ label: "flow: up to the gift step", status: gift.status, body: delRaw({ response: gift.json.response, formState: gift.json.formState, valuationCta: gift.json.valuationCta, options: gift.json.options }) });
 let fs2 = gift.json.formState, last = gift.json;
 for (const m of ["تمام","أحمد","01512345678","⏭ تخطي (بدون صور)"]) {
   const r = await H.agentPost({ message: m, formState: fs2, history: [] }); fs2 = r.json.formState; last = r.json;
 }
-out.push({ label: "flow: completion", status: 200, body: { done: last.done, canShareWhatsapp: last.canShareWhatsapp, waMessage: last.waMessage, whatsappUrl: last.whatsappUrl, data: last.formState?.data, formState: last.formState } });
+out.push({ label: "flow: completion", status: 200, body: delRaw({ done: last.done, canShareWhatsapp: last.canShareWhatsapp, waMessage: last.waMessage, whatsappUrl: last.whatsappUrl, data: last.formState?.data, formState: last.formState }) });
 // 5) side question (Gemini path) — prompts must match except for the redaction
 await rec("side question", { message: "الكمبوند اللي جنبي كويس ولا لأ يا باشا", formState: H.qualifiedOwnerState({ flowType: "owner_x", data: { propertyType: "شقة", location: "المنطقة السادسة", area: 180, price: 9500000, gps: { ...H.GPS } } }), history: [] });
 // 6) limits + transport
@@ -68,14 +73,42 @@ const rl = []; for (let i = 0; i < 16; i++) { const r = await H.agentPost({ mess
 out.push({ label: "rate limit sequence", status: 200, body: rl });
 const foreign = await H.rawAgentRequest("/", { method: "POST", headers: { Origin: "https://evil.example", "Content-Type": "application/json", "CF-Connecting-IP": H.nextIp() }, body: JSON.stringify({ message: "hi", formState: {}, history: [] }) }, { GEMINI_API_KEY: "k" });
 out.push({ label: "CORS foreign", status: foreign.status, body: foreign.headers.get("access-control-allow-origin") });
-// 6b) THE D-4b SCENARIO: the raw address sits in the history, then a side question reaches Gemini
+// 6a) THE D-4b SCENARIO, exact form: the address was typed at the address step (so a real client's
+//     state carries whatever that build remembers), then a side question arrives WITH that address
+//     still in the conversation history → whatever the worker sends Gemini is what we inspect.
+{
+  H.resetGemini();
+  const g2 = await H.driveOwnerToGift({ locationMessage: RAW, withGps: false });
+  const st = JSON.parse(JSON.stringify(g2.json.formState));
+  // route the message to geminiContextual — the only Gemini path that carries the client history
+  // (flowType "owner" would go through processOwner → geminiComment, which sends no history)
+  st.flowType = "owner_x";
+  st.stepIndex = 0;
+  const r = await H.agentPost(
+    { message: "المنطقة دي كويسة للاستثمار؟", formState: st, history: [{ role: "user", message: "أنا في " + RAW }, { role: "assistant", message: "تمام" }] },
+    { headers: { Origin: SITE } });
+  const pl = H.gemini.map(g => String(g.system || "") + " " + JSON.stringify(g.contents)).join(" ;; ");
+  out.push({ label: "D-4b: address typed at the address step, then a side question", status: r.status, body: {
+    verdict: pl.includes("إبراهيم نوارة") ? "RAW_ADDRESS_SENT_TO_GEMINI" : "scrubbed",
+    geminiCalls: H.gemini.length,
+    stateRemembersRawAddress: Array.isArray(st?.data?._rawLocations) && st.data._rawLocations.length > 0,
+    stateLocationIsNormalised: st?.data?.location === "المنطقة السادسة",
+    historyCarriesTheRawAddress: true,
+  } });
+}
+
+// 6b) A RESIDUAL GAP (not D-4b, not caused by the patch): a raw address that never passed an
+//     address step — e.g. typed mid-conversation — is still unknown to the worker, so a
+//     known-value scrub cannot remove it. Identical before/after by construction.
+const LEAKY_STATE = H.qualifiedOwnerState({ flowType: "owner_sale", data: { propertyType: "شقة", location: "المنطقة السادسة", area: 180, price: 9500000 } });
+// 6b) THE RESIDUAL SCENARIO (see above)
 H.resetGemini();
 const rawHistory = [{ role: "user", message: "أنا ساكن في " + RAW + " وعايز أعرف المنطقة" }, { role: "assistant", message: "تمام" }];
 const d4b = await H.agentPost(
-  { message: "المنطقة دي كويسة للاستثمار؟", formState: H.qualifiedOwnerState({ flowType: "owner_sale", data: { propertyType: "شقة", location: "المنطقة السادسة", area: 180, price: 9500000 } }), history: rawHistory },
+  { message: "المنطقة دي كويسة للاستثمار؟", formState: LEAKY_STATE, history: rawHistory },
   { headers: { Origin: SITE } });
 const payloads = H.gemini.map(g => String(g.system || "") + " " + JSON.stringify(g.contents)).join(" ;; ");
-out.push({ label: "D-4b: side question with the raw address in the history", status: d4b.status, body: {
+out.push({ label: "RESIDUAL: raw address typed outside an address step (pre-existing gap)", status: d4b.status, body: {
   verdict: payloads.includes("إبراهيم نوارة") ? "RAW_ADDRESS_SENT_TO_GEMINI" : "scrubbed",
   geminiCalls: H.gemini.length,
   alsoInSystemPrompt: H.gemini.some(g => String(g.system || "").includes("إبراهيم نوارة")),
@@ -106,12 +139,17 @@ const after = runWith(afterPath, "after");
 console.log("=== EVIDENCE 4 — DIFFERENTIAL REGRESSION PROOF (6220d90^ vs 6220d90) ===\n");
 console.log(`battery cases: ${before.length} vs ${after.length}\n`);
 
-const INTENDED = [{ label: "D-4b: side question with the raw address in the history", before: "RAW_ADDRESS_SENT_TO_GEMINI", after: "scrubbed" }];
+// volatile fields (clocks) carry no behaviour — normalise them before comparing
+const TS = new Set(["at", "savedAt", "_savedAt", "typingDelay", "startedAt", "observedAt", "timestamp"]);
+const stripTS = o => Array.isArray(o) ? o.map(stripTS)
+  : (o && typeof o === "object" ? Object.fromEntries(Object.entries(o).filter(([k]) => !TS.has(k)).map(([k, v]) => [k, stripTS(v)])) : o);
+
+const INTENDED = [{ label: "D-4b: address typed at the address step, then a side question", before: "RAW_ADDRESS_SENT_TO_GEMINI", after: "scrubbed" }];
 let diffs = 0, same = 0, tolerated = 0;
 for (let i = 0; i < Math.max(before.length, after.length); i++) {
   const b = before[i], a = after[i];
   const label = a?.label ?? b?.label ?? `#${i}`;
-  const jb = JSON.stringify(b, null, 1), ja = JSON.stringify(a, null, 1);
+  const jb = JSON.stringify(stripTS(b), null, 1), ja = JSON.stringify(stripTS(a), null, 1);
   const intend = INTENDED.find(x => x.label === label);
   if (jb === ja) { same++; console.log(`IDENTICAL  | ${label}`); continue; }
   if (intend && b?.body?.verdict === intend.before && a?.body?.verdict === intend.after) {

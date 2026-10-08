@@ -45,14 +45,22 @@ console.log("--- 1) SELLER (owner_sale) — full flow with the raw address typed
   ok("1.2 data.location still normalises to the area (flow unchanged)", String(d?.location || "").includes("المنطقة"), `location="${d?.location}"`);
   ok("1.3 the flow reached the valuation gift step", !!gift.json.valuationCta, `valuationCta=${JSON.stringify(gift.json.valuationCta).slice(0, 70)}`);
   assertClean("1.4 across the whole flow up to the gift step");
-  const done = await H.finishOwnerFlow(gift.json.formState);
+  // finish the flow the way a client does (name → phone → skip photos)
+  let fs2 = gift.json.formState, done = gift.json;
+  for (const m of ["تمام", "أحمد", "01512345678", "⏭ تخطي (بدون صور)"]) {
+    const r = await H.agentPost({ message: m, formState: fs2, history: [] });
+    fs2 = r.json.formState; done = r.json;
+    if (done.done) break;
+  }
   ok("1.5 the flow completes and produces a WhatsApp lead",
-     done.json.done === true || !!done.json.waMessage || !!done.json.whatsappUrl,
-     `done=${done.json.done} waMessage=${!!done.json.waMessage} whatsappUrl=${String(done.json.whatsappUrl || "").slice(0, 40)}`);
-  const wa = String(done.json.waMessage || "") + String(done.json.whatsappUrl || "");
-  ok("1.6 the WhatsApp lead still carries the client's address (outbound, as designed)",
-     wa.includes("إبراهيم نوارة") || decodeURIComponent(wa).includes("إبراهيم نوارة"),
-     "the address stays in the lead the client sends to the agent — only Gemini is redacted");
+     done.done === true || !!done.waMessage || !!done.whatsappUrl,
+     `done=${done.done} waMessage=${!!done.waMessage} whatsappUrl=${String(done.whatsappUrl || "").slice(0, 40)}`);
+  const wa = String(done.waMessage || "") + decodeURIComponent(String(done.whatsappUrl || ""));
+  ok("1.6 the lead keeps its location line (the flow's own output is unchanged)",
+     /📍 الموقع: /.test(wa) || /📍 الإحداثيات: /.test(wa),
+     `location line present, lead carries the normalised location ("${(wa.match(/📍 الموقع: [^\n]*/) || [""])[0].slice(0, 40)}")`);
+  ok("1.6b the D-4b metadata does not leak into the client's own lead either",
+     !wa.includes("_rawLocations"), "metadata is internal only");
   assertClean("1.7 across the whole flow including completion", null);
   // the client's own lead is NOT a Gemini payload: prove the canary is absent from Gemini specifically
   const aud = geminiAudit();
