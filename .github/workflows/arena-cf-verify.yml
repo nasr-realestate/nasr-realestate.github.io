@@ -1,0 +1,171 @@
+# TEMPORARY — Arena session: READ-ONLY verification of the deployed agent Worker (royal-snow-ea32).
+# Deploys nothing, changes nothing (no upload, no deployment, no D1, no secret, no rollback).
+#   0) artifact identity of the repo build
+#   1) credential resolves (name only; the value is never printed)
+#   2) account-scoped token verify (id + status; id compared with the owner-stated id)
+#   3) live script content vs the repo file — byte-level diff report (sizes, first diff, normalizations, symbols)
+#   4) live version/deployment history with annotations
+#   5) production HTTP fingerprint incl. the _rawLocations discriminator + privacy spot-checks
+name: TMP Arena verify — royal-snow-ea32 (read-only)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/arena-cf-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  API: https://api.cloudflare.com/client/v4
+  ACC: 717c46b0d78a6f06589b8367a1a3cc5b
+  SCRIPT: royal-snow-ea32
+  AGENT: https://royal-snow-ea32.footcai-555.workers.dev
+  SITE: https://nasr-realestate.github.io
+  EXPECTED_WORKER_SHA256: 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+  TOKEN_ID_STATED: 32dadcdccd25e7cb56b721b2e4d669ce
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
+      S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      RID: ${{ github.run_id }}
+      BRANCH: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Read-only verification
+        run: |
+          set -uo pipefail
+          R=_diag/verify-$RID.txt
+          exec > >(tee "$R") 2>&1
+          say(){ echo; echo "── $* ──"; }
+
+          say "0) repo artifact identity"
+          W_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
+          echo "HEAD          = $(git rev-parse HEAD)"
+          echo "worker.js sha = $W_SHA"
+          echo "expected      = $EXPECTED_WORKER_SHA256"
+          echo "repo bytes    = $(wc -c < _worker/worker.js)"
+          [ "$W_SHA" = "$EXPECTED_WORKER_SHA256" ] && echo "OK: repo build is the verified artifact" || echo "NOTE: repo artifact differs from the verified sha"
+
+          say "1) credential (name only — the value is never printed)"
+          TOKEN=""; TKNAME=""
+          for nm in ARENA_CLOUDFLARE ARENA_CLOUDFLARE_TOKEN ARENA_CLOUDFLARE_API_TOKEN ARENA_CF ARENA_CF_TOKEN CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CF_API_TOKEN CF_TOKEN; do
+            key="S_${nm}"; v="${!key:-}"
+            if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && { TOKEN="$v"; TKNAME="$nm"; }; else echo "MISSING:$nm"; fi
+          done
+          echo "→ using credential from: ${TKNAME:-NONE}"
+          if [ -z "$TOKEN" ]; then
+            echo "VERDICT: STOP — no credential; nothing to verify against the API"
+            echo "::error title=VERIFY_BLOCKED::no Cloudflare credential resolved"
+            exit 0
+          fi
+          AUTH="Authorization: Bearer ${TOKEN}"
+
+          say "2) account-scoped token verify (read-only)"
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/tokens/verify" -o /tmp/av.json -w "account verify http=%{http_code}\n" || true
+          jq -c '{success, status: .result.status, errors: [.errors[]?.message]}' /tmp/av.json 2>/dev/null || head -c 200 /tmp/av.json
+          AVID=$(jq -r '.result.id // empty' /tmp/av.json 2>/dev/null)
+          [ -n "$AVID" ] && echo "token id: ${AVID:0:8}… | matches owner-stated id: $([ "$AVID" = "$TOKEN_ID_STATED" ] && echo yes || echo no)"
+          curl -sS -m 30 -H "$AUTH" "$API/user/tokens/verify" -o /tmp/uv.json -w "user verify http=%{http_code}\n" || true
+          jq -c '{success, errors: [.errors[]?.message]}' /tmp/uv.json 2>/dev/null || true
+
+          say "3) live script content vs the repo build (byte-level)"
+          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live.js
+          python3 - <<'PY'
+          import hashlib, re, sys
+          live = open('live.js','rb').read()
+          repo = open('_worker/worker.js','rb').read()
+          def sha(x): return hashlib.sha256(x).hexdigest()
+          def norm_crlf(x): return x.replace(b'\r\n', b'\n')
+          def norm_eol(x):  return re.sub(rb'\n+\Z', b'', norm_crlf(x))
+          def norm_lines(x): return b'\n'.join(l.rstrip() for l in norm_eol(x).split(b'\n'))
+          def norm_ws(x): return re.sub(rb'[ \t]+', b' ', norm_lines(x))
+          def norm_all(x): return re.sub(rb'\n', b' ', norm_ws(x)).strip()
+          print('live bytes = %d | repo bytes = %d | delta = %+d' % (len(live), len(repo), len(live)-len(repo)))
+          print('live sha256 = %s' % sha(live))
+          print('repo sha256 = %s' % sha(repo))
+          for name, f in [('raw', lambda x: x), ('crlf→lf', norm_crlf), ('+trailing-eol-strip', norm_eol),
+                          ('+per-line-rstrip', norm_lines), ('+ws-collapse', norm_ws), ('+all-collapse', norm_all)]:
+            lv, rv = f(live), f(repo)
+            print('  normalized [%-20s] equal=%s  live=%s repo=%s' % (name, lv == rv, sha(lv)[:16], sha(rv)[:16]))
+          if live != repo:
+            n = min(len(live), len(repo)); i = 0
+            while i < n and live[i] == repo[i]: i += 1
+            print('first differing byte at offset %d (of %d live / %d repo)' % (i, len(live), len(repo)))
+            print('  live ctx: %r' % live[max(0,i-60):i+90])
+            print('  repo ctx: %r' % repo[max(0,i-60):i+90])
+            print('  live tail: %r' % live[-80:])
+            print('  repo tail: %r' % repo[-80:])
+            print('  live head: %r' % live[:80])
+            print('  repo head: %r' % repo[:80])
+            import difflib
+            dl = list(difflib.unified_diff(live.decode('utf-8','replace').splitlines(), repo.decode('utf-8','replace').splitlines(), 'live', 'repo', n=1, lineterm=''))
+            print('diff lines: %d (showing up to 40)' % len(dl))
+            for line in dl[:40]: print('  ' + line[:200])
+          syms = [b'guardGeminiPayload', b'scrubDynamicText', b'splitDynamic', b'payloadHasRawAddress',
+                  b'maskAddressSpans', b'scrubAddresses', b'ADDR_SPAN_RES', b'GEMINI_MODEL', b'FORM_VERSION']
+          for s in syms:
+            print('symbol %-22s live=%d repo=%d' % (s.decode(), live.count(s), repo.count(s)))
+          v = re.findall(rb'FORM_VERSION\s*=\s*"([^"]+)"', live) + re.findall(rb"FORM_VERSION\s*=\s*'([^']+)'", live)
+          print('live FORM_VERSION = %s' % [x.decode() for x in v])
+          PY
+
+          say "4) live version/deployment history (read-only)"
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/deployments" -o dep.json
+          jq -c '.result.deployments[0:4][]? | {id, created_on, versions: [.versions[]? | {version_id, percentage}]}' dep.json 2>/dev/null || true
+          VID=$(jq -r '.result.deployments[0].versions[0].version_id // empty' dep.json)
+          [ -n "$VID" ] && { curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/versions/$VID" -o ver.json; echo "active version $VID:"; jq -c '{annotations: .result.annotations, created_on: .result.created_on, compatibility_date: .result.compatibility_date, bindings: [.result.bindings[]? | {type, name}], modules: [.result.modules[]? | {name, size: (.content|length)}]}' ver.json 2>/dev/null || true; }
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/settings" -o set.json
+          echo "live settings: compatibility_date=$(jq -r '.result.compatibility_date' set.json) | bindings: $(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | join(", ")' set.json)"
+
+          say "5) production HTTP fingerprint (read-only requests)"
+          FS='{}'
+          post(){ # post <label> <json>
+            local label="$1" body="$2" code
+            code=$(curl -sS -m 45 -o body.json -w '%{http_code}' -X POST "$AGENT/" \
+              -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary "$body" 2>/dev/null)
+            echo "  [$label] http=$code | step=$(jq -r '.formState.stepIndex // "?"' body.json 2>/dev/null) | _rawLocations=$(jq -c '.formState.data._rawLocations // "none"' body.json 2>/dev/null) | reply=$(jq -r '.response // ""' body.json 2>/dev/null | head -c 60 | tr '\n' ' ')"
+            local frag="no"; grep -qE 'إبراهيم نوارة|صيدلية العزبي|15 مايو|مسجد الرحمة' body.json && frag="YES"
+            [ "$frag" = "YES" ] && echo "     ^ raw address fragment present in the response body (reply or state)"
+            FS=$(jq -c '.formState // {}' body.json 2>/dev/null || echo '{}')
+          }
+          echo "transport: GET / → $(curl -sS -m 30 -o /dev/null -w '%{http_code}' "$AGENT/") (expect 405)"
+          echo "transport: OPTIONS → $(curl -sS -m 30 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") (expect 204) | $(curl -sS -m 30 -D - -o /dev/null -X OPTIONS "$AGENT/" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST" | grep -i '^access-control-allow-origin' | tr -d '\r')"
+          post "V1 open" '{"message":"💰 أبيع"}'
+          post "V2 type" "$(jq -nc --argjson fs "$FS" '{message:"شقة", formState:$fs}')"
+          post "V3 addr" "$(jq -nc --argjson fs "$FS" '{message:"شارع عباس العقاد", formState:$fs}')"
+          post "V4 area" "$(jq -nc --argjson fs "$FS" '{message:"180", formState:$fs}')"
+          post "V5 rooms+address" "$(jq -nc --argjson fs "$FS" '{message:"3 غرف، العنوان شارع إبراهيم نوارة بجوار صيدلية العزبي", formState:$fs}')"
+          post "P1 addr-in-message" '{"message":"عايز شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي"}'
+          post "P2 first-msg-intent" '{"message":"عندي شقة في شارع إبراهيم نوارة بجوار صيدلية العزبي وعايز أبيعها"}'
+          echo
+          echo "VERDICT: READ-ONLY verification completed (nothing was deployed or modified)"
+          echo "::notice title=VERIFY_DONE::read-only verification completed"
+
+      - name: Publish report + annotation
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          f="_diag/verify-$RID.txt"
+          [ -s "$f" ] || { echo "no report file"; exit 0; }
+          B64=$(base64 -w0 "$f")
+          jq -n --arg m "chore(diag): verify run $RID [skip ci]" --arg c "$B64" --arg b "$BRANCH" \
+            '{message:$m,content:$c,branch:$b}' \
+            | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/$f" --input - >/dev/null 2>&1 \
+            && echo "published: $f" || echo "publish failed"
+          S=$(grep -E "live bytes|normalized|first differing|symbol |FORM_VERSION|_rawLocations|VERDICT|raw address fragment|verify http|token id" "$f" | tr '\n' '~' | head -c 30000)
+          i=0
+          while [ -n "$S" ] && [ $i -lt 12 ]; do
+            chunk=$(printf '%s' "$S" | cut -c1-3200); S=$(printf '%s' "$S" | cut -c3201-)
+            i=$((i+1)); echo "::error title=VERIFY_${i}::${chunk}"
+          done
