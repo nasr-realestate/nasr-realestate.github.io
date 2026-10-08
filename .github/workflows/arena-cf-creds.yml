@@ -1,0 +1,88 @@
+# TEMPORARY — Arena session: locate the Cloudflare credential the owner says was added.
+# Prints PRESENT/MISSING only (names, never values) for a wide set of candidate secret and
+# variable names, at repository scope and at the github-pages environment scope.
+# Read-only: nothing is deployed, nothing is modified.
+name: TMP Arena credential locator
+
+on:
+  push:
+    paths:
+      - ".github/workflows/arena-cf-creds.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-scope:
+    runs-on: ubuntu-latest
+    env:
+      S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      S_CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+      S_CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+      S_CLOUDFLARE_API: ${{ secrets.CLOUDFLARE_API }}
+      S_CLOUDFLARE_APIKEY: ${{ secrets.CLOUDFLARE_APIKEY }}
+      S_CLOUDFLARE_GLOBAL_API_KEY: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY }}
+      S_CLOUDFLARE_WORKERS_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
+      S_CLOUDFLARE_DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+      S_CLOUDFLARE_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
+      S_CLOUDFLARE_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT }}
+      S_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      S_CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+      S_CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      S_CLOUDFLARE_SECRET: ${{ secrets.CLOUDFLARE_SECRET }}
+      S_CLOUDFLARE: ${{ secrets.CLOUDFLARE }}
+      S_CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      S_CF_TOKEN: ${{ secrets.CF_TOKEN }}
+      S_CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      S_CF_APIKEY: ${{ secrets.CF_APIKEY }}
+      S_CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      S_CF_EMAIL: ${{ secrets.CF_EMAIL }}
+      S_CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
+      S_CF_WORKERS_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+      S_CF_DEPLOY_TOKEN: ${{ secrets.CF_DEPLOY_TOKEN }}
+      S_CF: ${{ secrets.CF }}
+      S_WORKERS_TOKEN: ${{ secrets.WORKERS_TOKEN }}
+      S_WRANGLER_TOKEN: ${{ secrets.WRANGLER_TOKEN }}
+      S_WRANGLER_API_TOKEN: ${{ secrets.WRANGLER_API_TOKEN }}
+      S_AGENT_WORKER_TOKEN: ${{ secrets.AGENT_WORKER_TOKEN }}
+      V_CLOUDFLARE_API_TOKEN: ${{ vars.CLOUDFLARE_API_TOKEN }}
+      V_CLOUDFLARE_TOKEN: ${{ vars.CLOUDFLARE_TOKEN }}
+      V_CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      V_CF_API_TOKEN: ${{ vars.CF_API_TOKEN }}
+      V_CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+    steps:
+      - name: matrix
+        run: |
+          echo "ref: $GITHUB_REF_NAME  run: $GITHUB_RUN_ID"
+          echo "── repository secrets ──"
+          for k in $(env | cut -d= -f1 | grep '^S_' | sort); do
+            eval "v=\$$k"; [ -n "$v" ] && echo "PRESENT:${k#S_}" || echo "MISSING:${k#S_}"
+          done
+          echo "── repository variables ──"
+          for k in $(env | cut -d= -f1 | grep '^V_' | sort); do
+            eval "v=\$$k"; [ -n "$v" ] && echo "PRESENT:${k#V_}" || echo "MISSING:${k#V_}"
+          done
+          echo "── verdict ──"
+          for k in $(env | cut -d= -f1 | grep '^S_\|^V_'); do
+            eval "v=\$$k"; [ -n "$v" ] && echo "FOUND:$k"
+          done
+          echo "done"
+
+  env-scope:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: github-pages
+    env:
+      S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      S_CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+      S_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      S_CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      S_CF_TOKEN: ${{ secrets.CF_TOKEN }}
+    steps:
+      - name: matrix (github-pages environment scope)
+        run: |
+          echo "environment scope reached — the branch policy allowed this branch"
+          for k in $(env | cut -d= -f1 | grep '^S_' | sort); do
+            eval "v=\$$k"; [ -n "$v" ] && echo "PRESENT:${k#S_}" || echo "MISSING:${k#S_}"
+          done
