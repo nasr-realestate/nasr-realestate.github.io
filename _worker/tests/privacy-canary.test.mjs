@@ -83,10 +83,17 @@ async function ownerToRooms() {
   for (const m of ["شقة", "شارع عباس العقاد", "180", "9500000"]) fs = (await turn(m, fs)).fs;
   return fs;                                            // الخطوة الحالية: عدد الغرف
 }
-async function ownerToNotes() {
+async function ownerToNotes(locationText = "شارع عباس العقاد") {
   let fs = (await turn("💰 أبيع", {})).fs;
-  for (const m of ["شقة", "شارع عباس العقاد", "180", "9500000", "3", "2", "ثالث", "سوبر لوكس"]) fs = (await turn(m, fs)).fs;
+  for (const m of ["شقة", locationText, "180", "9500000", "3", "2", "ثالث", "سوبر لوكس"]) fs = (await turn(m, fs)).fs;
   return fs;                                            // الخطوة الحالية: التفاصيل المهمة (notes)
+}
+// مسار حتمي: النص يُكتب في خطوة التفاصيل (notes) ثم نداء لاحق يحمل بيانات الحالة معه
+async function notesProbe(text, locationText) {
+  const fs = await ownerToNotes(locationText);
+  const after = (await turn(text, fs)).fs;
+  await turn("ممكن تفاصيل أكتر؟", after);
+  return after;
 }
 async function buyerToLandmark() {
   let fs = (await turn("🏠 عايز أشتري", {})).fs;
@@ -205,40 +212,43 @@ test("R-1: an address-free message reaches Gemini natural and undistorted", asyn
   assertClean();
 });
 
-test("M-1: false positives — address-free messages keep their exact words", async () => {
+test("M-1: false positives — address-free text keeps its exact words in the payload", async () => {
   const BENIGN = [
-    "عايز شقة 3 غرف في مدينة نصر",
+    "عايز شقة 3 غرف",
     "ميزانيتي حوالي 3 مليون",
     "ممكن تفاصيل أكتر عن الشقة؟",
     "السعر ده نهائي ولا فيه تفاوض؟",
     "التشطيب إيه؟",
-    "في رسوم إضافية؟",
+    "محتاج أعرف الرسوم كمان",
     "عايز أعرف المميزات والعيوب",
     "المنطقة هادية؟",
     "ممكن أعرف متوسط الأسعار؟",
     "شكرًا جزيلًا على المساعدة",
   ];
-  let fp = 0, captured = 0;
+  let fp = 0, captured = 0, unproven = 0;
   const rows = [];
   for (const msg of BENIGN) {
     scenario(`FP · ${msg.slice(0, 30)}`);
-    await probeTurn(msg);
+    const st = await notesProbe(msg, "مدينة نصر");
     const payload = canon(payloadText());
     if (payload.length) captured += 1;
-    const distorted = payload.includes("[عنوان]");
-    if (distorted) fp += 1;
-    rows.push(`${distorted ? "MASKED   " : "natural  "} | ${msg}`);
-    sc.hits.length = 0;                                  // ليست سيناريو عنوان: الحكم على نص الرسالة نفسه
+    const carried = st?.data?.notes === msg;              // النص اتخزن فعلًا وخطوة النداء حملته
+    const natural = payload.includes(canon(msg));         // وصل الحمولة كما هو، بلا إخفاء
+    if (!carried) unproven += 1;
+    if (!natural) fp += 1;
+    rows.push(`${natural ? "natural " : "ALTERED "} | ${msg}`);
+    sc.hits.length = 0;
     MEASURE.scenarios.push({ name: sc.name, turns: sc.turns, calls: sc.calls, chars: sc.chars, hits: 0 });
   }
-  console.log("\n── M-1 · false positives (" + fp + "/" + BENIGN.length + " masked · " + captured + " payloads captured) ──");
+  console.log("\n── M-1 · false positives (" + fp + "/" + BENIGN.length + " altered · " + unproven + " unproven · " + captured + " payloads captured) ──");
   for (const r of rows) console.log("   " + r);
   assert.equal(captured, BENIGN.length, "every benign probe must really capture a Gemini payload");
-  assert.equal(fp, 0, "an address-free message was masked by the address protection");
+  assert.equal(unproven, 0, "a benign text was never carried to the payload — the probe proves nothing");
+  assert.equal(fp, 0, "an address-free text was altered by the address protection");
   assertClean();
 });
 
-test("M-2: false negatives — unmatched addresses are never sent", async () => {
+test("M-2: false negatives — unmatched addresses never reach the payload", async () => {
   const CORPUS = [
     "شارع 15 مايو بجوار مسجد الرحمة",
     "شارع الترعة البولاقية بجوار كوبري الساحل",
@@ -247,22 +257,25 @@ test("M-2: false negatives — unmatched addresses are never sent", async () => 
     "شقة في شارع عباس العقاد",
     OUTSIDE,
   ];
-  let fn = 0, captured = 0;
+  let fn = 0, unproven = 0, captured = 0;
   const rows = [];
   for (const addr of CORPUS) {
     scenario(`FN · ${addr.slice(0, 30)}`, [addr]);
-    await probeTurn(addr);
+    await notesProbe(addr, "مدينة نصر");                  // الحالة نفسها بلا أي عنوان ⇒ أي [عنوان] مصدره النص المُختبر
     const sent = canon(payloadText());
     if (sent.length) captured += 1;
     const leaked = sent.includes(canon(addr));
+    const masked = sent.includes("[عنوان]");
     if (leaked) fn += 1;
-    rows.push(`${leaked ? "LEAKED   " : "masked   "} | ${addr}`);
-    sc.hits.length = 0;                                  // الحكم هنا على العنوان نفسه لا على fragments الكاناري
+    if (!masked) unproven += 1;
+    rows.push(`${leaked ? "LEAKED   " : masked ? "masked   " : "UNPROVEN "} | ${addr}`);
+    sc.hits.length = 0;
     MEASURE.scenarios.push({ name: sc.name, turns: sc.turns, calls: sc.calls, chars: sc.chars, hits: 0 });
   }
-  console.log("\n── M-2 · false negatives (" + fn + "/" + CORPUS.length + " leaked · " + captured + " payloads captured) ──");
+  console.log("\n── M-2 · false negatives (" + fn + "/" + CORPUS.length + " leaked · " + unproven + " unproven · " + captured + " payloads captured) ──");
   for (const r of rows) console.log("   " + r);
   assert.equal(captured, CORPUS.length, "every address probe must really capture a Gemini payload");
+  assert.equal(unproven, 0, "an address was neither found nor provably masked — the probe proves nothing");
   assert.equal(fn, 0, "an unmatched address reached Gemini unmasked");
   assertClean();
 });

@@ -1410,24 +1410,59 @@ function rememberAddressSpans(data, spans){
   for(const s of spans){ const v = String(s||"").trim(); if(v.length>=6 && !list.includes(v)) list.push(v); }
   if(list.length>5) list.splice(0, list.length-5);
 }
+// الحاجز بينقّي النصوص الديناميكية فقط (رسائل العميل + بيانات الحالة + أي نص متغيّر).
+// القوالب الثابتة (الشخصية/المزاج) ما بتتغيّرش — ما ينفعش يبقى فيها عنوان أصلًا، وفحص المنع
+// (payloadHasRawAddress) بيفحص الحمولة كلها بما فيها القوالب، فلو حصل حاجة غريبة الإرسال يتوقف.
+const GUARD_TEMPLATES = [() => TAREK_PERSONA, () => MOOD_GUIDE];
+// يقسّم النص لمقاطع {text, dynamic} — القالب الثابت يفضل كما هو وما بيتحسبش تسريب
+function splitDynamic(text){
+  const t = String(text||"");
+  const spans = [];
+  for(const get of GUARD_TEMPLATES){
+    const c = get(); if(!c) continue;
+    let i = 0;
+    while((i = t.indexOf(c, i)) >= 0){ spans.push([i, i + c.length]); i += c.length; }
+  }
+  if(!spans.length) return [{ text: t, dynamic: true }];
+  spans.sort((a,b)=>a[0]-b[0]);
+  const out = []; let last = 0;
+  for(const [a,b] of spans){
+    if(a < last) continue;
+    if(a > last) out.push({ text: t.slice(last, a), dynamic: true });
+    out.push({ text: t.slice(a, b), dynamic: false });     // القالب الثابت
+    last = b;
+  }
+  if(last < t.length) out.push({ text: t.slice(last), dynamic: true });
+  return out;
+}
+function scrubDynamicText(text, data){
+  return splitDynamic(text).map(p => p.dynamic ? scrubAddresses(p.text, data) : p.text).join("");
+}
 function guardGeminiPayload(body, data){
   const clean = JSON.parse(JSON.stringify(body));
   const fix = t => {
     if(typeof t !== "string") return t;
     const spans = addressSpans(t);
     if(spans.length) rememberAddressSpans(data, spans);   // يُسجَّل فورًا: أي نص عنواني يُلتقط بعد كده بالمطابقة المتحمّلة
-    return scrubAddresses(t, data);
+    return scrubDynamicText(t, data);
   };
   if(clean?.system_instruction?.parts) for(const p of clean.system_instruction.parts) p.text = fix(p.text);
   for(const c of clean?.contents||[]) for(const p of c.parts||[]) p.text = fix(p.text);
   return clean;
 }
+// الفحص النهائي: أي عنوان خام كتبه العميل لسه موجود في الأجزاء الديناميكية من الحمولة؟ ⇒ امنع الإرسال
+function payloadPartsText(body){
+  const out = [];
+  if(body?.system_instruction?.parts) for(const p of body.system_instruction.parts) out.push(String(p?.text ?? ""));
+  for(const c of body?.contents||[]) for(const p of c.parts||[]) out.push(String(p?.text ?? ""));
+  return out;
+}
 function payloadHasRawAddress(body, data){
   const raw = (Array.isArray(data?._rawLocations) ? data._rawLocations : [])
     .map(x => addrCanon(String(x||"").trim()).s).filter(x => x.length >= 6);
   if(!raw.length) return false;
-  const text = addrCanon(JSON.stringify(body)).s;
-  return raw.some(r => text.includes(r));
+  const dynamic = payloadPartsText(body).flatMap(t => splitDynamic(t).filter(p => p.dynamic).map(p => p.text)).map(addrCanon).join("\n");
+  return raw.some(r => dynamic.includes(r));
 }
 async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data){
   if(!env?.GEMINI_API_KEY) return null;
