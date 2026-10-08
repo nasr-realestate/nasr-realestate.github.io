@@ -33,7 +33,7 @@ meta_description: "طلب شراء عاجل: مطلوب شقة تمليك في �
     <p style="color: #88c7ff; margin-bottom: 30px; font-size: 1rem;">إذا كانت شقتك تتكون من 3 غرف في الحي السابع وتناسب هذه الميزانية، تواصل معنا فوراً. المشتري جاهز للتنفيذ.</p>
     
     <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-        <a href="https://wa.me/201147758857?text={{ 'لدي شقة للبيع في الحي السابع تناسب طلبكم: ' | append: page.title | url_encode }}" 
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، لدي شقة للبيع في الحي السابع تناسب الطلب المنشور على موقع سمسار طلبك: ' | append: page.title | url_encode }}" 
            style="background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; width: 100%; max-width: 300px; padding: 18px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; box-sizing: border-box;">
             <i class="fab fa-whatsapp"></i> اعرض شقتك (واتساب)
         </a>

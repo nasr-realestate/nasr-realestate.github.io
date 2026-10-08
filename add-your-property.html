@@ -385,14 +385,18 @@ function buildWAMsg(ctx, data, imgUrls = []) {
   const isRent  = ctx === "owner_rent" || ctx === "tenant";
   const pt      = data.propertyType || "عقار";
   const requestLabel = getRequestLabel(isRent ? "rent" : "sale", pt, data.furnished, isOwner);
+  // جملة المصدر: المالك يوضح أنه سجّل بيانات عقاره من صفحة «اعرض عقارك»
+  const ownerLine = isOwner
+    ? `أنا مالك وأرغب في ${isSale ? "بيع" : "تأجير"} عقاري، وقد سجّلت بياناته من صفحة "اعرض عقارك" على موقع سمسار طلبك.`
+    : `أنا عميل من موقع "سمسار طلبك".`;
 
   const lines = [
+    `السلام عليكم أ. طارق،`,
+    ownerLine,
+    ``,
     `━━━━━━━━━━━━━━━━━━━━`,
     `*${requestLabel}*`,
     `━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `السلام عليكم أ. طارق،`,
-    `أنا عميل من موقع "سمسار طلبك".`,
     ``,
     `📋 *المواصفات المطلوبة:*`,
     `┌───────────────────`,

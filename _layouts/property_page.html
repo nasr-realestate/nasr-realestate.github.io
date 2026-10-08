@@ -10,29 +10,39 @@ hide_navbar: true
 {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: main_img -%}
 
 {%- comment -%} ═══════════════════════════════════════════════════
-   رسالة واتساب مؤهلة كاملة — تحتوي كل تفاصيل العقار
+   رسالة واتساب مؤهلة — قالب موحّد للأزرار الثلاثة
+   (الزر الرئيسي + كارت الوكيل + الزر العائم)
+   توضح مصدر العميل + كود العقار + أهم التفاصيل، وبدون أسطر فارغة
    ═══════════════════════════════════════════════════ {%- endcomment -%}
+{%- comment -%} كود العقار: نستخدم page.slug لأنه نفس الكود الظاهر في رابط العقار
+   (page.id يحجبه Jekyll ويعرضه بمسار المجموعة /properties/… ) {%- endcomment -%}
+{%- assign wa_code  = page.slug | default: page.id -%}
+{%- assign wa_price_label = "السعر" -%}
+{%- if page.category contains "rent" -%}{%- assign wa_price_label = "الإيجار الشهري" -%}{%- endif -%}
 {%- capture wa_text -%}
 السلام عليكم أ. طارق،
-أنا مهتم بهذا العقار من موقع سمسار طلبك:
 
-🏢 {{ page.title }}
-
-📋 التفاصيل:
-━━━━━━━━━━━━━━━━━━
-{% if page.category contains "rent" %}💰 الإيجار الشهري: {{ page.price }}{% else %}💰 السعر: {{ page.price }}{% endif %}
-{% if page.location %}📍 الموقع: {{ page.location }}{% endif %}
-{% if page.area %}📐 المساحة: {{ page.area }}{% endif %}
-{% if page.rooms %}🛏️ الغرف: {{ page.rooms }}{% endif %}
-{% if page.bathrooms %}🛁 الحمامات: {{ page.bathrooms }}{% elsif page.baths %}🛁 الحمامات: {{ page.baths }}{% endif %}
-{% if page.floor %}🏢 الدور: {{ page.floor }}{% endif %}
-{% if page.finish %}✨ التشطيب: {{ page.finish }}{% endif %}
-━━━━━━━━━━━━━━━━━━
-
+أنا مهتم بالعقار {{ wa_code }} — {{ page.title }}.
+شاهدته على صفحة العقار في موقع سمسار طلبك.
+{% if page.price %}
+💰 {{ wa_price_label }}: {{ page.price }}
+{% endif -%}
+{% if page.location %}📍 الموقع: {{ page.location }}
+{% endif -%}
+{% if page.area %}📐 المساحة: {{ page.area }}
+{% endif -%}
+{% if page.rooms %}🛏️ الغرف: {{ page.rooms }}
+{% endif -%}
+{% if page.bathrooms or page.baths %}🛁 الحمامات: {{ page.bathrooms | default: page.baths }}
+{% endif -%}
+{% if page.floor %}🏢 الدور: {{ page.floor }}
+{% endif -%}
+{% if page.finish %}✨ التشطيب: {{ page.finish }}
+{% endif %}
 🔗 رابط العقار:
 {{ site.url }}{{ page.url }}
 
-من فضلك أرسل لي تفاصيل المعاينة. شكراً.
+أرجو إفادتي بالتفاصيل والتوافر.
 {%- endcapture -%}
 
 <div class="pp-container">
