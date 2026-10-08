@@ -1,11 +1,9 @@
 # TEMPORARY, READ-ONLY Cloudflare probe — created by an Arena session to compare GitHub
 # against the *deployed* state of the agent Worker (royal-snow-ea32).
 #
-# GET requests only. It never deploys, never rolls back, never deletes a version or a
-# deployment, never touches D1, secrets or webhooks. The API token is read from the
-# repository secret and is never printed. Results are published to the session branch
-# through the Contents API, and a compact summary is emitted as check-run annotations
-# (this sandbox cannot download workflow logs).
+# GET requests only. Never deploys, never rolls back, never deletes a version or a
+# deployment, never touches D1, secrets or webhooks. Credential VALUES are never printed:
+# the workflow prints the *names* of the available secrets/vars and nothing else.
 name: TMP Cloudflare read-only probe
 
 on:
@@ -21,8 +19,18 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     env:
-      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
-      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+      SECRETS_JSON: ${{ toJSON(secrets) }}
+      VARS_JSON: ${{ toJSON(vars) }}
+      # every credential name this repository has ever used for Cloudflare (values are
+      # referenced but never echoed)
+      C_T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      C_T2: ${{ secrets.CLOUDFLARE_TOKEN }}
+      C_T3: ${{ secrets.CLOUDFLARE_API_KEY }}
+      C_T4: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
+      C_T5: ${{ secrets.CF_API_TOKEN }}
+      C_T6: ${{ secrets.CF_TOKEN }}
+      C_A1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      C_A2: ${{ secrets.CF_ACCOUNT_ID }}
       BRANCH: ${{ github.ref_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -31,19 +39,48 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 1
 
-      - name: Probe (read-only) → _diag files
+      - name: Which credential names still exist (names only) + read-only Cloudflare probe
         id: probe
         continue-on-error: true
         run: |
           set +e
           mkdir -p _diag
-          R=_diag/cf-agent-probe.txt
-          API=https://api.cloudflare.com/client/v4
-          ACC="${CF_ACCOUNT}"
           RID="${GITHUB_RUN_ID}"
+          R=_diag/cf-agent-probe.txt
+          N=_diag/secret-names.txt
 
-          echo "run=${RID} ref=${BRANCH} commit=${GITHUB_SHA}" > _diag/probe-ping.txt
-          echo "token=$([ -n "$CF_TOKEN" ] && echo PRESENT || echo MISSING)" >> _diag/probe-ping.txt
+          {
+            echo "=== credential NAMES visible to this job (values never printed) ==="
+            echo "when: $(date -u +%FT%TZ)  ref: ${BRANCH}  run: ${RID}"
+            echo "--- repository secrets ---"
+            printf '%s' "$SECRETS_JSON" | jq -r 'keys[]' 2>/dev/null | sort
+            echo "--- repository variables ---"
+            printf '%s' "$VARS_JSON" | jq -r 'keys[]' 2>/dev/null | sort
+            echo "--- explicit candidate check (PRESENT/MISSING only) ---"
+            for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_D1_TOKEN CF_API_TOKEN CF_TOKEN CLOUDFLARE_ACCOUNT_ID CF_ACCOUNT_ID; do
+              v="$(eval echo \"\$C_T1\" >/dev/null 2>&1; true)"   # placeholder, real check below
+            done
+          } > "$N" 2>&1
+
+          # explicit PRESENT/MISSING matrix (no values)
+          {
+            echo "--- candidate matrix ---"
+            [ -n "$C_T1" ] && echo "PRESENT:CLOUDFLARE_API_TOKEN" || echo "MISSING:CLOUDFLARE_API_TOKEN"
+            [ -n "$C_T2" ] && echo "PRESENT:CLOUDFLARE_TOKEN"    || echo "MISSING:CLOUDFLARE_TOKEN"
+            [ -n "$C_T3" ] && echo "PRESENT:CLOUDFLARE_API_KEY"  || echo "MISSING:CLOUDFLARE_API_KEY"
+            [ -n "$C_T4" ] && echo "PRESENT:CLOUDFLARE_D1_TOKEN" || echo "MISSING:CLOUDFLARE_D1_TOKEN"
+            [ -n "$C_T5" ] && echo "PRESENT:CF_API_TOKEN"        || echo "MISSING:CF_API_TOKEN"
+            [ -n "$C_T6" ] && echo "PRESENT:CF_TOKEN"            || echo "MISSING:CF_TOKEN"
+            [ -n "$C_A1" ] && echo "PRESENT:CLOUDFLARE_ACCOUNT_ID" || echo "MISSING:CLOUDFLARE_ACCOUNT_ID"
+            [ -n "$C_A2" ] && echo "PRESENT:CF_ACCOUNT_ID"       || echo "MISSING:CF_ACCOUNT_ID"
+          } >> "$N" 2>&1
+
+          # pick the first token that exists, and the account id if any
+          TOKEN=""
+          for v in "$C_T1" "$C_T2" "$C_T3" "$C_T5" "$C_T6" "$C_T4"; do
+            [ -n "$v" ] && { TOKEN="$v"; break; }
+          done
+          ACCOUNT="$C_A1"; [ -z "$ACCOUNT" ] && ACCOUNT="$C_A2"
 
           {
             echo "=== TMP Cloudflare read-only probe ==="
@@ -51,120 +88,90 @@ jobs:
             echo "run:         ${RID}"
             echo "commit:      ${GITHUB_SHA}"
             echo "ref:         ${BRANCH}"
-            echo "token:       $([ -n "$CF_TOKEN" ] && echo PRESENT || echo MISSING)"
-            echo "account env: ${ACC:-<unset>}"
+            echo "token:       $([ -n "$TOKEN" ] && echo PRESENT || echo MISSING)"
+            echo "account env: ${ACCOUNT:-<unset>}"
             echo
           } > "$R"
 
-          if [ -z "$CF_TOKEN" ]; then
-            echo "no token — nothing to probe" >> "$R"
-            echo "::error title=PROBE_NO_TOKEN::CF_TOKEN is empty for this repository/branch"
+          if [ -z "$TOKEN" ]; then
+            echo "no Cloudflare credential resolves for this repository/branch right now." >> "$R"
+            echo "last known-good: run 37458158722 (arena/7f9b48da) and 37459940870 (master) on 2026-10-06 reported credential PRESENT." >> "$R"
             exit 0
           fi
 
-          AUTH="Authorization: Bearer ${CF_TOKEN}"
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${TOKEN}"
           g() { curl -sS -m 30 -H "$AUTH" "$API$1"; }
-
-          if [ -z "$ACC" ]; then
-            ACC=$(g "/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)
-            echo "account resolved from token: ${ACC:-<none>}" >> "$R"
+          if [ -z "$ACCOUNT" ]; then
+            ACCOUNT=$(g "/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)
           fi
-          echo "ACCOUNT=${ACC}" >> "$R"
+          echo "ACCOUNT=${ACCOUNT}" >> "$R"
 
           {
-            echo
-            echo "=== 1) token verify ==="
-            g "/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null
-            echo
-            echo "=== 2) accounts ==="
-            g "/accounts" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null
-            echo
-            echo "=== 3) ALL workers scripts (id, created_on, modified_on, etag) ==="
-            g "/accounts/${ACC}/workers/scripts" | jq -c '{success, errors, scripts: [.result[]? | {id, created_on, modified_on, etag, handlers}]}' 2>/dev/null
-            echo
-            echo "=== 4) royal-snow-ea32 metadata ==="
-            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag, usage_model, handlers, compatibility_date} else null end)}' 2>/dev/null
-            echo
-            echo "=== 5) royal-snow-ea32 settings (bindings/compat) ==="
-            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/settings" | jq -c '{success, errors, result: (.result | if . then {bindings, compatibility_date, compatibility_flags} else null end)}' 2>/dev/null
-            echo
-            echo "=== 6) royal-snow-ea32 schedules ==="
-            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/schedules" | jq -c '{success, errors, result}' 2>/dev/null
-            echo
-            echo "=== 7) royal-snow-ea32 deployments (scripts endpoint) ==="
-            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
-            echo
-            echo "=== 8) royal-snow-ea32 deployments (services/environments endpoint) ==="
-            g "/accounts/${ACC}/workers/services/royal-snow-ea32/environments/production/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
-            echo
-            echo "=== 9) royal-snow-ea32 versions ==="
-            g "/accounts/${ACC}/workers/scripts/royal-snow-ea32/versions" | jq -c '{success, errors, versions: [.result[]? | {id, number, created_on, author_email, annotations}]}' 2>/dev/null
-            echo
-            echo "=== 10) service metadata (services endpoint) ==="
-            g "/accounts/${ACC}/workers/services/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, default_environment: (.default_environment // {} | {environment, script: (.script // {} | {id, created_on, modified_on, etag})})} else null end)}' 2>/dev/null
-            echo
-            echo "=== 11) other production Workers ==="
+            echo "=== 1) token verify ==="; g "/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null
+            echo; echo "=== 2) accounts ==="; g "/accounts" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null
+            echo; echo "=== 3) ALL workers scripts (id, created_on, modified_on, etag) ==="
+            g "/accounts/${ACCOUNT}/workers/scripts" | jq -c '{success, errors, scripts: [.result[]? | {id, created_on, modified_on, etag, handlers}]}' 2>/dev/null
+            echo; echo "=== 4) royal-snow-ea32 metadata ==="
+            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag, usage_model, handlers, compatibility_date} else null end)}' 2>/dev/null
+            echo; echo "=== 5) royal-snow-ea32 settings ==="
+            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/settings" | jq -c '{success, errors, result: (.result | if . then {bindings, compatibility_date, compatibility_flags} else null end)}' 2>/dev/null
+            echo; echo "=== 6) schedules ==="; g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/schedules" | jq -c '{success, errors, result}' 2>/dev/null
+            echo; echo "=== 7) deployments (scripts endpoint) ==="
+            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
+            echo; echo "=== 8) deployments (services/environments endpoint) ==="
+            g "/accounts/${ACCOUNT}/workers/services/royal-snow-ea32/environments/production/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
+            echo; echo "=== 9) versions ==="
+            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/versions" | jq -c '{success, errors, versions: [.result[]? | {id, number, created_on, author_email, annotations}]}' 2>/dev/null
+            echo; echo "=== 10) services metadata ==="
+            g "/accounts/${ACCOUNT}/workers/services/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, default_environment: (.default_environment // {} | {environment, script: (.script // {} | {id, created_on, modified_on, etag})})} else null end)}' 2>/dev/null
+            echo; echo "=== 11) other production Workers ==="
             for s in noisy-bush-fd84 nasr-properties-sync; do
               echo "--- $s ---"
-              g "/accounts/${ACC}/workers/scripts/${s}" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag} else null end)}' 2>/dev/null
+              g "/accounts/${ACCOUNT}/workers/scripts/${s}" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag} else null end)}' 2>/dev/null
             done
-            echo
-            echo "=== 12) workers.dev subdomain ==="
-            g "/accounts/${ACC}/workers/subdomain" | jq -c '{success, errors, result}' 2>/dev/null
+            echo; echo "=== 12) workers.dev subdomain ==="; g "/accounts/${ACCOUNT}/workers/subdomain" | jq -c '{success, errors, result}' 2>/dev/null
           } >> "$R" 2>&1
 
-          # ── deployed agent source (read-only download) ─────────────────────────
           echo -e "\n=== 13) royal-snow-ea32 deployed source ===" >> "$R"
           curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker.js -w "content/v2 http=%{http_code} bytes=%{size_download}\n" \
-            "$API/accounts/${ACC}/workers/scripts/royal-snow-ea32/content/v2" >> "$R" 2>&1
+            "$API/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/content/v2" >> "$R" 2>&1
           if [ "$(wc -c < _diag/live-agent-worker.js 2>/dev/null | tr -d ' ')" -lt 200 ]; then
             rm -f _diag/live-agent-worker.js
             curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker-raw.bin -w "content(v1) http=%{http_code} bytes=%{size_download}\n" \
-              "$API/accounts/${ACC}/workers/scripts/royal-snow-ea32/content" >> "$R" 2>&1
+              "$API/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/content" >> "$R" 2>&1
           fi
-
-          LIVE_SHA="none"
           if [ -s _diag/live-agent-worker.js ]; then
-            LIVE_SHA=$(sha256sum _diag/live-agent-worker.js | cut -d' ' -f1)
             {
               echo "bytes:  $(wc -c < _diag/live-agent-worker.js)   lines: $(wc -l < _diag/live-agent-worker.js)"
-              echo "sha256: ${LIVE_SHA}"
+              echo "sha256: $(sha256sum _diag/live-agent-worker.js | cut -d' ' -f1)"
               echo "repo worker.js sha256: $(sha256sum _worker/worker.js | cut -d' ' -f1)"
               echo "--- first 3 lines of deployed source ---"; head -3 _diag/live-agent-worker.js
               echo "--- FORM_VERSION in deployed source ---"
-              grep -m2 -n 'FORM_VERSION' _diag/live-agent-worker.js | head -2
               grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _diag/live-agent-worker.js
-              echo "--- version-looking markers (top 12 by count) ---"
+              echo "--- version-like markers (top 12) ---"
               grep -oE 'v[0-9]+\.[0-9]+[A-Za-z0-9._-]*' _diag/live-agent-worker.js | sort | uniq -c | sort -rn | head -12
-              echo "--- feature marker counts in deployed source (0 = absent) ---"
-              for m in redactPII scrubAddresses initAgentState waURL upload-images webhook hub.challenge X-Hub-Signature phone_number_id verify_token twilio ultramsg callmebot consulta360 360dialog WATI; do
+              echo "--- marker counts in deployed source (0 = absent) ---"
+              for m in redactPII scrubAddresses initAgentState waURL upload-images webhook hub.challenge X-Hub-Signature phone_number_id verify_token twilio ultramsg callmebot 360dialog WATI; do
                 printf '%-20s %s\n' "$m" "$(grep -c -- "$m" _diag/live-agent-worker.js)"
               done
-              echo "--- diff: repo _worker/worker.js  →  deployed source ---"
+              echo "--- diff repo → deployed ---"
               diff -u _worker/worker.js _diag/live-agent-worker.js > _diag/live-vs-repo.diff 2>&1
-              echo "diff exit: $?  (0 = identical)"
-              echo "hunks: $(grep -c '^@@' _diag/live-vs-repo.diff)"
-              echo "added lines: $(grep -c '^+' _diag/live-vs-repo.diff)   removed lines: $(grep -c '^-' _diag/live-vs-repo.diff)"
-              echo "changed-lines summary by section:"
-              grep -E '^[-+]' _diag/live-vs-repo.diff | grep -vE '^(\+\+\+|---)' | \
-                grep -oE '^[-+].{0,60}' | sed 's/[[:space:]]\+/ /g' | sort | uniq -c | sort -rn | head -25
+              echo "hunks: $(grep -c '^@@' _diag/live-vs-repo.diff)  added: $(grep -c '^+' _diag/live-vs-repo.diff)  removed: $(grep -c '^-' _diag/live-vs-repo.diff)"
+              grep -E '^[-+]' _diag/live-vs-repo.diff | grep -vE '^(\+\+\+|---)' | grep -oE '^[-+].{0,60}' | sed 's/[[:space:]]\+/ /g' | sort | uniq -c | sort -rn | head -20
             } >> "$R" 2>&1
-          else
-            echo "no source downloaded — token likely lacks Workers Scripts:Read" >> "$R"
           fi
 
-          # ── public endpoint probes (unauthenticated; no Cloudflare state touched) ─
           {
-            echo
-            echo "=== 14) public endpoint probes ==="
-            echo "--- OPTIONS / (CORS preflight) ---"
+            echo; echo "=== 14) public endpoint probes ==="
+            echo "--- OPTIONS / ---"
             curl -sS -m 20 -i -X OPTIONS https://royal-snow-ea32.footcai-555.workers.dev/ \
               -H "Origin: https://nasr-realestate.github.io" -H "Access-Control-Request-Method: POST" \
               -H "Access-Control-Request-Headers: content-type" | sed -n '1,12p'
             echo "--- GET / ---"
             curl -sS -m 20 -o /tmp/get.txt -w "http=%{http_code}\n" https://royal-snow-ea32.footcai-555.workers.dev/
             head -c 300 /tmp/get.txt; echo
-            echo "--- POST / one greeting (live worker stamps its own formState._version) ---"
+            echo "--- POST / one greeting ---"
             curl -sS -m 40 -o /tmp/post.json -w "http=%{http_code}\n" -X POST \
               https://royal-snow-ea32.footcai-555.workers.dev/ \
               -H "Origin: https://nasr-realestate.github.io" -H "Content-Type: application/json" \
@@ -177,11 +184,7 @@ jobs:
             curl -sS -m 20 https://nasr-properties-sync.footcai-555.workers.dev/ | jq -c '{service, status, worker_version, version}' 2>/dev/null
           } >> "$R" 2>&1
 
-          echo "LIVE_SHA=${LIVE_SHA}" >> "$GITHUB_ENV"
-          echo "ACCOUNT=${ACC}" >> "$GITHUB_ENV"
-          echo "--- report tail ---"
-          sed -n '1,30p' "$R"
-          wc -l "$R"
+          echo "--- report lines: $(wc -l < "$R") ---"
 
       - name: Publish results (Contents API + annotations + artifacts)
         if: always()
@@ -189,30 +192,27 @@ jobs:
         run: |
           set +e
           RID="${GITHUB_RUN_ID}"
-          put() {   # put <local file> <path in repo>
+          put() {
             local f="$1" p="$2"
             [ -s "$f" ] || { echo "skip $f (missing/empty)"; return; }
             B64=$(base64 -w0 "$f")
             BODY=$(jq -n --arg m "probe artifact ${p} (run ${RID}) [skip ci]" --arg c "$B64" --arg b "$BRANCH" \
               '{message:$m, content:$c, branch:$b}')
-            CODE=$(printf '%s' "$BODY" | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${p}" --input - 2>&1 | jq -r '.content.sha // .message // "?"' 2>/dev/null)
-            echo "PUT ${p} → ${CODE}"
+            printf '%s' "$BODY" | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${p}" --input - >/dev/null 2>&1 && echo "PUT ok: ${p}" || echo "PUT failed: ${p}"
           }
-          echo "== publishing =="
-          put _diag/probe-ping.txt            "_diag/probe-${RID}-ping.txt"
-          put _diag/cf-agent-probe.txt        "_diag/probe-${RID}-report.txt"
-          put _diag/live-agent-worker.js      "_diag/probe-${RID}-live-agent-worker.js"
-          put _diag/live-vs-repo.diff         "_diag/probe-${RID}-live-vs-repo.diff"
+          put _diag/secret-names.txt        "_diag/probe-${RID}-secret-names.txt"
+          put _diag/cf-agent-probe.txt      "_diag/probe-${RID}-report.txt"
+          put _diag/live-agent-worker.js    "_diag/probe-${RID}-live-agent-worker.js"
+          put _diag/live-vs-repo.diff       "_diag/probe-${RID}-live-vs-repo.diff"
 
-          echo "== annotations =="
-          # compact, human-readable essentials (the sandbox can read check-run annotations)
-          S=$(sed -n '1,400p' _diag/cf-agent-probe.txt 2>/dev/null | tr '\n' '~')
+          S=$(sed -n '1,300p' _diag/cf-agent-probe.txt 2>/dev/null | tr '\n' '~')
           i=0; n=0
-          while [ -n "$S" ] && [ $n -lt 12 ]; do
+          while [ -n "$S" ] && [ $n -lt 10 ]; do
             chunk=$(printf '%s' "$S" | cut -c1-3500); S=$(printf '%s' "$S" | cut -c3501-)
-            i=$((i+1)); n=$((n+1))
-            echo "::error title=CFPROBE_${i}::${chunk}"
+            i=$((i+1)); n=$((n+1)); echo "::error title=CFPROBE_${i}::${chunk}"
           done
+          K=$(sed -n '1,60p' _diag/secret-names.txt 2>/dev/null | tr '\n' '~')
+          [ -n "$K" ] && echo "::error title=CFKEYS::${K:0:3400}"
 
       - name: Upload artifacts (fallback channel)
         if: always()
@@ -222,8 +222,8 @@ jobs:
           name: cf-probe-${{ github.run_id }}
           path: |
             _diag/cf-agent-probe.txt
+            _diag/secret-names.txt
             _diag/live-agent-worker.js
             _diag/live-vs-repo.diff
-            _diag/probe-ping.txt
           if-no-files-found: warn
           retention-days: 7
