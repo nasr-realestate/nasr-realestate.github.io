@@ -1403,11 +1403,26 @@ function renderValuationCta(context) {
   scrollToBottom();
 }
 
+// ═══ جملة المصدر (واجهة الصفحة فقط — الـWorker يبقى كما هو):
+// توضح لطارق أن العميل وصل من الوكيل الذكي، وتُضاف مرة واحدة فقط لرسالة الواتساب
+const WA_AGENT_SOURCE = `السلام عليكم أ. طارق، وصلت إليك من الوكيل الذكي على موقع سمسار طلبك.`;
+function withAgentSource(url) {
+  try {
+    if (!url || typeof url !== "string") return url;
+    if (url.indexOf("wa.me/") === -1 && url.indexOf("api.whatsapp.com") === -1) return url;
+    const parts = url.split("text=");
+    if (parts.length < 2) return url;
+    const text = decodeURIComponent(parts.slice(1).join("text="));
+    if (text.indexOf("وصلت إليك من الوكيل الذكي") !== -1) return url; // لا تكرار عند الاستعادة
+    return parts[0] + "text=" + encodeURIComponent(WA_AGENT_SOURCE + "\n\n" + text);
+  } catch { return url; }
+}
 function showWA(url, msg) {
   if (!url) return;
+  const finalUrl = withAgentSource(url);
   waWrapper.classList.add("show");
-  waBtn.href = url;
-  state.whatsappUrl = url;
+  waBtn.href = finalUrl;
+  state.whatsappUrl = finalUrl;
   state.waMessage = msg;
 }
 function hideWA() { waWrapper.classList.remove("show"); waBtn.href = "#"; }

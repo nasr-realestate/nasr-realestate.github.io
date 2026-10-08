@@ -55,7 +55,17 @@
     <span>المعرض الفاخر</span>
   </a>
   <div class="floating-menu-sep"></div>
-  <a href="https://wa.me/201147758857" target="_blank" rel="noopener" class="floating-menu-item">
+  {%- comment -%} رسالة واتساب من القائمة العائمة — توضح اسم الصفحة الحالية
+     بدل فتح المحادثة فارغة. (لا تغيير على الرقم 201147758857) {%- endcomment -%}
+  {%- assign wa_menu_page = page.title | default: "" | split: "|" | first | strip -%}
+  {%- if page.url == "/" -%}{%- assign wa_menu_page = "الصفحة الرئيسية" -%}{%- endif -%}
+  {%- if page.url contains "404" -%}{%- assign wa_menu_page = "" -%}{%- endif -%}
+  {%- if wa_menu_page != "" -%}
+  {%- capture wa_menu_text -%}السلام عليكم أ. طارق، وصلت إليك من صفحة «{{ wa_menu_page }}» في موقع سمسار طلبك وأرغب في استشارة عقارية.{%- endcapture -%}
+  {%- else -%}
+  {%- capture wa_menu_text -%}السلام عليكم أ. طارق، وصلت إليك من موقع سمسار طلبك وأرغب في استشارة عقارية.{%- endcapture -%}
+  {%- endif -%}
+  <a href="https://wa.me/201147758857?text={{ wa_menu_text | url_encode }}" target="_blank" rel="noopener" class="floating-menu-item">
     <i class="fab fa-whatsapp"></i>
     <span>تواصل واتساب</span>
   </a>

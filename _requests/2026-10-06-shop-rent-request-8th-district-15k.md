@@ -33,7 +33,7 @@ meta_description: "طلب إيجار تجاري عاجل: مطلوب محل 45 �
     <p style="color: #88c7ff; margin-bottom: 30px; font-size: 1rem;">نشاط السوبر ماركت من أكثر الأنشطة استقراراً. إذا كان محلك في شارع جانبي حيوي ويناسب هذه الميزانية، تواصل معنا الآن لترتيب المعاينة.</p>
     
     <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-        <a href="https://wa.me/201147758857?text={{ 'لدي محل إيجار يناسب طلب السوبر ماركت بالحي الثامن: ' | append: page.title | url_encode }}" 
+        <a href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق، لدي محل للإيجار يناسب طلب السوبر ماركت بالحي الثامن المنشور على موقع سمسار طلبك: ' | append: page.title | url_encode }}" 
            style="background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; width: 100%; max-width: 300px; padding: 18px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; box-sizing: border-box;">
             <i class="fab fa-whatsapp"></i> اعرض محلك (واتساب)
         </a>

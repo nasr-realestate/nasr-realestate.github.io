@@ -14,26 +14,34 @@ hide_navbar: true
 {%- assign phone_number    = "+201147758857" -%}
 {%- assign whatsapp_number = "201147758857" -%}
 
-{%- comment -%} رسالة واتساب مؤهلة كاملة للطلب {%- endcomment -%}
+{%- comment -%} رسالة واتساب مؤهلة — قالب موحّد للأزرار الثلاثة (الرئيسي + كارت
+   الوكيل + الزر العائم): توضح أن العميل شاهد الطلب المنشور ولديه عرض مناسب.
+   الحقول تُطبع فقط إن كانت موجودة فعلًا في ملف الطلب (بدون أسطر فارغة) {%- endcomment -%}
+{%- comment -%} كود الطلب: نفس الكود الظاهر في رابط الطلب (page.id يعرضه Jekyll بمسار المجموعة) {%- endcomment -%}
+{%- assign wa_code = page.slug | default: page.id -%}
 {%- capture wa_text -%}
 السلام عليكم أ. طارق،
-رأيت هذا الطلب على موقع سمسار طلبك ولدي عرض مشابه:
+
+رأيت هذا الطلب المنشور على موقع سمسار طلبك ولدي عرض مناسب له (كود الطلب: {{ wa_code }}).
 
 📋 {{ page.title }}
-
-📌 تفاصيل الطلب:
-━━━━━━━━━━━━━━━━━━
-📍 المنطقة: {{ page.location }}
-{% if page.property_type %}🏢 النوع المطلوب: {{ page.property_type }}{% endif %}
-💰 الميزانية: {{ page.budget }}
-{% if page.area_min %}📐 المساحة المطلوبة: {{ page.area_min }}{% endif %}
-{% if page.rooms_min %}🛏️ الغرف المطلوبة: {{ page.rooms_min }}{% endif %}
-━━━━━━━━━━━━━━━━━━
-
+{% if page.location %}📍 المنطقة: {{ page.location }}
+{% endif -%}
+{% if page.property_type %}🏢 النوع المطلوب: {{ page.property_type }}
+{% endif -%}
+{% if page.budget %}💰 الميزانية: {{ page.budget }}
+{% endif -%}
+{% if page.area_min %}📐 المساحة المطلوبة: {{ page.area_min }}
+{% endif -%}
+{% if page.rooms_min %}🛏️ الغرف المطلوبة: {{ page.rooms_min }}
+{% endif -%}
+{% if page.requirements and page.requirements.size > 0 %}
+📌 {{ page.requirements | join: " • " }}
+{% endif %}
 🔗 رابط الطلب:
 {{ site.url }}{{ page.url }}
 
-لدي عرض مشابه، من فضلك تواصل معي.
+لدي عرض مناسب لهذا الطلب، من فضلك تواصل معي.
 {%- endcapture -%}
 
 {%- comment -%}
