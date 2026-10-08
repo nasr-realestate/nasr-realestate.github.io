@@ -1300,6 +1300,8 @@ const PII_KEYS = new Set(["ownerName","ownerPhone","buyerName","buyerPhone","pho
 const LOCATION_KEYS = new Set(["gps","location","address","lat","lng","lon","latitude","longitude","coords","coordinates","mapUrl","mapsUrl","googleMapsUrl"]);
 function safeDataForPrompt(data){
   const out = {};
+  const rawCanon = (Array.isArray(data?._rawLocations) ? data._rawLocations : [])
+    .map(x => addrCanon(String(x||"")).s).filter(x => x.length >= 6);
   for(const [k,v] of Object.entries(data||{})){
     if(PII_KEYS.has(k)||LOCATION_KEYS.has(k)) continue;
     if(k.startsWith("_")||k.startsWith("selected")) continue;
@@ -1308,7 +1310,12 @@ function safeDataForPrompt(data){
       continue;
     }
     if(!hasVal(v)) continue;
-    out[k] = typeof v==="string" ? sanitizeForPrompt(v,60) : v;
+    // ⭐ F2: أي قيمة نصية (notes/landmark/أي حقل مستقبلي) تُنقّى قبل الـprompt،
+    //    وأي قيمة هي جزء من عنوان خام كتبه العميل بنفسه تُستبدل بالكامل
+    if(typeof v === "string"){
+      const cv = addrCanon(v).s;
+      out[k] = (cv.length>=3 && rawCanon.some(r => r.includes(cv))) ? "[عنوان]" : sanitizeForPrompt(scrubAddresses(v, data),60);
+    } else out[k] = v;
   }
   return redactPII(JSON.stringify(out)).slice(0,500);
 }
@@ -1320,22 +1327,120 @@ function rememberRawLocation(data, raw){
   if(list.includes(t)) return data;
   return { ...data, _rawLocations: [...list, t].slice(-5) };
 }
+// ═══ F3: تطبيع عربي خفيف (ه/ة · ي/ى · الهمزات · التشكيل · المسافات · الترقيم) — بلا false positives واسعة ═══
+const AR_DIACRITIC = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/;
+const AR_CANON_MAP = { "ة":"ه", "ى":"ي", "أ":"ا", "إ":"ا", "آ":"ا", "ٱ":"ا", "ؤ":"و", "ئ":"ي" };
+function addrCanon(text){
+  const src = String(text||""); let s = ""; const map = [];
+  for(let i=0;i<src.length;i++){
+    const ch = src[i];
+    if(AR_DIACRITIC.test(ch)) continue;
+    s += (AR_CANON_MAP[ch] || ch); map.push(i);
+  }
+  return { s, map };
+}
+// مطابقة متحمّلة: كلمات العنوان بينها مسافات/ترقيم مرن (المقارنة على النص المُطبَّع)
+function addrRegex(needle){
+  const { s } = addrCanon(needle);
+  const words = s.split(/[\s،,.!؟\-–—|]+/).filter(Boolean);
+  if(words.join("").length < 6) return null;
+  const body = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s،,.\\-–—]*");
+  return new RegExp(body, "g");
+}
+// أنماط أرضية للعنوان داخل أي نص حر — لا تعتمد على خطوة العنوان ولا على أي قائمة
+const ADDR_SPAN_RES = [
+  /(?<![\u0600-\u06FF])(?:صيدلية|مسجد|مستشفى|مدرسه|مدرسة|مول|كافيه|مطعم|بنك|محطه|محطة|كوبري|كوبرى|برج|عمارة|كمبوند|كومباوند|فندق|سوبر\s*ماركت)(?:\s+[^\s،,.!؟|]+){1,2}/g,
+  /(?<![\u0600-\u06FF])(?:بجوار|بجانب|جنب|أمام|امام|خلف|مقابل|ناصية)\s+(?:[^\s،,.!؟|]+\s+){0,2}[^\s،,.!؟|]+/g,
+  /(?<![\u0600-\u06FF])(?:شارع|شوارع|ش\.)\s*(?:[^\s،,.!؟|]+\s+){0,3}[^\s،,.!؟|]+/g,
+];
+// كلمات تدل على أن العنوان انتهى وبدأ كلام/سؤال — تُقصّ من آخر المقطع فقط (ما تمنعش اكتشاف العنوان)
+const AR_SPAN_STOP = new Set(["في","على","من","إلى","الى","عند","عندك","عندنا","قريب","قريبة","زي","نفس","بعد","قبل","كل","أي","اي","بتاع","بتاعة","وفيها","وفيه","وفي","وفى","والمساحة","والميزانية","والسعر","والمكان","وكمان","وكان","وكانت","وبعدين","ومش","ولسه","ولسا","وعايز","وعاوز","وعايزه","وعايزة","وعاوزة","وأريد","واريد","وأعرف","واعرف","عايز","عاوز","عايزه","عايزة","عاوزة","أريد","اريد","أعرف","اعرف","ممكن","تقولي","تقول","قولي","فين","إزاي","ازاي","كام","ليه","إيه","ايه","مش","بس","ده","دي","دا","دول","أنا","انا","هو","هي","احنا","إحنا","كمان","برضو","بردو","عشان","علشان","لو","أو","او","اللي","إللي","اللى","التي","الذي","امبارح","النهارده","النهاردة","بكره","بكرة"]);
+function spanTailTrim(span){
+  let v = String(span||"");
+  for(;;){
+    const m = v.match(/(\S+)\s*$/);          // آخر كلمة فعليّة (بتتخطّى المسافات في الآخر)
+    if(!m) break;
+    const key = m[1].replace(/[^\u0600-\u06FF0-9A-Za-z]/g,"");
+    if(key && AR_SPAN_STOP.has(key)){ v = v.slice(0, m.index); continue; }
+    break;
+  }
+  return v.replace(/\s+$/,"");
+}
+function maskAddressSpans(text){
+  let t = String(text||"");
+  for(const re of ADDR_SPAN_RES)
+    t = t.replace(re, (sp) => {
+      const v = spanTailTrim(sp);
+      return (v.length>=6 ? "[عنوان]" : "") + sp.slice(v.length);
+    });
+  return t;
+}
+function addressSpans(text){
+  const out = []; const t = String(text||"");
+  for(const re of ADDR_SPAN_RES){
+    re.lastIndex = 0; let m;
+    while((m = re.exec(t))){ const v = spanTailTrim(m[0]); if(v.length>=6) out.push(v); if(m.index === re.lastIndex) re.lastIndex++; }
+  }
+  return [...new Set(out)];
+}
 function scrubAddresses(text,data){
   let t = String(text||"");
   const raw = Array.isArray(data?._rawLocations) ? data._rawLocations : [];
   const known = [...new Set([data?.location, data?.gps?.address, ...raw].map(x=>String(x||"").trim()).filter(x=>x.length>=6))].sort((a,b)=>b.length-a.length);
-  for(const a of known) t = t.split(a).join("[عنوان]");
-  return t;
+  for(const a of known){
+    const re = addrRegex(a);
+    if(!re) continue;
+    const { s, map } = addrCanon(t);
+    const parts = []; let last = 0, m;
+    while((m = re.exec(s))){
+      const st = map[m.index] ?? 0;
+      const lastIdx = m.index + m[0].length - 1;
+      const end = lastIdx < map.length ? map[lastIdx] + 1 : t.length;
+      parts.push(t.slice(last, st), "[عنوان]"); last = end;
+      if(m.index === re.lastIndex) re.lastIndex++;
+    }
+    if(parts.length){ parts.push(t.slice(last)); t = parts.join(""); }
+  }
+  return maskAddressSpans(t);
 }
-async function callGemini(env, sys, msgs, maxTok=150, temp=0.6){
+// ═══ F1 + الحاجز النهائي: لا يخرج أي payload فيه عنوان خام إلى Gemini ═══
+function rememberAddressSpans(data, spans){
+  if(!data || !Array.isArray(spans) || !spans.length) return;
+  const list = Array.isArray(data._rawLocations) ? data._rawLocations : (data._rawLocations = []);
+  for(const s of spans){ const v = String(s||"").trim(); if(v.length>=6 && !list.includes(v)) list.push(v); }
+  if(list.length>5) list.splice(0, list.length-5);
+}
+function guardGeminiPayload(body, data){
+  const clean = JSON.parse(JSON.stringify(body));
+  const fix = t => {
+    if(typeof t !== "string") return t;
+    const spans = addressSpans(t);
+    if(spans.length) rememberAddressSpans(data, spans);   // يُسجَّل فورًا: أي نص عنواني يُلتقط بعد كده بالمطابقة المتحمّلة
+    return scrubAddresses(t, data);
+  };
+  if(clean?.system_instruction?.parts) for(const p of clean.system_instruction.parts) p.text = fix(p.text);
+  for(const c of clean?.contents||[]) for(const p of c.parts||[]) p.text = fix(p.text);
+  return clean;
+}
+function payloadHasRawAddress(body, data){
+  const raw = (Array.isArray(data?._rawLocations) ? data._rawLocations : [])
+    .map(x => addrCanon(String(x||"").trim()).s).filter(x => x.length >= 6);
+  if(!raw.length) return false;
+  const text = addrCanon(JSON.stringify(body)).s;
+  return raw.some(r => text.includes(r));
+}
+async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data){
   if(!env?.GEMINI_API_KEY) return null;
   try {
     const url = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`;
     const body = { system_instruction:{parts:[{text:sys}]}, contents:msgs, generationConfig:{temperature:temp,maxOutputTokens:maxTok} };
+    // ⭐ الحاجز النهائي قبل أي fetch لـGoogle: تنقية كل النصوص، ومنع الإرسال لو بقي عنوان خام معروف
+    const guarded = guardGeminiPayload(body, data);
+    if(payloadHasRawAddress(guarded, data)){ console.warn("[gemini] payload blocked: raw address"); return null; }
     const r = await fetchWithTimeout(url,{
       method:"POST",
       headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
-      body:JSON.stringify(body)
+      body:JSON.stringify(guarded)
     }, FETCH_TIMEOUT_GEMINI);
     if(!r.ok){ console.warn("[gemini] non-ok status:",r.status); return null; }
     const j = await r.json();
@@ -1366,9 +1471,9 @@ function timeContext(now = cairoNow()){
   if(!bits.length) return "";
   return `الوقت دلوقتي: ${bits.join("، ")}.\nاذكر ده بشكل عابر وطبيعي لو كان له لازمة، من غير ما تعتذر كتير ومن غير ما تكرره في كل رد.`;
 }
-async function geminiFirstMsg(env, userMsg, history){
+async function geminiFirstMsg(env, userMsg, history, data){
   const sys = `${TAREK_PERSONA}\n\nالموقف: حد لسه داخل على الشات دلوقتي وكتبلك حاجة.\nانت عايز تعرف هو عايز يشتري ولا يأجر ولا عنده عقار عايز يبيعه أو يأجره.\nتحت الشات في أزرار جاهزة، وجّهه ليها بكلامك من غير ما تسرد الاختيارات كأنها قايمة.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nرد بسطر أو اتنين بالكتير. متسألش عن تفاصيل العقار دلوقتي ومتتكلمش في أسعار.`;
-  return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(userMsg)}]}], 150, 0.85);
+  return callGemini(env, sys, [{role:"user",parts:[{text:sanitizeForPrompt(scrubAddresses(userMsg, data))}]}], 150, 0.85, data);
 }
 async function geminiComment(env, userMsg, nextQ, fsData){
   const safeMsg = sanitizeForPrompt(scrubAddresses(userMsg, fsData));
@@ -1379,7 +1484,7 @@ async function geminiComment(env, userMsg, nextQ, fsData){
     return cached.variants[Math.floor(Math.random()*cached.variants.length)];
   }
   const sys = `${TAREK_PERSONA}\n\nالموقف: العميل لسه جاوبك على سؤال، وانت هتسأله السؤال اللي بعده على طول.\nعايز منك رد فعل قصير جدا على إجابته.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nمهم جدا: مش كل إجابة محتاجة رد.\nلو إجابته عادية خالص (رقم، اختيار من زرار، كلمة واحدة) — مترّدش خالص واكتب: -\nالرد الفاضي ده طبيعي.\nعلّق بس لما يكون في حاجة فعلا تستاهل.\nلو هتعلّق: كلمتين أو تلاتة بالكتير. متعيدش السؤال اللي جاي.\n\nإجابة العميل: "${safeMsg}"\nالسؤال اللي جاي: "${sanitizeForPrompt(nextQ,200)}"\nاللي عارفه عنه: ${safeDataForPrompt(fsData)}`;
-  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95);
+  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95, fsData);
   const cleaned = String(reply||"").trim();
   if(!cleaned||cleaned==="-"||/^[-–—.]+$/.test(cleaned)) return null;
   const variants = cached?.variants ? [...new Set([...cached.variants, cleaned])].slice(-4) : [cleaned];
@@ -1394,7 +1499,7 @@ async function geminiContextual(env, userMsg, formState, currentStep, history){
   if(convHistory[convHistory.length-1]?.role==="user") convHistory.pop();
   convHistory.push({role:"user",parts:[{text:sanitizeForPrompt(scrubAddresses(userMsg, formState?.data))}]});
   const sys = `${TAREK_PERSONA}\n\nالموقف: انت كنت سألته سؤال، وهو بدل ما يجاوب سألك انت سؤال تاني.\nجاوب على سؤاله بسرعة وبعدين رجّعه للسؤال بتاعك.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nالسؤال اللي انت مستنيه منه: "${sanitizeForPrompt(q,200)}"\nاللي عارفه عنه: ${safeDataForPrompt(formState?.data)}\n\nجاوب سؤاله في سطر واحد بس، وبعدين اسأله سؤالك تاني.\nالسؤال ترجّعه بمعناه وبكلامك انت، مش نسخ لصق حرفي.`;
-  return callGemini(env, sys, convHistory, 150, 0.75);
+  return callGemini(env, sys, convHistory, 150, 0.75, formState?.data);
 }
 function deservesComment(userMsg){
   const t = String(userMsg||"").trim();
@@ -2425,7 +2530,7 @@ export default {
         }
 
         if(!env?.GEMINI_API_KEY) return jsonRes({response:"تمام، أساعدك في عقارات مدينة نصر. شراء ولا إيجار؟",options:ROUTE_BTNS,formState:fs});
-        const reply = await geminiFirstMsg(env, userMsg, history);
+        const reply = await geminiFirstMsg(env, userMsg, history, fs?.data);
         if(reply) return jsonRes({response:reply,options:ROUTE_BTNS,formState:fs});
         return jsonRes(newRequest());
       }

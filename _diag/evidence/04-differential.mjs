@@ -98,9 +98,9 @@ out.push({ label: "CORS foreign", status: foreign.status, body: foreign.headers.
   } });
 }
 
-// 6b) A RESIDUAL GAP (not D-4b, not caused by the patch): a raw address that never passed an
-//     address step — e.g. typed mid-conversation — is still unknown to the worker, so a
-//     known-value scrub cannot remove it. Identical before/after by construction.
+// 6b) THE RESIDUAL GAP — CLOSED by the privacy fix (F1+F2+F3 + the final Gemini payload guard):
+//     a raw address that never passed an address step used to reach Gemini because a known-value
+//     scrub cannot see it. The "after" side must now be clean; this case stays as its regression.
 const LEAKY_STATE = H.qualifiedOwnerState({ flowType: "owner_sale", data: { propertyType: "شقة", location: "المنطقة السادسة", area: 180, price: 9500000 } });
 // 6b) THE RESIDUAL SCENARIO (see above)
 H.resetGemini();
@@ -162,6 +162,23 @@ const INPUT_LOGIC = [
     test: (b, a) => b?.body?.data?.price === 1512345678 && a?.body?.data?.price === 9500000 && a?.body?.done === true,
   },
 ];
+// ── the privacy phase: two differences that ARE the fix. Each is pinned to an exact predicate. ──
+const PRIVACY_FIX = [
+  {
+    label: "RESIDUAL: raw address typed outside an address step (pre-existing gap)",
+    why: "الإصلاح: العنوان الخام لم يعد يوصل Gemini — الحمولة صارت scrubbed",
+    test: (b, a) => b?.body?.verdict === "RAW_ADDRESS_SENT_TO_GEMINI" && a?.body?.verdict === "scrubbed" && a?.body?.geminiCalls === 1,
+  },
+  {
+    label: "gemini payloads",
+    why: "أثر الإصلاح على الحمولات: كانت تحمل العنوان الخام قبل الإصلاح، ولا تحمله بعده",
+    test: (b, a) => {
+      const frags = ["إبراهيم نوارة", "صيدلية العزبي", "العزبي", "15 مايو", "مسجد الرحمة"];
+      const jb = JSON.stringify(b?.body ?? []), ja = JSON.stringify(a?.body ?? []);
+      return (a?.body?.length || 0) > 0 && frags.some(f => jb.includes(f)) && !frags.some(f => ja.includes(f));
+    },
+  },
+];
 let diffs = 0, same = 0, tolerated = 0;
 for (let i = 0; i < Math.max(before.length, after.length); i++) {
   const b = before[i], a = after[i];
@@ -175,7 +192,7 @@ for (let i = 0; i < Math.max(before.length, after.length); i++) {
     console.log(`             before: ${intend.before}  →  after: ${intend.after}   (${JSON.stringify(a.body)})`);
     continue;
   }
-  const intended2 = INPUT_LOGIC.find(x => x.label === label && x.test(b, a));
+  const intended2 = INPUT_LOGIC.find(x => x.label === label && x.test(b, a)) || PRIVACY_FIX.find(x => x.label === label && x.test(b, a));
   if (intended2) {
     tolerated++;
     console.log(`FIXED      | ${label}`);
