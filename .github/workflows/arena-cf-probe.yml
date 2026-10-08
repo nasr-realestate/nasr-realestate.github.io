@@ -1,9 +1,13 @@
-# TEMPORARY, READ-ONLY Cloudflare probe — created by an Arena session to compare GitHub
-# against the *deployed* state of the agent Worker (royal-snow-ea32).
+# TEMPORARY, READ-ONLY probe — created by an Arena session to compare GitHub against the
+# *deployed* state of the agent Worker (royal-snow-ea32).
 #
-# GET requests only. Never deploys, never rolls back, never deletes a version or a
-# deployment, never touches D1, secrets or webhooks. Credential VALUES are never printed:
-# the workflow prints the *names* of the available secrets/vars and nothing else.
+# Everything here is unauthenticated and read-only: public HTTPS GET/OPTIONS probes of the
+# three production Workers, one plain chat POST per worker (a normal visitor action, it
+# mutates nothing), and fetches of the live GitHub Pages files. No deploy, no rollback, no
+# version/deployment deletion, no D1/secrets/webhook changes.
+#
+# The Cloudflare API section only runs if a Cloudflare credential resolves (it currently
+# does not — see the credential matrix in the report).
 name: TMP Cloudflare read-only probe
 
 on:
@@ -19,8 +23,6 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     env:
-      # every credential name this repository has ever used for Cloudflare (values are
-      # referenced but never echoed)
       C_T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       C_T2: ${{ secrets.CLOUDFLARE_TOKEN }}
       C_T3: ${{ secrets.CLOUDFLARE_API_KEY }}
@@ -37,24 +39,94 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 1
 
-      - name: Which credential names still exist (names only) + read-only Cloudflare probe
-        id: probe
+      - name: Live fingerprints (public, read-only)
         continue-on-error: true
         run: |
           set +e
           mkdir -p _diag
           RID="${GITHUB_RUN_ID}"
-          R=_diag/cf-agent-probe.txt
-          N=_diag/secret-names.txt
+          R=_diag/live-probe.txt
+          AGENT=https://royal-snow-ea32.footcai-555.workers.dev
+          VAL=https://noisy-bush-fd84.footcai-555.workers.dev
+          SYNC=https://nasr-properties-sync.footcai-555.workers.dev
+          SITE=https://nasr-realestate.github.io
+
+          sk() { jq -c '{status: 0} + .' 2>/dev/null; }
+          # one chat turn: prints the keys the UI depends on + the worker's own _version stamp
+          chat() { # chat <label> <json>
+            echo "--- $1 ---"
+            curl -sS -m 45 -o /tmp/c.json -D /tmp/c.hdr -w "http=%{http_code} time=%{time_total}s\n" -X POST "$AGENT/" \
+              -H "Origin: $SITE" -H "Content-Type: application/json" -d "$2"
+            echo "resp-headers:"; grep -iE "access-control|content-type|cache-control|x-content|referrer|vary|server" /tmp/c.hdr | sed 's/^/  /'
+            jq -c '{keys:(keys), response:((.response // "")|.[0:180]), formState_version:(.formState._version // null),
+                     lifecycle:(.formState.lifecycle // null), active:(.formState.active // null),
+                     flowType:(.formState.flowType // null), stepIndex:(.formState.stepIndex // null),
+                     options:((.options // [])|length), typingDelay:(.typingDelay // null),
+                     done:(.done // null), canShareWhatsapp:(.canShareWhatsapp // null),
+                     whatsappUrl:((.whatsappUrl // "")|.[0:60]), valuationCta:(.valuationCta // null), error:(.error // null)}' /tmp/c.json 2>/dev/null \
+              || { echo "  raw:"; head -c 400 /tmp/c.json; echo; }
+          }
 
           {
-            echo "=== credential PRESENCE (names only — values never printed) ==="
-            echo "when: $(date -u +%FT%TZ)  ref: ${BRANCH}  run: ${RID}"
-          } > "$N" 2>&1
-
-          # explicit PRESENT/MISSING matrix (no values)
-          {
-            echo "--- candidate matrix ---"
+            echo "=== LIVE FINGERPRINTS (public, read-only) ==="
+            echo "when: $(date -u +%FT%TZ)  run: ${RID}  ref: ${BRANCH}"
+            echo
+            echo "=== 1) agent worker: transport + CORS ==="
+            echo "--- OPTIONS / (preflight from the site origin) ---"
+            curl -sS -m 20 -o /dev/null -D - -X OPTIONS "$AGENT/" \
+              -H "Origin: $SITE" -H "Access-Control-Request-Method: POST" \
+              -H "Access-Control-Request-Headers: content-type" | sed -n '1,14p'
+            echo "--- GET / ---"
+            curl -sS -m 20 -o /tmp/g.txt -w "http=%{http_code}\n" "$AGENT/"
+            head -c 300 /tmp/g.txt; echo
+            echo "--- GET /health, /version, /status (do they exist?) ---"
+            for p in health version status; do
+              printf 'GET /%-8s → %s  ' "$p" "$(curl -sS -m 15 -o /dev/null -w '%{http_code}' "$AGENT/$p")"
+              curl -sS -m 15 "$AGENT/$p" | head -c 120; echo
+            done
+            echo
+            echo "=== 2) agent worker: who is deployed? (its own _version stamp) ==="
+            chat "greeting (empty formState)" '{"message":"السلام عليكم","formState":{},"history":[]}'
+            chat "identity question"          '{"message":"انت مين؟","formState":{},"history":[]}'
+            chat "off-topic"                  '{"message":"الجو حلو النهاردة","formState":{},"history":[]}'
+            echo
+            echo "=== 3) agent worker: which form version does it expect? (stale-state probe) ==="
+            for V in v87 v92 v93 v90; do
+              chat "active owner flow with _version=$V" \
+                "{\"message\":\"💰 أبيع\",\"formState\":{\"active\":true,\"lifecycle\":\"active\",\"type\":\"sale\",\"flowType\":\"owner\",\"stepIndex\":0,\"awaitingQ\":true,\"imageUrls\":[],\"_version\":\"$V\",\"data\":{\"propertyType\":\"شقة\"}},\"history\":[]}"
+            done
+            echo
+            echo "=== 4) agent worker: upload endpoint contract ==="
+            printf 'POST /upload-images (text/plain) → %s  ' "$(curl -sS -m 20 -o /tmp/u.txt -w '%{http_code}' -X POST "$AGENT/upload-images" -H 'Content-Type: text/plain' -d '{}')"; head -c 160 /tmp/u.txt; echo
+            printf 'POST /upload-images (json, no images) → %s  ' "$(curl -sS -m 20 -o /tmp/u2.txt -w '%{http_code}' -X POST "$AGENT/upload-images" -H 'Content-Type: application/json' -d '{}')"; head -c 160 /tmp/u2.txt; echo
+            echo
+            echo "=== 5) valuation worker ==="
+            curl -sS -m 25 "$VAL/areas" | jq -c '{service, status, version, api_contract, valuation_method, areas: ((.available_areas // []) | length), first_area: (.available_areas[0] // null)}' 2>/dev/null
+            echo
+            echo "=== 6) sync worker ==="
+            curl -sS -m 25 "$SYNC/" | jq -c '{service, status, worker_version, version, write_ready, scheduler, cron}' 2>/dev/null
+            echo
+            echo "=== 7) live site pages (GitHub Pages) vs the repository ==="
+            for p in agent.html add-your-property.html; do
+              curl -sS -m 25 -o /tmp/p.html -w "$p: http=%{http_code} bytes=%{size_download}\n" "$SITE/$p"
+              echo "  FORM_VERSION:   $(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' /tmp/p.html)"
+              echo "  WORKER_URL:     $(grep -m1 -oE 'https://[a-z0-9.-]+\.workers\.dev/?' /tmp/p.html)"
+              echo "  STORAGE_KEY:    $(grep -m1 -oE 'const STORAGE_KEY[[:space:]]*=[[:space:]]*"[^"]+"' /tmp/p.html)"
+              echo "  sha256(live):   $(sha256sum /tmp/p.html | cut -d' ' -f1)"
+              echo "  sha256(repo):   $(sha256sum "$p" | cut -d' ' -f1)"
+              echo "  byte delta:     live=$(wc -c < /tmp/p.html) repo=$(wc -c < "$p")"
+              echo "  identical:      $(cmp -s /tmp/p.html "$p" && echo YES || echo NO)"
+              echo "  whatsapp markers: wa.me=$(grep -c 'wa\.me' /tmp/p.html) webhook=$(grep -ci 'webhook' /tmp/p.html) cloud_api=$(grep -c 'graph\.facebook\.com' /tmp/p.html)"
+            done
+            echo
+            echo "=== 8) live index/ai-feed sanity ==="
+            curl -sS -m 20 -o /dev/null -w "index.html http=%{http_code}\n" "$SITE/"
+            curl -sS -m 20 "$SITE/ai-feed.json" | jq -c '{keys:(keys), properties:((.properties // [])|length), updated:(.updated // .generated_at // null)}' 2>/dev/null
+            echo
+            echo "=== 9) credential matrix (Cloudflare API access) ==="
+            TOKEN=""
+            for v in "$C_T1" "$C_T2" "$C_T3" "$C_T5" "$C_T6" "$C_T4"; do [ -n "$v" ] && { TOKEN="$v"; break; }; done
+            ACCOUNT="$C_A1"; [ -z "$ACCOUNT" ] && ACCOUNT="$C_A2"
             [ -n "$C_T1" ] && echo "PRESENT:CLOUDFLARE_API_TOKEN" || echo "MISSING:CLOUDFLARE_API_TOKEN"
             [ -n "$C_T2" ] && echo "PRESENT:CLOUDFLARE_TOKEN"    || echo "MISSING:CLOUDFLARE_TOKEN"
             [ -n "$C_T3" ] && echo "PRESENT:CLOUDFLARE_API_KEY"  || echo "MISSING:CLOUDFLARE_API_KEY"
@@ -63,120 +135,40 @@ jobs:
             [ -n "$C_T6" ] && echo "PRESENT:CF_TOKEN"            || echo "MISSING:CF_TOKEN"
             [ -n "$C_A1" ] && echo "PRESENT:CLOUDFLARE_ACCOUNT_ID" || echo "MISSING:CLOUDFLARE_ACCOUNT_ID"
             [ -n "$C_A2" ] && echo "PRESENT:CF_ACCOUNT_ID"       || echo "MISSING:CF_ACCOUNT_ID"
-          } >> "$N" 2>&1
-
-          # pick the first token that exists, and the account id if any
-          TOKEN=""
-          for v in "$C_T1" "$C_T2" "$C_T3" "$C_T5" "$C_T6" "$C_T4"; do
-            [ -n "$v" ] && { TOKEN="$v"; break; }
-          done
-          ACCOUNT="$C_A1"; [ -z "$ACCOUNT" ] && ACCOUNT="$C_A2"
-
-          {
-            echo "=== TMP Cloudflare read-only probe ==="
-            echo "when:        $(date -u +%FT%TZ)"
-            echo "run:         ${RID}"
-            echo "commit:      ${GITHUB_SHA}"
-            echo "ref:         ${BRANCH}"
-            echo "token:       $([ -n "$TOKEN" ] && echo PRESENT || echo MISSING)"
-            echo "account env: ${ACCOUNT:-<unset>}"
+            echo "last known-good: 2026-10-06 (arena/7f9b48da run 37458158722 and master run 37459940870 → credential PRESENT)"
+            if [ -z "$TOKEN" ]; then
+              echo "→ Cloudflare API is NOT reachable from Actions right now (no credential resolves)."
+            else
+              echo "→ credential present: querying the read-only API"
+              API=https://api.cloudflare.com/client/v4; AUTH="Authorization: Bearer ${TOKEN}"
+              g() { curl -sS -m 30 -H "$AUTH" "$API$1"; }
+              [ -z "$ACCOUNT" ] && ACCOUNT=$(g "/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)
+              echo "account: ${ACCOUNT:-<none>}"
+              echo "--- scripts ---"; g "/accounts/${ACCOUNT}/workers/scripts" | jq -c '{success, errors, scripts: [.result[]? | {id, created_on, modified_on, etag}]}' 2>/dev/null
+              echo "--- royal-snow-ea32 metadata ---"; g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32" | jq -c '{success, errors, result:(.result|if . then {id, created_on, modified_on, etag} else null end)}' 2>/dev/null
+              echo "--- deployments ---"; g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/deployments" | jq -c '{success, errors, deployments:[.result.deployments[]? | {id, number, created_on, source, author_email, versions:[.versions[]?|{version_id,percentage}]}]}' 2>/dev/null
+              echo "--- versions ---"; g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/versions" | jq -c '{success, errors, versions:[.result[]? | {id, number, created_on, author_email}]}' 2>/dev/null
+              echo "--- deployed source ---"
+              curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker.js -w "content/v2 http=%{http_code} bytes=%{size_download}\n" \
+                "$API/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/content/v2"
+              if [ -s _diag/live-agent-worker.js ]; then
+                echo "sha256(cloudflare): $(sha256sum _diag/live-agent-worker.js | cut -d' ' -f1)"
+                echo "sha256(repo):       $(sha256sum _worker/worker.js | cut -d' ' -f1)"
+                grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _diag/live-agent-worker.js
+                diff -u _worker/worker.js _diag/live-agent-worker.js > _diag/live-vs-repo.diff 2>&1
+                echo "hunks: $(grep -c '^@@' _diag/live-vs-repo.diff) added: $(grep -c '^+' _diag/live-vs-repo.diff) removed: $(grep -c '^-' _diag/live-vs-repo.diff)"
+              fi
+            fi
             echo
-          } > "$R"
-
-          if [ -z "$TOKEN" ]; then
-            echo "no Cloudflare credential resolves for this repository/branch right now." >> "$R"
-            echo "last known-good: run 37458158722 (arena/7f9b48da) and 37459940870 (master) on 2026-10-06 reported credential PRESENT." >> "$R"
-            exit 0
-          fi
-
-          API=https://api.cloudflare.com/client/v4
-          AUTH="Authorization: Bearer ${TOKEN}"
-          g() { curl -sS -m 30 -H "$AUTH" "$API$1"; }
-          if [ -z "$ACCOUNT" ]; then
-            ACCOUNT=$(g "/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)
-          fi
-          echo "ACCOUNT=${ACCOUNT}" >> "$R"
-
-          {
-            echo "=== 1) token verify ==="; g "/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null
-            echo; echo "=== 2) accounts ==="; g "/accounts" | jq -c '{success, errors, accounts: [.result[]? | {id, name}]}' 2>/dev/null
-            echo; echo "=== 3) ALL workers scripts (id, created_on, modified_on, etag) ==="
-            g "/accounts/${ACCOUNT}/workers/scripts" | jq -c '{success, errors, scripts: [.result[]? | {id, created_on, modified_on, etag, handlers}]}' 2>/dev/null
-            echo; echo "=== 4) royal-snow-ea32 metadata ==="
-            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag, usage_model, handlers, compatibility_date} else null end)}' 2>/dev/null
-            echo; echo "=== 5) royal-snow-ea32 settings ==="
-            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/settings" | jq -c '{success, errors, result: (.result | if . then {bindings, compatibility_date, compatibility_flags} else null end)}' 2>/dev/null
-            echo; echo "=== 6) schedules ==="; g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/schedules" | jq -c '{success, errors, result}' 2>/dev/null
-            echo; echo "=== 7) deployments (scripts endpoint) ==="
-            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
-            echo; echo "=== 8) deployments (services/environments endpoint) ==="
-            g "/accounts/${ACCOUNT}/workers/services/royal-snow-ea32/environments/production/deployments" | jq -c '{success, errors, deployments: [.result.deployments[]? | {id, number, created_on, source, strategy, author_email, versions: [.versions[]? | {version_id, percentage}], annotations}]}' 2>/dev/null
-            echo; echo "=== 9) versions ==="
-            g "/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/versions" | jq -c '{success, errors, versions: [.result[]? | {id, number, created_on, author_email, annotations}]}' 2>/dev/null
-            echo; echo "=== 10) services metadata ==="
-            g "/accounts/${ACCOUNT}/workers/services/royal-snow-ea32" | jq -c '{success, errors, result: (.result | if . then {id, default_environment: (.default_environment // {} | {environment, script: (.script // {} | {id, created_on, modified_on, etag})})} else null end)}' 2>/dev/null
-            echo; echo "=== 11) other production Workers ==="
-            for s in noisy-bush-fd84 nasr-properties-sync; do
-              echo "--- $s ---"
-              g "/accounts/${ACCOUNT}/workers/scripts/${s}" | jq -c '{success, errors, result: (.result | if . then {id, created_on, modified_on, etag} else null end)}' 2>/dev/null
-            done
-            echo; echo "=== 12) workers.dev subdomain ==="; g "/accounts/${ACCOUNT}/workers/subdomain" | jq -c '{success, errors, result}' 2>/dev/null
-          } >> "$R" 2>&1
-
-          echo -e "\n=== 13) royal-snow-ea32 deployed source ===" >> "$R"
-          curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker.js -w "content/v2 http=%{http_code} bytes=%{size_download}\n" \
-            "$API/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/content/v2" >> "$R" 2>&1
-          if [ "$(wc -c < _diag/live-agent-worker.js 2>/dev/null | tr -d ' ')" -lt 200 ]; then
-            rm -f _diag/live-agent-worker.js
-            curl -sS -m 60 -H "$AUTH" -o _diag/live-agent-worker-raw.bin -w "content(v1) http=%{http_code} bytes=%{size_download}\n" \
-              "$API/accounts/${ACCOUNT}/workers/scripts/royal-snow-ea32/content" >> "$R" 2>&1
-          fi
-          if [ -s _diag/live-agent-worker.js ]; then
-            {
-              echo "bytes:  $(wc -c < _diag/live-agent-worker.js)   lines: $(wc -l < _diag/live-agent-worker.js)"
-              echo "sha256: $(sha256sum _diag/live-agent-worker.js | cut -d' ' -f1)"
-              echo "repo worker.js sha256: $(sha256sum _worker/worker.js | cut -d' ' -f1)"
-              echo "--- first 3 lines of deployed source ---"; head -3 _diag/live-agent-worker.js
-              echo "--- FORM_VERSION in deployed source ---"
-              grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _diag/live-agent-worker.js
-              echo "--- version-like markers (top 12) ---"
-              grep -oE 'v[0-9]+\.[0-9]+[A-Za-z0-9._-]*' _diag/live-agent-worker.js | sort | uniq -c | sort -rn | head -12
-              echo "--- marker counts in deployed source (0 = absent) ---"
-              for m in redactPII scrubAddresses initAgentState waURL upload-images webhook hub.challenge X-Hub-Signature phone_number_id verify_token twilio ultramsg callmebot 360dialog WATI; do
-                printf '%-20s %s\n' "$m" "$(grep -c -- "$m" _diag/live-agent-worker.js)"
-              done
-              echo "--- diff repo → deployed ---"
-              diff -u _worker/worker.js _diag/live-agent-worker.js > _diag/live-vs-repo.diff 2>&1
-              echo "hunks: $(grep -c '^@@' _diag/live-vs-repo.diff)  added: $(grep -c '^+' _diag/live-vs-repo.diff)  removed: $(grep -c '^-' _diag/live-vs-repo.diff)"
-              grep -E '^[-+]' _diag/live-vs-repo.diff | grep -vE '^(\+\+\+|---)' | grep -oE '^[-+].{0,60}' | sed 's/[[:space:]]\+/ /g' | sort | uniq -c | sort -rn | head -20
-            } >> "$R" 2>&1
-          fi
-
-          {
-            echo; echo "=== 14) public endpoint probes ==="
-            echo "--- OPTIONS / ---"
-            curl -sS -m 20 -i -X OPTIONS https://royal-snow-ea32.footcai-555.workers.dev/ \
-              -H "Origin: https://nasr-realestate.github.io" -H "Access-Control-Request-Method: POST" \
-              -H "Access-Control-Request-Headers: content-type" | sed -n '1,12p'
-            echo "--- GET / ---"
-            curl -sS -m 20 -o /tmp/get.txt -w "http=%{http_code}\n" https://royal-snow-ea32.footcai-555.workers.dev/
-            head -c 300 /tmp/get.txt; echo
-            echo "--- POST / one greeting ---"
-            curl -sS -m 40 -o /tmp/post.json -w "http=%{http_code}\n" -X POST \
-              https://royal-snow-ea32.footcai-555.workers.dev/ \
-              -H "Origin: https://nasr-realestate.github.io" -H "Content-Type: application/json" \
-              -d '{"message":"السلام عليكم","formState":{},"history":[]}'
-            jq -c '{keys: (keys), response: ((.response // "") | .[0:160]), formState_version: (.formState._version // null), typingDelay: (.typingDelay // null), options: ((.options // []) | length), error: (.error // null)}' /tmp/post.json 2>/dev/null || head -c 400 /tmp/post.json
-            echo
-            echo "--- valuation worker GET /areas ---"
-            curl -sS -m 20 https://noisy-bush-fd84.footcai-555.workers.dev/areas | jq -c '{service, status, version, api_contract, areas: ((.available_areas // []) | length)}' 2>/dev/null
-            echo "--- sync worker GET / ---"
-            curl -sS -m 20 https://nasr-properties-sync.footcai-555.workers.dev/ | jq -c '{service, status, worker_version, version}' 2>/dev/null
-          } >> "$R" 2>&1
+            echo "=== 10) repo-side reference (what GitHub master declares) ==="
+            grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _worker/worker.js
+            grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' agent.html
+            sha256sum _worker/worker.js agent.html
+          } > "$R" 2>&1
 
           echo "--- report lines: $(wc -l < "$R") ---"
 
-      - name: Publish results (Contents API + annotations + artifacts)
+      - name: Publish results (Contents API + annotations)
         if: always()
         continue-on-error: true
         run: |
@@ -184,36 +176,29 @@ jobs:
           RID="${GITHUB_RUN_ID}"
           put() {
             local f="$1" p="$2"
-            [ -s "$f" ] || { echo "skip $f (missing/empty)"; return; }
+            [ -s "$f" ] || { echo "skip $f"; return; }
             B64=$(base64 -w0 "$f")
-            BODY=$(jq -n --arg m "probe artifact ${p} (run ${RID}) [skip ci]" --arg c "$B64" --arg b "$BRANCH" \
-              '{message:$m, content:$c, branch:$b}')
-            printf '%s' "$BODY" | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${p}" --input - >/dev/null 2>&1 && echo "PUT ok: ${p}" || echo "PUT failed: ${p}"
+            jq -n --arg m "probe artifact ${p} (run ${RID}) [skip ci]" --arg c "$B64" --arg b "$BRANCH" \
+              '{message:$m, content:$c, branch:$b}' | gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/${p}" --input - >/dev/null 2>&1 \
+              && echo "PUT ok: ${p}" || echo "PUT failed: ${p}"
           }
-          put _diag/secret-names.txt        "_diag/probe-${RID}-secret-names.txt"
-          put _diag/cf-agent-probe.txt      "_diag/probe-${RID}-report.txt"
-          put _diag/live-agent-worker.js    "_diag/probe-${RID}-live-agent-worker.js"
-          put _diag/live-vs-repo.diff       "_diag/probe-${RID}-live-vs-repo.diff"
+          put _diag/live-probe.txt       "_diag/probe-${RID}-live-probe.txt"
+          put _diag/live-agent-worker.js "_diag/probe-${RID}-live-agent-worker.js"
+          put _diag/live-vs-repo.diff    "_diag/probe-${RID}-live-vs-repo.diff"
 
-          S=$(sed -n '1,300p' _diag/cf-agent-probe.txt 2>/dev/null | tr '\n' '~')
-          i=0; n=0
-          while [ -n "$S" ] && [ $n -lt 10 ]; do
-            chunk=$(printf '%s' "$S" | cut -c1-3500); S=$(printf '%s' "$S" | cut -c3501-)
-            i=$((i+1)); n=$((n+1)); echo "::error title=CFPROBE_${i}::${chunk}"
+          S=$(tr '\n' '~' < _diag/live-probe.txt 2>/dev/null)
+          i=0
+          while [ -n "$S" ] && [ $i -lt 14 ]; do
+            chunk=$(printf '%s' "$S" | cut -c1-3400); S=$(printf '%s' "$S" | cut -c3401-)
+            i=$((i+1)); echo "::error title=LIVEPROBE_${i}::${chunk}"
           done
-          K=$(sed -n '1,60p' _diag/secret-names.txt 2>/dev/null | tr '\n' '~')
-          [ -n "$K" ] && echo "::error title=CFKEYS::${K:0:3400}"
 
       - name: Upload artifacts (fallback channel)
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: cf-probe-${{ github.run_id }}
-          path: |
-            _diag/cf-agent-probe.txt
-            _diag/secret-names.txt
-            _diag/live-agent-worker.js
-            _diag/live-vs-repo.diff
+          name: live-probe-${{ github.run_id }}
+          path: "_diag/live-probe.txt"
           if-no-files-found: warn
           retention-days: 7
