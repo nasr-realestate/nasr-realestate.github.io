@@ -19,8 +19,6 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     env:
-      SECRETS_JSON: ${{ toJSON(secrets) }}
-      VARS_JSON: ${{ toJSON(vars) }}
       # every credential name this repository has ever used for Cloudflare (values are
       # referenced but never echoed)
       C_T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -50,16 +48,8 @@ jobs:
           N=_diag/secret-names.txt
 
           {
-            echo "=== credential NAMES visible to this job (values never printed) ==="
+            echo "=== credential PRESENCE (names only — values never printed) ==="
             echo "when: $(date -u +%FT%TZ)  ref: ${BRANCH}  run: ${RID}"
-            echo "--- repository secrets ---"
-            printf '%s' "$SECRETS_JSON" | jq -r 'keys[]' 2>/dev/null | sort
-            echo "--- repository variables ---"
-            printf '%s' "$VARS_JSON" | jq -r 'keys[]' 2>/dev/null | sort
-            echo "--- explicit candidate check (PRESENT/MISSING only) ---"
-            for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_D1_TOKEN CF_API_TOKEN CF_TOKEN CLOUDFLARE_ACCOUNT_ID CF_ACCOUNT_ID; do
-              v="$(eval echo \"\$C_T1\" >/dev/null 2>&1; true)"   # placeholder, real check below
-            done
           } > "$N" 2>&1
 
           # explicit PRESENT/MISSING matrix (no values)
