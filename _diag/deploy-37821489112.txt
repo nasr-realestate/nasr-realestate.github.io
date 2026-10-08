@@ -1,0 +1,15 @@
+
+── 0) artifact identity (the Worker file must be untouched since the verified commit) ──
+HEAD          = 657aeb4a9887c8b1a7ceda1bea8c9cb3fe685c68  (workflow/doc commits after the fix are allowed)
+verified at   = 0288fa3ce6ff12cbedb341ba5a660d76fca76236
+worker.js sha = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+expected      = 4ca2fac9cd9e5fa6dc0e20db8f6934857be3ea64c7959d2bb91efa3974a6659e
+verified commit present in the clone: yes
+OK: worker.js is byte-identical to the verified build (no change since the fix commit)
+
+── 1) credential matrix (names only — values are never printed) ──
+MISSING: every candidate secret/variable name
+account id in use: 717c46b0d78a6f06589b8367a1a3cc5b
+account id in use: 717c46b0d78a6f06589b8367a1a3cc5b
+VERDICT: STOP — NO Cloudflare credential available in this repository; NOTHING was deployed
+::error title=DEPLOY_BLOCKED::NO Cloudflare credential (all candidate secret names MISSING) — nothing deployed, production untouched.
