@@ -354,16 +354,86 @@ test("the 💎 button is one link, replaced on every reply and removed when the 
   assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 0);
 });
 
-test("a failed or unreachable Worker shows a clear message and unlocks the input", async () => {
+test("a failed or unreachable Worker shows a clear message, preserves the draft, and unlocks the input", async () => {
   const bad = bootAgent({ fetchImpl: fetchOk({}, [], 500) });
   await send(bad, "مرحبا");
   assert.match(bad.messages().at(-1).innerHTML, /حصل خطأ مؤقت\. جرّب تاني\./);
+  assert.equal(bad.el("msgInput").value, "مرحبا");
+  assert.equal(bad.run("state.history.filter(m => m.role === 'user').length"), 0, "failed sends don't pollute history");
   assert.equal(bad.run("isSending"), false);
   assert.equal(bad.el("sendBtn").disabled, false);
-  const down = bootAgent({ fetchImpl: async () => { throw new TypeError("offline"); } });
+
+  let offlineAttempts = 0;
+  const offline = bootAgent({ onLine: false, fetchImpl: async () => { offlineAttempts += 1; throw new TypeError("offline"); } });
+  await send(offline, "مرحبا");
+  assert.equal(offlineAttempts, 1, "don't retry when the browser reports offline");
+  assert.match(offline.messages().at(-1).innerHTML, /الإنترنت عندك مفصول/);
+  assert.equal(offline.el("msgInput").value, "مرحبا");
+
+  const limited = bootAgent({ fetchImpl: fetchOk({}, [], 429) });
+  await send(limited, "مرحبا");
+  assert.match(limited.messages().at(-1).innerHTML, /وصلت رسائل كتير بسرعة/);
+  assert.equal(limited.el("msgInput").value, "مرحبا");
+
+  const down = bootAgent({ runTimers: true, fetchImpl: async () => { throw new TypeError("offline"); } });
   await send(down, "مرحبا");
   assert.match(down.messages().at(-1).innerHTML, /تعذّر الاتصال بالخادم/);
   assert.equal(down.run("isSending"), false);
+});
+
+test("a transient Worker network failure is retried once with the same payload", async () => {
+  let attempts = 0;
+  const bodies = [];
+  const recovered = bootAgent({
+    runTimers: true,
+    fetchImpl: async (_url, init) => {
+      attempts += 1;
+      bodies.push(JSON.parse(init.body));
+      if (attempts === 1) throw new TypeError("temporary network failure");
+      return { ok: true, status: 200, json: async () => ({ response: "تمام", formState: { _version: "v92" } }) };
+    },
+  });
+  await send(recovered, "عايز أشتري");
+  assert.equal(attempts, 2);
+  assert.deepEqual(bodies[0], bodies[1], "the retry must reuse the original message and conversation state");
+  assert.equal(recovered.run("state.history.filter(m => m.role === 'user').length"), 1);
+  assert.match(recovered.messages().at(-1).innerHTML, /تمام/);
+  assert.equal(recovered.el("msgInput").value, "");
+});
+
+test("a Worker request that hangs is aborted and the typed message remains available", async () => {
+  class TestAbortController {
+    constructor() {
+      this.signal = {
+        aborted: false,
+        listeners: [],
+        addEventListener(type, listener) { if (type === "abort") this.listeners.push(listener); },
+      };
+    }
+    abort() {
+      if (this.signal.aborted) return;
+      this.signal.aborted = true;
+      this.signal.listeners.forEach(listener => listener());
+    }
+  }
+  let attempts = 0;
+  const slow = bootAgent({
+    runTimers: true,
+    AbortControllerImpl: TestAbortController,
+    fetchImpl: (_url, init) => {
+      attempts += 1;
+      return new Promise((_resolve, reject) => {
+        init.signal.addEventListener("abort", () => {
+          const error = new Error("aborted"); error.name = "AbortError"; reject(error);
+        });
+      });
+    },
+  });
+  await send(slow, "عايز أشتري");
+  assert.equal(attempts, 1, "a timed-out request is not automatically duplicated");
+  assert.match(slow.messages().at(-1).innerHTML, /الرد اتأخر عن المعتاد/);
+  assert.equal(slow.el("msgInput").value, "عايز أشتري");
+  assert.equal(slow.run("isSending"), false);
 });
 
 // ───────── التمرير الذكي ─────────
