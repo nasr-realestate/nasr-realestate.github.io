@@ -3,6 +3,7 @@ name: Agent Worker — read-only live audit
 on:
   push:
     branches:
+      - master
       - arena/cab1e226-nasr-realestate-github-io
     paths:
       - .github/workflows/agent-worker-readonly-audit.yml
