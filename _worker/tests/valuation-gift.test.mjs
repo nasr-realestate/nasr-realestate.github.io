@@ -30,7 +30,7 @@ test("the gift step comes after the basic data and before the personal data, for
   assert.match(sale.json.response, /\(10\/13\)$/, "10th of 13: after the 9 data questions, before name and phone");
   assert.deepEqual(sale.json.options, GIFT_OPTIONS);
   assert.equal(sale.json.valuationCta.intent, "seller");
-  assert.equal(sale.json.valuationCta.area, ADDRESS);
+  assert.equal(sale.json.valuationCta.area, "المنطقة السادسة", "the CTA carries the canonical district, never the street address");
   assert.equal(sale.json.valuationCta.size, 180);
   assert.equal(sale.json.valuationCta.areaType, "sale");
   assert.equal(sale.json.valuationCta.rentCondition, null);
@@ -228,7 +228,7 @@ test("end to end (rent): a furnished-rent owner gets the furnished snapshot, lab
   await send(agentBefore, "لا");
   const button = agentBefore.chatArea.querySelector(".valuation-link");
   assert.deepEqual(Object.fromEntries(new URL(button.href, BASE).searchParams), {
-    from: "agent", journey: "seller", area: "المنطقة السادسة شارع عباس العقاد", size: "180", type: "apartment", deal: "rent", furnished: "yes", floor: "3", price: "9000",
+    from: "agent", journey: "seller", area: "6th-district", size: "180", type: "apartment", deal: "rent", furnished: "yes", floor: "3", price: "9000",
   });
   const posts = [];
   const page = createPageContext({

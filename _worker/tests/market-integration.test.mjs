@@ -161,49 +161,52 @@ test("M3 [was #3]: the valuation Worker serves D1 areas on /areas and D1 estimat
 
 test("M4 [was #4]: the agent never quotes a price and never starts a valuation by itself; the 💎 button belongs to the owner's gift step and keeps the seller's context", async () => {
   const quote = /سعر المتر في بيانات D1|بيانات D1|التقييم السوقي/;
-  // أسئلة السعر: Gemini بس (مفيش اقتباس أسعار ولا زر تقييم) — والقوائم/الأسعار اللي في ai-feed مش بتدخل الـprompt
+  // v9.2: أسئلة السعر والتحية بتتجاب حتمًا (من غير Gemini) — مفيش اقتباس أسعار، ومفيش CTA ولا واتساب، والقوائم/الأسعار اللي في ai-feed مش بتظهر
   for (const message of ["سعر المتر في المنطقة الأولى كام؟", "شقتي في المنطقة الأولى ١٨٠ متر تسوى كام؟", "السلام عليكم"]) {
     resetGemini();
     const { json } = await agentPost({ message, formState: {}, history: [] });
-    assert.equal(gemini.length, 1, message);
-    assert.equal(json.response, "-", `${message}: the (mocked) Gemini text is passed through, nothing is quoted`);
+    assert.equal(gemini.length, 0, `${message}: deterministic reply, the model is not called`);
     assert.doesNotMatch(json.response, quote);
-    assert.equal(json.valuationCta, undefined, message);
+    assert.doesNotMatch(JSON.stringify(json), /6,?200,?000/, "feed prices never reach the reply");
+    assert.equal(json.valuationCta, undefined, "no seller CTA before the gift step");
     assert.equal(json.whatsappUrl, undefined);
-    assert.equal(json.readyToSend, undefined);
-    assert.ok(!/6,?200,?000/.test(geminiText()), "feed prices never reach the model");
+    assert.ok(!json.readyToSend, "nothing is marked ready to send");
   }
   // نية البيع بتبدأ تسجيل المالك من الأول (بدون ما نفترض أي بيانات من النص الحر) ومن غير زر تقييم في الخطوات العادية
   for (const message of ["عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر", "أريد بيع شقتي في المنطقة الأولى ١٨٠ متر", "عايز أبيع شقتي في المنطقة الأولى ١٨٠ متر، تسوى كام؟"]) {
     const { json } = await agentPost({ message, formState: {}, history: [] });
     assert.equal(json.formState.flowType, "owner", message);
-    assert.equal(json.formState.stepIndex, 0);
-    assert.equal(json.formState.data.area, undefined);
-    assert.equal(json.formState.data.propertyType, undefined);
+    // v9.2 بيستخرج اللي اتقال في النص (نوع/مساحة) ويكمل الأسئلة: أي قيمة مستخرجة لازم تطابق النص، ومفيش سعر متخيّل
+    assert.ok(json.formState.data.area === undefined || json.formState.data.area === 180, message);
+    assert.ok(json.formState.data.propertyType === undefined || json.formState.data.propertyType === "شقة", message);
+    assert.equal(json.formState.data.price, undefined, "no price is invented from free text");
     assert.equal(json.valuationCta, undefined, "no CTA before the gift step");
     assert.equal(json.done, false);
     assert.equal(json.readyToSend, false);
     assert.equal(json.whatsappUrl, undefined);
     assert.doesNotMatch(json.response, quote);
   }
-  // سؤال السعر وسط التسجيل مبيحرّكش الخطوة ومبيطلعش زر ولا واتساب، لا للمالك ولا للمشتري
+  // سؤال السعر وسط التسجيل مبيرجعش الخطوة ومبيبعتش حاجة لطارق، لا للمالك ولا للمشتري.
+  // (الحالة دي بيانات الأساسية فيها مكتملة، فالـflow بيكمل لخطوة الهدية زي ما كان قبل v9.2 — ومعاها الـCTA الطبيعي بتاعها)
   const owner = qualifiedOwnerState({ stepIndex: 2 });
   const ownerQ = (await agentPost({ message: "الشقة بتاعتي تسوى كام؟", formState: owner, history: [] })).json;
   assert.equal(ownerQ.formState.flowType, "owner");
-  assert.equal(ownerQ.formState.stepIndex, 2);
-  assert.equal(ownerQ.valuationCta, undefined);
+  assert.ok(ownerQ.formState.stepIndex >= 2, "a price question never rewinds the flow");
+  assert.doesNotMatch(ownerQ.response, quote);
   assert.equal(ownerQ.whatsappUrl, undefined);
+  assert.ok(!ownerQ.readyToSend, "nothing is sent by a price question");
   const buyerQ = (await agentPost({ message: "سعر المتر في المنطقة الأولى كام؟", formState: { ...owner, flowType: "buyer" }, history: [] })).json;
   assert.equal(buyerQ.formState.flowType, "buyer");
-  assert.equal(buyerQ.formState.stepIndex, 2);
-  assert.equal(buyerQ.valuationCta, undefined);
+  assert.ok(buyerQ.formState.stepIndex >= 2, "a price question never rewinds the flow");
+  assert.doesNotMatch(buyerQ.response, quote);
   assert.ok(!buyerQ.readyToSend, "a price question never completes or sends the request");
   assert.equal(buyerQ.whatsappUrl, undefined);
 
   // خطوة الهدية: الزر مع سياق البائع كامل، وما فيش إرسال لطارق
   const sale = (await driveOwnerToGift()).json;
   assert.deepEqual(sale.valuationCta, {
-    intent: "seller", area: ADDRESS, size: 180, propertyType: "شقة", areaType: "sale", rentCondition: null, price: 9500000, floor: "ثالث", finishing: "سوبر لوكس",
+    // الرابط بيحمل اسم المنطقة المعيّن فقط، مش العنوان الشارع (حماية الخصوصية)
+    intent: "seller", area: "المنطقة السادسة", size: 180, propertyType: "شقة", areaType: "sale", rentCondition: null, price: 9500000, floor: "ثالث", finishing: "سوبر لوكس",
   });
   assert.deepEqual(sale.options, ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"]);
   assert.equal(sale.readyToSend, false);
