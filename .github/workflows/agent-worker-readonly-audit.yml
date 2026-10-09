@@ -1,4 +1,4 @@
-name: Agent Worker — read-only live audit
+name: Agent Worker — live audit and safe smoke test
 
 on:
   push:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   audit:
-    name: Read current Agent Worker and Pages fingerprints
+    name: Read live fingerprints and test stateless identity route
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -31,7 +31,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Read-only live audit (GET / OPTIONS only)
+      - name: Live audit (GET / OPTIONS plus one stateless identity POST; no D1 or Gemini)
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +63,7 @@ jobs:
           add_summary "page_http=$PAGE_CODE page_form=${PAGE_VERSION:-not-found} page_worker=${PAGE_WORKER_URL:-not-found}"
 
           echo
-          echo "=== Worker transport (GET / OPTIONS only; no chat POST) ==="
+          echo "=== Worker transport (GET / OPTIONS plus one stateless identity POST) ==="
           if ! GET_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/worker-get.json -w '%{http_code}' "$WORKER_URL/"); then GET_CODE=000; fi
           echo "GET / HTTP=$GET_CODE (405 is expected for this POST-only Worker)"
           add_summary "worker_get=$GET_CODE"
@@ -82,6 +82,19 @@ jobs:
             sleep 1
           done
           add_summary "options=$OPTIONS_PROBES allow_origin=${ALLOW_ORIGIN_LAST:-missing}"
+
+          echo
+          echo "=== Safe stateless Worker smoke (identity branch; no Gemini, D1, upload, or lead submission) ==="
+          if ! POST_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -D /tmp/worker-post.headers -o /tmp/worker-post.json -w '%{http_code}' \
+            -X POST "$WORKER_URL/" \
+            -H "Origin: $SITE_URL" \
+            -H 'Content-Type: application/json' \
+            --data-binary '{"message":"انت مين؟","formState":{},"history":[]}'); then POST_CODE=000; fi
+          POST_VERSION=$(jq -r '.formState._version // "not-found"' /tmp/worker-post.json 2>/dev/null || echo invalid-json)
+          POST_RESPONSE_LENGTH=$(jq -r '(.response // "")|length' /tmp/worker-post.json 2>/dev/null || echo 0)
+          CF_RAY=$(awk 'BEGIN{IGNORECASE=1} /^cf-ray:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' /tmp/worker-post.headers 2>/dev/null || true)
+          echo "identity POST HTTP=$POST_CODE form_version=$POST_VERSION response_length=$POST_RESPONSE_LENGTH cf-ray=${CF_RAY:-<missing>}"
+          add_summary "worker_identity_post=$POST_CODE post_form=$POST_VERSION cf_ray=${CF_RAY:-missing}"
 
           echo
           echo "=== Cloudflare API metadata (GET only; secret values are never requested or printed) ==="
@@ -159,7 +172,13 @@ jobs:
               print('live worker.js bytes:', len(module))
               print('live worker.js sha256:', live_sha)
               print('repo worker.js sha256:', repo_sha)
+              linewise_equal = module.decode('utf-8', 'replace').splitlines() == repo.decode('utf-8', 'replace').splitlines()
+              lf_normalized_equal = module.replace(b'\r\n', b'\n').replace(b'\r', b'\n') == repo.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+              trailing_eol_ignored_equal = module.rstrip(b'\r\n') == repo.rstrip(b'\r\n')
               print('live module byte-for-byte equals this branch:', module == repo)
+              print('live module equal line-by-line:', linewise_equal)
+              print('equal after CRLF/CR to LF normalization:', lf_normalized_equal)
+              print('equal ignoring trailing line endings:', trailing_eol_ignored_equal)
               print('live release header:', release_header)
               print('live FORM_VERSION:', live_form)
               print('live module contains v9.3-W:', b'v9.3-W' in module)
@@ -194,7 +213,7 @@ jobs:
               print('changed declaration names:', symbols)
               print('network-related marker presence:', marker_text)
               with open('/tmp/agent-audit-module-meta.txt', 'w') as f:
-                  f.write(f'live_sha={live_sha} live_form={live_form} release_header={release_header} byte_match={str(module == repo).lower()} changed_regions={regions} changed_symbols={symbols} markers={marker_text}')
+                  f.write(f'live_sha={live_sha} live_form={live_form} release_header={release_header} byte_match={str(module == repo).lower()} linewise_equal={str(linewise_equal).lower()} lf_normalized_equal={str(lf_normalized_equal).lower()} trailing_eol_ignored_equal={str(trailing_eol_ignored_equal).lower()} changed_regions={regions} changed_symbols={symbols} markers={marker_text}')
           PY
             MODULE_META=$(cat /tmp/agent-audit-module-meta.txt 2>/dev/null || echo module-unavailable)
           else
