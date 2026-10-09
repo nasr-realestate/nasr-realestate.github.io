@@ -1,0 +1,212 @@
+name: Agent Worker — read-only live audit
+
+on:
+  push:
+    branches:
+      - master
+      - arena/cab1e226-nasr-realestate-github-io
+    paths:
+      - .github/workflows/agent-worker-readonly-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-worker-readonly-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Read current Agent Worker and Pages fingerprints
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 717c46b0d78a6f06589b8367a1a3cc5b
+      WORKER_NAME: royal-snow-ea32
+      WORKER_URL: https://royal-snow-ea32.footcai-555.workers.dev
+      SITE_URL: https://nasr-realestate.github.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read-only live audit (GET / OPTIONS only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API="https://api.cloudflare.com/client/v4"
+          REPO_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
+          REPO_FORM=$(grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _worker/worker.js || true)
+          SUMMARY="commit=$(git rev-parse HEAD) repo_worker_sha=$REPO_SHA repo_form=$REPO_FORM"
+          add_summary(){ SUMMARY="${SUMMARY}; $1"; }
+          publish_summary(){
+            echo "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Agent Worker audit::$SUMMARY"
+          }
+
+          echo "=== Repository artifact ==="
+          echo "commit: $(git rev-parse HEAD)"
+          echo "worker sha256: $REPO_SHA"
+          echo "worker FORM_VERSION: $REPO_FORM"
+          echo "page FORM_VERSION: $(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' agent.html || true)"
+
+          echo
+          echo "=== Public page fingerprint (GET only) ==="
+          if ! PAGE_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/agent-page.html -w '%{http_code}' "$SITE_URL/agent.html"); then PAGE_CODE=000; fi
+          PAGE_VERSION=$(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' /tmp/agent-page.html 2>/dev/null || true)
+          PAGE_WORKER_URL=$(grep -m1 -oE 'https://[a-z0-9.-]+\.workers\.dev/?' /tmp/agent-page.html 2>/dev/null || true)
+          echo "agent.html HTTP=$PAGE_CODE bytes=$(wc -c < /tmp/agent-page.html 2>/dev/null || echo 0)"
+          echo "live page FORM_VERSION: ${PAGE_VERSION:-<not found>}"
+          echo "live page WORKER_URL: ${PAGE_WORKER_URL:-<not found>}"
+          add_summary "page_http=$PAGE_CODE page_form=${PAGE_VERSION:-not-found} page_worker=${PAGE_WORKER_URL:-not-found}"
+
+          echo
+          echo "=== Worker transport (GET / OPTIONS only; no chat POST) ==="
+          if ! GET_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/worker-get.json -w '%{http_code}' "$WORKER_URL/"); then GET_CODE=000; fi
+          echo "GET / HTTP=$GET_CODE (405 is expected for this POST-only Worker)"
+          add_summary "worker_get=$GET_CODE"
+          OPTIONS_PROBES=""
+          ALLOW_ORIGIN_LAST=""
+          for n in 1 2 3 4 5; do
+            if ! OPTIONS_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -D /tmp/worker-options.headers -o /dev/null -w '%{http_code}' \
+              -X OPTIONS "$WORKER_URL/" \
+              -H "Origin: $SITE_URL" \
+              -H 'Access-Control-Request-Method: POST' \
+              -H 'Access-Control-Request-Headers: content-type'); then OPTIONS_CODE=000; fi
+            ALLOW_ORIGIN_LAST=$(awk 'BEGIN{IGNORECASE=1} /^access-control-allow-origin:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' /tmp/worker-options.headers 2>/dev/null || true)
+            [ -n "$OPTIONS_PROBES" ] && OPTIONS_PROBES="$OPTIONS_PROBES,"
+            OPTIONS_PROBES="${OPTIONS_PROBES}${n}:${OPTIONS_CODE}"
+            echo "OPTIONS probe $n HTTP=$OPTIONS_CODE allow-origin=${ALLOW_ORIGIN_LAST:-<missing>}"
+            sleep 1
+          done
+          add_summary "options=$OPTIONS_PROBES allow_origin=${ALLOW_ORIGIN_LAST:-missing}"
+
+          echo
+          echo "=== Cloudflare API metadata (GET only; secret values are never requested or printed) ==="
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN: unavailable to this workflow; no authenticated API request was made"
+            add_summary "cf_api_token=unavailable"
+            publish_summary
+            exit 0
+          fi
+          add_summary "cf_api_token=present"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+
+          if ! VERIFY_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-token-verify.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify"); then VERIFY_CODE=000; fi
+          TOKEN_STATUS=$(jq -r '.result.status // "unknown"' /tmp/cf-token-verify.json 2>/dev/null || echo unknown)
+          echo "token verify HTTP=$VERIFY_CODE status=$TOKEN_STATUS"
+          add_summary "token_verify=$VERIFY_CODE/$TOKEN_STATUS"
+
+          if ! SETTINGS_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-settings.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/settings"); then SETTINGS_CODE=000; fi
+          echo "settings HTTP=$SETTINGS_CODE"
+          if [ "$SETTINGS_CODE" = 200 ]; then
+            SETTINGS_META=$(jq -c '{compatibility_date:.result.compatibility_date,bindings:[.result.bindings[]?|{type,name}]}' /tmp/cf-settings.json 2>/dev/null || echo parse-error)
+          else
+            SETTINGS_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-settings.json 2>/dev/null || echo unavailable)
+          fi
+          echo "settings metadata: $SETTINGS_META"
+          add_summary "settings_http=$SETTINGS_CODE settings=$SETTINGS_META"
+
+          if ! DEPLOYMENTS_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-deployments.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/deployments"); then DEPLOYMENTS_CODE=000; fi
+          echo "deployments HTTP=$DEPLOYMENTS_CODE"
+          if [ "$DEPLOYMENTS_CODE" = 200 ]; then
+            DEPLOYMENT_META=$(jq -c '{deployments:[.result.deployments[0:8][]?|{id,created_on,versions:[.versions[]?|{version_id,percentage}],annotations:{tag:.annotations["workers/tag"],message:.annotations["workers/message"],triggered_by:.annotations["workers/triggered_by"]}}]}' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
+            MATCH_7751=$(jq -c --arg needle '7751a7dc' '[.result.deployments[]?|select((.id//""|contains($needle)) or any(.versions[]?; (.version_id//""|contains($needle))))|{id,created_on,versions:[.versions[]?|{version_id,percentage}]}]' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
+          else
+            DEPLOYMENT_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-deployments.json 2>/dev/null || echo unavailable)
+            MATCH_7751=unavailable
+          fi
+          echo "recent deployments: $DEPLOYMENT_META"
+          echo "7751a7dc matches: $MATCH_7751"
+          add_summary "deployments_http=$DEPLOYMENTS_CODE recent_deployments=$DEPLOYMENT_META id_7751=$MATCH_7751"
+
+          if ! CONTENT_CODE=$(curl -sS --connect-timeout 10 --max-time 45 -H "$AUTH" -o /tmp/cf-worker.raw -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME"); then CONTENT_CODE=000; fi
+          echo "script content HTTP=$CONTENT_CODE bytes=$(wc -c < /tmp/cf-worker.raw 2>/dev/null || echo 0)"
+          if [ "$CONTENT_CODE" = 200 ]; then
+            python3 - <<'PY'
+          import difflib
+          import hashlib
+          import re
+          from pathlib import Path
+
+          raw = Path('/tmp/cf-worker.raw').read_bytes()
+          repo = Path('_worker/worker.js').read_bytes()
+          module = raw
+          if raw.startswith(b'--') and b'\r\n' in raw:
+              boundary = raw[2:raw.index(b'\r\n')]
+              module = None
+              for part in raw.split(b'--' + boundary):
+                  if b'name="worker.js"' in part or b'filename="worker.js"' in part:
+                      _, body = part.split(b'\r\n\r\n', 1)
+                      module = body[:-2] if body.endswith(b'\r\n') else body
+                      break
+          if module is None:
+              print('worker.js module was not found in multipart; response body suppressed')
+          else:
+              Path('/tmp/live-agent-worker.js').write_bytes(module)
+              live_sha = hashlib.sha256(module).hexdigest()
+              repo_sha = hashlib.sha256(repo).hexdigest()
+              form_version = re.search(rb'const FORM_VERSION\s*=\s*"([^"]+)"', module)
+              live_form = form_version.group(1).decode() if form_version else 'not-found'
+              header = re.search(rb'Cloudflare Worker ([^\r\n]+)', module)
+              release_header = header.group(1).decode('utf-8', 'replace').strip() if header else 'not-found'
+              has_v93 = b'v9.3-W' in module
+              print('live worker.js bytes:', len(module))
+              print('live worker.js sha256:', live_sha)
+              print('repo worker.js sha256:', repo_sha)
+              linewise_equal = module.decode('utf-8', 'replace').splitlines() == repo.decode('utf-8', 'replace').splitlines()
+              lf_normalized_equal = module.replace(b'\r\n', b'\n').replace(b'\r', b'\n') == repo.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+              trailing_eol_ignored_equal = module.rstrip(b'\r\n') == repo.rstrip(b'\r\n')
+              print('live module byte-for-byte equals this branch:', module == repo)
+              print('live module equal line-by-line:', linewise_equal)
+              print('equal after CRLF/CR to LF normalization:', lf_normalized_equal)
+              print('equal ignoring trailing line endings:', trailing_eol_ignored_equal)
+              print('live release header:', release_header)
+              print('live FORM_VERSION:', live_form)
+              print('live module contains v9.3-W:', has_v93)
+              print('live module contains deployment id 7751a7dc:', b'7751a7dc' in module)
+
+              decl = re.compile(r'^\s*(?:async\s+)?function\s+([\w$]+)|^\s*(?:const|let|var)\s+([\w$]+)')
+              repo_lines = repo.decode('utf-8', 'replace').splitlines()
+              live_lines = module.decode('utf-8', 'replace').splitlines()
+              changed_symbols = set()
+              regions = 0
+              matcher = difflib.SequenceMatcher(a=repo_lines, b=live_lines)
+              for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+                  if tag == 'equal':
+                      continue
+                  regions += 1
+                  for lines, lo, hi in ((repo_lines, i1, i2), (live_lines, j1, j2)):
+                      for line in lines[max(0, lo-20):min(len(lines), max(hi, lo+1)+3)]:
+                          match = decl.match(line)
+                          if match:
+                              changed_symbols.add(match.group(1) or match.group(2))
+              symbols = ','.join(sorted(changed_symbols)[:40]) or 'unknown'
+              markers = {
+                  'cors_header': b'Access-Control-Allow-Origin' in module,
+                  'preflight': b'OPTIONS' in module,
+                  'gemini_timeout': b'FETCH_TIMEOUT_GEMINI' in module,
+                  'feed_timeout': b'FETCH_TIMEOUT_FEED' in module,
+                  'rate_limit': b'RATE_MAX' in module,
+                  'worker_url': b'royal-snow-ea32' in module,
+              }
+              marker_text = ','.join(f'{k}={str(v).lower()}' for k, v in markers.items())
+              print('changed diff regions:', regions)
+              print('changed declaration names:', symbols)
+              print('network-related marker presence:', marker_text)
+              with open('/tmp/agent-audit-module-meta.txt', 'w') as f:
+                  f.write(f'live_sha={live_sha} live_form={live_form} release_header={release_header} contains_v93={str(has_v93).lower()} byte_match={str(module == repo).lower()} linewise_equal={str(linewise_equal).lower()} lf_normalized_equal={str(lf_normalized_equal).lower()} trailing_eol_ignored_equal={str(trailing_eol_ignored_equal).lower()} changed_regions={regions} changed_symbols={symbols} markers={marker_text}')
+          PY
+            MODULE_META=$(cat /tmp/agent-audit-module-meta.txt 2>/dev/null || echo module-unavailable)
+          else
+            MODULE_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-worker.raw 2>/dev/null || echo unavailable)
+          fi
+          echo "module metadata: $MODULE_META"
+          add_summary "module_http=$CONTENT_CODE module=$MODULE_META"
+          publish_summary

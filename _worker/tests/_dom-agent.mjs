@@ -91,7 +91,7 @@ function makeStorage(initial = {}) {
 // يشغّل السكربت الرئيسي في agent.html. search = query string للصفحة (مثلًا "?return=valuation&estimate=…")،
 // session/local = محتوى sessionStorage/localStorage قبل التحميل (القيم نصوص).
 // runTimers: لما الاختبار بيمرّ على ردود Worker حقيقية (فيها typingDelay) الصفحة بتستنى setTimeout — فبننفّذها فورًا بدل الانتظار.
-export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, runTimers = false, visualViewport } = {}) {
+export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, runTimers = false, visualViewport, onLine, AbortControllerImpl } = {}) {
   const els = new Map();
   const timers = [];
   const errors = [];
@@ -123,8 +123,8 @@ export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, ru
   const sessionStorage = makeStorage(session);
   const localStorage = makeStorage(local);
   const ctx = vm.createContext({
-    window: win, document: doc, location, history, navigator: {}, sessionStorage, localStorage,
-    URL, URLSearchParams, console: { log() {}, warn() {}, error: (...a) => errors.push(a.join(" ")), info() {}, debug() {} },
+    window: win, document: doc, location, history, navigator: typeof onLine === "boolean" ? { onLine } : {}, sessionStorage, localStorage,
+    URL, URLSearchParams, AbortController: AbortControllerImpl, console: { log() {}, warn() {}, error: (...a) => errors.push(a.join(" ")), info() {}, debug() {} },
     fetch: fetchImpl || (async () => ({ ok: true, json: async () => ({}) })),
     requestAnimationFrame: cb => { cb(); return 0; }, // متزامن، وبيرجّع 0 = «مفيش frame معلّق» (الصفحة بتستخدم `if (!raf) raf = requestAnimationFrame(...)`)
     setTimeout: (fn, ms) => { timers.push({ fn, ms }); if (runTimers) setImmediate(fn); return timers.length; },
