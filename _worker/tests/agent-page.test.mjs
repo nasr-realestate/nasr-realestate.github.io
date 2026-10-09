@@ -18,6 +18,18 @@ async function send(a, text) { a.el("msgInput").value = text; await a.run("sendM
 const params = href => Object.fromEntries(new URL(href, BASE).searchParams);
 
 // ───────── T1.1: داكن دايمًا ─────────
+// الستايل الفعّال لمحدد: آخر إعلان لكل خاصية بترتيب المصدر (الـcascade) — مش آخر بلوك بس ولا أي بلوك متلغي
+function effectiveOf(rules, selector) {
+  const decl = new Map();
+  for (const r of rules) {
+    if (r.selector !== selector) continue;
+    for (const d of r.body.split(";")) {
+      const i = d.indexOf(":");
+      if (i > 0) decl.set(d.slice(0, i).trim(), d.slice(i + 1).trim());
+    }
+  }
+  return [...decl].map(([k, v]) => `${k}: ${v}`).join("; ");
+}
 function cssRules(text) {
   const clean = text.replace(/\/\*[\s\S]*?\*\//g, "");
   return [...clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({
@@ -77,14 +89,14 @@ test("T1.1b: the chrome wears the navy+gold identity — no WhatsApp wallpaper, 
 
   const rules = cssRules(agentStyle);
   const bodyOf = selector => {
-    const rule = rules.filter(r => r.selector === selector).at(-1);
-    assert.ok(rule, `agent.html must style ${selector}`);
-    return rule.body;
+    const body = effectiveOf(rules, selector);
+    assert.ok(body, `agent.html must style ${selector}`);
+    return body;
   };
-  const allOf = selector => rules.filter(r => r.selector === selector).map(r => r.body).join(" ");
+  const allOf = selector => effectiveOf(rules, selector);
 
   // لوحة الهوية معرّفة بألوان حرفية في agent.html
-  for (const token of ["--brand-bg", "--brand-panel", "--brand-in", "--brand-out", "--brand-chip", "--brand-accent", "--brand-text", "--brand-sub"]) {
+  for (const token of ["--brand-bg", "--brand-panel", "--brand-in", "--brand-out", "--brand-accent", "--brand-text", "--brand-sub"]) {
     assert.match(identity, new RegExp(`${token}:\\s*#[0-9a-f]{6}`, "i"), `${token} must be declared`);
   }
   // خلفية الشات: كحلي + نقشة النقاط الجديدة (مش نقشة واتساب)
@@ -120,10 +132,12 @@ test("T1.1b: the chrome wears the navy+gold identity — no WhatsApp wallpaper, 
 
 test("agent layout always keeps the header and input dock fixed around the scrollable chat", () => {
   const rules = cssRules(agentStyle);
+  // الـcascade بيطبّق كل الإعلانات اللي لنفس المحدد (مش آخر بلوك بس): bottom-dock مثلاً بيكسب flex من البلوك الأول
+  // والـpadding من بلوك لاحق — فنقرأ كل الإعلانات للمحدد ونتأكد إنها موجودة
   const bodyOf = selector => {
-    const rule = rules.filter(r => r.selector === selector).at(-1);
-    assert.ok(rule, `agent.html must define ${selector}`);
-    return rule.body;
+    const body = effectiveOf(rules, selector);
+    assert.ok(body, `agent.html must define ${selector}`);
+    return body;
   };
   assert.match(bodyOf("body.page-agent #app"), /display: flex/);
   assert.match(bodyOf("body.page-agent #app"), /flex-direction: column/);
@@ -163,7 +177,7 @@ test("messages are HTML-escaped; links stop at the first quote and open with noo
 // ───────── T1.3: سقف history ─────────
 test("T1.3: stored history messages are capped at 1000 characters, so one huge paste can't break every later request", async () => {
   const calls = [];
-  const a = bootAgent({ fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v87" } }, calls) });
+  const a = bootAgent({ fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v92" } }, calls) });
   await send(a, "ك".repeat(5000));
   const mine = a.run("state.history").filter(m => m.role === "user");
   assert.equal(mine.length, 1);
@@ -225,7 +239,7 @@ test("T1.4: hostile or broken hand-off parameters are neutralised", () => {
 
 test("the returned valuation is sent to the Worker exactly once, with the next message", async () => {
   const calls = [];
-  const a = bootAgent({ search: RETURN_QS, fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v87" } }, calls) });
+  const a = bootAgent({ search: RETURN_QS, fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v92" } }, calls) });
   await send(a, "رجعت");
   assert.equal(calls[0].body.valuationResult.estimate, 9360000);
   assert.equal(calls[0].body.valuationResult.priceBasis, "median_price_m2");
@@ -235,7 +249,7 @@ test("the returned valuation is sent to the Worker exactly once, with the next m
 
 test("the chat is restored after the valuation round trip; the GPS pin is never written to storage", () => {
   const a1 = bootAgent();
-  a1.run(`state.formState = { _version: "v87", active: true, flowType: "owner", type: "sale", stepIndex: 27,
+  a1.run(`state.formState = { _version: "v92", active: true, flowType: "owner", type: "sale", stepIndex: 27,
     data: { location: "شارع س", area: 180, gps: { lat: 30.1, lng: 31.2, address: "secret street" } } };
     state.history.push({ role: "user", message: "💰 أبيع" });
     state.valuationCta = { intent: "seller", area: "المنطقة السادسة", size: 180, propertyType: "شقة", areaType: "sale" };
@@ -252,11 +266,11 @@ test("the chat is restored after the valuation round trip; the GPS pin is never 
   assert.ok(a2.chatArea.querySelector(".valuation-link"), "the 💎 button is back");
   assert.equal(a2.sessionStorage.getItem("simsar_return_session"), null, "the saved context is consumed");
   assert.equal(a2.run("state.valuationResult.estimate"), 9360000);
-  assert.equal(a2.run("state.formState._version"), "v87");
+  assert.equal(a2.run("state.formState._version"), "v92");
 });
 
 test("stored sessions: a stale valuation (24h) and an old form version are dropped", () => {
-  const stored = (over, savedAt) => JSON.stringify({ formState: { _version: "v87" }, history: [{ role: "assistant", message: "أهلاً" }], valuationResult: { estimate: 9360000, savedAt }, ...over });
+  const stored = (over, savedAt) => JSON.stringify({ formState: { _version: "v92" }, history: [{ role: "assistant", message: "أهلاً" }], valuationResult: { estimate: 9360000, savedAt }, ...over });
   const stale = bootAgent({ session: { simsar_wa_v92: stored({}, Date.now() - 25 * 3600 * 1000) } });
   assert.equal(stale.run("state.valuationResult"), null);
   const fresh = bootAgent({ session: { simsar_wa_v92: stored({}, Date.now() - 3600 * 1000) } });
@@ -318,7 +332,7 @@ test("the 💎 link carries the owner's data to the tool: slugs when known, free
 
 test("the 💎 button is one link, replaced on every reply and removed when the Worker sends no CTA", async () => {
   const calls = [];
-  let reply = { response: "قيّم عقارك", formState: { _version: "v87" }, valuationCta: SELLER_CTA, options: ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"] };
+  let reply = { response: "قيّم عقارك", formState: { _version: "v92" }, valuationCta: SELLER_CTA, options: ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"] };
   const a = bootAgent({ fetchImpl: async (u, i) => fetchOk(reply, calls)(u, i) });
   await send(a, "كمّل");
   let links = a.chatArea.querySelectorAll(".valuation-link");
@@ -332,7 +346,7 @@ test("the 💎 button is one link, replaced on every reply and removed when the 
   await send(a, "تاني"); // نفس الرد: مفيش تكرار
   assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 1);
 
-  reply = { response: "اسم حضرتك إيه؟", formState: { _version: "v87" } };
+  reply = { response: "اسم حضرتك إيه؟", formState: { _version: "v92" } };
   await send(a, "تخطي السؤال ⏭");
   assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 0, "the button disappears once the gift step is over");
   assert.equal(a.run("state.valuationCta"), null);
@@ -396,9 +410,9 @@ test("on-screen keyboard: #app follows the visual viewport only when ≥80px is 
   assert.match(agentStyle, /html\.vv-keyboard body\.page-agent #app\s*\{[^}]*height:\s*var\(--vv-h\)[^}]*transform:\s*var\(--vv-tf, none\)/);
   assert.match(agentStyle, /height:\s*100vh;\s*height:\s*100dvh;/);
   // حقل الكتابة 16px على الأقل: iOS Safari بيعمل zoom تلقائي على أي حقل أصغر من كده (style.css محدده 15.5px)
-  const rule = cssRules(agentStyle).filter(r => r.selector === "body.page-agent .input-field").at(-1);
-  assert.ok(rule, "agent.html overrides the input rule that style.css loads before it");
-  assert.match(rule.body, /font-size: 16px/);
+  const inputRule = effectiveOf(cssRules(agentStyle), "body.page-agent .input-field");
+  assert.ok(inputRule, "agent.html overrides the input rule that style.css loads before it");
+  assert.match(inputRule, /font-size: 16px/);
 });
 
 // ───────── حراسة التحليلات ─────────

@@ -52,7 +52,7 @@ const dropped = async valuationResult => {
 };
 
 // خطوة وسط التسجيل بتعدّي على مسار تعليق Gemini (رد مزاجي) — عشان نشوف إيه اللي بيوصل للـprompt
-const ownerAtStep0 = () => ({ active: true, lifecycle: "active", type: "sale", stepIndex: 0, data: {}, awaitingQ: true, flowType: "owner", imageUrls: [], _version: "v87" });
+const ownerAtStep0 = () => ({ active: true, lifecycle: "active", type: "sale", stepIndex: 0, data: {}, awaitingQ: true, flowType: "owner", imageUrls: [], _version: "v92" });
 let uniq = 0;
 const LETTERS = "أبتثجحخدذرزسشصضطظعغ";
 const moodMessage = () => { const n = uniq++; return `والله أنا مش فاهم حاجة خالص دلوقتي ${LETTERS[n % 20]}${LETTERS[Math.floor(n / 20) % 20]}${LETTERS[Math.floor(n / 400) % 20]}`; }; // فريدة دايمًا (كاش التعليق)
@@ -270,7 +270,7 @@ test("H9 [was #9]: the agent never touches D1, so an unavailable or missing DB c
 // ═══════════ 3) المسار الكامل عبر الـWorker ═══════════
 
 test("H10 [was #10]: without an active owner flow a valuation is ignored completely — not in the prompt, the reply or the state", async () => {
-  for (const formState of [{}, undefined, { active: false }, { _version: "v87" }]) {
+  for (const formState of [{}, undefined, { active: false }, { _version: "v92" }]) {
     const request = extra => {
       const body = { message: "السلام عليكم", history: [], ...extra };
       if (formState !== undefined) body.formState = structuredClone(formState);

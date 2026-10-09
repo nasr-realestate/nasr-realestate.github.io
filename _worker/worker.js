@@ -772,7 +772,9 @@ function syncAgentStateFromFlow(as, fs){
   if(hasVal(d.propertyType) && !as.propertyType) setAgentField(as,"propertyType",d.propertyType,EV.CUSTOMER);
   if(hasVal(d.landmark) && !as.location) setAgentField(as,"location",d.landmark,EV.CUSTOMER);
   if(hasVal(d.location) && !as.location) setAgentField(as,"location",d.location,EV.CUSTOMER);
-  if(hasVal(d.gps?.address) && !as.location) setAgentField(as,"location",d.gps.address,EV.CUSTOMER);
+  // ⭐ خصوصية: عنوان الدبوس (reverse-geocode) مش بيدخل agentState أبدًا — الـstate بيرجع للمتصفح وبيتخزن في sessionStorage.
+  //    بنسجّل بس إن الموقع معروف (علامة ثابتة) عشان قرار الأسئلة يفضل زي ما هو.
+  if(hasVal(d.gps?.address) && !as.location) setAgentField(as,"location","موقع على الخريطة",EV.CUSTOMER);
   if(hasVal(d.budget) && as.budget===null) as.budget = parseNum(d.budget);
   if(hasVal(d.price) && as.price===null) as.price = parseNum(d.price);
   if(hasVal(d.area) && as.area===null) as.area = parseNum(d.area);
