@@ -276,11 +276,16 @@ test("H10 [was #10]: without an active owner flow a valuation is ignored complet
       if (formState !== undefined) body.formState = structuredClone(formState);
       return agentPost(body);
     };
+    resetGemini();
     const baseline = await request({});
+    const baseCalls = gemini.length;
+    const basePrompt = geminiText();
     resetGemini();
     const run = await request({ valuationResult: goodValuation() });
     assert.equal(run.status, 200);
-    assert.equal(gemini.length, 1);
+    // التحية بتتجاب حتمًا (من غير Gemini): المقارنة مع الـbaseline — الـvaluation مبيغيّرش أي نداء للموديل ولا الـprompt
+    assert.equal(gemini.length, baseCalls, "the valuation never changes the model calls");
+    assert.equal(geminiText(), basePrompt, "the prompt is identical with and without the valuation");
     assert.equal(/9360000|9,360,000|52000|"valuation"|التقييم/.test(geminiText()), false, "no valuation context in the prompt");
     assert.equal(run.json.response, baseline.json.response);
     assert.deepEqual(run.json.formState, baseline.json.formState, "the state is exactly what it would have been without the valuation");
@@ -355,11 +360,11 @@ test("H13 [was #13]: the agent never turns a client-supplied valuation into a ma
   const absurd = goodValuation({ estimate: 123456789, perMeter: 700000, size: 180 });
   resetGemini();
   const noFlow = await agentPost({ message: "شقتي في المنطقة الأولى ١٨٠ متر تسوى كام؟", formState: {}, history: [], valuationResult: absurd });
-  assert.equal(noFlow.json.response, "-", "price questions go to the model only, which gets no valuation");
+  assert.match(noFlow.json.response, /قيمة عقارك/, "a price question gets the deterministic valuation pitch — never the client's numbers");
   assert.equal(/123456789|123,456,789|700000/.test(geminiText() + JSON.stringify(noFlow.json)), false);
   assert.equal(noFlow.json.valuationCta, undefined);
   assert.equal(noFlow.json.whatsappUrl, undefined);
-  assert.equal(noFlow.json.readyToSend, undefined);
+  assert.ok(!noFlow.json.readyToSend, "nothing is marked ready to send");
   // وفي تسجيل شغّال: رقم متناقض حسابيًا بيتسقط ومبيتقدّمش كسعر
   const inconsistent = await inFlow(goodValuation({ estimate: 123456789, perMeter: 52000, size: 180 }));
   assert.equal(valuationOf(inconsistent), undefined);
