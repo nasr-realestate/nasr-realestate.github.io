@@ -37,74 +37,101 @@ jobs:
           set -euo pipefail
           umask 077
           API="https://api.cloudflare.com/client/v4"
-          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN:-}"
+          REPO_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
+          REPO_FORM=$(grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' _worker/worker.js || true)
+          SUMMARY="commit=$(git rev-parse HEAD) repo_worker_sha=$REPO_SHA repo_form=$REPO_FORM"
+          add_summary(){ SUMMARY="${SUMMARY}; $1"; }
+          publish_summary(){
+            echo "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Agent Worker audit::$SUMMARY"
+          }
 
           echo "=== Repository artifact ==="
           echo "commit: $(git rev-parse HEAD)"
-          echo "worker sha256: $(sha256sum _worker/worker.js | cut -d' ' -f1)"
-          echo "worker FORM_VERSION: $(grep -m1 -oE 'FORM_VERSION[[:space:]]*=[[:space:]]*\"[^\"]+\"' _worker/worker.js || true)"
-          echo "page FORM_VERSION: $(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*\"[^\"]+\"' agent.html || true)"
+          echo "worker sha256: $REPO_SHA"
+          echo "worker FORM_VERSION: $REPO_FORM"
+          echo "page FORM_VERSION: $(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' agent.html || true)"
 
           echo
           echo "=== Public page fingerprint (GET only) ==="
-          PAGE_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/agent-page.html -w '%{http_code}' "$SITE_URL/agent.html")
-          echo "agent.html HTTP=$PAGE_CODE bytes=$(wc -c < /tmp/agent-page.html)"
-          echo "live page FORM_VERSION: $(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*\"[^\"]+\"' /tmp/agent-page.html || true)"
-          echo "live page WORKER_URL: $(grep -m1 -oE 'https://[a-z0-9.-]+\.workers\.dev/?' /tmp/agent-page.html || true)"
+          if ! PAGE_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/agent-page.html -w '%{http_code}' "$SITE_URL/agent.html"); then PAGE_CODE=000; fi
+          PAGE_VERSION=$(grep -m1 -oE 'const FORM_VERSION[[:space:]]*=[[:space:]]*"[^"]+"' /tmp/agent-page.html 2>/dev/null || true)
+          PAGE_WORKER_URL=$(grep -m1 -oE 'https://[a-z0-9.-]+\.workers\.dev/?' /tmp/agent-page.html 2>/dev/null || true)
+          echo "agent.html HTTP=$PAGE_CODE bytes=$(wc -c < /tmp/agent-page.html 2>/dev/null || echo 0)"
+          echo "live page FORM_VERSION: ${PAGE_VERSION:-<not found>}"
+          echo "live page WORKER_URL: ${PAGE_WORKER_URL:-<not found>}"
+          add_summary "page_http=$PAGE_CODE page_form=${PAGE_VERSION:-not-found} page_worker=${PAGE_WORKER_URL:-not-found}"
 
           echo
           echo "=== Worker transport (GET / OPTIONS only; no chat POST) ==="
-          GET_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/worker-get.json -w '%{http_code}' "$WORKER_URL/")
+          if ! GET_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/worker-get.json -w '%{http_code}' "$WORKER_URL/"); then GET_CODE=000; fi
           echo "GET / HTTP=$GET_CODE (405 is expected for this POST-only Worker)"
+          add_summary "worker_get=$GET_CODE"
+          OPTIONS_PROBES=""
+          ALLOW_ORIGIN_LAST=""
           for n in 1 2 3 4 5; do
-            OPTIONS_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -D /tmp/worker-options.headers -o /dev/null -w '%{http_code}' \
+            if ! OPTIONS_CODE=$(curl -sS --connect-timeout 10 --max-time 20 -D /tmp/worker-options.headers -o /dev/null -w '%{http_code}' \
               -X OPTIONS "$WORKER_URL/" \
               -H "Origin: $SITE_URL" \
               -H 'Access-Control-Request-Method: POST' \
-              -H 'Access-Control-Request-Headers: content-type')
-            ALLOW_ORIGIN=$(awk 'BEGIN{IGNORECASE=1} /^access-control-allow-origin:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' /tmp/worker-options.headers)
-            echo "OPTIONS probe $n HTTP=$OPTIONS_CODE allow-origin=${ALLOW_ORIGIN:-<missing>}"
+              -H 'Access-Control-Request-Headers: content-type'); then OPTIONS_CODE=000; fi
+            ALLOW_ORIGIN_LAST=$(awk 'BEGIN{IGNORECASE=1} /^access-control-allow-origin:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' /tmp/worker-options.headers 2>/dev/null || true)
+            [ -n "$OPTIONS_PROBES" ] && OPTIONS_PROBES="$OPTIONS_PROBES,"
+            OPTIONS_PROBES="${OPTIONS_PROBES}${n}:${OPTIONS_CODE}"
+            echo "OPTIONS probe $n HTTP=$OPTIONS_CODE allow-origin=${ALLOW_ORIGIN_LAST:-<missing>}"
             sleep 1
           done
+          add_summary "options=$OPTIONS_PROBES allow_origin=${ALLOW_ORIGIN_LAST:-missing}"
 
           echo
-          echo "=== Cloudflare API metadata (GET only; values of secrets are never requested or printed) ==="
+          echo "=== Cloudflare API metadata (GET only; secret values are never requested or printed) ==="
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
             echo "CLOUDFLARE_API_TOKEN: unavailable to this workflow; no authenticated API request was made"
+            add_summary "cf_api_token=unavailable"
+            publish_summary
             exit 0
           fi
+          add_summary "cf_api_token=present"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
 
-          verify_code=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-token-verify.json -w '%{http_code}' \
-            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify")
-          echo "token verify HTTP=$verify_code"
-          jq -c '{success, status:.result.status, errors:[.errors[]?.message]}' /tmp/cf-token-verify.json 2>/dev/null || echo "token verification response was not valid JSON"
+          if ! VERIFY_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-token-verify.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify"); then VERIFY_CODE=000; fi
+          TOKEN_STATUS=$(jq -r '.result.status // "unknown"' /tmp/cf-token-verify.json 2>/dev/null || echo unknown)
+          echo "token verify HTTP=$VERIFY_CODE status=$TOKEN_STATUS"
+          add_summary "token_verify=$VERIFY_CODE/$TOKEN_STATUS"
 
-          settings_code=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-settings.json -w '%{http_code}' \
-            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/settings")
-          echo "settings HTTP=$settings_code"
-          if [ "$settings_code" = 200 ]; then
-            jq -c '{success, errors:[.errors[]?.message], compatibility_date:.result.compatibility_date, bindings:[.result.bindings[]?|{type,name}]}' /tmp/cf-settings.json
+          if ! SETTINGS_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-settings.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/settings"); then SETTINGS_CODE=000; fi
+          echo "settings HTTP=$SETTINGS_CODE"
+          if [ "$SETTINGS_CODE" = 200 ]; then
+            SETTINGS_META=$(jq -c '{compatibility_date:.result.compatibility_date,bindings:[.result.bindings[]?|{type,name}]}' /tmp/cf-settings.json 2>/dev/null || echo parse-error)
           else
-            jq -c '{success, errors:[.errors[]?.message]}' /tmp/cf-settings.json 2>/dev/null || true
+            SETTINGS_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-settings.json 2>/dev/null || echo unavailable)
           fi
+          echo "settings metadata: $SETTINGS_META"
+          add_summary "settings_http=$SETTINGS_CODE settings=$SETTINGS_META"
 
-          deployments_code=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-deployments.json -w '%{http_code}' \
-            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/deployments")
-          echo "deployments HTTP=$deployments_code"
-          if [ "$deployments_code" = 200 ]; then
-            jq -c '{success, errors:[.errors[]?.message], deployments:[.result.deployments[]?|{id,created_on,versions:[.versions[]?|{version_id,percentage}],annotations:{tag:.annotations["workers/tag"],message:.annotations["workers/message"],triggered_by:.annotations["workers/triggered_by"]}}]}' /tmp/cf-deployments.json
-            echo "reported ID 7751a7dc matches:"
-            jq -c --arg needle '7751a7dc' '[.result.deployments[]?|select((.id//""|contains($needle)) or any(.versions[]?; (.version_id//""|contains($needle))))|{id,created_on,versions:[.versions[]?|{version_id,percentage}]}]' /tmp/cf-deployments.json
+          if ! DEPLOYMENTS_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o /tmp/cf-deployments.json -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/deployments"); then DEPLOYMENTS_CODE=000; fi
+          echo "deployments HTTP=$DEPLOYMENTS_CODE"
+          if [ "$DEPLOYMENTS_CODE" = 200 ]; then
+            DEPLOYMENT_META=$(jq -c '{deployments:[.result.deployments[0:8][]?|{id,created_on,versions:[.versions[]?|{version_id,percentage}],annotations:{tag:.annotations["workers/tag"],message:.annotations["workers/message"],triggered_by:.annotations["workers/triggered_by"]}}]}' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
+            MATCH_7751=$(jq -c --arg needle '7751a7dc' '[.result.deployments[]?|select((.id//""|contains($needle)) or any(.versions[]?; (.version_id//""|contains($needle))))|{id,created_on,versions:[.versions[]?|{version_id,percentage}]}]' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
           else
-            jq -c '{success, errors:[.errors[]?.message]}' /tmp/cf-deployments.json 2>/dev/null || true
+            DEPLOYMENT_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-deployments.json 2>/dev/null || echo unavailable)
+            MATCH_7751=unavailable
           fi
+          echo "recent deployments: $DEPLOYMENT_META"
+          echo "7751a7dc matches: $MATCH_7751"
+          add_summary "deployments_http=$DEPLOYMENTS_CODE recent_deployments=$DEPLOYMENT_META id_7751=$MATCH_7751"
 
-          content_code=$(curl -sS --connect-timeout 10 --max-time 45 -H "$AUTH" -D /tmp/cf-content.headers -o /tmp/cf-worker.raw -w '%{http_code}' \
-            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME")
-          echo "script content HTTP=$content_code bytes=$(wc -c < /tmp/cf-worker.raw 2>/dev/null || echo 0)"
-          if [ "$content_code" = 200 ]; then
+          if ! CONTENT_CODE=$(curl -sS --connect-timeout 10 --max-time 45 -H "$AUTH" -o /tmp/cf-worker.raw -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME"); then CONTENT_CODE=000; fi
+          echo "script content HTTP=$CONTENT_CODE bytes=$(wc -c < /tmp/cf-worker.raw 2>/dev/null || echo 0)"
+          if [ "$CONTENT_CODE" = 200 ]; then
             python3 - <<'PY'
           import hashlib
+          import re
           from pathlib import Path
 
           raw = Path('/tmp/cf-worker.raw').read_bytes()
@@ -119,18 +146,27 @@ jobs:
                       module = body[:-2] if body.endswith(b'\r\n') else body
                       break
           if module is None:
-              print('worker.js module was not found in the multipart response; raw response was not printed')
+              print('worker.js module was not found in multipart; response body suppressed')
           else:
-              print('live worker.js bytes:', len(module))
-              print('live worker.js sha256:', hashlib.sha256(module).hexdigest())
-              print('repo worker.js sha256:', hashlib.sha256(repo).hexdigest())
-              print('live module byte-for-byte equals this branch:', module == repo)
-              import re
+              Path('/tmp/live-agent-worker.js').write_bytes(module)
+              live_sha = hashlib.sha256(module).hexdigest()
+              repo_sha = hashlib.sha256(repo).hexdigest()
               form_version = re.search(rb'const FORM_VERSION\s*=\s*"([^"]+)"', module)
-              print('live FORM_VERSION:', form_version.group(1).decode() if form_version else '<not found>')
+              live_form = form_version.group(1).decode() if form_version else 'not-found'
+              print('live worker.js bytes:', len(module))
+              print('live worker.js sha256:', live_sha)
+              print('repo worker.js sha256:', repo_sha)
+              print('live module byte-for-byte equals this branch:', module == repo)
+              print('live FORM_VERSION:', live_form)
               print('live module contains v9.3-W:', b'v9.3-W' in module)
               print('live module contains deployment id 7751a7dc:', b'7751a7dc' in module)
+              with open('/tmp/agent-audit-module-meta.txt', 'w') as f:
+                  f.write(f'live_sha={live_sha} live_form={live_form} byte_match={str(module == repo).lower()}')
           PY
+            MODULE_META=$(cat /tmp/agent-audit-module-meta.txt 2>/dev/null || echo module-unavailable)
           else
-            jq -c '{success, errors:[.errors[]?.message]}' /tmp/cf-worker.raw 2>/dev/null || echo "script content could not be read; response body suppressed"
+            MODULE_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-worker.raw 2>/dev/null || echo unavailable)
           fi
+          echo "module metadata: $MODULE_META"
+          add_summary "module_http=$CONTENT_CODE module=$MODULE_META"
+          publish_summary
