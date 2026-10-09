@@ -61,11 +61,11 @@ const MOOD_GUIDE = `صنّف النية الأول: عقارات، تحية أو
 اقرا مزاج العميل: المستعجل اختصر، المتردد طمّنه، والمستثمر ادّيه أرقامًا مبدئية فقط.
 لو العميل قال غالي، اسأل عن توقعه من غير دفاع. لو قال مش متأكد، ساعده يحدد من غير ضغط.`;
 
-const IDENTITY_RESPONSE = `طارق طنطاوي — وكيل عقاري في مدينة نصر، خبرة 15 سنة، 48 سنة، وGoogle Local Guide Level 7.
+const IDENTITY_RESPONSE = `أنا وكيل ذكي بيشتغل لصالح طارق طنطاوي — سمسار مدينة نصر، خبرة 15 سنة، وGoogle Local Guide Level 7. بسجّل طلبك وبوصّله لطارق.
 تحب تشتري ولا تأجر ولا تبيع؟`;
-const GREETING_RESPONSE = `أهلاً بيك، أنا طارق طنطاوي — وكيل عقاري في مدينة نصر.
+const GREETING_RESPONSE = `أهلاً بيك، أنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر.
 تشتري ولا تأجر ولا تبيع؟`;
-const OFF_TOPIC_RESPONSE = `أنا طارق، متخصص في عقارات مدينة نصر 🏠 ومش بساعد في ده، لكن معاك في أي طلب شراء أو إيجار أو بيع.`;
+const OFF_TOPIC_RESPONSE = `أنا وكيل طارق، متخصص في عقارات مدينة نصر 🏠 ومش بساعد في ده، لكن معاك في أي طلب شراء أو إيجار أو بيع.`;
 const PRICE_OBJECTION_RESPONSE = `فاهمك، السعر بيفرق حسب المنطقة والحالة. إيه السعر اللي في دماغك؟`;
 const HESITATION_RESPONSE = `ولا يهمك، ناخدها واحدة واحدة ومن غير ضغط. نبدأ بشراء ولا إيجار؟`;
 const OUT_OF_SCOPE_RESPONSE = `التخصص الحالي لطارق الوكيل هو مدينة نصر بس، ومش بعرض عقارات خارجها.`;
@@ -2219,7 +2219,7 @@ function cancelFlow(fs){
 
 function newRequest(){
   return {
-    response: `أهلاً بيك، أنا طارق طنطاوي — وكيل عقاري في مدينة نصر.
+    response: `أهلاً بيك، أنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر.
 تشتري ولا تأجر ولا تبيع؟`,
     formState:{active:true,lifecycle:LC.ACTIVE,type:null,stepIndex:-1,data:{}, awaitingQ:false,flowType:"route_selection",imageUrls:[]},
     options:ROUTE_BTNS, done:false,readyToSend:false,canShareWhatsapp:false,imageUrls:[]
