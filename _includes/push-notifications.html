@@ -1,0 +1,48 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════════
+  تنبيهات Web Push — بانر الدعوة + الأنماط + السكربت (2026-10-10)
+  ────────────────────────────────────────────────────────────
+  • يُدرَج في _layouts/default.html لكل صفحات المحتوى.
+  • لا يُدرَج في تخطيط الوكيل (app.html) حتى لا تتأثر المحادثة.
+  • لا يطلب إذن المتصفح تلقائيًا — فقط عبر زر «فعّل التنبيهات».
+  • صفحة /notifications.html تحمل الواجهة الكاملة (لذلك يُخفى
+    البانر فيها تلقائيًا هنا).
+═══════════════════════════════════════════════════════════════
+{%- endcomment -%}
+<style>
+  .push-banner{position:fixed;inset-inline:12px;bottom:12px;z-index:940;display:none;
+    background:#0a3d2e;color:#fff;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.28);
+    padding:14px 16px;font-family:'Cairo',sans-serif}
+  .push-banner-visible{display:block}
+  .push-banner-hidden{display:none!important}
+  .push-banner-title{font-weight:700;font-size:15px;margin:0 0 4px}
+  .push-banner-text{font-size:13px;opacity:.92;margin:0 0 10px;line-height:1.7}
+  .push-banner-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .push-btn{border:0;border-radius:10px;padding:9px 16px;font-family:'Cairo',sans-serif;
+    font-size:14px;font-weight:700;cursor:pointer}
+  .push-btn-primary{background:#25d366;color:#07301c}
+  .push-btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55)}
+  .push-btn:disabled{opacity:.55;cursor:not-allowed}
+  .push-card{max-width:720px;margin:24px auto;background:#fff;border-radius:16px;
+    border:1px solid #e3e8e5;padding:22px}
+  .push-card h2{margin:0 0 8px;font-size:20px;color:#0a3d2e}
+  .push-status-text{line-height:1.9;color:#333;font-size:15px;margin:10px 0 16px}
+  .push-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .push-hint{font-size:13px;color:#667;line-height:1.9;background:#f5f8f6;border-radius:10px;padding:12px 14px}
+  .push-sub-id{direction:ltr;unicode-bidi:embed;font-family:monospace;background:#eef3f0;
+    padding:2px 8px;border-radius:6px}
+  @media (max-width:600px){.push-banner{inset-inline:8px;bottom:8px}}
+</style>
+{%- unless page.url == "/notifications.html" -%}
+<div class="push-banner" data-push-panel role="region" aria-label="تنبيهات العروض الجديدة">
+  <p class="push-banner-title">🔔 فعّل التنبيهات</p>
+  <p class="push-banner-text">وصلك تنبيه فور نشر أي عرض أو طلب جديد في مدينة نصر.</p>
+  <div class="push-banner-actions">
+    <button type="button" class="push-btn push-btn-primary" data-push-enable>فعّل التنبيهات</button>
+    <button type="button" class="push-btn push-btn-ghost" data-push-dismiss>لاحقًا</button>
+    <a class="push-btn push-btn-ghost" href="{{ '/notifications.html' | relative_url }}">التفاصيل</a>
+  </div>
+  <p class="push-status-text" style="display:none"></p>
+</div>
+{%- endunless -%}
+<script src="{{ '/assets/js/push-notifications.js' | relative_url }}" defer></script>

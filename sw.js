@@ -50,6 +50,65 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// ═══════════════════════════════════════════════════════════════
+// إشعارات Web Push (VAPID) — 2026-10-10
+// ───────────────────────────────────────────────────────────────
+// ⚠️ قواعد السلامة:
+// • هذا هو Service Worker الوحيد بنطاق "/" — لا يُسجَّل غيره.
+// • معالجات الإشعارات مستقلة عن الكاش ولا تغيّره إطلاقًا.
+// • رابط الضغط على الإشعار يُقيَّد بالموقع الرسمي فقط (ضد أي إساءة).
+// ═══════════════════════════════════════════════════════════════
+const PUSH_SITE_ORIGIN = 'https://nasr-realestate.github.io';
+
+// روابط الإشعارات: نفس الأصل فقط — أي رابط آخر يُعاد توجيهه للرئيسية
+function safeNotificationUrl(raw) {
+  try {
+    const u = new URL(String(raw || ''), PUSH_SITE_ORIGIN + '/');
+    if (u.origin === PUSH_SITE_ORIGIN && u.pathname.charAt(0) === '/' && u.pathname.charAt(1) !== '/') {
+      return u.href;
+    }
+  } catch (_) { /* ignore */ }
+  return PUSH_SITE_ORIGIN + '/';
+}
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (_) {
+    try { data = { body: event.data ? event.data.text() : '' }; } catch (__) { /* ignore */ }
+  }
+  const title = (typeof data.title === 'string' && data.title.trim())
+    ? data.title.trim().slice(0, 140) : 'سمسار طلبك';
+  const body = (typeof data.body === 'string') ? data.body.trim().slice(0, 180) : '';
+  const options = {
+    body: body,
+    icon: '/assets/img/logo.webp',
+    badge: '/assets/img/icon-192.png',
+    lang: 'ar',
+    dir: 'rtl',
+    data: { url: safeNotificationUrl(data.url) },
+  };
+  if (typeof data.tag === 'string' && data.tag) options.tag = data.tag.slice(0, 64);
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = safeNotificationUrl(event.notification.data && event.notification.data.url);
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (decodeURIComponent(client.url) === decodeURIComponent(targetUrl) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(targetUrl);
+      })
+  );
+});
+
 // ─── الجلب: Network-First مع fallback للكاش ───
 self.addEventListener('fetch', (event) => {
   const request = event.request;

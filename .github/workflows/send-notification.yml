@@ -1,3 +1,16 @@
+# إرسال إشعار Web Push عند إضافة عقار أو طلب جديد — 2026-10-10 (نظام Cloudflare/VAPID)
+#
+# ◦ مشغّل خفيف: بلا npm install — سكربت Node فقط (.github/scripts/push-notify.mjs).
+# ◦ يُرسل عند إضافة ملف جديد فقط إلى _properties/ أو _requests/ (لا تعديل/حذف).
+# ◦ إعادة تشغيل الـWorkflow يدويًا لا تُرسل شيئًا إلا بوضع test-single
+#   ومعرّف جهاز واحد (لا إرسال جماعي تجريبي).
+# ◦ الإرسال idempotent عبر commit SHA + مسار الملف (الـWorker يمنع التكرار في KV).
+# ◦ فشل الإرسال يفشل الـWorkflow فعليًا (exit 1).
+#
+# الأسرار:
+#   PUSH_SEND_SECRET (اختياري) — سر مشترك صريح بين GitHub و Worker.
+#   إن لم يوجد، يُشتق السر من ARENA_CLOUDFLARE (نفس التحويل في push-notify-setup.yml)
+#   عبر HMAC-SHA256 — القيمة لا تُطبع في السجلات إطلاقًا.
 name: إرسال إشعار عند إضافة عقار أو طلب جديد
 
 on:
@@ -8,96 +21,69 @@ on:
       - '_properties/**'
       - '_requests/**'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "وضع التشغيل (الافتراضي: لا إرسال)"
+        type: choice
+        options:
+          - none
+          - test-single
+        default: none
+      target:
+        description: "معرّف اشتراك جهاز واحد للاختبار (من صفحة التنبيهات)"
+        type: string
+        required: false
+        default: ""
+      file_path:
+        description: "مسار ملف md واحد اختياري للاختبار (مثل _properties/example.md)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# منع التوازي حتى لا يتسابق تشغيلان على نفس الـidempotency keys
+concurrency:
+  group: send-notification
+  cancel-in-progress: false
 
 jobs:
   send-notification:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     steps:
       - name: استنساخ المستودع
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # تاريخ كامل صغير الحجم — حتى يظهر فرق «المُضافة فقط» حتى مع دفعات متعددة الكوميتات
+          fetch-depth: 0
 
       - name: إعداد Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
-      - name: تثبيت المكتبات
-        run: npm install firebase-admin frontmatter
+          node-version: '20'
 
-      - name: إرسال الإشعارات
+      - name: إعداد سر الإرسال (لا يُطبع أبدًا)
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
+          S_PUSH_SEND_SECRET: ${{ secrets.PUSH_SEND_SECRET }}
         run: |
-          node -e '
-          const admin = require("firebase-admin");
-          const fs = require("fs");
-          const { execSync } = require("child_process");
-          const frontmatter = require("frontmatter");
-          
-          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-          });
-          
-          const db = admin.firestore();
-          
-          async function sendNotification() {
-            try {
-              const output = execSync("git log -1 --name-only --pretty=", { encoding: "utf8" });
-              const files = output.split("\n").filter(f =>
-                (f.startsWith("_properties/") || f.startsWith("_requests/")) && f.endsWith(".md") && fs.existsSync(f)
-              );
+          set -euo pipefail
+          umask 077
+          if [ -n "${S_PUSH_SEND_SECRET:-}" ]; then
+            TOKEN="$S_PUSH_SEND_SECRET"
+          elif [ -n "${S_ARENA_CLOUDFLARE:-}" ]; then
+            TOKEN=$(node -e 'const c=require("crypto");process.stdout.write(c.createHmac("sha256",process.argv[1]).update("nasr-realestate/push-send/v1").digest("hex"))' "$S_ARENA_CLOUDFLARE")
+          else
+            echo "::error title=PUSH_AUTH_MISSING::لا يوجد سر إرسال (PUSH_SEND_SECRET أو ARENA_CLOUDFLARE) — أضفه من إعدادات المستودع."
+            exit 1
+          fi
+          echo "PUSH_SEND_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "send-auth: ready (hidden)"
 
-              if (files.length === 0) {
-                console.log("⚠️ لم يتم العثور على ملفات مستهدفة.");
-                return;
-              }
-
-              const tokensSnapshot = await db.collection("fcmTokens").get();
-              const tokens = [];
-              tokensSnapshot.forEach(doc => tokens.push(doc.id));
-              
-              if (tokens.length === 0) {
-                console.log("❌ لا يوجد مستخدمين مسجلين.");
-                return;
-              }
-
-              for (const filePath of files) {
-                const content = fs.readFileSync(filePath, "utf8");
-                const { data } = frontmatter(content);
-                
-                const isRequest = filePath.startsWith("_requests/");
-                const title = data.title || (isRequest ? "طلب جديد" : "عقار جديد");
-                const price = data.price || data.budget || "";
-                const location = data.location || "";
-                const slug = data.slug || "";
-                
-                const baseUrl = "https://nasr-realestate.github.io";
-                
-                // هندسة الرابط الديناميكي الذكي لمنع الـ 404 نهائياً بناءً على نوع المجلد الفعلي
-                const folderFolder = isRequest ? "requests" : "properties";
-                const propertyUrl = slug ? `${baseUrl}/${folderFolder}/${slug}/` : baseUrl;
-
-                const message = {
-                  data: {
-                    title: isRequest ? `🔔 طلب جديد: ${title}` : `🏠 عرض جديد: ${title}`,
-                    body: `${price ? "💰 " + price : ""} ${location ? "📍 " + location : ""}`.trim() || "اضغط للتفاصيل",
-                    url: propertyUrl
-                  },
-                  tokens: tokens
-                };
-                
-                const response = await admin.messaging().sendEachForMulticast(message);
-                console.log(`✅ تم الإرسال بنجاح للرابط الديناميكي: ${propertyUrl}`);
-              }
-            } catch (error) {
-              console.error("❌ خطأ:", error);
-            }
-          }
-          
-          sendNotification();
-          '
-          
+      - name: إرسال الإشعارات (الملفات المُضافة فقط)
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: node .github/scripts/push-notify.mjs

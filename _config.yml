@@ -118,9 +118,13 @@ compress_html:
   endings: all
   blanklines: false
 
+# ملفات تبقى في المخرجات حتى لو لم يولّدها Jekyll
+# (2026-10-10 — ترحيل الإشعارات: كان المسار قديمًا assets/js/firebase-messaging-sw.js
+#  بينما الملف الفعلي في الجذر. يُصحَّح المسار الآن، ويُحذف الإدخال لاحقًا
+#  عند إزالة تكامل Firebase بعد التأكد من نجاح نظام Web Push الجديد.)
 keep_files:
   - search-data.json
-  - assets/js/firebase-messaging-sw.js
+  - firebase-messaging-sw.js
 
 exclude:
   - _worker
