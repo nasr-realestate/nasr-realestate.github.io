@@ -1169,32 +1169,63 @@ function formatMsg(text) {
 // scrollToBottom(): ذكي — بينزّل لآخر المحادثة بس لو القارئ قريب منها (أقل من 80px).
 //   لو القارئ طالع بيقرا فوق ما بنحرّكوش، وبنظهر زر «للأسفل» بس.
 // forceScrollToBottom(): صريح — لزر «للأسفل»، ولرسالة المستخدم نفسه، ولأول تحميل/رجوع من التقييم.
+//
+// ⭐ إصلاح «رد الوكيل بيختفي والكيبورد مفتوح» (2026-10-11) — المطلوب سلوك واتساب:
+//    الرسالة الجديدة تزق القديم لفوق، وتفضل آخر رسالة ظاهرة من غير ما المستخدم يقفل الكيبورد.
+//    الأسباب اللي اتعالجت:
+//    (1) تعيين scrollTop مرة واحدة قبل ما الـlayout يستقر (كيبورد/خط/صورة) كان بيسيبنا فوق القاع.
+//    (2) حدث scroll الناتج عن التمرير الآلي نفسه كان بيقلّب stickToBottom → الرسالة الجاية ما بتنزلش.
+//    (3) ما كانش فيه أي إعادة تثبيت لما مقاس الشات يتغيّر (فتح/قفل الكيبورد) أو المحتوى يزيد.
 const NEAR_BOTTOM_PX = 80;
 let stickToBottom = true; // آخر وضع معروف للقارئ — بيتحدّث من حدث scroll قبل ما المحتوى يتغيّر
+let _autoScrolling = false; // التمرير الحالي من الكود (تثبيت) مش من صوابع المستخدم
 function distanceFromBottom() { return chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight; }
+// بنعلّم إن التمرير ده من الكود، والعلَم بيقع في أول إطار بعد كده (بعد ما الـreflow يطلق scroll بتاعه)
+function markAutoScroll() {
+  _autoScrolling = true;
+  requestAnimationFrame(() => { _autoScrolling = false; });
+}
+// تثبيت فعلي + تحقق: لو القاع ما اتحققش (المحتوى لسه بيترسم) نعيد مرة تانية بعد الـlayout
+function pinToBottomNow() {
+  if (!chatArea) return;
+  markAutoScroll();
+  chatArea.scrollTop = chatArea.scrollHeight;
+  scrollBtn.classList.remove("show");
+  if (distanceFromBottom() > 1) {
+    requestAnimationFrame(() => {
+      if (!chatArea || !stickToBottom) return;
+      chatArea.scrollTop = chatArea.scrollHeight;
+      scrollBtn.classList.remove("show");
+    });
+  }
+}
+// للمحاولات المتأخرة: نثبّت بس لو القارئ لسه مع القاع — ما نخطَفش حد طالع يقرا
+function pinIfStillSticky() { if (stickToBottom) pinToBottomNow(); }
 function scrollToBottom() {
   if (!stickToBottom) { scrollBtn.classList.add("show"); return; }
   forceScrollToBottom();
 }
 function forceScrollToBottom() {
   stickToBottom = true;
-  requestAnimationFrame(() => {
-    chatArea.scrollTop = chatArea.scrollHeight;
-    scrollBtn.classList.remove("show");
-  });
+  requestAnimationFrame(pinToBottomNow);
 }
 // ⭐ نزول متعدد المحاولات — يعالج الـreflow المتأخر بعد الرسم (خصوصًا لما الكيبورد مفتوح)
 function forceScrollToBottomWithRetries() {
   stickToBottom = true;
-  const go = () => {
-    if (!chatArea) return;
-    chatArea.scrollTop = chatArea.scrollHeight;
-    scrollBtn.classList.remove("show");
-  };
-  requestAnimationFrame(go);
-  setTimeout(go, 60);
-  setTimeout(go, 200);
-  setTimeout(go, 400);
+  pinToBottomNow();                    // فوري — مش مستني آخر الإطار
+  requestAnimationFrame(pinToBottomNow);
+  setTimeout(pinIfStillSticky, 60);
+  setTimeout(pinIfStillSticky, 200);
+  setTimeout(pinIfStillSticky, 400);
+}
+// الكيبورد مفتوح؟ iOS وأندرويد الحديث بيصغّروا الـvisual viewport (>=80px)،
+// وأندرويد القديم بيصغّر الـviewport كله فمفيش فرق يُقاس — هناك نكتفي بتركيز حقل الكتابة على جهاز لمس.
+function keyboardLikelyOpen() {
+  if (document.documentElement.classList.contains("vv-keyboard")) return true;
+  const vv = window.visualViewport;
+  if (vv && window.innerHeight - vv.height >= 80) return true;
+  return !!msgInput && document.activeElement === msgInput &&
+    typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
 }
 function setTyping(on, customText) {
   if (on) { statusText.textContent = customText || "يكتب..."; statusLine.classList.add("typing"); }
@@ -1237,8 +1268,7 @@ function renderMsg(text, type = "bot", images) {
   if (type === "user") {
     forceScrollToBottom();
   } else {
-    const keyboardOpen = document.documentElement.classList.contains("vv-keyboard");
-    if (keyboardOpen || stickToBottom) forceScrollToBottomWithRetries();
+    if (keyboardLikelyOpen() || stickToBottom) forceScrollToBottomWithRetries();
     else scrollToBottom();
   }
 }
@@ -1787,11 +1817,28 @@ function deleteChat() {
 // ═══ SCROLL BTN ═══
 // بيحدّث «وضع القارئ» (قريب من آخر المحادثة ولا لأ) وبيظهر/يخفي زر «للأسفل» على أساسه
 chatArea.addEventListener("scroll", () => {
+  // ⭐ التمرير الناتج عن التثبيت الآلي نفسه مش تمرير من المستخدم — ما نقلبش stickToBottom بسببه
+  if (_autoScrolling) return;
   // ⭐ أثناء فتح/قفل الكيبورد، الـreflow بيطلق scroll وهمي — نتجاهله عشان ما نقلبش stickToBottom غلط
   if (window.__vpTransitioning && window.__vpTransitioning()) return;
   stickToBottom = distanceFromBottom() < NEAR_BOTTOM_PX;
   scrollBtn.classList.toggle("show", !stickToBottom);
 }, { passive: true });
+
+// ═══ إعادة التثبيت التلقائي ═══
+// ⭐ إعادة تثبيت القاع لما مقاس الشات يتغيّر (فتح/قفل الكيبورد) أو المحتوى يزيد (رسالة/أزرار/صورة).
+//   بنثبّت بس لو القارئ لسه مع القاع — اللي طالع يقرا فوق ما بنزقّوش (نفس منطق واتساب).
+(function bindAutoPin() {
+  // المراقِبات مش مضمونة في كل متصفح — بنسجّلها لو متاحة بس
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(() => pinIfStillSticky()).observe(chatArea);
+  }
+  if (typeof MutationObserver === "function") {
+    new MutationObserver(() => pinIfStillSticky()).observe(chatArea, { childList: true, subtree: true });
+  }
+  // الصور جوه الرسائل بتكمّل تحميل بعد الرسم فتزوّد الارتفاع — وload ما بيفقّعش، فبنسمعه في مرحلة الالتقاط
+  chatArea.addEventListener("load", () => pinIfStillSticky(), true);
+})();
 
 // ═══ لوحة مفاتيح الموبايل ═══
 // الواجهة مقفولة على ارتفاع الشاشة (CSS في أول الصفحة). لما الكيبورد يفتح نظبّط ارتفاع #app على
