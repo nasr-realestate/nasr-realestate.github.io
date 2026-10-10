@@ -101,7 +101,7 @@ jobs:
             echo "VERDICT: $VERDICT"
             echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
             echo "::error title=SETUP_STOPPED::$VERDICT"
-            exit 0
+            exit 1
           }
 
           say "0) mode + artifact identity"
@@ -137,13 +137,13 @@ jobs:
 
           # التحقق من bindings الحية: القائمة الأساسية + مسموحات الإشعارات فقط
           BASE_OK=$(jq -r '
-            [.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",") as $got |
-            (["d1/DB","plain_text/GEMINI_MODEL","secret_text/GEMINI_API_KEY","secret_text/IMGBB_API_KEY"] | sort | join(",")) as $base |
-            (["kv_namespace/PUSH_SUBS","secret_text/PUSH_SEND_SECRET","secret_text/VAPID_PRIVATE_KEY","secret_text/VAPID_PUBLIC_KEY"] | sort | join(",")) as $push |
-            if ($got == $base) or ($got == (($base + "," + $push) | split(",") | sort | join(","))) then "yes"
-            else
-              ((($got | split(",")) - ($base | split(",")) - ($push | split(",")))) as $extra |
-              "no:unexpected=" + ($extra | join(";"))
+            [.result.bindings[]? | "\(.type)/\(.name)"] | sort | unique as $got |
+            (["d1/DB","plain_text/GEMINI_MODEL","secret_text/GEMINI_API_KEY","secret_text/IMGBB_API_KEY"] | sort) as $base |
+            (["kv_namespace/PUSH_SUBS","secret_text/PUSH_SEND_SECRET","secret_text/VAPID_PRIVATE_KEY","secret_text/VAPID_PUBLIC_KEY"] | sort) as $push |
+            ($got - $base - $push) as $extra |
+            ($base - $got) as $missing |
+            if ((($extra | length) == 0) and (($missing | length) == 0)) then "yes"
+            else "no:unexpected=" + ($extra | join(";")) + ":missing=" + ($missing | join(";"))
             end' snap.json 2>/dev/null) || BASE_OK="no:snapshot-unreadable"
           echo "bindings match expected baseline: ${BASE_OK:-parse-error}"
           case "$BASE_OK" in
