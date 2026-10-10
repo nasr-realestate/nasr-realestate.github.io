@@ -1,0 +1,51 @@
+---
+layout: default
+body_class: page-notifications
+title: "تفعيل التنبيهات | سمسار طلبك"
+description: "فعّل تنبيهات العروض والطلبات العقارية الجديدة في مدينة نصر — تصلك الإشعارات فور النشر على جهازك مباشرة."
+permalink: /notifications.html
+image: "/assets/img/social-home.png"
+---
+
+{%- comment -%}
+═══════════════════════════════════════════════════════════════
+  صفحة تنبيهات Web Push — الواجهة الكاملة (2026-10-10)
+  ────────────────────────────────────────────────────────────
+  • زر «فعّل التنبيهات» يطلب إذن المتصفح عند الضغط فقط.
+  • زر «أوقف التنبيهات» متاح للمشتركين في أي وقت.
+  • إرشادات iPhone/iPad: التثبيت على الشاشة الرئيسية + iOS 16.4+.
+  • بديل واضح عند عدم الدعم: واتساب + صفحة العقارات.
+  • «معرّف الاشتراك» (16 حرفًا) يُستخدم للإرسال التجريبي لجهاز واحد.
+═══════════════════════════════════════════════════════════════
+{%- endcomment -%}
+
+<section class="push-card" data-push-panel data-push-state="loading" aria-label="إعدادات التنبيهات">
+  <h2>🔔 تنبيهات العروض والطلبات الجديدة</h2>
+  <p class="push-status-text">جارٍ التحقق من حالة التنبيهات…</p>
+
+  <div class="push-actions">
+    <button type="button" class="push-btn push-btn-primary" data-push-enable>فعّل التنبيهات</button>
+    <button type="button" class="push-btn push-btn-ghost" style="color:#0a3d2e;border-color:#b9c9c1" data-push-disable>أوقف التنبيهات</button>
+    <button type="button" class="push-btn push-btn-ghost" style="color:#0a3d2e;border-color:#b9c9c1" data-push-copy-id>نسخ معرّف الاشتراك</button>
+    <a class="push-btn push-btn-ghost" style="color:#0a3d2e;border-color:#b9c9c1;text-decoration:none" href="{{ '/properties/' | relative_url }}">تصفح العروض</a>
+    <a class="push-btn push-btn-primary" style="text-decoration:none" href="https://wa.me/201147758857" target="_blank" rel="noopener">واتساب</a>
+  </div>
+
+  <p class="push-hint">
+    معرّف الاشتراك لهذا الجهاز: <span class="push-sub-id">—</span>
+  </p>
+
+  <div class="push-hint" style="margin-top:14px">
+    <strong>📱 مستخدمو iPhone/iPad:</strong>
+    تنبيهات الويب على أجهزة Apple تعمل فقط بعد تثبيت الموقع كتطبيق على الشاشة الرئيسية
+    (قائمة المشاركة ⬆︎ ← «إضافة إلى الشاشة الرئيسية»)، ثم فتح التطبيق وتفعيل التنبيهات من هذه الصفحة
+    داخله — ويتطلب نظام iOS 16.4 فأحدث. بدون التثبيت، اعتمد على واتساب أو صفحة العقارات.
+    <br>
+    <strong>🤖 أندرويد وسطح المكتب:</strong>
+    يعمل التفعيل مباشرة من المتصفحات الحديثة (Chrome / Edge / Firefox / Safari 16+)
+    — إن ظهرت نافذة الإذن فاضغط «السماح».
+    <br>
+    <strong>🔒 الخصوصية:</strong>
+    نخزّن رمز اشتراك تقني فقط (بدون اسمك أو رقمك أو عنوانك)، ويمكنك الإلغاء في أي وقت من هنا.
+  </div>
+</section>

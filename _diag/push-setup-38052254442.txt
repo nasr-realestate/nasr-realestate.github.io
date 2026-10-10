@@ -1,0 +1,33 @@
+
+── 0) mode + artifact identity ──
+mode: verify | ref: arena/72dd7e7d-nasr-realestate-github-io | run: 38052254442
+worker.js sha256 = c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+expected         = c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+
+── 1) credential (names only — values never printed) ──
+MISSING:ARENA_CLOUDFLARE
+MISSING:ARENA_CLOUDFLARE_TOKEN
+PRESENT:CLOUDFLARE_API_TOKEN
+MISSING:CF_API_TOKEN
+
+── 2) live read-only snapshot ──
+settings success: true
+bindings (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+compatibility_date = 2026-09-04 | flags = []
+bindings match expected baseline: yes
+live module sha256 = c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+live == repo worker.js: yes
+
+── 2b) live transport probes (GET/OPTIONS only — no chat POST) ──
+GET / → 405 (405 = chat POST-only preserved) | OPTIONS /push/subscribe → 204 (204) | GET /push/config → 200 (200)
+resource ids: kv[PUSH_SUBS=6987204b82e146c897127283daa7bea5] d1[DB=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf]
+VERDICT: VERIFY_OK — الإعدادات الحية موثّقة (bindings=d1/DB,secret_text/GEMINI_API_KEY,plain_text/GEMINI_MODEL,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,kv_namespace/PUSH_SUBS,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY | compat=2026-09-04 | live_sha=c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583 | kv=PUSH_SUBS=6987204b82e146c897127283daa7bea5 | transport: GET=405 OPT=204 CFG=200). لا تغيير.
+::notice title=PUSH_SETUP::VERIFY_OK — الإعدادات الحية موثّقة (bindings=d1/DB,secret_text/GEMINI_API_KEY,plain_text/GEMINI_MODEL,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,kv_namespace/PUSH_SUBS,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY | compat=2026-09-04 | live_sha=c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583 | kv=PUSH_SUBS=6987204b82e146c897127283daa7bea5 | transport: GET=405 OPT=204 CFG=200). لا تغيير.

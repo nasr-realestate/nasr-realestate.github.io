@@ -2355,6 +2355,419 @@ function stampVersion(obj){
 const jsonResWith = (cors, obj, s=200) =>
   new Response(JSON.stringify(obj), {status:s, headers:{...cors, "Content-Type":"application/json; charset=utf-8"}});
 
+// ══════════════════════════════════════════════════════════════════════
+// WEB PUSH (VAPID) — إشعارات العروض والطلبات الجديدة · 2026-10-10
+// ──────────────────────────────────────────────────────────────────────
+// المسارات (كلها تحت /push/ ولا تمس محادثة الوكيل إطلاقًا):
+//   GET  /push/config      → المفتاح العام VAPID + حالة الجاهزية
+//   POST /push/subscribe   → حفظ اشتراك Push في KV (CORS للأصل الرسمي فقط)
+//   POST /push/unsubscribe → حذف الاشتراك
+//   POST /push/send        → إرسال إشعار لمشتركين (يحميه سر Worker Secret)
+//
+// الأمان:
+//  • لا تُخزَّن بيانات شخصية إطلاقًا: الـendpoint + مفتاحا التشفير + تاريخ فقط.
+//  • الإرسال يرفض أي نص يشبه أرقام هواتف (حماية إضافية على مستوى الـWorker).
+//  • الرابط المفتوح عند الضغط يُقيَّد بنطاق الموقع الرسمي داخل sw.js أيضًا.
+//  • الحفاظ على idempotency عبر commit SHA + مسار الملف (مفتاح في KV).
+//  • الاشتراكات المنتهية (404/410 من مزود Push) تُحذف تلقائيًا.
+//
+// ⚠️ المفاتيح والأسرار (VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / PUSH_SEND_SECRET)
+//    تُضبط كـ Worker Secrets ولا تُخزَّن في Git — راجع push-notify-setup.yml.
+// ══════════════════════════════════════════════════════════════════════
+
+const PUSH_SUB_PREFIX      = "push:sub:";
+const PUSH_SENT_PREFIX     = "push:sent:";
+const PUSH_SENT_TTL_S      = 30 * 24 * 3600;      // ذاكرة idempotency لمدة 30 يومًا
+const VAPID_SUBJECT        = "mailto:samsar.talabak@mailo.com";
+const SITE_ORIGIN          = "https://nasr-realestate.github.io";
+const PUSH_MAX_BODY        = 8 * 1024;            // حد مستقل لمسارات /push/
+const PUSH_SUB_RATE_WINDOW = 60 * 60 * 1000;
+const PUSH_SUB_RATE_MAX    = 12;
+const PUSH_SEND_RATE_WINDOW = 10 * 60 * 1000;
+const PUSH_SEND_RATE_MAX    = 30;
+const PUSH_TTL_SECONDS     = 86400;               // يوم واحد — عروض عقارية لا تستدعي إلحاحًا
+const VAPID_MAX_AGE_S      = 12 * 3600;
+const MAX_SUBS_PER_SEND    = 2000;                // سقف أمان ضد الضخامة
+const MAX_TITLE_LEN        = 120;
+const MAX_BODY_LEN         = 180;
+
+// روابط الإشعارات: الموقع الرسمي فقط (نفس القيد في sw.js)
+const PUSH_URL_RE = /^https:\/\/nasr-realestate\.github\.io\/(?:|(?:properties|requests)(?:\/[a-z0-9][a-z0-9-]{0,80})?\/)$/;
+const COMMIT_SHA_RE = /^[0-9a-f]{7,40}$/i;
+const FILE_PATH_RE = /^_(properties|requests)\/[A-Za-z0-9][A-Za-z0-9._-]{0,140}\.md$/;
+
+const pushSubRateMap  = new Map();
+const pushSendRateMap = new Map();
+function pushSubRateLimited(ip){ return hitLimit(pushSubRateMap, ip, PUSH_SUB_RATE_WINDOW, PUSH_SUB_RATE_MAX); }
+function pushSendRateLimited(ip){ return hitLimit(pushSendRateMap, ip, PUSH_SEND_RATE_WINDOW, PUSH_SEND_RATE_MAX); }
+
+// ─── ترميز base64url (بديل Buffer — متاح في Workers وNode معًا) ───
+const B64U_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+function bytesToB64u(bytes){
+  let out = "";
+  for(let i = 0; i < bytes.length; i += 3){
+    const b0 = bytes[i], b1 = bytes[i+1], b2 = bytes[i+2];
+    out += B64U_ALPHABET[b0 >> 2];
+    out += B64U_ALPHABET[((b0 & 3) << 4) | ((b1 ?? 0) >> 4)];
+    if(i + 1 < bytes.length) out += B64U_ALPHABET[((b1 & 15) << 2) | ((b2 ?? 0) >> 6)];
+    if(i + 2 < bytes.length) out += B64U_ALPHABET[b2 & 63];
+  }
+  return out;
+}
+function b64uToBytes(str){
+  const s = String(str || "").replace(/[^A-Za-z0-9\-_]/g, "");
+  const out = [];
+  let buf = 0, bits = 0;
+  for(const ch of s){
+    const v = B64U_ALPHABET.indexOf(ch);
+    if(v < 0) return new Uint8Array(0);
+    buf = (buf << 6) | v; bits += 6;
+    if(bits >= 8){ bits -= 8; out.push((buf >> bits) & 0xff); }
+  }
+  return new Uint8Array(out);
+}
+function b64uToAscii(str){ return String.fromCharCode(...b64uToBytes(str)); }
+function utf8ToB64u(text){ return bytesToB64u(new TextEncoder().encode(String(text))); }
+function asciiToB64u(str){ return bytesToB64u(Uint8Array.from(str, c => c.charCodeAt(0))); }
+
+function timingSafeEqualStr(a, b){
+  const sa = String(a || ""), sb = String(b || "");
+  // مقارنة ثابتة الزمن على بايت خشن ثم مطابقة الطول
+  let diff = sa.length ^ sb.length;
+  const n = Math.max(sa.length, sb.length);
+  for(let i = 0; i < n; i++) diff |= (sa.charCodeAt(i) || 0) ^ (sb.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
+// ─── حماية الخصوصية: أي نص يشبه رقم هاتف/بيانات شخصية يُرفض ───
+const PHONE_LIKE_RE = /(?:\+|00)\d{7,15}|\b01[0125]\d{8}\b|[0-9٠-٩]{9,}/;
+function looksLikePhone(text){ return PHONE_LIKE_RE.test(String(text || "")); }
+
+function pushCors(request, env, methods){
+  return { ...corsHeaders(request, env), "Access-Control-Allow-Methods": methods };
+}
+
+// ─── تحقق من اشتراك Push المُستلَم من المتصفح ───
+const ALLOWED_ENDPOINT_HOST_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
+function validateSubscription(raw){
+  if(!raw || typeof raw !== "object") return { error: "invalid_subscription" };
+  const endpoint = String(raw.endpoint || "");
+  if(endpoint.length < 20 || endpoint.length > 2048) return { error: "invalid_endpoint" };
+  let eu;
+  try { eu = new URL(endpoint); } catch { return { error: "invalid_endpoint" }; }
+  if(eu.protocol !== "https:") return { error: "invalid_endpoint" };
+  const host = eu.hostname.toLowerCase();
+  if(host === "localhost" || !ALLOWED_ENDPOINT_HOST_RE.test(host) ||
+     /\.(local|internal|home|lan|corp)$/.test(host)){
+    return { error: "invalid_endpoint" };
+  }
+  const keys = raw.keys;
+  if(!keys || typeof keys !== "object") return { error: "invalid_keys" };
+  const p256dh = String(keys.p256dh || "");
+  const auth = String(keys.auth || "");
+  const p256 = b64uToBytes(p256dh);
+  const authB = b64uToBytes(auth);
+  if(p256.length !== 65 || p256[0] !== 4) return { error: "invalid_keys" };
+  if(authB.length < 16 || authB.length > 64) return { error: "invalid_keys" };
+  return { ok: true, subscription: { endpoint, keys: { p256dh, auth } } };
+}
+
+// معرّف الاشتراك: بصمة SHA-256 للـendpoint (لا نُعيد الـendpoint نفسه أبدًا في الردود)
+async function endpointHashHex(endpoint){
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(endpoint)));
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ─── RFC 8291: تشفير محتوى الإشعار (aes128gcm) عبر WebCrypto فقط ───
+async function hkdfSha256(ikmBytes, saltBytes, infoBytes, length){
+  const key = await crypto.subtle.importKey("raw", ikmBytes, "HKDF", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "HKDF", hash: "SHA-256", salt: saltBytes, info: infoBytes }, key, length * 8
+  );
+  return new Uint8Array(bits);
+}
+async function webPushEncrypt(payloadText, uaPublicB64u, uaAuthB64u){
+  const uaPublic = b64uToBytes(uaPublicB64u);
+  const uaAuth = b64uToBytes(uaAuthB64u);
+  if(uaPublic.length !== 65 || uaPublic[0] !== 4) throw new Error("bad_p256dh");
+  if(uaAuth.length < 16) throw new Error("bad_auth");
+
+  const uaPubKey = await crypto.subtle.importKey("raw", uaPublic, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const eph = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+  const ecdhSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaPubKey }, eph.privateKey, 256));
+
+  // key_info = "WebPush: info" || 0x00 || ua_public || as_public
+  const infoPrefix = new TextEncoder().encode("WebPush: info\u0000");
+  const keyInfo = new Uint8Array(infoPrefix.length + uaPublic.length + asPublic.length);
+  keyInfo.set(infoPrefix, 0);
+  keyInfo.set(uaPublic, infoPrefix.length);
+  keyInfo.set(asPublic, infoPrefix.length + uaPublic.length);
+
+  const ikm = await hkdfSha256(ecdhSecret, uaAuth, keyInfo, 32);
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cekInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\u0000");
+  const nonceInfo = new TextEncoder().encode("Content-Encoding: nonce\u0000");
+  const cek = await hkdfSha256(ikm, salt, cekInfo, 16);
+  const nonce = await hkdfSha256(ikm, salt, nonceInfo, 12);
+
+  // سجل واحد: البيانات ثم محدد التجزئة 0x02 (RFC 8188 / RFC 8291 §4)
+  const plain = new TextEncoder().encode(String(payloadText));
+  const record = new Uint8Array(plain.length + 1);
+  record.set(plain, 0);
+  record[plain.length] = 0x02;
+
+  const cekKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, cekKey, record));
+
+  // ترويسة RFC 8188: salt(16) || rs=4096 (4 بايت BE) || idlen=0x41 || as_public(65)
+  const header = new Uint8Array(86);
+  header.set(salt, 0);
+  header.set([0x00, 0x00, 0x10, 0x00], 16);
+  header[20] = 0x41;
+  header.set(asPublic, 21);
+
+  const body = new Uint8Array(header.length + cipher.length);
+  body.set(header, 0);
+  body.set(cipher, header.length);
+  return { body, saltB64u: bytesToB64u(salt), asPublicB64u: bytesToB64u(asPublic) };
+}
+
+// ─── RFC 8292: ترويسة VAPID (JWT ES256) ───
+async function importVapidKeys(env){
+  const privB64u = String(env.VAPID_PRIVATE_KEY || "");
+  const pubB64u = String(env.VAPID_PUBLIC_KEY || "");
+  if(!privB64u || !pubB64u) return null;
+  try{
+    const pub = b64uToBytes(pubB64u);
+    const priv = b64uToBytes(privB64u);
+    if(pub.length !== 65 || pub[0] !== 4 || priv.length !== 32) return null;
+    const jwk = {
+      kty: "EC", crv: "P-256",
+      x: bytesToB64u(pub.slice(1, 33)), y: bytesToB64u(pub.slice(33, 65)),
+      d: bytesToB64u(priv), alg: "ES256", ext: true,
+    };
+    const key = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+    return { key, publicKeyB64u: pubB64u };
+  }catch{ return null; }
+}
+async function vapidHeaders(vapid, endpointUrl){
+  const aud = new URL(endpointUrl).origin;
+  const now = Math.floor(Date.now() / 1000);
+  const header = utf8ToB64u(JSON.stringify({ typ: "JWT", alg: "ES256" }));
+  const payload = utf8ToB64u(JSON.stringify({ aud, exp: now + VAPID_MAX_AGE_S, sub: VAPID_SUBJECT }));
+  const signingInput = header + "." + payload;
+  const sig = new Uint8Array(await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" }, vapid.key,
+    new TextEncoder().encode(signingInput)
+  ));
+  const jwt = signingInput + "." + bytesToB64u(sig);
+  return {
+    "Authorization": "vapid t=" + jwt + ", k=" + vapid.publicKeyB64u,
+    "Crypto-Key": "p256ecdsa=" + vapid.publicKeyB64u,
+  };
+}
+
+// ─── إرسال إشعار واحد إلى مزود Push؛ يعيد الحالة دون كشف بيانات ───
+async function deliverPush(sub, payloadObj, vapid, fetchImpl = fetch){
+  const encryption = await webPushEncrypt(JSON.stringify(payloadObj), sub.keys.p256dh, sub.keys.auth);
+  const vapidHdr = await vapidHeaders(vapid, sub.endpoint);
+  // Crypto-Key يجمع dh (RFC 8188 القديم) و p256ecdsa (VAPID) — دون إسقاط أحدهما
+  const cryptoKey = "dh=" + encryption.asPublicB64u + "; " + (vapidHdr["Crypto-Key"] || "");
+  const headers = {
+    "TTL": String(PUSH_TTL_SECONDS),
+    "Urgency": "normal",
+    "Content-Encoding": "aes128gcm",
+    "Content-Type": "application/octet-stream",
+    "Encryption": "salt=" + encryption.saltB64u,
+    "Authorization": vapidHdr["Authorization"],
+    "Crypto-Key": cryptoKey,
+  };
+  const res = await fetchImpl(sub.endpoint, { method: "POST", headers, body: encryption.body });
+  const status = res?.status || 0;
+  if(status === 201 || status === 200) return { ok: true, status };
+  if(status === 404 || status === 410) return { ok: false, gone: true, status };
+  return { ok: false, gone: false, status };
+}
+
+// ─── صياغة نص الإشعار من بيانات عامة فقط (بلا هواتف/أسماء/بيانات عملاء) ───
+function buildNotification(input){
+  const kind = input.kind === "request" ? "request" : "property";
+  const rawTitle = String(input.title || "").replace(/\s+/g, " ").trim().slice(0, MAX_TITLE_LEN);
+  if(!rawTitle) return { error: "invalid_title" };
+  const price = String(input.price || "").replace(/\s+/g, " ").trim().slice(0, 40);
+  const location = String(input.location || "").replace(/\s+/g, " ").trim().slice(0, 60);
+  const parts = [];
+  if(price) parts.push("💰 " + price);
+  if(location) parts.push("📍 " + location);
+  const body = parts.join(" · ").slice(0, MAX_BODY_LEN) || "اضغط للتفاصيل";
+  const title = (kind === "request" ? "🔔 طلب جديد: " : "🏠 عرض جديد: ") + rawTitle;
+  if(looksLikePhone(title + " " + body)) return { error: "privacy_guard" };
+  return {
+    payload: {
+      title: title.slice(0, MAX_TITLE_LEN + 24),
+      body,
+      url: String(input.url || ""),
+      tag: "listing-" + String(input.filePath || "").replace(/[^a-z0-9]/gi, "-").slice(-40),
+      kind,
+    },
+  };
+}
+
+function isConfigured(env){ return Boolean(env && env.PUSH_SUBS && env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY); }
+
+// ─── المُعالج الرئيسي لمسارات /push/ ───
+async function handlePush(request, env, url, ip){
+  const path = url.pathname;
+  const cors = pushCors(request, env, "GET,POST,OPTIONS");
+
+  if(request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const respond = (obj, s = 200) => jsonResWith(cors, obj, s);
+
+  // ── GET /push/config: المفتاح العام فقط (لا أسرار) ──
+  if(path === "/push/config"){
+    if(request.method !== "GET") return respond({ ok: false, error: "method_not_allowed" }, 405);
+    const publicKey = env.VAPID_PUBLIC_KEY && env.PUSH_SUBS ? String(env.VAPID_PUBLIC_KEY) : null;
+    return respond({ ok: true, enabled: Boolean(publicKey), publicKey });
+  }
+
+  if(request.method !== "POST") return respond({ ok: false, error: "method_not_allowed" }, 405);
+  if(!env.PUSH_SUBS) return respond({ ok: false, error: "push_not_configured" }, 503);
+  const contentType = request.headers.get("Content-Type") || "";
+  if(!/^application\/json\b/i.test(contentType)) return respond({ ok: false, error: "unsupported_content_type" }, 415);
+
+  const { json: body, tooLarge } = await readJsonBody(request, PUSH_MAX_BODY);
+  if(tooLarge) return respond({ ok: false, error: "payload_too_large" }, 413);
+  if(!body || typeof body !== "object") return respond({ ok: false, error: "invalid_json" }, 400);
+
+  // ── POST /push/subscribe ──
+  if(path === "/push/subscribe"){
+    if(pushSubRateLimited(ip)) return respond({ ok: false, error: "rate_limited" }, 429);
+    const checked = validateSubscription(body.subscription);
+    if(checked.error) return respond({ ok: false, error: checked.error }, 400);
+    const device = ["mobile", "desktop", "tablet", "other"].includes(String(body.device || "")) ? String(body.device) : "other";
+    const hash = await endpointHashHex(checked.subscription.endpoint);
+    const nowIso = new Date().toISOString();
+    const prev = await env.PUSH_SUBS.get(PUSH_SUB_PREFIX + hash, { type: "json" });
+    await env.PUSH_SUBS.put(PUSH_SUB_PREFIX + hash, JSON.stringify({
+      ...checked.subscription,
+      device,
+      createdAt: prev?.createdAt || nowIso,
+      updatedAt: nowIso,
+    }));
+    return respond({ ok: true, id: hash.slice(0, 16) });
+  }
+
+  // ── POST /push/unsubscribe ──
+  if(path === "/push/unsubscribe"){
+    if(pushSubRateLimited(ip)) return respond({ ok: false, error: "rate_limited" }, 429);
+    let hash = "";
+    if(body.endpoint && typeof body.endpoint === "string") hash = await endpointHashHex(body.endpoint);
+    else if(body.id && typeof body.id === "string" && /^[0-9a-f]{12,64}$/.test(body.id)) hash = body.id;
+    else return respond({ ok: false, error: "invalid_request" }, 400);
+    if(hash.length === 64){
+      await env.PUSH_SUBS.delete(PUSH_SUB_PREFIX + hash);
+    }else{
+      // معرّف مختصر (16 حرفًا): ابحث بالبادئة ثم احذف المطابق
+      const listed = await env.PUSH_SUBS.list({ prefix: PUSH_SUB_PREFIX });
+      for(const key of (listed.keys || [])){
+        if(key.name.slice(PUSH_SUB_PREFIX.length).startsWith(hash)) await env.PUSH_SUBS.delete(key.name);
+      }
+    }
+    return respond({ ok: true });
+  }
+
+  // ── POST /push/send — مسار الإرسال من GitHub Actions (سر Worker Secret) ──
+  if(path === "/push/send"){
+    const auth = String(request.headers.get("Authorization") || "");
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
+    const expected = String(env.PUSH_SEND_SECRET || "");
+    if(!expected || !token || !timingSafeEqualStr(token, expected)){
+      return respond({ ok: false, error: "unauthorized" }, 401);
+    }
+    if(pushSendRateLimited(ip)) return respond({ ok: false, error: "rate_limited" }, 429);
+
+    const filePath = String(body.filePath || "");
+    const commitSha = String(body.commitSha || "");
+    const targetUrl = String(body.url || "");
+    const isTest = body.test === true;
+    const target = body.target == null ? "" : String(body.target);
+
+    if(!FILE_PATH_RE.test(filePath)) return respond({ ok: false, error: "invalid_file_path" }, 400);
+    if(!COMMIT_SHA_RE.test(commitSha)) return respond({ ok: false, error: "invalid_commit_sha" }, 400);
+    if(!PUSH_URL_RE.test(targetUrl)) return respond({ ok: false, error: "invalid_url" }, 400);
+    const kindFromPath = filePath.indexOf("_requests/") === 0 ? "request" : "property";
+    const kind = String(body.kind || kindFromPath);
+    if(kind !== kindFromPath) return respond({ ok: false, error: "kind_mismatch" }, 400);
+    if(target && !/^[0-9a-f]{12,64}$/.test(target)) return respond({ ok: false, error: "invalid_target" }, 400);
+    if(isTest && !target) return respond({ ok: false, error: "test_requires_single_target" }, 400);
+
+    const built = buildNotification({ kind, title: body.title, price: body.price || body.budget, location: body.location, url: targetUrl, filePath });
+    if(built.error) return respond({ ok: false, error: built.error }, 400);
+    if(isTest) built.payload.title = "🧪 اختبار: " + built.payload.title;
+
+    // idempotency: نفس commit SHA + المسار لا يُرسل مرتين (يحمي من إعادة التشغيل)
+    const idemKey = String(body.idempotencyKey || (commitSha + ":" + filePath)).slice(0, 200);
+    if(!/^[A-Za-z0-9:._#\/-]+$/.test(idemKey)) return respond({ ok: false, error: "invalid_idempotency_key" }, 400);
+    const sentKey = PUSH_SENT_PREFIX + idemKey;
+    const already = await env.PUSH_SUBS.get(sentKey);
+    if(already) return respond({ ok: true, deduped: true, attempted: 0, success: 0, failed: 0, removed: 0, id: idemKey });
+
+    // جمع المشتركين (أو واحد فقط عند التحديد)
+    const subs = [];
+    if(target && target.length === 64){
+      const one = await env.PUSH_SUBS.get(PUSH_SUB_PREFIX + target, { type: "json" });
+      if(one) subs.push({ key: PUSH_SUB_PREFIX + target, sub: one });
+    }else{
+      let cursor;
+      do{
+        const page = await env.PUSH_SUBS.list({ prefix: PUSH_SUB_PREFIX, cursor });
+        for(const item of (page.keys || [])){
+          const sub = await env.PUSH_SUBS.get(item.name, { type: "json" });
+          if(sub && sub.endpoint && sub.keys) subs.push({ key: item.name, sub });
+        }
+        cursor = page.list_complete ? undefined : page.cursor;
+      }while(cursor && subs.length < MAX_SUBS_PER_SEND);
+      if(target){
+        const narrowed = subs.filter(s => s.key.slice(PUSH_SUB_PREFIX.length).startsWith(target));
+        subs.length = 0; subs.push(...narrowed);
+      }
+    }
+
+    if(!subs.length){
+      await env.PUSH_SUBS.put(sentKey, JSON.stringify({ at: Date.now(), attempted: 0 }), { expirationTtl: PUSH_SENT_TTL_S });
+      return respond({ ok: true, deduped: false, attempted: 0, success: 0, failed: 0, removed: 0, note: isTest ? "target_not_found" : "no_subscribers", id: idemKey });
+    }
+
+    const vapid = await importVapidKeys(env);
+    if(!vapid) return respond({ ok: false, error: "vapid_not_configured" }, 503);
+
+    let success = 0, failed = 0, removed = 0;
+    for(const entry of subs){
+      try{
+        const result = await deliverPush(entry.sub, built.payload, vapid);
+        if(result.ok){ success++; }
+        else{
+          failed++;
+          if(result.gone){ await env.PUSH_SUBS.delete(entry.key); removed++; }
+        }
+      }catch{ failed++; }
+    }
+
+    const summary = { attempted: subs.length, success, failed, removed, id: idemKey };
+    // ذاكرة idempotency — تُحفظ حتى لو فشل البعض، لأن إعادة التشغيل لن تُصلح مشتركًا ميتًا
+    await env.PUSH_SUBS.put(sentKey, JSON.stringify({ at: Date.now(), ...summary }), { expirationTtl: PUSH_SENT_TTL_S });
+
+    if(success === 0 && subs.length > 0 && !isTest){
+      return respond({ ok: false, error: "all_deliveries_failed", ...summary }, 502);
+    }
+    return respond({ ok: true, deduped: false, ...summary });
+  }
+
+  return respond({ ok: false, error: "not_found" }, 404);
+}
+
 // ══════════════════════════════════════════════════
 // MAIN EXPORT
 // ══════════════════════════════════════════════════
@@ -2365,6 +2778,9 @@ export default {
     const jsonRes = (obj, s=200) => jsonResWith(cors, stampVersion(withTypingDelay(obj)), s);
     const reqId = Math.random().toString(36).slice(2,10);
     const ip = request.headers.get("CF-Connecting-IP")||"unknown";
+
+    // ═══ Web Push — مسارات الإشعارات مستقلة تمامًا عن محادثة الوكيل ═══
+    if(url.pathname.indexOf("/push/")===0) return handlePush(request, env, url, ip);
 
     if(request.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
 

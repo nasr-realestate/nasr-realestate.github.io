@@ -1,0 +1,34 @@
+
+── 0) mode + artifact identity ──
+mode: configure | ref: arena/72dd7e7d-nasr-realestate-github-io | run: 38051935007
+worker.js sha256 = c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+expected         = c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+
+── 1) credential (names only — values never printed) ──
+MISSING:ARENA_CLOUDFLARE
+MISSING:ARENA_CLOUDFLARE_TOKEN
+PRESENT:CLOUDFLARE_API_TOKEN
+MISSING:CF_API_TOKEN
+
+── 2) live read-only snapshot ──
+settings success: true
+bindings (name/type only):
+  d1	DB
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+compatibility_date = 2026-09-04 | flags = []
+bindings match expected baseline: yes
+live module sha256 = a3a53359a673c8b0ee0fdd3914bc2b3c562e6046af30e61f05d1cb19fd78a452
+live == repo worker.js: no
+
+── 3) KV namespace (nasr-push-subs) ──
+namespace missing → creating…
+kv namespace created (id 6987204b…)
+
+── 4) Worker secrets (values generated in-runner, never printed) ──
+generated new VAPID keypair (first time)
+PUSH_SEND_SECRET: derived from Cloudflare credential (HMAC-SHA256)
+secret VAPID_PRIVATE_KEY → HTTP 201 (true)
+VERDICT: STOP — تعذّر ضبط VAPID_PRIVATE_KEY (الأسرار السابقة لم تُمس).
+::error title=SETUP_STOPPED::STOP — تعذّر ضبط VAPID_PRIVATE_KEY (الأسرار السابقة لم تُمس).
