@@ -91,7 +91,9 @@ function makeStorage(initial = {}) {
 // يشغّل السكربت الرئيسي في agent.html. search = query string للصفحة (مثلًا "?return=valuation&estimate=…")،
 // session/local = محتوى sessionStorage/localStorage قبل التحميل (القيم نصوص).
 // runTimers: لما الاختبار بيمرّ على ردود Worker حقيقية (فيها typingDelay) الصفحة بتستنى setTimeout — فبننفّذها فورًا بدل الانتظار.
-export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, runTimers = false, visualViewport, onLine, AbortControllerImpl } = {}) {
+// extraGlobals: globals إضافية يتحقن بها السياق قبل التشغيل (مثلًا ResizeObserver/MutationObserver
+//   لاختبارات التثبيت التلقائي) — اختيارية، والافتراضي فاضي فسلوك الاختبارات القائمة ما بيتغيّرش.
+export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, runTimers = false, visualViewport, onLine, AbortControllerImpl, extraGlobals = {} } = {}) {
   const els = new Map();
   const timers = [];
   const errors = [];
@@ -130,6 +132,7 @@ export function bootAgent({ search = "", session = {}, local = {}, fetchImpl, ru
     setTimeout: (fn, ms) => { timers.push({ fn, ms }); if (runTimers) setImmediate(fn); return timers.length; },
     clearTimeout() {},
     setInterval: () => 1, clearInterval() {},
+    ...extraGlobals,
   });
   vm.runInContext(mainScript, ctx);
   return {
