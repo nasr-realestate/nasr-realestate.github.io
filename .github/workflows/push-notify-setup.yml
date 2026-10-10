@@ -214,7 +214,7 @@ jobs:
           fi
 
           say "4) Worker secrets (values generated in-runner, never printed)"
-          HAS_VAPID=$(jq -r '[.result.bindings[]? | .name] | index("VAPID_PRIVATE_KEY") != null' snap.json 2>/dev/null) || HAS_VAPID="false"
+          HAS_VAPID=$(jq -r '([.result.bindings[]? | .name] as $n | (($n | index("VAPID_PRIVATE_KEY")) != null) and (($n | index("VAPID_PUBLIC_KEY")) != null))' snap.json 2>/dev/null) || HAS_VAPID="false"
           GEN_PUB=""; GEN_PRIV=""; SEND_SECRET=""
           if [ "$HAS_VAPID" != "true" ]; then
             GEN=$(node -e '
@@ -249,7 +249,7 @@ jobs:
             code=$(curl -sS -m 30 -o sec-out.json -w '%{http_code}' -X PUT -H "$AUTH" -H "Content-Type: application/json" \
               --data "$payload" "$API/accounts/$ACC/workers/scripts/$SCRIPT/secrets") || return 1
             echo "secret $name → HTTP $code ($(jq -r '.success // false' sec-out.json 2>/dev/null || echo parse-error))"
-            [ "$code" = "200" ] && [ "$(jq -r '.success // false' sec-out.json 2>/dev/null || echo false)" = "true" ]
+            { [ "$code" = "200" ] || [ "$code" = "201" ]; } && [ "$(jq -r '.success // false' sec-out.json 2>/dev/null || echo false)" = "true" ]
           }
 
           if [ -n "$GEN_PRIV" ]; then
