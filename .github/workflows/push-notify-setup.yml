@@ -55,7 +55,7 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
-  AUTO_MODE: "configure"
+  AUTO_MODE: "verify"
 
 jobs:
   setup:
@@ -174,9 +174,18 @@ jobs:
           echo "live == repo worker.js: $([ "$LIVE_SHA" = "$W_SHA" ] && echo yes || echo no)"
 
           BINDINGS_SUMMARY=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | join(",")' snap.json 2>/dev/null) || BINDINGS_SUMMARY="unavailable"
+          KV_IDS=$(jq -r '[.result.bindings[]? | select(.type == "kv_namespace") | .name + "=" + (.namespace_id // "?")] | join(" | ")' snap.json 2>/dev/null) || KV_IDS="?"
+          D1_IDS=$(jq -r '[.result.bindings[]? | select(.type == "d1") | .name + "=" + (.database_id // "?")] | join(" | ")' snap.json 2>/dev/null) || D1_IDS="?"
+
+          say "2b) live transport probes (GET/OPTIONS only — no chat POST)"
+          GET_CODE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$AGENT/") || GET_CODE="000"
+          OPT_CODE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/push/subscribe" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") || OPT_CODE="000"
+          CFG_CODE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$AGENT/push/config") || CFG_CODE="000"
+          echo "GET / → $GET_CODE (405 = chat POST-only preserved) | OPTIONS /push/subscribe → $OPT_CODE (204) | GET /push/config → $CFG_CODE (200)"
+          echo "resource ids: kv[$KV_IDS] d1[$D1_IDS]"
 
           if [ "$MODE" = "verify" ]; then
-            VERDICT="VERIFY_OK — الإعدادات الحية موثّقة (bindings=$BINDINGS_SUMMARY | compat=$COMPAT | live_sha=$LIVE_SHA). لا تغيير."
+            VERDICT="VERIFY_OK — الإعدادات الحية موثّقة (bindings=$BINDINGS_SUMMARY | compat=$COMPAT | live_sha=$LIVE_SHA | kv=$KV_IDS | transport: GET=$GET_CODE OPT=$OPT_CODE CFG=$CFG_CODE). لا تغيير."
             echo "VERDICT: $VERDICT"
             echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
             echo "::notice title=PUSH_SETUP::$VERDICT"
