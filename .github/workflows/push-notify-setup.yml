@@ -22,7 +22,8 @@
 #   • لا يُنشر أي شيء إذا اختلفت bindings الحية عن المتوقع (gate 2).
 #   • لا تُدار الأسرار من Git: VAPID الخاص وسر الإرسال خارج المستودع دائمًا.
 #   • سر الإرسال: إن وُجد سر GitHub PUSH_SEND_SECRET يُستخدم؛ وإلا يُشتق
-#     من ARENA_CLOUDFLARE عبر HMAC-SHA256 (نفس التحويل في send-notification.yml).
+#     من CLOUDFLARE_API_TOKEN (أو ARENA_CLOUDFLARE) عبر HMAC-SHA256
+#     (نفس التحويل في send-notification.yml).
 #
 # طريقة التشغيل:
 #   • verify تلقائيًا عند أي دفع يغيّر هذا الملف.
@@ -54,7 +55,7 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
-  AUTO_MODE: "verify"
+  AUTO_MODE: "configure"
 
 jobs:
   setup:
@@ -85,6 +86,7 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Verify / configure (gated, self-reporting)
+        shell: bash
         run: |
           set -uo pipefail
           umask 077
@@ -94,17 +96,21 @@ jobs:
           VERDICT=""
           MODE="${INPUT_MODE:-$AUTO_MODE}"
           say(){ echo; echo "── $* ──"; }
+          stop(){
+            VERDICT="$1"
+            echo "VERDICT: $VERDICT"
+            echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
+            echo "::error title=SETUP_STOPPED::$VERDICT"
+            exit 0
+          }
 
           say "0) mode + artifact identity"
           echo "mode: $MODE | ref: $BRANCH | run: $RID"
-          W_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1)
+          W_SHA=$(sha256sum _worker/worker.js | cut -d' ' -f1) || W_SHA="unavailable"
           echo "worker.js sha256 = $W_SHA"
           echo "expected         = $EXPECTED_WORKER_SHA256"
           if [ "$W_SHA" != "$EXPECTED_WORKER_SHA256" ]; then
-            VERDICT="STOP — worker.js sha256 لا يطابق البصمة المثبتة في هذا الـWorkflow. حدّث EXPECTED_WORKER_SHA256 عمدًا بعد مراجعة التغيير."
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-            echo "::error title=SETUP_STOPPED::$VERDICT"
-            exit 0
+            stop "STOP — worker.js sha256 لا يطابق البصمة المثبتة في هذا الـWorkflow. حدّث EXPECTED_WORKER_SHA256 عمدًا بعد مراجعة التغيير."
           fi
 
           say "1) credential (names only — values never printed)"
@@ -114,20 +120,19 @@ jobs:
             if [ -n "$v" ]; then echo "PRESENT:$nm"; [ -z "$TOKEN" ] && TOKEN="$v"; else echo "MISSING:$nm"; fi
           done
           if [ -z "$TOKEN" ]; then
-            VERDICT="STOP — لا يوجد أي credential لـ Cloudflare في هذا المستودع؛ لم يتغيّر أي شيء."
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-            echo "::error title=SETUP_STOPPED::$VERDICT"
-            exit 0
+            stop "STOP — لا يوجد أي credential لـ Cloudflare في هذا المستودع؛ لم يتغيّر أي شيء."
           fi
           AUTH="Authorization: Bearer $TOKEN"
 
           say "2) live read-only snapshot"
-          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/settings" -o snap.json
-          echo "settings success: $(jq -r .success snap.json 2>/dev/null)"
+          if ! curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/settings" -o snap.json; then
+            stop "STOP — تعذّر الوصول إلى Cloudflare API (شبكة/توكن). لم يتغيّر أي شيء."
+          fi
+          echo "settings success: $(jq -r '.success // false' snap.json 2>/dev/null || echo parse-error)"
           echo "bindings (name/type only):"
-          jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap.json 2>/dev/null | sort
-          COMPAT=$(jq -r '.result.compatibility_date // ""' snap.json)
-          FLAGS=$(jq -c '.result.compatibility_flags // []' snap.json)
+          jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap.json 2>/dev/null | sort || echo "  (تعذّر القراءة)"
+          COMPAT=$(jq -r '.result.compatibility_date // ""' snap.json 2>/dev/null) || COMPAT=""
+          FLAGS=$(jq -c '.result.compatibility_flags // []' snap.json 2>/dev/null) || FLAGS="[]"
           echo "compatibility_date = $COMPAT | flags = $FLAGS"
 
           # التحقق من bindings الحية: القائمة الأساسية + مسموحات الإشعارات فقط
@@ -135,26 +140,22 @@ jobs:
             [.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",") as $got |
             (["d1/DB","plain_text/GEMINI_MODEL","secret_text/GEMINI_API_KEY","secret_text/IMGBB_API_KEY"] | sort | join(",")) as $base |
             (["kv_namespace/PUSH_SUBS","secret_text/PUSH_SEND_SECRET","secret_text/VAPID_PRIVATE_KEY","secret_text/VAPID_PUBLIC_KEY"] | sort | join(",")) as $push |
-            if ($got == $base) or ($got == ($base + "," + $push) | sort | join(",")) then "yes"
+            if ($got == $base) or ($got == (($base + "," + $push) | split(",") | sort | join(","))) then "yes"
             else
-              ([ $got | split(",")[] ] - [ $base | split(",")[] ] - [ $push | split(",")[] ]) as $extra |
+              ((($got | split(",")) - ($base | split(",")) - ($push | split(",")))) as $extra |
               "no:unexpected=" + ($extra | join(";"))
-            end' snap.json 2>/dev/null)
+            end' snap.json 2>/dev/null) || BASE_OK="no:snapshot-unreadable"
           echo "bindings match expected baseline: ${BASE_OK:-parse-error}"
           case "$BASE_OK" in
             yes) ;;
-            *)
-              VERDICT="STOP — bindings الحية لا تطابق المتوقع (${BASE_OK:-parse-error}). لم يتغيّر أي شيء؛ راجع الإعدادات يدويًا."
-              echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-              echo "::error title=SETUP_STOPPED::$VERDICT"
-              exit 0
-              ;;
+            *) stop "STOP — bindings الحية لا تطابق المتوقع (${BASE_OK:-parse-error}). لم يتغيّر أي شيء؛ راجع الإعدادات يدويًا." ;;
           esac
 
-          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live.raw
-          python3 - <<'PY'
-          from pathlib import Path
+          LIVE_SHA="unavailable"
+          if curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live.raw; then
+            LIVE_SHA=$(python3 - <<'PY'
           import hashlib
+          from pathlib import Path
           raw = Path('live.raw').read_bytes()
           module = raw
           if raw.startswith(b'--') and b'\r\n' in raw:
@@ -165,53 +166,47 @@ jobs:
                       _, body = part.split(b'\r\n\r\n', 1)
                       module = body[:-2] if body.endswith(b'\r\n') else body
                       break
-          if module is None:
-              print('live module: NOT FOUND in multipart')
-              Path('live.sha').write_text('unavailable')
-          else:
-              live_sha = hashlib.sha256(module).hexdigest()
-              Path('live.sha').write_text(live_sha)
-              print('live module bytes:', len(module))
-              print('live module sha256:', live_sha)
+          print(hashlib.sha256(module).hexdigest() if module else 'unavailable')
           PY
-          LIVE_SHA=$(cat live.sha 2>/dev/null || echo unavailable)
+            ) || LIVE_SHA="unavailable"
+          fi
+          echo "live module sha256 = $LIVE_SHA"
           echo "live == repo worker.js: $([ "$LIVE_SHA" = "$W_SHA" ] && echo yes || echo no)"
 
+          BINDINGS_SUMMARY=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | join(",")' snap.json 2>/dev/null) || BINDINGS_SUMMARY="unavailable"
+
           if [ "$MODE" = "verify" ]; then
-            VERDICT="VERIFY_OK — الإعدادات الحية موثّقة (bindings=$(jq -r '[.result.bindings[]? | \"\(.type)/\(.name)\"] | join(\",\")' snap.json 2>/dev/null) | compat=$COMPAT | live_sha=$LIVE_SHA). لا تغيير."
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
+            VERDICT="VERIFY_OK — الإعدادات الحية موثّقة (bindings=$BINDINGS_SUMMARY | compat=$COMPAT | live_sha=$LIVE_SHA). لا تغيير."
+            echo "VERDICT: $VERDICT"
+            echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
             echo "::notice title=PUSH_SETUP::$VERDICT"
             exit 0
           fi
 
           if [ "$MODE" != "configure" ]; then
-            VERDICT="STOP — وضع غير معروف: $MODE"
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-            exit 0
+            stop "STOP — وضع غير معروف: $MODE"
           fi
 
           say "3) KV namespace ($KV_TITLE)"
-          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/storage/kv/namespaces?per_page=100" -o kv.json
-          KV_OK=$(jq -r .success kv.json 2>/dev/null)
-          if [ "$KV_OK" != "true" ]; then
-            VERDICT="STOP — تعذّر الوصول إلى KV API (صلاحية Workers KV غير ممنوحة لهذا الـtoken). لم يتغيّر أي شيء."
-            echo "kv response: $(jq -c '{success, errors: [.errors[]? | {code, message}]}' kv.json 2>/dev/null)"
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-            echo "::error title=SETUP_STOPPED::$VERDICT"
-            exit 0
+          if ! curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/storage/kv/namespaces?per_page=100" -o kv.json; then
+            stop "STOP — تعذّر الوصول إلى KV API. لم يتغيّر أي شيء."
           fi
-          KVID=$(jq -r --arg t "$KV_TITLE" '.result[]? | select(.title == $t) | .id' kv.json | head -1)
+          KV_OK=$(jq -r '.success // false' kv.json 2>/dev/null) || KV_OK="false"
+          if [ "$KV_OK" != "true" ]; then
+            echo "kv response: $(jq -c '{success, errors: [.errors[]? | {code, message}]}' kv.json 2>/dev/null || echo unreadable)"
+            stop "STOP — صلاحية Workers KV غير ممنوحة لهذا الـtoken. لم يتغيّر أي شيء؛ أضف الصلاحية أو أنشئ namespace يدويًا (انظر التقرير)."
+          fi
+          KVID=$(jq -r --arg t "$KV_TITLE" '[.result[]? | select(.title == $t) | .id][0] // ""' kv.json 2>/dev/null) || KVID=""
           if [ -z "$KVID" ]; then
             echo "namespace missing → creating…"
-            curl -sS -m 30 -X POST -H "$AUTH" -H "Content-Type: application/json" \
-              --data "{\"title\":\"$KV_TITLE\"}" "$API/accounts/$ACC/storage/kv/namespaces" -o kv-create.json
-            KVID=$(jq -r '.result.id // empty' kv-create.json)
+            if ! curl -sS -m 30 -X POST -H "$AUTH" -H "Content-Type: application/json" \
+              --data "{\"title\":\"$KV_TITLE\"}" "$API/accounts/$ACC/storage/kv/namespaces" -o kv-create.json; then
+              stop "STOP — تعذّر إنشاء namespace الـKV (شبكة). لم يتغيّر أي شيء."
+            fi
+            KVID=$(jq -r '.result.id // ""' kv-create.json 2>/dev/null) || KVID=""
             if [ -z "$KVID" ]; then
-              VERDICT="STOP — تعذّر إنشاء namespace الـKV. لم يتغيّر أي شيء."
-              echo "kv create: $(jq -c '{success, errors: [.errors[]? | {code, message}]}' kv-create.json 2>/dev/null)"
-              echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-              echo "::error title=SETUP_STOPPED::$VERDICT"
-              exit 0
+              echo "kv create: $(jq -c '{success, errors: [.errors[]? | {code, message}]}' kv-create.json 2>/dev/null || echo unreadable)"
+              stop "STOP — تعذّر إنشاء namespace الـKV. لم يتغيّر أي شيء."
             fi
             echo "kv namespace created (id ${KVID:0:8}…)"
           else
@@ -219,7 +214,7 @@ jobs:
           fi
 
           say "4) Worker secrets (values generated in-runner, never printed)"
-          HAS_VAPID=$(jq -r '[.result.bindings[]? | .name] | index("VAPID_PRIVATE_KEY") != null' snap.json)
+          HAS_VAPID=$(jq -r '[.result.bindings[]? | .name] | index("VAPID_PRIVATE_KEY") != null' snap.json 2>/dev/null) || HAS_VAPID="false"
           GEN_PUB=""; GEN_PRIV=""; SEND_SECRET=""
           if [ "$HAS_VAPID" != "true" ]; then
             GEN=$(node -e '
@@ -249,23 +244,22 @@ jobs:
 
           set_secret(){
             local name="$1" value="$2"
-            local payload
-            payload=$(jq -n --arg name "$name" --arg text "$value" '{name:$name, text:$text, type:"secret_text"}')
-            local code
+            local payload code
+            payload=$(jq -n --arg name "$name" --arg text "$value" '{name:$name, text:$text, type:"secret_text"}') || return 1
             code=$(curl -sS -m 30 -o sec-out.json -w '%{http_code}' -X PUT -H "$AUTH" -H "Content-Type: application/json" \
-              --data "$payload" "$API/accounts/$ACC/workers/scripts/$SCRIPT/secrets")
-            echo "secret $name → HTTP $code ($(jq -r '.success // false' sec-out.json))"
-            [ "$code" = "200" ] && [ "$(jq -r '.success // false' sec-out.json)" = "true" ]
+              --data "$payload" "$API/accounts/$ACC/workers/scripts/$SCRIPT/secrets") || return 1
+            echo "secret $name → HTTP $code ($(jq -r '.success // false' sec-out.json 2>/dev/null || echo parse-error))"
+            [ "$code" = "200" ] && [ "$(jq -r '.success // false' sec-out.json 2>/dev/null || echo false)" = "true" ]
           }
 
           if [ -n "$GEN_PRIV" ]; then
-            set_secret "VAPID_PRIVATE_KEY" "$GEN_PRIV" || { VERDICT="STOP — تعذّر ضبط VAPID_PRIVATE_KEY"; echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0; }
-            set_secret "VAPID_PUBLIC_KEY" "$GEN_PUB" || { VERDICT="STOP — تعذّر ضبط VAPID_PUBLIC_KEY"; echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0; }
+            set_secret "VAPID_PRIVATE_KEY" "$GEN_PRIV" || stop "STOP — تعذّر ضبط VAPID_PRIVATE_KEY (الأسرار السابقة لم تُمس)."
+            set_secret "VAPID_PUBLIC_KEY" "$GEN_PUB" || stop "STOP — تعذّر ضبط VAPID_PUBLIC_KEY."
           fi
-          set_secret "PUSH_SEND_SECRET" "$SEND_SECRET" || { VERDICT="STOP — تعذّر ضبط PUSH_SEND_SECRET"; echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"; exit 0; }
+          set_secret "PUSH_SEND_SECRET" "$SEND_SECRET" || stop "STOP — تعذّر ضبط PUSH_SEND_SECRET."
 
           say "5) upload worker.js (existing bindings replicated verbatim + KV binding)"
-          KEEP=$(jq -c '[.result.bindings[]? | select(.type | test("^secret")) | .type] | unique' snap.json)
+          KEEP=$(jq -c '[.result.bindings[]? | select(.type | test("^secret")) | .type] | unique' snap.json 2>/dev/null) || KEEP='["secret_text"]'
           jq -n --argjson snap "$(cat snap.json)" --argjson keep "$KEEP" --arg compat "$COMPAT" --argjson flags "$FLAGS" \
             --arg kvid "$KVID" --arg kvc "$KV_BINDING" \
             '{
@@ -276,35 +270,33 @@ jobs:
               bindings: ([ $snap.result.bindings[]? | select((.type | test("^secret")) | not) | select((.type == "kv_namespace" and .name == $kvc) | not) ]
                          + [{ type: "kv_namespace", name: $kvc, namespace_id: $kvid }]),
               annotations: { "workers/message": "push notifications (VAPID+KV) arena-2026-10-10", "workers/tag": "push-v1" }
-            }' > meta.json
+            }' > meta.json || stop "STOP — تعذّر بناء بيانات الرفع."
           jq -c '{main_module, compatibility_date, compatibility_flags, keep_bindings, bindings: [.bindings[] | {type, name}]}' meta.json
           HTTP=$(curl -sS -m 120 -o up.json -w '%{http_code}' -X PUT "$API/accounts/$ACC/workers/scripts/$SCRIPT" \
             -H "$AUTH" \
             -F "metadata=<meta.json;type=application/json" \
-            -F "worker.js=@_worker/worker.js;type=application/javascript+module")
-          echo "upload http=$HTTP success=$(jq -r .success up.json 2>/dev/null)"
-          if [ "$HTTP" != "200" ] || [ "$(jq -r .success up.json 2>/dev/null)" != "true" ]; then
-            VERDICT="STOP — رفض الـAPI رفع الكود (http=$HTTP). bindings الحالية سليمة ولم تتغيّر."
-            echo "upload errors: $(jq -c '{errors: [.errors[]? | {code, message}]}' up.json 2>/dev/null)"
-            echo "VERDICT: $VERDICT"; echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
-            echo "::error title=SETUP_STOPPED::$VERDICT"
-            exit 0
+            -F "worker.js=@_worker/worker.js;type=application/javascript+module") || HTTP="000"
+          echo "upload http=$HTTP success=$(jq -r '.success // false' up.json 2>/dev/null || echo parse-error)"
+          if [ "$HTTP" != "200" ] || [ "$(jq -r '.success // false' up.json 2>/dev/null || echo false)" != "true" ]; then
+            echo "upload errors: $(jq -c '{errors: [.errors[]? | {code, message}]}' up.json 2>/dev/null || echo unreadable)"
+            stop "STOP — رفض الـAPI رفع الكود (http=$HTTP). bindings الحالية سليمة ولم تتغيّر."
           fi
 
           say "6) post-deploy verification"
           sleep 5
-          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/settings" -o snap2.json
+          curl -sS -m 30 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT/settings" -o snap2.json || true
           echo "bindings after (name/type only):"
-          jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap2.json | sort
-          BEFORE_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap.json)
-          AFTER_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap2.json)
+          jq -r '.result.bindings[]? | "  \(.type)\t\(.name)"' snap2.json 2>/dev/null | sort || echo "  (تعذّر القراءة)"
+          BEFORE_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap.json 2>/dev/null) || BEFORE_B="?"
+          AFTER_B=$(jq -r '[.result.bindings[]? | "\(.type)/\(.name)"] | sort | join(",")' snap2.json 2>/dev/null) || AFTER_B="?"
           echo "bindings before: $BEFORE_B"
           echo "bindings after:  $AFTER_B"
 
-          curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live2.raw
-          python3 - <<'PY'
-          from pathlib import Path
+          NEW_SHA="unavailable"
+          if curl -sS -m 60 -H "$AUTH" "$API/accounts/$ACC/workers/scripts/$SCRIPT" -o live2.raw; then
+            NEW_SHA=$(python3 - <<'PY'
           import hashlib
+          from pathlib import Path
           raw = Path('live2.raw').read_bytes()
           module = raw
           if raw.startswith(b'--') and b'\r\n' in raw:
@@ -315,27 +307,23 @@ jobs:
                       _, body = part.split(b'\r\n\r\n', 1)
                       module = body[:-2] if body.endswith(b'\r\n') else body
                       break
-          Path('live2.sha').write_text(hashlib.sha256(module).hexdigest() if module else 'unavailable')
+          print(hashlib.sha256(module).hexdigest() if module else 'unavailable')
           PY
-          NEW_SHA=$(cat live2.sha)
+            ) || NEW_SHA="unavailable"
+          fi
           echo "live module sha after = $NEW_SHA"
           echo "live == repo build: $([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo NO)"
 
-          CFG=$(curl -sS -m 30 "$AGENT/push/config")
-          echo "GET /push/config → $(echo "$CFG" | jq -c 'if .publicKey then {ok, enabled, publicKey: (.publicKey[0:8] + "…(" + (.publicKey|length|tostring) + ")")} else {ok, enabled} end' 2>/dev/null || echo "$CFG")"
-          CFG_ENABLED=$(echo "$CFG" | jq -r '.enabled // false' 2>/dev/null)
-          CFG_PUB_LEN=$(echo "$CFG" | jq -r '.publicKey // "" | length' 2>/dev/null)
+          CFG=$(curl -sS -m 30 "$AGENT/push/config") || CFG="{}"
+          echo "GET /push/config → $(echo "$CFG" | jq -c 'if .publicKey then {ok, enabled, publicKey: ((.publicKey[0:8]) + "…(" + ((.publicKey|length)|tostring) + ")")} else {ok, enabled} end' 2>/dev/null || echo "$CFG")"
+          CFG_ENABLED=$(echo "$CFG" | jq -r '.enabled // false' 2>/dev/null) || CFG_ENABLED="false"
           if [ -n "$GEN_PUB" ]; then
-            MATCH=$(echo "$CFG" | jq -r --arg p "$GEN_PUB" '.publicKey == $p' 2>/dev/null)
+            MATCH=$(echo "$CFG" | jq -r --arg p "$GEN_PUB" '.publicKey == $p' 2>/dev/null) || MATCH="error"
             echo "config publicKey matches generated key: $MATCH"
-          else
-            MATCH="n/a (pre-existing keys)"
           fi
 
           say "6b) synthetic single-subscription smoke (no real user involved)"
           SMOKE_EP="https://push-service-smoke.invalid/fake-endpoint-$RID"
-          SUB_PAYLOAD=$(jq -n --arg ep "$SMOKE_EP" '{subscription: {endpoint: $ep, keys: {p256dh: ("BC" + ("A" * 84)), auth: ("B" * 22)}, device: "other"}}')
-          # مفتاح p256dh اصطناعي صالح الشكل (65 بايت تبدأ بـ 0x04) للاختبار فقط
           SUB_PAYLOAD=$(node -e '
             const ep = process.argv[1];
             const b64u = (buf) => Buffer.from(buf).toString("base64url");
@@ -343,21 +331,25 @@ jobs:
             const auth = b64u(Buffer.alloc(16, 3));
             process.stdout.write(JSON.stringify({ subscription: { endpoint: ep, keys: { p256dh, auth } }, device: "other" }));
           ' "$SMOKE_EP")
-          SUB_RES=$(curl -sS -m 30 -X POST "$AGENT/push/subscribe" -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary "$SUB_PAYLOAD")
+          SUB_RES=$(curl -sS -m 30 -X POST "$AGENT/push/subscribe" -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary "$SUB_PAYLOAD") || SUB_RES='{"ok":false}'
           echo "subscribe smoke → $(echo "$SUB_RES" | jq -c '{ok, id, error}' 2>/dev/null || echo "$SUB_RES")"
-          SUB_ID=$(echo "$SUB_RES" | jq -r '.id // ""' 2>/dev/null)
+          SUB_ID=$(echo "$SUB_RES" | jq -r '.id // ""' 2>/dev/null) || SUB_ID=""
           SEND_RES=$(curl -sS -m 60 -X POST "$AGENT/push/send" -H "Content-Type: application/json" \
             -H "Authorization: Bearer $SEND_SECRET" \
-            --data-binary "$(jq -n --arg id "$SUB_ID" --arg rid "$RID" '{kind:"property", title:"اختبار دورة الإرسال", price:"", location:"مدينة نصر", url:"https://nasr-realestate.github.io/properties/", filePath:"_properties/setup-smoke.md", commitSha:("f" * 40), test:true, target:$id, idempotencyKey:("setup-smoke-" + $rid)}')")
+            --data-binary "$(jq -n --arg id "$SUB_ID" --arg rid "$RID" '{kind:"property", title:"اختبار دورة الإرسال", price:"", location:"مدينة نصر", url:"https://nasr-realestate.github.io/properties/", filePath:"_properties/setup-smoke.md", commitSha:("f" * 40), test:true, target:$id, idempotencyKey:("setup-smoke-" + $rid)}')") || SEND_RES='{"ok":false}'
           echo "send smoke (test:true, single target) → $(echo "$SEND_RES" | jq -c '{ok, attempted, success, failed, removed, note, error}' 2>/dev/null || echo "$SEND_RES")"
-          UN_RES=$(curl -sS -m 30 -X POST "$AGENT/push/unsubscribe" -H "Content-Type: application/json" --data-binary "{\"id\":\"$SUB_ID\"}")
+          UN_RES=$(curl -sS -m 30 -X POST "$AGENT/push/unsubscribe" -H "Content-Type: application/json" --data-binary "{\"id\":\"$SUB_ID\"}") || UN_RES='{"ok":false}'
           echo "unsubscribe smoke → $(echo "$UN_RES" | jq -c '{ok}' 2>/dev/null || echo "$UN_RES")"
 
           say "summary"
-          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && echo "$AFTER_B" | grep -q "kv_namespace/PUSH_SUBS"; then
-            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · اختبار اصطناعي: attempted=$(echo "$SEND_RES" | jq -r '.attempted // 0' 2>/dev/null) failed=$(echo "$SEND_RES" | jq -r '.failed // 0' 2>/dev/null) removed=$(echo "$SEND_RES" | jq -r '.removed // 0' 2>/dev/null)"
+          ATT=$(echo "$SEND_RES" | jq -r '.attempted // 0' 2>/dev/null) || ATT="0"
+          FAILS=$(echo "$SEND_RES" | jq -r '.failed // 0' 2>/dev/null) || FAILS="0"
+          RM=$(echo "$SEND_RES" | jq -r '.removed // 0' 2>/dev/null) || RM="0"
+          KV_BOUND=$(echo "$AFTER_B" | grep -c 'kv_namespace/PUSH_SUBS' || true)
+          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ]; then
+            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
           else
-            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$(echo "$AFTER_B" | grep -c 'kv_namespace/PUSH_SUBS')). لا rollback تلقائي."
+            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND). لا rollback تلقائي."
           fi
           echo "VERDICT: $VERDICT"
           echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
@@ -366,6 +358,7 @@ jobs:
       - name: Publish sanitized report (non-master refs)
         if: always()
         continue-on-error: true
+        shell: bash
         run: |
           set +e
           f="_diag/push-setup-$RID.txt"
