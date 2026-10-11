@@ -5,23 +5,32 @@ on:
     branches:
       - master
       - main
+
   pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
 
-      - name: SonarCloud Scan Action
+      - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          
