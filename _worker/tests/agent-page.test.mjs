@@ -456,29 +456,41 @@ test("smart scroll: a reply doesn't yank a reader who scrolled up, but your own 
 });
 
 // ───────── لوحة مفاتيح الموبايل (حالة 15) ─────────
-test("on-screen keyboard: #app follows the visual viewport only when ≥80px is hidden, stays out of the way while zoomed, and is restored on close", () => {
+test("on-screen keyboard: the shell tracks the visible area (visualViewport) instead of 100dvh alone, stays out of the way while zoomed, and is restored on close", () => {
   const vv = { height: 800, offsetTop: 0, scale: 1, listeners: {}, addEventListener(type, fn) { this.listeners[type] = fn; } };
   const a = bootAgent({ visualViewport: vv });
   const root = a.doc.documentElement;
   assert.ok(vv.listeners.resize && vv.listeners.scroll, "the page listens to visualViewport resize and scroll");
-  vv.height = 740; vv.listeners.resize();                      // شريط المتصفح (أقل من 80px) مش كيبورد
-  assert.equal(root.classList.contains("vv-keyboard"), false);
-  vv.height = 450; vv.listeners.resize();                      // الكيبورد فتح
-  assert.equal(root.classList.contains("vv-keyboard"), true);
-  assert.equal(root.style["--vv-h"], "450px");
-  assert.equal(root.style["--vv-tf"], "none");
-  vv.offsetTop = 30; vv.listeners.scroll();                    // المتصفح عمل pan للـvisual viewport
-  assert.equal(root.style["--vv-tf"], "translateY(30px)");
+  // الحالة العادية: المساحة الظاهرة = الصفحة → مفيش أي تدخّل (100dvh هي الحاكمة)
+  assert.equal(root.classList.contains("vv-active"), false);
+  assert.equal("--vv-h" in root.style, false);
+  vv.height = 740; vv.listeners.resize();                      // شريط متصفح (60px): أقل من حدّ الكيبورد
+  assert.equal(root.classList.contains("vv-active"), false, "browser chrome alone never triggers the override");
+  vv.height = 450; vv.listeners.resize();                      // الكيبورد فتح: المساحة الظاهرة 450 من 800
+  assert.equal(root.classList.contains("vv-active"), true);
+  assert.equal(root.style["--vv-h"], "450px", "the shell shrinks to what is actually visible");
+  assert.equal(root.style["--vv-top"], "0px");
+  vv.offsetTop = 220; vv.listeners.scroll();                   // المتصفح زحزح النافذة الظاهرة فوق
+  assert.equal(root.style["--vv-top"], "220px", "the shell follows the browser's own shift");
   vv.scale = 1.5; vv.listeners.resize();                       // pinch-zoom من المستخدم: ما نتدخلش
-  assert.equal(root.classList.contains("vv-keyboard"), false);
+  assert.equal(root.classList.contains("vv-active"), false);
   assert.equal("--vv-h" in root.style, false);
   vv.scale = 1; vv.height = 800; vv.offsetTop = 0; vv.listeners.resize(); // الكيبورد اتقفل
-  assert.equal(root.classList.contains("vv-keyboard"), false);
-  assert.equal("--vv-h" in root.style || "--vv-tf" in root.style, false);
+  assert.equal(root.classList.contains("vv-active"), false);
+  assert.equal("--vv-h" in root.style || "--vv-top" in root.style, false);
 
-  // الـCSS اللي بيستهلك المتغيرات + قفل الواجهة على ارتفاع الشاشة (الشات هو الوحيد اللي بيتحرك)
-  assert.match(agentStyle, /html\.vv-keyboard body\.page-agent #app\s*\{[^}]*height:\s*var\(--vv-h\)[^}]*transform:\s*var\(--vv-tf, none\)/);
-  assert.match(agentStyle, /height:\s*100vh;\s*height:\s*100dvh;/);
+  // لما المتصفح نفسه يصغّر الصفحة (كروم أندرويد + interactive-widget=resizes-content)
+  // المساحة الظاهرة = الصفحة → الصفحة ما بتتدخلش والشغل كله native
+  const native = bootAgent({ visualViewport: vv });
+  native.doc.documentElement.clientHeight = 460;
+  vv.height = 460; vv.offsetTop = 0; vv.listeners.resize();
+  assert.equal(native.doc.documentElement.classList.contains("vv-active"), false, "the native path needs no JS override");
+
+  // الـCSS اللي بيستهلك المتغيرات: الصندوق ثابت (fixed) على المساحة الظاهرة، من غير transform
+  assert.match(agentStyle, /body\.page-agent #app\s*\{[^}]*inset-block-start:\s*var\(--vv-top,\s*0px\)/);
+  assert.match(agentStyle, /html\.vv-active body\.page-agent #app\s*\{[^}]*height:\s*var\(--vv-h,\s*100vh\)/);
+  assert.equal(/html\.vv-keyboard/.test(agentStyle), false, "the old transform-based lock is gone");
+assert.match(agentStyle, /height:\s*100vh;\s*height:\s*100dvh;/);
   // حقل الكتابة 16px على الأقل: iOS Safari بيعمل zoom تلقائي على أي حقل أصغر من كده (style.css محدده 15.5px)
   const inputRule = effectiveOf(cssRules(agentStyle), "body.page-agent .input-field");
   assert.ok(inputRule, "agent.html overrides the input rule that style.css loads before it");

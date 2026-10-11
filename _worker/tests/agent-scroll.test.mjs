@@ -36,15 +36,30 @@ function setup(opts = {}) {
   const chat = a.chatArea;
   chat.scrollHeight = 2000;
   chat.clientHeight = 500;
-  return { a, chat, obs };
+  return { a, chat, obs, root: a.doc.documentElement, vv: opts.visualViewport };
 }
+// محاكاة لوحة مفاتيح الموبايل بالطريقة الحقيقية: المساحة الظاهرة (visualViewport) بتصغر
+// والصفحة نفسها بتفضل بطولها (سفاري آيفون وكروم أندرويد الحديث) — عكس الفرض القديم تمامًا.
+function makeVv(height = 800, offsetTop = 0, scale = 1) {
+  return {
+    height, offsetTop, scale, listeners: {},
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+  };
+}
+// بنقفل نافذة «الانتقال» يدويًا بعد فتح الكيبورد: النافذة (420ms) بتنتهي في الواقع قبل ما
+// المستخدم يلمس الشاشة، لكن الاختبارات متزامنة فمفيش مؤقتات بتشتغل.
+const openKeyboard = (a, vv, height = 460, offsetTop = 0) => {
+  vv.height = height; vv.offsetTop = offsetTop; vv.listeners.resize();
+  a.run("_vpTransitioning = false");
+};
 const atBottom = (chat) => { chat.scrollTop = chat.scrollHeight - chat.clientHeight; };
 const scrolledUp = (chat) => { chat.scrollTop = 0; chat.dispatch("scroll"); };
 
-// ── 1) الكيبورد مفتوح (iOS/أندرويد الحديث): الرد الجديد ينزّل المحادثة للقاع ──────────
+// ── 1) الكيبورد مفتوح (سفاري آيفون/كروم أندرويد الحديث): الرد الجديد ينزّل المحادثة للقاع ──
 test("a bot reply pins the chat to the bottom while the on-screen keyboard is open", () => {
-  const { a, chat } = setup();
-  a.doc.documentElement.classList.add("vv-keyboard");   // الكيبورد مفتوح
+  const vv = makeVv();
+  const { a, chat } = setup({ visualViewport: vv });
+  openKeyboard(a, vv);                                  // الكيبورد مفتوح: المساحة الظاهرة 460 من 800
   atBottom(chat); chat.dispatch("scroll");
   chat.scrollHeight = 2400;                              // الرد الجديد زاد المحتوى
   a.run(`renderMsg("رد الوكيل", "bot")`);
@@ -53,11 +68,17 @@ test("a bot reply pins the chat to the bottom while the on-screen keyboard is op
 });
 
 // ── 2) حتى لو reflow قلّب وضع القارئ غلط، الكيبورد المفتوح يفرض النزول ────────────────
-test("with the keyboard open the reply still scrolls down even if a reflow flipped the reader state", () => {
-  const { a, chat } = setup();
-  a.doc.documentElement.classList.add("vv-keyboard");
-  scrolledUp(chat);                                      // scroll وهمي من الـreflow
-  assert.equal(a.run("stickToBottom"), false, "the stray scroll flipped the flag (the old bug)");
+test("with the keyboard open the reply still scrolls down even if the reader state got flipped", () => {
+  const vv = makeVv();
+  const { a, chat } = setup({ visualViewport: vv });
+  // (أ) سكرول وهمي أثناء انتقال الكيبورد: نافذة الانتقال بتحمي وضع القارئ — ما بيتقلبش
+  vv.height = 460; vv.listeners.resize();                // الكيبورد لسه بيفتح (الانتقال شغّال)
+  scrolledUp(chat);
+  assert.equal(a.run("stickToBottom"), true, "a stray reflow scroll during the keyboard transition is ignored");
+  // (ب) وبعد ما الانتقال يخلص، لو سكرول حقيقي قلب الوضع — الكيبورد المفتوح بيفرض النزول برضه
+  openKeyboard(a, vv);                                   // الكيبورد استقر (نافذة الانتقال خلصت)
+  scrolledUp(chat);                                      // scroll حقيقي بعد انتهاء الانتقال
+  assert.equal(a.run("stickToBottom"), false, "a real scroll after the transition still counts as reading upwards");
   chat.scrollHeight = 2400;
   a.run(`renderMsg("رد الوكيل", "bot")`);
   assert.equal(chat.scrollTop, chat.scrollHeight, "the reply is visible without closing the keyboard");
@@ -125,11 +146,13 @@ test("added content and loaded images re-pin the chat when the reader is at the 
 
 // ── 6) المحاولات المتأخرة (60/200/400ms) ما تخطَفش قارئ طلع يقرا في النص ───────────────
 test("the delayed re-pins respect a reader who scrolled up in between", () => {
-  const { a, chat } = setup({ runTimers: false });
-  a.doc.documentElement.classList.add("vv-keyboard");
+  const vv = makeVv();
+  const { a, chat } = setup({ runTimers: false, visualViewport: vv });
+  openKeyboard(a, vv);
   atBottom(chat); chat.dispatch("scroll");
   a.run(`renderMsg("رد الوكيل", "bot")`);
   assert.equal(chat.scrollTop, chat.scrollHeight);
+  a.run("_vpTransitioning = false");
   scrolledUp(chat);                                      // القارئ طلع يقرا قبل ما المحاولات تنفذ
   chat.scrollHeight = 2800;
   a.timers.filter((t) => t.ms === 60 || t.ms === 200 || t.ms === 400).forEach((t) => t.fn());
@@ -180,4 +203,32 @@ test("the «للأسفل» button restores following and hides itself", () => {
   assert.equal(chat.scrollTop, chat.scrollHeight);
   assert.equal(a.scrollBtn._classes.has("show"), false);
   assert.equal(a.run("stickToBottom"), true);
+});
+
+// ── 9) معيار القبول: والكيبورد مفتوح، الصندوق = المساحة الظاهرة والرد في قاعه ──────────
+//   ده بالظبط اللي اتكسر على الموبايل: الصندوق كان يفضل 100dvh (طول الشاشة) والكيبورد يغطّي قاعه،
+//   فمهما اتعمل scroll للشات الرد يفضل مخفي لغاية ما المستخدم يقفل الكيبورد.
+test("acceptance: with the keyboard open the shell equals the visible height and the reply sits at its bottom", () => {
+  const vv = makeVv();
+  const { a, chat, root } = setup({ visualViewport: vv });
+  a.win.innerHeight = 800;                       // الصفحة نفسها ما بتصغّرش — زي سفاري آيفون وكروم الحديث
+  openKeyboard(a, vv, 460);
+  assert.equal(root.style["--vv-h"], "460px", "the shell shrinks to the visible area");
+  assert.equal(root.classList.contains("vv-active"), true);
+  assert.notEqual(a.run("keyboardLikelyOpen()"), false, "the page knows the keyboard is up (geometry, not guessing)");
+  atBottom(chat); chat.dispatch("scroll");
+  chat.scrollHeight = 2400;                      // رد الوكيل وصل
+  a.run(`renderMsg("رد الوكيل", "bot")`);
+  assert.equal(chat.scrollTop, chat.scrollHeight, "the reply is at the bottom of the visible area — no need to close the keyboard");
+
+  // ولما الكيبورد يقفل: الاختيار بيختفي و100dvh بترجع تحكم من جديد
+  vv.height = 800; vv.listeners.resize();
+  assert.equal(root.style["--vv-h"], undefined);
+  assert.equal(root.classList.contains("vv-active"), false);
+
+  // وإذا كان المتصفح نفسه بيصغّر الصفحة (كروم أندرويد مع resizes-content): ما نتدخلش خالص
+  const native = setup({ visualViewport: makeVv() });
+  native.root.clientHeight = 460;
+  native.vv.height = 460; native.vv.listeners.resize();
+  assert.equal(native.root.style["--vv-h"], undefined, "the native path does the job on its own");
 });

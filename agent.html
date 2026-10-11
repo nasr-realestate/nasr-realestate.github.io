@@ -19,8 +19,17 @@ extra_head: |
   <style>
 
     /* ═══ قفل الواجهة على ارتفاع الشاشة ═══
-       html/body/#app ثابتين على 100dvh بدون تمرير، و.chat-area هي الوحيدة القابلة للتمرير.
-       القواعد دي بتتحمّل بعد style.css (نفس الـselectors) فبتكسب بالترتيب — style.css نفسه مش متعدّل. */
+       html/body/#app ثابتين بدون تمرير، و.chat-area هي الوحيدة القابلة للتمرير.
+       القواعد دي بتتحمّل بعد style.css (نفس الـselectors) فبتكسب بالترتيب — style.css نفسه مش متعدّل.
+
+       ⭐ إصلاح 2026-10-11 (المحاولة الناجحة): طول الصندوق بقى مربوط بـ«المساحة الظاهرة فعلًا»
+       (visualViewport) مش بـ 100dvh لوحده. السبب: من كروم أندرويد 108 وسفاري آيفون، الكيبورد
+       **ما بيصغّرش** الصفحة ولا 100dvh — بيغطّي الجزء السفلي بس. فـ#app كان يفضل بطول الشاشة
+       الكاملة وقاعه (رد الوكيل + مربع الكتابة) يقع ورا الكيبورد، ومفيش أي scrollTop يطلّعه.
+       دلوقتي: --vv-h = ارتفاع المساحة الظاهرة، و --vv-top = إزاحة النافذة الظاهرة،
+       والـJS (syncViewport) هو اللي بيكتبهم — وبيسيبهم فاضيين في الحالة العادية فيرجع 100dvh.
+       ملاحظة: كروم أندرويد بيصغّر الصفحة أصلًا (interactive-widget=resizes-content في القالب)
+       فالقيمتين بيتساووا وما بنتدخلش — التدخّل اليدوي بيتفجّر بس لما الكيبورد يغطّي فعلًا. */
     :root { color-scheme: dark; } /* الصفحة داكنة دائمًا (قرار المالك): الحقول والسكرول وقوائم المتصفح تتبع الداكن مهما كان وضع الجهاز */
     html.page-agent, body.page-agent {
       height: 100vh; height: 100dvh;
@@ -28,13 +37,25 @@ extra_head: |
       overflow: hidden;
       overscroll-behavior: none;
     }
+    /* position: fixed (مش تدفّق عادي) عن قصد: الصندوق يفصل تمامًا عن سكرول المستند
+       اللي بعض المتصفحات بتعمله من نفسها لتبان خانة الكتابة فوق الكيبورد — فمفيش خناقة. */
     body.page-agent #app {
+      position: fixed;
+      inset-block-start: var(--vv-top, 0px);
+      inset-inline: 0;
+      margin-inline: auto;
       height: 100vh; height: 100dvh;
       max-height: 100vh; max-height: 100dvh;
       overflow: hidden;
     }
-    /* تثبيت الـlayout دايمًا: الهيدر فوق / الشات يتمرّر / مربع الكتابة ملزوق تحت.
-       نفس قواعد .vv-keyboard لكن بدون شرط، عشان طول المحادثة ما يزقّش الـbottom-dock خارج الشاشة. */
+    /* لما الكيبورد يغطّي فعلًا (.vv-active): الطول = المساحة الظاهرة اللي الـJS بيقيسها.
+       ملاحظة مقصودة: fallback القيمة 100vh (وحدة مدعومة في كل المتصفحات) مش 100dvh —
+       لأن fallback غير مدعوم جوه var() بيلغي الإعلان كله (invalid at computed-value time). */
+    html.vv-active body.page-agent #app {
+      height: var(--vv-h, 100vh);
+      max-height: var(--vv-h, 100vh);
+    }
+    /* تثبيت الـlayout دايمًا: الهيدر فوق / الشات يتمرّر / مربع الكتابة ملزوق تحت. */
     body.page-agent #app {
       display: flex;
       flex-direction: column;
@@ -54,11 +75,7 @@ extra_head: |
       overflow-y: auto; overflow-x: hidden;
       overscroll-behavior: contain;
       scroll-behavior: auto; /* من غير smooth: كان بيتعارض مع السحب التلقائي ويعمل اهتزاز */
-    }
-    /* لوحة مفاتيح الموبايل: الـJS بيضيف .vv-keyboard ويضبط --vv-h/--vv-tf على الـvisual viewport */
-    html.vv-keyboard body.page-agent #app {
-      height: var(--vv-h); max-height: var(--vv-h);
-      transform: var(--vv-tf, none);
+      overflow-anchor: none; /* مانسيبش المتصفح يعاندنا بنقطة تثبيت السكرول الذكية */
     }
     /* حقل الكتابة: القاعدة بقت في كتلة الهوية تحت (🟡) — نفس الـselector وهو آخر
        قاعدة بتكسب بالترتيب، ومعه إصلاح iOS (16px) وcolor-scheme الداكن. */
@@ -1218,12 +1235,14 @@ function forceScrollToBottomWithRetries() {
   setTimeout(pinIfStillSticky, 200);
   setTimeout(pinIfStillSticky, 400);
 }
-// الكيبورد مفتوح؟ iOS وأندرويد الحديث بيصغّروا الـvisual viewport (>=80px)،
-// وأندرويد القديم بيصغّر الـviewport كله فمفيش فرق يُقاس — هناك نكتفي بتركيز حقل الكتابة على جهاز لمس.
+// الكيبورد مفتوح؟ بنحكم من الهندسة الحقيقية (المساحة الظاهرة صغرت بفرق حجم كيبورد)،
+// ومن غير أي تخمين على نوع الجهاز. ولو المتصفح بيصغّر الصفحة أصلاً (كروم أندرويد الحديث)
+// الفرق بيطلع صفر — فبنكتفي بتركيز حقل الكتابة على جهاز لمس.
+const VISIBLE_AREA_MIN_PX = 80; // فرق أقل من كده = شريط متصفح، مش كيبورد
 function keyboardLikelyOpen() {
-  if (document.documentElement.classList.contains("vv-keyboard")) return true;
+  if (document.documentElement.classList.contains("vv-active")) return true;
   const vv = window.visualViewport;
-  if (vv && window.innerHeight - vv.height >= 80) return true;
+  if (vv && layoutViewportHeight() - vv.height >= VISIBLE_AREA_MIN_PX) return true;
   return !!msgInput && document.activeElement === msgInput &&
     typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
 }
@@ -1682,8 +1701,9 @@ async function sendMsg() {
   } finally {
     isSending = false;
     sendBtn.disabled = false;
-    // ⭐ لو الكيبورد أصلاً مفتوح، نحافظ على التركيز (زي واتساب) — مش نفتحه من الصفر
-    const keyboardOpen = document.documentElement.classList.contains("vv-keyboard");
+    // ⭐ لو الكيبورد أصلاً مفتوح (أو على جهاز لمس والرسالة اتكتبت بإيد المستخدم)، نحافظ على
+    //   التركيز (زي واتساب) — مش نفتحه من الصفر. رسائل أزرار الردود السريعة ما بتفتحش كيبورد.
+    const keyboardOpen = keyboardLikelyOpen();
     if (keyboardOpen || !(IS_TOUCH && quick)) {
       msgInput.focus({ preventScroll: true });
     }
@@ -1841,52 +1861,155 @@ chatArea.addEventListener("scroll", () => {
 })();
 
 // ═══ لوحة مفاتيح الموبايل ═══
-// الواجهة مقفولة على ارتفاع الشاشة (CSS في أول الصفحة). لما الكيبورد يفتح نظبّط ارتفاع #app على
-// الـvisual viewport (ونمشي مع أي pan بيعمله المتصفح) فيفضل الهيدر والـdock في مكانهم والشات هو اللي بيتحرك.
-// أي فرق أقل من 80px (شريط العنوان/التولبار) مش بيتعامل معاه كأنه كيبورد، ولو المستخدم عامل pinch-zoom
-// ما بنتدخلش خالص. لو القارئ كان على آخر المحادثة بنفضّله هناك بعد التغيير.
-(function bindViewportLock() {
+// الفكرة كلها في سطر واحد: **الصندوق يتبع المساحة الظاهرة فعلًا** (visualViewport) مش 100dvh لوحده.
+//   • كروم أندرويد الحديث (مع interactive-widget=resizes-content في القالب): المتصفح بيصغّر الصفحة
+//     والـdvh بنفسه → المقاسين بيتساووا → إحنا مش بنتدخلش خالص (أقل JS = أقل أعطال).
+//   • سفاري آيفون والـWebViews اللي بتتجاهل الكلمة المفتاحية: الكيبورد بيغطّي من غير ما يصغّر الصفحة
+//     → هنا بنكتب --vv-h (المساحة الظاهرة) و --vv-top (إزاحة النافذة)، فيصغّر الصندوق ويقعد فوق الكيبورد.
+// مفيش تعويض مزدوج: لا transform ولا window.scrollTo وسط فتح الكيبورد (ده اللي كان بيعاند المتصفح).
+function layoutViewportHeight() {
+  const docEl = document.documentElement;
+  return Math.round(docEl.clientHeight || window.innerHeight || 0);
+}
+// علَم «الانتقال الحالي» — بيمنع معالج scroll من قلب وضع القارئ أثناء إعادة الرسم
+let _vpTransitioning = false;
+let _vpTransitionTimer = 0;
+window.__vpTransitioning = () => _vpTransitioning;
+function markVpTransition() {
+  _vpTransitioning = true;
+  clearTimeout(_vpTransitionTimer);
+  _vpTransitionTimer = setTimeout(() => { _vpTransitioning = false; }, 420);
+}
+// آخر قيمتين اتكتبوا فعلاً على الـCSS — بنقارن بيهم عشان نعرف هل الهندسة اتغيّرت فعلًا
+let _vvAppliedH = "";
+let _vvAppliedTop = "";
+function syncViewport() {
   const vv = window.visualViewport;
   if (!vv) return;
   const root = document.documentElement;
+  const wasSticky = stickToBottom; // ⭐ نحفظ وضع القارئ قبل أي تعديل، ونرفع علَم الانتقال
+  markVpTransition();
+  const zoomed = vv.scale > 1.01;                      // pinch-zoom: ما نتدخلش خالص
+  const visibleH = Math.round(vv.height);              // المساحة الظاهرة فعلًا
+  const offsetTop = Math.round(vv.offsetTop || 0);     // إزاحة النافذة الظاهرة عن الصفحة
+  const shift = offsetTop >= 8 ? offsetTop : 0;        // إزاحة صغيرة = تفاصيل شريط، مش زحزحة كيبورد
+  const covered = layoutViewportHeight() - visibleH;   // الجزء المغطّى (كيبورد/شريط متصفح)
+  // القرار بالهندسة بس: المساحة الظاهرة أقل من الصفحة بفرق حجم كيبورد؟ → نتدخّل.
+  // (ما بنتدخّلش على فرق شريط متصفح صغير، ولا لو المتصفح نفسه صغّر الصفحة، ولا وقت pinch-zoom.
+  //  وبنستبعد كمان «إزاحة عالقة» بعد قفل الكيبورد — iOS 26 بتسيب offsetTop قديم بعض المرات.)
+  const needsOverride = !zoomed && covered >= VISIBLE_AREA_MIN_PX;
+  const prevH = _vvAppliedH;
+  const prevTop = _vvAppliedTop;
+  if (needsOverride) {
+    root.style.setProperty("--vv-h", visibleH + "px");
+    root.style.setProperty("--vv-top", shift + "px");
+    root.classList.add("vv-active");
+  } else {
+    root.style.removeProperty("--vv-h");
+    root.style.removeProperty("--vv-top");
+    root.classList.remove("vv-active");
+    // ⭐ نصفّر سكرول المستند القديم في الحالة العادية بس (مش وسط فتح الكيبورد) —
+    //    iOS 26 بيسيب إزاحة عالقة بعد قفل الكيبورد، وده بيلخبط أي محاولة لاحقة
+    if (window.scrollY) window.scrollTo(0, 0);
+  }
+  _vvAppliedH = needsOverride ? visibleH + "px" : "";
+  _vvAppliedTop = needsOverride ? shift + "px" : "";
+  const changed = prevH !== _vvAppliedH || prevTop !== _vvAppliedTop;
+  // ⭐ نرجّع وضع القارئ زي ما كان (التقلّب كان من reflow مش تمرير حقيقي)، ونثبّت القاع لو متابع
+  if (wasSticky) stickToBottom = true;
+  if (wasSticky || changed) pinIfStillSticky();
+}
+(function bindViewportSync() {
+  const vv = window.visualViewport;
   let raf = 0;
-  // ⭐ علَم "الانتقال الحالي" — بيمنع scroll handler من قلب stickToBottom أثناء الـreflow
-  let _vpTransitioning = false;
-  let _vpTransitionTimer = 0;
-  window.__vpTransitioning = () => _vpTransitioning;
-  function markVpTransition() {
-    _vpTransitioning = true;
-    clearTimeout(_vpTransitionTimer);
-    _vpTransitionTimer = setTimeout(() => { _vpTransitioning = false; }, 420);
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; syncViewport(); }); };
+  // ⭐ سلسلة استقرار: الارتفاع النهائي بتيجي بعد أنيميشن الكيبورد — وساعات من غير أي حدث جديد،
+  //   فبنعيد القراءة كام مرة بعد آخر حدث (السلسلة الجديدة بتلغي القديمة، مش بتتراكم)
+  let settleSeq = 0;
+  const SETTLE_DELAYS = [50, 150, 350, 650];
+  const scheduleWithSettle = () => {
+    schedule();
+    const my = ++settleSeq;
+    SETTLE_DELAYS.forEach(ms => setTimeout(() => { if (my === settleSeq) syncViewport(); }, ms));
+  };
+  if (vv) {
+    vv.addEventListener("resize", scheduleWithSettle);
+    vv.addEventListener("scroll", scheduleWithSettle);
   }
-
-  function apply() {
-    raf = 0;
-    // ⭐ نحفظ حالة "القارئ مع القاع" قبل أي تعديل
-    const wasSticky = stickToBottom;
-    const hidden = Math.round(window.innerHeight - vv.height); // الجزء المغطّى (الكيبورد غالبًا)
-    const active = !(vv.scale > 1.01) && hidden >= 80;
-    if (active) {
-      root.style.setProperty("--vv-h", Math.round(vv.height) + "px");
-      root.style.setProperty("--vv-tf", vv.offsetTop > 0 ? `translateY(${Math.round(vv.offsetTop)}px)` : "none");
-      root.classList.add("vv-keyboard");
-      if (window.scrollY) window.scrollTo(0, 0);
-    } else {
-      root.classList.remove("vv-keyboard");
-      root.style.removeProperty("--vv-h");
-      root.style.removeProperty("--vv-tf");
-    }
-    // ⭐ نرجّع stickToBottom لحالتها لو كانت true — التقلّب كان بيحصل بسبب reflow مش تمرير حقيقي
-    if (wasSticky) stickToBottom = true;
-    if (stickToBottom) forceScrollToBottomWithRetries();
+  window.addEventListener("resize", scheduleWithSettle);
+  window.addEventListener("orientationchange", scheduleWithSettle);
+  window.addEventListener("pageshow", scheduleWithSettle);   // رجوع من الـback-forward cache
+  msgInput.addEventListener("focus", () => setTimeout(scheduleWithSettle, 0));  // التركيز بيسبق فتح الكيبورد
+  msgInput.addEventListener("blur", () => setTimeout(scheduleWithSettle, 150)); // iOS مش دايمًا بيبعت resize عند القفل
+  if (vv) scheduleWithSettle();
+  // 🩺 شاشة القياس — بتشتغل بس بـ ?diag=1، ومساعد تشخيص مش جزء من تجربة العميل
+  if (/[?&]diag=1(?:&|$)/.test(location.search)) {
+    try { startViewportDiag(); } catch (e) {}
   }
-  const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
-  const scheduleWithFlag = () => { markVpTransition(); schedule(); };
-
-  vv.addEventListener("resize", scheduleWithFlag);
-  vv.addEventListener("scroll", scheduleWithFlag);
-  msgInput.addEventListener("blur", () => setTimeout(scheduleWithFlag, 150)); // iOS مش دايمًا بيبعت resize عند قفل الكيبورد
 })();
+
+// ═══ 🩺 شاشة القياس (?diag=1) ═══
+// بتعرض أرقام الهندسة الحقيقية على الجهاز: المساحة الظاهرة، إزاحة النافذة، مقاس الصندوق،
+// ومسافة قاع المحادثة عن آخر رسالة — للأعطال اللي بتظهر على الموبايل بس.
+function startViewportDiag() {
+  const wrap = document.createElement("div");
+  wrap.setAttribute("dir", "ltr");
+  wrap.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(8,12,16,.95);" +
+    "color:#e8e6e3;font:11px/1.5 ui-monospace,SFMono-Regular,monospace;padding:6px 8px;" +
+    "border-bottom:1px solid #c9a961;max-height:45vh;overflow:auto";
+  const pre = document.createElement("pre");
+  pre.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-word";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "📋 انسخ الأرقام";
+  btn.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #c9a961;" +
+    "background:#1a2229;color:#c9a961;font:700 12px Cairo,sans-serif";
+  wrap.appendChild(pre);
+  wrap.appendChild(btn);
+  document.body.appendChild(wrap);
+  const log = [];
+  function write() {
+    const vv = window.visualViewport || {};
+    const app = document.getElementById("app");
+    const rect = app && app.getBoundingClientRect ? app.getBoundingClientRect() : { top: 0, height: 0 };
+    const root = document.documentElement;
+    pre.textContent = [
+      "vv.h=" + Math.round(vv.height || 0) + "  vv.top=" + Math.round(vv.offsetTop || 0) +
+        "  scale=" + (vv.scale || 1).toFixed(2),
+      "innerH=" + window.innerHeight + "  clientH=" + layoutViewportHeight() +
+        "  scrollY=" + Math.round(window.scrollY || 0),
+      "app.top=" + Math.round(rect.top) + "  app.h=" + Math.round(rect.height) +
+        "  css --vv-h=" + (_vvAppliedH || "-") +
+        (root.classList.contains("vv-active") ? "  [vv-active]" : ""),
+      "chat h=" + Math.round(chatArea.clientHeight) + "  scrollH=" + Math.round(chatArea.scrollHeight) +
+        "  top=" + Math.round(chatArea.scrollTop) + "  fromBottom=" + Math.round(distanceFromBottom()) +
+        (stickToBottom ? "  sticky" : "  reader-up"),
+      "-- آخر الأحداث --",
+    ].concat(log.slice(-8)).join("\n");
+  }
+  function note(label) {
+    log.push(new Date().toLocaleTimeString("ar-EG") + "  " + label);
+    write();
+  }
+  const vvNow = window.visualViewport;
+  if (vvNow) { vvNow.addEventListener("resize", () => note("vv.resize")); vvNow.addEventListener("scroll", () => note("vv.scroll")); }
+  window.addEventListener("resize", () => note("win.resize"));
+  window.addEventListener("orientationchange", () => note("orientationchange"));
+  msgInput.addEventListener("focus", () => note("input.focus"));
+  msgInput.addEventListener("blur", () => note("input.blur"));
+  chatArea.addEventListener("scroll", () => note("chat.scroll"));
+  btn.addEventListener("click", () => {
+    const text = pre.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => { btn.textContent = "✅ اتنسخ"; },
+        () => { btn.textContent = "⚠️ انسخه بإيدك"; }
+      );
+    } else { btn.textContent = "⚠️ انسخه بإيدك"; }
+  });
+  write();
+  setInterval(write, 300);
+}
 
 // ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
