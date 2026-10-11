@@ -1,6 +1,6 @@
 # 🏙️ سمسار طلبك | Samsar Talabak
 
-**بوابتك العقارية الأولى في مدينة نصر، مبنية بأحدث التقنيات لضمان تجربة مستخدم فائقة السرعة وأرشفة قوية.**
+**بوابتك العقارية الأولى انشأ هذا في مدينة نصر، مبنية بأحدث التقنيات لضمان تجربة مستخدم فائقة السرعة وأرشفة قوية.**
 *The Premier Real Estate Gateway in Nasr City, built with modern tech for a blazing-fast UX and powerful SEO.*
 
 ---
