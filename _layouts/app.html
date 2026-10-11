@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <!-- ⚠️ إصلاح: كان maximum-scale=1, user-scalable=no يمنع التكبير/التصغير (مخالف لـ WCAG 1.4.4) -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- ⭐ إصلاح لوحة المفاتيح (2026-10-11): كروم أندرويد من إصدار 108 بقى — بالافتراضي —
+       ما بيصغّرش الصفحة لما الكيبورد يفتح (زي سفاري آيفون)، فقاع الشاشة (وخانة الكتابة
+       وآخر رسالة) بيتغطّوا بالكيبورد و100dvh ما بتتحركش. الكلمة المفتاحية دي بترجّع السلوك
+       الأصلي: الكيبورد يصغّر الصفحة والـdvh تتبعها — من غير أي JavaScript.
+       ⚠️ لا تحذفها: صفحة الوكيل (agent.html) وصفحة إضافة العقار بيّعتمدوا عليها.
+       المرجع: https://developer.chrome.com/blog/viewport-resize-behavior/ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <!-- ⚠️ إصلاح PWA (2026-09-26): كان #075e54 (تركواز واتساب) — صار #0a3d2e
        (أخضر الهوية) ليطابق manifest.json في شريط حالة التطبيق المثبّت. -->
   <meta name="theme-color" content="#0a3d2e">
