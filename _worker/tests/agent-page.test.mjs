@@ -288,7 +288,7 @@ test("T1.5: the page says it is the agent, not Tarek — greeting, header status
   const greeting = a.messages()[0].innerHTML;
   assert.match(greeting, /أنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر\./);
   assert.doesNotMatch(greeting, /أنا طارق طنطاوي/);
-  assert.match(greeting, /🏆 طارق: Google Local Guide 7 \| 16\.3 مليون مشاهدة/);
+  assert.match(agentHtml, /<span class="ag-stat-num">17M\+<\/span>/, "Google Maps profile modal shows the updated 17M+ views claim");
   assert.equal(a.run("STATUS_ONLINE"), "وكيل ذكي • متصل الآن");
   a.run("setTyping(true)");
   assert.equal(a.el("statusText").textContent, "يكتب...");

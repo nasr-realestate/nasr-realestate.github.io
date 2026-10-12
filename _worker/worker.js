@@ -1,7 +1,8 @@
 // ============================================================
 // سمسار طلبك — Cloudflare Worker v9.2-FINAL
 // طارق طنطاوي | مدينة نصر | 2014–2026
-// Google Local Guide Level 7 | 16.3M+ Views
+// Google Local Guide Level 7 | 17M+ Views
+// الملف الشخصي الموثق: https://maps.app.goo.gl/8QWS1BCPBViggDfa7
 // ------------------------------------------------------------
 // v9.2-FINAL — فوق v9.0-INTELLIGENCE (الحفاظ الكامل على السلوك):
 //  • فهم المصرية الطبيعية: "أعرف سعرها" / "بتاعتي" / "مش مفروشة"
@@ -71,10 +72,11 @@ const HESITATION_RESPONSE = `ولا يهمك، ناخدها واحدة واحد�
 const OUT_OF_SCOPE_RESPONSE = `التخصص الحالي لطارق الوكيل هو مدينة نصر بس، ومش بعرض عقارات خارجها.`;
 
 const GOOGLE_PROFILE = {
-  url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
+  // الملف الشخصي الموثق لطارق طنطاوي (Local Guide Level 7) — يُستخدم في كل روابط «بروفايلي»
+  url: "https://maps.app.goo.gl/8QWS1BCPBViggDfa7",
   level: 7, badge: "Google Local Guide Level 7",
   points: 7741, maxPoints: 15000, photosCount: 468,
-  totalViews: 16273294, formattedViews: "16.3 مليون",
+  totalViews: 17000000, formattedViews: "أكثر من 17 مليون",
   reviewsCount: 195, ratingsCount: 39,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",

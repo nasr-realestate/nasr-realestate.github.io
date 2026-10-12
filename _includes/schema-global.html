@@ -10,10 +10,17 @@
      صفحة النشاط «سمسار طلبك»: 4.7 من 102 مراجعة ← المصدر الوحيد لـ aggregateRating أدناه.
      aggregateRating = مراجعات العملاء عن النشاط نفسه فقط. لا تضع فيه مراجعات Local Guide التي كتبها طارق عن أماكن أخرى
      (الخلط بينهما = بيانات منظمة مضللة ← خطر عقوبة يدوية من Google وفقدان نجوم التقييم في نتائج البحث). -->
-<!-- Verified from: https://www.google.com/maps/contrib/100792782130997747487/photos/ (2026-09-24)
+<!-- Verified from: https://www.google.com/maps/contrib/100792782130997747487/photos/ (2026-10-12)
      ملف المرشد المحلي «Tarek Tantawy (Only)»: Local Guide Level 7 · 7,741 نقطة
      تبويب Reviews: 151 مراجعة + 28 تقييم ← agentInteractionStatistic في كيان Person
-     تبويب Photos: 430 صورة · 16,305,265 مشاهدة للصور -->
+     تبويب Photos: 430 صورة · أكثر من 17,000,000 مشاهدة للصور (تحقق 2026-10-12)
+     ← interactionStatistic/ViewAction أدناه. -->
+
+<!-- ═══ الملف الشخصي الموثق لطارق طنطاوي على Google Maps (2026-10-12) ═══
+     https://maps.app.goo.gl/8QWS1BCPBViggDfa7
+     هذا هو رابط «Google Local Guide Level 7» الذي يُربط به النص في واجهة الموقع،
+     ويُستخدم هنا لربط كيان Person بكيان «سمسار طلبك» (RealEstateAgent/LocalBusiness)
+     عبر عقدة ProfilePage في الـ @graph أدناه (mainEntity = Person، about = النشاط). -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org/",
@@ -55,6 +62,7 @@
       "award": ["Google Local Guide Level 7"],
       "agentInteractionStatistic": {
         "@type": "InteractionCounter",
+        "name": "المراجعات التي كتبها طارق طنطاوي على Google Maps",
         "interactionType": "https://schema.org/WriteAction",
         "userInteractionCount": 151,
         "interactionService": {
@@ -63,11 +71,12 @@
           "url": "https://www.google.com/maps"
         }
       },
+      "subjectOf": { "@id": "https://maps.app.goo.gl/8QWS1BCPBViggDfa7" },
       "sameAs": [
         "https://www.facebook.com/Tarekonly",
         "https://www.linkedin.com/in/tarek-tantawy-444269162",
         "https://www.google.com/maps/contrib/100792782130997747487",
-        "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
+        "https://maps.app.goo.gl/8QWS1BCPBViggDfa7"
       ]
     },
     {
@@ -90,6 +99,7 @@
       "foundingDate": "2014",
       "founder": { "@id": "https://nasr-realestate.github.io/#tarek-tantawy" },
       "employee": { "@id": "https://nasr-realestate.github.io/#tarek-tantawy" },
+      "subjectOf": { "@id": "https://maps.app.goo.gl/8QWS1BCPBViggDfa7" },
       "telephone": "+201147758857",
       "email": "samsar.talabak@mailo.com",
       "address": {
@@ -181,6 +191,33 @@
         "https://www.pinterest.com/smsar_talbk",
         "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
       ]
+    },
+    {
+      "@type": "ProfilePage",
+      "@id": "https://maps.app.goo.gl/8QWS1BCPBViggDfa7",
+      "url": "https://maps.app.goo.gl/8QWS1BCPBViggDfa7",
+      "name": "طارق طنطاوي — Google Local Guide Level 7 على Google Maps",
+      "alternateName": ["Tarek Tantawy — Google Local Guide Level 7"],
+      "inLanguage": ["ar", "en"],
+      "description": "الملف الشخصي الموثق لطارق طنطاوي، المستشار العقاري المؤسس لـ«سمسار طلبك»، كمرشد محلي من المستوى السابع (Level 7) على خرائط جوجل: 7,741 نقطة، 430 صورة، 151 مراجعة، وأكثر من 17 مليون مشاهدة للصور.",
+      "interactionStatistic": {
+        "@type": "InteractionCounter",
+        "name": "مشاهدات صور طارق طنطاوي على Google Maps (أكثر من 17 مليون)",
+        "interactionType": "https://schema.org/ViewAction",
+        "userInteractionCount": 17000000,
+        "interactionService": {
+          "@type": "WebSite",
+          "name": "Google Maps",
+          "url": "https://www.google.com/maps"
+        }
+      },
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Google Maps",
+        "url": "https://www.google.com/maps"
+      },
+      "mainEntity": { "@id": "https://nasr-realestate.github.io/#tarek-tantawy" },
+      "about": { "@id": "https://nasr-realestate.github.io/#semsar-talabk" }
     }
   ]
 }

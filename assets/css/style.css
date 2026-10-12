@@ -7279,3 +7279,71 @@ body.page-add .valuation-cta-arrow { color: #d4af37; font-size: 1.1rem; flex-shr
 body .floating-menu-panel { padding: 8px; }
 body .floating-menu-item  { padding: 12px 16px; }
 body .floating-menu-sep   { margin: 6px 12px; }
+
+
+/* ─────────────────────────────────────────────────────────────
+   6) روابط إشارات المصداقية — Hyperlink شفاف وموثوق (2026-10-12)
+   ─────────────────────────────────────────────────────────────
+   الهدف: نص «Google Local Guide Level 7» وأرقام المشاهدات تصبح
+   روابط حقيقية تفتح الملف الشخصي الموثق لطارق طنطاوي على خرائط جوجل:
+     https://maps.app.goo.gl/8QWS1BCPBViggDfa7
+   دون تغيير شكل العنصر (نفس اللون والحجم) — أي «هايبرلنك شفاف»:
+   لا لون أزرق، لا تحته خط دائم، ويظهر خط ذهبي منقّط عند المرور فقط،
+   مع إطار تركيز واضح (focus-visible) لتنقّل الكيبورد وإتاحة الوصول.
+
+   ثلاثة أصناف حسب مكان الاستخدام:
+     .u-cred-link   → عنصر رقم/إحصائية كامل داخل بطاقة (display:block)
+     .u-cred-inline → نص أو رقم مضمّن داخل فقرة الإحصائيات
+     .u-cred-badge  → شارة مصغّرة داخل سطر الاسم (inline-flex)
+     .u-cred-text   → نص موثوق داخل فقرة أو إجابة سؤال شائع
+   ───────────────────────────────────────────────────────────── */
+
+a.u-cred-link,
+a.u-cred-inline,
+a.u-cred-badge,
+a.u-cred-text {
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a.u-cred-link   { display: block; }
+a.u-cred-inline { display: inline; }
+a.u-cred-badge  { display: inline-flex; align-items: center; }
+
+a.u-cred-text {
+  color: #d4af37;
+  font-weight: 700;
+  border-bottom: 1px dotted rgba(212, 175, 55, 0.65);
+}
+
+/* إبراز خفيف عند المرور — بلا تغيير في التفاف الأسطر */
+a.u-cred-link:hover   .hp-trust-item-value,
+a.u-cred-link:hover   .hp-stat-value,
+a.u-cred-link:hover   .ab-stat-value,
+a.u-cred-inline:hover strong {
+  color: #d4af37;
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 175, 55, 0.85);
+  text-decoration-style: dotted;
+  text-underline-offset: 5px;
+}
+
+a.u-cred-badge:hover,
+a.u-cred-text:hover { color: #fce205; }
+
+a.u-cred-badge:hover {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.55);
+}
+
+a.u-cred-text:hover { border-bottom-style: solid; }
+
+/* إتاحة الوصول: إطار تركيز مرئي للكيبورد فقط (لا يظهر بالفأرة) */
+a.u-cred-link:focus-visible,
+a.u-cred-inline:focus-visible,
+a.u-cred-badge:focus-visible,
+a.u-cred-text:focus-visible {
+  outline: 2px solid #d4af37;
+  outline-offset: 3px;
+  border-radius: 10px;
+}
