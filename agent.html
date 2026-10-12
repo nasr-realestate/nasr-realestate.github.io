@@ -4,9 +4,17 @@ body_class: page-agent
 title: "الوكيل العقاري الذكي | سمسار طلبك"
 permalink: /agent.html
 hide_navbar: true
+custom_viewport: true   # وسم <viewport> خاص بالصفحة يُدرج من extra_head (بدل وسم القالب — ر.أ _layouts/app.html)
 image: "/assets/img/google-local.webp"
 description: "بتدور على عقار أو عايز تبيع أو تأجر؟ احكي طلبك للوكيل الذكي، وخليه يساعدك تبدأ خطوتك الجاية. اضغط وابدأ المحادثة."
 extra_head: |
+  <!-- ⭐ تثبيت شاشة المحادثة كتطبيق مدمج (App-like) — وسم viewport خاص بالصفحة (2026-10-12)
+       الأوامر الأربعة المطلوبة بتمنع التكبير على الموبايل (initial-scale + maximum-scale +
+       user-scalable)، ومعها viewport-fit=cover (المساحة الآمنة على آيفون) و
+       interactive-widget=resizes-content (إصلاح لوحة المفاتيح 2026-10-11 — تحذير
+       «⚠️ لا تحذفها» في _layouts/app.html). القالب بيتخطّى وسمه لهذه الصفحة بفضل
+       `custom_viewport: true` في الـfront matter (أول وسم viewport بس هو اللي المتصفح بياخده). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
@@ -659,6 +667,46 @@ extra_head: |
           transition-duration: 0.01ms !important;
         }
       }
+
+    /* ═══ تثبيت الشاشة كتطبيق مدمج (App-like embedded view) — 2026-10-12 ═══
+       الأهداف: حاوية ثابتة الأبعاد لا تتمدد، شاشة لا تقبل التكبير باللمس،
+       تمرير داخلي فقط، ولا حركة عند الكتابة أو اللمس.
+       CSS بحت على شاشة المحادثة (نفس الـselectors الموجودة) — style.css /
+       style.min.css ومنطق الوكيل والـAPI endpoints لم نمسّهم.
+
+       ① حاوية المحادثة (#app):
+          - touch-action: pan-x pan-y ← يمنع pinch / double-tap zoom داخل الشاشة
+            ويخلي السحب العرضي والطولي (تمرير الرسائل) شغّال.
+          - overflow: hidden ← تستوعب التمرير الداخلي فقط ولا تتمدد.
+          - display: flex + flex-direction: column ← هيدر فوق / الرسائل في
+            النتصف / شريط الكتابة ملزوق تحت (نفس بنية القفل الموجودة فوق —
+            مكرّرة هنا قصدًا عشان بلوك الحاوية يقرأ كإجابة واحدة على المواصفة).
+          ⚠️ position ثابتة fixed مش relative المذكورة في المواصفة: fixed أقوى —
+             بيفصل الصندوق عن سكرول المستند وقت فتح الكيبورد (إصلاح 2026-10-11
+             الموثّق فوق) وبيحقق هدف «ثابتة الأبعاد ولا تتحرك عند الكتابة» —
+             تبديلها لـrelative بيرجّع ثغرة انزلاق الشاشة وراء الكيبورد. */
+    body.page-agent #app {
+      touch-action: pan-x pan-y;
+      overflow: hidden;
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ② منطقة الرسائل (.chat-area) هي الوحيدة اللي تتمرّر داخليًا —
+       overflow-y: auto (موجود فوق) + تمرير Momentum على أجهزة iOS. */
+    body.page-agent .chat-area {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ③ حقل الإدخال: لا يقل عن 16px (يمنع الـzoom التلقائي عند التركيز على
+       الموبايل — style.css محدّده 15.5px فالـ!important بيضمنها فوق أي قاعدة)
+       + touch-action: manipulation لمنع double-tap zoom على الحقل. */
+    body.page-agent .input-field {
+      font-size: 16px !important;
+      touch-action: manipulation;
+    }
   </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>

@@ -9,7 +9,14 @@
        الأصلي: الكيبورد يصغّر الصفحة والـdvh تتبعها — من غير أي JavaScript.
        ⚠️ لا تحذفها: صفحة الوكيل (agent.html) وصفحة إضافة العقار بيّعتمدوا عليها.
        المرجع: https://developer.chrome.com/blog/viewport-resize-behavior/ -->
+  <!-- ⭐ (2026-10-12) تخصيص الصفحة: لو الصفحة حاطة `custom_viewport: true` في
+       الـfront matter (صفحة الوكيل agent.html) فهي اللي بتحط وسم <viewport>
+       خاص بيها داخل <head> عبر extra_head — فما نطبعش الوسم الافتراضي مرتين
+       (أول وسم viewport بس هو اللي المتصفح بياخده). باقي صفحات هذا القالب
+       بتأخد الوسم الافتراضي بالظبط — مفيش أي تغيير في خرجها. -->
+  {% unless page.custom_viewport %}
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  {% endunless %}
   <!-- ⚠️ إصلاح PWA (2026-09-26): كان #075e54 (تركواز واتساب) — صار #0a3d2e
        (أخضر الهوية) ليطابق manifest.json في شريط حالة التطبيق المثبّت. -->
   <meta name="theme-color" content="#0a3d2e">
