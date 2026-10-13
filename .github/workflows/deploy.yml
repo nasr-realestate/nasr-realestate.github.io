@@ -2,9 +2,7 @@ name: Deploy Jekyll with Plugins
 
 on:
   push:
-    branches:
-      - master
-      - main
+    branches: ["master", "main"]
   workflow_dispatch:
 
 permissions:
@@ -13,27 +11,24 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: "deploy-jekyll-own"
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: Setup Ruby
-        uses: ruby/setup-ruby@a24eabf32617781b1c607ab9b83b190f7a0753d0 # v1.218.0
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
           bundler-cache: true
 
       - name: Setup Pages
-        uses: actions/configure-pages@983d771653b075ae667fad5a9f59dd1118750a1e # v5.0.0
+        uses: actions/configure-pages@v4
 
       - name: Build with Jekyll
         run: bundle exec jekyll build
@@ -41,7 +36,7 @@ jobs:
           JEKYLL_ENV: production
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@v3
 
   deploy:
     environment:
@@ -49,8 +44,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        uses: actions/deploy-pages@v4
+        
