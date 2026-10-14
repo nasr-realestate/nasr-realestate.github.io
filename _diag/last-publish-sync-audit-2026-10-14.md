@@ -119,3 +119,27 @@
 
 ### د) الاختبارات بعد الدفعة الثانية
 `node --test _worker/tests/*.test.mjs` → **219 ناجح / 2 فاشل** (الإخفاقان المعروفان: صياغة الهوية + سطر الحالة). الخطوة الحاجزة في CI: 219/0.
+
+## 8) النشر الفعلي — النتائج بالأدلة (2026-10-14)
+
+### Workers الثلاثة
+| Worker | الحالة | الدليل |
+|---|---|---|
+| **agent** `royal-snow-ea32` | **v9.3-W منشور** | run `38631030666` (configure): `upload http=200 success=true` · `live module sha after = f861131d…` = بصمة المستودع · `live == repo build: yes` · `VERDICT: SUCCESS` · bindings قبل=بعد · `/push/config` يعمل. ثم run `38631193270` (verify): `live == repo worker.js: yes` + `VERIFY_OK`. وتدقيق `38633244990`: `repo_worker_sha=f861131d…` |
+| **properties-sync** `nasr-properties-sync` | **منشور + تحقق حقيقي كامل** | run `38634093234` (الفرع) و `38635023287` (master): `Deploy sync Worker → success` · `POST-DEPLOY CHECKS PASSED` · `ALL CHECKS PASSED` · `101 ملفًا: in-scope 81 · out-of-scope 12 · invalid 8` · `duplicates=0` · `foreign_key_check=0` · `no_rows_deleted=true` · `price_snapshots=39` · `areas=31` · `null_area=2` |
+| **valuation** `noisy-bush-fd84` | **بلا تغيير (مقصود)** | ليس له أي Workflow نشر (بحسب ملاحظة `deploy-properties-sync.yml`)، ونسخة المستودع = الحيّة `v6.2` بنفس العقد — فلا داعي لنشر شيء |
+
+### الموقع
+- `Deploy Jekyll with Plugins` نجح على `bb973b43` ثم على `20ee528a`، والنسخة الحيّة تُثبت التغيير:
+  `https://nasr-realestate.github.io/sw.js` → `const CACHE_NAME = 'smsar-v2'` ✅
+  و`agent.html` الحيّ يعرض «17M+ · 430 صورة · 151 مراجعة كتبها» مع رابط **ملف المرشد** ✅
+
+### بوابة الاعتماد — درس مهم
+- `push-notify-setup.yml` نجح بالسرّ `ARENA_CLOUDFLARE`، بينما `deploy-properties-sync.yml` كان يبحث في
+  أسماء أخرى فقط (`CLOUDFLARE_API_TOKEN` …) فكان **يتوقف بصمت** (`credential: MISSING`).
+  أُضيفت `ARENA_CLOUDFLARE`/`ARENA_CLOUDFLARE_TOKEN` إلى سلسلته، فصار ينشر ويتحقق فعليًا.
+
+### المتبقّي بوعي (لا يوقف شيئًا)
+1. إخفاقان معروفان في `agent-page` (صياغة الهوية: «أنا طارق طنطاوي» في الصفحة مقابل «وكيل ذكي» في الـworker والاختبار، وسطر الحالة) — قرار محتوى، وهما مستثنيان صراحةً في بوابة CI.
+2. تشغيل `master` القديم `38633244891` (بالأرقام المثبتة 98/78) سينتهي بالفشل المعلوم؛ superseded بتشغيل `38635023287` الناجح.
+3. قيمة `GEMINI_MODEL` الحيّة غير مقروءة من المستودع (bindings تُطبع بالأسماء فقط). وُضِع لها fallback في الكود، فلو كانت مرفوضة من Google يعود الـWorker تلقائيًا للموديل المدمج بدل أن تصمت ردوده.
