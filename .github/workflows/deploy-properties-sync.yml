@@ -224,6 +224,10 @@ jobs:
           set +e
           exec >> "$REPORT" 2>&1
           FAILED=""
+          # مشتقان من المستودع نفسه فلا يحتاجان تحديثًا يدويًا عند إضافة عقارات جديدة
+          EXPECTED_FILES=$(ls _properties/*.md 2>/dev/null | wc -l | tr -d ' ')
+          EXPECTED_IN_SCOPE=$(echo "$IN_SCOPE_IDS" | tr ',' '\n' | grep -c .)
+          echo "expectations: files=$EXPECTED_FILES in_scope=$EXPECTED_IN_SCOPE"
           API=https://api.cloudflare.com/client/v4
           ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
           export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
@@ -284,11 +288,11 @@ jobs:
             case "$DERR" in
               github_tree_failed*|*rate\ limit*) echo "  GitHub tree API rate limit — retrying in 120s"; sleep 120; continue;;
             esac
-            [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "98" ] && break
+            [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "$EXPECTED_FILES" ] && break
             sleep 60
           done
           check "dryrun_flag" "$(vget '.dry_run' /tmp/dryrun.json)" "true"
-          check "dryrun_read_the_tree" "$(vget '.github.files_total' /tmp/dryrun.json)" "98"
+          check "dryrun_read_the_tree" "$(vget '.github.files_total' /tmp/dryrun.json)" "$EXPECTED_FILES"
           # في الـdry run العدادات تُظهر ما كان *سيحدث* — والدليل الحقيقي هو أن D1 لم تتغير
           report /tmp/verify_after_dry.json
           check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
@@ -326,7 +330,7 @@ jobs:
           report /tmp/verify_state.json
           jq -c '.state' /tmp/verify_state.json 2>/dev/null
           echo "state: $(vget '.state.files_tracked' /tmp/verify_state.json) files tracked · in-scope $(vget '.state.in_scope' /tmp/verify_state.json) · out-of-scope $(vget '.state.out_of_scope' /tmp/verify_state.json) · invalid $(vget '.state.invalid' /tmp/verify_state.json)"
-          check "state_in_scope_78"     "$(vget '.state.in_scope' /tmp/verify_state.json)" "78"
+          check "state_in_scope"        "$(vget '.state.in_scope' /tmp/verify_state.json)" "$EXPECTED_IN_SCOPE"
           check "state_out_of_scope_12" "$(vget '.state.out_of_scope' /tmp/verify_state.json)" "12"
           check "state_invalid_8"       "$(vget '.state.invalid' /tmp/verify_state.json)" "8"
           jq -r '.state.out_of_scope_files[]?' /tmp/verify_state.json | sort -u > /tmp/oos_seen.txt
@@ -360,8 +364,8 @@ jobs:
           B_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_before.json); A_ZERO=$(vget '.counts.source9_null_area' /tmp/verify_after.json)
           echo "source9 rows: before=${B_SRC9} after=${A_SRC9} | listings: ${B_TOT} -> ${A_TOT} | snapshots: ${B_SNAP} -> ${A_SNAP} | areas: ${B_AREAS} -> ${A_AREAS}"
           echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
-          echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/78 present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
-          check "in_scope_78_present"       "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "78/78"
+          echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/$EXPECTED_IN_SCOPE present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
+          check "in_scope_present"          "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "$EXPECTED_IN_SCOPE/$EXPECTED_IN_SCOPE"
           check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "$B_ZERO"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
           check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
@@ -382,7 +386,7 @@ jobs:
           if [ "$D1_API" = "true" ]; then
             echo "=== 7) D1 API cross-check (wrangler d1 execute) ==="
             IN_SQL=$(echo "$IN_SCOPE_IDS" | tr ',' '\n' | sed "s/^/'/; s/$/'/" | paste -sd, -)
-            check "d1api_in_scope_78"   "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9 AND ${EXTERNAL_COL} IN (${IN_SQL})")" "78"
+            check "d1api_in_scope"      "$(one "SELECT COUNT(*) FROM listings WHERE ${SOURCE_COL} = 9 AND ${EXTERNAL_COL} IN (${IN_SQL})")" "$EXPECTED_IN_SCOPE"
             check "d1api_duplicates"    "$(one "SELECT COUNT(*) FROM (SELECT ${EXTERNAL_COL} FROM listings WHERE ${SOURCE_COL} = 9 GROUP BY ${EXTERNAL_COL} HAVING COUNT(*) > 1)")" "0"
           fi
           echo
