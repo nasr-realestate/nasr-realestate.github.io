@@ -70,14 +70,26 @@ const PRICE_OBJECTION_RESPONSE = `فاهمك، السعر بيفرق حسب ال
 const HESITATION_RESPONSE = `ولا يهمك، ناخدها واحدة واحدة ومن غير ضغط. نبدأ بشراء ولا إيجار؟`;
 const OUT_OF_SCOPE_RESPONSE = `التخصص الحالي لطارق الوكيل هو مدينة نصر بس، ومش بعرض عقارات خارجها.`;
 
-const GOOGLE_PROFILE = {
+// ═══ GOOGLE SIGNALS ═══
+// ⚠️ مقياسان مختلفان لا يُخلطان — نفس قاعدة _includes/schema-global.html و llms.txt:
+//   • GOOGLE_BUSINESS = صفحة نشاط «سمسار طلبك» → تقييم العملاء 4.7 من 102 مراجعة (تحقق 2026-09-24)
+//   • GOOGLE_PROFILE  = ملف طارق كمرشد محلي → Level 7 · 7,741 نقطة · 151 مراجعة كتبها (+28 تقييم)
+//                       · 430 صورة · أكثر من 17 مليون مشاهدة (تحقق 2026-10-12)
+const GOOGLE_BUSINESS = {
   url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
-  level: 7, badge: "Google Local Guide Level 7",
-  points: 7741, maxPoints: 15000, photosCount: 468,
-  totalViews: 16273294, formattedViews: "16.3 مليون",
-  reviewsCount: 195, ratingsCount: 39,
+  rating: 4.7, reviewsCount: 102,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",
+};
+
+const GOOGLE_PROFILE = {
+  // ⭐ v9.3: هذا رابط الملف الشخصي للمرشد (أرقامه الشخصية: النقاط/الصور/المراجعات المكتوبة).
+  //    رابط صفحة النشاط في GOOGLE_BUSINESS — جملة «شوف بروفايلي» لازم تفتح الملف الشخصي.
+  url: "https://maps.app.goo.gl/8QWS1BCPBViggDfa7",
+  level: 7, badge: "Google Local Guide Level 7",
+  points: 7741, maxPoints: 15000, photosCount: 430,
+  totalViews: 17000000, formattedViews: "أكثر من 17 مليون",
+  reviewsCount: 151, ratingsCount: 28,
 };
 
 const BTN = {
@@ -479,14 +491,15 @@ function cleanPersonName(raw){
 }
 
 // ═══ GOOGLE AUTHORITY ═══
+// ⭐ v9.3: كل رقم يُنسب لصاحبه — تقييم العملاء من صفحة النشاط، والأرقام الشخصية من ملف المرشد
 function buildGoogleAuthorityMsg(){
-  return `🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}\n\n📊 *الأرقام الرسمية على Google Maps:*\n• 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة\n• 📸 ${GOOGLE_PROFILE.photosCount} صورة\n• ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم\n• 🎯 ${GOOGLE_PROFILE.points.toLocaleString("en-US")} / ${GOOGLE_PROFILE.maxPoints.toLocaleString("en-US")} نقطة\n\n📍 ${GOOGLE_PROFILE.description}\n🗺️ شوف بروفايلي: ${GOOGLE_PROFILE.url}`;
+  return `🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}\n\n📊 *الأرقام الرسمية على Google Maps:*\n• 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة\n• 📸 ${GOOGLE_PROFILE.photosCount} صورة\n• ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة + ${GOOGLE_PROFILE.ratingsCount} تقييم (مساهماته كمرشد محلي)\n• 🎯 ${GOOGLE_PROFILE.points.toLocaleString("en-US")} / ${GOOGLE_PROFILE.maxPoints.toLocaleString("en-US")} نقطة\n\n⭐ *تقييم عملاء «سمسار طلبك»:* ${GOOGLE_BUSINESS.rating} من 5 (${GOOGLE_BUSINESS.reviewsCount} مراجعة)\n📍 ${GOOGLE_BUSINESS.description} — ${GOOGLE_BUSINESS.office}\n\n🗺️ شوف بروفايلي: ${GOOGLE_PROFILE.url}\n🏢 صفحة النشاط: ${GOOGLE_BUSINESS.url}`;
 }
 function buildGoogleAuthorityShort(){
-  return `🏆 ${GOOGLE_PROFILE.badge}\n👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps\n⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة\n🗺️ ${GOOGLE_PROFILE.url}`;
+  return `🏆 ${GOOGLE_PROFILE.badge}\n⭐ تقييم العملاء: ${GOOGLE_BUSINESS.rating} من 5 (${GOOGLE_BUSINESS.reviewsCount} مراجعة)\n👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps\n🗺️ ${GOOGLE_PROFILE.url}`;
 }
 function buildTrustBar(){
-  return `━━━━━━━━━━━━━━━━━━━\n🏆 Google Local Guide Level 7\n⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة\n━━━━━━━━━━━━━━━━━━━`;
+  return `━━━━━━━━━━━━━━━━━━━\n🏆 Google Local Guide Level 7\n⭐ ${GOOGLE_BUSINESS.rating} من 5 (${GOOGLE_BUSINESS.reviewsCount} مراجعة) | 👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة\n━━━━━━━━━━━━━━━━━━━`;
 }
 
 // ═══ REQUEST LABEL ═══
@@ -1261,7 +1274,7 @@ function buildWAMsg(ctx, data, imgUrls=[]){
   }
   lines.push("",`━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`🏆 *طارق طنطاوي* — ${GOOGLE_PROFILE.badge}`);
-  lines.push(`📸 ${GOOGLE_PROFILE.photosCount} صورة | ⭐ ${GOOGLE_PROFILE.reviewsCount} مراجعة`);
+  lines.push(`⭐ تقييم النشاط: ${GOOGLE_BUSINESS.rating} من 5 (${GOOGLE_BUSINESS.reviewsCount} مراجعة) | 📸 ${GOOGLE_PROFILE.photosCount} صورة`);
   lines.push(`👁️ ${GOOGLE_PROFILE.formattedViews} مشاهدة على Google Maps`);
   lines.push(`🗺️ ${GOOGLE_PROFILE.url}`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
