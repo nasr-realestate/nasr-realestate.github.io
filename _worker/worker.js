@@ -1,17 +1,15 @@
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v9.2-FINAL
+// سمسار طلبك — Cloudflare Worker v9.3
 // طارق طنطاوي | مدينة نصر | 2014–2026
-// Google Local Guide Level 7 | 17M+ Views
-// الملف الشخصي الموثق: https://maps.app.goo.gl/8QWS1BCPBViggDfa7
+// Google Local Guide Level 7 | 16.3M+ Views
 // ------------------------------------------------------------
-// v9.2-FINAL — فوق v9.0-INTELLIGENCE (الحفاظ الكامل على السلوك):
-//  • فهم المصرية الطبيعية: "أعرف سعرها" / "بتاعتي" / "مش مفروشة"
-//  • دور المالك (SELLER/LANDLORD) يُكتشَف من "عندي/بتاعتي/ملكي"
-//  • VALUATION يبدأ owner_sale/owner_rent مباشرة (بدل ما يسأل شراء/إيجار)
-//  • حماية من ادعاء وجود مشتري (anti-hallucination)
-//  • تطبيق التصحيحات داخل الـflow (استبدال القيم القديمة)
-//  • استقبال النص الحر في notes بدل رفضه
-//  • كل السلوك القديم (buyer/tenant/owner/valuation/image/WA) محفوظ
+// v9.3 — فوق v9.2-FINAL (الحفاظ الكامل على السلوك):
+//  • إصلاح: حدود كلمات عربية في OFF_TOPIC / "بوت" (أرض الجولف، بوتاجاز، سيارات…)
+//  • إصلاح: الردود الجاهزة (هوية/تحية/غالي/متردد/خارج الموضوع) لا تخطف المحادثة وسط التسجيل
+//  • إصلاح: matchInterrupt داخل الفورم يعمل على الأسئلة فقط
+//  • سرعة: تعليق Gemini مهلته 2.5 ثانية ثم يُسقَط، كاش feed على مستوى Cloudflare
+//  • سرعة: تأخير الكتابة 250–600ms
+//  • مرونة: اسم الموديل قابل للضبط من env.GEMINI_MODEL
 // ============================================================
 
 // ═══ CONSTANTS ═══
@@ -33,8 +31,9 @@ const RATE_WINDOW_MS     = 30 * 1000;
 const RATE_MAX           = 15;
 const MAX_VISIBLE_LM     = 8;
 const VALUATION_MAX_AGE  = 24 * 60 * 60 * 1000;
-const FETCH_TIMEOUT_FEED   = 6000;
+const FETCH_TIMEOUT_FEED   = 3000;
 const FETCH_TIMEOUT_GEMINI = 8000;
+const FETCH_TIMEOUT_COMMENT = 2500;
 const FETCH_TIMEOUT_IMGBB  = 15000;
 const MAX_MSG_LEN          = 1000;
 const MAX_HISTORY          = 20;
@@ -72,11 +71,10 @@ const HESITATION_RESPONSE = `ولا يهمك، ناخدها واحدة واحد�
 const OUT_OF_SCOPE_RESPONSE = `التخصص الحالي لطارق الوكيل هو مدينة نصر بس، ومش بعرض عقارات خارجها.`;
 
 const GOOGLE_PROFILE = {
-  // الملف الشخصي الموثق لطارق طنطاوي (Local Guide Level 7) — يُستخدم في كل روابط «بروفايلي»
-  url: "https://maps.app.goo.gl/8QWS1BCPBViggDfa7",
+  url: "https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7",
   level: 7, badge: "Google Local Guide Level 7",
   points: 7741, maxPoints: 15000, photosCount: 468,
-  totalViews: 17000000, formattedViews: "أكثر من 17 مليون",
+  totalViews: 16273294, formattedViews: "16.3 مليون",
   reviewsCount: 195, ratingsCount: 39,
   description: "Real Estate Agent in Nasr City",
   office: "مدينة نصر — القاهرة",
@@ -159,10 +157,12 @@ function normAr(s){
 }
 
 // ═══ INTENT + FACT EXTRACTION ═══
-const GREETING_RE = /^(?:السلام\s*عليكم(?:\s*ورحمة\s*الله)?|وعليكم\s*السلام|اهلا|أهلا|أهلاً|اهلاً|صباح\s*الخير|صباح\s*النور|مساء\s*الخير|مساء\s*النور|ازيك|إزيك|ازاى|إزاى|عامل\s*ايه|عامل\s*إيه|هاي|hello|hi|hey|سلام)[!؟?.,\s]*$/i;
+// ⭐ v9.3: حدود كلمات عربية — الكلمة لا تُطابَق وهي جزء من كلمة أطول (الجولف / بوتاجاز / سيارات…)
+const AR_B = s => new RegExp(`(?<![\\u0600-\\u06FF])(?:${s})(?![\\u0600-\\u06FF])`, "i");
+const GREETING_RE = /^(?:السلام\s*عليكم(?:\s*ورحمة\s*الله)?|وعليكم\s*السلام|اهلا|أهلا|أهلاً|اهلاً|صباح\s*الخير|صباح\s*النور|مساء\s*الخير|مساء\s*النور|ازيك|إزيك|ازاى|إزاى|ازاي|إزاي|عامل\s*ايه|عامل\s*إيه|هاي|hello|hi|hey|سلام)[!؟?.,\s]*$/i;
 const REAL_ESTATE_CORE_RE = /عقار|شقه?|فيلا|دوبلكس|روف|محل|مكتب|مخزن|سكن|تمليك|شراء|اشتري|أشتري|إيجار|ايجار|استأجر|استاجر|بيع|ابيع|أبيع|تأجير|أأجر|متر|مساحه|مساحة|ميزانيه|ميزانية|سعر/i;
 const REAL_ESTATE_RE = new RegExp(`${REAL_ESTATE_CORE_RE.source}|مدينة\\s*نصر|مدينه\\s*نصر|الحي|المنطقه|المنطقة|عباس|مكرم|النحاس|الطيران`, "i");
-const OFF_TOPIC_RE = /شاي|قهوة|قهوه|جو\s*(بكره|بكرة|النهارده|دلوقتي)|الطقس|الجو|سياسة|سياسه|رياضة|رياضه|كورة|كره|ماتش|برمجه|برمجة|كود|بايثون|جافاسكربت|javascript|python|فيلم|اغنيه|أغنية|موسيقى|مزيكا|وصفة|اكل|أكل|طبخ|سفر|كرة\s*قدم|سيارة|سيارات|عربية/i;
+const OFF_TOPIC_RE = AR_B("شاي|قهوة|قهوه|الطقس|الجو|سياسة|سياسه|رياضة|رياضه|كورة|كوره|ماتش|برمجة|برمجه|بايثون|جافاسكربت|javascript|python|فيلم|اغنيه|أغنية|موسيقى|مزيكا|وصفة|طبخ|كرة\\s*قدم");
 const PRICE_OBJECTION_RE = /غالي|غالى|غلاء|كتير|مرتفع|مش\s*مناسب|مش\s*قدرتي|فوق\s*ميزانيتي/i;
 const HESITATION_RE = /مش\s*متأكد|مش\s*متاكده|مش\s*عارف|لسه\s*محتار|محتارة|محتار|متردد|مترددة/i;
 
@@ -567,7 +567,8 @@ const GOOGLE_AUTHORITY_INTERRUPTS = [
   { re:/كام تقييم|كام مراجعة|كام صورة|كام مشاهدة/i, ans:()=>buildGoogleAuthorityMsg() },
 ];
 const IDENTITY_Q_PATTERNS = [
-  /بوت|روبوت|شات\s*جي\s*بي\s*تي|جي\s*بي\s*تي|chat\s*gpt|\bgpt\b|openai|\b(bot|robot)\b|artificial|ذكاء\s*اصطناعي|a\.?i\.?\b/i,
+  // ⭐ v9.3: "بوت" بحدود كلمات عربية (ما تطابقش "بوتاجاز")
+  /(?<![\u0600-\u06FF])بوت(?![\u0600-\u06FF])|روبوت|شات\s*جي\s*بي\s*تي|جي\s*بي\s*تي|chat\s*gpt|\bgpt\b|openai|\b(bot|robot)\b|artificial|ذكاء\s*اصطناعي|a\.?i\.?\b/i,
   /انسان|إنسان|بني\s*آدم|بني\s*ادم|شخص\s*حقيقي|حد\s*حقيقي|شخص\s*بشري|حد\s*بشري|رد\s*بشري|human|real\s*person|are\s*you\s*(real|human)|not\s*a\s*(bot|machine)/i,
   /مين\s*انت|انت\s*مين|حضرتك\s*مين|مين\s*حضرتك|انت\s*طارق|حضرتك\s*طارق|معاك\s*طارق|ده\s*طارق|اسمك\s*(ايه|إيه)|who\s*are\s*you|are\s*you\s*tarek/i,
   /(عايز|محتاج|ممكن|ابغى|احب|ياريت)\s*(اتكلم|اكلم|كلموني|كلملي|كلم|مكالمة|اتصل|يتصل|قابل|اشوف)\s*(مع\s*)?(حد|شخص|واحد|موظف|مدير|مسؤول|طارق|الاستاذ\s*طارق|مين)/i,
@@ -664,7 +665,8 @@ async function fetchFeed(){
   const now = Date.now();
   if(feedCache.data && (now-feedCache.at)<CACHE_TTL_MS) return feedCache.data;
   try {
-    const r = await fetchWithTimeout(AI_FEED_URL,{headers:{"Accept":"application/json"}},FETCH_TIMEOUT_FEED);
+    // ⭐ v9.3: كاش على مستوى Cloudflare (الكاش في الذاكرة بيضيع مع كل isolate جديد)
+    const r = await fetchWithTimeout(AI_FEED_URL,{headers:{"Accept":"application/json"}, cf:{cacheTtl:300, cacheEverything:true}},FETCH_TIMEOUT_FEED);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
     const safe = (d&&typeof d==="object")?d:{properties:[]};
@@ -1468,10 +1470,12 @@ function payloadHasRawAddress(body, data){
   const dynamic = payloadPartsText(body).flatMap(t => splitDynamic(t).filter(p => p.dynamic).map(p => p.text)).map(addrCanon).join("\n");
   return raw.some(r => dynamic.includes(r));
 }
-async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data){
+// ⭐ v9.3: مهلة قابلة للتخصيص لكل استدعاء، واسم الموديل من env.GEMINI_MODEL لو موجود
+async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data, timeoutMs=FETCH_TIMEOUT_GEMINI){
   if(!env?.GEMINI_API_KEY) return null;
   try {
-    const url = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`;
+    const model = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.\-]/g,"");
+    const url = `${GEMINI_BASE}/${model}:generateContent`;
     const body = { system_instruction:{parts:[{text:sys}]}, contents:msgs, generationConfig:{temperature:temp,maxOutputTokens:maxTok} };
     // ⭐ الحاجز النهائي قبل أي fetch لـGoogle: تنقية كل النصوص، ومنع الإرسال لو بقي عنوان خام معروف
     const guarded = guardGeminiPayload(body, data);
@@ -1480,7 +1484,7 @@ async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data){
       method:"POST",
       headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
       body:JSON.stringify(guarded)
-    }, FETCH_TIMEOUT_GEMINI);
+    }, timeoutMs);
     if(!r.ok){ console.warn("[gemini] non-ok status:",r.status); return null; }
     const j = await r.json();
     const t = j?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1523,7 +1527,8 @@ async function geminiComment(env, userMsg, nextQ, fsData){
     return cached.variants[Math.floor(Math.random()*cached.variants.length)];
   }
   const sys = `${TAREK_PERSONA}\n\nالموقف: العميل لسه جاوبك على سؤال، وانت هتسأله السؤال اللي بعده على طول.\nعايز منك رد فعل قصير جدا على إجابته.\n\n${MOOD_GUIDE}\n${timeContext()}\n\nمهم جدا: مش كل إجابة محتاجة رد.\nلو إجابته عادية خالص (رقم، اختيار من زرار، كلمة واحدة) — مترّدش خالص واكتب: -\nالرد الفاضي ده طبيعي.\nعلّق بس لما يكون في حاجة فعلا تستاهل.\nلو هتعلّق: كلمتين أو تلاتة بالكتير. متعيدش السؤال اللي جاي.\n\nإجابة العميل: "${safeMsg}"\nالسؤال اللي جاي: "${sanitizeForPrompt(nextQ,200)}"\nاللي عارفه عنه: ${safeDataForPrompt(fsData)}`;
-  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95, fsData);
+  // ⭐ v9.3: التعليق تحسين اختياري — لو اتأخر أكتر من 2.5 ثانية يُسقَط والرد يخرج بدونه
+  const reply = await callGemini(env, sys, [{role:"user",parts:[{text:safeMsg}]}], 60, 0.95, fsData, FETCH_TIMEOUT_COMMENT);
   const cleaned = String(reply||"").trim();
   if(!cleaned||cleaned==="-"||/^[-–—.]+$/.test(cleaned)) return null;
   const variants = cached?.variants ? [...new Set([...cached.variants, cleaned])].slice(-4) : [cleaned];
@@ -2335,8 +2340,9 @@ function corsHeaders(request, env){
     "Cache-Control": "no-store",
   };
 }
-const TYPING_MIN_MS = 400;
-const TYPING_MAX_MS = 900;
+// ⭐ v9.3: تأخير الكتابة المصطنع أقصر (250–600ms)
+const TYPING_MIN_MS = 250;
+const TYPING_MAX_MS = 600;
 function typingDelayFor(text){
   const len = String(text||"").length;
   if(!len) return 0;
@@ -2842,8 +2848,12 @@ export default {
       fs.agentState = initAgentState(fs.agentState);
       syncAgentStateFromFlow(fs.agentState, fs);
 
-      // Identity / Greeting / Off-topic
-      if(isIdentityQ(userMsg)){
+      // ⭐ v9.3: الردود الجاهزة (هوية/تحية/خارج الموضوع/غالي/متردد) لا تخطف المحادثة وسط التسجيل.
+      //    داخل الفورم: سؤال الهوية بس لو الرسالة قصيرة، والباقي يتعامل معه الـflow نفسه.
+      const inFlow = fs.active===true && !!fs.flowType && fs.flowType!=="route_selection";
+      const shortMsg = userMsg.length <= 40;
+
+      if(isIdentityQ(userMsg) && (!inFlow || shortMsg)){
         return jsonRes({
           response: IDENTITY_RESPONSE,
           formState: fs,
@@ -2852,7 +2862,7 @@ export default {
           imageUrls: fs.imageUrls||[],
         });
       }
-      if(isGreeting(userMsg)){
+      if(!inFlow && isGreeting(userMsg)){
         return jsonRes({
           response: GREETING_RESPONSE,
           formState: fs,
@@ -2861,11 +2871,11 @@ export default {
           imageUrls: fs.imageUrls||[],
         });
       }
-      if(isOffTopic(userMsg)){
+      if(!inFlow && isOffTopic(userMsg)){
         return jsonRes({ response: OFF_TOPIC_RESPONSE, formState: fs, options: [] });
       }
-      if(PRICE_OBJECTION_RE.test(userMsg)) return jsonRes({ response: PRICE_OBJECTION_RESPONSE, options: ROUTE_BTNS, formState: fs });
-      if(HESITATION_RE.test(userMsg)) return jsonRes({ response: HESITATION_RESPONSE, options: ROUTE_BTNS, formState: fs });
+      if(!inFlow && PRICE_OBJECTION_RE.test(userMsg)) return jsonRes({ response: PRICE_OBJECTION_RESPONSE, options: ROUTE_BTNS, formState: fs });
+      if(!inFlow && HESITATION_RE.test(userMsg)) return jsonRes({ response: HESITATION_RESPONSE, options: ROUTE_BTNS, formState: fs });
 
       const flowType = fs.flowType||"";
       const hasFlow = fs.active===true && flowType!=="";
@@ -3037,7 +3047,9 @@ export default {
           return jsonRes(askOwnerStep(ownerSteps, fs.stepIndex, fs, "أكيد 👌 اضغط زر 💎 قيّم عقارك تحت.", null));
         }
       }
-      const cannedMid = matchInterrupt(userMsg, fs);
+      // ⭐ v9.3: الردود الجاهزة داخل الفورم تعمل على الأسئلة القصيرة فقط (مش على الملاحظات/الإجابات)
+      const looksLikeQuestion = /[؟?]|كام|ايه|إيه|ازاي|إزاي|فين/.test(userMsg);
+      const cannedMid = (looksLikeQuestion && userMsg.length<=80) ? matchInterrupt(userMsg, fs) : null;
       if(cannedMid) return jsonRes({response:cannedMid,options:ROUTE_BTNS,formState:fs});
 
       if(flowType==="owner"){
@@ -3071,5 +3083,5 @@ export default {
   }
 };
 // ═══════════════════════════════════════════════════
-// نهاية الملف — سمسار طلبك v9.2-FINAL
+// نهاية الملف — سمسار طلبك v9.3
 // ═══════════════════════════════════════════════════
