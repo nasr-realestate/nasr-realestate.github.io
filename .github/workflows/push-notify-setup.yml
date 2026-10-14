@@ -55,8 +55,8 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
-  # ⚠️ مؤقتًا configure لنشر v9.3-W — يُعاد إلى verify فورًا بعد نجاح النشر (2026-10-14)
-  AUTO_MODE: "configure"
+  # أُعيد إلى verify بعد نشر v9.3-W بنجاح (run 38631030666: live == repo build ✅) — 2026-10-14
+  AUTO_MODE: "verify"
 
 jobs:
   setup:

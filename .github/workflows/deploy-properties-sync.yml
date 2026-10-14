@@ -1,8 +1,9 @@
 # Deploy the GitHub → D1 properties sync Worker (source_id = 9 · سمسار طلبك) and verify
 # it against the real Cloudflare D1.
 #
-# Required repository secrets:
-#   CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
+# Required repository secrets (بنفس سلسلة الاعتماد المستخدمة في push-notify-setup.yml —
+# آخر تحديث 2026-10-14 بعد أن نجح نشر الـagent عبر ARENA_CLOUDFLARE):
+#   ARENA_CLOUDFLARE / CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
 #   CLOUDFLARE_ACCOUNT_ID (optional — resolved from the token when unset)
 # Optional:
 #   SYNC_TOKEN            (protects POST /sync; stored as a Worker secret when present)
@@ -37,8 +38,8 @@ jobs:
   deploy-and-verify:
     runs-on: ubuntu-latest
     env:
-      CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
