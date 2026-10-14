@@ -3047,9 +3047,10 @@ export default {
           return jsonRes(askOwnerStep(ownerSteps, fs.stepIndex, fs, "أكيد 👌 اضغط زر 💎 قيّم عقارك تحت.", null));
         }
       }
-      // ⭐ v9.3: الردود الجاهزة داخل الفورم تعمل على الأسئلة القصيرة فقط (مش على الملاحظات/الإجابات)
-      const looksLikeQuestion = /[؟?]|كام|ايه|إيه|ازاي|إزاي|فين/.test(userMsg);
-      const cannedMid = (looksLikeQuestion && userMsg.length<=80) ? matchInterrupt(userMsg, fs) : null;
+      // ⭐ v9.3: الردود الجاهزة داخل الفورم تعمل على الأسئلة/الطلبات القصيرة فقط (مش على الملاحظات/الإجابات).
+      //    لازم تشمل صيغ الطلب مش الاستفهام بس — «ممكن أشوف التقييم» طلب ومكانه matchInterrupt.
+      const looksLikeAsk = /[؟?]|كام|ايه|إيه|ازاي|إزاي|فين|عايز|عاوز|محتاج|ممكن|ياريت|أشوف|اشوف|وريني|قولي|هات|التقييم|تقييم/.test(userMsg);
+      const cannedMid = (looksLikeAsk && userMsg.length<=80) ? matchInterrupt(userMsg, fs) : null;
       if(cannedMid) return jsonRes({response:cannedMid,options:ROUTE_BTNS,formState:fs});
 
       if(flowType==="owner"){
