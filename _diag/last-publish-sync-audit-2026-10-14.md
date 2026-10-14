@@ -93,3 +93,29 @@
 ---
 
 **الخلاصة:** تصحيحات المنطق في v9.3 جيدة وتستحق الإبقاء؛ المشكلة كانت في تعديلَي **الرابط وعدد المشاهدات** داخل `GOOGLE_PROFILE` لأنهما خالفا الأرقام الموثّقة بالتاريخ في الموقع وأكملا خلط «النشاط» بـ«المرشد المحلي» — وقد عُولجا بفصل الكيانين وإرجاع 17 مليون.
+
+## 7) ما نُفِّذ فعليًا (2026-10-14 — الدفعة الثانية)
+
+### أ) الحالة الحيّة للـWorkers (أدلة من تشغيلات المستودع)
+- **agent (royal-snow-ea32):** تقرير `_diag/push-setup-38052254442.txt` (2026-10-10) يثبت `live == repo worker.js` عند البصمة `c3aae4d0…` = نسخة `08b58691` (10-10) التي تحمل «16.3M + رابط صفحة النشاط». أي أن **الحيّ متأخر** عن المستودع: لم يستقبل تعديل 10-12 (`adfa2996`: 17M + رابط ملف المرشد) ولا v9.3. ⇒ نشر v9.3-W هو ترقية حقيقية لا تراجع.
+- **valuation (noisy-bush-fd84):** المستودع `v6.2` = الحيّ `v6.2` ونفس العقد `d1-price-snapshots-v2` (موثّق في `_worker/README.md` + فحوص ما بعد النشر). لا تغيير مطلوب؛ لا يوجد Workflow ينشره (بحسب ملاحظة `deploy-properties-sync.yml`).
+- **properties-sync (nasr-properties-sync):** يُنشر ويُتحقق منه تلقائيًا من `deploy-properties-sync.yml` (v1.0.4).
+
+### ب) ملفات الـWorkers الثلاثة
+| الملف | التغيير |
+|---|---|
+| `_worker/worker.js` | `release: v9.3-W` في الترويسة · فصل `GOOGLE_BUSINESS`/`GOOGLE_PROFILE` · **fallback للموديل**: لو رفض Google اسم `env.GEMINI_MODEL` (400/404) يُعاد مرة واحدة بالموديل المدمج · ترويسة تشير إلى بوابة `EXPECTED_WORKER_SHA256` |
+| `_worker/valuation-worker.js` | سطر مراجعة موثّق (لا تغيير سلوك) — نسخة المستودع = الحيّة v6.2 |
+| `_worker/properties-sync-worker.js` | سطر مراجعة موثّق (لا تغيير سلوك) — يُنشر تلقائيًا مع اختباراته |
+
+### ج) باقي الإصلاحات
+- `.github/workflows/tests.yml`: **بوابة اختبارات جديدة** (advisory للمجموعة كاملة + خطوة حاجزة تستثني الإخفاقين المعروفين فقط). لم يكن هناك أي job يشغّل هذه المجموعة قبل اليوم.
+- `_worker/tests/properties-sync.test.mjs`: العدد المتوقع صار مشتقًّا من العدد الحقيقي للملفات (كان 98/78 ثابتًا، والواقع 101/81). الإخفاق الثلاثي القديم (test 99) انتهى.
+- `.github/workflows/deploy-properties-sync.yml`: `IN_SCOPE_IDS` +3 (`luxury-admin-unit-41m-rent`, `helmy-abdel-aaty-seraj-230m`, `hayat-compound-furnished-200m`).
+- `.github/workflows/agent-worker-readonly-audit.yml`: رُفع فحص `7751a7dc`/`v9.3-W` المكتوب يدويًا واستُبدل بفحص **علامة `release:` المقروءة من المستودع** فتُقارَن بالحيّ دائمًا.
+- `.github/workflows/push-notify-setup.yml`: `EXPECTED_WORKER_SHA256` = بصمة v9.3-W الجديدة، ووضع `AUTO_MODE=configure` للنشر ثم يُعاد إلى `verify`، ووسم النشر على Cloudflare صار `agent-v9.3`.
+- `sw.js`: `CACHE_NAME` → `smsar-v2` (كان `smsar-v1`، فالـprecache لا يتحدّث مع تغيّر `agent.html`).
+- `_worker/README.md` · `wrangler.agent.toml` · `.env.example`: توثيق v9.3-W، وبيانات الـWorkers الصحيحة (كان الجدول يذكر v8.7.2 وv1.0.0)، وسلوك `GEMINI_MODEL` والكاش على الحافة (5 دقائق)، وبوابة البصمة، وأمر الاختبارات الجديد.
+
+### د) الاختبارات بعد الدفعة الثانية
+`node --test _worker/tests/*.test.mjs` → **219 ناجح / 2 فاشل** (الإخفاقان المعروفان: صياغة الهوية + سطر الحالة). الخطوة الحاجزة في CI: 219/0.

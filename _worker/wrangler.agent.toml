@@ -1,12 +1,16 @@
 # ⚠️ توثيق فقط — لا يُستخدم للنشر من هذا الملف.
 # الإنتاج يُدار عبر .github/workflows/push-notify-setup.yml (بوابات مُحكمة
-# تقرأ bindings الحيّة قبل أي تغيير). آخر مزامنة مع الإنتاج: 2026-10-10.
+# تقرأ bindings الحيّة قبل أي تغيير).
+# آخر نشر: 2026-10-14 (v9.3-W) عبر push-notify-setup.yml في وضع configure.
 #
 # الإعدادات الحيّة الفعلية لـ royal-snow-ea32 (run 38052254442):
 #   compatibility_date = 2026-09-04   ← ليس 2026-09-01 (كان هذا الملف يخالف الإنتاج)
 #   bindings:
 #     d1              DB                → nasr-market-db (ace5c9a2-c6b1-47b3-adf1-77e84ac50abf)
 #     plain_text      GEMINI_MODEL      (متغيّر قائم — يُحافظ عليه ولا يُحذف)
+#                                             ⚠️ صار يُقرأ فعليًا من v9.3؛ لو قيمته اسم موديل
+#                                             مرفوض من Google (400/404) يرجع الكود تلقائيًا
+#                                             للموديل المدمج gemini-3.5-flash-lite مرة واحدة.
 #     secret_text     GEMINI_API_KEY
 #     secret_text     IMGBB_API_KEY
 #     kv_namespace    PUSH_SUBS         → nasr-push-subs (6987204b82e146c897127283daa7bea5)

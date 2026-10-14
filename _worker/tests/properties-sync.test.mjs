@@ -837,7 +837,7 @@ test("إحداثيات: تُكتب فقط لو موجودة في الملف (ب�
 // ───────────────────────────────────────────────────────────────────────────
 // 7) تكامل: كل ملفات _properties الحقيقية عبر الـWorker (D1 وهمي)
 // ───────────────────────────────────────────────────────────────────────────
-test("تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة", async () => {
+test("تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة", async () => {
   const names = fs.readdirSync(PROPERTIES_DIR).filter((f) => f.endsWith(".md"));
   const files = names.map((name) => ({ name, content: fs.readFileSync(path.join(PROPERTIES_DIR, name), "utf8") }));
   const gh = installGitHubMock(files);
@@ -854,10 +854,16 @@ test("تكامل: 98 ملفًا حقيقيًا → insert بلا duplicates، ث
       files.length,
       "كل ملف إما اتحفظ أو اتسجّل كغير صالح أو خارج النطاق — بدون تجاهل صامت"
     );
-    assert.equal(first.body.db.inserted, 78, `عدد السجلات المحفوظة غير متوقع: ${first.body.db.inserted}`);
+    // المجموعتان مثبّتتان ومطابقتان لـOUT_OF_SCOPE_IDS / INVALID_IDS في deploy-properties-sync.yml،
+    // والباقي كله لازم يتحفظ — فيبقى العدد المتوقع مشتقًا من عدد الملفات الحقيقي (لا رقم مكتوب باليد).
     assert.equal(first.body.db.out_of_scope, 12);
     assert.equal(first.body.db.invalid, 8);
-    assert.equal(db.state.listings.length, 78);
+    assert.equal(
+      first.body.db.inserted,
+      files.length - 20,
+      `عدد السجلات المحفوظة غير متوقع: ${first.body.db.inserted} من ${files.length} ملفًا`
+    );
+    assert.equal(db.state.listings.length, files.length - 20);
     assert.equal(first.body.out_of_scope_files.length, 12, "كل ملف خارج النطاق لازم يظهر باسمه وسببه");
 
     // كل السجلات: مصدر 9، معرّف خارجي، بيع/إيجار، سعر ومساحة موجبان، ومفيش area_id=1 إلا لو المنطقة اتطابقت فعلًا
@@ -1050,7 +1056,7 @@ test("R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدو�
   assert.equal(__test.isCityArea({ id: 22, name: "المنطقة السادسة", names: ["المنطقة السادسة"], scope: "zone" }), false);
 });
 
-test("R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص الـ98 ملفًا)", () => {
+test("R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)", () => {
   const files = fs.readdirSync(PROPERTIES_DIR).filter((f) => f.endsWith(".md"));
   for (const f of files) {
     const fm = __test.parseFrontMatter(fs.readFileSync(path.join(PROPERTIES_DIR, f), "utf8"));

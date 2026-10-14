@@ -1,15 +1,20 @@
 // ============================================================
 // سمسار طلبك — Cloudflare Worker v9.3
 // طارق طنطاوي | مدينة نصر | 2014–2026
-// Google Local Guide Level 7 | 16.3M+ Views
+// Google Local Guide Level 7 | أكثر من 17 مليون مشاهدة (تحقق 2026-10-12)
+// release: v9.3-W  |  deployed: 2026-10-14
 // ------------------------------------------------------------
 // v9.3 — فوق v9.2-FINAL (الحفاظ الكامل على السلوك):
 //  • إصلاح: حدود كلمات عربية في OFF_TOPIC / "بوت" (أرض الجولف، بوتاجاز، سيارات…)
 //  • إصلاح: الردود الجاهزة (هوية/تحية/غالي/متردد/خارج الموضوع) لا تخطف المحادثة وسط التسجيل
-//  • إصلاح: matchInterrupt داخل الفورم يعمل على الأسئلة فقط
+//  • إصلاح: matchInterrupt داخل الفورم يعمل على الأسئلة/الطلبات القصيرة (مش على الملاحظات)
 //  • سرعة: تعليق Gemini مهلته 2.5 ثانية ثم يُسقَط، كاش feed على مستوى Cloudflare
 //  • سرعة: تأخير الكتابة 250–600ms
 //  • مرونة: اسم الموديل قابل للضبط من env.GEMINI_MODEL
+//  • أرقام جوجل: فصل الكيانين — GOOGLE_BUSINESS (النشاط: 4.7 من 102) عن
+//    GOOGLE_PROFILE (ملف المرشد: Level 7 · 7,741 نقطة · 151 مراجعة + 28 تقييم · 430 صورة)
+// ⚠️ سلسلة النصيحة: أي تغيير في هذا الملف ⇒ حدّث EXPECTED_WORKER_SHA256 في
+//    .github/workflows/push-notify-setup.yml (بوابة النشر تقارن البصمة قبل الرفع).
 // ============================================================
 
 // ═══ CONSTANTS ═══
@@ -1487,21 +1492,33 @@ function payloadHasRawAddress(body, data){
 async function callGemini(env, sys, msgs, maxTok=150, temp=0.6, data, timeoutMs=FETCH_TIMEOUT_GEMINI){
   if(!env?.GEMINI_API_KEY) return null;
   try {
-    const model = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.\-]/g,"");
-    const url = `${GEMINI_BASE}/${model}:generateContent`;
+    const preferred = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.\-]/g,"") || GEMINI_MODEL;
+    // ⭐ v9.3: لو اسم الموديل القادم من env غير صالح عند Google (400/404) نجرب الموديل
+    //    المدمج مرة واحدة — فمتغيّر بيئة خاطئ لا يُسقط الردود على الردود الجاهزة فقط.
+    const models = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
     const body = { system_instruction:{parts:[{text:sys}]}, contents:msgs, generationConfig:{temperature:temp,maxOutputTokens:maxTok} };
     // ⭐ الحاجز النهائي قبل أي fetch لـGoogle: تنقية كل النصوص، ومنع الإرسال لو بقي عنوان خام معروف
     const guarded = guardGeminiPayload(body, data);
     if(payloadHasRawAddress(guarded, data)){ console.warn("[gemini] payload blocked: raw address"); return null; }
-    const r = await fetchWithTimeout(url,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
-      body:JSON.stringify(guarded)
-    }, timeoutMs);
-    if(!r.ok){ console.warn("[gemini] non-ok status:",r.status); return null; }
-    const j = await r.json();
-    const t = j?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return t ? String(t).trim() : null;
+    for(const model of models){
+      const url = `${GEMINI_BASE}/${model}:generateContent`;
+      const r = await fetchWithTimeout(url,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},
+        body:JSON.stringify(guarded)
+      }, timeoutMs);
+      if(!r.ok){
+        console.warn("[gemini] non-ok status:",r.status,"model:",model);
+        // 400/404 = اسم الموديل مرفوض ⇒ جرّب الموديل المدمج؛ أي خطأ آخر (429/500) يُسقَط كما كان
+        if((r.status===400||r.status===404) && model!==GEMINI_MODEL) continue;
+        return null;
+      }
+      const j = await r.json();
+      const t = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(t) return String(t).trim();
+      return null; // رد ناجح بلا نص = لا شيء (بدون إعادة محاولة)
+    }
+    return null;
   } catch(err){
     console.warn("[gemini] failed:",err?.name==="AbortError"?"timeout":err?.message);
     return null;

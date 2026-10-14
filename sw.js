@@ -11,7 +11,7 @@
    • الاستراتيجية: Network-First مع السقوط على الكاش عند انقطاع الشبكة.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'smsar-v1';
+const CACHE_NAME = 'smsar-v2';
 const OFFLINE_URL = '/agent.html';
 
 const PRECACHE_URLS = [

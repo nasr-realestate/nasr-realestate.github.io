@@ -116,14 +116,11 @@ jobs:
           echo "deployments HTTP=$DEPLOYMENTS_CODE"
           if [ "$DEPLOYMENTS_CODE" = 200 ]; then
             DEPLOYMENT_META=$(jq -c '{deployments:[.result.deployments[0:8][]?|{id,created_on,versions:[.versions[]?|{version_id,percentage}],annotations:{tag:.annotations["workers/tag"],message:.annotations["workers/message"],triggered_by:.annotations["workers/triggered_by"]}}]}' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
-            MATCH_7751=$(jq -c --arg needle '7751a7dc' '[.result.deployments[]?|select((.id//""|contains($needle)) or any(.versions[]?; (.version_id//""|contains($needle))))|{id,created_on,versions:[.versions[]?|{version_id,percentage}]}]' /tmp/cf-deployments.json 2>/dev/null || echo parse-error)
           else
             DEPLOYMENT_META=$(jq -c '{errors:[.errors[]?.message]}' /tmp/cf-deployments.json 2>/dev/null || echo unavailable)
-            MATCH_7751=unavailable
           fi
           echo "recent deployments: $DEPLOYMENT_META"
-          echo "7751a7dc matches: $MATCH_7751"
-          add_summary "deployments_http=$DEPLOYMENTS_CODE recent_deployments=$DEPLOYMENT_META id_7751=$MATCH_7751"
+          add_summary "deployments_http=$DEPLOYMENTS_CODE recent_deployments=$DEPLOYMENT_META"
 
           if ! CONTENT_CODE=$(curl -sS --connect-timeout 10 --max-time 45 -H "$AUTH" -o /tmp/cf-worker.raw -w '%{http_code}' \
             "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME"); then CONTENT_CODE=000; fi
@@ -156,7 +153,8 @@ jobs:
               live_form = form_version.group(1).decode() if form_version else 'not-found'
               header = re.search(rb'Cloudflare Worker ([^\r\n]+)', module)
               release_header = header.group(1).decode('utf-8', 'replace').strip() if header else 'not-found'
-              has_v93 = b'v9.3-W' in module
+              marker = re.search(rb'^// release: ([^\r\n]+)', repo, re.M)
+              release_marker = marker.group(1).decode('utf-8', 'replace').strip() if marker else 'not-found'
               print('live worker.js bytes:', len(module))
               print('live worker.js sha256:', live_sha)
               print('repo worker.js sha256:', repo_sha)
@@ -169,8 +167,8 @@ jobs:
               print('equal ignoring trailing line endings:', trailing_eol_ignored_equal)
               print('live release header:', release_header)
               print('live FORM_VERSION:', live_form)
-              print('live module contains v9.3-W:', has_v93)
-              print('live module contains deployment id 7751a7dc:', b'7751a7dc' in module)
+              print('repo release marker:', release_marker)
+              print('live module contains repo release marker:', release_marker != 'not-found' and release_marker.encode() in module)
 
               decl = re.compile(r'^\s*(?:async\s+)?function\s+([\w$]+)|^\s*(?:const|let|var)\s+([\w$]+)')
               repo_lines = repo.decode('utf-8', 'replace').splitlines()
@@ -201,7 +199,7 @@ jobs:
               print('changed declaration names:', symbols)
               print('network-related marker presence:', marker_text)
               with open('/tmp/agent-audit-module-meta.txt', 'w') as f:
-                  f.write(f'live_sha={live_sha} live_form={live_form} release_header={release_header} contains_v93={str(has_v93).lower()} byte_match={str(module == repo).lower()} linewise_equal={str(linewise_equal).lower()} lf_normalized_equal={str(lf_normalized_equal).lower()} trailing_eol_ignored_equal={str(trailing_eol_ignored_equal).lower()} changed_regions={regions} changed_symbols={symbols} markers={marker_text}')
+                  f.write(f'live_sha={live_sha} live_form={live_form} release_header={release_header} release_marker={release_marker} byte_match={str(module == repo).lower()} linewise_equal={str(linewise_equal).lower()} lf_normalized_equal={str(lf_normalized_equal).lower()} trailing_eol_ignored_equal={str(trailing_eol_ignored_equal).lower()} changed_regions={regions} changed_symbols={symbols} markers={marker_text}')
           PY
             MODULE_META=$(cat /tmp/agent-audit-module-meta.txt 2>/dev/null || echo module-unavailable)
           else

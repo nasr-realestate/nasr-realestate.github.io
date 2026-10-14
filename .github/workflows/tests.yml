@@ -1,0 +1,57 @@
+# ══════════════════════════════════════════════════════════════════════
+# بوابة اختبارات Worker/الصفحة — كانت غائبة تمامًا قبل 2026-10-14
+# ────────────────────────────────────────────────────────────────────
+# لماذا هذا الملف: لا job واحد في CI كان يشغّل _worker/tests/*.test.mjs
+# (فقط properties-sync.test.mjs داخل deploy-properties-sync.yml)، فمرّت
+# إخفاقات v9.3 على الصفحة (9 اختبارات) دون أن يوقفها أي شيء قبل النشر.
+#
+# القاعدة هنا:
+#   • الخطوة الأولى «استشارية»: تشغيل المجموعة كاملة (219 اختبارًا) — تظهر
+#     الإخفاقات المعروفة في السجل والملاحظات ولا تُسقط البناء.
+#   • الخطوة الثانية «حاجزة»: نفس المجموعة مع استثناء إخفاقين قديمين
+#     معروفين، وهما قرار محتوى لا قرار كود (تفاصيلهما في
+#     _diag/last-publish-sync-audit-2026-10-14.md):
+#       1) نص ترحيب agent.html يقول «أنا طارق طنطاوي» بينما الاختبار يتوقع
+#          «وكيل ذكي» — وIDENTITY_RESPONSE في worker.js يقول «أنا وكيل ذكي».
+#       2) شريط الحالة «متصل الآن» مقابل «وكيل ذكي • متصل الآن».
+#     أي إخفاق جديد (لا يطابق النمط) يُسقط البناء فورًا.
+# ══════════════════════════════════════════════════════════════════════
+name: Worker & page tests
+
+on:
+  push:
+    branches: ["master", "main", "arena/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # الإخفاقان القديمان المعروفان (regex؛ تُستخدم مع --test-skip-pattern)
+      KNOWN_FAILURES: "stored sessions: a stale valuation|T1.5: the page says it is the agent"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Full suite — advisory (the two known failures stay visible here)
+        continue-on-error: true
+        run: |
+          node --test $(ls _worker/tests/*.test.mjs | tr '\n' ' ')
+
+      - name: Blocking suite — any new failure stops the build
+        run: |
+          node --test --test-skip-pattern="$KNOWN_FAILURES" $(ls _worker/tests/*.test.mjs | tr '\n' ' ')
