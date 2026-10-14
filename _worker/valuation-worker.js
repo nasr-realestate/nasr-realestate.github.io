@@ -46,6 +46,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const WORKER_VERSION = "v6.2";
+// آخر مراجعة: 2026-10-14 — لم يتغيّر أي سلوك. النسخة الحيّة على Cloudflare
+// (noisy-bush-fd84) تُبلّغ عن v6.2 ونفس العقد d1-price-snapshots-v2 (انظر _worker/README.md).
 const API_CONTRACT = "d1-price-snapshots-v2";
 const SERVICE_NAME = "nasr-valuation";
 

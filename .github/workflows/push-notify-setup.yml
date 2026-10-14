@@ -55,6 +55,7 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
+  # أُعيد إلى verify بعد نشر v9.3-W بنجاح (run 38631030666: live == repo build ✅) — 2026-10-14
   AUTO_MODE: "verify"
 
 jobs:
@@ -70,7 +71,8 @@ jobs:
       KV_TITLE: nasr-push-subs
       KV_BINDING: PUSH_SUBS
       # بصمة كود الـWorker المتوقع — تُحدَّث عمدًا عند أي تغيير على _worker/worker.js
-      EXPECTED_WORKER_SHA256: c3aae4d0c2a66abf9b75944534ab6f6eea8ad8937e62a4e7b6a29549d2489583
+      # تحديث عمدي 2026-10-14: v9.3-W (فصل كيانَي جوجل + إصلاحات v9.3) — راجع _diag/last-publish-sync-audit-2026-10-14.md
+      EXPECTED_WORKER_SHA256: f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -278,7 +280,7 @@ jobs:
               keep_bindings: $keep,
               bindings: ([ $snap.result.bindings[]? | select((.type | test("^secret")) | not) | select((.type == "kv_namespace" and .name == $kvc) | not) ]
                          + [{ type: "kv_namespace", name: $kvc, namespace_id: $kvid }]),
-              annotations: { "workers/message": "push notifications (VAPID+KV) arena-2026-10-10", "workers/tag": "push-v1" }
+              annotations: { "workers/message": "agent v9.3-W — entity split + Arabic word boundaries/perf (2026-10-14)", "workers/tag": "agent-v9.3" }
             }' > meta.json || stop "STOP — تعذّر بناء بيانات الرفع."
           jq -c '{main_module, compatibility_date, compatibility_flags, keep_bindings, bindings: [.bindings[] | {type, name}]}' meta.json
           HTTP=$(curl -sS -m 120 -o up.json -w '%{http_code}' -X PUT "$API/accounts/$ACC/workers/scripts/$SCRIPT" \

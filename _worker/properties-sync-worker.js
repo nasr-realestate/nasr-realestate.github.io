@@ -29,6 +29,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const WORKER_VERSION = "v1.0.4";
+// آخر مراجعة: 2026-10-14 — لم يتغيّر أي سلوك. يُنشر من .github/workflows/deploy-properties-sync.yml
+// (نشر + تحقق حقيقي على D1) عند أي تغيير في هذا الملف أو في اختباراته أو في wrangler.sync.toml.
 const SERVICE_NAME = "nasr-properties-sync";
 
 const SOURCE_ID = 9;

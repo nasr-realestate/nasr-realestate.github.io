@@ -1,8 +1,9 @@
 # Deploy the GitHub → D1 properties sync Worker (source_id = 9 · سمسار طلبك) and verify
 # it against the real Cloudflare D1.
 #
-# Required repository secrets:
-#   CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
+# Required repository secrets (بنفس سلسلة الاعتماد المستخدمة في push-notify-setup.yml —
+# آخر تحديث 2026-10-14 بعد أن نجح نشر الـagent عبر ARENA_CLOUDFLARE):
+#   ARENA_CLOUDFLARE / CLOUDFLARE_API_TOKEN  (Workers Scripts: Edit + D1: Edit)
 #   CLOUDFLARE_ACCOUNT_ID (optional — resolved from the token when unset)
 # Optional:
 #   SYNC_TOKEN            (protects POST /sync; stored as a Worker secret when present)
@@ -37,17 +38,19 @@ jobs:
   deploy-and-verify:
     runs-on: ubuntu-latest
     env:
-      CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
       REPORT: _diag/sync-deploy-report.txt
-      # the exact sets produced by the offline audit of the 98 files (see _worker/README.md)
+      # the exact sets produced by the offline audit of _properties/*.md (see _worker/README.md)
+      # last reviewed 2026-10-14: أُضيفت الثلاثة الجديدة إلى IN_SCOPE_IDS
+      #   hayat-compound-furnished-200m · helmy-abdel-aaty-seraj-230m · luxury-admin-unit-41m-rent
       OUT_OF_SCOPE_IDS: "heliopolis-badia-180m-lux,masr-al-gdida-150m-classic,lavida-rent-2units-jan26,villa-new-cairo-1st-district-568m,rehab-villa-model-h-gate9,villa-south-90th-120m,shams-club-heliopolis-160m,andalus1-duplex-285m,banafseg2-showroom-340m,new-polis-130m,salam-city-218m-roof,sheraton-nozha-165m-rent"
       INVALID_IDS: "rent-furnished-batrawy-30k,shinzo-abe-262m-4th-floor,sherif-samy-ground-admin,saudi-buildings-golf-110m,nasr-street-furnished,obour-buildings-rent-47,rent-tayaran-panorama-35k,showroom-ahmed-fakhry-600m"
       NULL_AREA_IDS: "gamal-afifi-ahly-club-250m,admin-tayaran-st-400m,shop-tayaran-togari-400m,duplex-villa-badawy,police-towers-rent-280m"
-      IN_SCOPE_IDS: "10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m"
+      IN_SCOPE_IDS: "luxury-admin-unit-41m-rent,helmy-abdel-aaty-seraj-230m,hayat-compound-furnished-200m,10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m"
     steps:
       - uses: actions/checkout@v4
         with:
