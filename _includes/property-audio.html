@@ -155,7 +155,8 @@
     .pp-audio__script > summary::-webkit-details-marker { display: none; }
     .pp-audio__script > summary::before {
       content: "\f0da";
-      font-family: "Font Awesome 6 Free";
+      /* عائلة احتياطية عامة مطلوبة — أيقونة القائمة المنسدلة */
+      font-family: "Font Awesome 6 Free", "Font Awesome 6 Free Regular", sans-serif;
       font-weight: 900;
       font-size: 0.7rem;
       transition: transform .2s ease;
@@ -262,7 +263,7 @@
     var icoPause = '<i class="fas fa-pause" aria-hidden="true"></i>';
 
     function fmt(sec) {
-      if (!isFinite(sec) || sec < 0) sec = 0;
+      if (!Number.isFinite(sec) || sec < 0) sec = 0;
       var m = Math.floor(sec / 60);
       var s = Math.floor(sec % 60);
       return m + ':' + (s < 10 ? '0' : '') + s;
@@ -285,7 +286,7 @@
     function paint() {
       var d = audio.duration;
       var c = audio.currentTime;
-      var pct = (isFinite(d) && d > 0) ? (c / d) * 100 : 0;
+      var pct = (Number.isFinite(d) && d > 0) ? (c / d) * 100 : 0;
       fill.style.width = pct + '%';
       curEl.textContent = fmt(c);
       track.setAttribute('aria-valuenow', Math.round(pct));
@@ -343,7 +344,7 @@
       var ratio = (x - rect.left) / rect.width;
       if (getComputedStyle(track).direction === 'rtl') ratio = 1 - ratio;
       ratio = Math.min(1, Math.max(0, ratio));
-      if (isFinite(audio.duration)) {
+      if (Number.isFinite(audio.duration)) {
         audio.currentTime = ratio * audio.duration;
         paint();
       }
@@ -352,7 +353,7 @@
     track.addEventListener('keydown', function (ev) {
       if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
         ev.preventDefault();
-        if (!isFinite(audio.duration)) return;
+        if (!Number.isFinite(audio.duration)) return;
         var step = ev.key === 'ArrowRight' ? 5 : -5;
         audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + step));
         paint();
