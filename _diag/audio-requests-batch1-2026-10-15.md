@@ -28,11 +28,11 @@
 
 | الفحص | حالة التحقق المحلي | حالة Jekyll/CI |
 |---|---|---|
-| A — الصفحات الثلاث وMP3 وID3 والـSHA ووسم المدة وعدم تسرب المشغل | `_diag/check-audio-requests.mjs` ناجح على HTML ناتج خادم المعاينة، 1 مشغّل و2 بلا مشغّل؛ بصمات ملفّي الطلب المستثنيين محفوظة. | **بانتظار PR**: البناء الفعلي `bundle exec jekyll build` ثم نفس الفحص، مع `_diag/check-audio-batch3.mjs` للـ101 عقاراً (26 إعلاناً مقفلاً ببصمات SHA-256 و75 بلا مشغّل). |
+| A — الصفحات الثلاث وMP3 وID3 والـSHA ووسم المدة وعدم تسرب المشغل | `_diag/check-audio-requests.mjs` ناجح على HTML ناتج خادم المعاينة، 1 مشغّل و2 بلا مشغّل؛ بصمات ملفّي الطلب المستثنيين محفوظة. | ✅ [Jekyll PR build #38781675866](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38781675866): `bundle exec jekyll build` و`_diag/check-audio-requests.mjs` ناجحان؛ `_diag/check-audio-batch3.mjs` ناجح لكل الـ101 عقار (26 صوتياً مثبت SHA-256، 75 بلا مشغّل). |
 | B — Chromium | Chromium 153 على 1440×900 و390×844 (لمس): تشغيل/إيقاف، تقديم RTL بالنقر واللمس إلى ~80%، موضع قبل `.rq-actions`، بلا autoplay أو overflow أو استثناءات JS. كلا الطلبين الآخرين بلا مشغّل، ومشغّل العقار السابق موجود. | — |
 | C — HTTP/FFmpeg | GET MP3 `200 audio/mpeg`، و`Range: bytes=0-1023` ← `206` (خادم المعاينة)؛ FFmpeg فك بلا أخطاء، 16.368 ثانية، ذروة **−1.6 dB** (<0 dB). | فحص HTTP **الإنتاجي** بعد النشر عبر job يدوي للقراءة فقط (لا نشر). |
 | D — مطابقة الوقائع | النوع/المساحة/الموقع/الميزانية روجعت مع حقول front matter أعلاه؛ بقية بيانات الطلب الأصلية ثابتة SHA-256 `3aec7689aa139d68be565b7420db81df62e9383361ca40595c96b56e38e7c3a9` عند حذف حقول الصوت الأربعة. | — |
-| E — الموقع كامل | `npm run lint` ناجح؛ Worker **219/219** في المجموعة الحاجزة؛ المجموعة الخام 221 اختباراً: 219 ناجحاً والإخفاقان القديمان فقط (T1.5 / stored sessions). `git diff --check` ناجح. | **بانتظار PR**: Jekyll property gate + request gate + Worker + SonarCloud (0 issues، duplication ≤3%). |
+| E — الموقع كامل | `npm run lint` ناجح؛ Worker **219/219** في المجموعة الحاجزة؛ المجموعة الخام 221 اختباراً: 219 ناجحاً والإخفاقان القديمان فقط (T1.5 / stored sessions). `git diff --check` ناجح. | ✅ [Worker CI #38781675805](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38781675805)؛ ✅ [Jekyll + الصفحات #38781675866](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38781675866)؛ ✅ [SonarCloud #38781675873](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38781675873): Quality Gate passed، **0 New issues**، **0.0% Duplication on New Code** (≤3%)، 0 Security Hotspots. |
 
 المشغّل في `_includes/request-audio.html` نسخة من تصميم/منطق مشغّل العقارات مع CSS محصور بـ `.rq-audio`، تسميات «الطلب»، وتتبع `request_audio_play`؛ `preload="none"` وبدون autoplay. استدعاؤه **سطر شرطي واحد** في `_layouts/request_page.html` قبل أزرار الإجراءات، دون مساس بـ `_includes/property-audio.html` أو قالب العقارات أو CSS العام.
 
@@ -42,4 +42,4 @@
 - عُدلت: `_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md` (**4 حقول صوت فقط**)؛ `_layouts/request_page.html` (**سطر شرطي واحد**)، `_diag/check-audio-batch3.mjs` (إعادة استخدام محلّل ID3 في الوحدة المشتركة، مع الحفاظ على بصمات الـ26 القديمة)، `.github/workflows/verify-audio-pages.yml` (**فحص فقط** في PR + HTTP على الإنتاج بعد النشر، بلا صلاحيات نشر).
 - لم تُعدَّل: الطلبان المستثنيان، الـ26 ملف MP3 السابقة، `_includes/property-audio.html`، `_layouts/property_page.html`، Worker/D1/KV/Web Push/الوكيل، أسرار وإعدادات النشر و`deploy.yml`، SEO والروابط العامة.
 
-**بوابة القرار:** لا دمج ولا نشر إلا بعد نجاح الفحص الحقيقي في CI وفحص SonarCloud. فحص الإنتاج يُنفّذ بعد نجاح workflow النشر ويُسجّل في التسليم النهائي.
+**بوابة القرار:** نجحت فحوص PR الحقيقية (Jekyll + Worker + SonarCloud)، ولا يُدمَج سوى بعد نجاح إعادة تشغيلها على الالتزام النهائي للتقرير. فحص HTTP الإنتاجي يُنفّذ **بعد** نجاح workflow النشر في job للقراءة فقط ويُسجّل رابطه ونتيجته في التسليم النهائي؛ الإنتاج الجديد غير متاح قبل الدمج.
