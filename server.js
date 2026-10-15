@@ -115,6 +115,11 @@ if (fs.existsSync('_config.yml')) {
 // Load properties collection
 const properties = [];
 const propertiesMap = new Map();
+// خريطة slug الـ front matter → العقار.
+// Jekyll ينشر العقار على /properties/<slug من الـfront matter>/ بينما
+// هذا الخادم كان يطابق اسم الملف فقط. الخريطة تجعل رابط المعاينة المحلي
+// مطابقًا تمامًا للرابط الإنتاجي. (أداة تطوير محلية فقط — لا تدخل بناء Jekyll.)
+const propertiesByFrontSlug = new Map();
 if (fs.existsSync('_properties')) {
   const files = fs.readdirSync('_properties');
   for (const file of files) {
@@ -136,6 +141,7 @@ if (fs.existsSync('_properties')) {
       };
       properties.push(propData);
       propertiesMap.set(slug, propData);
+      if (parsed.data.slug) propertiesByFrontSlug.set(String(parsed.data.slug), propData);
     } catch (err) {
       console.warn(`Failed to load property ${file}:`, err.message);
     }
@@ -286,7 +292,7 @@ app.get(['/properties', '/properties/'], async (req, res, next) => {
 app.get(['/properties/:slug', '/properties/:slug/'], async (req, res, next) => {
   try {
     const slug = req.params.slug;
-    const prop = propertiesMap.get(slug);
+    const prop = propertiesMap.get(slug) || propertiesByFrontSlug.get(slug);
     if (!prop) {
       return res.status(404).send(await renderFile('404.html', { url: req.path }));
     }

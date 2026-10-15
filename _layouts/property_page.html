@@ -188,7 +188,12 @@ hide_navbar: true
     {% endif %}
   </div>
   {% endif %}
-
+{% if page.audio_ad %}{% comment %}
+  🎙️ الإعلان الصوتي — تجربة (PoC) على صفحة عقار واحد فقط.
+  يُفعَّل بـ audio_ad: true في الـ front matter لملف العقار.
+  صفحة أي عقار آخر تُعرَض بلا أي سطر إضافي (صفر بايت فرق).
+  التفاصيل الكاملة في _includes/property-audio.html
+{% endcomment %}{% include property-audio.html %}{% endif %}
   <!-- ═══ Action Buttons ═══ -->
   <div class="pp-actions">
     <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"

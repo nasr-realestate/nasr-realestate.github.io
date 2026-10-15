@@ -1,0 +1,373 @@
+{%- comment -%}
+  ═══════════════════════════════════════════════════════════════════════
+  🎙️ مشغّل الإعلان الصوتي للعقار — تجربة (PoC) صفحة عقار واحدة
+  ═══════════════════════════════════════════════════════════════════════
+  يُستدعى من _layouts/property_page.html فقط عندما يكون page.audio_ad == true،
+  أي على صفحة عقار واحد فقط (تجربة محدودة — لا تُعمَّم على باقي العقارات).
+
+  البيانات تُقرأ من الـ front matter لملف العقار:
+    audio_ad       : true            → تفعيل المشغّل
+    audio_file     : المسار الكامل لملف MP3
+    audio_duration : المدة المعروضة (نص)
+    audio_script   : نص الإعلان المطبوع (لإتاحة «نص الإعلان» و-screen readers)
+
+  قواعد السلامة:
+    • لا تشغيل تلقائي إطلاقًا (preload="none" وبدون autoplay).
+    • الملف محلي داخل المستودع (assets/audio/…) — لا روابط خارجية.
+    • الأسلوب (CSS) مُضمَّن هنا ومحصور بـ .pp-audio حتى لا يمسّ أي صفحة أخرى.
+    • في حال تعذّر تشغيل الصوت يعرض رسالة واضحة + رابط مباشر للملف.
+  ═══════════════════════════════════════════════════════════════════════
+{%- endcomment -%}
+
+{%- assign audio_url = page.audio_file | default: "" -%}
+
+{% if audio_url != "" %}
+<section class="pp-audio" id="ppAudioBox" aria-label="الإعلان الصوتي عن هذا العقار">
+
+  <style>
+    /* ── مشغّل الإعلان الصوتي — أنماط محصورة بــ .pp-audio فقط ── */
+    .pp-audio {
+      position: relative;
+      margin: 0 0 2rem;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(20,20,20,0.9) 55%);
+      border: 1px solid rgba(212,175,55,0.35);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      font-family: inherit;
+    }
+    .pp-audio__head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .pp-audio__badge {
+      flex: 0 0 auto;
+      width: 46px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d4af37, #b8941f);
+      color: #050505;
+      font-size: 1.15rem;
+      box-shadow: 0 0 0 4px rgba(212,175,55,0.15);
+    }
+    .pp-audio__titles { flex: 1 1 auto; min-width: 0; }
+    .pp-audio__title {
+      margin: 0 0 2px;
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: #f5f5f5;
+      line-height: 1.4;
+    }
+    .pp-audio__sub {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #b0b0b0;
+      line-height: 1.5;
+    }
+    .pp-audio__len {
+      flex: 0 0 auto;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(212,175,55,0.12);
+      border: 1px solid rgba(212,175,55,0.35);
+      color: #d4af37;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pp-audio__bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pp-audio__btn {
+      flex: 0 0 auto;
+      width: 54px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d4af37, #b8941f);
+      color: #050505;
+      font-size: 1.35rem;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 6px 20px rgba(212,175,55,0.35);
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pp-audio__btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(212,175,55,0.5); }
+    .pp-audio__btn:active { transform: translateY(0) scale(.97); }
+    .pp-audio__btn:focus-visible { outline: 2px solid #fce205; outline-offset: 3px; }
+    .pp-audio__btn i { line-height: 1; margin-inline-start: 2px; }
+    .pp-audio__btn.is-playing i { margin-inline-start: 0; }
+    .pp-audio__track {
+      flex: 1 1 auto;
+      position: relative;
+      height: 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.12);
+      cursor: pointer;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .pp-audio__fill {
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      width: 0%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #b8941f, #d4af37, #fce205);
+      transition: width .12s linear;
+    }
+    .pp-audio__time {
+      flex: 0 0 auto;
+      font-size: 0.8rem;
+      color: #b0b0b0;
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      white-space: nowrap;
+    }
+    .pp-audio__note {
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255,77,77,0.08);
+      border: 1px solid rgba(255,77,77,0.35);
+      color: #ffb3b3;
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    .pp-audio__note a { color: #d4af37; }
+    .pp-audio__script { margin-top: 12px; }
+    .pp-audio__script > summary {
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: #d4af37;
+      font-weight: 700;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    .pp-audio__script > summary::-webkit-details-marker { display: none; }
+    .pp-audio__script > summary::before {
+      content: "\f0da";
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      font-size: 0.7rem;
+      transition: transform .2s ease;
+    }
+    .pp-audio__script[open] > summary::before { transform: rotate(-90deg); }
+    .pp-audio__script p {
+      margin: 10px 0 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: #cfcfcf;
+      font-size: 0.88rem;
+      line-height: 1.9;
+    }
+    /* شاشة صغيرة */
+    @media (max-width: 480px) {
+      .pp-audio { padding: 16px 14px; border-radius: 16px; }
+      .pp-audio__badge { width: 40px; height: 40px; font-size: 1rem; }
+      .pp-audio__title { font-size: 0.98rem; }
+      .pp-audio__btn { width: 50px; height: 50px; font-size: 1.2rem; }
+      .pp-audio__len { padding: 4px 9px; font-size: 0.72rem; }
+    }
+    /* تقليل الحركة */
+    @media (prefers-reduced-motion: reduce) {
+      .pp-audio__fill { transition: none; }
+      .pp-audio__btn:hover { transform: none; }
+    }
+  </style>
+
+  <div class="pp-audio__head">
+    <span class="pp-audio__badge" aria-hidden="true"><i class="fas fa-volume-high"></i></span>
+    <div class="pp-audio__titles">
+      <h2 class="pp-audio__title">اسمع الإعلان الصوتي للعقار</h2>
+      <p class="pp-audio__sub">تعليق صوتي مختصر عن هذا العقار{{ page.audio_duration | prepend: " · مدته " }}</p>
+    </div>
+    <span class="pp-audio__len" aria-hidden="true">{{ page.audio_duration }}</span>
+  </div>
+
+  <div class="pp-audio__bar">
+    <button type="button"
+            class="pp-audio__btn"
+            id="ppAudioBtn"
+            aria-label="تشغيل الإعلان الصوتي"
+            aria-pressed="false">
+      <i class="fas fa-play" aria-hidden="true"></i>
+    </button>
+
+    <div class="pp-audio__track"
+         id="ppAudioTrack"
+         role="slider"
+         tabindex="0"
+         aria-label="موضع تشغيل الإعلان الصوتي"
+         aria-valuemin="0"
+         aria-valuemax="100"
+         aria-valuenow="0"
+         aria-valuetext="بداية الإعلان">
+      <div class="pp-audio__fill" id="ppAudioFill"></div>
+    </div>
+
+    <span class="pp-audio__time" aria-hidden="true">
+      <span id="ppAudioCur">0:00</span> / <span id="ppAudioDur">0:00</span>
+    </span>
+  </div>
+
+  <p class="pp-audio__note" id="ppAudioNote" hidden></p>
+
+  {% if page.audio_script and page.audio_script != "" %}
+  <details class="pp-audio__script">
+    <summary>نص الإعلان الصوتي</summary>
+    <p>{{ page.audio_script }}</p>
+  </details>
+  {% endif %}
+
+  <audio id="ppAudio" preload="none" src="{{ audio_url | relative_url }}"></audio>
+
+  <noscript>
+    <p class="pp-audio__note">
+      متصفحك لا يدعم تشغيل الصوت التلقائي من هذه الصفحة.
+      <a href="{{ audio_url | relative_url }}" download>تحميل ملف الإعلان الصوتي (MP3)</a>
+    </p>
+  </noscript>
+</section>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // مشغّل الإعلان الصوتي — منطق مستقل داخل صندوق واحد فقط.
+  // لا تشغيل تلقائي · إيقاف يدوي · دعم لوحة المفاتيح · RTL.
+  // ═══════════════════════════════════════════════════════════════
+  (function () {
+    var box  = document.getElementById('ppAudioBox');
+    if (!box) return;
+
+    var audio = document.getElementById('ppAudio');
+    var btn   = document.getElementById('ppAudioBtn');
+    var track = document.getElementById('ppAudioTrack');
+    var fill  = document.getElementById('ppAudioFill');
+    var curEl = document.getElementById('ppAudioCur');
+    var durEl = document.getElementById('ppAudioDur');
+    var note  = document.getElementById('ppAudioNote');
+    if (!audio || !btn || !track || !fill) return;
+
+    var icoPlay  = '<i class="fas fa-play" aria-hidden="true"></i>';
+    var icoPause = '<i class="fas fa-pause" aria-hidden="true"></i>';
+
+    function fmt(sec) {
+      if (!isFinite(sec) || sec < 0) sec = 0;
+      var m = Math.floor(sec / 60);
+      var s = Math.floor(sec % 60);
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function showNote(html) {
+      if (!note) return;
+      if (!html) { note.hidden = true; note.textContent = ''; return; }
+      note.hidden = false;
+      note.innerHTML = html;
+    }
+
+    function setState(playing) {
+      btn.innerHTML = playing ? icoPause : icoPlay;
+      btn.classList.toggle('is-playing', playing);
+      btn.setAttribute('aria-label', playing ? 'إيقاف الإعلان الصوتي' : 'تشغيل الإعلان الصوتي');
+      btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    }
+
+    function paint() {
+      var d = audio.duration;
+      var c = audio.currentTime;
+      var pct = (isFinite(d) && d > 0) ? (c / d) * 100 : 0;
+      fill.style.width = pct + '%';
+      curEl.textContent = fmt(c);
+      track.setAttribute('aria-valuenow', Math.round(pct));
+      track.setAttribute('aria-valuetext', fmt(c) + ' من ' + fmt(d));
+    }
+
+    btn.addEventListener('click', function () {
+      if (audio.paused) {
+        showNote('');
+        var p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(function () {
+            showNote('تعذّر تشغيل الصوت تلقائياً على هذا المتصفح. ' +
+                     'جرّب الضغط على الزر مرة أخرى، أو ' +
+                     '<a href="' + audio.getAttribute('src') + '" download>حمّل ملف الإعلان (MP3)</a>.');
+          });
+        }
+      } else {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener('play',  function () { setState(true);  });
+    audio.addEventListener('pause', function () { setState(false); });
+    audio.addEventListener('ended', function () {
+      setState(false);
+      audio.currentTime = 0;
+      paint();
+    });
+    audio.addEventListener('timeupdate', paint);
+    audio.addEventListener('loadedmetadata', function () {
+      durEl.textContent = fmt(audio.duration);
+      paint();
+    });
+    audio.addEventListener('error', function () {
+      setState(false);
+      showNote('تعذّر تحميل ملف الإعلان الصوتي. تأكد من الاتصال ثم أعد المحاولة، أو ' +
+               '<a href="' + audio.getAttribute('src') + '" download>حمّل الملف مباشرة (MP3)</a>.');
+    });
+
+    // شريط التقدّم — RTL: النسبة 0 عند الحافة اليمنى و100 عند اليسرى
+    function seekFromEvent(ev) {
+      var rect = track.getBoundingClientRect();
+      if (!rect.width) return;
+      var x = (ev.clientX !== undefined) ? ev.clientX : (ev.touches && ev.touches[0] ? ev.touches[0].clientX : null);
+      if (x === null) return;
+      var ratio = (x - rect.left) / rect.width;
+      if (getComputedStyle(track).direction === 'rtl') ratio = 1 - ratio;
+      ratio = Math.min(1, Math.max(0, ratio));
+      if (isFinite(audio.duration)) {
+        audio.currentTime = ratio * audio.duration;
+        paint();
+      }
+    }
+    track.addEventListener('click', seekFromEvent);
+    track.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        if (!isFinite(audio.duration)) return;
+        var step = ev.key === 'ArrowRight' ? 5 : -5;
+        audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + step));
+        paint();
+      } else if (ev.key === ' ' || ev.key === 'Enter') {
+        ev.preventDefault();
+        btn.click();
+      }
+    });
+
+    // تتبّع التفاعل (GTM) — نفس نمط تتبّع الأزرار الموجود في الصفحة
+    var tracked = false;
+    audio.addEventListener('play', function () {
+      if (tracked) return;
+      tracked = true;
+      if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({
+          event: 'property_audio_play',
+          event_category: 'Property Engagement',
+          event_label: document.title,
+          property_url: window.location.pathname
+        });
+      }
+    });
+  })();
+</script>
+{% endif %}
