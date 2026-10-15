@@ -21,6 +21,11 @@ areaNumeric: 190
 roomsNumeric: 0
 bathsNumeric: 0
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/commercial-shop-for-rent-nozha-street-nasr-city.mp3"
+audio_duration: "26 ثانية"
+audio_script: "بتفتح مشروع ومحتاج مكان أثبت نجاحه؟ محل تجاري للإيجار مية وتسعين متر في شارع النزهة الرئيسي بمدينة نصر، قرب ميدان الساعة. مية وعشرة أرضي بواجهة ممتازة، وتمانين علوي بسلم داخلي. المكان استضاف أنشطة ناجحة لسنين. الإيجار ستين ألف جنيه شهريًا. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

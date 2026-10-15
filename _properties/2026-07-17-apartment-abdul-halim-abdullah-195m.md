@@ -21,6 +21,11 @@ areaNumeric: 195
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-abdul-halim-abdullah-195m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "شقة في المربع الذهبي بين عباس ومكرم! للبيع مية وخمسة وتسعين متر في شارع عبد الحليم عبد الله بمدينة نصر. تلات غرف وريسبشن تلات قطع وحمامين، وبلكونة بحرية. الدور الأول، وتصلح سكني أو إداري. السعر خمسة مليون وخمسمية ألف جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

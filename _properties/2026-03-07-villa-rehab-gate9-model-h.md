@@ -21,6 +21,11 @@ areaNumeric: 300
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/rehab-villa-model-h-gate9.mp3"
+audio_duration: "24 ثانية"
+audio_script: "فيلا مستقلة في الرحاب على سور بوابة 9! نموذج H بمساحة أرض تلاتمية متر ومباني ميتين وعشرة. تلات غرف وليفينج وتلات حمامات، أرضي وأول وروف. حديقة خاصة، ورخص مسبح وغرف السطح مدفوعة. السعر خمسة وعشرين مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <!-- Schema.org RealEstateListing -->

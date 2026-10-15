@@ -1,21 +1,47 @@
-# Build-only PR check for the five audio ads. Deliberately no deploy step,
+# Build-only PR check for the audio ads (batches 1–3). Deliberately no deploy step,
 # environment, Cloudflare bindings, or GitHub Pages permissions.
 name: Check audio property pages (no deployment)
 
 on:
   pull_request:
     paths:
+      # batch 1–2 (unchanged reference + five ads)
+      - '_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md'
       - '_properties/2026-10-06-furnished-apartment-rent-hayat-compound-safarat-200m.md'
       - '_properties/2026-10-03-luxury-apartment-rent-al-azhar-st-200m.md'
       - '_properties/2026-10-02-apartment-gamal-afifi-ahly-club-250m.md'
       - '_properties/2026-09-28-office-storage-rent-hassanein-heikal-73m.md'
       - '_properties/2026-09-22-apartment-egyptair-nasr-city-125m.md'
+      - 'assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3'
       - 'assets/audio/properties/furnished-apartment-rent-hayat-compound-safarat-200m.mp3'
       - 'assets/audio/properties/luxury-apartment-rent-al-azhar-street-nasr-city-200m.mp3'
       - 'assets/audio/properties/apartment-sale-gamal-afifi-ahly-club-250m.mp3'
       - 'assets/audio/properties/office-storage-rent-hassanein-heikal-nasr-city-73m.mp3'
       - 'assets/audio/properties/apartment-sale-egyptair-nasr-city-125m-furnished.mp3'
+      # batch 3 (ten new ads)
+      - '_properties/2026-10-13-administrative-unit-rent-41m.md'
+      - '_properties/2026-10-02-apartment-rent-gamal-dewidar-160m.md'
+      - '_properties/rent-waha-50th-street-163m.md'
+      - '_properties/makram-ebid-177m.md'
+      - '_properties/2026-09-09-apartment-makarif-6th-district-130m.md'
+      - '_properties/2026-09-09-apartment-rabaa-investment-165m.md'
+      - '_properties/2026-09-09-unfurnished-apartment-rent-abdel-hamid-lotfy-tayaran.md'
+      - '_properties/2026-07-17-apartment-abdul-halim-abdullah-195m.md'
+      - '_properties/2026-06-02-shop-rent-nozha-st-190m.md'
+      - '_properties/2026-03-07-villa-rehab-gate9-model-h.md'
+      - 'assets/audio/properties/administrative-unit-rent-nasr-city-41m.mp3'
+      - 'assets/audio/properties/apartment-rent-gamal-dewidar-enppi-nasr-city-160m.mp3'
+      - 'assets/audio/properties/rent-waha-50th-street-163m.mp3'
+      - 'assets/audio/properties/makram-ebid-177m.mp3'
+      - 'assets/audio/properties/apartment-sale-makarif-6th-district-130m.mp3'
+      - 'assets/audio/properties/apartment-sale-rabaa-investment-abbas-elakkad-165m.mp3'
+      - 'assets/audio/properties/rent-abdel-hamid-lotfy-tayaran-150m.mp3'
+      - 'assets/audio/properties/apartment-sale-abdul-halim-abdullah-195m.mp3'
+      - 'assets/audio/properties/commercial-shop-for-rent-nozha-street-nasr-city.mp3'
+      - 'assets/audio/properties/rehab-villa-model-h-gate9.mp3'
+      # checks & this workflow
       - '_diag/check-audio-batch2.mjs'
+      - '_diag/check-audio-batch3.mjs'
       - '.github/workflows/verify-audio-pages.yml'
 
 permissions:
@@ -38,5 +64,5 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the five output pages and assets, reference, and all other pages
-        run: node _diag/check-audio-batch2.mjs
+      - name: Verify the sixteen audio pages and assets, and all other pages
+        run: node _diag/check-audio-batch3.mjs
