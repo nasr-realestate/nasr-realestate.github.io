@@ -21,6 +21,10 @@ areaNumeric: 160
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/shaka-nour-deen.mp3"
+audio_duration: "20 ثانية"
+audio_script: "شقة فاخرة 160م بنور الدين بهجت! للبيع بالمنطقة الأولى بمدينة نصر. هاي لوكس جاهز للسكن، ثلاث غرف وريسبشن، حمامين، واجهة مميزة. السعر أربعة مليون وخمسمئة ألف. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

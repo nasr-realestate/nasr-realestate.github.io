@@ -21,6 +21,10 @@ areaNumeric: 162
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-al-hayat-towers-nasr-city-162m.mp3"
+audio_duration: "20 ثانية"
+audio_script: "شقة 162م بأبراج الحياة للبيع! بجوار مستشفى الشرطة بالحي السابع. نصف تشطيب، ثلاث غرف وريسبشن، دور عاشر بحري، تنازل حكومي مباشر. السعر أربعة مليون وخمسمئة ألف. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

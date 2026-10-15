@@ -21,6 +21,10 @@ areaNumeric: 200
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/abdel-azim-ghalmi-200m-expat.mp3"
+audio_duration: "21 ثانية"
+audio_script: "شقة 200م للمغتربين بالخارج! للبيع في 13 شارع عبد العظيم الغلمي. مباني 2012، سوبر لوكس كالجديدة، دور خامس، جراج لسيارتين. الدفع بتحويل دولاري. السعر سبعة مليون. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <!-- Schema.org -->

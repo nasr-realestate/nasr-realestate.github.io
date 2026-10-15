@@ -21,6 +21,10 @@ areaNumeric: 200
 roomsNumeric: 0
 bathsNumeric: 0
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-abbas-elakkad-refaai-200m-roi.mp3"
+audio_duration: "28 ثانية"
+audio_script: "شقة 200م مسجلة تطل مباشرة على عباس العقاد! للبيع مئتا متر بشارع عبد الحكيم الرفاعي. إطلالة تجارية ممتازة، مسجلة شهر عقاري، مؤجرة حالياً بـ 35 ألف شهرياً (العقد ينتهي خلال شهر). تصلح كمقر شركة أو استثمار. السعر سبعة مليون. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

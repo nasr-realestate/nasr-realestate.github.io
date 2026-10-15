@@ -39,6 +39,11 @@ const lockedAudio = {
   'shop-rent-makram-ebeid-67m': 'd477736938387c1507427b3b44ad709849e77a5c074c2c433d384e55506236f6',
   'genena-mall-186m-office-residence': '668290009d62d6ae8b9761af42c783a3e971538a59fb1d31ffa9716f0e4aff70',
   'admin-rent-nozha-main-260m': '326d70b377dae0175846deebfe8c8a84e23d0ef15076a1878709dabe3aea8397',
+  'apartment-sale-abbas-elakkad-refaai-200m-roi': '29d1d678eaa2719c34d7ba2f9aaeafeffb56f3f281cb4cfaedae73db151d511a',
+  'apartment-for-sale-khedr-eltouny-tayaran-120m': '473cd73b187f9e797d09eaa73946365af732d1855d61d0d23a9a0dc6b60f9d06',
+  'apartment-sale-al-hayat-towers-nasr-city-162m': '6352bd42f3073a9f90aef0fb69a6cf2806baf01e601c2f1b4c74f0236f1e4972',
+  'shaka-nour-deen': 'abf86029dffe077e14cc93d3bc4c1516679db82662bbf86dc605d3f53b5752b4',
+  'abdel-azim-ghalmi-200m-expat': 'e163142e8549afbe02007b9b153d2731057595b4721a454cd032fd6d7333a5a9',
 };
 
 // slugs that must show exactly one player (batch 2 ∪ batch 3)
