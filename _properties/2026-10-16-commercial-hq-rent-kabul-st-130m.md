@@ -9,7 +9,7 @@ id: "kabul-st-commercial-hq-130m"
 slug: "commercial-hq-rent-kabul-street-nasr-city-130m"
 image_file: "Kabul-Commercial-HQ-130m.webp"
 area: "130 متر مربع"
-rooms: "3 غرف كبيرة + ريسبشن قطعتين + بوفيه"
+rooms: "3 غرف + ريسبشن + بوفيه"
 bathrooms: "2 حمام"
 floor: "الدور الأرضي (مدخل مستقل)"
 finish: "تشطيب تجاري - ارتفاع سقف 4 متر"
@@ -47,16 +47,30 @@ meta_description: "مقر إداري وتجاري 130م للإيجار بشار�
 
     <!-- 2. الصورة الرئيسية للعقار -->
     <div class="property-main-hero">
-        <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}" alt="{{ page.title }}" title="{{ page.title }}">
+        <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}" 
+             alt="مقر تجاري وإداري للإيجار شارع كابول مكرم عبيد" 
+             title="{{ page.title }}">
         <div class="hero-overlay-tag elite-tag"><i class="fas fa-building"></i> دور أرضي بمدخل مستقل - نموذج 8</div>
     </div>
 
     <!-- 3. البطاقة السريعة الذكية -->
     <div class="main-stats-card">
-        <div class="stat-box"><span class="stat-label">الإيجار الشهري</span><span class="stat-value gold-text">{{ page.price }}</span></div>
-        <div class="stat-box"><span class="stat-label">المساحة</span><span class="stat-value">{{ page.area }}</span></div>
-        <div class="stat-box"><span class="stat-label">الترخيص</span><span class="stat-value">نموذج 8 نهائي</span></div>
-        <div class="stat-box"><span class="stat-label">الكهرباء</span><span class="stat-value">عداد 3 فاز</span></div>
+        <div class="stat-box">
+            <span class="stat-label">الإيجار الشهري</span>
+            <span class="stat-value gold-text">{{ page.price }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">المساحة</span>
+            <span class="stat-value">{{ page.area }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">الدور</span>
+            <span class="stat-value">أرضي (مدخل مستقل)</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">الترخيص</span>
+            <span class="stat-value">نموذج 8 نهائي</span>
+        </div>
     </div>
 
     <!-- 4. وصف العقار والموقع -->
@@ -68,7 +82,7 @@ meta_description: "مقر إداري وتجاري 130م للإيجار بشار�
         </div>
     </section>
 
-    <!-- 5. التفاصيل الفنية -->
+    <!-- 5. المواصفات الفنية وتوزيع المساحة -->
     <section class="detail-section">
         <h2 class="detail-title"><i class="fas fa-list-check"></i> التجهيزات والمواصفات الفنية</h2>
         <div class="technical-specs">
@@ -81,7 +95,7 @@ meta_description: "مقر إداري وتجاري 130م للإيجار بشار�
         </div>
     </section>
 
-    <!-- 6. الأنشطة المناسبة -->
+    <!-- 6. المميزات والأنشطة -->
     <section class="detail-section">
         <h2 class="detail-title"><i class="fas fa-star"></i> الأنشطة المستهدفة (مقر إداري أو تجاري)</h2>
         <div class="features-columns">
@@ -93,7 +107,7 @@ meta_description: "مقر إداري وتجاري 130م للإيجار بشار�
             <ul class="features-list">
                 <li><i class="fas fa-check-circle gold-text"></i> مراكز تدريب وتعليم (قريب من الدارسين بالأزهر والوافدين).</li>
                 <li><i class="fas fa-check-circle gold-text"></i> مكاتب إدارية وخدمية.</li>
-                <li><li style="color: #ff9999;"><i class="fas fa-times-circle" style="color: #ff4444;"></i> <strong>ملاحظة:</strong> غير متاح للـ (كافيهات، المطاعم، أو مراكز التجميل).</li>
+                <li style="color: #ff9999;"><i class="fas fa-times-circle" style="color: #ff4444;"></i> <strong>ملاحظة:</strong> غير متاح للـ (كافيهات، المطاعم، أو مراكز التجميل).</li>
             </ul>
         </div>
     </section>
