@@ -21,6 +21,11 @@ areaNumeric: 125
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثانية (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-egyptair-nasr-city-125m-furnished.mp3"
+audio_duration: "24 ثانية"
+audio_script: "شقة مفروشة للبيع والعفش داخل في السعر؟ خلف مصر للطيران، قريب من جامع بلال في مدينة نصر، شقة مية خمسة وعشرين متر. تلات غرف وحمامين، الدور التاسع، والبيع شامل الفرش بالكامل. السعر أربعة مليون جنيه. كلم سمسار طلبك على واتساب واسأل عن التفاصيل وحدد معاينة."
 ---
 
 

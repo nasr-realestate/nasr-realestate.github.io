@@ -1,0 +1,42 @@
+# Build-only PR check for the five audio ads. Deliberately no deploy step,
+# environment, Cloudflare bindings, or GitHub Pages permissions.
+name: Check audio property pages (no deployment)
+
+on:
+  pull_request:
+    paths:
+      - '_properties/2026-10-06-furnished-apartment-rent-hayat-compound-safarat-200m.md'
+      - '_properties/2026-10-03-luxury-apartment-rent-al-azhar-st-200m.md'
+      - '_properties/2026-10-02-apartment-gamal-afifi-ahly-club-250m.md'
+      - '_properties/2026-09-28-office-storage-rent-hassanein-heikal-73m.md'
+      - '_properties/2026-09-22-apartment-egyptair-nasr-city-125m.md'
+      - 'assets/audio/properties/furnished-apartment-rent-hayat-compound-safarat-200m.mp3'
+      - 'assets/audio/properties/luxury-apartment-rent-al-azhar-street-nasr-city-200m.mp3'
+      - 'assets/audio/properties/apartment-sale-gamal-afifi-ahly-club-250m.mp3'
+      - 'assets/audio/properties/office-storage-rent-hassanein-heikal-nasr-city-73m.mp3'
+      - 'assets/audio/properties/apartment-sale-egyptair-nasr-city-125m-furnished.mp3'
+      - '_diag/check-audio-batch2.mjs'
+      - '.github/workflows/verify-audio-pages.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build with the site's existing Jekyll and Gemfile (no publication)
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+      - name: Verify the five output pages and assets, reference, and all other pages
+        run: node _diag/check-audio-batch2.mjs
