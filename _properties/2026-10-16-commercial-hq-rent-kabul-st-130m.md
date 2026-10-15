@@ -2,7 +2,7 @@
 layout: property_page
 title: "مقر تجاري وإداري 130م للإيجار (نموذج 8 نهائي) - شارع كابول مكرم عبيد"
 date: 2026-10-16
-location: "33 شارع كابول - متفرع من مكرم عبيد ومصطفى النحاس - مدينة نصر"
+location: "شارع كابول - متفرع من مكرم عبيد ومصطفى النحاس - مدينة نصر"
 price: "55,000 ج.م شهرياً"
 category: commercial
 id: "kabul-st-commercial-hq-130m"
@@ -35,7 +35,7 @@ meta_description: "مقر إداري وتجاري 130م للإيجار بشار�
   },
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "33 شارع كابول - مكرم عبيد",
+    "streetAddress": " شارع كابول - مكرم عبيد",
     "addressLocality": "مدينة نصر",
     "addressRegion": "القاهرة",
     "addressCountry": "EG"
