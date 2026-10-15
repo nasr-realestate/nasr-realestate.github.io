@@ -115,4 +115,9 @@ jobs:
         with:
           node-version: '22'
       - name: Verify real production pages, MP3 GET/Range/MIME and checksum
-        run: node _diag/check-audio-production.mjs
+        run: |
+          node _diag/check-audio-production.mjs > /tmp/audio-production-check.log 2>&1 && exit 0
+          cat /tmp/audio-production-check.log
+          error=$(grep -m1 -E 'AssertionError|TypeError|Error:' /tmp/audio-production-check.log || true)
+          echo "::error title=Production HTTP smoke failure::${error:-Unknown error; see job log}"
+          exit 1
