@@ -21,6 +21,10 @@ areaNumeric: 160
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/ismail-wahby-160m-luxury.mp3"
+audio_duration: "19 ثانية"
+audio_script: "شقة مية وستين متر للبيع بشارع إسماعيل وهبي، المنطقة التاسعة بمدينة نصر! إكسترا سوبر لوكس، تلات غرف وحمامين، واجهتين على حديقتين، وعقد مسجل. السعر أربعة مليون وتلتمية وخمسين ألف جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <!-- Schema.org RealEstateListing -->

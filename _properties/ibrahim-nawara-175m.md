@@ -21,6 +21,10 @@ areaNumeric: 175
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/ibrahim-nawara-175m.mp3"
+audio_duration: "19 ثانية"
+audio_script: "شقة مية وخمسة وسبعين متر للبيع بشارع إبراهيم نوارة، خلف أحمد فخري! تلات غرف وريسبشن، حمامين، دور تالت بأسانسير، مسجلة شهر عقاري وحصة في الجراج. السعر خمسة مليون جنيه، سعر نهائي. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
