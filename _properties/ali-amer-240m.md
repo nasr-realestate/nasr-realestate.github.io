@@ -22,6 +22,10 @@ areaNumeric: 240
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/ali-amer-240m.mp3"
+audio_duration: "24 ثانية"
+audio_script: "شقة ميتين وأربعين متر للبيع بشارع الفريق علي عامر، متفرع من مكرم عبيد! تلات غرف منهم ماستر، تلات حمامات، دور حداشر بأسانسيرين، تشطيب رخام كرارة وباركي. مسجلة شهر عقاري وحصة في الأرض. السعر سبعة مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

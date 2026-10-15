@@ -83,6 +83,17 @@ on:
       - 'assets/audio/properties/abu-dawood-fakhry-167m.mp3'
       - 'assets/audio/properties/ismail-wahby-160m-luxury.mp3'
       - 'assets/audio/properties/shop-abbas-elakkad-60m-jan26.mp3'
+      # batch 7 (five new ads)
+      - '_properties/makram-ebid-main-250m.md'
+      - '_properties/ali-amer-240m.md'
+      - '_properties/sanhoori-luxury-250m.md'
+      - '_properties/safarat-safwa-170m.md'
+      - '_properties/degla-landmark-122m-rent.md'
+      - 'assets/audio/properties/makram-ebid-main-250m.mp3'
+      - 'assets/audio/properties/ali-amer-240m.mp3'
+      - 'assets/audio/properties/sanhoori-luxury-250m.mp3'
+      - 'assets/audio/properties/safarat-safwa-170m.mp3'
+      - 'assets/audio/properties/degla-landmark-122m-rent.mp3'
       # request batch 1 (one eligible request; two excluded for incomplete data)
       - '_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md'
       - '_requests/2026-10-10-apartment-rent-art-studio-70m.md'
@@ -119,7 +130,7 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the 36 property audio pages and all other property pages
+      - name: Verify the 41 property audio pages and all other property pages
         run: node _diag/check-audio-batch3.mjs
       - name: Verify the request audio page and the two unchanged request pages
         run: node _diag/check-audio-requests.mjs

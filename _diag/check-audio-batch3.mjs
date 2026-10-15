@@ -1,7 +1,7 @@
-// Batch-6 gate: five new audio ads (batch 6) + the 31 earlier ones, built-page verification only.
+// Batch-7 gate: five new audio ads (batch 7) + the 36 earlier ones, built-page verification only.
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
-// Successor of the batch-2 snapshot check: batch 6 widens the audio feature to 36
+// Successor of the batch-2 snapshot check: batch 7 widens the audio feature to 41
 // pages and locks every MP3 with SHA-256 (all earlier files must remain byte-identical).
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -11,7 +11,7 @@ import { grab, occurrences, parseComm } from './audio-check-utils.mjs';
 
 const outDir = process.argv[2] ?? '_site';
 
-// slug -> sha256 of the committed MP3 (batches 1–6)
+// slug -> sha256 of the committed MP3 (batches 1–7)
 const lockedAudio = {
   'apartment-sale-helmy-abdel-aaty-seraj-mall-230m': 'fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a',
   'furnished-apartment-rent-hayat-compound-safarat-200m': '42e7026d9dbca88d59483390760bf50bb457fa8b2ff762ba11f610211f8f85b9',
@@ -49,9 +49,14 @@ const lockedAudio = {
   'abu-dawood-fakhry-167m': '456d61fa435c7573694e099fda3db57a8fde42a3e2fbb0bf4a259deecd00f4e8',
   'ismail-wahby-160m-luxury': '3260fa3e57eafa34205c55605170aa6f395b20cd2bb8003b159eaa2710c17315',
   'shop-abbas-elakkad-60m-jan26': '0e92ee4940e629389af53f7cca2b4e632d501644662eb2d367af9232cb6ded3c',
+  'makram-ebid-main-250m': '6077222c9469a33d70b3fcecdb23a6702bc034bc908678ab4b1f55652ee942c3',
+  'ali-amer-240m': 'a98be4bc95f1aeaa68ae98ac17fec20932018d3c181e4ab32323f7c2eca93775',
+  'sanhoori-luxury-250m': 'ac9e1009533854eed93a2d3e44c1888e5e9a59f594c6a83f59d3804c70b6ea2a',
+  'safarat-safwa-170m': '354f9b19411a5766e2d646462f4c52d371d7f2e6da8b1319265d8b3724e614cf',
+  'degla-landmark-122m-rent': '65e10976244b9eda573541497a14f6efea58a211203933cb3d5ff5471434671e',
 };
 
-// slugs that must show exactly one player (batches 1–6)
+// slugs that must show exactly one player (batches 1–7)
 const withPlayer = new Set(Object.keys(lockedAudio));
 
 function checkEnabledPage(slug, front, html, mp3bytes) {

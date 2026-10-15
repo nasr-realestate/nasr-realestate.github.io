@@ -22,6 +22,10 @@ areaNumeric: 170
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/safarat-safwa-170m.mp3"
+audio_duration: "22 ثانية"
+audio_script: "شقة مية وسبعين متر للبيع ببرج الصفوة في حي السفارات، شارع أحباب الرسول! تلات غرف وتلات حمامات، ريسبشن مستويين، دور سادس بأسانسير وبلكونتين. حصة صريحة في الأرض. السعر أربعة مليون وخمسمية ألف جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

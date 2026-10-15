@@ -22,6 +22,10 @@ areaNumeric: 250
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/makram-ebid-main-250m.mp3"
+audio_duration: "19 ثانية"
+audio_script: "شقة ميتين وخمسين متر للبيع بشارع مكرم عبيد الرئيسي في قلب مدينة نصر! تلات غرف وريسبشن واسع، حمامين، دور سادس بأسانسير، سوبر لوكس ومسجلة شهر عقاري. السعر تمانية مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

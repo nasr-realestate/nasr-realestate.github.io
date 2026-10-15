@@ -22,6 +22,10 @@ areaNumeric: 250
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/sanhoori-luxury-250m.mp3"
+audio_duration: "21 ثانية"
+audio_script: "شقة ميتين وخمسين متر للبيع بشارع عبد الرزاق السنهوري، المنطقة الأولى بمدينة نصر! تلات غرف كلها ماستر وتلات حمامات، دور تالت نص تشطيب، وباكيتين جراج. مسجلة شهر عقاري. السعر اتناشر مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
