@@ -68,10 +68,10 @@
 
 مرجع التجربة: صفحته تفتح 200 وبها المشغل، ملفه **مطابق بـSHA-256** لنسخة بداية هذا الفرع، CSS المشغل لم تتغير. راجع فاحص البناء `_diag/check-audio-batch2.mjs`: مرّ على **101 صفحة عقار** في المعاينة المحلية **ثم في ناتج Jekyll الفعلي**، الستّ فقط (الخمسة + المرجع) تحتوي مشغلًا، و**95 صفحة بلا مشغل**. فحص صفحة أخرى بالمتصفح أعطى 200 بلا مشغل. لا تغييرات في القالب المشترك/المشغل/ملفات CSS أو Worker أو الإشعارات. اختبارات المستودع الحاجزة `node --test --test-skip-pattern=… _worker/tests/*.test.mjs`: **219/219 ناجح**؛ `npm run lint` ناجح.
 
-**نتائج GitHub Actions على [PR #53](https://github.com/nasr-realestate/nasr-realestate.github.io/pull/53) قبل تحديث هذا التقرير:**
-- [بناء Jekyll الحقيقي + فحص كل صفحات العقارات وملفاتها — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738370647) (Workflow `Check audio property pages (no deployment)` بامتياز `contents: read` فقط، **بلا نشر**).
-- [اختبارات الصفحة/Worker — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738370412).
-- [SonarCloud Scan — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738370387).
+**نتائج فحوص [PR #53](https://github.com/nasr-realestate/nasr-realestate.github.io/pull/53) قبل التحديث التوثيقي النهائي لهذا الملف:**
+- [بناء Jekyll الحقيقي + فحص كل صفحات العقارات وملفاتها — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738888134) (Workflow `Check audio property pages (no deployment)` بامتياز `contents: read` فقط، **بلا نشر**).
+- [اختبارات الصفحة/Worker — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738887870).
+- [SonarCloud Scan — نجاح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38738888151) و[Quality Gate (Code Analysis) — نجاح](https://sonarcloud.io/dashboard?id=nasr-realestate_nasr-realestate.github.io&pullRequest=53). **إخفاق سابق عولج:** صنّف SonarCloud نسخة أولى من workflow التحقق الجديد C Security Rating بسبب `ruby/setup-ruby@v1` غير مُثبّت إلى SHA كاملة؛ ثُبِّتَت SHA كاملة للـ3 Actions في workflow التحقق فقط، ثم نجحت بوابة الجودة. لم يُمسّ workflow النشر الموجود.
 - Workflow النشر الإنتاجي `deploy.yml` لا يعمل إلا على `master` أو `main` (أو تشغيل يدوي)، ولم يُشغّل لهذه الدفعة. Workflow نشر Properties Sync Worker مشروط بتغيير ملفات Worker/Sync بعينها ولم يتغير أي منها. Workflow إشعارات إضافة العقار يعمل على `master` فقط ولملف عقار **جديد**؛ هنا العقارات موجودة ومعدَّلة لا مضافة.
 
 ## حدود التحقق والإذن
