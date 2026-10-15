@@ -63,7 +63,6 @@ on:
       # checks & this workflow
       - '_diag/check-audio-batch2.mjs'
       - '_diag/check-audio-batch3.mjs'
-      - '_diag/check-audio-batch4.mjs'
       - '.github/workflows/verify-audio-pages.yml'
 
 permissions:
@@ -87,4 +86,4 @@ jobs:
         env:
           JEKYLL_ENV: production
       - name: Verify the sixteen audio pages and assets, and all other pages
-        run: node _diag/check-audio-batch4.mjs
+        run: node _diag/check-audio-batch3.mjs
