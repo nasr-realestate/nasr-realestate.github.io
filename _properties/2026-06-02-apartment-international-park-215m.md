@@ -21,6 +21,12 @@ areaNumeric: 215
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-international-park-nasr-city-215m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "شقة VIP بفيو مباشر على الحديقة الدولية! للبيع ميتين وخمسة عشر متر (ميتين وستة صافي) بشارع إبراهيم بن المهدي أمام سجلات الجيش. تراس خمسة وسبعين متر، ثلاث غرف منهن ماستر، ثلاث حمامات، أسانسير خاص بالوحدة. تشطيب ممتاز. السعر خمسة مليون وسبعمية وخمسين ألف. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -21,6 +21,12 @@ areaNumeric: 123
 roomsNumeric: 3
 bathsNumeric: 1
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/commercial-mohamed-hasan-elgamal.mp3"
+audio_duration: "26 ثانية"
+audio_script: "مقر تجاري وإداري فاخر بالمربع الذهبي! للبيع مئة وثلاثة وعشرين متر (مئة وعشرة صافي) بشارع محمد حسن الجمل من عباس العقاد. أرضي مرتفع، ثلاث غرف إدارية واسعة، حمام مجهز، سوبر لوكس جاهز للتشغيل، ترخيص رسمي. السعر ستة مليون. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -21,6 +21,12 @@ areaNumeric: 260
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/kabul-st-makram-ebeid-260m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "شقة فاخرة مستويين بشارع كابول! للبيع ميتين وستين متر خلف مصطفى السلاب مكرم عبيد. تصميم مستويين، ثلاث غرف وليفينج وريسبشن ثلاث قطع، ثلاث حمامات منهن ماستر، عمارة حديثة بأسانسيرين ميتسوبيشي. سوبر لوكس. السعر ثمانية مليون (سعر نهائي). كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

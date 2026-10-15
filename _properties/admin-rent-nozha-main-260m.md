@@ -21,6 +21,12 @@ areaNumeric: 260
 roomsNumeric: 4
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/admin-rent-nozha-main-260m.mp3"
+audio_duration: "23 ثانية"
+audio_script: "مقر إداري فخم على شارع النزهة الرئيسي! للإيجار ميتين وستين متر بمدينة نصر. دور ثامن، أربع غرف مغلقة وريسبشن ثلاث قطع، حمامين بورسلين إسباني، سوبر لوكس مكيف بالكامل، باركينج خاص بالعقد. الإيجار سبعين ألف شهرياً. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

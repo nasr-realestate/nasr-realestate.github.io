@@ -21,6 +21,12 @@ areaNumeric: 67
 roomsNumeric: 0
 bathsNumeric: 1
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/shop-rent-makram-ebeid-67m.mp3"
+audio_duration: "23 ثانية"
+audio_script: "محل فاخر للإيجار موازي لمكرم عبيد! سبعة وستين متر أرضي تجاري بالمربع الذهبي. مساحة مفتوحة، حمام خاص، تشطيب ألترا سوبر لوكس رخام، واجهة سيكوريت، عداد تجاري. الإيجار ستة عشر ألف شهرياً. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

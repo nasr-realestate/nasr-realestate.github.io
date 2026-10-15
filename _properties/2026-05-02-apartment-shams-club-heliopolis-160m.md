@@ -21,6 +21,12 @@ areaNumeric: 160
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/shams-club-heliopolis-160m.mp3"
+audio_duration: "24 ثانية"
+audio_script: "شقة مسجلة للبيع أمام نادي الشمس! مئة وستين متر على شارع رئيسي بمصر الجديدة. الدور الأول علوي، ثلاث غرف وريسبشن قطعتين، حمامين، تشطيب جيد جاهزة للسكن، عقد مسجل. السعر ستة مليون وخمسمية ألف (قابل للتفاوض). كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

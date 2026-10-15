@@ -1,4 +1,4 @@
-// Batch-3 gate: ten new audio ads + the six earlier ones, built-page verification only.
+// Batch-3 gate: ten new audio ads (batch 3) + the sixteen earlier ones, built-page verification only.
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
 // Successor of the batch-2 snapshot check: batch 3 widens the audio feature to 16
@@ -28,6 +28,16 @@ const lockedAudio = {
   'apartment-sale-abdul-halim-abdullah-195m': '41144f92e1db328a326e9a49757dd603fe490f2d8fc9468f23a54c030584b3d6',
   'commercial-shop-for-rent-nozha-street-nasr-city': '89cbcf9f3056d8dd9e04f1fb89f701bd3e53ffb70d645f07bf5321f2f21e4d34',
   'rehab-villa-model-h-gate9': 'f49fb304f877e442a3fead8821354873fbadbd01652c50080e5b295daef20427',
+  'apartment-sale-international-park-nasr-city-215m': 'b834abbc18332a6e4fa35e568c4f5f3d8876328608d42daec2dfc9efa1853935',
+  'truegate-compound-waha-108m': '1c70e7a51a98c75edbbdce4267963463835a64a86794514c13022c8a540ad647',
+  'commercial-mohamed-hasan-elgamal': '5b509764e3f0fb729ea8908861108cd8fcfbaf6efb9d7ebe370eef470e8bc259',
+  'kabul-st-makram-ebeid-260m': '04c69a45044be8663af88912ae35fa93dd12c5c73817a4aeec5b37d10319a222',
+  'shams-club-heliopolis-160m': 'fe06556889a78cbac07959cf49eaaf0fe6430069c1a2eeae61d72b7f8f5faac4',
+  'villa-new-cairo-1st-district-568m': '0ad30545587d9c185324d3d41e15a7f5fb729b8c3a9896d7f33921f75ec7432d',
+  'int-park-140m-furnished': '7b46469c754a4f7adf303163e1c8862feeb70f6af5ae3c8f76e11a497044ede8',
+  'shop-rent-makram-ebeid-67m': 'd477736938387c1507427b3b44ad709849e77a5c074c2c433d384e55506236f6',
+  'genena-mall-186m-office-residence': '668290009d62d6ae8b9761af42c783a3e971538a59fb1d31ffa9716f0e4aff70',
+  'admin-rent-nozha-main-260m': '326d70b377dae0175846deebfe8c8a84e23d0ef15076a1878709dabe3aea8397',
 };
 
 // slugs that must show exactly one player (batch 2 ∪ batch 3)
@@ -41,6 +51,47 @@ function grab(front, key) {
 
 function occurrences(hay, needle) {
   return hay.split(needle).length - 1;
+}
+
+
+function findCommFrame(buf, tagEnd) {
+  let pos = 10;
+  while (pos + 10 <= tagEnd && pos + 10 <= buf.length) {
+    const id = buf.slice(pos, pos + 4).toString('ascii');
+    const fsz = buf.readUInt32BE(pos + 4);
+    if (fsz < 0 || pos + 10 + fsz > buf.length) return null;
+    if (id === 'COMM') return { pos: pos, size: fsz };
+    pos += 10 + fsz;
+  }
+  return null;
+}
+
+function stripTrailingNulls(text) {
+  let out = text;
+  while (out.length > 0 && out.charCodeAt(out.length - 1) === 0) {
+    out = out.slice(0, -1);
+  }
+  return out;
+}
+
+function parseComm(buf) {
+  if (!buf || buf.length < 10) return null;
+  if (buf[0] !== 0x49 || buf[1] !== 0x44 || buf[2] !== 0x33) return null;
+  const size = ((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) | ((buf[8] & 0x7f) << 7) | (buf[9] & 0x7f);
+  const tagEnd = 10 + size;
+  const frame = findCommFrame(buf, tagEnd);
+  if (!frame) return null;
+  const body = buf.slice(frame.pos + 10, frame.pos + 10 + frame.size);
+  let nullIdx = -1;
+  for (let j = 4; j + 1 < body.length; j++) {
+    if (body[j] === 0 && body[j + 1] === 0) { nullIdx = j; break; }
+  }
+  if (nullIdx === -1) return null;
+  let textBytes = body.slice(nullIdx + 2);
+  if (textBytes.length >= 2 && textBytes[0] === 0xff && textBytes[1] === 0xfe) textBytes = textBytes.slice(2);
+  let txt = textBytes.toString('utf16le');
+  txt = stripTrailingNulls(txt);
+  return txt;
 }
 
 function checkEnabledPage(slug, front, html, mp3bytes) {
@@ -57,6 +108,8 @@ function checkEnabledPage(slug, front, html, mp3bytes) {
   assert.equal(createHash('sha256').update(mp3bytes).digest('hex'), lockedAudio[slug], `${slug}: MP3 drifted`);
   assert.ok(html.includes('نص الإعلان الصوتي'), `${slug}: script disclosure missing`);
   const spoken = grab(front, 'audio_script');
+  const comm = parseComm(mp3bytes);
+  assert.equal(comm, spoken, `${slug}: ID3 COMM mismatch`);
   assert.ok(spoken.length > 80 && html.includes(spoken.slice(0, 40)), `${slug}: script text not rendered`);
   const label = grab(front, 'audio_duration');
   assert.match(label, /^\d+ ثانية$/, `${slug}: duration label format`);
