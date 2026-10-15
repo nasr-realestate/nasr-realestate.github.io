@@ -39,9 +39,31 @@ on:
       - 'assets/audio/properties/apartment-sale-abdul-halim-abdullah-195m.mp3'
       - 'assets/audio/properties/commercial-shop-for-rent-nozha-street-nasr-city.mp3'
       - 'assets/audio/properties/rehab-villa-model-h-gate9.mp3'
+      # batch 4 (ten new ads)
+      - '_properties/2026-06-02-apartment-international-park-215m.md'
+      - '_properties/2026-05-25-apartment-truegate-waha-108m.md'
+      - '_properties/commercial-mohamed-hasan-elgamal.md'
+      - '_properties/2026-05-11-apartment-kabul-st-makram-ebeid-260m.md'
+      - '_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md'
+      - '_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md'
+      - '_properties/2026-02-06-furnished-apartment-international-park-140m.md'
+      - '_properties/2026-01-25-luxury-shop-rent-makram-ebeid-67m.md'
+      - '_properties/2026-01-23-apartment-sale-genena-mall-186m.md'
+      - '_properties/admin-rent-nozha-main-260m.md'
+      - 'assets/audio/properties/apartment-sale-international-park-nasr-city-215m.mp3'
+      - 'assets/audio/properties/truegate-compound-waha-108m.mp3'
+      - 'assets/audio/properties/commercial-mohamed-hasan-elgamal.mp3'
+      - 'assets/audio/properties/kabul-st-makram-ebeid-260m.mp3'
+      - 'assets/audio/properties/shams-club-heliopolis-160m.mp3'
+      - 'assets/audio/properties/villa-new-cairo-1st-district-568m.mp3'
+      - 'assets/audio/properties/int-park-140m-furnished.mp3'
+      - 'assets/audio/properties/shop-rent-makram-ebeid-67m.mp3'
+      - 'assets/audio/properties/genena-mall-186m-office-residence.mp3'
+      - 'assets/audio/properties/admin-rent-nozha-main-260m.mp3'
       # checks & this workflow
       - '_diag/check-audio-batch2.mjs'
       - '_diag/check-audio-batch3.mjs'
+      - '_diag/check-audio-batch4.mjs'
       - '.github/workflows/verify-audio-pages.yml'
 
 permissions:
@@ -65,4 +87,4 @@ jobs:
         env:
           JEKYLL_ENV: production
       - name: Verify the sixteen audio pages and assets, and all other pages
-        run: node _diag/check-audio-batch3.mjs
+        run: node _diag/check-audio-batch4.mjs

@@ -21,6 +21,12 @@ areaNumeric: 108.4
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/truegate-compound-waha-108m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "شقة بكمبوند ترو جيت في حي الواحة! للبيع مئة وثمانية فاصلة أربعة متر بامتداد حسن المأمون. نصف تشطيب، ثلاث غرف وريسبشن، حمامين، جراج خاص وحصة بالأرض. الدور العاشر. السعر مليونين وستمئة ألف شامل الجراج، متاح تقسيط على سنة. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

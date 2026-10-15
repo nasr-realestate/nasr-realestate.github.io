@@ -21,6 +21,12 @@ areaNumeric: 186
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الرابعة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/genena-mall-186m-office-residence.mp3"
+audio_duration: "27 ثانية"
+audio_script: "شقة مسجلة بجوار جنينة مول! للبيع مئة وستة وثمانين متر صافي بشارع إسماعيل القباني المنطقة الأولى. دور ثالث، مساحات مفتوحة (تقسيم شركات)، حمامين، تشطيب إداري بواجهات زجاجية، أسانسيرين، مسجلة شهر عقاري، مؤجرة حالياً لشركة. السعر ستة مليون. كلم سمسار طلبك على واتساب وحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
