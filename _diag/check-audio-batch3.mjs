@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { grab, occurrences, parseComm } from './audio-check-utils.mjs';
 
 const outDir = process.argv[2] ?? '_site';
 
@@ -42,57 +43,6 @@ const lockedAudio = {
 
 // slugs that must show exactly one player (batch 2 ∪ batch 3)
 const withPlayer = new Set(Object.keys(lockedAudio));
-
-function grab(front, key) {
-  const hit = new RegExp(`^${key}:\\s*"?([^"\\r\\n]+)"?\\s*$`, 'm').exec(front);
-  assert.equal(Boolean(hit), true, `front matter lacks ${key}`);
-  return hit[1];
-}
-
-function occurrences(hay, needle) {
-  return hay.split(needle).length - 1;
-}
-
-
-function findCommFrame(buf, tagEnd) {
-  let pos = 10;
-  while (pos + 10 <= tagEnd && pos + 10 <= buf.length) {
-    const id = buf.slice(pos, pos + 4).toString('ascii');
-    const fsz = buf.readUInt32BE(pos + 4);
-    if (fsz < 0 || pos + 10 + fsz > buf.length) return null;
-    if (id === 'COMM') return { pos: pos, size: fsz };
-    pos += 10 + fsz;
-  }
-  return null;
-}
-
-function stripTrailingNulls(text) {
-  let out = text;
-  while (out.length > 0 && out.charCodeAt(out.length - 1) === 0) {
-    out = out.slice(0, -1);
-  }
-  return out;
-}
-
-function parseComm(buf) {
-  if (!buf || buf.length < 10) return null;
-  if (buf[0] !== 0x49 || buf[1] !== 0x44 || buf[2] !== 0x33) return null;
-  const size = ((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) | ((buf[8] & 0x7f) << 7) | (buf[9] & 0x7f);
-  const tagEnd = 10 + size;
-  const frame = findCommFrame(buf, tagEnd);
-  if (!frame) return null;
-  const body = buf.slice(frame.pos + 10, frame.pos + 10 + frame.size);
-  let nullIdx = -1;
-  for (let j = 4; j + 1 < body.length; j++) {
-    if (body[j] === 0 && body[j + 1] === 0) { nullIdx = j; break; }
-  }
-  if (nullIdx === -1) return null;
-  let textBytes = body.slice(nullIdx + 2);
-  if (textBytes.length >= 2 && textBytes[0] === 0xff && textBytes[1] === 0xfe) textBytes = textBytes.slice(2);
-  let txt = textBytes.toString('utf16le');
-  txt = stripTrailingNulls(txt);
-  return txt;
-}
 
 function checkEnabledPage(slug, front, html, mp3bytes) {
   assert.equal(occurrences(html, 'id="ppAudioBox"'), 1, `${slug}: exactly one player`);

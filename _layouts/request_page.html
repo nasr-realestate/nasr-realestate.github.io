@@ -200,6 +200,7 @@ hide_navbar: true
   </div>
   {% endif %}
 
+  {% if page.audio_ad %}{% include request-audio.html %}{% endif %}
   <!-- ═══ Action Buttons ═══ -->
   <div class="rq-actions">
     <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"
