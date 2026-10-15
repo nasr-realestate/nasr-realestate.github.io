@@ -21,6 +21,10 @@ areaNumeric: 60
 roomsNumeric: 0
 bathsNumeric: 1
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/shop-abbas-elakkad-60m-jan26.mp3"
+audio_duration: "20 ثانية"
+audio_script: "محل ستين متر للإيجار بشارع محمد حسن الجمل، متفرع من أول عباس العقاد! مساحة مفتوحة وحمام، تشطيب جاهز للتشغيل، ومناسب لخدمات السيارات. الإيجار اتناشر ألف جنيه شهريًا. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

@@ -21,6 +21,10 @@ areaNumeric: 661
 roomsNumeric: 4
 bathsNumeric: 0
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/villa-south-90th-120m.mp3"
+audio_duration: "20 ثانية"
+audio_script: "فيلا مستقلة للبيع على التسعين الجنوبي مباشرة، قدام فندق دوسيت! مساحة الأرض ستمية وواحد وستين متر، بدروم وأربع أدوار، بترخيص سكني وفندقي ونصف تشطيب بواجهات كاملة. السعر مية وعشرين مليون جنيه قابل للتفاوض. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <!-- Schema.org RealEstateListing -->

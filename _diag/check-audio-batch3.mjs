@@ -1,8 +1,8 @@
-// Batch-3 gate: ten new audio ads (batch 3) + the sixteen earlier ones, built-page verification only.
+// Batch-6 gate: five new audio ads (batch 6) + the 31 earlier ones, built-page verification only.
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
-// Successor of the batch-2 snapshot check: batch 3 widens the audio feature to 16
-// pages and locks every MP3 with SHA-256 (earlier six must remain byte-identical).
+// Successor of the batch-2 snapshot check: batch 6 widens the audio feature to 36
+// pages and locks every MP3 with SHA-256 (all earlier files must remain byte-identical).
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
@@ -11,7 +11,7 @@ import { grab, occurrences, parseComm } from './audio-check-utils.mjs';
 
 const outDir = process.argv[2] ?? '_site';
 
-// slug -> sha256 of the committed MP3 (batches 1–3)
+// slug -> sha256 of the committed MP3 (batches 1–6)
 const lockedAudio = {
   'apartment-sale-helmy-abdel-aaty-seraj-mall-230m': 'fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a',
   'furnished-apartment-rent-hayat-compound-safarat-200m': '42e7026d9dbca88d59483390760bf50bb457fa8b2ff762ba11f610211f8f85b9',
@@ -44,9 +44,14 @@ const lockedAudio = {
   'apartment-sale-al-hayat-towers-nasr-city-162m': '6352bd42f3073a9f90aef0fb69a6cf2806baf01e601c2f1b4c74f0236f1e4972',
   'shaka-nour-deen': 'abf86029dffe077e14cc93d3bc4c1516679db82662bbf86dc605d3f53b5752b4',
   'abdel-azim-ghalmi-200m-expat': 'e163142e8549afbe02007b9b153d2731057595b4721a454cd032fd6d7333a5a9',
+  'ibrahim-nawara-175m': '964d0687973c4ec7133c06ed5a38793a3d7c948bf070f7638c0c788f266298d5',
+  'villa-south-90th-120m': 'df397b9bcbbcc405485247843cdb8a635dd34af392ea535013793e1303aa9c02',
+  'abu-dawood-fakhry-167m': '456d61fa435c7573694e099fda3db57a8fde42a3e2fbb0bf4a259deecd00f4e8',
+  'ismail-wahby-160m-luxury': '3260fa3e57eafa34205c55605170aa6f395b20cd2bb8003b159eaa2710c17315',
+  'shop-abbas-elakkad-60m-jan26': '0e92ee4940e629389af53f7cca2b4e632d501644662eb2d367af9232cb6ded3c',
 };
 
-// slugs that must show exactly one player (batch 2 ∪ batch 3)
+// slugs that must show exactly one player (batches 1–6)
 const withPlayer = new Set(Object.keys(lockedAudio));
 
 function checkEnabledPage(slug, front, html, mp3bytes) {

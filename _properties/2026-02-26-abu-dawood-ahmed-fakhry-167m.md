@@ -21,6 +21,10 @@ areaNumeric: 167
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/abu-dawood-fakhry-167m.mp3"
+audio_duration: "23 ثانية"
+audio_script: "شقة مية وسبعة وستين متر للبيع بالمنطقة السادسة، بين أبو داود الظاهري وأحمد فخري! تلات غرف وصالة كبيرة، حمامين، دور سادس بأسانسيرين، نص تشطيب وحصة في الأرض. السعر خمسة مليون جنيه قابل للتفاوض. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <!-- 1. كود Schema.org -->
