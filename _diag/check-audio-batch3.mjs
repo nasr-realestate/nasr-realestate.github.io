@@ -1,7 +1,7 @@
-// Batch-7 gate: five new audio ads (batch 7) + the 36 earlier ones, built-page verification only.
+// Batch-7 gate: six new audio ads (batch 7) + the 36 earlier ones, built-page verification only.
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
-// Successor of the batch-2 snapshot check: batch 7 widens the audio feature to 41
+// Successor of the batch-2 snapshot check: batch 7 widens the audio feature to 42
 // pages and locks every MP3 with SHA-256 (all earlier files must remain byte-identical).
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -54,6 +54,7 @@ const lockedAudio = {
   'sanhoori-luxury-250m': 'ac9e1009533854eed93a2d3e44c1888e5e9a59f594c6a83f59d3804c70b6ea2a',
   'safarat-safwa-170m': '354f9b19411a5766e2d646462f4c52d371d7f2e6da8b1319265d8b3724e614cf',
   'degla-landmark-122m-rent': '65e10976244b9eda573541497a14f6efea58a211203933cb3d5ff5471434671e',
+  'commercial-hq-rent-kabul-street-nasr-city-130m': 'a0952c86b1dbdb0d1e04cc91d3d8b00e5985aca995568fab9a0501771baafad5',
 };
 
 // slugs that must show exactly one player (batches 1–7)
