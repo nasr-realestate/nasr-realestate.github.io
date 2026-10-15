@@ -326,11 +326,19 @@
                '<a href="' + audio.getAttribute('src') + '" download>حمّل الملف مباشرة (MP3)</a>.');
     });
 
+    // إحداثي أفقي من نقرة ماوس أو لمسة إصبع (بدون شروط ثلاثية متداخلة)
+    function pointerX(ev) {
+      if (typeof ev.clientX === 'number') return ev.clientX;
+      var touches = ev.touches;
+      if (touches && touches.length > 0) return touches[0].clientX;
+      return null;
+    }
+
     // شريط التقدّم — RTL: النسبة 0 عند الحافة اليمنى و100 عند اليسرى
     function seekFromEvent(ev) {
       var rect = track.getBoundingClientRect();
       if (!rect.width) return;
-      var x = (ev.clientX !== undefined) ? ev.clientX : (ev.touches && ev.touches[0] ? ev.touches[0].clientX : null);
+      var x = pointerX(ev);
       if (x === null) return;
       var ratio = (x - rect.left) / rect.width;
       if (getComputedStyle(track).direction === 'rtl') ratio = 1 - ratio;
