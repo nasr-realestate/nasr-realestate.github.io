@@ -22,6 +22,10 @@ areaNumeric: 122
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/degla-landmark-122m-rent.mp3"
+audio_duration: "22 ثانية"
+audio_script: "شقة مية واتنين وعشرين متر للإيجار في كمبوند دجلة لاند مارك على محور المشير! تلات غرف بفيو على حمام السباحة، حمامين، دور رابع، الترا سوبر لوكس ومفروشة بالكامل. الإيجار تلاتين ألف جنيه شهريًا شامل الجراج. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
