@@ -23,6 +23,11 @@ areaNumeric: 150
 roomsNumeric: 3
 bathsNumeric: 1
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/rent-abdel-hamid-lotfy-tayaran-150m.mp3"
+audio_duration: "22 ثانية"
+audio_script: "شقة للإيجار ناصية عند شارع عبد الحميد لطفي وتقاطع الطيران بمدينة نصر! مية وخمسين متر قانون جديد، تلات غرف وريسبشن بحري وحمّام. الدور الرابع، والعمارة فيها بوابة حديدية وحارس مقيم. الإيجار تلتاشر ألف جنيه شهريًا. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

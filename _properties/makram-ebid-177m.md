@@ -21,6 +21,11 @@ areaNumeric: 177
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/makram-ebid-177m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "عايز شقة مسجلة بعقد أخضر في آخر مكرم عبيد؟ شقة للبيع مية وسبعة وسبعين متر صافي، بعد كلية الألسن في مدينة نصر. تلات غرف وحمامين، الدور التاسع، وعلى كل دور شقتين بس. ماتور خاص والشقة المقابلة مش مسكونة. السعر ستة مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

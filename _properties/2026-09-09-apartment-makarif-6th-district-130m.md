@@ -21,6 +21,11 @@ areaNumeric: 130
 roomsNumeric: 2
 bathsNumeric: 1
 status: available
+# 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-makarif-6th-district-130m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "شقة بميزة نادرة في المنطقة السادسة بمدينة نصر! للبيع مية وتلاتين متر، متفرع من محمد المقريف وخطوات من حديقة الطفل. واجهة بحري، غرفتين وريسبشن تلات قطع وبلكونة واسعة، وتتشطب على ذوقك. عمارة تلات أدوار بس، بحصة كبيرة في الأرض. السعر أربعة مليون وميتين ألف. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
