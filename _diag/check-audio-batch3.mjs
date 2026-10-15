@@ -84,5 +84,6 @@ for (const name of collection) {
 }
 
 assert.ok(collection.length >= 16, 'property collection shrank');
-assert.deepEqual([...seen].sort(), [...withPlayer].sort(), 'audio-enabled set drifted');
+assert.equal(seen.size, withPlayer.size, 'audio-enabled count drifted');
+for (const id of withPlayer) assert.ok(seen.has(id), `audio page missing from build: ${id}`);
 console.log(`${collection.length} property pages: ${seen.size} with locked audio players, ${collection.length - seen.size} untouched without player.`);
