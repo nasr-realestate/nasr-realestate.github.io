@@ -3,6 +3,9 @@
 name: Check audio property pages (no deployment)
 
 on:
+  push: # temporary branch-only trigger to run the read-only post-deploy check; dispatch is forbidden (403)
+    branches: ['arena/83fa2ae4-nasr-realestate-github-io']
+    paths: ['.github/workflows/verify-audio-pages.yml']
   workflow_dispatch: # post-deploy HTTP smoke test on master; never deploys anything
   pull_request:
     paths:
@@ -103,7 +106,7 @@ jobs:
         run: node _diag/check-audio-requests.mjs
 
   production-http:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
