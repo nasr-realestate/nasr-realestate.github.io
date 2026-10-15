@@ -108,6 +108,12 @@
 
 **جولة التحقق البنيوي:** لا تغيير في `_includes/property-audio.html` أو `_layouts/property_page.html` أو `assets/css/*` أو Cloudflare Workers/D1/KV/Web Push/الوكيل الذكي/الأسرار/`deploy.yml`. تعديل القالب المشترك (السطر الشرطي في property_page) لم يتغير أصلاً منذ الدفعة الأولى — التأثير على الصفحات الأخرى موجب صفري (85 صفحة بلا مشغّل كما قبل التعديل).
 
+## فحوص PR #54 على CI (بناء Jekyll الحقيقي — بلا نشر)
+
+- [Check audio property pages (no deployment) — build-only: ناجح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38759300310) — بناء Jekyll كامل (101 صفحة) ثم `check-audio-batch3.mjs` بامتياز `contents: read` فقط، **بلا أي خطوة deploy**.
+- [node-tests: ناجح](https://github.com/nasr-realestate/nasr-realestate.github.io/actions/runs/38759300321) — الحزمة الحاجزة 219/219.
+- [SonarCloud Scan + Quality Gate: ناجح](https://sonarcloud.io/dashboard?id=nasr-realestate_nasr-realestate.github.io&pullRequest=54). ملاحظتان أُصلحتا أثناء المراجعة (بنية الفحص لتقليل التكرار، ومقارنة المجموعات بلا `sort()` عاري — قاعدة S2871)؛ workflow النشر `deploy.yml` لا يعمل إلا على `master` ولم يُشغَّل.
+
 ## حدود التحقق (بصراحة)
 
 - **لم يُختبر** على هاتف iOS/Android حقيقي أو Safari — المحاكاة Chromium 390×844 بلمس حقيقي (CDP tap) هي أقرب اختبار متاح في هذه البيئة.
