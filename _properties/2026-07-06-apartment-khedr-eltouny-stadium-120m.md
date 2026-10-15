@@ -21,6 +21,10 @@ areaNumeric: 120
 roomsNumeric: 0
 bathsNumeric: 1
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-for-sale-khedr-eltouny-tayaran-120m.mp3"
+audio_duration: "20 ثانية"
+audio_script: "شقة 120م تشطيب حديث للبيع بشارع خضر التوني! متفرع من الطيران بجوار محطة الاستاد. الدور الثامن، غرف نوم وريسبشن، حمام، تشطيب حديث جاهزة للسكن. السعر أربعة مليون. كلم سمسار طلبك على واتساب وحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">

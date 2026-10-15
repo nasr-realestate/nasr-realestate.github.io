@@ -61,6 +61,17 @@ on:
       - 'assets/audio/properties/shop-rent-makram-ebeid-67m.mp3'
       - 'assets/audio/properties/genena-mall-186m-office-residence.mp3'
       - 'assets/audio/properties/admin-rent-nozha-main-260m.mp3'
+      # batch 5 (five new ads)
+      - '_properties/2026-07-17-apartment-abbas-elakkad-refaai-200m.md'
+      - '_properties/2026-07-06-apartment-khedr-eltouny-stadium-120m.md'
+      - '_properties/2026-06-06-apartment-al-hayat-towers-162m.md'
+      - '_properties/shaka-nour-deen.md'
+      - '_properties/2026-04-12-abdel-azim-ghalmi-200m-expats.md'
+      - 'assets/audio/properties/apartment-sale-abbas-elakkad-refaai-200m-roi.mp3'
+      - 'assets/audio/properties/apartment-for-sale-khedr-eltouny-tayaran-120m.mp3'
+      - 'assets/audio/properties/apartment-sale-al-hayat-towers-nasr-city-162m.mp3'
+      - 'assets/audio/properties/shaka-nour-deen.mp3'
+      - 'assets/audio/properties/abdel-azim-ghalmi-200m-expat.mp3'
       # request batch 1 (one eligible request; two excluded for incomplete data)
       - '_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md'
       - '_requests/2026-10-10-apartment-rent-art-studio-70m.md'
@@ -97,7 +108,7 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the 26 existing property audio pages and all other property pages
+      - name: Verify the 31 property audio pages and all other property pages
         run: node _diag/check-audio-batch3.mjs
       - name: Verify the request audio page and the two unchanged request pages
         run: node _diag/check-audio-requests.mjs
