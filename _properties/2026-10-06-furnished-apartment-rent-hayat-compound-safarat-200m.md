@@ -20,32 +20,19 @@ audio_ad: true
 audio_file: "/assets/audio/properties/furnished-apartment-rent-hayat-compound-safarat-200m.mp3"
 audio_duration: "23 ثانية"
 audio_script: "حديقة خاصة وشقة مفروشة في مدينة نصر؟ شقة للإيجار في كمبوند حياة بحي السفارات: ميتين متر للشقة، وحديقة خاصة خمسين متر. دور أرضي، غرفتين وحمامين، وفرش فاخر. الإيجار خمسة وتلاتين ألف جنيه شهريًا. كلم سمسار طلبك على واتساب للاستفسار وتحديد معاينة."
+priceNumeric: 35000
+areaNumeric: 200
+roomsNumeric: 2
+bathsNumeric: 2
 ---
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "35000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "كمبوند حياة - حي السفارات",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
+<!-- 1. البيانات المنظمة (Schema.org)
+     ⚠️ حُذفت كتلة JSON-LD اليدوية من هذا الملف (2026-10-16) لأنها كانت تُنتج
+     بيانات منظمة مكرّرة ومتعارضة مع الكتلة الرسمية:
+       • datePosted كان يُطبع بصيغة غير ISO 8601
+       • image كان رابطًا نسبيًا بدون نطاق الموقع
+       • لا @id ولا url ولا الأرقام الرقمية (المساحة/الغرف/الحمامات)
+     المصدر الوحيد الآن: _includes/schema-property.html عبر _layouts/property_page.html -->
 <div class="property-detail-wrapper">
     <div class="property-main-hero">
         <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}" alt="{{ page.title }}" title="{{ page.title }}">

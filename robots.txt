@@ -1,45 +1,72 @@
 # ═══════════════════════════════════════════════════════
-# robots.txt — سمسار طلبك
-# آخر تحديث: 2026
+# robots.txt — سمسار طلبك (مدينة نصر، القاهرة)
+# آخر تحديث: 2026-10-16
 # ═══════════════════════════════════════════════════════
+# ⚠️ إصلاحان موثّقان (2026-10-16):
+#
+#   1) ترتيب القواعد: كان `Disallow: /*.json$` مكتوبًا **قبل**
+#      `Allow: /ai-feed.json`. الزواحف التي تعتمد أول قاعدة مطابقة
+#      (first-match) كانت تحجب ai-feed.json — أي أن الملف الذي بُني
+#      ليقرأه الذكاء الاصطناعي كان محجوبًا بقاعدة عامة. الحل: كل
+#      قواعد Allow مكتوبة الآن **قبل** قواعد Disallow داخل نفس الكتلة.
+#
+#   2) `Disallow: /*.json$` كان يحجب أيضًا `/manifest.json` و
+#      `/site.webmanifest` — وهي ملفات يحتاجها Google لاعتبار الموقع
+#      تطبيقًا قابلًا للتثبيت (PWA). لا يوجد أي JSON داخلي منشور في
+#      الموقع أصلًا: كل ما يُنشر إما بيانات آليّة مقصودة أو مانيفست.
+#      لذلك حُذفت القاعدة، ولم يبقَ سوى حجب ملفات المصدر والبناء.
 
-# ═══ محركات البحث العامة ═══
+# ═══════════════════════════════════════════════════════
+# ═══ محركات البحث العامة (المجموعة الافتراضية) ═══
+# ═══════════════════════════════════════════════════════
 User-agent: *
-Allow: /
 
-# ═══ استثناءات ═══
+# ─── المسموح صراحةً (قبل أي Disallow) ───
+Allow: /
+Allow: /ai-feed.json
+Allow: /search-data.json
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /feed.xml
+Allow: /.well-known/
+Allow: /api/
+Allow: /properties/
+Allow: /requests/
+Allow: /assets/
+Allow: /manifest.json
+Allow: /site.webmanifest
+Allow: /tools/valuation.html
+
+# ─── الممنوع (ملفات المصدر والبناء — لا محتوى عام فيها) ───
 Disallow: /_site/
 Disallow: /_includes/
 Disallow: /_layouts/
 Disallow: /_properties/
 Disallow: /_requests/
+Disallow: /_worker/
+Disallow: /_diag/
+Disallow: /scripts/
 Disallow: /vendor/
 Disallow: /node_modules/
 Disallow: /.git/
 Disallow: /.github/
 Disallow: /.jekyll-cache/
-Disallow: /scripts/
-Disallow: /tools/
-Disallow: /*.json$
 Disallow: /*.log$
 Disallow: /*.tmp$
-
-# ═══ استثناءات صريحة (للسماح) ═══
-Allow: /ai-feed.json
-Allow: /search-data.json
-Allow: /sitemap.xml
-Allow: /llms.txt
-Allow: /feed.xml
+Disallow: /*.map$
+Disallow: /404.html
 
 # ═══════════════════════════════════════════════════════
 # ═══ وكلاء الذكاء الاصطناعي — AI Crawlers ═══
 # ═══════════════════════════════════════════════════════
+# كل الوكلاء أدناه مسموح لهم بالموقع بالكامل، بما في ذلك ملفات
+# القراءة الآلية (llms.txt · llms-full.txt · ai-feed.json · /api/**).
+# لا تخلط بينهم وبين مجموعة `*` أعلاه — كل كتلة مستقلة تمامًا.
 
-# ─── OpenAI (ChatGPT) ───
+# ─── OpenAI (ChatGPT · Search · Operator) ───
 User-agent: GPTBot
 Allow: /
-Disallow: /_site/
-Disallow: /scripts/
 
 User-agent: ChatGPT-User
 Allow: /
@@ -47,24 +74,36 @@ Allow: /
 User-agent: OAI-SearchBot
 Allow: /
 
+User-agent: Operator
+Allow: /
+
 # ─── Anthropic (Claude) ───
+User-agent: ClaudeBot
+Allow: /
+
 User-agent: Claude-Web
 Allow: /
 
-User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
 Allow: /
 
 User-agent: anthropic-ai
 Allow: /
 
-# ─── Perplexity AI ───
+# ─── Perplexity ───
 User-agent: PerplexityBot
 Allow: /
 
 User-agent: Perplexity
 Allow: /
 
-# ─── Google AI (Gemini) ───
+User-agent: Perplexity-User
+Allow: /
+
+# ─── Google AI / Gemini ───
 User-agent: Google-Extended
 Allow: /
 
@@ -74,7 +113,10 @@ Allow: /
 User-agent: Googlebot-Image
 Allow: /
 
-# ─── Microsoft (Bing Chat, Copilot) ───
+User-agent: Google-CloudVertexBot
+Allow: /
+
+# ─── Microsoft (Copilot · Bing) ───
 User-agent: Bingbot
 Allow: /
 
@@ -91,44 +133,59 @@ Allow: /
 User-agent: meta-externalagent
 Allow: /
 
-# ─── Apple AI ───
+# ─── Apple Intelligence ───
 User-agent: Applebot
 Allow: /
 
 User-agent: Applebot-Extended
 Allow: /
 
-# ─── Amazon AI ───
+# ─── Amazon ───
 User-agent: Amazonbot
 Allow: /
 
-# ─── Common Crawl (يخدم AI training) ───
-# ⚠️ إصلاح: كانت هناك كتلتان مكرّرتان باسم CCBot
+# ─── Common Crawl (يخدم تدريب نماذج متعددة) ───
 User-agent: CCBot
 Allow: /
 
-# ─── You.com ───
+# ─── وكلاء آخرون ───
 User-agent: YouBot
 Allow: /
 
-# ─── Cohere AI ───
 User-agent: cohere-ai
 Allow: /
 
-# ─── Diffbot ───
+User-agent: cohere-training-data-crawler
+Allow: /
+
 User-agent: Diffbot
 Allow: /
 
-# ─── DuckDuckGo ───
 User-agent: DuckDuckBot
 Allow: /
 
-# ─── Yandex ───
 User-agent: YandexBot
 Allow: /
 
-# ─── Baidu ───
 User-agent: Baiduspider
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Timpibot
+Allow: /
+
+User-agent: ImagesiftBot
+Allow: /
+
+User-agent: ai2bot
+Allow: /
+
+User-agent: Omgilibot
+Allow: /
+
+User-agent: Scrapy
 Allow: /
 
 # ═══════════════════════════════════════════════════════
@@ -138,11 +195,14 @@ Allow: /
 Sitemap: https://nasr-realestate.github.io/sitemap.xml
 
 # ═══════════════════════════════════════════════════════
-# ═══ معلومات إضافية ═══
+# ═══ الموقع يدعم الذكاء الاصطناعي صراحةً ═══
 # ═══════════════════════════════════════════════════════
-
-# هذا الموقع يدعم AI:
-# - llms.txt: https://nasr-realestate.github.io/llms.txt
-# - ai-feed.json: https://nasr-realestate.github.io/ai-feed.json
-# - Schema.org Markup: في كل صفحة
-# - RSS Feed: https://nasr-realestate.github.io/feed.xml
+# سياسة الاستخدام الآلي:    https://nasr-realestate.github.io/.well-known/ai.txt
+# دليل الموقع للنماذج:      https://nasr-realestate.github.io/llms.txt
+# الكتالوج الكامل Markdown: https://nasr-realestate.github.io/llms-full.txt
+# التغذية الأساسية JSON:    https://nasr-realestate.github.io/ai-feed.json
+# الكتالوج JSON:            https://nasr-realestate.github.io/api/properties.json
+# OpenAPI 3.1:              https://nasr-realestate.github.io/api/openapi.json
+# بطاقة خادم MCP:           https://nasr-realestate.github.io/.well-known/mcp.json
+# خادم MCP:                 https://nasr-ai-gateway.footcai-555.workers.dev/mcp
+# RSS:                      https://nasr-realestate.github.io/feed.xml

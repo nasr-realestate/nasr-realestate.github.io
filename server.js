@@ -6,7 +6,31 @@ import { Liquid } from 'liquidjs';
 import { marked } from 'marked';
 import yaml from 'js-yaml';
 
+// ═══ طبقة الذكاء الاصطناعي (2026-10-16) ═══
+// نفس المُولّدات التي يستخدمها نشر GitHub Pages (scripts/build-ai-artifacts.mjs)
+// تُشغَّل هنا في الذاكرة، حتى تُعاين المعاينة المحلية ما سيُنشر بالحرف:
+//   /llms-full.txt · /api/** · /search-data.json · /.well-known/**
+// بلا كتابة أي ملف على القرص وبلا تأخير بدء تشغيل.
+import {
+  renderLlmsFull, renderPropertyMarkdown, renderAiTxt,
+  renderMcpCard, renderOpenApi, renderSearchData, SITE as AI_SITE,
+} from './scripts/lib/ai-docs.mjs';
+import { loadProperties as loadAiProperties, buildFacets as buildAiFacets } from './scripts/lib/properties.mjs';
+import { buildFeed as buildAiFeed, buildPropertyDocument as buildAiPropertyDoc } from './scripts/build-ai-artifacts.mjs';
+
+const AI_MCP_ENDPOINT = 'https://nasr-ai-gateway.footcai-555.workers.dev/mcp';
+const AI_SCHEMA_VERSION = '3.0';
+let _aiCache = { at: 0, props: null };
+function aiProperties() {
+  // كاش 10 ثوانٍ حتى تظهر أي إضافة جديدة في المعاينة فورًا تقريبًا
+  if (_aiCache.props && Date.now() - _aiCache.at < 10_000) return _aiCache.props;
+  _aiCache = { at: Date.now(), props: loadAiProperties(path.resolve('_properties')) };
+  return _aiCache.props;
+}
+
 const app = express();
+// لا نكشف إصدار الإطار في الترويسات (SonarCloud S5689)
+app.disable('x-powered-by');
 const PORT = 3000;
 const HOST = '0.0.0.0';
 
@@ -354,6 +378,93 @@ app.get(['/tools/valuation', '/tools/valuation.html', '/assets/tools/valuation.h
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+//  مسارات طبقة الذكاء الاصطناعي (معاينة محلية فقط)
+//  الإنتاج يُنتج نفس الملفات ثابتةً داخل _site عبر
+//  scripts/build-ai-artifacts.mjs — راجع .github/workflows/deploy.yml
+// ═══════════════════════════════════════════════════════════
+const aiJson = (res, body) => res.type('application/json; charset=utf-8').send(JSON.stringify(body, null, 2));
+
+// ai-feed.json: القالب في الجذر (ai-feed.json) مصدر Liquid خام. في الإنتاج
+// يكتب المُولّد النسخة النهائية داخل _site، وهنا نبنيها في الذاكرة بنفس
+// الدالة تمامًا حتى تُعاين المعاينة المحلية الملف الحقيقي لا مصدره.
+app.get('/ai-feed.json', (req, res) => {
+  aiJson(res, buildAiFeed(aiProperties(), new Date().toISOString()));
+});
+
+app.get('/llms-full.txt', (req, res) => {
+  res.type('text/markdown; charset=utf-8').send(renderLlmsFull(aiProperties()));
+});
+
+app.get('/search-data.json', (req, res) => aiJson(res, renderSearchData(aiProperties())));
+
+app.get('/api/index.json', (req, res) => {
+  const props = aiProperties();
+  const facets = buildAiFacets(props);
+  aiJson(res, {
+    schema_version: AI_SCHEMA_VERSION,
+    name: 'سمسار طلبك — واجهة العقارات',
+    generated_at: new Date().toISOString(),
+    total_count: props.length,
+    base_url: AI_SITE,
+    mcp: { endpoint: AI_MCP_ENDPOINT, transport: 'streamable-http' },
+    facets,
+    endpoints: [
+      { path: '/llms.txt', format: 'text/markdown' },
+      { path: '/llms-full.txt', format: 'text/markdown' },
+      { path: '/ai-feed.json', format: 'application/json' },
+      { path: '/api/properties.json', format: 'application/json' },
+      { path: '/api/properties/{slug}.json', format: 'application/json' },
+      { path: '/api/properties/{slug}.md', format: 'text/markdown' },
+      { path: '/api/openapi.json', format: 'application/json' },
+      { path: '/search-data.json', format: 'application/json' },
+      { path: '/.well-known/ai.txt', format: 'text/plain' },
+      { path: '/.well-known/mcp.json', format: 'application/json' },
+    ],
+  });
+});
+
+app.get('/api/openapi.json', (req, res) => aiJson(res, renderOpenApi(aiProperties())));
+
+app.get('/api/properties.json', (req, res) => {
+  const props = aiProperties();
+  aiJson(res, {
+    schema_version: AI_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    total_count: props.length,
+    base_url: AI_SITE,
+    facets: buildAiFacets(props),
+    properties: props,
+  });
+});
+
+app.get('/api/properties/:slug.json', (req, res) => {
+  const slug = req.params.slug;
+  const prop = aiProperties().find((p) => p.slug === slug);
+  if (!prop) return res.status(404).json({ error: 'NOT_FOUND', id: slug });
+  aiJson(res, buildAiPropertyDoc(prop, new Date().toISOString()));
+});
+
+app.get('/api/properties/:slug.md', (req, res) => {
+  const prop = aiProperties().find((p) => p.slug === req.params.slug);
+  if (!prop) return res.status(404).type('text/plain').send('NOT_FOUND');
+  res.type('text/markdown; charset=utf-8').send(renderPropertyMarkdown(prop));
+});
+
+app.get('/.well-known/ai.txt', (req, res) => {
+  res.type('text/plain; charset=utf-8').send(renderAiTxt(aiProperties(), { stamp: new Date().toISOString().slice(0, 10), mcpEndpoint: AI_MCP_ENDPOINT }));
+});
+
+
+app.get(['/.well-known/mcp.json', '/.well-known/mcp/server-card.json', '/mcp.json'], (req, res) => {
+  aiJson(res, renderMcpCard({ endpoint: AI_MCP_ENDPOINT, properties: aiProperties() }));
+});
+
+// نسخة جذرية موازية — للتغطية لو حجب ناشر ما المجلدات النقطية
+app.get('/ai.txt', (req, res) => {
+  res.type('text/plain; charset=utf-8').send(renderAiTxt(aiProperties(), { stamp: new Date().toISOString().slice(0, 10), mcpEndpoint: AI_MCP_ENDPOINT }));
+});
+
 // Dynamic handler for any other top-level HTML page (about-us, contact-us, add-your-property, etc.)
 app.get('/:page', async (req, res, next) => {
   try {
@@ -376,8 +487,13 @@ app.use(express.static(path.resolve('.'), {
   index: false,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.json')) {
-      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    } else if (filePath.endsWith('.txt') || filePath.endsWith('.webmanifest')) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     }
+    // المعاينة تُحاكي GitHub Pages، وهي تُخدِم بترويسة CORS مفتوحة.
+    // بدونها يبدو أن الواجهة غير قابلة للاستدعاء من وكيل خارجي أثناء التجربة.
+    res.setHeader('Access-Control-Allow-Origin', '*');
   },
 }));
 

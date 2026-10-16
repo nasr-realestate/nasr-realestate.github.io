@@ -122,9 +122,19 @@ compress_html:
 # (2026-10-10 — ترحيل الإشعارات: كان المسار قديمًا assets/js/firebase-messaging-sw.js
 #  بينما الملف الفعلي في الجذر. يُصحَّح المسار الآن، ويُحذف الإدخال لاحقًا
 #  عند إزالة تكامل Firebase بعد التأكد من نجاح نظام Web Push الجديد.)
+# 2026-10-16 — طبقة الذكاء الاصطناعي (scripts/build-ai-artifacts.mjs) تُكتب
+# داخل _site بعد jekyll build. الإدخالات أدناه تحمي المخرجات لو أُعيد بناء
+# Jekyll في نفس مجلد الوجهة (بلا clean)، فلا يختفي الـ API أو .well-known.
 keep_files:
   - search-data.json
   - firebase-messaging-sw.js
+  - ai-feed.json
+  - llms-full.txt
+  - api
+  - .well-known
+
+# ملاحظة: Jekyll يتجاهل أي ملف أو مجلد يبدأ بنقطة، لذلك .well-known لا يمكن
+# أن يُولَّد من داخل Jekyll أصلًا — وهو ما يجعله من مسؤولية المُولّد أعلاه.
 
 exclude:
   - _worker

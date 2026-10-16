@@ -20,33 +20,17 @@ audio_ad: true
 audio_file: "/assets/audio/properties/apartment-sale-gamal-afifi-ahly-club-250m.mp3"
 audio_duration: "24 ثانية"
 audio_script: "عايز شقة متجددة جنب النادي الأهلي؟ شقة للبيع بمساحة ميتين وخمسين متر، في شارع جمال الدين عفيفي المتفرع من حسن المأمون بمدينة نصر. الدور التالت، أرضيات بورسلين، والكهربا والدهانات متجددين، ومعاها مطبخ ألوميتال. السعر سبعة مليون جنيه. كلم سمسار طلبك على واتساب وحدد معاينة."
+priceNumeric: 7000000
+areaNumeric: 250
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "7000000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع جمال الدين عفيفي - حسن المأمون",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
+<!-- 1. البيانات المنظمة (Schema.org)
+     ⚠️ حُذفت كتلة JSON-LD اليدوية من هذا الملف (2026-10-16) لأنها كانت تُنتج
+     بيانات منظمة مكرّرة ومتعارضة مع الكتلة الرسمية:
+       • datePosted كان يُطبع بصيغة غير ISO 8601 (مثال: Fri Oct 16 2026 00:00:00 GMT+0000)
+       • image كان رابطًا نسبيًا بدون نطاق الموقع
+       • لا @id ولا url ولا الأرقام الرقمية (المساحة/الغرف/الحمامات)
+     المصدر الوحيد الآن: _includes/schema-property.html عبر _layouts/property_page.html -->
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

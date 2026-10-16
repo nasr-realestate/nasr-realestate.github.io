@@ -1,0 +1,181 @@
+# ══════════════════════════════════════════════════════════════════════
+# نشر خادم MCP — nasr-ai-gateway (_worker/mcp-worker.js)
+# ──────────────────────────────────────────────────────────────────────
+#  لماذا هذا الـworkflow:
+#    الموقع ينشر بيانات الوحدات ليُقرأ؛ هذا العامل يجعله **قابلًا
+#    للاستدعاء** من أي نموذج أو وكيل يدعم Model Context Protocol — بحث،
+#    تفاصيل وحدة، ملخص سوق، مناطق، وتواصل — بلا زحف HTML.
+#
+#  أمان التصميم (مطابق لقواعد بقية العوامل في هذا المستودع):
+#    • العامل المطلوب نشره هنا هو `nasr-ai-gateway` **فقط**.
+#    • لا يلمس هذا الملف `royal-snow-ea32` (المحادثة) ولا
+#      `noisy-bush-fd84` (التقييم) ولا `nasr-properties-sync` — الثلاثة
+#      نسخها الحيّة أسبق من نسخ المستودع عن قصد، وأي نشر تلقائي لها
+#      يُعد ارتدادًا محتملًا. لهذا لا يظهر لها أي أمر deploy هنا.
+#    • العامل نفسه بلا bindings وبلا أسرار: لا D1 ولا KV ولا مفاتيح.
+#    • الاختبارات الحاجزة تُشغَّل **قبل** أي نشر: لو فشل أي اختبار، لا نشر.
+#
+#  الأسرار: يستخدم نفس سلسلة الاعتماد الموجودة أصلًا لدى بقية عمليات
+#  النشر (ARENA_CLOUDFLARE / CLOUDFLARE_API_TOKEN / CF_API_TOKEN …).
+#  لو لم يوجد أي منها، يُتخطى النشر بالكامل وينجح الـworkflow بلا فشل،
+#  حتى لا يتحوّل غياب توكن إلى إخفاق أحمر مضلّل.
+# ══════════════════════════════════════════════════════════════════════
+name: Deploy MCP Gateway
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master", "main", "arena/**"]
+    paths:
+      - "_worker/mcp-worker.js"
+      - "_worker/wrangler.mcp.toml"
+      - "_worker/tests/mcp-gateway.test.mjs"
+      - ".github/workflows/deploy-mcp-gateway.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-mcp-gateway
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Blocking tests (no network, no secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # ⚠️ بلا `npm install`: المُولّد وخادم MCP لا يعتمدان على أي حزمة.
+      #    اختبار التكافؤ (front-matter مقابل gray-matter) يُتخطّى تلقائيًا
+      #    لو لم تكن الحزمة موجودة — راجع scripts/tests.
+      - name: MCP gateway tests
+        run: node --test _worker/tests/mcp-gateway.test.mjs
+      - name: AI layer tests
+        run: node --test _worker/tests/ai-artifacts.test.mjs
+      - name: Dependency-free front-matter reader (parity test self-skips without gray-matter)
+        run: node --test scripts/tests/front-matter.test.mjs
+
+  deploy:
+    name: Deploy nasr-ai-gateway
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # ⚠️ نفس سلسلة الاعتماد المستخدمة في deploy-properties-sync.yml بالحرف.
+      #    لا تُختصر هذه القائمة: في أول تشغيل لهذا الـworkflow (2026-10-16)
+      #    جُرّبت قائمة قصيرة بلا `CLOUDFLARE_D1_TOKEN` — وهو أحد الأسماء
+      #    الفعلية في هذا المستودع — فحُلّ المتغيّر فارغًا وتخطّى النشر نفسه،
+      #    رغم أن توكن Cloudflare موجود ويُنشر به عامل المزامنة بنجاح.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+      WORKER_NAME: nasr-ai-gateway
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Report the artifact that will be deployed
+        run: |
+          set -euo pipefail
+          echo "worker sha256: $(sha256sum _worker/mcp-worker.js | cut -d' ' -f1)"
+          echo "release: $(grep -m1 -oE 'RELEASE = \"[^\"]+\"' _worker/mcp-worker.js)"
+          {
+            echo "### MCP Gateway"
+            echo "- \`_worker/mcp-worker.js\` sha256 \`$(sha256sum _worker/mcp-worker.js | cut -d' ' -f1)\`"
+            echo "- $(grep -m1 -oE 'RELEASE = \"[^\"]+\"' _worker/mcp-worker.js)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Diagnose credential availability (booleans only — no values are printed)
+        run: |
+          set -euo pipefail
+          REPORT="ARENA_CLOUDFLARE=${{ secrets.ARENA_CLOUDFLARE && 'yes' || 'no' }} · ARENA_CLOUDFLARE_TOKEN=${{ secrets.ARENA_CLOUDFLARE_TOKEN && 'yes' || 'no' }} · CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN && 'yes' || 'no' }} · CF_API_TOKEN=${{ secrets.CF_API_TOKEN && 'yes' || 'no' }} · CLOUDFLARE_TOKEN=${{ secrets.CLOUDFLARE_TOKEN && 'yes' || 'no' }} · CF_TOKEN=${{ secrets.CF_TOKEN && 'yes' || 'no' }} · CLOUDFLARE_D1_TOKEN=${{ secrets.CLOUDFLARE_D1_TOKEN && 'yes' || 'no' }}"
+          echo "$REPORT"
+          {
+            echo "### Credential diagnostic (presence only — no values)"
+            echo '```'
+            echo "$REPORT"
+            echo "ref=${{ github.ref }} event=${{ github.event_name }} actor=${{ github.actor }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # تُمرَّر إلى الخطوة التالية لتظهر داخل التحذير عند التخطي فقط،
+          # فلا تُضاف ملاحظة (annotation) مزعجة في كل تشغيل ناجح.
+          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+        id: diag
+
+      - name: Skip gracefully when no Cloudflare token is available
+        id: creds
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::warning title=MCP Gateway::No Cloudflare credential resolved — deployment skipped, the Worker was NOT touched. Presence: ${{ steps.diag.outputs.report }}"
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+            echo "credential resolved (value never printed); length=${#CLOUDFLARE_API_TOKEN}"
+          fi
+
+      - name: Resolve the account id from the token when unset
+        if: steps.creds.outputs.has_token == 'true'
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            # يُحفط الرد في ملف ثم يُحلّل بـ JSON.parse — بلا أنابيب تنفيذ لما يُنزّل
+            # (قاعدة SonarCloud: لا تُنفّذ ما يُنزّل مباشرة بلا تحقق).
+            curl -sS --max-time 30 -o "$RUNNER_TEMP/cloudflare-accounts.json" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts?per_page=1"
+            ACCOUNT_ID=$(node -e "const fs=require('node:fs');try{const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(j.result?.[0]?.id||'')}catch{process.stdout.write('')}" "$RUNNER_TEMP/cloudflare-accounts.json")
+            # بدون `&&` أخيرة: مع `set -e` يكون اختبار فاشل سببًا لإبطال الخطوة.
+            if [ -n "$ACCOUNT_ID" ]; then
+              echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+            fi
+          fi
+          echo "account id present: $([ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] && echo yes || echo no)"
+
+      - name: Install Wrangler from the committed lockfile (بلا npx وبلا سكربتات حياة)
+        if: steps.creds.outputs.has_token == 'true'
+        working-directory: _worker
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/wrangler --version
+
+      - name: Deploy with Wrangler (this Worker only)
+        if: steps.creds.outputs.has_token == 'true'
+        working-directory: _worker
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/wrangler deploy --config wrangler.mcp.toml
+
+      - name: Smoke-test the live endpoint (GET only, never POST)
+        if: steps.creds.outputs.has_token == 'true'
+        run: |
+          set -euo pipefail
+          BASE="https://nasr-ai-gateway.footcai-555.workers.dev"
+          for attempt in 1 2 3 4 5; do
+            CODE=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/card.json -w '%{http_code}' "$BASE/" || echo 000)
+            echo "GET / attempt $attempt → HTTP $CODE"
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          [ "$CODE" = "200" ] || { echo "::error title=MCP Gateway::GET / did not return 200"; exit 1; }
+          node -e "
+            const c = require('/tmp/card.json');
+            if (c.service !== 'semsar-talabk') { console.error('unexpected service', c.service); process.exit(1); }
+            if (!c.read_only) { console.error('gateway must be read-only'); process.exit(1); }
+            console.log('tools:', c.tools.map(t => t.name).join(', '));
+          "
+          {
+            echo "### Live MCP Gateway"
+            echo '```json'
+            head -c 400 /tmp/card.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

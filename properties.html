@@ -25,20 +25,125 @@ hide_navbar: true
   "inLanguage": "ar-EG",
   "isPartOf": { "@id": "{{ site.url }}/#website" },
   "about": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "dateModified": {{ site.time | date_to_xmlschema | jsonify }},
   "mainEntity": {
     "@type": "ItemList",
+    "@id": "{{ site.url }}{{ page.url }}#itemlist",
+    "name": "كل العقارات المعروضة — سمسار طلبك",
     "numberOfItems": {{ site.properties | size }},
+    "itemListOrder": "https://schema.org/ItemListOrderDescending",
     "itemListElement": [
-      {%- for prop in site.properties limit: 20 -%}
+      {%- comment -%}
+        ⚠️ إصلاح 2026-10-16: كان `limit: 20` يقصّ القائمة عند 20 وحدة،
+        فيرى Google والذكاء الاصطناعي 20 من 102 عقار فقط. الآن القائمة كاملة
+        (102 وحدة)، ومُثراة بالسعر والمساحة والصورة حتى تُقتبس مباشرة.
+        كل ListItem يحمل أيضًا `item` كائناً مستقلًا (Offer) بدل رابط مجرّد.
+      {%- endcomment -%}
+      {%- assign props_sorted = site.properties | sort: "date" | reverse -%}
+      {%- for prop in props_sorted -%}
       {
         "@type": "ListItem",
         "position": {{ forloop.index }},
         "url": "{{ site.url }}{{ prop.url }}",
-        "name": {{ prop.title | jsonify }}
+        "name": {{ prop.title | jsonify }},
+        "item": {
+          "@type": "RealEstateListing",
+          "@id": "{{ site.url }}{{ prop.url }}#listing",
+          "url": "{{ site.url }}{{ prop.url }}",
+          "name": {{ prop.title | jsonify }},
+          "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ prop.image_file }}",
+          "datePosted": "{{ prop.date | date: '%Y-%m-%d' }}",
+          {%- assign _pr = prop.priceNumeric | default: 0 | plus: 0 -%}
+          {%- if _pr <= 0 -%}{%- assign _pr = prop.price | remove: "," | split: " " | first | plus: 0 -%}{%- endif -%}
+          "offers": {
+            "@type": "Offer",
+            "url": "{{ site.url }}{{ prop.url }}",
+            "priceCurrency": "EGP",
+            {%- if _pr > 0 %}
+            "price": "{{ _pr }}",
+            {%- endif %}
+            "availability": "https://schema.org/InStock",
+            "businessFunction": "{% if prop.category contains 'rent' or prop.price contains 'شهرياً' or prop.title contains 'إيجار' or prop.title contains 'للايجار' %}https://schema.org/ForRent{% else %}https://schema.org/ForSale{% endif %}",
+            "seller": { "@id": "{{ site.url }}/#semsar-talabk" }
+          },
+          {%- assign _ar = prop.areaNumeric | default: 0 | plus: 0 -%}
+          {%- if _ar <= 0 -%}{%- assign _ar = prop.area | remove: "," | split: " " | first | plus: 0 -%}{%- endif -%}
+          {%- if _ar > 0 %}
+          "floorSize": {"@type": "QuantitativeValue", "value": {{ _ar }}, "unitCode": "MTK"},
+          {%- endif %}
+          "address": { "@type": "PostalAddress", "streetAddress": {{ prop.location | jsonify }}, "addressLocality": "مدينة نصر", "addressRegion": "القاهرة", "addressCountry": "EG" }
+        }
       }{%- unless forloop.last -%},{%- endunless -%}
       {%- endfor -%}
     ]
-  }
+  },
+  "significantLink": [
+    "{{ site.url }}/llms.txt",
+    "{{ site.url }}/llms-full.txt",
+    "{{ site.url }}/ai-feed.json",
+    "{{ site.url }}/api/properties.json"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "@id": "{{ site.url }}/ai-feed.json#dataset",
+  "name": "سمسار طلبك — بيانات العقارات المعروضة",
+  "alternateName": "Semsar Talabk property listings dataset",
+  "description": "بيانات كل الوحدات العقارية المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة) بصيغة JSON: المعرّف، العنوان، النوع، المعاملة (بيع/إيجار)، السعر الرقمي، المساحة، الغرف، الحمامات، التشطيب، الدور، الموقع، الصورة، والرابط. تتحدّث تلقائيًا مع كل نشر للموقع.",
+  "url": "{{ site.url }}/ai-feed.json",
+  "sameAs": [
+    "{{ site.url }}/api/properties.json",
+    "{{ site.url }}/llms-full.txt",
+    "{{ site.url }}/api/openapi.json"
+  ],
+  "identifier": "semsar-talabk-properties",
+  "version": "3.0",
+  "license": "{{ site.url }}/llms.txt",
+  "isAccessibleForFree": true,
+  "creator": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "publisher": { "@id": "{{ site.url }}/#semsar-talabk" },
+  {%- assign _first_year = site.properties | map: "date" | sort | first | date: "%Y" | default: "2014" -%}
+  {%- assign _this_year = site.time | date: "%Y" -%}
+  {%- assign _temporal = _first_year | append: "/" | append: _this_year -%}
+  "temporalCoverage": {{ _temporal | jsonify }},
+  "spatialCoverage": {
+    "@type": "Place",
+    "name": "مدينة نصر والقاهرة الجديدة، القاهرة، مصر",
+    "geo": { "@type": "GeoCoordinates", "latitude": 30.067317, "longitude": 31.339143 }
+  },
+  "variableMeasured": [
+    {"@type": "PropertyValue", "name": "priceNumeric", "description": "سعر الطلب بالجنيه المصري (شهري لو إيجار)", "unitCode": "EGP"},
+    {"@type": "PropertyValue", "name": "areaNumeric", "description": "المساحة بالمتر المربع", "unitCode": "MTK"},
+    {"@type": "PropertyValue", "name": "roomsNumeric", "description": "عدد الغرف"},
+    {"@type": "PropertyValue", "name": "bathsNumeric", "description": "عدد الحمامات"},
+    {"@type": "PropertyValue", "name": "transaction", "description": "sale أو rent"},
+    {"@type": "PropertyValue", "name": "propertyType", "description": "apartment / villa / shop / office / warehouse / clinic"}
+  ],
+  "distribution": [
+    {
+      "@type": "DataDownload",
+      "name": "AI Feed (JSON)",
+      "encodingFormat": "application/json",
+      "contentUrl": "{{ site.url }}/ai-feed.json"
+    },
+    {
+      "@type": "DataDownload",
+      "name": "الكامل (Markdown)",
+      "encodingFormat": "text/markdown",
+      "contentUrl": "{{ site.url }}/llms-full.txt"
+    },
+    {
+      "@type": "DataDownload",
+      "name": "OpenAPI 3.1",
+      "encodingFormat": "application/json",
+      "contentUrl": "{{ site.url }}/api/openapi.json"
+    }
+  ],
+  "size": { "@type": "QuantitativeValue", "value": {{ site.properties | size }}, "unitText": "وحدة عقارية" }
 }
 </script>
 

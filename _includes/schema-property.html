@@ -14,10 +14,69 @@
   4) أُضيف numberOfRooms / numberOfBathroomsTotal / amenityFeature / url / identifier.
 {%- endcomment -%}
 
-{%- assign price_num = page.priceNumeric | default: 0 -%}
-{%- assign area_num  = page.areaNumeric  | default: 0 -%}
-{%- assign rooms_num = page.roomsNumeric | default: 0 -%}
-{%- assign baths_num = page.bathsNumeric | default: 0 -%}
+{%- comment -%}
+  ═══ إصلاح 2026-10-16 — الأرقام الرقمية الاحتياطية ═══
+  كانت هذه المتغيرات تُقرأ من `*Numeric` فقط. أي ملف عقار يُضاف بدونها
+  (وهو ما حدث فعلاً في 8 ملفات) كان يُنتج:
+     • offers.price = "0"  ← سعر صفر مضلل في البيانات المنظمة
+     • لا floorSize / numberOfRooms / numberOfBathroomsTotal
+  الآن: تُقرأ القيمة من الحقل، وإن غابت تُستخرج من النص العربي بنفس
+  تقنية قالب ai-feed.json (`remove: ","` ثم `split: " "` ثم `plus: 0`).
+  النتيجة: 0 تعني «لا يوجد رقم معلن» — ويُحذف الحقل بدل نشر رقم خطأ.
+
+  ⚠️ لماذا `split` وليس `plus: 0` مباشرةً؟
+     Liquid يرفض النص المخلوط: `"180 متر مربع" | plus: 0` = 0، بينما
+     `"180 متر مربع" | split: " " | first | plus: 0` = 180.
+{%- endcomment -%}
+{%- assign price_num = page.priceNumeric | default: 0 | plus: 0 -%}
+{%- if price_num <= 0 -%}
+  {%- assign price_num = page.price | remove: "," | remove: "،" | split: " " | first | plus: 0 -%}
+{%- endif -%}
+
+{%- assign area_num = page.areaNumeric | default: 0 | plus: 0 -%}
+{%- if area_num <= 0 -%}
+  {%- assign area_num = page.area | remove: "," | split: " " | first | plus: 0 -%}
+{%- endif -%}
+
+{%- assign rooms_num = page.roomsNumeric | default: 0 | plus: 0 -%}
+{%- if rooms_num <= 0 -%}
+  {%- assign rooms_num = page.rooms | split: " " | first | plus: 0 -%}
+  {%- comment -%} حماية: «3.5 غرفة» أو رقم غريب خارج نطاق المعقول {%- endcomment -%}
+  {%- if rooms_num > 15 -%}{%- assign rooms_num = 0 -%}{%- endif -%}
+{%- endif -%}
+
+{%- assign baths_src = page.bathsNumeric | default: page.bathroomsNumeric | default: 0 -%}
+{%- assign baths_num = baths_src | plus: 0 -%}
+{%- if baths_num <= 0 -%}
+  {%- assign baths_num = page.bathrooms | default: page.baths | split: " " | first | plus: 0 -%}
+  {%- if baths_num > 10 -%}{%- assign baths_num = 0 -%}{%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ═══ تجهيزات الوحدة — تُستخرج من النص، ولا تُختلق ═══
+  نبني السلسلة ثم نقسمها (Liquid 4 لا يدعم push). كل بند يُضاف فقط
+  لو ظهر في العنوان أو الوصف — وبالتالي لا يظهر في المخرجات أي بند وهمي.
+{%- endcomment -%}
+{%- comment -%}
+  padding بالمسافات + تحويل الفواصل: بدونها كان «براند مع**روف**» يُنتج
+  تجهيز «روف/تراس» وهمي. نُفضّل تفويت تجهيز حقيقي على ادّعاء تجهيز غير موجود،
+  ولذلك الكلمات القصيرة/الملتبسة (روف · أمن · حصة · مطبخ) تُطابَق ككلمة مستقلة.
+{%- endcomment -%}
+{%- assign amen_src = " " | append: page.title | append: " " | append: page.description | append: " " | append: page.finish | append: " " -%}
+{%- assign amen_src = amen_src | replace: "،", " " | replace: ",", " " | replace: "(", " " | replace: ")", " " | replace: ".", " " | replace: "-", " " | replace: "/", " " | replace: "  ", " " | replace: "  ", " " -%}
+{%- assign amen_raw = "" -%}
+{%- if amen_src contains "جراج" or amen_src contains "باركينج" or amen_src contains "سيارة" or amen_src contains "سيارات" -%}{%- assign amen_raw = amen_raw | append: "موقف سيارات|" -%}{%- endif -%}
+{%- if amen_src contains "أسانسير" or amen_src contains "اسانسير" or amen_src contains "مصعد" -%}{%- assign amen_raw = amen_raw | append: "مصعد|" -%}{%- endif -%}
+{%- if amen_src contains "مفروش" or amen_src contains "فرش فاخر" or amen_src contains "فندقي" -%}{%- assign amen_raw = amen_raw | append: "مفروش|" -%}{%- endif -%}
+{%- if amen_src contains "تكييف" or amen_src contains "مكيف" -%}{%- assign amen_raw = amen_raw | append: "تكييف|" -%}{%- endif -%}
+{%- if amen_src contains "حديقة" or amen_src contains "جاردن" -%}{%- assign amen_raw = amen_raw | append: "حديقة|" -%}{%- endif -%}
+{%- if amen_src contains " روف " or amen_src contains "تراس" or amen_src contains "سطح خاص" -%}{%- assign amen_raw = amen_raw | append: "روف/تراس|" -%}{%- endif -%}
+{%- if amen_src contains " حصة " or amen_src contains "حصة في" or amen_src contains "حصة بال" -%}{%- assign amen_raw = amen_raw | append: "حصة في الأرض|" -%}{%- endif -%}
+{%- if amen_src contains "سيكيوريتي" or amen_src contains " أمن " or amen_src contains "كاميرات" -%}{%- assign amen_raw = amen_raw | append: "أمن وحراسة|" -%}{%- endif -%}
+{%- if amen_src contains "قانون جديد" -%}{%- assign amen_raw = amen_raw | append: "قانون جديد|" -%}{%- endif -%}
+{%- if amen_src contains "مسجلة" or amen_src contains "شهر عقاري" or amen_src contains "مسجل" -%}{%- assign amen_raw = amen_raw | append: "قابلة للتسجيل شهر عقاري|" -%}{%- endif -%}
+{%- if amen_src contains "مطبخ" -%}{%- assign amen_raw = amen_raw | append: "مطبخ|" -%}{%- endif -%}
+{%- if amen_src contains "واجهة" or amen_src contains "ناصية" -%}{%- assign amen_raw = amen_raw | append: "واجهة مميزة|" -%}{%- endif -%}
+{%- assign amen_list = amen_raw | split: "|" -%}
 
 {%- comment -%} نوع المعاملة {%- endcomment -%}
 {%- assign transaction_type = "https://schema.org/ForSale" -%}
@@ -63,26 +122,59 @@
   "url": "{{ page_url }}",
   "name": {{ page.title | jsonify }},
   "description": {{ page.description | default: page.title | jsonify }},
-  "identifier": {{ page.id | default: page.slug | jsonify }},
+  "identifier": {{ page.slug | default: page.id | jsonify }},
   "image": ["{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"],
   "datePosted": "{{ page.date | date_to_xmlschema }}",
   "inLanguage": "ar-EG",
-  "broker": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"},
-  "provider": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"},
+  "isPartOf": { "@id": "{{ site.url }}/properties/#collection" },
+  "mainEntityOfPage": { "@id": "{{ page_url }}" },
+  "broker": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "provider": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "keywords": [
+      {%- assign kw_src = page.title | append: " " | append: page.location | append: " " | append: page.category -%}
+      {%- assign kw_raw = "" -%}
+      {%- if kw_src contains "شقة" -%}{%- assign kw_raw = kw_raw | append: "شقة|" -%}{%- endif -%}
+      {%- if kw_src contains "فيلا" or kw_src contains "دوبلكس" -%}{%- assign kw_raw = kw_raw | append: "فيلا|" -%}{%- endif -%}
+      {%- if kw_src contains "محل" or kw_src contains "تجار" -%}{%- assign kw_raw = kw_raw | append: "محل تجاري|" -%}{%- endif -%}
+      {%- if kw_src contains "مكتب" or kw_src contains "إدار" or kw_src contains "ادار" or kw_src contains "مقر" -%}{%- assign kw_raw = kw_raw | append: "مقر إداري|" -%}{%- endif -%}
+      {%- if kw_src contains "مخزن" -%}{%- assign kw_raw = kw_raw | append: "مخزن|" -%}{%- endif -%}
+      {%- if kw_src contains "روف" -%}{%- assign kw_raw = kw_raw | append: "روف|" -%}{%- endif -%}
+      {%- if transaction_type contains "ForRent" -%}{%- assign kw_raw = kw_raw | append: "إيجار|" -%}{%- endif -%}
+      {%- assign kw_raw = kw_raw | append: "عقارات مدينة نصر|سمسار طلبك|" -%}
+      {%- assign kw_list = kw_raw | split: "|" -%}
+      {%- for k in kw_list -%}
+      {%- if k != "" -%}{{ k | jsonify }}{%- unless forloop.last -%},{%- endunless -%}{%- endif -%}
+      {%- endfor -%}
+  ],
   "offers": {
     "@type": "Offer",
+    "@id": "{{ page_url }}#offer",
     "url": "{{ page_url }}",
     "priceCurrency": "EGP",
+    {%- if price_num > 0 %}
     "price": "{{ price_num }}",
+    {%- endif %}
     "availability": "https://schema.org/InStock",
     "businessFunction": "{{ transaction_type }}",
-    "seller": {"@id": "https://nasr-realestate.github.io/#semsar-talabk"}
+    "seller": { "@id": "{{ site.url }}/#semsar-talabk" },
+    "areaServed": { "@type": "City", "name": "القاهرة" },
+    {%- comment -%} وحدة السعر: إيجار شهري فقط. البيع سعر إجمالي — لا نُلبسه وحدة زمنية. {%- endcomment -%}
+    {%- if transaction_type contains "ForRent" and price_num > 0 %}
+    "priceSpecification": {
+      "@type": "UnitPriceSpecification",
+      "priceCurrency": "EGP",
+      "price": "{{ price_num }}",
+      "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
+    },
+    {%- endif %}
+    "eligibleRegion": { "@type": "Country", "name": "مصر" }
   },
   "address": {
     "@type": "PostalAddress",
     "streetAddress": {{ page.location | jsonify }},
     "addressLocality": "مدينة نصر",
     "addressRegion": "القاهرة",
+    "postalCode": "11371",
     "addressCountry": "EG"
   },
   {%- if area_num > 0 %}
@@ -94,6 +186,74 @@
   {%- if baths_num > 0 %}
   "numberOfBathroomsTotal": {{ baths_num }},
   {%- endif %}
-  "additionalType": "https://schema.org/{{ property_subtype }}"
+  "additionalType": "https://schema.org/{{ property_subtype }}",
+
+  {%- comment -%}
+    mainEntity — الكيان الفيزيائي للوحدة.
+    السبب (2026-10-16): RealEstateListing في schema.org هو صفحة عرض (WebPage)،
+    وخصائص المبنى الحقيقية (numberOfRooms/numberOfBathroomsTotal/floorSize/
+    amenityFeature/floorLevel) تنتمي إلى Accommodation/House/Place. النماذج
+    والوكلاء يقرأون الكيان المتداخل لفهم مواصفات الوحدة، والحقول أعلاه باقية
+    كما هي حتى لا يحدث أي ارتداد في نتائج البحث.
+  {%- endcomment -%}
+  "mainEntity": {
+    "@type": ["{{ property_subtype }}", "Accommodation"],
+    "@id": "{{ page_url }}#unit",
+    "name": {{ page.title | jsonify }},
+    "url": "{{ page_url }}",
+    {%- if area_num > 0 %}
+    "floorSize": {"@type": "QuantitativeValue", "value": {{ area_num }}, "unitCode": "MTK"},
+    {%- endif %}
+    {%- if rooms_num > 0 %}
+    "numberOfRooms": {{ rooms_num }},
+    {%- endif %}
+    {%- if baths_num > 0 %}
+    "numberOfBathroomsTotal": {{ baths_num }},
+    {%- endif %}
+    {%- if page.floor != nil and page.floor != "" %}
+    "floorLevel": {{ page.floor | jsonify }},
+    {%- endif %}
+    {%- comment -%}
+      additionalProperty — أوصاف نصية حقيقية من الصفحة (تشطيب/فرش/دور/شهادة).
+      استُخدمت بدل accommodationCategory لأن «الترا سوبر لوكس» ليست فئة إقامة،
+      وبدل petsAllowed لأن لا بيانات لدينا عن سياسة الحيوانات.
+    {%- endcomment -%}
+    {%- assign prop_raw = "" -%}
+    {%- if page.finish != nil and page.finish != "" -%}{%- assign prop_raw = prop_raw | append: "التشطيب::" | append: page.finish | append: "||" -%}{%- endif -%}
+    {%- if page.floor != nil and page.floor != "" -%}{%- assign prop_raw = prop_raw | append: "الدور::" | append: page.floor | append: "||" -%}{%- endif -%}
+    {%- if page.bathrooms != nil and page.bathrooms != "" -%}{%- assign prop_raw = prop_raw | append: "الحمامات::" | append: page.bathrooms | append: "||" -%}{%- endif -%}
+    {%- if amen_src contains "مفروش" -%}{%- assign prop_raw = prop_raw | append: "الفرش::مفروش||" -%}{%- endif -%}
+    {%- if page.audio_file != nil and page.audio_file != "" -%}
+      {%- comment -%} لا يمكن إدراج {{ }} داخل وسم Liquid — يُبنى الرابط أولًا {%- endcomment -%}
+      {%- assign audio_abs = page.audio_file | prepend: site.url -%}
+      {%- assign prop_raw = prop_raw | append: "وصف صوتي::" | append: audio_abs | append: "||" -%}
+    {%- endif -%}
+    {%- if prop_raw != "" %}
+    "additionalProperty": [
+      {%- assign prop_list = prop_raw | split: "||" -%}
+      {%- for pair in prop_list -%}
+      {%- if pair != "" -%}
+      {%- assign kv = pair | split: "::" -%}
+      {"@type": "PropertyValue", "name": {{ kv[0] | jsonify }}, "value": {{ kv[1] | jsonify }}}{%- unless forloop.last -%},{%- endunless -%}
+      {%- endif -%}
+      {%- endfor -%}
+    ],
+    {%- endif %}
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": {{ page.location | jsonify }},
+      "addressLocality": "مدينة نصر",
+      "addressRegion": "القاهرة",
+      "addressCountry": "EG"
+    },
+    {%- if amen_raw != "" %}
+    "amenityFeature": [
+      {%- for a in amen_list -%}
+      {%- if a != "" -%}{"@type": "LocationFeatureSpecification", "name": {{ a | jsonify }}, "value": true}{%- unless forloop.last -%},{%- endunless -%}{%- endif -%}
+      {%- endfor -%}
+    ],
+    {%- endif %}
+    "containedInPlace": { "@id": "{{ site.url }}/#semsar-talabk" }
+  }
 }
 </script>
