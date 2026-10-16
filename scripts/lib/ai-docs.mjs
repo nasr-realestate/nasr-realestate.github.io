@@ -19,11 +19,12 @@ export const SITE = 'https://nasr-realestate.github.io';
  * بعد نجاح .github/workflows/deploy-mcp-gateway.yml: بدّل status إلى 'live'،
  * وحدّث verified_at، ثم أعد التوليد:
  *   node scripts/build-ai-artifacts.mjs --out=. --skip=ai-feed.json
+ * 2026-10-16 (تحديث آلي): نُشرت البوابة وتحقّقت المصافحة الكاملة في تشغيل CI رقم 38972182779 على aca2cf6 — verdict=pass · properties=102/102 · health_status=ok · read_only=true · protocol=2025-06-18 · tools=5/5 · resources=4 · release=v1.0.0 · commit=aca2cf68f388090a0efdb92233b854749b4769ec
  */
 export const MCP_GATEWAY_STATUS = {
-  status: 'pending-deployment',
+  status: 'live',
   verified_at: '2026-10-16',
-  note: 'بوابة MCP تُنشر من _worker/ بمفاتيح Cloudflare، ولم تُضَف الأسرار بعد. استخدم المسار المضمون أدناه اليوم.',
+  note: 'البوابة منشورة ومتحقَّق منها بمصافحة MCP كاملة (initialize · tools/list · tools/call · resources/read). المسارات المضمونة أدناه تبقى متاحة بلا مصادقة كبديل دائم.',
   guaranteed_fallback: `${SITE}/api/properties.json`,
   guaranteed_paths: [
     `${SITE}/api/properties.json`,
