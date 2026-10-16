@@ -1,0 +1,67 @@
+name: Verify the published AI layer
+
+# لماذا هذا الـworkflow؟
+#   النشر الفعلي على GitHub Pages يأتي من **بناء الفرع** (master/الجذر): Jekyll
+#   يبني المستودع كما هو. وJekyll عنده طريقتان تُفسدان طبقة الذكاء بصمت:
+#     • أي ملف `.md` يبدأ بـ`---` يصير «صفحة»: يُحذف وصفه الميكانيكي ويتحوّل إلى HTML.
+#     • أي مسار يبدأ بنقطة (`.well-known/`) يُهمَل إلا إذا صُرّح به في `include`.
+#   لا يكتشف ذلك أي فحص آخر — لا اختبارات الوحدة ولا بوابة الصوت. لذلك هنا نبني
+#   بنفس بناء النشر ثم نتحقق أن كل ملف من طبقة الذكاء نُشر حرفيًا بلا تحويل.
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - '.well-known/**'
+      - 'llms.txt'
+      - 'llms-full.txt'
+      - 'ai.txt'
+      - 'mcp.json'
+      - 'ai-feed.json'
+      - 'search-data.json'
+      - 'robots.txt'
+      - 'scripts/**'
+      - '_config.yml'
+      # سلوك النشر يعتمد على إصدار github-pages (الإضافات المفعّلة افتراضيًا)،
+      # فتغيير القفل أو الـGemfile يجب أن يُعيد تشغيل هذا الفحص.
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '_properties/**'
+      - '_diag/check-ai-layer-published.mjs'
+      - '.github/workflows/verify-ai-layer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-only:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # كل الإجراءات مثبَّتة ببصمة commit كاملة (SonarCloud S7637) لا بوسم متحرّك.
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      # نفس بناء النشر بالحرف (بناء الفرع على Pages)، بلا صلاحيات نشر.
+      - name: Build with Jekyll
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: The AI layer must be published verbatim
+        run: node _diag/check-ai-layer-published.mjs
+
+      - name: Committed AI artifacts must match the generator
+        run: node scripts/check-ai-artifacts-in-sync.mjs

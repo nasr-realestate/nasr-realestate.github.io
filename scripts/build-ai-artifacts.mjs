@@ -23,6 +23,7 @@
  *    node scripts/build-ai-artifacts.mjs                 # يكتب داخل _site
  *    node scripts/build-ai-artifacts.mjs --out=.         # يكتب في الجذر (معاينة محلية)
  *    node scripts/build-ai-artifacts.mjs --check         # يتحقق فقط ولا يكتب
+ *    node scripts/build-ai-artifacts.mjs --out=. --skip=ai-feed.json  # النشر الجذري
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -56,10 +57,19 @@ const flag = (name, fallback = null) => {
 
 const OUT_DIR = path.resolve(ROOT, String(flag('out', '_site')));
 const CHECK_ONLY = Boolean(flag('check', false));
+// ملفات لا يُلمسها المولّد في وضع النشر إلى الجذر: `--skip=ai-feed.json`
+// (المصدر الجذري لـ ai-feed.json قالبه Liquid يبنيه Jekyll، فلا يُستبدل بمخرج ثابت).
+const SKIP = new Set(
+  String(flag('skip', ''))
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean),
+);
 
 /* ─────────────────────────── أدوات ─────────────────────────── */
 
 function write(relative, contents) {
+  if (SKIP.has(relative) || SKIP.has(relative.split('/')[0])) return { relative, bytes: 0, skipped: true };
   const target = path.join(OUT_DIR, relative);
   const body = typeof contents === 'string' ? contents : `${JSON.stringify(contents, null, 2)}\n`;
   if (CHECK_ONLY) return { relative, bytes: Buffer.byteLength(body) };

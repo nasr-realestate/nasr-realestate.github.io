@@ -180,23 +180,35 @@ export function renderLlmsFull(properties) {
   return out.join('\n');
 }
 
-/** صفحة Markdown مستقلة لكل عقار — تُخدَم على المسار /api/properties/<slug>.md */
+/**
+ * صفحة Markdown مستقلة لكل عقار — تُخدم على المسار /api/properties/<slug>.md
+ *
+ * ⚠️ لا تُعد إلى front matter بين علامتي `---`:
+ *    ناشر الموقع (بناء الفرع على GitHub Pages) يعدّ Jekyll أي ملف `.md`
+ *    يبدأ بـ`---` «صفحة»، فيحذف الـfront matter ويحوّل النص
+ *    إلى HTML — أي يختفي الوصف الميكانيكي وتتغير صيغة الخدمة.
+ *    التعليق أدناه يحفظ نفس الحقول بـJSON واحد يقرأه الجهاز والنموذج،
+ *    ويُبقي الملف «ملفًا ثابتًا» يُخدم كما هو.
+ */
 export function renderPropertyMarkdown(p) {
+  const meta = {
+    title: p.title,
+    slug: p.slug,
+    transaction: p.transaction,
+    propertyType: p.propertyType,
+    ...(Number.isFinite(p.priceNumeric) ? { price: p.priceNumeric } : {}),
+    currency: 'EGP',
+    ...(Number.isFinite(p.areaNumeric) ? { area_sqm: p.areaNumeric } : {}),
+    ...(Number.isFinite(p.roomsNumeric) ? { rooms: p.roomsNumeric } : {}),
+    ...(Number.isFinite(p.bathsNumeric) ? { baths: p.bathsNumeric } : {}),
+    ...(p.location ? { location: p.location } : {}),
+    ...(p.zone ? { zone: p.zone } : {}),
+    ...(p.datePosted ? { date_posted: p.datePosted } : {}),
+  };
+  // مانع إغلاق التعليق مبكرًا: `--` لا تظهر في JSON إلا داخل النصوص، فنُهرّبها.
+  const metaJson = JSON.stringify(meta).replace(/--/g, '\\u002d\\u002d');
   const out = [];
-  out.push('---');
-  out.push(`title: "${p.title.replace(/"/g, '\\"')}"`);
-  out.push(`slug: "${p.slug}"`);
-  out.push(`transaction: "${p.transaction}"`);
-  out.push(`propertyType: "${p.propertyType}"`);
-  if (Number.isFinite(p.priceNumeric)) out.push(`price: ${p.priceNumeric}`);
-  out.push('currency: "EGP"');
-  if (Number.isFinite(p.areaNumeric)) out.push(`area_sqm: ${p.areaNumeric}`);
-  if (Number.isFinite(p.roomsNumeric)) out.push(`rooms: ${p.roomsNumeric}`);
-  if (Number.isFinite(p.bathsNumeric)) out.push(`baths: ${p.bathsNumeric}`);
-  if (p.location) out.push(`location: "${p.location.replace(/"/g, '\\"')}"`);
-  if (p.zone) out.push(`zone: "${p.zone.replace(/"/g, '\\"')}"`);
-  if (p.datePosted) out.push(`date_posted: "${p.datePosted}"`);
-  out.push('---');
+  out.push(`<!-- ai-property ${metaJson} -->`);
   out.push('');
   out.push(`# ${p.title}`);
   out.push('');

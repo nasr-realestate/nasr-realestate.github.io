@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "name": "semsar-talabk",
+  "title": "سمسار طلبك — بوابة عقارات مدينة نصر",
+  "description": "خادم MCP للقراءة فقط يعرض الوحدات المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة) ويسمح لأي نموذج أو وكيل بالبحث فيها واسترجاع تفاصيلها واقتباسها بالإسناد.",
+  "version": "1.0.0",
+  "homepage": "https://nasr-realestate.github.io",
+  "documentation": "https://nasr-realestate.github.io/llms.txt",
+  "updated_at": "2026-10-16T20:05:25.110Z",
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "https://nasr-ai-gateway.footcai-555.workers.dev/mcp",
+    "protocol_version": "2025-06-18",
+    "methods": [
+      "initialize",
+      "tools/list",
+      "tools/call",
+      "resources/list",
+      "resources/read",
+      "prompts/list"
+    ],
+    "supports_get_sse": false
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    },
+    "resources": {
+      "subscribe": false,
+      "listChanged": false
+    },
+    "prompts": {
+      "listChanged": false
+    }
+  },
+  "tools": [
+    {
+      "name": "search_properties",
+      "title": "البحث في العقارات",
+      "description": "ابحث في الوحدات المعروضة بموقع سمسار طلبك (مدينة نصر والقاهرة الجديدة). يدعم التصفية بنوع المعاملة (sale/rent)، نوع العقار (apartment/villa/shop/office/warehouse)، المنطقة، نطاق السعر، نطاق المساحة، عدد الغرف، والتشطيب. يُعيد قائمة مضغوطة قابلة للاقتباس مع رابط كل وحدة."
+    },
+    {
+      "name": "get_property",
+      "title": "تفاصيل وحدة",
+      "description": "يُرجع البيانات الكاملة لوحدة واحدة بمعرّفها (slug) أو برابطها."
+    },
+    {
+      "name": "market_summary",
+      "title": "ملخص السوق",
+      "description": "إحصاءات مجمّعة من الأسعار المعروضة: العدد، الوسيط، الأقل والأعلى لكل نوع ومعاملة، وتوزيع المناطق. مشتقة من الأسعار المعروضة وليست تقييمًا معتمدًا."
+    },
+    {
+      "name": "list_zones",
+      "title": "المناطق المخدومة",
+      "description": "قائمة المناطق والشوارع المخدومة مع عدد الوحدات المتاحة في كل منطقة."
+    },
+    {
+      "name": "get_contact",
+      "title": "بيانات التواصل",
+      "description": "بيانات التواصل الرسمية مع الوسيط طارق طنطاوي: واتساب، هاتف، بريد، عنوان المكتب، ومواعيد العمل."
+    }
+  ],
+  "resources": [
+    {
+      "uri": "semsar://catalog",
+      "name": "كتالوج الوحدات",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "semsar://llms-full",
+      "name": "الكتالوج الكامل (Markdown)",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "semsar://contact",
+      "name": "بيانات التواصل",
+      "mimeType": "application/json"
+    }
+  ],
+  "rest": {
+    "properties": "https://nasr-realestate.github.io/api/properties.json",
+    "property": "https://nasr-realestate.github.io/api/properties/{slug}.json",
+    "markdown": "https://nasr-realestate.github.io/api/properties/{slug}.md",
+    "openapi": "https://nasr-realestate.github.io/api/openapi.json"
+  },
+  "counts": {
+    "properties": 102
+  },
+  "contact": {
+    "email": "samsar.talabak@mailo.com",
+    "whatsapp": "+201147758857"
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "سمسار طلبك — واجهة العقارات",
+    "version": "1.0.0",
+    "summary": "واجهة قراءة فقط لكل الوحدات المعروضة على موقع سمسار طلبك.",
+    "description": "واجهة ثابتة (static JSON) بلا مصادقة، مبنية من مجموعة _properties في مستودع الموقع. كل الاستجابات JSON وتتضمّن دائمًا schema_version. الأسعار أسعار طلب قابلة للتفاوض بالجنيه المصري.",
+    "contact": {
+      "name": "طارق طنطاوي — سمسار طلبك",
+      "email": "samsar.talabak@mailo.com",
+      "url": "https://nasr-realestate.github.io"
+    },
+    "license": {
+      "name": "الاقتباس مسموح مع الإسناد",
+      "url": "https://nasr-realestate.github.io/llms.txt"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://nasr-realestate.github.io"
+    }
+  ],
+  "tags": [
+    {
+      "name": "properties",
+      "description": "الوحدات المعروضة"
+    },
+    {
+      "name": "meta",
+      "description": "بيانات وصفية وفهارس"
+    }
+  ],
+  "paths": {
+    "/ai-feed.json": {
+      "get": {
+        "tags": [
+          "properties"
+        ],
+        "operationId": "getAiFeed",
+        "summary": "التغذية الكاملة للعقارات",
+        "description": "المصدر الأساسي الذي يستهلكه وكيل الموقع. يتضمّن كل الوحدات مع السعر الرقمي والمساحة والغرف.",
+        "responses": {
+          "200": {
+            "description": "التغذية",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/properties.json": {
+      "get": {
+        "tags": [
+          "properties"
+        ],
+        "operationId": "listProperties",
+        "summary": "كل الوحدات + الفهارس",
+        "responses": {
+          "200": {
+            "description": "الكتالوج",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/properties/{slug}.json": {
+      "get": {
+        "tags": [
+          "properties"
+        ],
+        "operationId": "getProperty",
+        "summary": "وحدة واحدة",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرّف الوحدة",
+            "example": "commercial-hq-rent-kabul-street-nasr-city-130m"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "الوحدة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Property"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "غير موجودة"
+          }
+        }
+      }
+    },
+    "/api/properties/{slug}.md": {
+      "get": {
+        "tags": [
+          "properties"
+        ],
+        "operationId": "getPropertyMarkdown",
+        "summary": "وحدة واحدة بصيغة Markdown (مناسبة للنماذج)",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/index.json": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "operationId": "getApiIndex",
+        "summary": "دليل الواجهة ونقاط الوصول",
+        "responses": {
+          "200": {
+            "description": "الدليل"
+          }
+        }
+      }
+    },
+    "/llms.txt": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "operationId": "getLlmsTxt",
+        "summary": "دليل الموقع للنماذج",
+        "responses": {
+          "200": {
+            "description": "نص"
+          }
+        }
+      }
+    },
+    "/llms-full.txt": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "operationId": "getLlmsFull",
+        "summary": "الكتالوج الكامل كنص Markdown",
+        "responses": {
+          "200": {
+            "description": "نص"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Property": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "url",
+          "transaction",
+          "propertyType"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "transaction": {
+            "type": "string",
+            "enum": [
+              "sale",
+              "rent"
+            ]
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "apartment",
+              "villa",
+              "shop",
+              "office",
+              "warehouse",
+              "clinic"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "zone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "price": {
+            "type": "string"
+          },
+          "priceNumeric": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "priceIsMonthly": {
+            "type": "boolean"
+          },
+          "currency": {
+            "type": "string",
+            "const": "EGP"
+          },
+          "area": {
+            "type": "string"
+          },
+          "areaNumeric": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "rooms": {
+            "type": "string"
+          },
+          "roomsNumeric": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "baths": {
+            "type": "string"
+          },
+          "bathsNumeric": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "floor": {
+            "type": "string"
+          },
+          "finish": {
+            "type": "string"
+          },
+          "furnished": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "furnished",
+              "unfurnished",
+              null
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "status": {
+            "type": "string"
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "datePosted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "facets": {
+            "type": "object"
+          }
+        }
+      },
+      "Feed": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Catalog"
+          }
+        ]
+      }
+    }
+  }
+}

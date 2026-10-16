@@ -54,6 +54,12 @@ jobs:
       - name: Install dev dependencies for the local renderer
         run: npm ci --no-audit --no-fund --ignore-scripts
 
+      # طبقة الذكاء تُنشر من ملفات محفوظة في الجذر (النشر الفعلي = بناء الفرع على
+      # Pages، لا مخرَج Actions)، فهذا الفحص يمنع أن تبقى النسخة المنشورة قديمة
+      # بعد أي تعديل على _properties أو على أدوات المُولّد. بلا npm: المُولّد مستقل.
+      - name: AI artifacts committed at the root must match the generator
+        run: node scripts/check-ai-artifacts-in-sync.mjs
+
       - name: Full suite — advisory (the two known failures stay visible here)
         continue-on-error: true
         run: |
