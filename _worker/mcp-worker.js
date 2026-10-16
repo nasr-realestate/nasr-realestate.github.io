@@ -102,11 +102,11 @@ function clampLimit(v, fallback = 10) {
 
 let memCache = { at: 0, data: null };
 
-async function fetchWithTimeout(url, init = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+async function fetchWithTimeout(url, init = {}, timeoutMs = FETCH_TIMEOUT_MS, fetchImpl = fetch) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
+    return await fetchImpl(url, { ...init, signal: ctrl.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -120,7 +120,7 @@ export async function loadFeed(fetchImpl = fetch) {
     const res = await fetchWithTimeout(FEED_URL, {
       headers: { Accept: "application/json" },
       cf: { cacheTtl: CACHE_TTL_S, cacheEverything: true },
-    }, FETCH_TIMEOUT_MS);
+    }, FETCH_TIMEOUT_MS, fetchImpl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data || typeof data !== "object" || !Array.isArray(data.properties)) {
@@ -580,9 +580,12 @@ async function readResource(uri, deps = {}) {
     return { uri, mimeType: "application/json", text: JSON.stringify(payload, null, 2) };
   }
   if (uri === "semsar://llms-full") {
+    // نفس قابلية الحقن الموجودة في loadFeed — بدونها كان هذا المسار
+    // يذهب إلى الشبكة الحقيقية داخل الاختبارات (انظر HERMETIC_NETWORK في
+    // _worker/tests/mcp-gateway.test.mjs).
     const fetchImpl = deps.fetchImpl ?? fetch;
     try {
-      const res = await fetchWithTimeout(LLMS_FULL_URL, { headers: { Accept: "text/markdown" }, cf: { cacheTtl: CACHE_TTL_S, cacheEverything: true } });
+      const res = await fetchWithTimeout(LLMS_FULL_URL, { headers: { Accept: "text/markdown" }, cf: { cacheTtl: CACHE_TTL_S, cacheEverything: true } }, FETCH_TIMEOUT_MS, fetchImpl);
       if (res.ok) return { uri, mimeType: "text/markdown", text: await res.text() };
     } catch { /* نُكمل إلى البديل */ }
     const fallback = sortByDateDesc(list)

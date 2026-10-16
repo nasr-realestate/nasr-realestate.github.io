@@ -7,7 +7,7 @@
 // التشغيل:
 //   node --test _worker/tests/mcp-gateway.test.mjs
 
-import test from "node:test";
+import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +15,31 @@ import { fileURLToPath } from "node:url";
 
 import worker, { __test, RELEASE, callTool, filterProperties, buildStats, compactProperty, handleRpc } from "../mcp-worker.js";
 import { loadProperties } from "../../scripts/lib/properties.mjs";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERMETIC_NETWORK — الشبكة مقطوعة في هذا الملف بالكامل
+   ───────────────────────────────────────────────────────────────────────────
+   ⚠️ عطل حقيقي وقع في CI (2026-10-16): اختباران كانا يعتمدان على أن الطلب
+   الحقيقي إلى https://nasr-realestate.github.io/ai-feed.json **يفشل**:
+      • «health reports degraded + 503» — يفترض فشل التغذية فيُتوقّع 503.
+      • «a failing upstream feed produces a clear error» — يفترض نفس الفشل.
+   وقد نجحا محليًا فقط لأن بيئة التطوير تحجب هذه النطاقات أصلًا، بينما في
+   GitHub Actions الشبكة تعمل: التغذية الحيّة تُقرأ بنجاح ⇒ 200 و isError=false
+   ⇒ إخفاق البناء. الاختبار الذي يعتمد على حالة الشبكة ليس اختبارًا.
+
+   الحل: نستبدل globalThis.fetch بدالة تفشل دائمًا **قبل** أي اختبار، وتسجّل
+   كل محاولة. أي طلب حقيقي يصبح مستحيلًا، وأي اختبار يحتاج تغذية يحقنها
+   صراحةً (cache أو fetchImpl) — فلا يعتمد شيء على الشبكة أو على كونها محجوبة.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const REAL_FETCH = globalThis.fetch;
+const NETWORK_ATTEMPTS = [];
+const OFFLINE_FETCH = async (url) => {
+  NETWORK_ATTEMPTS.push(String(url));
+  throw new Error(`NETWORK_DISABLED_IN_TESTS: ${url}`);
+};
+
+before(() => { globalThis.fetch = OFFLINE_FETCH; });
+after(() => { globalThis.fetch = REAL_FETCH; });
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..", "..");
@@ -268,6 +293,7 @@ test("unknown tool names fail loudly with the list of valid tools", async () => 
 });
 
 test("a failing upstream feed produces a clear error instead of an empty-but-happy answer", async () => {
+  // الشبكة مقطوعة في هذا الملف (انظر HERMETIC_NETWORK)، فالتغذية تفشل حتمًا.
   __test.resetCache();
   const res = await post({ jsonrpc: "2.0", id: 13, method: "tools/call", params: { name: "search_properties", arguments: {} } }, { });
   assert.equal(res.json.result.isError, true);
@@ -295,8 +321,18 @@ test("resources/list + resources/read stream the same source of truth", async ()
   assert.equal(parsed.properties.length, FEED.total_count);
   assert.equal(catalog.json.result.contents[0].mimeType, "application/json");
 
+  // مسار llms-full يحاول الشبكة ثم يسقط إلى الكتالوج المحلي — وهو السلوك
+  // الصحيح تمامًا في بيئة بلا شبكة، ولذلك نتحقق من المحتوى لا من المصدر.
   const llms = await post({ jsonrpc: "2.0", id: 22, method: "resources/read", params: { uri: "semsar://llms-full" } }, {});
   assert.equal(llms.json.result.contents[0].uri, "semsar://llms-full");
+  assert.equal(llms.json.result.contents[0].mimeType, "text/markdown");
+  assert.match(llms.json.result.contents[0].text, /كتالوج سمسار طلبك|سمسار طلبك/);
+
+  // والحقن الصريح يعمل أيضًا: تغذية llms-full عبر fetchImpl بلا شبكة
+  const injected = await callTool("list_zones", {}, { fetchImpl: mockFetch({ llms: "# نسخة محقونة\n" }) });
+  assert.ok(injected.structuredContent.total_zones > 0);
+  const viaInjection = await post({ jsonrpc: "2.0", id: 25, method: "resources/read", params: { uri: "semsar://llms-full" } });
+  assert.equal(viaInjection.json.result.contents[0].uri, "semsar://llms-full");
 
   const missing = await post({ jsonrpc: "2.0", id: 23, method: "resources/read", params: { uri: "semsar://nope" } });
   assert.equal(missing.json.error.code, -32002);
@@ -348,6 +384,8 @@ test("REST endpoints mirror the MCP surface and clamp the limit", async () => {
 });
 
 test("health reports degraded + 503 when the feed cannot be read at all", async () => {
+  // لا حقن هنا عن قصد: نريد اختبار السلوك الافتراضي (fetch العالمي) داخل
+  // بيئة بلا شبكة إطلاقًا — وهو ما يمنع عودة الاعتماد على حالة الشبكة.
   __test.resetCache();
   const res = await worker.fetch(new Request("https://nasr-ai-gateway.example/health"), {}, {});
   assert.equal(res.status, 503);
@@ -390,6 +428,18 @@ test("buildStats never divides by zero and omits empty buckets", () => {
   const s = buildStats([{ transaction: "sale", propertyType: "apartment", priceNumeric: 1000, zone: "x" }]);
   assert.equal(s.overall.sale.median, 1000);
   assert.equal(s.overall.rent, null);
+});
+
+test("the suite is hermetic: no test may reach the real network", () => {
+  // لو نُفِّذ طلب حقيقي في أي اختبار أعلاه لظهر في NETWORK_ATTEMPTS، ولأن
+  // الدالة ترمي دائمًا فلن تستطيع أي تغذية حيّة أن تُغيّر النتائج.
+  assert.notEqual(globalThis.fetch, REAL_FETCH, "the offline stub must stay installed for the whole file");
+  const hosts = new Set(NETWORK_ATTEMPTS.map((u) => new URL(u).host));
+  for (const host of hosts) {
+    assert.equal(host, "nasr-realestate.github.io", `unexpected outbound host in tests: ${host}`);
+  }
+  // هناك محاولات متوقّعة (اختبارات الفشل الصريح) — لكنها لم تنجح قط.
+  assert.ok(NETWORK_ATTEMPTS.every((u) => u.startsWith("https://nasr-realestate.github.io/")));
 });
 
 test("compactProperty publishes a stable contract for downstream models", () => {
