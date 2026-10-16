@@ -138,6 +138,20 @@ function diagnose(res) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * تنقية أي نص قبل كتابته إلى السجل أو تضمينه في سطر توثيقي.
+ * المدخلات هنا قد تأتي من argv أو من GitHub API؛ لا تُطبع خامًا حتى لا تُزوَّر
+ * سطور السجل أو أوامر GitHub Actions بسطر جديد مزروع (Log Injection).
+ */
+function cleanLog(value, maxLength = 500) {
+  return String(value ?? '')
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .slice(0, maxLength);
+}
+
 /* ═══════════════════════════ أدوات التسجيل ═══════════════════════════ */
 
 /**
@@ -426,7 +440,7 @@ const NOTICE_TITLE_PASS = 'MCP Gateway handshake passed';
 const NOTICE_TITLE_FAIL = 'MCP Gateway handshake failed';
 
 const evidenceOf = (report, stepId) => report.steps.find((entry) => entry.id === stepId)?.evidence ?? {};
-const formatFacts = (facts) => Object.entries(facts).map(([key, value]) => `${key}=${value}`).join(' · ');
+const formatFacts = (facts) => Object.entries(facts).map(([key, value]) => `${key}=${cleanLog(value, 160)}`).join(' · ');
 
 /** يحلّل سطر الوقائع: `verdict=pass · properties=102/102 · …` */
 function parseMachineLine(message) {
@@ -712,27 +726,49 @@ function regenerateAndGuard() {
   return results;
 }
 
+/** يرفض إعلان live برسالة واحدة آمنة للسجل، وبنفس العبارة دائمًا: لا ملف يُمَس. */
+function refuseFlip(reason) {
+  console.error(`❌ رفضتُ إعلان live: ${cleanLog(reason)}`);
+  console.error('   لم يُمَس أي ملف. أصلح السبب ثم أعد المحاولة — لا تكتب live يدويًا.');
+  return 2;
+}
+
+/** رأس commit قصير لا يُطبع إلا إن كان SHA-1 كامل الصيغة؛ غير ذلك يبقى unknown. */
+function shortSha(value) {
+  const text = String(value ?? '');
+  return /^[0-9a-f]{40}$/i.test(text) ? text.slice(0, 7).toLowerCase() : 'unknown';
+}
+
+/** يقرأ دليل CI ويحوّله إلى وقائع وسطر توثيق؛ أي عطل في القراءة = دليل مرفوض. */
+async function ciEvidence(catalog, ciRun) {
+  let verified;
+  try {
+    verified = await verifyCiRun(ciRun, catalog);
+  } catch (error) {
+    // أي عطل في قراءة الدليل = رفض، لا استثناء متطاير: لا يُمَس أي ملف.
+    verified = { ok: false, reason: String(error?.message ?? error) };
+  }
+  if (!verified.ok) return { ok: false, reason: verified.reason };
+
+  const runLabel = cleanLog(ciRun, 32);
+  const sha = shortSha(verified.run.head_sha);
+  console.log(`✅ دليل CI مقبول: تشغيل ${runLabel} · ${sha} · خطوات النشر والدخان والمصافحة كلها success`);
+  return {
+    ok: true,
+    facts: verified.facts,
+    evidenceLine: cleanLog(`نُشرت البوابة وتحقّقت المصافحة الكاملة في تشغيل CI رقم ${runLabel} على ${sha} — ${formatFacts(verified.facts)}`),
+  };
+}
+
 async function flip(catalog, options) {
   let evidenceLine = null;
   let facts = null;
 
   if (options.ciRun) {
-    let verified;
-    try {
-      verified = await verifyCiRun(options.ciRun, catalog);
-    } catch (error) {
-      // أي عطل في قراءة الدليل = رفض، لا استثناء متطاير: لا يُمَس أي ملف.
-      verified = { ok: false, reason: String(error?.message ?? error) };
-    }
-    if (!verified.ok) {
-      console.error(`❌ رفضتُ إعلان live: ${verified.reason}`);
-      console.error('   لم يُمَس أي ملف. أصلح السبب ثم أعد المحاولة — لا تكتب live يدويًا.');
-      return 2;
-    }
-    facts = verified.facts;
-    const sha = String(verified.run.head_sha).slice(0, 7);
-    console.log(`✅ دليل CI مقبول: تشغيل ${options.ciRun} · ${sha} · خطوات النشر والدخان والمصافحة كلها success`);
-    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة الكاملة في تشغيل CI رقم ${options.ciRun} على ${sha} — ${formatFacts(facts)}`;
+    const evidence = await ciEvidence(catalog, options.ciRun);
+    if (!evidence.ok) return refuseFlip(evidence.reason);
+    facts = evidence.facts;
+    evidenceLine = evidence.evidenceLine;
   } else {
     const result = await handshake(catalog);
     const report = buildReport(catalog, result, 'direct handshake');
@@ -745,7 +781,7 @@ async function flip(catalog, options) {
       return 2;
     }
     facts = factsFromReport(report);
-    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة الكاملة مباشرةً من هذا الجهاز (${report.generated_at}) — ${formatFacts(facts)}`;
+    evidenceLine = cleanLog(`نُشرت البوابة وتحقّقت المصافحة الكاملة مباشرةً من هذا الجهاز (${report.generated_at}) — ${formatFacts(facts)}`);
   }
 
   console.log(`   القراءة الحيّة: ${formatFacts(facts)}`);
@@ -783,7 +819,7 @@ function parseArgs(argv) {
     else if (arg === '--json') {
       options.json = argv[i + 1] ?? null;
       i += 1;
-    } else if (arg !== '--help' && arg !== '-h') console.error(`⚠️  وسيط غير معروف: ${arg}`);
+    } else if (arg !== '--help' && arg !== '-h') console.error(`⚠️  وسيط غير معروف: ${cleanLog(arg, 80)}`);
   }
   return options;
 }
