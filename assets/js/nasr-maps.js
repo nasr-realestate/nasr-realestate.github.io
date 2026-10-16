@@ -1,12 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════════
-   سمسار طلبك — نظام الخرائط العملي (v2 — 2026-09-26)
+   سمسار طلبك — نظام الخرائط العملي (v3 — 2026-10-16)
    ─────────────────────────────────────────────────────────────────
-   • Leaflet 1.9.4 (unpkg + jsdelivr احتياطي) — تحميل كسول عند الحاجة
-   • Tiles: CartoDB Voyager (labels إنجليزية واضحة) → Stadia Alidade احتياطي
+   • خرائط العقارات + خريطة المكتب: OSM embed (iframe) — صفر مفاتيح
+     https://www.openstreetmap.org/export/embed.html?bbox=…&layer=mapnik&marker=…
+   • مُنتقي الموقع (agent.html): Leaflet 1.9.4 + بلاطات OSM القياسية فقط
+     https://tile.openstreetmap.org/{z}/{x}/{y}.png مع إسناد إلزامي
    • Geocoding: Photon (lang=en) → Nominatim (accept-language=en) احتياطي
    • بدون أي API key • بدون تخزين دائم (ذاكرة الصفحة فقط)
    • Rate limit: طلب واحد/ثانية + AbortController + كاش ذاكرة للجلسة
-   • لا pin كاذب: بدون GPS موثوق = دائرة تقريبية أو بدون خريطة
+   • لا pin كاذب: بدون GPS موثوق = إطار نطاق 500م أو بدون خريطة
+   • كشف فشل حقيقي لا يعتمد على tileerror وحده:
+     مؤقّت 8 ثوانٍ + فحص صحة المزوّد بلاطة + كشف البلاطة المزوّرة/الموسومة
+     (HTTP 200 بصورة بديلة = فشل، لا نجاح)
+   ─────────────────────────────────────────────────────────────────
+   ملاحظة سياسة OSM: embed خدمة تطوعية (osm.org) وبلاطات tile.openstreetmap.org
+   «not intended for commercial use» وقد تُحظر المواقع المخالفة لشروط الاستخدام
+   (operations/osmfoundation.org + switch2osm.org/using-tiles). لذلك التدهور
+   الرشيق عند الفشل إلزامي: nm-loaded + nm-failed + .nm-fail-msg + رابط Google Maps.
    ═══════════════════════════════════════════════════════════════════ */
 (function (window, document) {
   'use strict';
@@ -23,15 +33,11 @@
   };
 
   const TILES = [
-    { // أساسي — CartoDB Voyager (إنجليزي)
-      url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      opts: { subdomains: 'abcd', maxZoom: 20,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' }
-    },
-    { // احتياطي — Stadia Alidade Smooth (إنجليزي)
-      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-      opts: { maxZoom: 20,
-        attribution: '&copy; <a href="https://stadiamaps.com/" target="_blank" rel="noopener">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }
+    { // المزوّد الوحيد — بلاطات OpenStreetMap القياسية (بدون مفاتيح + إسناد إلزامي)
+      // سياسة الاستخدام: openstreetmap.org/help/faq و switch2osm.org/using-tiles
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      opts: { maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }
     }
   ];
 
@@ -129,6 +135,203 @@
     return _leafletPromise;
   }
 
+  /* ═══ 3-bis) OSM embed + فحص صحة البلاطات + كشف البلاطة المزوّرة ═══
+     D1: خرائط العقارات والمكتب = iframe لـ osm.org/export/embed (صفر مفاتيح).
+     D4: كشف الفشل لا يعتمد على onload وحده (onload يُطلق حتى لصفحة خطأ)،
+     ولا على tileerror وحده (مزوّد قد يعيد HTTP 200 بصورة موسومة/بديلة):
+       1) مؤقّت زمني 8 ثوانٍ لـ onload الإطار.
+       2) فحص صحة المزوّد: تحميل بلاطة اختبارية من tile.openstreetmap.org.
+       3) كشف البلاطة المزوّرة: تحليل بكسلات البلاطة على canvas (عند توفر CORS)
+          وإلا بصمة/حجم البلاطة (256 أو 512) — بدون CORS لا يمكن قراءة محتوى
+          نطاق آخر إطلاقًا، والبديل الموثّق هو فحص الأبعاد + فحص التحميل. */
+  const OSM_EMBED_BASE = 'https://www.openstreetmap.org/export/embed.html';
+  const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const EMBED_WATCHDOG_MS = 8000;  // onload لم يُطلق خلال 8 ثوانٍ = فشل
+  const PROBE_TIMEOUT_MS = 6000;
+  const PROBE_ZOOM = 13;
+
+  function lngToTileX(lng, z) {
+    return Math.floor(((lng + 180) / 360) * Math.pow(2, z));
+  }
+  function latToTileY(lat, z) {
+    const rad = (lat * Math.PI) / 180;
+    return Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * Math.pow(2, z));
+  }
+
+  /** نطاق 500م (أو أي نصف قطر) حول نقطة: OSM bbox ترتيبها minLon,minLat,maxLon,maxLat. */
+  function bboxAround(lat, lng, meters) {
+    const dLat = meters / 111320;
+    const dLng = meters / (111320 * Math.cos((lat * Math.PI) / 180));
+    return {
+      minLon: lng - dLng, minLat: lat - dLat,
+      maxLon: lng + dLng, maxLat: lat + dLat
+    };
+  }
+
+  /** رابط OSM embed: bbox=minLon%2CminLat%2CmaxLon%2CmaxLat و marker=lat%2Clng. */
+  function osmEmbedUrl(lat, lng, meters) {
+    const b = bboxAround(lat, lng, meters);
+    const q = (n) => encodeURIComponent(String(Math.round(n * 1e6) / 1e6));
+    return OSM_EMBED_BASE + '?bbox=' + [b.minLon, b.minLat, b.maxLon, b.maxLat].map(q).join('%2C') +
+      '&layer=mapnik&marker=' + q(lat) + '%2C' + q(lng);
+  }
+
+  /** بلاطة اختبارية فوق مدينة نصر (عمرانية — لا تصلح لها صورة مسطّحة/موسومة). */
+  function osmProbeTileUrl() {
+    return OSM_TILES.replace('{z}', String(PROBE_ZOOM))
+      .replace('{x}', String(lngToTileX(NASR_CENTER[1], PROBE_ZOOM)))
+      .replace('{y}', String(latToTileY(NASR_CENTER[0], PROBE_ZOOM)));
+  }
+
+  function probeUrlFor(t) {
+    if (typeof t.probe === 'string') return t.probe;
+    return String(t.url)
+      .replace('{s}', (t.opts && t.opts.subdomains) ? String(t.opts.subdomains)[0] : 'a')
+      .replace('{z}', String(PROBE_ZOOM))
+      .replace('{x}', String(lngToTileX(NASR_CENTER[1], PROBE_ZOOM)))
+      .replace('{y}', String(latToTileY(NASR_CENTER[0], PROBE_ZOOM)))
+      .replace('{r}', '');
+  }
+
+  /** بصمة الأبعاد (بدون CORS): بلاطة قياسية 256×256 (أو 512×512). */
+  function classifyDimensions(img) {
+    const w = img.naturalWidth | 0, h = img.naturalHeight | 0;
+    if ((w === 256 || w === 512) && h === w) return { ok: true, method: 'size', reason: 'dimensions-ok' };
+    return { ok: false, method: 'size', reason: 'unexpected-tile-size:' + w + 'x' + h };
+  }
+
+  /** كشف البلاطة «ذات اللون الواحد أو الموسومة» من بكسلات RGBA (نفس منطق علامة CARTO). */
+  function classifyTilePixels(data, w, h) {
+    const hist = new Map();
+    let total = 0;
+    for (let i = 0; i + 2 < data.length; i += 16) { // عيّنة كل 4 بكسلات
+      const k = ((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3);
+      hist.set(k, (hist.get(k) || 0) + 1);
+      total++;
+    }
+    if (!total) return { ok: false, method: 'canvas', reason: 'empty-tile' };
+    let max = 0;
+    hist.forEach((c) => { if (c > max) max = c; });
+    const dominant = max / total;
+    // خريطة حقيقية فوق مدينة = ألوان كثيرة؛ بلاطة موسومة/ملونة واحدة = لون مسيطر
+    const forged = dominant >= 0.85 || (hist.size <= 8 && dominant >= 0.6);
+    return {
+      ok: !forged,
+      method: 'canvas',
+      reason: forged ? 'flat-or-watermarked-tile' : 'pixels-ok',
+      dominantFraction: Math.round(dominant * 1000) / 1000,
+      distinctColors: hist.size
+    };
+  }
+
+  /**
+   * classifyTile(img, opts) → { ok, method, reason }
+   * يحاول تحليل البكسلات (canvas) — إن تعذّر (tainted/بلا CORS) يكتفي ببصمة الأبعاد.
+   */
+  function classifyTile(img, opts) {
+    opts = opts || {};
+    const dims = classifyDimensions(img);
+    if (!dims.ok) return dims;
+    try {
+      const w = img.naturalWidth | 0, h = img.naturalHeight | 0;
+      const canvas = opts.createCanvas ? opts.createCanvas(w, h) : document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext && canvas.getContext('2d');
+      if (!ctx) throw new Error('no-2d');
+      ctx.drawImage(img, 0, 0);
+      return classifyTilePixels(ctx.getImageData(0, 0, w, h).data, w, h);
+    } catch (_) {
+      return Object.assign({}, dims, { reason: 'cors-unavailable-dimensions-only' });
+    }
+  }
+
+  /**
+   * probeTileProvider(url, opts) → Promise<{ ok, method, reason }>
+   * 1) صورة بدون CORS: نجاح التحميل + بصمة الأبعاد (onerror = المزوّد واقع).
+   * 2) صورة مع CORS (اختيارية): تحليل البكسلات لكشف العلامة المائية/اللون الواحد.
+   * opts.imgFactory / opts.createCanvas للحقن في الاختبارات الآلية.
+   */
+  function probeTileProvider(url, opts) {
+    opts = opts || {};
+    const makeImg = opts.imgFactory || (() => new Image());
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (res) => { if (!done) { done = true; clearTimeout(timer); resolve(res); } };
+      const timer = setTimeout(() => finish({ ok: false, method: 'timeout', reason: 'probe-timeout' }),
+        opts.timeout || PROBE_TIMEOUT_MS);
+
+      const plain = makeImg();
+      plain.onload = () => {
+        const dims = classifyDimensions(plain);
+        if (!dims.ok) return finish(dims);
+        const cors = makeImg();
+        cors.crossOrigin = 'anonymous';
+        cors.onload = () => finish(classifyTile(cors, opts));
+        cors.onerror = () => finish(Object.assign({}, dims, { reason: 'cors-unavailable-dimensions-only' }));
+        cors.src = url;
+      };
+      plain.onerror = () => finish({ ok: false, method: 'network', reason: 'probe-load-failed' });
+      plain.src = url;
+    });
+  }
+
+  function failMessageHtml(gmapsHref) {
+    return '<div class="nm-fail-msg"><i class="fas fa-map"></i><span>تعذّر تحميل الخريطة حاليًا</span>' +
+      '<a href="' + esc(gmapsHref || '#') + '" target="_blank" rel="noopener">افتح الموقع في Google Maps</a></div>';
+  }
+
+  /**
+   * embedOsmMap(mapEl, opts) — يحقن iframe خرائط OSM داخل .nm-map-target.
+   * opts: { lat, lng, meters, title, wrap, onFail, watchdogMs?, probeTimeoutMs?, imgFactory?, createCanvas? }
+   * النجاح = onload للإطار + نجاح فحص البلاطة. الفشل = 8 ثوانٍ بدون onload، أو فشل/تزييف الفحص.
+   * لا يُضاف sandbox (الإطار يحتاج سكربتاته) — loading lazy + referrerpolicy فقط.
+   */
+  function embedOsmMap(mapEl, opts) {
+    const url = osmEmbedUrl(opts.lat, opts.lng, opts.meters);
+    let settled = false, loaded = false, probeOk = false;
+    const wrap = opts.wrap;
+    const watchdog = setTimeout(() => { if (!loaded) fail(); }, opts.watchdogMs || EMBED_WATCHDOG_MS);
+    const cleanup = () => { clearTimeout(watchdog); };
+    const succeed = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (wrap) wrap.classList.add('nm-loaded');
+    };
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (opts.onFail) opts.onFail();
+    };
+    const maybeSucceed = () => { if (loaded && probeOk) succeed(); };
+
+    const ifr = document.createElement('iframe');
+    ifr.src = url;
+    ifr.loading = 'lazy';
+    ifr.referrerPolicy = 'strict-origin-when-cross-origin';
+    ifr.title = opts.title || 'خريطة';
+    ifr.style.cssText = 'width:100%;height:100%;border:0;display:block';
+    ifr.onload = () => { loaded = true; maybeSucceed(); };
+    ifr.onerror = () => fail();
+    if (mapEl) {
+      mapEl.innerHTML = '';
+      mapEl.appendChild(ifr);
+    }
+
+    probeTileProvider(osmProbeTileUrl(), {
+      timeout: opts.probeTimeoutMs || PROBE_TIMEOUT_MS,
+      imgFactory: opts.imgFactory,
+      createCanvas: opts.createCanvas
+    }).then((v) => {
+      if (settled) return;
+      if (mapEl && mapEl.dataset) mapEl.dataset.nmProbe = v.method || '';
+      if (!v.ok) return fail();
+      probeOk = true;
+      maybeSucceed();
+    });
+  }
+
   /* ═══ 4) إنشاء خريطة موحّدة (tiles إنجليزية + fallback + RTL fix) ═══ */
   function goldIcon(L, size) {
     const w = size || 36, h = Math.round(w * 1.3);
@@ -174,17 +377,32 @@
       if (idx >= TILES.length) { el.classList.add('nm-map-failed'); settle(false); return; }
       const t = TILES[idx];
       const layer = L.tileLayer(t.url, t.opts);
-      let loadedOne = false, errors = 0;
-      layer.on('tileload', () => { if (!loadedOne) { loadedOne = true; el.classList.add('nm-tiles-ready'); settle(true); } });
+      let loadedOne = false, errors = 0, probeOk = false, movingOn = false;
+      const maybeSettle = () => {
+        if (!settled && loadedOne && probeOk) { el.classList.add('nm-tiles-ready'); settle(true); }
+      };
+      const tryNext = () => {
+        if (movingOn || settled) return;
+        movingOn = true;
+        layer.off();
+        try { map.removeLayer(layer); } catch (_) {}
+        attachTiles(idx + 1);
+      };
+      layer.on('tileload', () => { loadedOne = true; maybeSettle(); });
       layer.on('tileerror', () => {
         errors++;
         // لو 3 بلاطات فشلت قبل ما أي بلاطة تنجح → المزود ده واقع → بدّل
-        if (!loadedOne && errors >= 3) {
-          layer.off(); map.removeLayer(layer);
-          attachTiles(idx + 1);
-        }
+        if (!loadedOne && errors >= 3) tryNext();
       });
       layer.addTo(map);
+      // D4: لا نعتمد على tileerror وحده — مزوّد قد يعيد HTTP 200 بصورة موسومة/بديلة.
+      // فحص البلاطة (صحة المزوّد + كشف التزييف) شرط للنجاح أيضًا.
+      probeTileProvider(probeUrlFor(t), { timeout: 8000 }).then((v) => {
+        if (settled || movingOn) return;
+        if (!v.ok) return tryNext();
+        probeOk = true;
+        maybeSettle();
+      });
     }
     attachTiles(0);
 
@@ -323,9 +541,9 @@
 
   /* ═══ 7) خريطة صفحة العقار ═══
      مستويات الدقة:
-       exact    → lat/lng في front matter               → pin ذهبي
-       building → lat/lng + map_precision: building     → pin ذهبي + تنويه "على مستوى العمارة"
-       street   → لا GPS لكن الشارع معروف               → دائرة 500م (بدون pin)
+       exact    → lat/lng في front matter               → iframe OSM + marker دقيق
+       building → lat/lng + map_precision: building     → نفس exact + تنويه "على مستوى العمارة"
+       street   → لا GPS لكن الشارع معروف               → iframe OSM يوضّح نطاق 500م (بدون دائرة)
        area     → منطقة عامة                            → بدون خريطة + تنويه */
   function resolvePropertyLevel(ds) {
     const lat = num(ds.lat), lng = num(ds.lng);
@@ -365,7 +583,8 @@
     if (link) link.href = res.level === 'street' ? gmapsSearch(res.streetEn + ', Nasr City, Cairo') : gmapsPoint(res.lat, res.lng);
     if (note) {
       if (res.level === 'street') {
-        note.innerHTML = `<i class="fas fa-circle-notch"></i> موقع تقريبي — الدائرة تمثل نطاق <strong>${esc(res.streetEn)}</strong> (حوالي 500 متر). العنوان الدقيق عند التواصل.`;
+        // الدائرة الذهبية لم تُرسم بعد الآن — الإطار (الـiframe) هو ما يوضّح النطاق
+        note.innerHTML = `<i class="fas fa-expand-arrows-alt"></i> موقع تقريبي — الإطار يوضّح نطاق <strong>${esc(res.streetEn)}</strong> (حوالي 500 متر). العنوان الدقيق عند التواصل.`;
         note.classList.add('show');
       } else if (res.level === 'building') {
         note.innerHTML = '<i class="fas fa-building"></i> الدبوس على مستوى العمارة — الشقة/الوحدة تُحدَّد عند المعاينة.';
@@ -373,55 +592,49 @@
       }
     }
 
-    const boot = async () => {
-      let L;
-      try { L = await loadLeaflet(); } catch (_) { return fail(); }
-      const isStreet = res.level === 'street';
-      const { map, ready } = createMap(L, mapEl, { center: [res.lat, res.lng], zoom: isStreet ? 15 : 17 });
-      if (isStreet) {
-        L.circle([res.lat, res.lng], { radius: 500, color: '#d4af37', weight: 2, fillColor: '#d4af37', fillOpacity: 0.18 }).addTo(map);
-      } else {
-        L.marker([res.lat, res.lng], { icon: goldIcon(L, 40), keyboard: false, title: ds.title || '' }).addTo(map)
-          .bindPopup(`<strong dir="rtl" style="display:block;text-align:right">${esc(ds.title || 'العقار')}</strong><span dir="ltr">${fmtCoords(res.lat, res.lng)}</span>`);
-      }
-      invalidateSoon(map);
-      const ok = await ready;
-      if (!ok) return fail();
-      wrap.classList.add('nm-loaded');
-    };
+    if (!mapEl || !wrap) return;
 
     const fail = () => {
       wrap.classList.add('nm-loaded', 'nm-failed');
-      if (mapEl) mapEl.innerHTML = '<div class="nm-fail-msg"><i class="fas fa-map"></i><span>تعذّر تحميل الخريطة حاليًا</span><a href="' + esc(link ? link.href : '#') + '" target="_blank" rel="noopener">افتح الموقع في Google Maps</a></div>';
+      mapEl.innerHTML = failMessageHtml(link ? link.href : gmapsSearch(locText));
     };
 
-    whenVisible(section, boot);
+    whenVisible(section, () => {
+      embedOsmMap(mapEl, {
+        lat: res.lat,
+        lng: res.lng,
+        meters: res.level === 'street' ? 500 : 250,
+        title: res.level === 'street'
+          ? `خريطة تقريبية لموقع العقار — نطاق ${res.streetEn}`
+          : `خريطة موقع العقار — ${ds.title || 'مدينة نصر'}`,
+        wrap: wrap,
+        onFail: fail
+      });
+    });
   }
 
-  /* ═══ 8) خريطة المكتب ═══ */
+  /* ═══ 8) خريطة المكتب — نفس مسار الـiframe (نطاق ≈300م + marker) ═══ */
   function renderOffice(section) {
     if (!section || section.dataset.nmDone) return;
     section.dataset.nmDone = '1';
     const lat = num(section.dataset.lat), lng = num(section.dataset.lng);
     const wrap = section.querySelector('.nm-map-wrap');
     const mapEl = section.querySelector('.nm-map-target');
-    if (lat == null || lng == null || !mapEl) return;
-    const boot = async () => {
-      let L;
-      try { L = await loadLeaflet(); } catch (_) { return fail(); }
-      const { map, ready } = createMap(L, mapEl, { center: [lat, lng], zoom: 17 });
-      L.marker([lat, lng], { icon: goldIcon(L, 42), keyboard: false, title: 'سمسار طلبك' }).addTo(map)
-        .bindPopup('<strong dir="rtl" style="display:block;text-align:right">سمسار طلبك</strong><span dir="rtl" style="display:block;text-align:right">16 ش محمد حسن الجمل — المنطقة السادسة</span>').openPopup();
-      invalidateSoon(map);
-      const ok = await ready;
-      if (!ok) return fail();
-      wrap.classList.add('nm-loaded');
-    };
+    if (lat == null || lng == null || !mapEl || !wrap) return;
     const fail = () => {
       wrap.classList.add('nm-loaded', 'nm-failed');
-      mapEl.innerHTML = '<div class="nm-fail-msg"><i class="fas fa-map"></i><span>تعذّر تحميل الخريطة حاليًا</span><a href="' + gmapsPoint(lat, lng) + '" target="_blank" rel="noopener">افتح الموقع في Google Maps</a></div>';
+      mapEl.innerHTML = failMessageHtml(gmapsPoint(lat, lng));
     };
-    whenVisible(section, boot);
+    whenVisible(section, () => {
+      embedOsmMap(mapEl, {
+        lat: lat,
+        lng: lng,
+        meters: 300,
+        title: 'خريطة موقع مكتب سمسار طلبك — مدينة نصر',
+        wrap: wrap,
+        onFail: fail
+      });
+    });
   }
 
   /* ═══ 9) Location Picker — للوكيل الذكي (agent.html) ═══
@@ -639,6 +852,12 @@
     searchPlaces, reverseGeocode, matchKnownStreet,
     renderProperty, renderOffice, createPicker,
     gmapsPoint, gmapsSearch,
-    _internals: { resolvePropertyLevel, fromPhoton, fromNominatim, normAr, KNOWN_STREETS }
+    embedOsmMap, osmEmbedUrl, bboxAround, failMessageHtml,
+    _internals: {
+      resolvePropertyLevel, fromPhoton, fromNominatim, normAr, KNOWN_STREETS,
+      classifyTilePixels, classifyTile, classifyDimensions, probeTileProvider,
+      lngToTileX, latToTileY, osmProbeTileUrl, probeUrlFor,
+      EMBED_WATCHDOG_MS, PROBE_TIMEOUT_MS, OSM_EMBED_BASE, OSM_TILES, TILES, SEARCH_BBOX
+    }
   };
 })(window, document);
