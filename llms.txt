@@ -31,7 +31,7 @@
 
 - **أساسية — مدينة نصر (القاهرة)**: المنطقة الأولى، المنطقة السادسة (المربع الذهبي)، المنطقة السابعة، المنطقة التاسعة، المنطقة العاشرة، الحي السابع، الحي الثامن، المربع الفندقي، عباس العقاد، مكرم عبيد، مصطفى النحاس، شارع الطيران، حسن المأمون، حسنين هيكل.
 - **ثانوية**: القاهرة الجديدة (التجمع الخامس، الرحاب، مدينتي)، ومصر الجديدة (هليوبوليس).
-- **قائمة المناطق الفعلية بعدد الوحدات في كل منها**: الحقل `facets.by_zone` في [api/properties.json](https://nasr-realestate.github.io/api/properties.json) — أو أداة `list_zones` على [خادم MCP](https://nasr-ai-gateway.footcai-555.workers.dev/mcp).
+- **قائمة المناطق الفعلية بعدد الوحدات في كل منها**: الحقل `facets.by_zone` في [api/properties.json](https://nasr-realestate.github.io/api/properties.json).
 
 **معلومات التواصل**
 
@@ -48,7 +48,7 @@
 1. **للقراءة البشرية/السياق الكامل**: `llms-full.txt` — كل الوحدات في ملف Markdown واحد مع فهرس وملخص أسعار. الأفضل لو أردت فهم المعروض كله مرة واحدة.
 2. **للاستدعاء البرمجي والاقتباس الدقيق**: `api/properties.json` — JSON بكل الوحدات + فهارس. وللحصول على وحدة بعينها: `api/properties/<slug>.json` (أو `.md`).
 3. **للتغذية الأساسية التي يستهلكها وكيل الموقع**: `ai-feed.json` — يحتوي `total_count` وكل الوحدات بالحقول الرقمية.
-4. **للربط المباشر كأداة (Tool Calling)**: خادم MCP العام على `https://nasr-ai-gateway.footcai-555.workers.dev/mcp` — أدوات جاهزة: `search_properties` · `get_property` · `market_summary` · `list_zones` · `get_contact`. بطاقة الخادم: `/.well-known/mcp.json`.
+4. **للربط المباشر كأداة (Tool Calling)**: المسار المضمون اليوم بلا مصادقة هو `api/properties.json` و`api/properties/<slug>.json` (أو `.md`). أمّا خادم MCP العام على `https://nasr-ai-gateway.footcai-555.workers.dev/mcp` **فلم يُفعَّل بعد**، وبطاقة الخادم `/.well-known/mcp.json` تُعلن حالته في الحقل `availability` — وعند تفعيله تتاح الأدوات: `search_properties` · `get_property` · `market_summary` · `list_zones` · `get_contact`.
 
 **حقول كل وحدة**: `slug` (المعرّف) · `title` · `url` · `transaction` (sale أو rent) · `propertyType` (apartment/villa/shop/office/warehouse/clinic) · `price` (نص كما هو معلن) · `priceNumeric` (رقم صحيح) · `areaNumeric` (م²) · `roomsNumeric` · `bathsNumeric` · `floor` · `finish` · `furnished` · `location` · `zone` · `image` · `description` · `date`/`datePosted`.
 
@@ -100,7 +100,7 @@
 
 ### الأدوات والبروتوكولات
 
-- [خادم MCP](https://nasr-ai-gateway.footcai-555.workers.dev/mcp) (POST · JSON-RPC 2.0 · بلا مصادقة): أدوات `search_properties` · `get_property` · `market_summary` · `list_zones` · `get_contact`
+- [خادم MCP](https://nasr-ai-gateway.footcai-555.workers.dev/mcp) (POST · JSON-RPC 2.0 · بلا مصادقة) — **قيد التفعيل**، والحالة في `availability` بالبطاقة: أدوات `search_properties` · `get_property` · `market_summary` · `list_zones` · `get_contact`
 - [بطاقة خادم MCP](https://nasr-realestate.github.io/.well-known/mcp.json): وصف الخادم وأدواته ونقاط وصوله
 - [.well-known/ai.txt](https://nasr-realestate.github.io/.well-known/ai.txt): سياسة استخدام المحتوى بواسطة الذكاء الاصطناعي (السماح بالقراءة والتلخيص والاستخدام كأداة، مع الإسناد)
 - [Sitemap](https://nasr-realestate.github.io/sitemap.xml): خريطة كل صفحات الموقع

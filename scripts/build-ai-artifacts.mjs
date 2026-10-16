@@ -39,6 +39,7 @@ import {
   renderMcpCard,
   renderOpenApi,
   renderSearchData,
+  MCP_GATEWAY_STATUS,
 } from './lib/ai-docs.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -187,7 +188,13 @@ export function buildApiIndex(properties, generatedAt) {
       { path: '/sitemap.xml', method: 'GET', format: 'application/xml', description: 'خريطة الموقع' },
       { path: '/feed.xml', method: 'GET', format: 'application/rss+xml', description: 'تغذية RSS' },
     ],
-    mcp: { endpoint: MCP_ENDPOINT, transport: 'streamable-http', card: `${SITE}/.well-known/mcp.json` },
+    mcp: {
+      endpoint: MCP_ENDPOINT,
+      transport: 'streamable-http',
+      card: `${SITE}/.well-known/mcp.json`,
+      status: MCP_GATEWAY_STATUS.status,
+      fallback: MCP_GATEWAY_STATUS.guaranteed_fallback,
+    },
     filters: {
       transaction: ['sale', 'rent'],
       propertyType: ['apartment', 'villa', 'shop', 'office', 'warehouse', 'clinic'],

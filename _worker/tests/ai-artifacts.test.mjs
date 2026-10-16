@@ -202,11 +202,24 @@ test("quotes, dashes and angle brackets cannot break the metadata comment", () =
 
 test("ai.txt declares the permissions and the machine endpoints an agent looks for", () => {
   const txt = renderAiTxt(PROPS, { stamp: "2026-10-16", mcpEndpoint: "https://example.workers.dev/mcp" });
-  for (const key of ["User-Agent:", "Allow-AI-Training:", "Allow-AI-Summarize:", "Allow-Redistribution-Full-Text: no", "Cite-As:", "AI-Discovery:", "AI-Catalog:", "AI-MCP-Endpoint:", "Sitemap:"]) {
+  for (const key of ["User-Agent:", "Allow-AI-Training:", "Allow-AI-Summarize:", "Allow-Redistribution-Full-Text: no", "Cite-As:", "AI-Discovery:", "AI-Catalog:", "AI-MCP-Endpoint:", "AI-MCP-Status:", "AI-MCP-Fallback:", "Sitemap:"]) {
     assert.ok(txt.includes(key), `ai.txt is missing ${key}`);
   }
   assert.ok(txt.includes(`${SITE}/llms-full.txt`));
   assert.ok(txt.includes("https://example.workers.dev/mcp"));
+});
+
+test("the MCP card declares the gateway availability and the guaranteed fallback", () => {
+  const card = renderMcpCard({ endpoint: "https://example.workers.dev/mcp", properties: PROPS, stamp: "2026-10-16T00:00:00Z" });
+  assert.ok(card.availability, "بطاقة الخادم بلا حقل availability");
+  assert.match(card.availability.status, /^(pending-deployment|live)$/);
+  assert.ok(card.availability.guaranteed_paths.length >= 3, "لا مسار مضمون معلن للنماذج");
+  for (const url of card.availability.guaranteed_paths) assert.ok(url.startsWith(`${SITE}/`), url);
+  assert.ok(card.availability.guaranteed_paths.includes(card.availability.guaranteed_fallback));
+  if (card.availability.status !== "live") {
+    assert.ok(card.availability.note, "حالة غير مفعّلة بلا سبب معلن للنماذج");
+    assert.ok(card.availability.verified_at, "بلا تاريخ تحقّق");
+  }
 });
 
 test("the MCP card and the OpenAPI document describe the same surface", () => {

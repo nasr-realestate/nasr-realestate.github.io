@@ -10,6 +10,30 @@ import { buildFacets } from './properties.mjs';
 
 export const SITE = 'https://nasr-realestate.github.io';
 
+/**
+ * حالة بوابة MCP — مصدر حقيقة واحد ينعكس في mcp.json وai.txt وapi/index.json.
+ * 2026-10-16: البوابة **لم تُنشَر بعد** (أسرار Cloudflare غير مضافة إلى المستودع)،
+ * ورابطها المُعلَن يردّ 404 من workers.dev (تحقّق فعلي عبر الجلب المباشر).
+ * لذلك تُنشَر البطاقة بحالة صريحة تُحيل النماذج إلى المسار المضمون (REST/Markdown)
+ * بدل أن تعدها بأداة لا تعمل — امتدادًا لقاعدة «لا تلفّق» إلى واجهاتنا نفسها.
+ * بعد نجاح .github/workflows/deploy-mcp-gateway.yml: بدّل status إلى 'live'،
+ * وحدّث verified_at، ثم أعد التوليد:
+ *   node scripts/build-ai-artifacts.mjs --out=. --skip=ai-feed.json
+ */
+export const MCP_GATEWAY_STATUS = {
+  status: 'pending-deployment',
+  verified_at: '2026-10-16',
+  note: 'بوابة MCP تُنشر من _worker/ بمفاتيح Cloudflare، ولم تُضَف الأسرار بعد. استخدم المسار المضمون أدناه اليوم.',
+  guaranteed_fallback: `${SITE}/api/properties.json`,
+  guaranteed_paths: [
+    `${SITE}/api/properties.json`,
+    `${SITE}/api/properties/{slug}.json`,
+    `${SITE}/api/properties/{slug}.md`,
+    `${SITE}/llms-full.txt`,
+    `${SITE}/search-data.json`,
+  ],
+};
+
 const AR = {
   sale: 'للبيع',
   rent: 'للإيجار',
@@ -273,6 +297,8 @@ AI-JSON-API: ${SITE}/api/properties.json
 AI-OpenAPI: ${SITE}/api/openapi.json
 AI-MCP-Endpoint: ${mcpEndpoint}
 AI-MCP-Card: ${SITE}/.well-known/mcp.json
+AI-MCP-Status: ${MCP_GATEWAY_STATUS.status}
+AI-MCP-Fallback: ${MCP_GATEWAY_STATUS.guaranteed_fallback}
 RSS: ${SITE}/feed.xml
 Sitemap: ${SITE}/sitemap.xml
 
@@ -377,6 +403,7 @@ export function renderMcpCard({ endpoint, properties, stamp }) {
       methods: ['initialize', 'tools/list', 'tools/call', 'resources/list', 'resources/read', 'prompts/list'],
       supports_get_sse: false,
     },
+    availability: MCP_GATEWAY_STATUS,
     capabilities: {
       tools: { listChanged: false },
       resources: { subscribe: false, listChanged: false },

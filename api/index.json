@@ -2,7 +2,7 @@
   "schema_version": "3.0",
   "name": "سمسار طلبك — واجهة العقارات",
   "description": "واجهة قراءة فقط بلا مصادقة لكل الوحدات المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة). مناسبة للنماذج والوكلاء: كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.",
-  "generated_at": "2026-10-16T20:05:25.110Z",
+  "generated_at": "2026-10-16T20:21:34.444Z",
   "total_count": 102,
   "base_url": "https://nasr-realestate.github.io",
   "contact": {
@@ -86,7 +86,9 @@
   "mcp": {
     "endpoint": "https://nasr-ai-gateway.footcai-555.workers.dev/mcp",
     "transport": "streamable-http",
-    "card": "https://nasr-realestate.github.io/.well-known/mcp.json"
+    "card": "https://nasr-realestate.github.io/.well-known/mcp.json",
+    "status": "pending-deployment",
+    "fallback": "https://nasr-realestate.github.io/api/properties.json"
   },
   "filters": {
     "transaction": [
