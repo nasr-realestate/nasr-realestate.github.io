@@ -47,11 +47,23 @@ jobs:
         with:
           node-version: "22"
 
+      # ⚠️ `npm install` لا `npm ci`: package-lock.json مستثنى من Git.
+      #    التبعيات هنا للتطوير/الاختبار فقط (server.js واختبار تكافؤ
+      #    قارئ front matter) — وخطوة النشر لا تحتاجها إطلاقًا.
+      - name: Install dev dependencies for the local renderer
+        run: npm install --no-audit --no-fund --ignore-scripts
+
       - name: Full suite — advisory (the two known failures stay visible here)
         continue-on-error: true
         run: |
-          node --test $(ls _worker/tests/*.test.mjs | tr '\n' ' ')
+          node --test $(ls _worker/tests/*.test.mjs scripts/tests/*.test.mjs | tr '\n' ' ')
 
       - name: Blocking suite — any new failure stops the build
         run: |
-          node --test --test-skip-pattern="$KNOWN_FAILURES" $(ls _worker/tests/*.test.mjs | tr '\n' ' ')
+          node --test --test-skip-pattern="$KNOWN_FAILURES" $(ls _worker/tests/*.test.mjs scripts/tests/*.test.mjs | tr '\n' ' ')
+
+      # بوابة منفصلة وحاجزة لطبقة الذكاء الاصطناعي: هذه هي المخرجات التي
+      # يقرأها الذكاء الاصطناعي، ولا يجوز أن تُنشر متناقضة مع المصدر.
+      - name: AI layer + front-matter parity (blocking, no skips)
+        run: |
+          node --test _worker/tests/ai-artifacts.test.mjs _worker/tests/mcp-gateway.test.mjs scripts/tests/front-matter.test.mjs

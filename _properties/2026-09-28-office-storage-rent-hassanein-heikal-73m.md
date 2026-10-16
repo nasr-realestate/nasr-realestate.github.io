@@ -20,34 +20,19 @@ audio_ad: true
 audio_file: "/assets/audio/properties/office-storage-rent-hassanein-heikal-nasr-city-73m.mp3"
 audio_duration: "25 ثانية"
 audio_script: "محتاج مكتب عملي أو مخزن في مدينة نصر؟ مقر للإيجار تلاتة وسبعين متر في شارع حسنين هيكل الرئيسي، خلف عباس العقاد. الدور الأول بأسانسير، غرفة وريسبشن، وتكييفين. يصلح مكتب خلفي من غير يافطة، أو مخزن. الإيجار خمستاشر ألف جنيه شهريًا. كلم سمسار طلبك على واتساب للاستفسار وتحديد معاينة."
+priceNumeric: 15000
+areaNumeric: 73
+roomsNumeric: 1
+bathsNumeric: 1
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "15000",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "89 شارع حسنين هيكل الرئيسي - خلف عباس العقاد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
+<!-- 1. البيانات المنظمة (Schema.org)
+     ⚠️ حُذفت كتلة JSON-LD اليدوية من هذا الملف (2026-10-16) لأنها كانت تُنتج
+     بيانات منظمة مكرّرة ومتعارضة مع الكتلة الرسمية:
+       • datePosted كان يُطبع بصيغة غير ISO 8601 (مثال: Fri Oct 16 2026 00:00:00 GMT+0000)
+       • image كان رابطًا نسبيًا بدون نطاق الموقع
+       • لا @id ولا url ولا الأرقام الرقمية (المساحة/الغرف/الحمامات)
+     المصدر الوحيد الآن: _includes/schema-property.html عبر _layouts/property_page.html -->
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

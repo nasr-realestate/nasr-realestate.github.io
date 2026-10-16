@@ -35,6 +35,40 @@ jobs:
         env:
           JEKYLL_ENV: production
 
+      # ══════════════════════════════════════════════════════════════
+      #  طبقة الذكاء الاصطناعي (2026-10-16)
+      # ──────────────────────────────────────────────────────────────
+      #  تُبنى **بعد** Jekyll ومباشرةً داخل _site، وسببها أن Jekyll وحده
+      #  لا يستطيع توليد ملف واحد لكل عقار (Liquid لا يُنشئ ملفات)، وإضافة
+      #  إضافة Ruby جديدة (_plugins) كانت ستُخاطر ببناء الموقع كله.
+      #  هذا المُولّد هو ملف Node واحد يقرأ _properties/*.md مباشرة:
+      #     ai-feed.json · llms-full.txt · api/** · search-data.json · .well-known/**
+      #  ويفشل بـ exit code غير صفري لو لم يجد أي عقار — أي أن نشرًا
+      #  بلا بيانات عقارية يتوقف بدل أن ينشر طبقة فارغة.
+      # ══════════════════════════════════════════════════════════════
+      - name: Setup Node (for the AI layer)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # ⚠️ بلا `npm install` عن قصد:
+      #    package-lock.json مستثنى من Git في هذا المستودع (انظر .gitignore)،
+      #    لذلك `npm ci` يفشل هنا. والمُولّد مستقل تمامًا — بلا أي حزمة خارجية —
+      #    فخطوة التثبيت تكلّف دقيقة كاملة مقابل لا شيء.
+      - name: Generate AI discovery layer into _site
+        run: node scripts/build-ai-artifacts.mjs --out=_site
+
+      - name: Verify the AI layer is complete and valid JSON
+        run: |
+          node --test _worker/tests/ai-artifacts.test.mjs
+          node --test _worker/tests/mcp-gateway.test.mjs
+          node --test scripts/tests/front-matter.test.mjs
+
+      # ⚠️ لا ترفع هذا الإصدار إلى upload-pages-artifact@v4 بلا تعديل:
+      #    v4 يحجب كل ما يبدأ بنقطة افتراضيًا (`--exclude=.[^/]*`) فيختفي
+      #    مجلد .well-known بالكامل وبلا أي رسالة خطأ. v3 لا يحجب إلا .git
+      #    و .github. وللتأمين الإضافي يُنتج المُولّد نسختين جذريتين
+      #    (ai.txt · mcp.json) بنفس المحتوى تمامًا.
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 

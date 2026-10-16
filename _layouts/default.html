@@ -26,6 +26,31 @@
 
   <meta name="google-site-verification" content="ozxUgrS2657mo8HYSvgjhYSeYv1FCcc8ig_3wjmSoGA">
 
+  <!-- ═══════════════════════════════════════════════════════
+       طبقة الذكاء الاصطناعي (2026-10-16)
+       ───────────────────────────────────────────────────────
+       1) max-snippet:-1 / max-image-preview:large: تسمح لمحركات البحث
+          والنماذج بعرض المقتطف والصورة كاملة بدل قصّها — بدونها تُختصر
+          إجابات المساعدين عن الوحدات إلى سطر بلا أسعار.
+       2) rel="alternate": تُعرّف كل صفحة بنسختها المقروءة آليًا (JSON،
+          Markdown، llms.txt) فيجدها الوكيل دون تخمين المسارات.
+       3) rel="ai-catalog" / "mcp": تلميحات غير قياسية لكنها غير ضارّة
+          ويقرأها عدد من أدوات الوكلاء — الاسم القياسي في /.well-known/ai.txt.
+       ═══════════════════════════════════════════════════════ -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="ai-content-policy" content="allow-indexing, allow-summarization, allow-agent-use; attribution-required">
+
+  <link rel="alternate" type="application/json" href="{{ '/ai-feed.json' | absolute_url }}" title="AI Feed — بيانات كل العقارات (JSON)">
+  <link rel="alternate" type="text/markdown" href="{{ '/llms-full.txt' | absolute_url }}" title="الكتالوج الكامل (Markdown)">
+  <link rel="alternate" type="text/plain" href="{{ '/llms.txt' | absolute_url }}" title="llms.txt — دليل الموقع للنماذج">
+  <link rel="describedby" type="application/json" href="{{ '/api/index.json' | absolute_url }}" title="دليل واجهة العقارات">
+  <link rel="ai-catalog" type="application/json" href="{{ '/api/properties.json' | absolute_url }}">
+  <link rel="mcp-server" href="https://nasr-ai-gateway.footcai-555.workers.dev/mcp">
+  {%- if page.collection == "properties" %}
+  <link rel="alternate" type="application/json" href="{{ '/api/properties/' | append: page.slug | append: '.json' | absolute_url }}" title="بيانات هذه الوحدة (JSON)">
+  <link rel="alternate" type="text/markdown" href="{{ '/api/properties/' | append: page.slug | append: '.md' | absolute_url }}" title="بيانات هذه الوحدة (Markdown)">
+  {%- endif %}
+
   <!-- ═══ Favicons — وسوم موحّدة من _includes/favicon.html (2026-09-25)
        SVG + PNG 16/32 + ICO 16/32/48 + Apple 180 + Manifest في الجذر —
        الهدف: شعار الموقع في نتائج Google بدل شعار GitHub الافتراضي ═══ -->

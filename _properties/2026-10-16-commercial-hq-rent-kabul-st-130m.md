@@ -19,34 +19,19 @@ audio_ad: true
 audio_file: "/assets/audio/properties/commercial-hq-rent-kabul-street-nasr-city-130m.mp3"
 audio_duration: "24 ثانية"
 audio_script: "مقر تجاري وإداري مية وتلاتين متر للإيجار بشارع كابول، متفرع من مكرم عبيد! تلات غرف وريسبشن، حمامين، دور أرضي بمدخل مستقل وسقف أربعة متر. نموذج تمانية نهائي وتلات فاز، ومكان سيارة في الجراج. الإيجار خمسة وخمسين ألف جنيه شهريًا. كلم سمسار طلبك على واتساب وحدد معاينة."
+priceNumeric: 55000
+areaNumeric: 130
+roomsNumeric: 3
+bathsNumeric: 2
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "55000",
-    "availability": "https://schema.org/InStock",
-    "description": "إيجار شهري تجاري/إداري"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": " شارع كابول - مكرم عبيد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
+<!-- 1. البيانات المنظمة (Schema.org)
+     ⚠️ حُذفت كتلة JSON-LD اليدوية من هذا الملف (2026-10-16) لأنها كانت تُنتج
+     بيانات منظمة مكرّرة ومتعارضة مع الكتلة الرسمية:
+       • datePosted كان يُطبع بصيغة غير ISO 8601 (مثال: Fri Oct 16 2026 00:00:00 GMT+0000)
+       • image كان رابطًا نسبيًا بدون نطاق الموقع
+       • لا @id ولا url ولا الأرقام الرقمية (المساحة/الغرف/الحمامات)
+     المصدر الوحيد الآن: _includes/schema-property.html عبر _layouts/property_page.html -->
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

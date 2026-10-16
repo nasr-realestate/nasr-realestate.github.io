@@ -5,7 +5,24 @@ Contact: +201147758857
 From: مدينة نصر، القاهرة، مصر
 
 /* SITE */
-Last update: 2026
+Last update: 2026-10-16
 Language: Arabic
-Standards: HTML5, Schema.org
+Standards: HTML5, Schema.org, llms.txt, ai.txt, OpenAPI 3.1, Model Context Protocol
 Components: Jekyll, Cloudflare Workers
+
+/* WHAT MACHINES CAN READ */
+AI guide:        /llms.txt
+Full catalogue:  /llms-full.txt
+Primary feed:    /ai-feed.json
+JSON catalogue:  /api/properties.json
+One unit:        /api/properties/<slug>.json  (or .md)
+Interface guide: /api/index.json
+OpenAPI:         /api/openapi.json
+AI policy:       /ai.txt  (also /.well-known/ai.txt)
+MCP card:        /mcp.json  (also /.well-known/mcp.json)
+MCP server:      https://nasr-ai-gateway.footcai-555.workers.dev/mcp
+Sitemap:         /sitemap.xml
+RSS:             /feed.xml
+
+/* THANKS */
+Built with: Jekyll, Liquid, Cloudflare Workers, Node.js

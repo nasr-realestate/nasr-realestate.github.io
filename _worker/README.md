@@ -1,16 +1,43 @@
 # Cloudflare Workers — deployment notes
 
-Two independent Workers serve the site; a third one syncs GitHub content into D1. All three use the existing `nasr-market-db` D1 database through the `DB` binding. The two serving Workers are **read-only** (`SELECT` / `PRAGMA` only). The sync Worker is the only writer, and it writes **only** `listings` rows whose `source_id = 9`, plus its own state table and the `ingestion_runs` log — never `areas`, `price_snapshots`, other sources, and never a `DELETE`.
+A fourth Worker (`nasr-ai-gateway`, added 2026-10-16) exposes the site's listings over Model Context Protocol; unlike the other three it binds **nothing** and uses **no secret**. Two independent Workers serve the site; a third one syncs GitHub content into D1. Those three use the existing `nasr-market-db` D1 database through the `DB` binding. The two serving Workers are **read-only** (`SELECT` / `PRAGMA` only). The sync Worker is the only writer, and it writes **only** `listings` rows whose `source_id = 9`, plus its own state table and the `ingestion_runs` log — never `areas`, `price_snapshots`, other sources, and never a `DELETE`.
 
 | Repository file | Wrangler config | Cloudflare Worker | Version | Role |
 | --- | --- | --- | --- | --- |
 | `_worker/worker.js` | `_worker/wrangler.agent.toml` (`main = "worker.js"`) | `royal-snow-ea32` | **v9.3-W** (`release:` في ترويسة الملف، آخر نشر 2026-10-14) | The conversational agent used by `agent.html` (chat + `POST /upload-images`) |
 | `_worker/valuation-worker.js` | `_worker/wrangler.valuation.toml` (`main = "valuation-worker.js"`) | `noisy-bush-fd84` | **v6.2**, contract `d1-price-snapshots-v2` | The valuation API used by `tools/valuation.html` (`GET /areas`, `POST /api`) |
 | `_worker/properties-sync-worker.js` | `_worker/wrangler.sync.toml` (`main = "properties-sync-worker.js"`) | `nasr-properties-sync` | **v1.0.4** | GitHub `_properties/*.md` → D1 `listings` (source_id = 9), hourly Cron + manual HTTP trigger |
+| `_worker/mcp-worker.js` | `_worker/wrangler.mcp.toml` (`main = "mcp-worker.js"`) | `nasr-ai-gateway` | **v1.0.0** | Read-only MCP server + JSON API over the public `ai-feed.json` — no binding, no secret, no D1 |
 
 **Each Worker is one self-contained file and imports nothing.** There is no shared module: the legacy shared D1 reader (`market-data`) was never imported by either Worker (Wrangler only bundles what is imported, so it was never deployed) and has been removed. The static `assets/data/market-data.json` is a different file: the valuation page reads only area *descriptions* from it (names, level, landmarks, streets) — never prices, confidence or fallbacks.
 
 Bindings and settings required by both Workers: the `DB` D1 binding to `nasr-market-db` (declared in both TOML files) and `workers_dev = true`. The **live** agent Worker runs `compatibility_date = "2026-09-04"` (the 2026-09-01 values in older notes were never its production date — `wrangler.agent.toml` now mirrors the live settings and is documentation only). Since 2026-10-10 the agent Worker also binds `PUSH_SUBS` → KV namespace `nasr-push-subs` for Web Push subscriptions (see `PUSH-NOTIFICATIONS.md`). `GEMINI_MODEL` (a plain-text variable that existed since the first deployment but was unused until v9.3) is now read by the code: if Google rejects the name (400/404) the Worker falls back to the built-in `gemini-3.5-flash-lite` once, so a wrong variable can never turn the agent silent. v9.3 also caches `ai-feed.json` at the Cloudflare edge (`cf.cacheTtl = 300`) — a newly published listing can take up to 5 minutes to appear in the agent's gallery. Deployment of the agent Worker is gated by `EXPECTED_WORKER_SHA256` in `.github/workflows/push-notify-setup.yml`: any change to `_worker/worker.js` requires updating that fingerprint deliberately (`release:` in the file header is the human-readable twin of that fingerprint, and the read-only audit compares it against the live module). Secrets: the **agent** Worker keeps `GEMINI_API_KEY`, `IMGBB_API_KEY` (and now `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `PUSH_SEND_SECRET` for Web Push — never stored in this repository); the **valuation** Worker needs no secret. `ALLOWED_ORIGINS` is an optional comma-separated plain variable for extra CORS origins — the site origin is already allowed by default in code. The agent Worker does **not** read prices from D1; its property listings come from `ai-feed.json`.
+
+## MCP Gateway — `nasr-ai-gateway` (v1.0.0)
+
+Purpose: the site already *publishes* data (`llms.txt`, `ai-feed.json`, JSON-LD) so models can read it while crawling. This Worker makes the site **callable**: any client that speaks the Model Context Protocol can search and quote a real unit instead of paraphrasing a page. That is the difference between "a model may mention the broker" and "a model returns unit `shop-abbas-elakkad-60m-jan26` with its price and link".
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /mcp` | MCP on Streamable HTTP (JSON-RPC 2.0): `initialize` · `ping` · `tools/list` · `tools/call` · `resources/list` · `resources/read` · `resources/templates/list` · `prompts/list` · `prompts/get` · `logging/setLevel` · `completion/complete`. Notifications (`notifications/initialized`, `notifications/cancelled`) answer `202` with an empty body. JSON-RPC batches are still accepted for older clients. |
+| `GET /mcp` | `405` + `Allow: POST`. This server is stateless and opens no SSE stream — allowed by the spec, and the reason the Worker needs no session storage. |
+| `GET /` | Service card: protocol version, tools, resources, prompts, read-only flag, citation policy. |
+| `GET /health` | `200` when the feed reads, `503` `degraded` when it does not. Reports the feed's own `generated_at` so staleness is visible. |
+| `GET /api/properties` | Compact JSON with `transaction`, `property_type`, `zone`, `query`, `min_price`, `max_price`, `min_area`, `max_area`, `min_rooms`, `furnished`, `limit` (cap 50). |
+| `GET /api/properties/{slug}` | One unit. `404` with the catalogue URL when the slug is unknown. |
+| `GET /api/stats` · `GET /api/zones` | Aggregates over the *asking* prices and the zone distribution. |
+
+Tools: `search_properties` · `get_property` · `market_summary` · `list_zones` · `get_contact`. Every `inputSchema` sets `additionalProperties: false`, and `limit` is capped at 50 so one call can never flood a context window. Resources: `semsar://catalog` · `semsar://llms-full` · `semsar://contact` · `semsar://stats`. Prompt: `recommend_units`, which instructs the model to widen filters instead of inventing a unit and to state that prices are asking prices.
+
+Design rules this Worker obeys, all covered by blocking tests:
+
+* **Read-only.** It issues `GET` requests only, has no `DB` binding, and never runs SQL. The tests strip comments and assert the absence of `import`, `env.DB`, any secret name, any non-`GET` upstream request, and any SQL write keyword.
+* **Secretless.** It reads one public file (`ai-feed.json`) with a 300 s edge cache plus a 60 s in-isolate cache. If the feed fails it serves the stale copy rather than failing; if there is no copy at all it returns a clear `FEED_UNAVAILABLE` error — never an empty-but-successful answer.
+* **No invented numbers.** `priceNumeric`/`areaNumeric`/`roomsNumeric`/`bathsNumeric` are passed through or returned as `null`. A price filter can never be satisfied by a unit whose price is unknown.
+* **Deterministic types.** `property_type` matches on the structured field, not on free text — the earlier text-matching version let a `warehouse` through a `shop` filter because its category said `commercial`.
+* **Isolated.** `compatibility_date = "2026-09-04"` matches the live agent Worker, but nothing else is shared. `.github/workflows/deploy-mcp-gateway.yml` runs the blocking tests first, deploys **only** `nasr-ai-gateway`, and skips cleanly (success, with a notice) when the repository has no Cloudflare credential — so it can never touch the other three Workers.
+
+Deploy: `cd _worker && npx wrangler@3 deploy --config wrangler.mcp.toml` (or push a change to `_worker/mcp-worker.js` on `master`/`arena/**`). Smoke check: `curl -s https://nasr-ai-gateway.footcai-555.workers.dev/` — expect `service: semsar-talabk`, `read_only: true`, `requires_secrets: false`.
 
 ## Properties Sync Worker (v1.0.0)
 

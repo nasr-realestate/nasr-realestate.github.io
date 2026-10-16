@@ -24,33 +24,19 @@ audio_ad: true
 audio_file: "/assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3"
 audio_duration: "27 ثانية"
 audio_script: "بتفكر في شقة 230 متر بفيو حديقة في مدينة نصر؟ في شارع حلمي عبد العاطي، بجوار السراج مول. الدور الأول من غير ما تعتمد على المصعد. 3 غرف نوم، ريسبشن يسع 4 قطع، وحمّامين. السعر 5 مليون و400 ألف جنيه. حديقة كبيرة قدام الشقة، والخدمات على بُعد خطوات. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+priceNumeric: 5400000
+areaNumeric: 230
+roomsNumeric: 3
+bathsNumeric: 2
 ---
 
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5400000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع حلمي عبد العاطي - بجوار السراج مول",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
-
+<!-- 1. البيانات المنظمة (Schema.org)
+     ⚠️ حُذفت كتلة JSON-LD اليدوية من هذا الملف (2026-10-16) لأنها كانت تُنتج
+     بيانات منظمة مكرّرة ومتعارضة مع الكتلة الرسمية:
+       • datePosted كان يُطبع بصيغة غير ISO 8601 (مثال: Fri Oct 16 2026 00:00:00 GMT+0000)
+       • image كان رابطًا نسبيًا بدون نطاق الموقع
+       • لا @id ولا url ولا الأرقام الرقمية (المساحة/الغرف/الحمامات)
+     المصدر الوحيد الآن: _includes/schema-property.html عبر _layouts/property_page.html -->
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

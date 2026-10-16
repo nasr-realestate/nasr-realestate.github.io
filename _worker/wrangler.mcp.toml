@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════════
+# MCP Gateway — سمسار طلبك
+# Cloudflare Worker: nasr-ai-gateway  ·  main = mcp-worker.js
+# ───────────────────────────────────────────────────────────────────
+# هذا العامل لا يلمس أي بيانات داخلية:
+#   • لا D1 binding (لا DB) — لا قراءة ولا كتابة في قاعدة السوق.
+#   • لا KV namespace — لا حالة ولا جلسات.
+#   • لا أسرار إطلاقًا — لا GEMINI_API_KEY ولا غيره.
+# مصدره الوحيد: ai-feed.json العام على GitHub Pages (مع كاش حافة 300 ثانية).
+#
+# لهذا يمكن نشره بأمر واحد بلا أي إعداد مسبق:
+#     wrangler deploy _worker/mcp-worker.js --name nasr-ai-gateway --compatibility-date 2026-09-04
+#
+# ولا يتأثر به أي عامل آخر: royal-snow-ea32 (المحادثة) · noisy-bush-fd84
+# (التقييم) · nasr-properties-sync (المزامنة) — كلها مستقلة تمامًا.
+# ═══════════════════════════════════════════════════════════════════
+
+name = "nasr-ai-gateway"
+main = "mcp-worker.js"
+compatibility_date = "2026-09-04"
+workers_dev = true
+
+# لا توجد bindings عن قصد. لو أُضيف أي binding لاحقًا، فهو قرار تصميمي
+# يجب أن يُوثّق هنا مع سببه — وليس إضافة صامتة.
+
+[observability]
+enabled = true
+
+# ملاحظات تشغيلية:
+#   • GET  /            → بطاقة الخدمة (أدوات · موارد · برومبت)
+#   • GET  /health      → 200 صحة / 503 تدهور
+#   • POST /mcp         → MCP Streamable HTTP (JSON-RPC 2.0)
+#   • GET  /api/properties[/{slug}] · /api/stats · /api/zones
+#   • CORS مفتوح (*) لكل المسارات — الخادم عام للقراءة فقط.
+#
+# آخر مراجعة: 2026-10-16 (v1.0.0)
