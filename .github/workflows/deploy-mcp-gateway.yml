@@ -31,6 +31,7 @@ on:
       - "_worker/wrangler.mcp.toml"
       - "_worker/tests/mcp-gateway.test.mjs"
       - ".github/workflows/deploy-mcp-gateway.yml"
+      - "_diag/verify-mcp-gateway.mjs"
 
 permissions:
   contents: read
@@ -179,3 +180,25 @@ jobs:
             head -c 400 /tmp/card.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── المصافحة الكاملة (التحقّق الذي كان ناقصًا) ───────────────────
+      #  خطوة الدخان أعلاه تُثبت أن `GET /` يردّ 200 — وهذا **لا** يُثبت أن
+      #  خادم MCP يعمل: قد تُنشر نسخة تردّ البطاقة وتفشل في JSON-RPC.
+      #  لذلك تُجرى هنا مصافحة حقيقية على الشبكة: initialize · initialized ·
+      #  tools/list · tools/call · resources/read، وتُقارَن كل نتيجة بكتالوج
+      #  المستودع (عدد الوحدات من `_properties` وأسماء الأدوات من `mcp.json`)
+      #  لا بأرقام متوقَّعة مكتوبة في الفاحص.
+      #
+      #  إن فشلت المصافحة يفشل الـworkflow عن قصد: «النشر الناجح» بلا مصافحة
+      #  متحقَّقة هو بالضبط ما أبقى الحالة `pending-deployment` رغم خضراء
+      #  التشغيلات السابقة (كانت تتخطّى النشر بلطف لأن التوكن غائب).
+      #
+      #  تُكتب نسخة التقرير في ملخّص التشغيل داخل وسم ثابت، لأن سجلات الخطوات
+      #  في هذا المستودع غير مقروءة (EOF من blob storage) — ومنها يقرأ
+      #  `_diag/verify-mcp-gateway.mjs --flip --ci-run <id>` دليلَه عبر
+      #  GitHub API قبل أن يعلن `live`.
+      - name: MCP handshake against the live endpoint
+        if: steps.creds.outputs.has_token == 'true'
+        run: |
+          set -euo pipefail
+          node _diag/verify-mcp-gateway.mjs --ci --json "$RUNNER_TEMP/mcp-handshake.json"
