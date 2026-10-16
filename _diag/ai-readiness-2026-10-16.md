@@ -438,3 +438,202 @@ Cloudflare وتشغيل `deploy-mcp-gateway.yml`: بدّل `status` إلى `live
 
 **الوحيد المتبقّي**: نشر بوابة MCP — يحتاج سرًّا من Cloudflare (أي اسم من السبعة التي
 يقرأها الـworkflow) ولا يمكن نشرها من هذه البيئة.
+
+---
+
+## 13) خطة نشر البوابة، ولماذا فاحص جديد (2026-10-16)
+
+### 13.1 تدقيق قبل التنفيذ: ما كان مُدّعى مقابل ما كان موجودًا فعلًا
+
+قاعدة «لا تلفّق» تُطبَّق أولًا على التسليم نفسه، لذلك قِيس كل ادّعاء قبل البناء عليه:
+
+| الادّعاء الوارد في التكليف | الواقع المقاس في الشجرة |
+|---|---|
+| رأس الفرع المحلي `6703ebe` أقدم من master | `git rev-parse HEAD` = `a70f7e3` = `origin/master` تمامًا، والشجرة نظيفة (`nothing to commit`). ولا وجود لكائن `6703ebe` أصلًا: `git cat-file -t 6703ebe` ⇒ `fatal: Not a valid object name` |
+| `_diag/verify-mcp-gateway.mjs` موجود على القرص | **غير موجود** (لا على القرص ولا في شجرة Git) — كُتب الآن من الصفر |
+| الـworkflow معدَّل عن master بـ19 سطرًا | **مطابق لـmaster بايتًا ببايت** (`git show origin/master:… \| diff - …` ⇒ فارغ) — التعديل أُضيف الآن |
+| هذا الملف فيه §13 | آخر قسم كان §12.1 والملف 440 سطرًا — أي أن §13 كُتب الآن أيضًا |
+| السر `ARENA_CLOUDFLARE_TOKEN` أُنشئ | لا يُثبَت من هنا: `gh secret list` ⇒ **403**، وآخر تشغيل على master (`38959048723`) طبع كل الأسرار السبعة `no` وتخطّى النشر. ما أُثبت لاحقًا أضعف وأدق: **توكنًا ما في السلسلة موجود** لأن خطوة النشر اشتغلت فعلًا في `38971312205` بدل أن تُتخطّى — أمّا اسمه فبقي غير مقروء (السبب في §14.3) |
+| `workflow_dispatch` يشغّل النشر عند الحاجة | `gh workflow run deploy-mcp-gateway.yml --ref master` ⇒ **403 Resource not accessible by integration**؛ فالدفعة على فرع `arena/**` هي المُشغّل الوحيد المتاح فعلًا |
+
+الخلاصة: لم يكن هناك عمل جاهز للدفع، بل مواصفة لعمل. لذلك كُتب الفاحص وعُدّل الـworkflow
+وفق المواصفة نفسها (نفس المسارات، نفس موضع الخطوة بعد الدخان)، ثم قِيس كل شيء.
+
+### 13.2 لماذا لا تكفي الاختبارات ولا خطوة الدخان
+
+ثلاث طبقات كانت موجودة، ولا واحدة منها تُجيب عن السؤال المطلوب:
+
+1. `_worker/tests/mcp-gateway.test.mjs` — يثبت صحة **الكود** (fetch موك بالكامل، شبكة مقطوعة
+   عن قصد). لا يعرف شيئًا عن النسخة المنشورة.
+2. `Deploy with Wrangler` — تُتخطّى بلطف (`if: has_token`) عند غياب التوكن، فينجح التشغيل
+   بلا أي نشر. هذا بالضبط ما جعل كل التشغيلات السابقة خضراء والبوابة فارغة.
+3. `Smoke-test` — معلّقة على **نفس الشرط** (`has_token == 'true'`)، فلا تُشغَّل حين يُتخطّى
+   النشر؛ وحتى حين تُشغَّل فهي `GET /` فقط: بطاقة JSON تردّ 200 لا تُثبت أن خادم
+   JSON-RPC يعمل.
+
+الفجوة: لا شيء يثبت أن **البوابة المنشورة** تُجري مصافحة MCP فعلًا. من هنا جاء الفاحص.
+
+### 13.3 تصميم `_diag/verify-mcp-gateway.mjs`
+
+* سبع مراحل على الشبكة الحقيقية بلا mocks: `card` · `health` · `initialize` · `initialized`
+  (إشعار ⇒ 202 بلا جسم) · `tools/list` · `tools/call` · `resources/read`.
+* **كل نتيجة تُقارَن بكتالوج المستودع** لا برقم متوقَّع مكتوب في الفاحص: عدد الوحدات من
+  `_properties` عبر `scripts/lib/properties.mjs` (102)، وأسماء الأدوات من `mcp.json`،
+  وأسماء الموارد من `mcp.json`. والوحدة المُختبَرة بـ`get_property` هي `slug` حقيقي من
+  الكتالوج لا مُختلَق.
+* الغياب يبقى غيابًا: `UNREACHABLE` (بيئة لا مخرج لها) غير `NOT_DEPLOYED` (صفحة
+  Cloudflare الافتراضية «There is nothing here yet») غير `HTTP_xxx` — ولا يُترجم أيٌّ منها
+  إلى نجاح أو إلى تشخيص بالتخمين.
+* `--flip` يرفض الإعلان إن لم تنجح المصافحة، ويرفض كذلك «النجاح الأخضر الذي تخطّت خطواته»:
+  يشترط أن تكون `Deploy` و`Smoke-test` و`MCP handshake` كلها `success` **لا `skipped`**.
+* بلا اعتماديات (Node 22 فقط) مثل بقية فاحصات `_diag/`.
+
+عطلان حقيقيان اكتُشفا أثناء الكتابة وعولجا في الفاحص نفسه:
+
+* **TLS**: بيئة التنفيذ تعترض الاتصالات بشهادة من مخزن النظام، وNode لا يثق إلا بمخزنه
+  المضمَّن ⇒ `fetch` إلى `api.github.com` يفشل بـ`UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
+  الحل: قناتان — fetch مباشر، ثم عملية Node فرعية بـ`--use-system-ca` (نفس
+  `process.execPath`، بلا أمر من PATH حتى لا تُخرق `sonarjs/no-os-command-from-path`،
+  وبلا توكن في argv).
+* **قناة الدليل**: انظر §14.1 — ملخّصات الخطوات غير مكشوفة برمجيًا، فالدليل يُكتب
+  في annotation.
+
+### 13.4 ما لم يُلمس عن قصد
+
+`royal-snow-ea32` · `noisy-bush-fd84` · `nasr-properties-sync` (لا أمر deploy لها في
+الـworkflow ولم يُنشَر أي منها) · `build_type=legacy` لنشر Pages · `optional_front_matter`
+في `_config.yml` · قالب `ai-feed.json` السائل (لم يُعَد توليده: `--skip=ai-feed.json`).
+
+---
+
+## 14) النتيجة المقاسة: البوابة `live` (2026-10-16)
+
+كل قيمة أدناه **قراءة فعلية** من تشغيل أو من endpoint حيّ، لا قيمة متوقَّعة.
+
+### 14.1 النشر والمصافحة في CI
+
+| التشغيل | الفرع / الرأس | ماذا أثبت |
+|---|---|---|
+| `38959048723` | master · `253f39a` | **قبل** العمل: كل الأسرار السبعة `no` ⇒ `Deploy` متخطّاة ⇒ «نجاح» بلا نشر. دليل على أن الخضرة السابقة كانت خادعة |
+| `38971312205` | `arena/11d8e9c0…` · `eba073a` | أول نشر حقيقي: `Deploy` ✓ `Smoke-test` ✓ `MCP handshake` ✓ — annotation: «المصافحة الكاملة نجحت على البوابة الحيّة» |
+| `38972182779` | `arena/11d8e9c0…` · `aca2cf6` | نفس النجاح + دليل آلي مقروء برمجيًا (أدناه) — وهو الدليل الذي قُبل لتبديل الحالة |
+
+سطر الوقائع كما ورد حرفيًا في annotation التشغيل `38972182779`
+(`check-runs/117212992726/annotations`):
+
+```
+verdict=pass · properties=102/102 · health_status=ok · read_only=true ·
+protocol=2025-06-18 · tools=5/5 · resources=4 · release=v1.0.0 ·
+commit=aca2cf68f388090a0efdb92233b854749b4769ec
+```
+
+خطوات وظيفة `Deploy nasr-ai-gateway` في ذلك التشغيل (من `/actions/runs/…/jobs`):
+`Report the artifact` ✓ · `Diagnose credential availability` ✓ · `Skip gracefully…` ✓ ·
+`Resolve the account id…` ✓ · `Install Wrangler…` ✓ · **`Deploy with Wrangler (this Worker only)` ✓** ·
+**`Smoke-test the live endpoint` ✓** · **`MCP handshake against the live endpoint` ✓** ·
+وخاتمته `success` على الرأس `aca2cf6` = رأس الفرع المدفوع.
+
+**عطل قناة اكتُشف هنا (ولهذا يوجد سطر الوقائع):** بعد التشغيل الناجح الأول قُرئ
+`check-runs/117210151244` فرجع `output.summary` **فارغًا (طوله 0)** رغم أن الخطوة كتبت في
+`$GITHUB_STEP_SUMMARY` فعلًا — أي أن ملخّصات الخطوات تُعرض في الواجهة فقط ولا تُكشف عبر
+REST API. ومع سجلات الخطوات غير المقروءة في هذا المستودع (EOF من blob storage) لم تبقَ
+قناة مقروءة برمجيًا إلا **annotations**. لذلك صارت الوقائع تُكتب في `::notice` بسطر واحد
+قابل للتحليل ومربوط بـ`commit`، ومنها يقرأ `--flip --ci-run` دليله.
+
+### 14.2 قراءات حيّة من البوابة نفسها (جلب مباشر)
+
+`GET https://nasr-ai-gateway.footcai-555.workers.dev/health` — كما رجع حرفيًا:
+
+```json
+{
+  "status": "ok",
+  "release": "v1.0.0",
+  "properties": 102,
+  "feed_generated_at": "2026-10-16T23:24:25+03:00",
+  "feed_url": "https://nasr-realestate.github.io/ai-feed.json",
+  "checked_at": "2026-10-16T21:44:43.830Z",
+  "read_only": true
+}
+```
+
+أي: `status: ok` ✓ · `properties: 102` ✓ (= كتالوج `_properties`) · `read_only: true` ✓.
+
+`GET /` (بطاقة الخدمة) — القيم المقاسة: `service: semsar-talabk` · `release: v1.0.0` ·
+`status: running` · `protocol: model-context-protocol 2025-06-18 · streamable-http · /mcp` ·
+`read_only: true` · `requires_secrets: false` · **5 أدوات** (`search_properties` ·
+`get_property` · `market_summary` · `list_zones` · `get_contact`) مطابقة تمامًا للبطاقة
+المستودعية · **4 موارد** (`semsar://catalog` · `semsar://llms-full` · `semsar://contact` ·
+`semsar://stats`) · **برومبت واحد** (`recommend_units`) · `contact.broker: طارق طنطاوي`.
+
+حدود هذه البيئة (موثّقة لا مُجمَّلة): لا مخرج إلى `*.workers.dev` من بيئة التنفيذ —
+القياس المباشر أعلاه جرى عبر أداة الجلب، أمّا مراحل `POST /mcp` (initialize ·
+tools/call · resources/read) فلا تُقاس من هنا إطلاقًا (`ECONNRESET`، وست محاولات كلها
+`UNREACHABLE`)؛ دليلها هو مصافحة CI في §14.1، وهي التي أجرت الفاحص نفسه على الشبكة.
+
+### 14.3 ما تعذّرت قراءته (بلا تجميل)
+
+* **اسم السرّ الموجود**: `gh secret list` ⇒ 403؛ وتشخيص الأسماء (`ARENA_CLOUDFLARE_TOKEN=yes/no`)
+  يُطبع في stdout (سجلات غير مقروءة: EOF) وفي ملخّص الخطوات (غير مكشوف برمجيًا: §14.1).
+  المثبت فقط أن `has_token=true` لأن خطوة النشر **اشتغلت ولم تُتخطَّ**، وأن العامل
+  `nasr-ai-gateway` صار يردّ. لا يُدّعى هنا اسم سرّ بعينه.
+* **`POST /mcp` محليًا**: مستحيل من هذه البيئة (لا مخرج) — انظر §14.2.
+
+### 14.4 التبديل إلى `live` وما غيّره فعلًا
+
+الأمر: `node _diag/verify-mcp-gateway.mjs --flip --ci-run 38972182779` ⇒ exit 0، بعد أن
+قبل الدليل (`✅ دليل CI مقبول: تشغيل 38972182779 · aca2cf6 · خطوات النشر والدخان
+والمصافحة كلها success`).
+
+* `scripts/lib/ai-docs.mjs`: `status: 'live'` · `verified_at: '2026-10-16'` · `note` جديدة
+  (بلا ادّعاء «لم تُضَف الأسرار بعد») + سطر توثيقي داخل تعليق المصدر يحمل دليل التبديل
+  (رقم التشغيل والرأس وسطر الوقائع).
+* أعيد التوليد بالأمر الوحيد المسموح: `node scripts/build-ai-artifacts.mjs --out=. --skip=ai-feed.json`.
+* انعكس على: `mcp.json` · `.well-known/mcp.json` · `.well-known/mcp/server-card.json`
+  (`availability.status: live`) · `ai.txt` · `.well-known/ai.txt` (`AI-MCP-Status: live`) ·
+  `api/index.json` (`mcp.status: live`).
+* وصُلحت الادّعاءات المكتوبة يدويًا حتى لا يبقى تناقض: `llms.txt` (موضعان) و`humans.txt`
+  (كانا يقولان «لم يُفعَّل بعد» / «قيد التفعيل» / «pending deployment»).
+* **9 ملفات فقط تغيّرت تغيّرًا حقيقيًا.** أمّا الـ104 الباقية التي لمسها التوليد
+  (`api/properties/*.json` و`api/properties.json` و`search-data.json`) فكان تغيّرها
+  `generated_at`/`updated_at` **فقط** (سطر واحد لكل ملف)، فأُعيدت إلى أصلها
+  (`git checkout --`) إبقاءً على فرق PR مقروءًا — وحرس الانحراف يتسامح مع الطوابع
+  بالتطبيع، وقد أُعيد تشغيله بعد الإرجاع فبقي أخضر.
+
+الفحوص بعد التبديل (كلها مقاسة):
+
+| الفحص | النتيجة |
+|---|---|
+| `scripts/check-ai-artifacts-in-sync.mjs` | ✅ **214 ملفًا** مطابق لمخرجات المولّد |
+| الحزمة الكاملة مع `--test-skip-pattern` | ✅ **282/282** · fail 0 · skipped 0 (النمطان المعروفان لم يعودا موجودين، فالقفز لم يلزم) · ~4.0s |
+| `_worker/tests/ai-artifacts.test.mjs` + `mcp-gateway.test.mjs` داخل التبديل | ✅ نجحا كجزء من حرس `--flip` |
+| `npx eslint --no-ignore --no-warn-ignored _diag/verify-mcp-gateway.mjs` | ✅ **0 مخالفات** |
+| `npx eslint … scripts/lib/ai-docs.mjs` | 5 مخالفات **سابقة للتغيير**: نفس الخمس على `origin/master` (سطور 67/72/106/140/245 ⇒ صارت 68/73/107/141/246 بإزاحة سطر التعليق المضاف). أي أن التبديل لم يُدخل مخالفة واحدة، وهي من الفئات التي يوثّق `eslint.config.mjs` أنها «روائح لا تُسقط بوابة الجودة الحالية» (تعقيد إدراكي وقوالب متداخلة) |
+
+حالات الرفض الثلاث التي قِيست على الفاحص قبل استعماله (ولم يُمَس فيها أي ملف):
+
+| الحالة | النتيجة |
+|---|---|
+| `--flip` مباشرًا من هذه البيئة | رفض: 6 محاولات كلها `UNREACHABLE (ECONNRESET)` ⇒ exit 2 |
+| `--flip --ci-run 38959048723` (التشغيل الأخضر القديم) | رفض: «الخطوة «Deploy with Wrangler» تخطّت (skipped) — أي أن النشر لم يحدث أصلًا» |
+| `--flip --ci-run 38971312205` (annotation بصيغة قديمة) | رفض مع جمع كل المشاكل: `verdict=undefined لا pass · عدد الوحدات (undefined) ≠ 102 · read_only=undefined · حالة الصحة=undefined` |
+| `--flip --ci-run 1` (تشغيل غير موجود) | رفض: `direct: UNABLE_TO_VERIFY_LEAF_SIGNATURE · system-ca: HTTP 404` |
+
+### 14.5 فحص الموقع الحيّ بعد النشر من master
+
+`availability.status = live` لا يظهر على الموقع إلا بعد بناء Pages من **master**
+(`build_type=legacy`)، أي بعد الدمج — لذلك لم يُكتب هنا كقيمة مقاسة. يُفحص بعد الدمج بـ:
+`https://nasr-realestate.github.io/mcp.json?1` (كاش Pages ~10 دقائق) والمتوقَّع
+`availability.status: live` و`verified_at: 2026-10-16`، و`AI-MCP-Status: live` في `/ai.txt`،
+و`mcp.status: live` في `/api/index.json`.
+
+### 14.6 ملاحظات متابعة (لا تعطّل الإعلان)
+
+* البطاقة المستودعية تُعلن **3** موارد بينما البوابة الحيّة تخدم **4** (`semsar://stats`
+  زائدة حيّة). الفاحص يتعامل مع البطاقة كمجموعة جزئية (يُبلّغ الزيادة ولا يُفشلها) —
+  والأصح إضافة `semsar://stats` إلى `renderMcpCard` في دورة تالية، لأن العقد الموجَّه
+  للنماذج يبقى ناقصًا موردًا موجودًا فعلًا.
+* `recommend_units` برومبت لا أداة، وغيابه عن `tools` في البطاقة صحيح (وتؤكده الاختبارات:
+  `tools/list` = خمس أدوات بالضبط).
+* دليل التبديل مربوط بـannotation؛ لو كشفت GitHub ملخّصات الخطوات برمجيًا يومًا، يمكن
+  إعادة ربطه بنسخة التقرير الكاملة (الوسم `<!-- mcp-handshake-transcript -->` ما زال
+  يُكتب في الملخّص لقارئ الواجهة البشرية).

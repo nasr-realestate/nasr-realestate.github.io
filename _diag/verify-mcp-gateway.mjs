@@ -690,7 +690,8 @@ function writeLiveStatus(evidenceLine) {
   const humans = path.join(ROOT, 'humans.txt');
   edited.push(['humans.txt', replaceAnchored(humans, '(pending deployment — see availability in /mcp.json)', `(live — verified ${TODAY}, see availability in /mcp.json)`)]);
 
-  return edited.filter(([, result]) => result.changed).map(([file]) => file);
+  // قائمة الملفات لا قائمة التعديلات: نفس الملف يُعدَّل في أكثر من موضع.
+  return [...new Set(edited.filter(([, result]) => result.changed).map(([file]) => file))];
 }
 
 /** يعيد توليد طبقة الذكاء ثم يفحص الانحراف ثم يشغّل اختبارات الطبقة. */
