@@ -618,13 +618,21 @@ tools/call · resources/read) فلا تُقاس من هنا إطلاقًا (`ECO
 | `--flip --ci-run 38971312205` (annotation بصيغة قديمة) | رفض مع جمع كل المشاكل: `verdict=undefined لا pass · عدد الوحدات (undefined) ≠ 102 · read_only=undefined · حالة الصحة=undefined` |
 | `--flip --ci-run 1` (تشغيل غير موجود) | رفض: `direct: UNABLE_TO_VERIFY_LEAF_SIGNATURE · system-ca: HTTP 404` |
 
-### 14.5 فحص الموقع الحيّ بعد النشر من master
+### 14.5 فحص الموقع الحيّ بعد النشر من master (مقاس بعد الدمج)
 
-`availability.status = live` لا يظهر على الموقع إلا بعد بناء Pages من **master**
-(`build_type=legacy`)، أي بعد الدمج — لذلك لم يُكتب هنا كقيمة مقاسة. يُفحص بعد الدمج بـ:
-`https://nasr-realestate.github.io/mcp.json?1` (كاش Pages ~10 دقائق) والمتوقَّع
-`availability.status: live` و`verified_at: 2026-10-16`، و`AI-MCP-Status: live` في `/ai.txt`،
-و`mcp.status: live` في `/api/index.json`.
+دُمج PR #64 في master بالرأس `8c33a60253826fa73d053e564b45d9afb6298d50`
+(mergedAt: `2026-10-16T22:15:15Z`). بعد نجاح `pages build and deployment`
+(التشغيل `38974627998`) قُرئت القيم التالية من الموقع الحيّ نفسه:
+
+| المسار الحيّ | القيمة المقاسة |
+|---|---|
+| `https://nasr-realestate.github.io/mcp.json?1` | `availability.status: live` · `verified_at: 2026-10-16` · `counts.properties: 102` |
+| `https://nasr-realestate.github.io/ai.txt?1` | `AI-MCP-Status: live` · `Data-Freshness: 102 وحدة معروضة حتى 2026-10-16` |
+| `https://nasr-realestate.github.io/api/index.json?1` | `total_count: 102` · `mcp.status: live` · `mcp.endpoint: https://nasr-ai-gateway.footcai-555.workers.dev/mcp` |
+| `https://nasr-ai-gateway.footcai-555.workers.dev/health` | `status: ok` · `properties: 102` · `read_only: true` · `release: v1.0.0` · `checked_at: 2026-10-16T22:16:15.856Z` |
+
+وتشغيل البوابة على master نفسه (`38974628531`) أعاد نفس وقائع المصافحة على رأس الدمج:
+`verdict=pass · properties=102/102 · health_status=ok · read_only=true · protocol=2025-06-18 · tools=5/5 · resources=4 · release=v1.0.0 · commit=8c33a60253826fa73d053e564b45d9afb6298d50`.
 
 ### 14.6 ملاحظات متابعة (لا تعطّل الإعلان)
 
@@ -637,3 +645,13 @@ tools/call · resources/read) فلا تُقاس من هنا إطلاقًا (`ECO
 * دليل التبديل مربوط بـannotation؛ لو كشفت GitHub ملخّصات الخطوات برمجيًا يومًا، يمكن
   إعادة ربطه بنسخة التقرير الكاملة (الوسم `<!-- mcp-handshake-transcript -->` ما زال
   يُكتب في الملخّص لقارئ الواجهة البشرية).
+
+### 14.7 بوابة Sonar أثناء PR #64
+
+أول مرور لـSonarCloud على PR #64 فشل بسبب تنبيهَي **Log Injection** في
+`_diag/verify-mcp-gateway.mjs` (سطرا طباعة سبب الرفض وقبول دليل CI؛ المدخلات هناك
+تأتي من argv أو من GitHub API). أُصلح ذلك في `9ef8c10` بتنقية موحّدة `cleanLog()`
+قبل أي طباعة/تضمين، وبعدم طباعة `head_sha` إلا إن كان SHA-1 كامل الصيغة، وبفصل
+قراءة دليل CI في `ciEvidence()` حتى لا يتجاوز التعقيد حدّ البوابة. بعد الإصلاح:
+فحوص PR #64 كلها ناجحة بما فيها `SonarCloud Code Analysis`، وفحص Sonar على master
+بعد الدمج (التشغيل `38974628583`) ناجح أيضًا.
