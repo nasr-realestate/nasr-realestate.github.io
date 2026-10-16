@@ -168,26 +168,36 @@ test("llms-full.txt carries every unit with a link and its numeric price", () =>
   assert.ok(!/\{\{|\{%/.test(md), "no unrendered Liquid tokens may leak into the catalogue");
 });
 
-test("per-property Markdown is valid front matter with a resolvable identity", () => {
+test("per-property Markdown stays a static file that Jekyll cannot render", () => {
   for (const p of PROPS.slice(0, 12).concat(PROPS.slice(-3))) {
     const md = renderPropertyMarkdown(p);
-    assert.match(md, /^---\n/);
-    assert.ok(md.includes(`slug: "${p.slug}"`));
+    // السبب الحرج: Jekyll يعدّ أي `.md` يبدأ بـ`---` «صفحة» فيحذف
+    // الوصف الميكانيكي ويخدم HTML بدل Markdown — لذا يمنع الاختبار عودته.
+    assert.ok(!md.startsWith("---"), "front matter would be rendered away by the site's Jekyll build");
+    assert.ok(md.startsWith("<!-- ai-property "), "the metadata comment must open the file");
+    const json = md.slice(md.indexOf("<!-- ai-property ") + 17, md.indexOf(" -->"));
+    const meta = JSON.parse(json);
+    assert.equal(meta.slug, p.slug);
+    assert.equal(meta.transaction, p.transaction);
+    assert.equal(meta.propertyType, p.propertyType);
+    assert.equal(meta.currency, "EGP");
+    if (Number.isFinite(p.priceNumeric)) assert.equal(meta.price, p.priceNumeric);
     assert.ok(md.includes(p.url));
     assert.ok(md.includes(`${SITE}/api/properties/${p.slug}.json`));
     assert.match(md, /أسعار طلب/);
-    const fm = md.slice(4, md.indexOf("\n---\n", 4));
-    for (const line of fm.split("\n")) {
-      assert.match(line, /^[A-Za-z_]+: .+$/, `malformed front-matter line: ${JSON.stringify(line)}`);
-    }
+    // الحقول الغائبة تُحذف ولا تصير صفرًا أو قيمة مختلقة
+    if (!Number.isFinite(p.areaNumeric)) assert.ok(!("area_sqm" in meta), "absent area must stay absent");
   }
 });
 
-test("a title containing a double quote cannot break the generated YAML", () => {
-  const md = renderPropertyMarkdown({ ...PROPS[0], title: 'شقة "لقطة" 180م', location: 'شارع "الاختبار"' });
-  const fm = md.slice(4, md.indexOf("\n---\n", 4));
-  for (const line of fm.split("\n")) assert.match(line, /^[A-Za-z_]+: .+$/);
-  assert.ok(!fm.includes('"شقة "لقطة"'));
+test("quotes, dashes and angle brackets cannot break the metadata comment", () => {
+  const md = renderPropertyMarkdown({ ...PROPS[0], title: 'شقة "لقطة" -- 180م', location: 'شارع "الاختبار" <!-- -->' });
+  assert.ok(!md.startsWith("---"));
+  const json = md.slice(md.indexOf("<!-- ai-property ") + 17, md.indexOf(" -->"));
+  assert.ok(!json.includes("--"), "no raw double dash may close the HTML comment early");
+  const meta = JSON.parse(json);
+  assert.equal(meta.title, 'شقة "لقطة" -- 180م');
+  assert.equal(meta.location, 'شارع "الاختبار" <!-- -->');
 });
 
 test("ai.txt declares the permissions and the machine endpoints an agent looks for", () => {

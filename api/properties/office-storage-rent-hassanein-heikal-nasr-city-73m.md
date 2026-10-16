@@ -1,0 +1,33 @@
+<!-- ai-property {"title":"مكتب إداري / مخزن 73م للإيجار مكيف ومجهز - حسنين هيكل الرئيسي","slug":"office-storage-rent-hassanein-heikal-nasr-city-73m","transaction":"rent","propertyType":"office","price":15000,"currency":"EGP","area_sqm":73,"rooms":1,"baths":1,"location":"89 شارع حسنين هيكل الرئيسي - خلف عباس العقاد - مدينة نصر","zone":"عباس العقاد","date_posted":"2026-09-28"} -->
+
+# مكتب إداري / مخزن 73م للإيجار مكيف ومجهز - حسنين هيكل الرئيسي
+
+مكتب إداري / مخزن 73م للإيجار مكيف ومجهز - حسنين هيكل الرئيسي
+
+## التفاصيل
+
+- **المعرّف**: `office-storage-rent-hassanein-heikal-nasr-city-73m`
+- **النوع**: مكتب إداري — للإيجار
+- **السعر**: 15,000 ج.م شهرياً (15000 EGP)
+- **المساحة**: 73 متر مربع
+- **الغرف**: 1 غرفة + ريسبشن
+- **الحمامات**: 1 حمام + مطبخ
+- **الدور**: الدور الأول (أسانسير)
+- **التشطيب**: مكيف ومجهز بالأجهزة
+- **الموقع**: 89 شارع حسنين هيكل الرئيسي - خلف عباس العقاد - مدينة نصر
+
+## الوصول للوحدة
+
+- **صفحة الوحدة**: https://nasr-realestate.github.io/properties/office-storage-rent-hassanein-heikal-nasr-city-73m/
+- **نسخة JSON**: https://nasr-realestate.github.io/api/properties/office-storage-rent-hassanein-heikal-nasr-city-73m.json
+- **الصورة**: https://nasr-realestate.github.io/assets/img/properties/Hassanein-Heikal-Office-Storage-73m.webp
+
+## التواصل
+
+- **الوسيط**: طارق طنطاوي — سمسار طلبك
+- **واتساب**: +201147758857 · https://wa.me/201147758857
+- **المكتب**: 16 شارع محمد حسن الجمل، المنطقة السادسة، مدينة نصر، القاهرة
+
+---
+
+> الأسعار المعروضة أسعار طلب قابلة للتفاوض وليست أسعار إتمام صفقات. الاقتباس مسموح مع ذكر المصدر «سمسار طلبك» ورابط الصفحة.

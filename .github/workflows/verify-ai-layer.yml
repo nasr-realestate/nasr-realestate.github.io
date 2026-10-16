@@ -1,0 +1,62 @@
+name: Verify the published AI layer
+
+# لماذا هذا الـworkflow؟
+#   النشر الفعلي على GitHub Pages يأتي من **بناء الفرع** (master/الجذر): Jekyll
+#   يبني المستودع كما هو. وJekyll عنده طريقتان تُفسدان طبقة الذكاء بصمت:
+#     • أي ملف `.md` يبدأ بـ`---` يصير «صفحة»: يُحذف وصفه الميكانيكي ويتحوّل إلى HTML.
+#     • أي مسار يبدأ بنقطة (`.well-known/`) يُهمَل إلا إذا صُرّح به في `include`.
+#   لا يكتشف ذلك أي فحص آخر — لا اختبارات الوحدة ولا بوابة الصوت. لذلك هنا نبني
+#   بنفس بناء النشر ثم نتحقق أن كل ملف من طبقة الذكاء نُشر حرفيًا بلا تحويل.
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - '.well-known/**'
+      - 'llms.txt'
+      - 'llms-full.txt'
+      - 'ai.txt'
+      - 'mcp.json'
+      - 'ai-feed.json'
+      - 'search-data.json'
+      - 'robots.txt'
+      - 'scripts/**'
+      - '_config.yml'
+      - '_properties/**'
+      - '_diag/check-ai-layer-published.mjs'
+      - '.github/workflows/verify-ai-layer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-only:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # نفس بناء النشر بالحرف (بناء الفرع على Pages)، بلا صلاحيات نشر.
+      - name: Build with Jekyll
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: The AI layer must be published verbatim
+        run: node _diag/check-ai-layer-published.mjs
+
+      - name: Committed AI artifacts must match the generator
+        run: node scripts/check-ai-artifacts-in-sync.mjs
