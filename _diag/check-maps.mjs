@@ -113,7 +113,7 @@ const documentShim = {
   querySelectorAll: () => [],
   querySelector: () => null,
   addEventListener: () => {},
-  createElement: (tag) => (tag === 'iframe' || tag === 'canvas' ? makeNode(tag) : makeNode(tag)),
+  createElement: (tag) => makeNode(tag),
   head: { appendChild() {} },
   body: {}
 };
