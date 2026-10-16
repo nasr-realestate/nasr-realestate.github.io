@@ -395,3 +395,46 @@ optional_front_matter:
 
 **الدرس**: البوابة كانت محقّة والخطأ كان في الإعداد. الاستجابة الخاطئة كانت ستكون «تجاهُل ملفات
 `index.html` في الفحص» — أي إخفاء عيب حقيقي في الموقع بدل إصلاحه.
+
+---
+
+## 12) حالة النشر النهائية — تحقّق حيّ على الموقع (2026-10-16، بعد دمجه في master)
+
+الدمج: PR #62 ⇒ `7ec5a7b` على master · تشغيل النشر `pages build and deployment` **نجح** ·
+`build_type: legacy` · `status: built`. كل ما يلي جُلِب من الموقع الحيّ فعلًا (لا من المستودع):
+
+| المسار | الحالة |
+|---|---|
+| `/api/index.json` | ✅ JSON · `schema_version 3.0` · `total_count 102` |
+| `/api/properties/<slug>.json` | ✅ بطاقة كاملة (citation · broker · property + `markdown_url`/`json_url`) |
+| `/api/properties/<slug>.md` | ✅ **Markdown خام** يبدأ بـ`<!-- ai-property {…} -->` — لا HTML ولا front matter |
+| `/.well-known/ai.txt` و`/ai.txt` | ✅ سياسة الاستخدام كاملة |
+| `/.well-known/mcp.json` و`/mcp.json` | ✅ مطابقة بايتًا لبعضها (3 نسخ: الجذر + .well-known + server-card) |
+| `/llms-full.txt` | ✅ الكتالوج الكامل: 102 وحدة + فهرس + جدول أسعار |
+| `/search-data.json` | ✅ فهرس خفيف بـ102 وحدة |
+| `/ai-feed.json` | ✅ JSON صالح · `total_count 102` (قالب Liquid يُصيَّر بواسطة Jekyll — لم يُستبدل) |
+| `/api/properties/<slug>/` | ✅ **404** — صفحات HTML المكرّرة غير موجودة (تأكيد حيّ لإصلاح §11) |
+| `/properties/<slug>/` | ✅ صفحة الوحدة الحقيقية سليمة (لم يتأثر الموقع) |
+| `/sitemap.xml` | ✅ فيه روابط `/properties/**` فقط — لا تسرّب لمسارات `/api/**` |
+
+### 12.1 قرار صيانة: بطاقة MCP صارت تصرّح بحالتها
+
+جلب مباشر لـ`https://nasr-ai-gateway.footcai-555.workers.dev/mcp` أعاد صفحة Cloudflare
+«There is nothing here yet» — أي أن البوابة **غير منشورة** (أسرار Cloudflare غير مضافة إلى
+المستودع، فخطوة النشر في `deploy-mcp-gateway.yml` تُتخطّى بلطف). وكانت `mcp.json` و`ai.txt`
+و`llms.txt` تعلنها «أدوات جاهزة» — ادّعاء غير صحيح في عقد موجَّه للنماذج. فصار:
+
+* `mcp.json` (والنسختان المطابقتان) يحمل `availability.status = "pending-deployment"` مع
+  `verified_at` و`note` و`guaranteed_fallback` و`guaranteed_paths` (خمسة مسارات تعمل اليوم).
+* `api/index.json` صار يحمل `mcp.status` و`mcp.fallback`.
+* `ai.txt` صار يحمل `AI-MCP-Status:` و`AI-MCP-Fallback:`.
+* `llms.txt` (مكتوب يدويًا) أُزيل منه ادّعاء الجاهزية من الموضعين، وأُشير إلى الحقل
+  `availability` في البطاقة. و`humans.txt` وُسم بوسم `(pending deployment)`.
+
+مصدر الحقيقة واحد: `MCP_GATEWAY_STATUS` في `scripts/lib/ai-docs.mjs`. وبعد إضافة مفتاح
+Cloudflare وتشغيل `deploy-mcp-gateway.yml`: بدّل `status` إلى `live` وحدّث `verified_at`
+ثم `node scripts/build-ai-artifacts.mjs --out=. --skip=ai-feed.json` — واختبار الوحدة
+الجديد يفرض وجود الحالة والمسار المضمون فلا يُنسى الحقل لاحقًا.
+
+**الوحيد المتبقّي**: نشر بوابة MCP — يحتاج سرًّا من Cloudflare (أي اسم من السبعة التي
+يقرأها الـworkflow) ولا يمكن نشرها من هذه البيئة.
