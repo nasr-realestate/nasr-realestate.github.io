@@ -247,9 +247,57 @@ export const KNOWN_ZONES = [
   'شيراتون', 'كمبوند دجلة لاند مارك', 'الواحة', 'بنفسج',
 ];
 
+/** مقارنة نصية بترتيب كود UTF-16 — نفس سلوك Array.prototype.sort الافتراضي بلاه، ولكن بمقارن صريح (SonarCloud S2871). */
+function byCodeUnit(a, b) {
+  const left = String(a);
+  const right = String(b);
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
 const ZONE_INDEX = KNOWN_ZONES
   .map((name) => ({ name, norm: stripTashkeel(name).replace(/\s+/g, ' ') }))
   .sort((a, b) => b.norm.length - a.norm.length);
+
+/** محرف مسافة (\s في النمط الأصلي) — بلا تعبير نمطي */
+const SPACE_CHARS = new Set([' ', '\t', '\n', '\r', '\f', '\v']);
+/** محارف الفصل الأخرى من صنف `[^\s\-–—,(]` */
+const ZONE_DELIMITERS = new Set(['-', '–', '—', ',', '(']);
+
+const isSpace = (ch) => SPACE_CHARS.has(ch);
+const isZoneDelimiter = (ch) => ch === undefined || isSpace(ch) || ZONE_DELIMITERS.has(ch);
+
+/**
+ * «المنطقة/الحي» + أول كلمة أو كلمتين كما كُتبتا في النص، أو null.
+ *
+ * مكتوبة يدويًا بلا تعبير نمطي متغيّر التراجع (SonarCloud S5852 — تنديد
+ * بأداء فوق خطي): تمسح النص من اليسار، وتشترط مسافة بعد الكلمة، وتتوقف
+ * عند أول محرف فاصل — نفس دلالات النمط السابق حرفيًا (بما فيها أن أول
+ * ظهور في النص هو الفائز، وأن «الحيوية» لا تُعتبر بداية جديدة لأن الحرف بعدها
+ * ليس مسافة).
+ */
+function firstDistrictPhrase(raw) {
+  for (let at = 0; at < raw.length; at += 1) {
+    for (const head of ['المنطقة', 'الحي']) {
+      if (!raw.startsWith(head, at)) continue;
+      let i = at + head.length;
+      if (!isSpace(raw[i])) continue;
+      while (isSpace(raw[i])) i += 1;
+
+      const words = [];
+      while (words.length < 2) {
+        const start = i;
+        while (!isZoneDelimiter(raw[i])) i += 1;
+        if (i === start) break;
+        words.push(raw.slice(start, i));
+        if (!isSpace(raw[i])) break;
+        while (isSpace(raw[i])) i += 1;
+      }
+      if (words.length) return `${head} ${words.join(' ')}`;
+    }
+  }
+  return null;
+}
 
 export function deriveZone(location = '') {
   const raw = text(location).trim();
@@ -262,10 +310,8 @@ export function deriveZone(location = '') {
   }
 
   // 2) نمط «المنطقة/الحي + الاسم» — نُعيد النص الأصلي كما هو مكتوب
-  const district = raw.match(/(المنطقة|الحي)\s+([^\s\-–—,(]+(?:\s+[^\s\-–—,(]+)?)/);
-  if (district) {
-    return `${district[1]} ${district[2].replace(/\s+-\s*.*$/, '')}`.trim();
-  }
+  const district = firstDistrictPhrase(raw);
+  if (district) return district;
 
   // 3) أول مقطع من العنوان (قبل الفاصل) كمنطقة احتياطية
   const head = raw.split(/[-–—,(/]/)[0].trim();
@@ -389,7 +435,7 @@ export function buildFacets(properties) {
   };
 
   const byTypePrice = {};
-  for (const type of [...new Set(properties.map((p) => p.propertyType))].sort()) {
+  for (const type of [...new Set(properties.map((p) => p.propertyType))].sort(byCodeUnit)) {
     const rows = properties.filter((p) => p.propertyType === type);
     byTypePrice[type] = {
       count: rows.length,

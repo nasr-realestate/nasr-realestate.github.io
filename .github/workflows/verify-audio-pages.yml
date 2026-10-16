@@ -96,10 +96,12 @@ on:
       - 'assets/audio/properties/degla-landmark-122m-rent.mp3'
       - '_properties/2026-10-16-commercial-hq-rent-kabul-st-130m.md'
       - 'assets/audio/properties/commercial-hq-rent-kabul-street-nasr-city-130m.mp3'
-      # request batch 1 (one eligible request; two excluded for incomplete data)
-      - '_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md'
+      # request batch 1: الطلب المؤهل الوحيد انتهى أجله وحُذف آليًا (d0ff0fd)، وبقي
+      # إعلانه الصوتي المنشور؛ لذلك لا يُذكر مسار الملف المحذوف هنا (مسار غير موجود
+      # لا يمكن أن يطابق تغييرًا)، وتبقى بقية مسارات الطلبات والأصل الصوتي مرصودة.
       - '_requests/2026-10-10-apartment-rent-art-studio-70m.md'
       - '_requests/2026-10-11-request-garage-40-buses-ismail-qabbani.md'
+      - '_requests/*.md'
       - 'assets/audio/requests/shop-rent-request-beauty-center-nasr-city.mp3'
       - '_includes/request-audio.html'
       - '_layouts/request_page.html'

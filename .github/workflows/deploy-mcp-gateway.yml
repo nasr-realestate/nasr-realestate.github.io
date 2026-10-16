@@ -127,20 +127,33 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            ACCOUNT_ID=$(curl -sS --max-time 30 \
+            # يُحفط الرد في ملف ثم يُحلّل بـ JSON.parse — بلا أنابيب تنفيذ لما يُنزّل
+            # (قاعدة SonarCloud: لا تُنفّذ ما يُنزّل مباشرة بلا تحقق).
+            curl -sS --max-time 30 -o "$RUNNER_TEMP/cloudflare-accounts.json" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts?per_page=1" \
-              | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>{try{const j=JSON.parse(s);process.stdout.write(j.result?.[0]?.id||'')}catch{process.stdout.write('')}})")
-            [ -n "$ACCOUNT_ID" ] && echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+              "https://api.cloudflare.com/client/v4/accounts?per_page=1"
+            ACCOUNT_ID=$(node -e "const fs=require('node:fs');try{const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(j.result?.[0]?.id||'')}catch{process.stdout.write('')}" "$RUNNER_TEMP/cloudflare-accounts.json")
+            # بدون `&&` أخيرة: مع `set -e` يكون اختبار فاشل سببًا لإبطال الخطوة.
+            if [ -n "$ACCOUNT_ID" ]; then
+              echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+            fi
           fi
           echo "account id present: $([ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] && echo yes || echo no)"
+
+      - name: Install Wrangler from the committed lockfile (بلا npx وبلا سكربتات حياة)
+        if: steps.creds.outputs.has_token == 'true'
+        working-directory: _worker
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/wrangler --version
 
       - name: Deploy with Wrangler (this Worker only)
         if: steps.creds.outputs.has_token == 'true'
         working-directory: _worker
         run: |
           set -euo pipefail
-          npx --yes wrangler@3 deploy --config wrangler.mcp.toml
+          ./node_modules/.bin/wrangler deploy --config wrangler.mcp.toml
 
       - name: Smoke-test the live endpoint (GET only, never POST)
         if: steps.creds.outputs.has_token == 'true'

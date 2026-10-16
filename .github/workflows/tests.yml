@@ -47,11 +47,12 @@ jobs:
         with:
           node-version: "22"
 
-      # ⚠️ `npm install` لا `npm ci`: package-lock.json مستثنى من Git.
-      #    التبعيات هنا للتطوير/الاختبار فقط (server.js واختبار تكافؤ
-      #    قارئ front matter) — وخطوة النشر لا تحتاجها إطلاقًا.
+      # التبعيات هنا للتطوير/الاختبار فقط (server.js واختبار تكافؤ قارئ
+      #    front matter) — وخطوة نشر الموقع (deploy.yml) لا تحتاج npm إطلاقًا.
+      #    `npm ci` يثبّت الإصدارات من package-lock.json المحفوظ (2026-10-16)
+      #    بدلاً من خطوة غير محدودة الإصدارات تُندّد بها SonarCloud (S6505).
       - name: Install dev dependencies for the local renderer
-        run: npm install --no-audit --no-fund --ignore-scripts
+        run: npm ci --no-audit --no-fund --ignore-scripts
 
       - name: Full suite — advisory (the two known failures stay visible here)
         continue-on-error: true

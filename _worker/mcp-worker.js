@@ -72,6 +72,36 @@ const CONTACT = {
   website: SITE,
 };
 
+/* ═════════ مقارنات وتحليل مسارات (بلا تعبيرات نمطية متغيّرة التراجع) ═════════ */
+
+/**
+ * مقارنة نصية بترتيب كود UTF-16 — نفس سلوك sort الافتراطي،
+ * لكن بمقارن صريح كما تطلب SonarCloud (S2871) — بلا تغيير ترتيب المخرجات.
+ */
+function byCodeUnit(a, b) {
+  const left = String(a);
+  const right = String(b);
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+/** يزيل الشرطات الختامية من مسار — بحلقة بسيطة بدل `/\/+$/`. */
+function stripTrailingSlashes(value) {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end -= 1;
+  return value.slice(0, end);
+}
+
+/** معرّف الوحدة من رابط أو ملف: يحذف الاستعلام والشرطات والامتداد. */
+function tidyUnitId(raw) {
+  let id = String(raw).split("?")[0];
+  id = stripTrailingSlashes(id).split("/").pop() ?? "";
+  for (const ext of [".json", ".md"]) {
+    if (id.endsWith(ext)) return id.slice(0, -ext.length);
+  }
+  return id;
+}
+
 /* ═══════════════════════════ أدوات نصية ═══════════════════════════ */
 
 /** تطبيع عربي للمقارنة: تشكيل، همزات، تاء مربوطة، ألف مقصورة */
@@ -389,7 +419,7 @@ export function buildStats(list) {
     }
     return Object.fromEntries([...m.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]))));
   };
-  const types = [...new Set(list.map((p) => p.propertyType).filter(Boolean))].sort();
+  const types = [...new Set(list.map((p) => p.propertyType).filter(Boolean))].sort(byCodeUnit);
   const perType = {};
   for (const t of types) {
     const rows = list.filter((p) => p.propertyType === t);
@@ -459,7 +489,7 @@ export async function callTool(name, args = {}, deps = {}) {
       if (!raw) {
         return { isError: true, content: [{ type: "text", text: "❌ مطلوب معرّف الوحدة (id)." }] };
       }
-      const slug = raw.split("?")[0].replace(/\/+$/, "").split("/").pop().replace(/\.(json|md)$/, "");
+      const slug = tidyUnitId(raw);
       const needle = normAr(slug);
       const hit = list.find((p) => normAr(p.slug) === needle)
         ?? list.find((p) => normAr(p.id) === needle)
@@ -795,7 +825,7 @@ function queryToFilter(url) {
 export default {
   async fetch(request, env = {}, ctx = {}) {
     const url = new URL(request.url);
-    const path = url.pathname.replace(/\/+$/, "") || "/";
+    const path = stripTrailingSlashes(url.pathname) || "/";
     const method = request.method.toUpperCase();
 
     if (method === "OPTIONS") {

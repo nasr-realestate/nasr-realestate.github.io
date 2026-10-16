@@ -13,7 +13,8 @@
     "build:ai:check": "node scripts/build-ai-artifacts.mjs --check",
     "test": "node --test _worker/tests/*.test.mjs scripts/tests/*.test.mjs",
     "test:ai": "node --test _worker/tests/ai-artifacts.test.mjs _worker/tests/mcp-gateway.test.mjs scripts/tests/front-matter.test.mjs",
-    "build:site": "node scripts/build-ai-artifacts.mjs --out=_site"
+    "build:site": "node scripts/build-ai-artifacts.mjs --out=_site",
+    "lint:sonar": "eslint ."
   },
   "dependencies": {
     "express": "^4.21.2",

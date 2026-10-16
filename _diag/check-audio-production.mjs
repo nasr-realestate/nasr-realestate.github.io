@@ -1,5 +1,14 @@
 // Post-deploy smoke test, run manually by the non-deployment audio verification workflow.
 // Unlike the build-only gate, this fetches the public GitHub Pages origin itself.
+//
+// ⚠️ 2026-10-16 — الطلب `shop-rent-request-beauty-center-nasr-city` انتهى أجله
+//    (date: 2026-10-09) فحذفه الالتزام المجدول d0ff0fd («قاعدة السبعة أيام»)، وبذلك
+//    اختفت صفحته من الموقع المنشور. كان هذا الملف يقرأ ملف الطلب في أول سطر فيسقط
+//    بـ ENOENT عند أي تشغيل يدوي بعد الحذف. صار الآن يميّز حالتين ولا يفترض واحدة:
+//      • حيّ: صفحة الطلب موجودة ⇒ كل التحققات كما كانت بالضبط (مشغّل + نص + 17 ثانية).
+//      • منتهٍ: ملف الطلب محذوف ⇒ يتأكد أن الصفحة **لم تعد تُنشر**، ويبقي فحص الأصل
+//        الصوتي المنشور (200 + audio/mpeg + SHA-256 + Range) لأنه ما زال رابطًا عامًا.
+//    لا يُخفَّف أي تحقق قائم في الحالتين.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -7,15 +16,22 @@ import { grab } from './audio-check-utils.mjs';
 
 const origin = 'https://nasr-realestate.github.io';
 const slug = 'shop-rent-request-beauty-center-nasr-city';
+const sourcePath = '_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md';
 const audioUrl = `/assets/audio/requests/${slug}.mp3`;
 const expectedHash = '7d2de3cbe4b1496bafba873266907913be1af3dd45660a82b14a110d5cf4fa5b';
-const front = (await readFile('_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md', 'utf8'))
-  .split(/^---\s*$/m)[1];
-const script = grab(front, 'audio_script');
+const otherRequests = [
+  'apartment-rent-request-art-studio-large-reception-nasr-city',
+  'garage-rent-request-40-buses-ismail-qabbani',
+];
 
-function sha(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
+const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+/** ملف الطلب نفسه موجود في المستودع؟ (غيابه = انتهى الأجل، لا خطأ في الفحص) */
+const source = await readFile(sourcePath, 'utf8').catch(() => null);
+if (!source) {
+  console.log(`ℹ️  ${sourcePath} غير موجود: الطلب انتهى أجله وحُذف آليًا (7 أيام) — وضع «منتهٍ».`);
 }
+const script = source ? grab(source.split(/^---\s*$/m)[1], 'audio_script') : null;
 
 async function get(path, options) {
   const response = await fetch(origin + path, { redirect: 'error', ...options });
@@ -23,23 +39,38 @@ async function get(path, options) {
   return response;
 }
 
-async function checkPage() {
+/** هل الصفحة غير منشورة الآن؟ (404 صريح، أو منع إعادة التوجيه عند غياب المورد) */
+async function isGone(path) {
+  try {
+    const response = await fetch(origin + path, { redirect: 'error' });
+    return response.status === 404;
+  } catch {
+    return true;
+  }
+}
+
+async function checkPages() {
   const path = `/requests/${slug}/`;
-  const response = await get(path);
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.ok(html.includes(`<audio id="rqAudio" preload="none" src="${audioUrl}"></audio>`), `${path}: no player`);
-  assert.ok(html.includes(script), `${path}: script not rendered`);
-  assert.ok(html.includes('17 ثانية'), `${path}: duration missing`);
-  for (const other of [
-    'apartment-rent-request-art-studio-large-reception-nasr-city',
-    'garage-rent-request-40-buses-ismail-qabbani',
-  ]) {
+  if (script) {
+    const response = await get(path);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.ok(html.includes(`<audio id="rqAudio" preload="none" src="${audioUrl}"></audio>`), `${path}: no player`);
+    assert.ok(html.includes(script), `${path}: script not rendered`);
+    assert.ok(html.includes('17 ثانية'), `${path}: duration missing`);
+  } else {
+    assert.ok(await isGone(path), `${path}: an expired request must not stay published`);
+  }
+  for (const other of otherRequests) {
     const page = await get(`/requests/${other}/`);
     assert.equal(page.status, 200);
     assert.ok(!(await page.text()).includes('id="rqAudioBox"'), `${other}: unexpected player`);
   }
-  console.log('Production: request player + script + 17s; 2 others unchanged (200).');
+  console.log(
+    script
+      ? 'Production: request player + script + 17s; 2 others unchanged (200).'
+      : `Production: ${path} not published (expired request), 2 others unchanged (200).`,
+  );
 }
 
 async function checkAudio() {
@@ -55,7 +86,7 @@ async function checkAudio() {
   console.log(`Production: ${audioUrl} HTTP 200 audio/mpeg, Range 206, SHA-256 ${expectedHash}.`);
 }
 
-await checkPage();
+await checkPages();
 await checkAudio();
 const property = await get('/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/');
 assert.ok((await property.text()).includes('id="ppAudioBox"'), 'old property player missing in production');

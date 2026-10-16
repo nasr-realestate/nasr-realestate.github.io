@@ -29,6 +29,8 @@ function aiProperties() {
 }
 
 const app = express();
+// لا نكشف إصدار الإطار في الترويسات (SonarCloud S5689)
+app.disable('x-powered-by');
 const PORT = 3000;
 const HOST = '0.0.0.0';
 

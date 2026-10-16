@@ -1,10 +1,11 @@
 // Tests: scripts/lib/front-matter.mjs — قارئ front matter المستقل
 //
 // سبب وجود الاختبار: خطوة التوليد في .github/workflows/deploy.yml تعمل
-// **بلا `npm install`** (package-lock.json مستثنى من Git، فـ`npm ci` يفشل).
-// لذلك يقرأ المُولّد الـfront matter بنفسه. هذا الاختبار هو شبكة الأمان:
-// يقارن مخرجات القارئ المستقل بـ gray-matter (المكتبة المعيارية) على
-// **كل ملفات المستودع الفعلية**، فلا يمر خطأ قراءة صامت إلى النشر.
+// **بلا npm إطلاقًا** — ليس لأن القفل معدوم (2026-10-16: صار محفوظًا
+// ليعمل `npm ci` في CI بتثبيت قابل للتكرار، ويُغلق تنبيه SonarCloud S6505)، بل لأن نشر
+// الموقع يجب ألا يعتمد على تثبيت حزم. لذلك يقرأ المُولّد الـfront matter بنفسه،
+// وهذا الاختبار هو شبكة الأمان: يقارن مخرجات القارئ المستقل بـ gray-matter
+// (المكتبة المعيارية) على **كل ملفات المستودع الفعلية**، فلا يمر خطأ قراءة صامت إلى النشر.
 //
 // التشغيل:
 //   node --test scripts/tests/front-matter.test.mjs
@@ -147,17 +148,32 @@ test("the generator and its libraries import nothing from outside node: builtins
   }
 });
 
-test("package-lock.json is gitignored, which is why the deploy path avoids npm", () => {
+test("the deploy path never runs npm, and CI now installs reproducibly from a committed lockfile", () => {
+  // 1) القفل محفوظ في Git: بدونه يفشل `npm ci` وبقي التثبيت غير محدود الإصدارات.
   const ignore = fs.readFileSync(path.join(REPO_ROOT, ".gitignore"), "utf8");
-  assert.match(ignore, /^package-lock\.json$/m);
+  assert.doesNotMatch(ignore, /^package-lock\.json$/m, "the lockfile must be tracked, not ignored");
+  assert.ok(
+    fs.existsSync(path.join(REPO_ROOT, "package-lock.json")),
+    "package-lock.json must exist so that npm ci can resolve locked versions",
+  );
 
+  // 2) خطوة نشر الموقع تبقى بلا npm تمامًا.
   const deploy = fs.readFileSync(path.join(REPO_ROOT, ".github", "workflows", "deploy.yml"), "utf8");
   // نستبعد أسطر التعليقات: الملف يشرح سبب تجنّب npm، والشرح نفسه يذكر الكلمة.
   const commands = deploy
     .split("\n")
     .filter((l) => !l.trimStart().startsWith("#"))
     .join("\n");
-  assert.doesNotMatch(commands, /npm (ci|install)/, "deploy.yml must not run npm while there is no lockfile in Git");
-  assert.doesNotMatch(commands, /cache:\s*["']?npm/, "setup-node npm caching also needs a lockfile in Git");
+  assert.doesNotMatch(commands, /npm (ci|install)/, "deploy.yml must never run npm");
+  assert.doesNotMatch(commands, /cache:\s*["']?npm/, "the site deploy does not need npm caching");
   assert.match(commands, /scripts\/build-ai-artifacts\.mjs --out=_site/);
+
+  // 3) مهام CI/الأدوات تستخدم `npm ci` (مقدّر بالقفل) لا `npm install`.
+  const tests = fs.readFileSync(path.join(REPO_ROOT, ".github", "workflows", "tests.yml"), "utf8");
+  const testCommands = tests
+    .split("\n")
+    .filter((l) => !l.trimStart().startsWith("#"))
+    .join("\n");
+  assert.match(testCommands, /npm ci/, "CI must install from the committed lockfile");
+  assert.doesNotMatch(testCommands, /npm install/, "unlocked installs are what SonarCloud S6505 flags");
 });
