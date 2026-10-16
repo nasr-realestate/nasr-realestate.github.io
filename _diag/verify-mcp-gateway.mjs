@@ -180,6 +180,8 @@ async function checkCard(catalog) {
 
   const live = (res.json.tools ?? []).map((tool) => tool.name);
   s.note('tools', live);
+  s.note('service', res.json.service ?? null);
+  s.note('read_only', res.json.read_only ?? null);
   s.note('release', res.json.release ?? null);
   const missing = catalog.card_tools.filter((name) => !live.includes(name));
   s.expect('كل أداة معلَنة في بطاقة المستودع موجودة حيّة', missing.length === 0, missing.length ? `ناقصة: ${missing.join(', ')}` : `${live.length} أداة`);
@@ -202,7 +204,9 @@ async function checkHealth(catalog) {
     `الواقع ${String(res.json.properties)} · المستودع ${catalog.count}`,
   );
   s.expect('feed_generated_at غير فارغ', Boolean(res.json.feed_generated_at), `الواقع ${String(res.json.feed_generated_at)}`);
+  s.note('status', res.json.status ?? null);
   s.note('properties', res.json.properties ?? null);
+  s.note('read_only', res.json.read_only ?? null);
   s.note('feed_generated_at', res.json.feed_generated_at ?? null);
   s.note('release', res.json.release ?? null);
   return s.record;
@@ -416,13 +420,71 @@ function printReport(report) {
   for (const entry of report.steps) printStep(entry);
 }
 
-/** يكتب ملخّص التشغيل + `::notice` لأن سجلات الخطوات في هذا المستودع غير مقروءة (EOF). */
+/* ══════════════ وقائع المصافحة — القناة المقروءة برمجيًا ══════════════ */
+
+const NOTICE_TITLE_PASS = 'MCP Gateway handshake passed';
+const NOTICE_TITLE_FAIL = 'MCP Gateway handshake failed';
+
+const evidenceOf = (report, stepId) => report.steps.find((entry) => entry.id === stepId)?.evidence ?? {};
+const formatFacts = (facts) => Object.entries(facts).map(([key, value]) => `${key}=${value}`).join(' · ');
+
+/** يحلّل سطر الوقائع: `verdict=pass · properties=102/102 · …` */
+function parseMachineLine(message) {
+  const facts = {};
+  for (const part of String(message ?? '').split(' · ')) {
+    const eq = part.indexOf('=');
+    if (eq > 0) facts[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
+  }
+  return facts;
+}
+
+/**
+ * وقائع رقمية قصيرة مستخلصة من التقرير.
+ *
+ * لماذا قناة ثانية غير ملخّص الخطوات؟ لأن REST API **لا يكشف** ملخّصات الخطوات
+ * أصلًا: `check-runs/{id}.output.summary` رجع فارغًا (طول 0) لتشغيل ناجح فعلًا
+ * — تحقّق مباشر 2026-10-16 على التشغيل 38971312205 — وسجلات الخطوات في هذا
+ * المستودع غير مقروءة (EOF من blob storage). القناة الوحيدة المقروءة برمجيًا
+ * هي annotations، لذلك تُكتب الوقائع في `::notice` بسطر واحد قابل للتحليل،
+ * ومنها يقرأ `--flip --ci-run` دليله ويربطه برأس التشغيل.
+ */
+function factsFromReport(report) {
+  const health = evidenceOf(report, 'health');
+  const card = evidenceOf(report, 'card');
+  const init = evidenceOf(report, 'initialize');
+  const tools = evidenceOf(report, 'tools/list');
+  const resources = evidenceOf(report, 'resources/read');
+  const facts = {
+    verdict: report.verdict,
+    properties: `${String(health.properties ?? 'null')}/${report.repo_catalog.count}`,
+    health_status: String(health.status ?? 'null'),
+    read_only: String(health.read_only ?? card.read_only ?? 'null'),
+    protocol: String(init.protocol_version ?? 'null'),
+    tools: `${(tools.tools ?? []).length}/${report.repo_catalog.card_tools.length}`,
+    resources: String((resources.resources ?? []).length),
+    release: String(health.release ?? card.release ?? 'null'),
+    commit: String(report.commit ?? 'local'),
+  };
+  const failed = report.steps.filter((entry) => !entry.ok).map((entry) => entry.id);
+  if (failed.length) facts.failed = failed.join(',');
+  return facts;
+}
+
+/** يكتب ملخّص التشغيل للبشر (واجهة Actions) + سطر الوقائع كـannotation للآلة. */
 function writeCiSummary(report) {
+  const facts = factsFromReport(report);
+  const title = report.verdict === 'pass' ? NOTICE_TITLE_PASS : NOTICE_TITLE_FAIL;
+  console.log(`::notice title=${title}::${formatFacts(facts)}`);
+
   const summary = process.env.GITHUB_STEP_SUMMARY;
   if (!summary) return;
   const icon = report.verdict === 'pass' ? '✅' : '❌';
   const lines = [
     `### ${icon} MCP handshake — ${report.verdict.toUpperCase()}`,
+    '',
+    '```',
+    formatFacts(facts),
+    '```',
     '',
     '| الخطوة | النتيجة |',
     '|---|---|',
@@ -435,10 +497,6 @@ function writeCiSummary(report) {
     '',
   ];
   fs.appendFileSync(summary, `${lines.join('\n')}\n`);
-  const failed = report.steps.filter((entry) => !entry.ok).map((entry) => entry.id);
-  const title = report.verdict === 'pass' ? 'MCP Gateway handshake passed' : 'MCP Gateway handshake failed';
-  const detail = report.verdict === 'pass' ? 'المصافحة الكاملة نجحت على البوابة الحيّة' : `خطوات فاشلة: ${failed.join(', ')}`;
-  console.log(`::notice title=${title}::${detail}`);
 }
 
 /* ═══════════════════════ الدليل من CI (لـ`--flip --ci-run`) ═══════════════════════ */
@@ -499,59 +557,77 @@ function readWithSystemCa(urlPath) {
   return JSON.parse(out);
 }
 
-/** يستخرج نسخة التقرير من ملخّص الفحص (محفوظة عند وسم ثابت). */
-function extractTranscript(summary) {
-  if (typeof summary !== 'string' || !summary.includes(TRANSCRIPT_MARKER)) return null;
-  const after = summary.slice(summary.indexOf(TRANSCRIPT_MARKER) + TRANSCRIPT_MARKER.length);
-  const start = after.indexOf('```json');
-  if (start < 0) return null;
-  const body = after.slice(start + '```json'.length);
-  const end = body.indexOf('```');
-  if (end < 0) return null;
-  try {
-    return JSON.parse(body.slice(0, end).trim());
-  } catch {
-    return null;
+/** يحمّل التشغيل ويتحقّق من هويته ونجاحه ونجاح خطواته الثلاث. */
+async function loadVerifiedRun(runId) {
+  const run = await ghApi(`/repos/${REPO}/actions/runs/${runId}`);
+  if (run.name !== WORKFLOW_NAME || run.path !== WORKFLOW_PATH) {
+    return { reason: `التشغيل ${runId} ليس نشر بوابة MCP (الواقع: ${String(run.name)} · ${String(run.path)})` };
   }
+  if (run.conclusion !== "success") return { reason: `التشغيل ${runId} خاتمته ${String(run.conclusion)} لا success` };
+  const jobs = await ghApi(`/repos/${REPO}/actions/runs/${runId}/jobs`);
+  const job = (jobs.jobs ?? []).find((entry) => entry.name === JOB_DEPLOY);
+  if (!job) return { reason: `لا وظيفة «${JOB_DEPLOY}» في التشغيل ${runId}` };
+  const stepReason = checkSteps(job, runId);
+  if (stepReason) return { reason: stepReason };
+  return { run, job };
+}
+
+/**
+ * النشر والدخان والمصافحة يجب أن تكون كلها success **لا skipped**.
+ * هذا هو الفخّ الذي وقع فيه المستودع: تشغيل أخضر وخطوات متخطّاة بلا توكن.
+ */
+function checkSteps(job, runId) {
+  const byName = new Map((job.steps ?? []).map((entry) => [entry.name, entry]));
+  for (const name of [STEP_DEPLOY, STEP_SMOKE, STEP_HANDSHAKE]) {
+    const found = byName.get(name);
+    if (!found) return `الخطوة «${name}» غير موجودة في التشغيل ${runId}`;
+    if (found.conclusion === "skipped") return `الخطوة «${name}» تخطّت (skipped) — أي أن النشر لم يحدث أصلًا`;
+    if (found.conclusion !== "success") return `الخطوة «${name}» خاتمته ${String(found.conclusion)}`;
+  }
+  return null;
+}
+
+/** كل ما يجب أن يقوله سطر الوقائع — تُجمع المشاكل كلها بدل أول واحدة فقط. */
+function factsProblems(facts, catalog, headSha) {
+  const [liveCount, catalogCount] = String(facts.properties ?? "/").split("/");
+  const problems = [];
+  if (facts.verdict !== "pass") problems.push(`verdict=${String(facts.verdict)} لا pass`);
+  if (Number(liveCount) !== catalog.count || Number(catalogCount) !== catalog.count) {
+    problems.push(`عدد الوحدات في دليل CI (${String(facts.properties)}) ≠ كتالوج المستودع (${catalog.count})`);
+  }
+  if (facts.read_only !== "true") problems.push(`read_only=${String(facts.read_only)} لا true`);
+  if (facts.health_status !== "ok") problems.push(`حالة الصحة=${String(facts.health_status)} لا ok`);
+  if (facts.commit && facts.commit !== "local" && facts.commit !== headSha) {
+    problems.push(`الدليل مرتبط بـ${String(facts.commit)} بينما رأس التشغيل ${String(headSha)}`);
+  }
+  return problems;
+}
+
+/** يقرأ وقائع المصافحة من annotation الخطوة — القناة الوحيدة المقروءة برمجيًا. */
+async function readCiFacts(job, run, catalog) {
+  const annotations = await ghApi(`/repos/${REPO}/check-runs/${job.id}/annotations`);
+  const list = Array.isArray(annotations) ? annotations : [];
+  const notice = list.find((entry) => String(entry.title ?? "").startsWith("MCP Gateway handshake"));
+  if (!notice) return { reason: `لا annotation لمصافحة MCP في التشغيل ${run.id} — لا دليل مقروء على إجرائها` };
+  if (String(notice.title) !== NOTICE_TITLE_PASS) {
+    return { reason: `annotation المصافحة ليس نجاحًا: «${String(notice.title)}» — ${String(notice.message ?? "").slice(0, 240)}` };
+  }
+  const facts = parseMachineLine(notice.message);
+  const problems = factsProblems(facts, catalog, run.head_sha);
+  if (problems.length) return { reason: problems.join(" · ") };
+  return { facts };
 }
 
 /**
  * يتحقّق من أن تشغيل CI معيّن أجرى المصافحة ونجحت — من GitHub API مباشرة.
- * الدليل مُرتبط بالتشغيل والـcommit، فلا يكفي ملف محلي مكتوب باليد.
+ * الدليل مُرتبط بالتشغيل ورأس الـcommit، فلا يكفي ملف محلي مكتوب باليد.
  */
 async function verifyCiRun(runId, catalog) {
-  const run = await ghApi(`/repos/${REPO}/actions/runs/${runId}`);
-  if (run.name !== WORKFLOW_NAME || run.path !== WORKFLOW_PATH) {
-    return { ok: false, reason: `التشغيل ${runId} ليس نشر بوابة MCP (الواقع: ${String(run.name)} · ${String(run.path)})` };
-  }
-  if (run.conclusion !== 'success') {
-    return { ok: false, reason: `التشغيل ${runId} خاتمته ${String(run.conclusion)} لا success` };
-  }
-  const jobs = await ghApi(`/repos/${REPO}/actions/runs/${runId}/jobs`);
-  const job = (jobs.jobs ?? []).find((entry) => entry.name === JOB_DEPLOY);
-  if (!job) return { ok: false, reason: `لا وظيفة «${JOB_DEPLOY}» في التشغيل ${runId}` };
-
-  const byName = new Map((job.steps ?? []).map((entry) => [entry.name, entry]));
-  const required = [STEP_DEPLOY, STEP_SMOKE, STEP_HANDSHAKE];
-  for (const name of required) {
-    const found = byName.get(name);
-    if (!found) return { ok: false, reason: `الخطوة «${name}» غير موجودة في التشغيل ${runId}` };
-    if (found.conclusion === 'skipped') return { ok: false, reason: `الخطوة «${name}» تخطّت (skipped) — أي أن النشر لم يحدث أصلًا` };
-    if (found.conclusion !== 'success') return { ok: false, reason: `الخطوة «${name}» خاتمته ${String(found.conclusion)}` };
-  }
-
-  const checkRun = await ghApi(`/repos/${REPO}/check-runs/${job.id}`);
-  const transcript = extractTranscript(checkRun.output?.summary);
-  if (!transcript) return { ok: false, reason: 'ملخّص الفحص لا يحمل نسخة تقرير المصافحة (الوسم غير موجود أو غير قابل للقراءة)' };
-  if (transcript.verdict !== 'pass') return { ok: false, reason: `نسخة التقرير في CI تقول ${String(transcript.verdict)} لا pass` };
-  if (transcript.commit !== run.head_sha) {
-    return { ok: false, reason: `تقرير CI مرتبط بـ${String(transcript.commit)} بينما رأس التشغيل ${String(run.head_sha)}` };
-  }
-  const live = transcript.steps?.find((entry) => entry.id === 'health')?.evidence?.properties;
-  if (live !== catalog.count) {
-    return { ok: false, reason: `عدد الوحدات الحيّ في تقرير CI (${String(live)}) ≠ كتالوج المستودع (${catalog.count})` };
-  }
-  return { ok: true, transcript, run };
+  const loaded = await loadVerifiedRun(runId);
+  if (loaded.reason) return { ok: false, reason: loaded.reason };
+  const evidence = await readCiFacts(loaded.job, loaded.run, catalog);
+  if (evidence.reason) return { ok: false, reason: evidence.reason };
+  return { ok: true, facts: evidence.facts, run: loaded.run };
 }
 
 /* ═══════════════════════════════ التبديل إلى live ═══════════════════════════════ */
@@ -637,7 +713,7 @@ function regenerateAndGuard() {
 
 async function flip(catalog, options) {
   let evidenceLine = null;
-  let transcript = null;
+  let facts = null;
 
   if (options.ciRun) {
     let verified;
@@ -652,9 +728,10 @@ async function flip(catalog, options) {
       console.error('   لم يُمَس أي ملف. أصلح السبب ثم أعد المحاولة — لا تكتب live يدويًا.');
       return 2;
     }
-    transcript = verified.transcript;
-    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة في تشغيل CI رقم ${options.ciRun} (commit ${String(verified.run.head_sha).slice(0, 7)}).`;
-    console.log(`✅ دليل CI مقبول: تشغيل ${options.ciRun} · ${String(verified.run.head_sha).slice(0, 7)} · خطوات النشر والدخان والمصافحة كلها success`);
+    facts = verified.facts;
+    const sha = String(verified.run.head_sha).slice(0, 7);
+    console.log(`✅ دليل CI مقبول: تشغيل ${options.ciRun} · ${sha} · خطوات النشر والدخان والمصافحة كلها success`);
+    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة الكاملة في تشغيل CI رقم ${options.ciRun} على ${sha} — ${formatFacts(facts)}`;
   } else {
     const result = await handshake(catalog);
     const report = buildReport(catalog, result, 'direct handshake');
@@ -666,12 +743,11 @@ async function flip(catalog, options) {
       console.error('   لم يُمَس أي ملف.');
       return 2;
     }
-    transcript = report;
-    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة مباشرةً من هذا الجهاز (${report.generated_at}).`;
+    facts = factsFromReport(report);
+    evidenceLine = `نُشرت البوابة وتحقّقت المصافحة الكاملة مباشرةً من هذا الجهاز (${report.generated_at}) — ${formatFacts(facts)}`;
   }
 
-  const health = transcript.steps?.find((entry) => entry.id === 'health')?.evidence ?? {};
-  console.log(`   القراءة الحيّة: properties=${String(health.properties ?? 'null')} · feed_generated_at=${String(health.feed_generated_at ?? 'null')} · release=${String(health.release ?? 'null')}`);
+  console.log(`   القراءة الحيّة: ${formatFacts(facts)}`);
 
   const changed = writeLiveStatus(evidenceLine);
   console.log(changed.length ? `✍️  عُدّلت: ${changed.join(' · ')}` : 'ℹ️  الحالة live أصلًا — لا تعديل مطلوب');
