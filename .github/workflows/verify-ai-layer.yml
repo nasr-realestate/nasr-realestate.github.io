@@ -21,6 +21,10 @@ on:
       - 'robots.txt'
       - 'scripts/**'
       - '_config.yml'
+      # سلوك النشر يعتمد على إصدار github-pages (الإضافات المفعّلة افتراضيًا)،
+      # فتغيير القفل أو الـGemfile يجب أن يُعيد تشغيل هذا الفحص.
+      - 'Gemfile'
+      - 'Gemfile.lock'
       - '_properties/**'
       - '_diag/check-ai-layer-published.mjs'
       - '.github/workflows/verify-ai-layer.yml'

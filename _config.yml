@@ -160,3 +160,16 @@ exclude:
   - .vscode
   - .DS_Store
   - scripts
+
+# ⚠️ 2026-10-16 (اكتشاف من CI في verify-ai-layer.yml) — المضيدة الرابعة:
+# GitHub Pages تُفعّل تلقائيًا الإضافة jekyll-optional-front-matter (انظر
+# DEFAULT_PLUGINS في github/pages-gem v231)، وهي تحوّل **كل** ملف Markdown بلا
+# front matter إلى «صفحة» لها رابط pretty. النتيجة على طبقة الذكاء: ملفات
+# api/properties/*.md تُنشر مرتين — نسخة حرفية صحيحة (لأن الأصل يُحتفظ به
+# افتراضيًا) **و102 صفحة HTML مكرّرة** على /api/properties/<slug>/index.html
+# تدخل sitemap.xml، فيتقدّم HTML على واجهة JSON/Markdown التي نعد بها النماذج.
+# إيقافها صريحًا يجعل شجرة api/ ملفات ساكنة تُنشر بايتًا ببايت.
+# ملاحظة: لا نستعمل المفتاح require_front_matter لإسكاتها، لأنه يُفعّل معها
+# remove_originals فتُحذف النسخ الأصلية من _site بدل أن تُنشر حرفيًا.
+optional_front_matter:
+  enabled: false

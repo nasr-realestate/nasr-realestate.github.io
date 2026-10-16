@@ -67,7 +67,13 @@ for (const tree of VERBATIM_TREES) {
   if (missing.length) {
     note(`${tree}: ${missing.length} ملفًا غير منشور (${sample(missing)}) — Jekyll يتجاهل ما يبدأ بنقطة إلا بـinclude`);
   }
-  if (extra.length) note(`${tree}: ${extra.length} ملفًا في _site ليس في المستودع (${sample(extra)})`);
+  if (extra.length) {
+    note(
+      `${tree}: ${extra.length} ملفًا في ${SITE_DIR} ليس في المستودع (${sample(extra)}) — أرجح سبب: ` +
+        "jekyll-optional-front-matter (مفعّلة تلقائيًا على Pages) حوّلت ملفات .md إلى صفحات HTML. " +
+        "أبقِ optional_front_matter: {enabled: false} في _config.yml، ولا تُعفِ هذه الملفات من الفحص."
+    );
+  }
   if (changed.length) note(`${tree}: ${changed.length} ملفًا نُشر محوَّلًا لا حرفيًا (${sample(changed)})`);
   verified += sourceFiles.length - missing.length - changed.length;
 }
