@@ -11,6 +11,9 @@ for p in pages:
     srcs = re.findall(r'(?:src|content)="(/assets/img/[^"]+)"', html)
     srcs += [m for m in re.findall(r"this\.src='([^']+)'", html) if m.startswith('/assets/')]
     for s in srcs:
+        # قوالب JavaScript تُملأ زمن التشغيل بملفات موجودة (مثل ${p.img}) ليست مسارات ثابتة
+        if '${' in s or '{{' in s:
+            continue
         if s in checked:
             continue
         checked.add(s)
