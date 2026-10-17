@@ -64,6 +64,17 @@ jobs:
           node --test _worker/tests/mcp-gateway.test.mjs
           node --test scripts/tests/front-matter.test.mjs
 
+      # 🎙️ بوابة الهوية الصوتية — تسبق الرفع فلا يُنشر انحراف صامت.
+      #    تتحقق من: بصمة المرجع الذي اختاره المالك، بصمة إعدادات الصوت
+      #    (encoding/id3/engine) مقابل سجل الإنتاج، أن كل MP3 مقيد في السجل،
+      #    أن لا ملف منشور استُبدل، وأن وسوم كل ملف ونصه ومدته مطابقة لصفحته.
+      #    تعمل على المصدر فقط: لا _site ولا حزم خارجية (مثل المُولّد أعلاه).
+      - name: Verify the audio voice identity gate (reference, production log, every MP3)
+        run: node scripts/audio/verify-voice-identity.mjs
+
+      - name: Test the voice identity pipeline, gate and MPEG/ID3 tooling
+        run: node --test scripts/tests/voice-identity.test.mjs
+
       # ⚠️ لا ترفع هذا الإصدار إلى upload-pages-artifact@v4 بلا تعديل:
       #    v4 يحجب كل ما يبدأ بنقطة افتراضيًا (`--exclude=.[^/]*`) فيختفي
       #    مجلد .well-known بالكامل وبلا أي رسالة خطأ. v3 لا يحجب إلا .git

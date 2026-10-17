@@ -1,4 +1,5 @@
-// Property-audio gate: the 42 ads from batches 1–7 plus the new October 17 listing.
+// Property-audio gate: the 43 ads from batches 1–7 (incl. the October 17 listing)
+// plus the first ad produced through the unified voice-identity pipeline (2026-10-18).
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
 // Every enabled page is locked with its MP3 SHA-256; prior files must remain byte-identical.
@@ -10,7 +11,7 @@ import { grab, occurrences, parseComm } from './audio-check-utils.mjs';
 
 const outDir = process.argv[2] ?? '_site';
 
-// slug -> sha256 of the committed MP3 (batches 1–7)
+// slug -> sha256 of the committed MP3 (batches 1–7 + the unified-pipeline test ad)
 const lockedAudio = {
   'apartment-sale-helmy-abdel-aaty-seraj-mall-230m': 'fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a',
   'furnished-apartment-rent-hayat-compound-safarat-200m': '42e7026d9dbca88d59483390760bf50bb457fa8b2ff762ba11f610211f8f85b9',
@@ -55,9 +56,13 @@ const lockedAudio = {
   'degla-landmark-122m-rent': '65e10976244b9eda573541497a14f6efea58a211203933cb3d5ff5471434671e',
   'commercial-hq-rent-kabul-street-nasr-city-130m': 'a0952c86b1dbdb0d1e04cc91d3d8b00e5985aca995568fab9a0501771baafad5',
   'apartment-sale-hassan-hassanein-heikal-200m': '1b2289c91c1747ba324ee0e7f43109c0f40b8dd93ea687460b52965b1b053173',
+  // 🎙️ 2026-10-18 — أول إعلان يُنتَج عبر مسار الإنتاج الموحّد (عقار جديد، بلا
+  //    استبدال أي ملف قائم). بصمته مقيّدة كذلك في _data/audio_voice_log.json
+  //    وتتحقق منها بوابة scripts/audio/verify-voice-identity.mjs.
+  'golden-square-garden-156m': 'bc8a10c088a1cf21e28a3145fbaf33d7c9dad93220b4d1b3000c88945833544f',
 };
 
-// slugs that must show exactly one player (batches 1–7 plus the 2026-10-17 listing)
+// slugs that must show exactly one player (batches 1–7 plus the unified-pipeline ad)
 const withPlayer = new Set(Object.keys(lockedAudio));
 
 function checkEnabledPage(slug, front, html, mp3bytes) {

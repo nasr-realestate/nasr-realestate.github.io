@@ -1,0 +1,281 @@
+{
+  "_comment": [
+    "════════════════════════════════════════════════════════════════════",
+    " المواصفة المركزية للهوية الصوتية — «سمسار طلبك»",
+    "════════════════════════════════════════════════════════════════════",
+    " هذا الملف هو المصدر الآلي الوحيد المُلزِم لإعدادات الصوت. أي إعلان",
+    " صوتي جديد يجب أن يمرّ عبر scripts/audio/produce-audio-ad.mjs الذي",
+    " يقرأ هذا الملف، وعبر scripts/audio/verify-voice-identity.mjs الذي",
+    " يمنعه من النشر إذا خالفه.",
+    "",
+    " الشرح الإنشائي الكامل (اللهجة، الإلقاء، الإيقاع، الوقفات، نطق",
+    " الأرقام، أسماء المناطق، حدود التطابق) في:",
+    "   _diag/voice-identity-spec-2026-10-18.md",
+    " وكل قيمة رقمية أدناه مصدرها قياس فعلي مُوثّق في:",
+    "   _diag/audio-identity-baseline-2026-10-18.json",
+    "   _diag/audio-identity-audit-2026-10-18.md",
+    "════════════════════════════════════════════════════════════════════"
+  ],
+  "specVersion": 1,
+  "updatedAt": "2026-10-18",
+  "status": "authoritative",
+  "specDocument": "_diag/voice-identity-spec-2026-10-18.md",
+  "measurementBaseline": "_diag/audio-identity-baseline-2026-10-18.json",
+  "productionLog": "_data/audio_voice_log.json",
+
+  "reference": {
+    "_why": "اختاره مالك المشروع بنفسه. لا يُستبدل ولا يُختار بديل عنه تلقائيًا.",
+    "ownerSelected": true,
+    "slug": "apartment-sale-helmy-abdel-aaty-seraj-mall-230m",
+    "repoPath": "assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3",
+    "publicUrl": "/assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3",
+    "absoluteUrl": "https://nasr-realestate.github.io/assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3",
+    "propertyPage": "/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/",
+    "propertyPageAbsolute": "https://nasr-realestate.github.io/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/",
+    "propertySource": "_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md",
+    "sha256": "fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a",
+    "bytes": 108976,
+    "durationSeconds": 26.664,
+    "script": "بتفكر في شقة 230 متر بفيو حديقة في مدينة نصر؟ في شارع حلمي عبد العاطي، بجوار السراج مول. الدور الأول من غير ما تعتمد على المصعد. 3 غرف نوم، ريسبشن يسع 4 قطع، وحمّامين. السعر 5 مليون و400 ألف جنيه. حديقة كبيرة قدام الشقة، والخدمات على بُعد خطوات. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة.",
+    "measured": {
+      "peakDbfs": -2.49,
+      "rmsDbfs": -19.61,
+      "clippedSamples": 0,
+      "voicedFrames": 566,
+      "f0MedianHz": 156.5,
+      "f0P05Hz": 100.3,
+      "f0P95Hz": 297.5,
+      "f0IqrHz": 90.2,
+      "spectralCentroidHz": 1489.8,
+      "spectralRolloff85Hz": 3023.4,
+      "lpcFormantsHz": { "f1": 875, "f2": 2663, "f3": 3689, "dispersion": 1407 }
+    }
+  },
+
+  "encoding": {
+    "_why": "قيم مقاسة من المرجع ومطابقة في 44/44 ملفًا مُلتزمًا. لا تُغيَّر إلا بسبب موثق في productionLog.",
+    "container": "MP3",
+    "mpegLayer": 3,
+    "mpegVersion": "MPEG-2",
+    "samplesPerFrame": 576,
+    "bitrateBps": 32000,
+    "sampleRateHz": 24000,
+    "channels": 1,
+    "channelMode": "mono",
+    "maxDurationSeconds": 30,
+    "targetDurationSeconds": { "min": 18, "max": 29 },
+    "maxPeakDbfs": -0.5,
+    "maxClippedSamples": 0,
+    "rmsDbfsBand": { "min": -22.0, "max": -17.0 }
+  },
+
+  "id3": {
+    "_why": "نفس إصدار الوسوم وترتيب الإطارات وتشفيرها في المرجع وكل الملفات الملتزمة.",
+    "version": "2.3",
+    "rejectVersions": ["2.4", "2.2", "1.1", "1.0"],
+    "headerFlagsByte": 0,
+    "textEncodingByte": 1,
+    "textEncodingName": "UTF-16 with BOM (FF FE)",
+    "frameOrder": ["TIT2", "TPE1", "TALB", "TDRC", "TCON", "TSSE", "COMM"],
+    "requiredFrames": ["TIT2", "TPE1", "TALB", "TDRC", "TCON", "TSSE", "COMM"],
+    "forbiddenExtraFrames": true,
+    "minPaddingBytes": 1024,
+    "fixedValues": {
+      "TPE1": "سمسار طلبك — طارق طنطاوي",
+      "TALB": "إعلانات سمسار طلبك",
+      "TCON": "إعلان عقاري",
+      "TSSE": "Lavf59.27.100"
+    },
+    "perAdValues": {
+      "TIT2": "عنوان عربي مختصر للإعلان (نوع + مساحة + موقع)",
+      "TDRC": "تاريخ الإنتاج بصيغة YYYY-MM-DD"
+    },
+    "comm": {
+      "language": "ara",
+      "description": "نص الإعلان",
+      "text": "نص audio_script حرفيًا — بلا زيادة أو نقصان",
+      "legacyDescriptionAccepted": "",
+      "_legacyNote": "38 ملفًا من الدفعات 3–7 كُتبت بوصف فارغ \"\". انحراف وصفي فقط بلا أي أثر صوتي؛ قُبِل كما هو حمايةً للملفات الناجحة (تغييره يبدّل 38 بصمة SHA-256 منشورة). الملفات الجديدة تلتزم وصف المرجع."
+    }
+  },
+
+  "language": {
+    "bcp47": "ar-EG",
+    "dialect": "مصرية عامية (قاهرية) — ليست فصحى",
+    "persona": "طارق طنطاوي — سمسار عقارات من مدينة نصر، بيتكلم مع العميل كأنه قاعدين مع بعض",
+    "gender": "masculine",
+    "useCase": "advertising",
+    "forbidden": {
+      "_why": "أشكال فصحى أو خليجية/شامية تكسر الهوية المصرية. الفحص آلي في produce-audio-ad.mjs.",
+      "msaForms": ["سوف", "لن ", "ليس ", "هل ", "ماذا", "لماذا", "هذه ", "هذا ", "ذلك", "التي ", "الذي ", "إنّ", "أنّ", "بأن ", "حيث ", "عبر ", "بواسطة", "إلحاقًا", "بالإضافة إلى", "علمًا بأن"],
+      "nonEgyptianForms": ["هيك", "شلون", "وايد", "أبغى", "بدي", "لكان", "يا جماعة", "السادة المستمعون"],
+      "digitsRule": "الأرقام تُكتب بالحروف المصرية لا بالأرقام الرقمية — يُفحص آليًا ويُسقط النص. المرجع نفسه يحتوي أرقامًا رقمية لأن المالك وافق على نطقها؛ القاعدة للإعلانات الجديدة هي الحروف لأنها لا تعتمد على قراءة المحرك للأرقام."
+    }
+  },
+
+  "script": {
+    "_why": "بنية المرجع حرفيًا — 7 مقاطع. الاختلاف المسموح هو بيانات العقار فقط.",
+    "structure": [
+      { "n": 1, "name": "hook", "seconds": "0-4", "rule": "سؤال بالجيزة المصرية يبدأ بـ«بتفكر في…» أو«عايز…» أو«محتاج…» أو ميزة نادرة + علامة استفهام. يحتوي النوع + المساحة أو الميزة الأقوى + المدينة.", "referenceExample": "بتفكر في شقة 230 متر بفيو حديقة في مدينة نصر؟" },
+      { "n": 2, "name": "location", "seconds": "4-9", "rule": "الشارع ثم أقرب معلم. بلا أرقام شقق ولا أدوار في هذه الجملة.", "referenceExample": "في شارع حلمي عبد العاطي، بجوار السراج مول." },
+      { "n": 3, "name": "floorBenefit", "seconds": "9-13", "rule": "الدور + منفعة مرتبطة به (مصعد/هدوء/خصوصية). تُحذف إن لم يكن في المصدر سند.", "referenceExample": "الدور الأول من غير ما تعتمد على المصعد." },
+      { "n": 4, "name": "layout", "seconds": "13-18", "rule": "الغرف ثم الريسبشن ثم الحمامات — بهذا الترتيب. لا تُختلق أعداد غير موجودة في المصدر.", "referenceExample": "3 غرف نوم، ريسبشن يسع 4 قطع، وحمّامين." },
+      { "n": 5, "name": "price", "seconds": "18-23", "rule": "«السعر» أو «الإيجار» + القيمة بالحروف المصرية + «جنيه» + «شهريًا» للإيجار. تُذكر قابلية التفاوض فقط لو مكتوبة في price.", "referenceExample": "السعر 5 مليون و400 ألف جنيه." },
+      { "n": 6, "name": "persuasion", "seconds": "23-26", "rule": "ميزة أو ميزتان لهما سند في متن ملف العقار. لا وعود بالتوافر ولا عائد استثماري ولا تمويل.", "referenceExample": "حديقة كبيرة قدام الشقة، والخدمات على بُعد خطوات." },
+      { "n": 7, "name": "cta", "seconds": "26-27", "rule": "الصيغة المرجعية بالمتكلم: «لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة.»", "referenceExample": "لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة." }
+    ],
+    "cta": {
+      "canonical": "لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة.",
+      "canonicalVariants": [
+        "لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة.",
+        "لو عاجبك، كلمني على واتساب سمسار طلبك ونحدد معاينة."
+      ],
+      "legacyThirdPerson": "كلم سمسار طلبك على واتساب وحدد معاينة.",
+      "_legacyNote": "43 ملفًا منشورًا تستخدم صيغة الغائب. مقبولة في الملفات القائمة ولا تُستبدل؛ الإعلانات الجديدة تستخدم الصيغة المرجعية بالمتكلم."
+    },
+    "numbers": {
+      "rule": "كل رقم يُكتب بالحروف المصرية العامية، لا بالأرقام ولا بالفصحى.",
+      "area": ["مية", "ميتين", "تلتمية", "أربعمية", "خمسمية", "ستمية", "سبعمية", "تمنمية"],
+      "areaExamples": { "120": "مية وعشرين متر", "156": "مية ستة وخمسين متر", "230": "ميتين وتلاتين متر", "262": "ميتين واتنين وستين متر" },
+      "counts": { "2": "اتنين", "3": "تلات", "4": "أربع", "8": "تمانية", "11": "حداشر" },
+      "prices": { "4000000": "أربعة مليون جنيه", "5400000": "خمسة مليون وأربعمية ألف جنيه", "5500000": "خمسة مليون وخمسمية ألف جنيه", "8200000": "تمانية مليون وميتين ألف جنيه", "35000": "خمسة وتلاتين ألف جنيه شهريًا" },
+      "ordinals": { "1": "أرضي / أول", "2": "تاني", "3": "تالت", "4": "رابع", "6": "سادس", "8": "تمان", "10": "عاشر", "11": "حداشر" },
+      "referenceDeviation": "المرجع نفسه كُتب بأرقام («230 متر»، «3 غرف نوم»، «5 مليون و400 ألف»). المالك وافق على الصوت الناتج. القاعدة للإعلانات الجديدة هي الحروف لأنها تضبط النطق بلا اعتماد على قراءة المحرك للأرقام."
+    },
+    "pronunciation": {
+      "areasWhitelist": {
+        "مدينة نصر": "مَدِينت نَصْر",
+        "مكرم عبيد": "مَكْرَم عُبِيد",
+        "عباس العقاد": "عَبَّاس العَقَّاد",
+        "السراج مول": "السِّرَاج مول",
+        "المربع الذهبي": "المربَّع الدهبي",
+        "حي السفارات": "حي السفارات",
+        "الواحة": "الواحة",
+        "المنطقة السادسة": "المنطقة السَّادسة",
+        "حسنين هيكل": "حُسْنِين هيكل",
+        "أحمد فخري": "أحمد فخري",
+        "الطيران": "الطيران",
+        "مصر الجديدة": "مصر الجديدة",
+        "التجمع الخامس": "التجمُّع الخامس",
+        "الحديقة الدولية": "الحديقة الدولية"
+      },
+      "rules": [
+        "«الجيم» قاهرية، لا معطّشة ولا جافا.",
+        "«القاف» تُنطق همزة في العامية: «أرضي»، «اتنين»، «أول».",
+        "المدّات قصيرة وإيقاع إعلاني سريع لكن واضح — لا مطّ في أواخر الجمل.",
+        "لا تشكيل ولا نطق فصيح للكلمات العامية («علشان» لا «لأجل»)."
+      ]
+    },
+    "delivery": {
+      "tempo": "إيقاع إعلاني متوسط-سريع: نحو 2.1-2.3 كلمة/ثانية في المرجع (58 كلمة في 26.66 ثانية).",
+      "pauses": [
+        "وقفة قصيرة (نحو 0.3 ثانية) بعد سؤال الـHook.",
+        "وقفة فاصلة بين المقاطع 2 و3 و4 و5 و6 (فواصل ونقاط في النص).",
+        "وقفة أطول قليلًا قبل جملة السعر لإبرازها.",
+        "بلا وقفات داخل الجملة الواحدة."
+      ],
+      "emphasis": ["المساحة في الـHook", "المعلم الأقرب في الموقع", "جملة السعر", "كلمة «دلوقتي» في الـCTA"],
+      "noMusic": true,
+      "noSoundEffects": true,
+      "_noMusicNote": "لا موسيقى خلفية ولا مؤثرات. MAGNeT مرفوض أصلًا (ليس TTS، لا يدعم العربية، أوزانه CC-BY-NC غير تجارية) — انظر _diag/audio-ad-experiment-2026-10-15.md."
+    },
+    "lengthHandling": {
+      "_why": "المدة تختلف بحسب بيانات العقار، والمدة وحدها ليست دليلًا على اختلاف الهوية.",
+      "hardCapSeconds": 30,
+      "shortAd": "لو بيانات العقار قليلة (مساحة + سعر + موقع فقط) فالمقطع يقصر لـ18-22 ثانية. لا تُحشى جمل بلا سند لملء الوقت.",
+      "longAd": "لو الميزات كثيرة يُختصر المقطع 6 (الإقناع) إلى ميزة واحدة، ثم يُحذف المقطع 3 (منفعة الدور). الترتيب المحذوف ثابت ولا يُغيَّر عشوائيًا.",
+      "neverSacrifice": ["المقطع 1 (Hook)", "المقطع 5 (السعر)", "المقطع 7 (CTA)"],
+      "durationLabel": "audio_duration = السقف (ceil) للمدة المقاسة بالثواني + « ثانية»",
+      "identityIsNotDuration": "المدة ليست معيار هوية. معيار الهوية هو قياس بصمة المتكلم في identityBand."
+    },
+    "factsRule": "كل رقم أو وصف في النص يجب أن يكون له سند حرفي في front matter أو متن ملف العقار. لا اختلاق، ولا استنتاج أعداد غير مذكورة، ولا وعود توافر أو عائد أو تمويل."
+  },
+
+  "engine": {
+    "_why": "وقائع مثبتة عن المحرك المتاح — وهي سبب انحراف الهوية.",
+    "name": "Arena built-in TTS",
+    "tools": ["add_voice", "generate_speech"],
+    "providerExposed": false,
+    "modelNameExposed": false,
+    "persistentVoiceId": false,
+    "voiceIdScope": "session-local",
+    "voiceIdExample": "voice-00",
+    "referenceAudioConditioning": false,
+    "voiceCloning": false,
+    "referenceAudioAcceptedAsInput": false,
+    "rawOutputId3": "2.4 (TSSE فقط، تشفير UTF-8) — يجب إعادة الوسم إلى 2.3",
+    "rawOutputEncoding": "MP3 32 kbps / 24 kHz / mono — مطابق للمواصفة بلا إعادة ترميز",
+    "hardLimit": "لا يوجد في المحرك أي مدخل يقبل ملف MP3 مرجعي أو Voice ID دائم. ملف MP3 وحده لا يستطيع فرض هوية المتحدث على هذا المحرك.",
+    "consequence": "إعادة إنتاج صوت المرجع نفسه مستحيلة تقنيًا بالمحرك الحالي. أفضل متاح = معاينة بشرية في كل جلسة + قياس موضوعي + توثيق.",
+    "externalProvidersRejected": {
+      "reason": "لا خدمة مدفوعة ولا مفتاح API ولا اعتماد غير متاح.",
+      "rejected": ["ElevenLabs", "OpenAI TTS", "Google/Azure Speech", "Coqui XTTS", "facebookresearch/MAGNeT"]
+    }
+  },
+
+  "identityBand": {
+    "_why": "حدود مقاسة فعليًا، لا أرقام مخترعة. التفاصيل في measurementBaseline.",
+    "method": "بصمة متحدث 256 بُعدًا من نموذج GE2E (Resemblyzer 17MB المُضمّن في PyPI) + تشابه جيب التمام",
+    "modelSource": "pypi.org (حزمة resemblyzer) — لا حاجة إلى huggingface.co المحجوب",
+    "notAvailableInCi": true,
+    "sameVoicePairs": {
+      "_definition": "135 زوجًا من داخل جلسة إنتاج واحدة (نفس موديل الصوت مؤكَّد)، من 44 ملفًا",
+      "n": 135, "min": 0.9116, "p1": 0.9201, "p5": 0.9351, "p25": 0.9456,
+      "median": 0.9539, "p75": 0.9622, "max": 0.9751, "mean": 0.9529
+    },
+    "withinFilePairs": {
+      "_definition": "132 زوجًا من تقسيم نفس الملف (نفس الصوت، كلمات مختلفة) — اختبار ضابط يثبت أن القياس صوتي لا نصي",
+      "n": 132, "min": 0.8747, "p1": 0.8846, "p5": 0.8968, "median": 0.931, "max": 0.9738
+    },
+    "referenceVsCorpus": {
+      "_definition": "المرجع مقابل الـ43 ملفًا الأخرى",
+      "n": 43, "min": 0.7245, "p5": 0.7677, "p25": 0.8107, "median": 0.8253,
+      "p75": 0.8613, "p95": 0.9031, "max": 0.9143, "mean": 0.8327,
+      "closestFile": "assets/audio/properties/apartment-sale-hassan-hassanein-heikal-200m.mp3",
+      "farthestFile": "assets/audio/requests/shop-rent-request-beauty-center-nasr-city.mp3"
+    },
+    "achievedCeilingThisSession": {
+      "_definition": "أفضل ما أنتجه المحرك فعليًا في جلسة 2026-10-17 بعد معاينتين اختار فيهما المالك",
+      "auditionRounds": 2,
+      "voice00": 0.9071,
+      "voice01": 0.8806,
+      "selected": "voice-00",
+      "selectedCosine": 0.9071
+    },
+    "thresholds": {
+      "identicalVoice": 0.9351,
+      "borderlineNeedsOwnerApproval": 0.9116,
+      "clearDeviation": 0.9116,
+      "unacceptable": 0.85
+    },
+    "policy": {
+      "newAdAutoPass": "cos >= 0.9351 — يُنشر ويُقيَّد في productionLog",
+      "newAdOwnerApproval": "0.9116 <= cos < 0.9351 — يُنشر فقط بموافقة المالك في نفس الجلسة، وتُقيَّد القيمة في productionLog",
+      "newAdBlocked": "cos < 0.9116 — لا يُنشر إلا بموافقة صريحة موثقة للمالك مع سبب (ownerOverride + reason)",
+      "existingAds": "الملفات الـ44 المنشورة «موروثة» (grandfathered): قيمها مقاسة ومقيّدة في productionLog ولا يُعاد توليدها صمتًا",
+      "noSilentRegeneration": "أي إعادة توليد لملف منشور تستلزم موافقة صريحة من المالك ونسخة بديلة منفصلة لا استبدالًا في المكان"
+    }
+  },
+
+  "governance": {
+    "_why": "منع التغيير التلقائي لإعدادات الصوت أو الموديل أو Voice ID.",
+    "changeControl": [
+      "لا يجوز تغيير أي قيمة في encoding أو id3.fixedValues أو engine دون سبب موثق في _data/audio_voice_log.json وسطر في تقرير _diag/.",
+      "لا يجوز اختيار صوت بديل عن المرجع تلقائيًا؛ الاختيار دائمًا بمعاينة add_voice يقررها المالك.",
+      "لا يجوز استبدال ملف MP3 منشور ناجح. البديل يُنشأ في مسار منفصل ويُراجع.",
+      "لا يجوز استخدام خدمة مدفوعة أو مفتاح API أو متغير بيئة جديد.",
+      "بصمة SHA-256 للمرجع مثبّتة هنا وللباقي في _diag/check-audio-batch3.mjs — أي انحراف يُسقط CI."
+    ],
+    "productionPipeline": [
+      "1. كتابة النص على بنية script.structure وقراءة _data/voice_identity.json.",
+      "2. فحص النص آليًا: scripts/audio/produce-audio-ad.mjs --plan (لهجة، أرقام بالحروف، CTA، طول، سند البيانات).",
+      "3. معاينة المالك: add_voice(language='ar-EG', gender='masculine', use_case='advertising') بنص من المرجع.",
+      "4. التوليد: generate_speech(voice_id المختار) — لا إعادة اختبار بين المقاطع داخل الدفعة.",
+      "5. القياس: scripts/audio/measure_voice_identity.py → cos مقابل المرجع، ومقارنته بـ identityBand.thresholds.",
+      "6. الوسم: scripts/audio/produce-audio-ad.mjs --tag (ID3v2.3، الإطارات السبعة، UTF-16، بلا إعادة ترميز).",
+      "7. القيد: scripts/audio/produce-audio-ad.mjs --record → سطر في _data/audio_voice_log.json.",
+      "8. البوابة: scripts/audio/verify-voice-identity.mjs ثم _diag/check-audio-batch3.mjs ثم npm test."
+    ],
+    "untouchable": ["_worker/", "D1", "KV", "Web Push", "إعدادات Cloudflare", "الوكيل الذكي", "الأسرار", "القوالب المشتركة"]
+  }
+}

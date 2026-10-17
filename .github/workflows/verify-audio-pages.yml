@@ -115,6 +115,18 @@ on:
       - '_diag/check-audio-production.mjs'
       - '_diag/audio-check-utils.mjs'
       - '.github/workflows/verify-audio-pages.yml'
+      # 🎙️ الهوية الصوتية (2026-10-18): المواصفة المركزية + سجل الإنتاج + مسار
+      # الإنتاج + البوابة + أدوات MPEG/ID3 + خط الأساس المقاس والتقرير.
+      - '_data/voice_identity.json'
+      - '_data/audio_voice_log.json'
+      - 'scripts/audio/*.mjs'
+      - 'scripts/tests/voice-identity.test.mjs'
+      - '_diag/voice-identity-spec-*.md'
+      - '_diag/audio-identity-baseline-*.json'
+      - '_diag/audio-identity-audit-*.md'
+      # أول إعلان يُنتَج عبر مسار الإنتاج الموحّد (عقار جديد)
+      - '_properties/2026-01-10-ground-floor-apartment-garden-nasr-city-156m.md'
+      - 'assets/audio/properties/golden-square-garden-156m.mp3'
 
 permissions:
   contents: read
@@ -133,11 +145,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, pinned to full commit SHA
         with:
           node-version: '22'
+      # 🎙️ بوابة الهوية الصوتية قبل أي بناء: تعمل على المصدر فقط وبلا حزم
+      #    خارجية، فتُسقط PR يغيّر المرجع أو إعدادات الصوت أو يستبدل ملفًا
+      #    منشورًا أو ينتج إعلانًا خارج مسار الإنتاج الموحّد.
+      - name: Verify the audio voice identity gate (reference, production log, every MP3)
+        run: node scripts/audio/verify-voice-identity.mjs
+      - name: Test the voice identity pipeline, gate and MPEG/ID3 tooling
+        run: node --test scripts/tests/voice-identity.test.mjs
       - name: Build with the site's existing Jekyll and Gemfile (no publication)
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the 43 property audio pages and all other property pages
+      - name: Verify the 44 property audio pages and all other property pages
         run: node _diag/check-audio-batch3.mjs
       - name: Verify the request audio page and the two unchanged request pages
         run: node _diag/check-audio-requests.mjs

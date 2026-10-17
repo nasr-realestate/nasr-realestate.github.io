@@ -9,6 +9,15 @@
 //      • منتهٍ: ملف الطلب محذوف ⇒ يتأكد أن الصفحة **لم تعد تُنشر**، ويبقي فحص الأصل
 //        الصوتي المنشور (200 + audio/mpeg + SHA-256 + Range) لأنه ما زال رابطًا عامًا.
 //    لا يُخفَّف أي تحقق قائم في الحالتين.
+//
+// ⚠️ 2026-10-18 — إصلاح عطل قائم: هذا الفحص كان يحمل بصمة SHA-256 وتسمية مدة
+//    مكتوبتين يدويًا لإعلان `apartment-sale-hassan-hassanein-heikal-200m`. بعد
+//    إعادة توليد ذلك الملف (تقرير _diag/audio-fix-hassan-hassanein-heikal-2026-10-17.md)
+//    صارت القيمتان قديمتين (7d738755… و«28 ثانية» بدل 1b2289c9… و«29 ثانية»)،
+//    فكان أي تشغيل يدوي بعد النشر يفشل حتمًا. صار الفحص الآن يقرأ البصمة من
+//    `_data/audio_voice_log.json` وتسمية المدة من front matter العقار نفسه —
+//    مصدر واحد للحقيقة فلا يتقادم مرة أخرى. وأُضيف إليه أول إعلان مُنتَج عبر
+//    مسار الإنتاج الموحّد.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -23,6 +32,18 @@ const otherLiveRequests = ['garage-rent-request-40-buses-ismail-qabbani'];
 const expiredOtherRequests = ['apartment-rent-request-art-studio-large-reception-nasr-city'];
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+/** سجل الإنتاج — مصدر البصمات والأحجام (انظر scripts/audio/verify-voice-identity.mjs) */
+const PRODUCTION_LOG = JSON.parse(await readFile('_data/audio_voice_log.json', 'utf8'));
+
+/** الإعلانات التي يُتحقق منها على الإنتاج بعد كل نشر. */
+/** المرجع الصوتي الذي اختاره المالك — يُقرأ من المواصفة المركزية ولا يُكتب يدويًا. */
+const SPEC_REFERENCE_SLUG = JSON.parse(await readFile('_data/voice_identity.json', 'utf8')).reference.slug;
+
+const PRODUCTION_AUDIO_SLUGS = [
+  'apartment-sale-hassan-hassanein-heikal-200m', // أُعيد توليده 2026-10-17
+  'golden-square-garden-156m',                   // أول إعلان عبر مسار الإنتاج الموحّد 2026-10-18
+];
 
 /** ملف الطلب نفسه موجود في المستودع؟ (غيابه = انتهى الأجل، لا خطأ في الفحص) */
 const source = await readFile(sourcePath, 'utf8').catch(() => null);
@@ -87,36 +108,53 @@ async function checkAudio() {
   console.log(`Production: ${audioUrl} HTTP 200 audio/mpeg, Range 206, SHA-256 ${expectedHash}.`);
 }
 
-async function checkNewPropertyAudio() {
-  const slug = 'apartment-sale-hassan-hassanein-heikal-200m';
-  const source = await readFile(`_properties/2026-10-17-${slug}.md`, 'utf8');
+/**
+ * فحص إعلان عقاري منشور على الإنتاج: الصفحة + المشغّل + النص + المدة + الأصل الصوتي.
+ * البصمة والحجم يُقرآن من سجل الإنتاج، وتسمية المدة من front matter العقار نفسه —
+ * لا قيم مكتوبة يدويًا تتقادم.
+ */
+async function checkPropertyAudio(slug) {
+  const entry = PRODUCTION_LOG.entries.find((e) => e.slug === slug);
+  assert.ok(entry, `${slug}: لا سطر له في _data/audio_voice_log.json`);
+  assert.ok(entry.propertySource, `${slug}: السطر لا يحدد ملف العقار`);
+  const source = await readFile(entry.propertySource, 'utf8');
   const front = source.split(/^---\s*$/m)[1];
   const script = grab(front, 'audio_script');
+  const label = grab(front, 'audio_duration');
+  assert.ok(script && script.length > 80, `${slug}: audio_script ناقص`);
+  assert.match(label, /^\d+ ثانية$/, `${slug}: تسمية مدة غير صالحة`);
+
   const pagePath = `/properties/${slug}/`;
   const audioPath = `/assets/audio/properties/${slug}.mp3`;
+  assert.equal(grab(front, 'audio_file'), audioPath, `${slug}: audio_file يجب أن يعكس الـslug`);
+
   const page = await get(pagePath);
   const html = await page.text();
-  assert.ok(html.includes(`src="${audioPath}"`), `${pagePath}: player source missing`);
-  assert.ok(html.includes(script), `${pagePath}: script missing`);
-  assert.ok(html.includes('28 ثانية'), `${pagePath}: duration missing`);
+  assert.ok(html.includes(`<audio id="ppAudio" preload="none" src="${audioPath}"></audio>`), `${pagePath}: المشغّل مفقود`);
+  assert.ok(html.includes(script), `${pagePath}: نص الإعلان غير ظاهر`);
+  assert.ok(html.includes(label), `${pagePath}: تسمية المدة ${label} غير ظاهرة`);
 
   const response = await get(audioPath);
-  assert.match(response.headers.get('content-type') ?? '', /audio\/mpeg/, 'property MP3 MIME');
+  assert.match(response.headers.get('content-type') ?? '', /audio\/mpeg/, `${audioPath}: MIME`);
   const bytes = Buffer.from(await response.arrayBuffer());
-  const expected = '7d738755536bb4a0808c0ebfb1bfce963d8c9b7992d89e3620123141b7966629';
-  assert.equal(sha(bytes), expected, 'new property MP3 differs from committed asset');
+  assert.equal(sha(bytes), entry.sha256, `${audioPath}: بصمة الإنتاج ≠ الأصل الملتزم في المستودع`);
+  assert.equal(bytes.length, entry.bytes, `${audioPath}: حجم الإنتاج ≠ الحجم الملتزم`);
+  assert.equal(bytes.subarray(0, 3).toString(), 'ID3', `${audioPath}: ليس MP3 موسومًا`);
+  assert.equal(bytes[3], 3, `${audioPath}: يجب أن يكون ID3v2.3`);
+
   const range = await get(audioPath, { headers: { Range: 'bytes=0-1023' } });
-  assert.equal(range.status, 206, 'new property MP3 Range request');
-  assert.equal(range.headers.get('content-range'), `bytes 0-1023/${bytes.length}`);
-  assert.deepEqual(Buffer.from(await range.arrayBuffer()), bytes.subarray(0, 1024));
-  assert.equal(bytes.subarray(0, 3).toString(), 'ID3');
-  assert.equal(bytes[3], 3, 'new property MP3 must use ID3v2.3');
-  console.log(`Production: ${pagePath} + ${audioPath} HTTP 200, audio/mpeg, Range 206, SHA-256 ${expected}.`);
+  assert.equal(range.status, 206, `${audioPath}: طلب Range`);
+  assert.equal(range.headers.get('content-range'), `bytes 0-1023/${bytes.length}`, `${audioPath}: content-range`);
+  assert.deepEqual(Buffer.from(await range.arrayBuffer()), bytes.subarray(0, 1024), `${audioPath}: محتوى Range`);
+  console.log(`Production: ${pagePath} + ${audioPath} HTTP 200, audio/mpeg, Range 206, SHA-256 ${entry.sha256.slice(0, 16)}… (${label}).`);
 }
 
 await checkPages();
 await checkAudio();
-await checkNewPropertyAudio();
-const property = await get('/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/');
+for (const productionSlug of PRODUCTION_AUDIO_SLUGS) await checkPropertyAudio(productionSlug);
+
+// المرجع الذي اختاره المالك: يُتحقق من صفحته وأصله الصوتي كاملًا لا من وجود المشغّل فقط.
+await checkPropertyAudio(SPEC_REFERENCE_SLUG);
+const property = await get(`/properties/${SPEC_REFERENCE_SLUG}/`);
 assert.ok((await property.text()).includes('id="ppAudioBox"'), 'old property player missing in production');
 console.log('Production: existing property player still present.');

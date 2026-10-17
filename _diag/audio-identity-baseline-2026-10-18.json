@@ -1,0 +1,743 @@
+{
+  "_comment": [
+    "خط الأساس المقاس للهوية الصوتية — 2026-10-18.",
+    "كل رقم هنا ناتج قياس فعلي قابل للتكرار بأدوات مثبتة في toolchain.",
+    "لا درجات تشابه مخترعة ولا أحكام سمعية: بصمات GE2E + قياسات إشارة."
+  ],
+  "toolchain": {
+    "python": "3.11",
+    "packages": {
+      "resemblyzer": "GE2E voice encoder, نموذج 17MB مُضمّن في حزمة PyPI (لا حاجة إلى huggingface.co)",
+      "soundfile": "0.14.0 / libsndfile 1.2.2 (فك ترميز MP3)",
+      "librosa": "إعادة العينة إلى 16kHz",
+      "mutagen": "1.48.1 (وسوم ID3 + بارامترات MP3)",
+      "numpy": "قياسات الإشارة"
+    },
+    "nodeTools": "scripts/audio/id3.mjs (ماسح MPEG + كاتب ID3v2.3) — مُتحقَّق منه مقابل mutagen على 45/45 ملفًا",
+    "notAvailable": [
+      "ffmpeg/ffprobe (غير مثبت)",
+      "huggingface.co (محجوب)",
+      "أي محرك ASR (أوزانه على huggingface.co)"
+    ],
+    "reproduce": "python3 scripts/audio/measure_voice_identity.py --all"
+  },
+  "reference": {
+    "path": "assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3",
+    "sha256": "fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a",
+    "bytes": 108976,
+    "durationSeconds": 26.664,
+    "embedding256": [
+      0.14664,
+      0.0,
+      0.26136,
+      0.0,
+      0.0,
+      0.01889,
+      0.0,
+      0.02648,
+      0.0639,
+      0.02398,
+      0.0737,
+      0.04284,
+      0.03303,
+      0.0,
+      0.03176,
+      0.0,
+      0.00147,
+      0.02084,
+      0.0,
+      0.01026,
+      0.13817,
+      0.07463,
+      0.0,
+      0.0,
+      0.0,
+      0.03426,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.06311,
+      0.12672,
+      0.00316,
+      0.0,
+      0.04135,
+      0.08885,
+      0.0072,
+      0.0,
+      0.0,
+      0.00647,
+      0.0,
+      0.01367,
+      0.04356,
+      0.02802,
+      0.06225,
+      0.00234,
+      0.00181,
+      0.00529,
+      0.0164,
+      0.00416,
+      0.0,
+      0.02686,
+      0.0,
+      0.0,
+      0.0,
+      0.00386,
+      0.06544,
+      0.00342,
+      0.04443,
+      0.0,
+      0.0059,
+      0.0,
+      0.03022,
+      0.0085,
+      0.00781,
+      0.0,
+      0.15539,
+      0.06479,
+      0.0,
+      0.00167,
+      0.04561,
+      0.00088,
+      0.0,
+      0.0413,
+      0.02092,
+      0.0,
+      0.0,
+      0.01311,
+      0.20976,
+      0.10366,
+      0.0,
+      0.0,
+      0.15668,
+      0.0538,
+      0.0,
+      0.0,
+      0.0,
+      0.05298,
+      0.0,
+      0.14777,
+      0.11273,
+      0.0,
+      0.0,
+      0.0,
+      0.01907,
+      0.0,
+      0.06282,
+      0.0,
+      0.0,
+      0.0,
+      9e-05,
+      0.0,
+      0.13778,
+      0.04582,
+      0.1072,
+      0.03896,
+      0.0,
+      0.00573,
+      0.0,
+      0.1586,
+      0.0,
+      0.05316,
+      0.0,
+      0.04588,
+      0.02871,
+      0.0,
+      0.08042,
+      0.04771,
+      0.0,
+      0.1507,
+      0.0896,
+      0.07312,
+      0.09328,
+      0.0001,
+      0.00073,
+      0.12522,
+      0.00983,
+      0.12394,
+      0.03471,
+      0.0,
+      0.07376,
+      0.0,
+      0.01515,
+      0.04919,
+      0.13688,
+      0.01579,
+      0.07152,
+      0.0,
+      0.0057,
+      0.04386,
+      0.00157,
+      0.00229,
+      0.06731,
+      0.00941,
+      0.06487,
+      0.02997,
+      0.17938,
+      0.0,
+      0.08381,
+      0.0622,
+      0.0014,
+      0.13014,
+      0.0,
+      0.04002,
+      0.0,
+      0.10414,
+      0.0,
+      0.0,
+      0.05227,
+      0.00258,
+      0.08572,
+      0.0,
+      0.03104,
+      0.00633,
+      0.02425,
+      0.16422,
+      0.00672,
+      0.02632,
+      0.01669,
+      0.09416,
+      0.0,
+      0.0,
+      0.01741,
+      0.00055,
+      0.0,
+      0.09043,
+      0.11414,
+      0.10965,
+      0.10682,
+      0.02069,
+      0.10299,
+      0.00022,
+      0.01152,
+      0.03489,
+      0.01158,
+      0.0,
+      5e-05,
+      0.09098,
+      0.0,
+      0.00661,
+      0.06054,
+      0.00121,
+      0.0,
+      0.07668,
+      0.0,
+      0.05067,
+      0.13297,
+      0.14632,
+      0.06724,
+      0.00971,
+      0.03659,
+      0.04631,
+      0.0,
+      0.0,
+      0.0,
+      0.0004,
+      0.0,
+      0.0411,
+      0.01723,
+      0.02825,
+      0.00409,
+      0.0,
+      0.09136,
+      0.11508,
+      0.0,
+      0.00046,
+      0.0,
+      0.12784,
+      0.04164,
+      0.0,
+      0.15206,
+      0.00194,
+      0.0,
+      0.0,
+      0.02736,
+      0.08114,
+      0.01593,
+      0.05035,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.00993,
+      0.0,
+      0.0,
+      0.0189,
+      0.00282,
+      0.05462,
+      0.07951,
+      0.05594,
+      0.11012,
+      0.13388,
+      0.02173,
+      0.20628,
+      0.00196,
+      0.08173,
+      0.02619,
+      0.0,
+      0.21108,
+      0.05187,
+      0.0,
+      0.01764,
+      0.0978,
+      0.0,
+      0.01444,
+      0.0
+    ],
+    "acoustic": {
+      "peak_dbfs": -2.49,
+      "rms_dbfs": -19.61,
+      "clipped_samples": 0,
+      "f0_median_hz": 156.5,
+      "f0_p05_hz": 100.3,
+      "f0_p95_hz": 297.5,
+      "f0_iqr_hz": 90.2,
+      "spectral_centroid_hz": 1489.8,
+      "spectral_rolloff85_hz": 3023.4
+    },
+    "rhythm": {
+      "words_per_second_overall": 2.18,
+      "pause_count": 19,
+      "pause_mean_s": 0.202,
+      "pause_max_s": 0.48,
+      "voiced_ratio": 0.784,
+      "words": 58
+    }
+  },
+  "sameVoiceBand": {
+    "definition": "أزواج من داخل جلسة إنتاج واحدة (نفس موديل الصوت مؤكَّد من تقارير _diag)",
+    "n": 135,
+    "min": 0.9116,
+    "p1": 0.9201,
+    "p5": 0.9351,
+    "p25": 0.9456,
+    "median": 0.9539,
+    "p75": 0.9622,
+    "max": 0.9751,
+    "mean": 0.9529
+  },
+  "withinFileControl": {
+    "definition": "اختبار ضابط: تقسيم نفس الملف إلى أثلاث (نفس الصوت، كلمات مختلفة) — يثبت أن القياس صوتي لا نصي",
+    "n": 132,
+    "min": 0.8747,
+    "p1": 0.8846,
+    "p5": 0.8968,
+    "median": 0.931,
+    "max": 0.9738
+  },
+  "referenceVsCorpus": {
+    "definition": "المرجع مقابل كل ملف آخر",
+    "values": {
+      "assets/audio/properties/abdel-azim-ghalmi-200m-expat.mp3": 0.9112,
+      "assets/audio/properties/abu-dawood-fakhry-167m.mp3": 0.8707,
+      "assets/audio/properties/admin-rent-nozha-main-260m.mp3": 0.8321,
+      "assets/audio/properties/administrative-unit-rent-nasr-city-41m.mp3": 0.8145,
+      "assets/audio/properties/ali-amer-240m.mp3": 0.8053,
+      "assets/audio/properties/apartment-for-sale-khedr-eltouny-tayaran-120m.mp3": 0.8959,
+      "assets/audio/properties/apartment-rent-gamal-dewidar-enppi-nasr-city-160m.mp3": 0.7851,
+      "assets/audio/properties/apartment-sale-abbas-elakkad-refaai-200m-roi.mp3": 0.9039,
+      "assets/audio/properties/apartment-sale-abdul-halim-abdullah-195m.mp3": 0.8134,
+      "assets/audio/properties/apartment-sale-al-hayat-towers-nasr-city-162m.mp3": 0.892,
+      "assets/audio/properties/apartment-sale-egyptair-nasr-city-125m-furnished.mp3": 0.846,
+      "assets/audio/properties/apartment-sale-gamal-afifi-ahly-club-250m.mp3": 0.8405,
+      "assets/audio/properties/apartment-sale-hassan-hassanein-heikal-200m.mp3": 0.9143,
+      "assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3": 1.0,
+      "assets/audio/properties/apartment-sale-international-park-nasr-city-215m.mp3": 0.8282,
+      "assets/audio/properties/apartment-sale-makarif-6th-district-130m.mp3": 0.8231,
+      "assets/audio/properties/apartment-sale-rabaa-investment-abbas-elakkad-165m.mp3": 0.8113,
+      "assets/audio/properties/commercial-hq-rent-kabul-street-nasr-city-130m.mp3": 0.8144,
+      "assets/audio/properties/commercial-mohamed-hasan-elgamal.mp3": 0.8104,
+      "assets/audio/properties/commercial-shop-for-rent-nozha-street-nasr-city.mp3": 0.7547,
+      "assets/audio/properties/degla-landmark-122m-rent.mp3": 0.8067,
+      "assets/audio/properties/furnished-apartment-rent-hayat-compound-safarat-200m.mp3": 0.827,
+      "assets/audio/properties/genena-mall-186m-office-residence.mp3": 0.8391,
+      "assets/audio/properties/golden-square-garden-156m.mp3": 0.9071,
+      "assets/audio/properties/ibrahim-nawara-175m.mp3": 0.8253,
+      "assets/audio/properties/int-park-140m-furnished.mp3": 0.8456,
+      "assets/audio/properties/ismail-wahby-160m-luxury.mp3": 0.8803,
+      "assets/audio/properties/kabul-st-makram-ebeid-260m.mp3": 0.8225,
+      "assets/audio/properties/luxury-apartment-rent-al-azhar-street-nasr-city-200m.mp3": 0.8201,
+      "assets/audio/properties/makram-ebid-177m.mp3": 0.7857,
+      "assets/audio/properties/makram-ebid-main-250m.mp3": 0.8246,
+      "assets/audio/properties/office-storage-rent-hassanein-heikal-nasr-city-73m.mp3": 0.8109,
+      "assets/audio/properties/rehab-villa-model-h-gate9.mp3": 0.8034,
+      "assets/audio/properties/rent-abdel-hamid-lotfy-tayaran-150m.mp3": 0.7936,
+      "assets/audio/properties/rent-waha-50th-street-163m.mp3": 0.7657,
+      "assets/audio/properties/safarat-safwa-170m.mp3": 0.8054,
+      "assets/audio/properties/sanhoori-luxury-250m.mp3": 0.8246,
+      "assets/audio/properties/shaka-nour-deen.mp3": 0.8669,
+      "assets/audio/properties/shams-club-heliopolis-160m.mp3": 0.8692,
+      "assets/audio/properties/shop-abbas-elakkad-60m-jan26.mp3": 0.8568,
+      "assets/audio/properties/shop-rent-makram-ebeid-67m.mp3": 0.8537,
+      "assets/audio/properties/truegate-compound-waha-108m.mp3": 0.8735,
+      "assets/audio/properties/villa-new-cairo-1st-district-568m.mp3": 0.8491,
+      "assets/audio/properties/villa-south-90th-120m.mp3": 0.8659,
+      "assets/audio/requests/shop-rent-request-beauty-center-nasr-city.mp3": 0.7245
+    }
+  },
+  "voiceGroups": {
+    "threshold": 0.9351,
+    "method": "single-linkage على تشابه جيب التمام",
+    "groups": [
+      {
+        "id": "G1",
+        "size": 15,
+        "members": [
+          "admin-rent-nozha-main-260m.mp3",
+          "apartment-sale-egyptair-nasr-city-125m-furnished.mp3",
+          "apartment-sale-gamal-afifi-ahly-club-250m.mp3",
+          "apartment-sale-international-park-nasr-city-215m.mp3",
+          "commercial-mohamed-hasan-elgamal.mp3",
+          "furnished-apartment-rent-hayat-compound-safarat-200m.mp3",
+          "genena-mall-186m-office-residence.mp3",
+          "int-park-140m-furnished.mp3",
+          "kabul-st-makram-ebeid-260m.mp3",
+          "luxury-apartment-rent-al-azhar-street-nasr-city-200m.mp3",
+          "office-storage-rent-hassanein-heikal-nasr-city-73m.mp3",
+          "shams-club-heliopolis-160m.mp3",
+          "shop-rent-makram-ebeid-67m.mp3",
+          "truegate-compound-waha-108m.mp3",
+          "villa-new-cairo-1st-district-568m.mp3"
+        ],
+        "sessions": [
+          "batch2 (2026-10-15)",
+          "batch4 (2026-10-16)"
+        ],
+        "cosToRef": [
+          0.8321,
+          0.846,
+          0.8405,
+          0.8282,
+          0.8104,
+          0.827,
+          0.8391,
+          0.8456,
+          0.8225,
+          0.8201,
+          0.8109,
+          0.8692,
+          0.8537,
+          0.8735,
+          0.8491
+        ]
+      },
+      {
+        "id": "G2",
+        "size": 10,
+        "members": [
+          "administrative-unit-rent-nasr-city-41m.mp3",
+          "apartment-rent-gamal-dewidar-enppi-nasr-city-160m.mp3",
+          "apartment-sale-abdul-halim-abdullah-195m.mp3",
+          "apartment-sale-makarif-6th-district-130m.mp3",
+          "apartment-sale-rabaa-investment-abbas-elakkad-165m.mp3",
+          "commercial-shop-for-rent-nozha-street-nasr-city.mp3",
+          "makram-ebid-177m.mp3",
+          "rehab-villa-model-h-gate9.mp3",
+          "rent-abdel-hamid-lotfy-tayaran-150m.mp3",
+          "rent-waha-50th-street-163m.mp3"
+        ],
+        "sessions": [
+          "batch3 (2026-10-15)"
+        ],
+        "cosToRef": [
+          0.8145,
+          0.7851,
+          0.8134,
+          0.8231,
+          0.8113,
+          0.7547,
+          0.7857,
+          0.8034,
+          0.7936,
+          0.7657
+        ]
+      },
+      {
+        "id": "G3",
+        "size": 6,
+        "members": [
+          "ali-amer-240m.mp3",
+          "commercial-hq-rent-kabul-street-nasr-city-130m.mp3",
+          "degla-landmark-122m-rent.mp3",
+          "makram-ebid-main-250m.mp3",
+          "safarat-safwa-170m.mp3",
+          "sanhoori-luxury-250m.mp3"
+        ],
+        "sessions": [
+          "batch7 (2026-10-16)"
+        ],
+        "cosToRef": [
+          0.8053,
+          0.8144,
+          0.8067,
+          0.8246,
+          0.8054,
+          0.8246
+        ]
+      },
+      {
+        "id": "G4",
+        "size": 5,
+        "members": [
+          "abdel-azim-ghalmi-200m-expat.mp3",
+          "apartment-for-sale-khedr-eltouny-tayaran-120m.mp3",
+          "apartment-sale-abbas-elakkad-refaai-200m-roi.mp3",
+          "apartment-sale-al-hayat-towers-nasr-city-162m.mp3",
+          "shaka-nour-deen.mp3"
+        ],
+        "sessions": [
+          "batch5 (2026-10-16)"
+        ],
+        "cosToRef": [
+          0.9112,
+          0.8959,
+          0.9039,
+          0.892,
+          0.8669
+        ]
+      },
+      {
+        "id": "G5",
+        "size": 5,
+        "members": [
+          "abu-dawood-fakhry-167m.mp3",
+          "ibrahim-nawara-175m.mp3",
+          "ismail-wahby-160m-luxury.mp3",
+          "shop-abbas-elakkad-60m-jan26.mp3",
+          "villa-south-90th-120m.mp3"
+        ],
+        "sessions": [
+          "batch6 (2026-10-16)"
+        ],
+        "cosToRef": [
+          0.8707,
+          0.8253,
+          0.8803,
+          0.8568,
+          0.8659
+        ]
+      },
+      {
+        "id": "G6",
+        "size": 1,
+        "members": [
+          "apartment-sale-hassan-hassanein-heikal-200m.mp3"
+        ],
+        "sessions": [
+          "fix (2026-10-17)"
+        ],
+        "cosToRef": [
+          0.9143
+        ]
+      },
+      {
+        "id": "G7",
+        "size": 1,
+        "members": [
+          "apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3"
+        ],
+        "sessions": [
+          "batch1-PoC (2026-10-15) — المرجع"
+        ],
+        "cosToRef": [
+          1.0
+        ]
+      },
+      {
+        "id": "G8",
+        "size": 1,
+        "members": [
+          "golden-square-garden-156m.mp3"
+        ],
+        "sessions": [
+          "test-ad (2026-10-18) — مسار الإنتاج الموحّد"
+        ],
+        "cosToRef": [
+          0.9071
+        ]
+      },
+      {
+        "id": "G9",
+        "size": 1,
+        "members": [
+          "shop-rent-request-beauty-center-nasr-city.mp3"
+        ],
+        "sessions": [
+          "requests b1 (منتهٍ)"
+        ],
+        "cosToRef": [
+          0.7245
+        ]
+      }
+    ]
+  },
+  "sessions": {
+    "batch1-PoC (2026-10-15) — المرجع": {
+      "n": 1,
+      "cosToRefMean": null,
+      "intraMean": null,
+      "intraMin": null,
+      "members": [
+        "apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3"
+      ]
+    },
+    "batch2 (2026-10-15)": {
+      "n": 5,
+      "cosToRefMean": 0.8289,
+      "intraMean": 0.9511,
+      "intraMin": 0.9392,
+      "members": [
+        "apartment-sale-egyptair-nasr-city-125m-furnished.mp3",
+        "apartment-sale-gamal-afifi-ahly-club-250m.mp3",
+        "furnished-apartment-rent-hayat-compound-safarat-200m.mp3",
+        "luxury-apartment-rent-al-azhar-street-nasr-city-200m.mp3",
+        "office-storage-rent-hassanein-heikal-nasr-city-73m.mp3"
+      ]
+    },
+    "batch3 (2026-10-15)": {
+      "n": 10,
+      "cosToRefMean": 0.7951,
+      "intraMean": 0.9543,
+      "intraMin": 0.9116,
+      "members": [
+        "administrative-unit-rent-nasr-city-41m.mp3",
+        "apartment-rent-gamal-dewidar-enppi-nasr-city-160m.mp3",
+        "apartment-sale-abdul-halim-abdullah-195m.mp3",
+        "apartment-sale-makarif-6th-district-130m.mp3",
+        "apartment-sale-rabaa-investment-abbas-elakkad-165m.mp3",
+        "commercial-shop-for-rent-nozha-street-nasr-city.mp3",
+        "makram-ebid-177m.mp3",
+        "rehab-villa-model-h-gate9.mp3",
+        "rent-abdel-hamid-lotfy-tayaran-150m.mp3",
+        "rent-waha-50th-street-163m.mp3"
+      ]
+    },
+    "batch4 (2026-10-16)": {
+      "n": 10,
+      "cosToRefMean": 0.8424,
+      "intraMean": 0.9548,
+      "intraMin": 0.9182,
+      "members": [
+        "admin-rent-nozha-main-260m.mp3",
+        "apartment-sale-international-park-nasr-city-215m.mp3",
+        "commercial-mohamed-hasan-elgamal.mp3",
+        "genena-mall-186m-office-residence.mp3",
+        "int-park-140m-furnished.mp3",
+        "kabul-st-makram-ebeid-260m.mp3",
+        "shams-club-heliopolis-160m.mp3",
+        "shop-rent-makram-ebeid-67m.mp3",
+        "truegate-compound-waha-108m.mp3",
+        "villa-new-cairo-1st-district-568m.mp3"
+      ]
+    },
+    "batch5 (2026-10-16)": {
+      "n": 5,
+      "cosToRefMean": 0.894,
+      "intraMean": 0.9478,
+      "intraMin": 0.9236,
+      "members": [
+        "abdel-azim-ghalmi-200m-expat.mp3",
+        "apartment-for-sale-khedr-eltouny-tayaran-120m.mp3",
+        "apartment-sale-abbas-elakkad-refaai-200m-roi.mp3",
+        "apartment-sale-al-hayat-towers-nasr-city-162m.mp3",
+        "shaka-nour-deen.mp3"
+      ]
+    },
+    "batch6 (2026-10-16)": {
+      "n": 5,
+      "cosToRefMean": 0.8598,
+      "intraMean": 0.9498,
+      "intraMin": 0.9365,
+      "members": [
+        "abu-dawood-fakhry-167m.mp3",
+        "ibrahim-nawara-175m.mp3",
+        "ismail-wahby-160m-luxury.mp3",
+        "shop-abbas-elakkad-60m-jan26.mp3",
+        "villa-south-90th-120m.mp3"
+      ]
+    },
+    "batch7 (2026-10-16)": {
+      "n": 6,
+      "cosToRefMean": 0.8135,
+      "intraMean": 0.9501,
+      "intraMin": 0.9342,
+      "members": [
+        "ali-amer-240m.mp3",
+        "commercial-hq-rent-kabul-street-nasr-city-130m.mp3",
+        "degla-landmark-122m-rent.mp3",
+        "makram-ebid-main-250m.mp3",
+        "safarat-safwa-170m.mp3",
+        "sanhoori-luxury-250m.mp3"
+      ]
+    },
+    "fix (2026-10-17)": {
+      "n": 1,
+      "cosToRefMean": 0.9143,
+      "intraMean": null,
+      "intraMin": null,
+      "members": [
+        "apartment-sale-hassan-hassanein-heikal-200m.mp3"
+      ]
+    },
+    "requests b1 (منتهٍ)": {
+      "n": 1,
+      "cosToRefMean": 0.7245,
+      "intraMean": null,
+      "intraMin": null,
+      "members": [
+        "shop-rent-request-beauty-center-nasr-city.mp3"
+      ]
+    },
+    "test-ad (2026-10-18) — مسار الإنتاج الموحّد": {
+      "n": 1,
+      "cosToRefMean": 0.9071,
+      "intraMean": null,
+      "intraMin": null,
+      "members": [
+        "golden-square-garden-156m.mp3"
+      ]
+    }
+  },
+  "newTestAd": {
+    "path": "assets/audio/properties/golden-square-garden-156m.mp3",
+    "sha256": "bc8a10c088a1cf21e28a3145fbaf33d7c9dad93220b4d1b3000c88945833544f",
+    "bytes": 111836,
+    "durationSeconds": 27.408,
+    "cosineToReference": 0.9071,
+    "voiceGroup": "G8",
+    "auditions": {
+      "round1_voice00": 0.9071,
+      "round2_voice01": 0.8806,
+      "selected": "voice-00"
+    },
+    "rhythm": {
+      "words_per_second_overall": 2.12,
+      "pause_count": 16,
+      "pause_mean_s": 0.254,
+      "voiced_ratio": 0.77,
+      "words": 58
+    },
+    "acoustic": {
+      "peak_dbfs": -3.75,
+      "rms_dbfs": -19.56,
+      "clipped_samples": 0,
+      "f0_median_hz": 144.6,
+      "f0_p05_hz": 95.1,
+      "f0_p95_hz": 230.9,
+      "spectral_centroid_hz": 1406.5
+    }
+  },
+  "corpus": {
+    "files": 45,
+    "allCompliantTechnical": true,
+    "encodingUniform": {
+      "bitrateBps": 32000,
+      "sampleRateHz": 24000,
+      "channels": 1,
+      "id3": "2.3",
+      "tsse": "Lavf59.27.100",
+      "verifiedCount": 45
+    },
+    "commDescriptionDeviationCount": 38
+  }
+}

@@ -22,6 +22,16 @@ areaNumeric: 156
 roomsNumeric: 3
 bathsNumeric: 0
 status: available
+
+# ── 🎙️ الإعلان الصوتي — أول إعلان يُنتَج عبر مسار الإنتاج الموحّد (2026-10-18) ──
+# المصدر الوحيد لإعدادات الصوت: _data/voice_identity.json (المواصفة المركزية).
+# المرجع الصوتي الذي اختاره المالك: assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3
+# قيد الإنتاج والقياس الموضوعي لبصمة المتكلم: _data/audio_voice_log.json
+# الحقول الأربعة أدناه جديدة بالكامل — لا تعديل على أي بيانات عقارية قائمة.
+audio_ad: true
+audio_file: "/assets/audio/properties/golden-square-garden-156m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتفكر في شقة أرضي بحديقة خاصة في المربع الذهبي بمدينة نصر؟ في شارع نبيل خليل، خلف مطعم جاد. مية ستة وخمسين متر صافي ومعاهم مية وعشرين متر حديقة. تلات غرف نوم وريسبشن تلات قطع، وحمام ومطبخ كبير. تشطيب حديث وحصة في الأرض. السعر خمسة مليون وخمسمية ألف جنيه. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
