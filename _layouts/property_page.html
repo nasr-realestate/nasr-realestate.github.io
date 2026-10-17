@@ -12,7 +12,12 @@ hide_navbar: true
     يُعرض الإطار بنسبة الصورة الحقيقية فلا يُقص أي جزء من العقار (كان الإطار الثابت
     16:10 يقص ~41% من الصور الطولية في المتوسط). إن غاب الإدخال نعود للسلوك القديم. {%- endcomment -%}
 {%- assign img_key = main_img | split: "." | first -%}
-{%- assign img_dims = site.data.image_dims[img_key] -%}
+{%- comment -%} نمط مقارنة المفاتيح بحلقة صريحة: متوافق قطعًا مع Jekyll Liquid
+    وLiquidJS معًا (الوصول بالمتغير بين قوسين مربعين ليس مضمونًا في كل النسخ). {%- endcomment -%}
+{%- assign img_dims = nil -%}
+{%- for dims_pair in site.data.image_dims -%}
+  {%- if dims_pair[0] == img_key -%}{%- assign img_dims = dims_pair[1] -%}{%- endif -%}
+{%- endfor -%}
 
 {%- comment -%} ═══════════════════════════════════════════════════
    رسالة واتساب مؤهلة — قالب موحّد للأزرار الثلاثة
