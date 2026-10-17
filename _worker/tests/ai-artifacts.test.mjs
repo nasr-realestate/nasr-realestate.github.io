@@ -165,6 +165,8 @@ test("llms-full.txt carries every unit with a link and its numeric price", () =>
   const priced = PROPS.filter((p) => p.priceNumeric !== null);
   assert.ok(md.split("**priceNumeric**:").length - 1 >= priced.length);
   assert.ok(md.length > 50_000, "the full catalogue should be substantial");
+  assert.match(md, /لا تفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً/);
+  assert.doesNotMatch(md, /أسعار طلب قابلة للتفاوض/u);
   assert.ok(!/\{\{|\{%/.test(md), "no unrendered Liquid tokens may leak into the catalogue");
 });
 
@@ -185,6 +187,7 @@ test("per-property Markdown stays a static file that Jekyll cannot render", () =
     assert.ok(md.includes(p.url));
     assert.ok(md.includes(`${SITE}/api/properties/${p.slug}.json`));
     assert.match(md, /أسعار طلب/);
+    assert.match(md, /لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً/);
     // الحقول الغائبة تُحذف ولا تصير صفرًا أو قيمة مختلقة
     if (!Number.isFinite(p.areaNumeric)) assert.ok(!("area_sqm" in meta), "absent area must stay absent");
   }
@@ -207,6 +210,8 @@ test("ai.txt declares the permissions and the machine endpoints an agent looks f
   }
   assert.ok(txt.includes(`${SITE}/llms-full.txt`));
   assert.ok(txt.includes("https://example.workers.dev/mcp"));
+  assert.match(txt, /لا تفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً/);
+  assert.doesNotMatch(txt, /سعر طلب قابل للتفاوض/u);
 });
 
 test("the MCP card declares the gateway availability and the guaranteed fallback", () => {

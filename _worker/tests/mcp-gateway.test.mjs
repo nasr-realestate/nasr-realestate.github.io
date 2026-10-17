@@ -188,9 +188,13 @@ test("search_properties filters on real data and returns a compact, citable list
     assert.equal(p.propertyType, "shop");
     assert.ok(p.url.startsWith("https://nasr-realestate.github.io/properties/"));
     assert.ok(p.priceNumeric > 0);
-    assert.match(p.price_note, /قابل للتفاوض/);
+    assert.match(p.price_note, /سعر طلب شهري/);
+    assert.match(p.price_note, /ليس سعر إتمام/);
+    const explicitlyNegotiable = /قابل\s*للتفاوض/u.test(String(p.price ?? ""));
+    assert.equal(/قابل للتفاوض/u.test(p.price_note), explicitlyNegotiable, `${p.slug}: negotiation must be stated only when the price says so`);
+    if (!explicitlyNegotiable) assert.match(p.price_note, /لم يذكر الإعلان إن كان قابلًا للتفاوض/);
   }
-  assert.match(out.content[0].text, /أسعار طلب قابلة للتفاوض/);
+  assert.match(out.content[0].text, /لا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان/);
   assert.match(out.content[0].text, /سمسار طلبك/);
   // الترتيب: الأحدث أولًا
   const dates = sc.properties.map((p) => p.datePosted);
@@ -226,6 +230,16 @@ test("an empty match set is reported as empty — never padded with a near miss"
   assert.equal(out.structuredContent.returned, 0);
   assert.equal(out.structuredContent.properties.length, 0);
   assert.match(out.content[0].text, /لا توجد وحدة/);
+});
+
+test("get_property does not imply negotiability for the Hassan Heikal listing", async () => {
+  prime();
+  const out = await callTool("get_property", { id: "apartment-sale-hassan-hassanein-heikal-200m" });
+  assert.ok(!out.isError);
+  assert.equal(out.structuredContent.priceNumeric, 6350000);
+  assert.equal(out.structuredContent.areaNumeric, 200);
+  assert.match(out.structuredContent.price_note, /لم يذكر الإعلان إن كان قابلًا للتفاوض/);
+  assert.doesNotMatch(out.structuredContent.price_note, /قابل للتفاوض/);
 });
 
 test("get_property resolves by slug, by full URL and by file name; misses are explicit", async () => {
