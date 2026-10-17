@@ -54,7 +54,7 @@ const lockedAudio = {
   'safarat-safwa-170m': '354f9b19411a5766e2d646462f4c52d371d7f2e6da8b1319265d8b3724e614cf',
   'degla-landmark-122m-rent': '65e10976244b9eda573541497a14f6efea58a211203933cb3d5ff5471434671e',
   'commercial-hq-rent-kabul-street-nasr-city-130m': 'a0952c86b1dbdb0d1e04cc91d3d8b00e5985aca995568fab9a0501771baafad5',
-  'apartment-sale-hassan-hassanein-heikal-200m': '7d738755536bb4a0808c0ebfb1bfce963d8c9b7992d89e3620123141b7966629',
+  'apartment-sale-hassan-hassanein-heikal-200m': '1b2289c91c1747ba324ee0e7f43109c0f40b8dd93ea687460b52965b1b053173',
 };
 
 // slugs that must show exactly one player (batches 1–7 plus the 2026-10-17 listing)
