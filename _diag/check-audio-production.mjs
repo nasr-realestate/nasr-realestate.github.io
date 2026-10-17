@@ -86,8 +86,36 @@ async function checkAudio() {
   console.log(`Production: ${audioUrl} HTTP 200 audio/mpeg, Range 206, SHA-256 ${expectedHash}.`);
 }
 
+async function checkNewPropertyAudio() {
+  const slug = 'apartment-sale-hassan-hassanein-heikal-200m';
+  const source = await readFile(`_properties/2026-10-17-${slug}.md`, 'utf8');
+  const front = source.split(/^---\s*$/m)[1];
+  const script = grab(front, 'audio_script');
+  const pagePath = `/properties/${slug}/`;
+  const audioPath = `/assets/audio/properties/${slug}.mp3`;
+  const page = await get(pagePath);
+  const html = await page.text();
+  assert.ok(html.includes(`src="${audioPath}"`), `${pagePath}: player source missing`);
+  assert.ok(html.includes(script), `${pagePath}: script missing`);
+  assert.ok(html.includes('28 ثانية'), `${pagePath}: duration missing`);
+
+  const response = await get(audioPath);
+  assert.match(response.headers.get('content-type') ?? '', /audio\/mpeg/, 'property MP3 MIME');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const expected = '7d738755536bb4a0808c0ebfb1bfce963d8c9b7992d89e3620123141b7966629';
+  assert.equal(sha(bytes), expected, 'new property MP3 differs from committed asset');
+  const range = await get(audioPath, { headers: { Range: 'bytes=0-1023' } });
+  assert.equal(range.status, 206, 'new property MP3 Range request');
+  assert.equal(range.headers.get('content-range'), `bytes 0-1023/${bytes.length}`);
+  assert.deepEqual(Buffer.from(await range.arrayBuffer()), bytes.subarray(0, 1024));
+  assert.equal(bytes.subarray(0, 3).toString(), 'ID3');
+  assert.equal(bytes[3], 3, 'new property MP3 must use ID3v2.3');
+  console.log(`Production: ${pagePath} + ${audioPath} HTTP 200, audio/mpeg, Range 206, SHA-256 ${expected}.`);
+}
+
 await checkPages();
 await checkAudio();
+await checkNewPropertyAudio();
 const property = await get('/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/');
 assert.ok((await property.text()).includes('id="ppAudioBox"'), 'old property player missing in production');
 console.log('Production: existing property player still present.');
