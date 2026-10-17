@@ -8,6 +8,7 @@ category: apartments
 id: "al-azhar-rent-200m-luxury"
 slug: "luxury-apartment-rent-al-azhar-street-nasr-city-200m"
 image_file: "Al-Azhar-Street-Luxury-Rent-200m.webp"
+image: "/assets/img/properties/og/Al-Azhar-Street-Luxury-Rent-200m.jpg"
 area: "200 متر مربع"
 rooms: "3 غرف نوم + ريسبشن واسع"
 bathrooms: "2 حمام (جاكوزي + كابينة شاور)"

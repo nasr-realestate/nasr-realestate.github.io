@@ -7347,3 +7347,13 @@ a.u-cred-text:focus-visible {
   outline-offset: 3px;
   border-radius: 10px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   تدقيق الصور (2026-10-17) — معرض عقار بنسبة الصورة الأصلية
+   كان الإطار الثابت 16:10 مع object-fit:cover يقص ~41% من الصور
+   الطولية في المتوسط. الآن: النسبة تأتي inline من _data/image_dims.yml
+   والصورة تُعرض contain = العقار كامل بلا قص ولا تشويه، مع سقف 85vh
+   للصور الطويلة جدًا.
+   ═══════════════════════════════════════════════════════════════ */
+body.layout-property_page .pp-gallery-main--natural { max-height: 85vh; }
+body.layout-property_page .pp-gallery-main--natural img { object-fit: contain; }

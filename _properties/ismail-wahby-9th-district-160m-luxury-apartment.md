@@ -15,7 +15,7 @@ floor: "الدور السابع"
 finish: "إكسترا سوبر لوكس"
 meta_title: "شقة 160م للبيع شارع اسماعيل وهبي مدينة نصر | إكسترا سوبر لوكس"
 description: "شقة 160م إكسترا سوبر لوكس للبيع بشارع اسماعيل وهبي المنطقة التاسعة مدينة نصر. عمارة حديثة، عقد مسجل، واجهتين على حديقتين، تشطيب فاخر."
-image: "/assets/img/properties/Ismail-Wahby-Street-9th-District-160m.webp"
+image: "/assets/img/properties/og/Ismail-Wahby-Street-9th-District-160m.jpg"
 priceNumeric: 4350000
 areaNumeric: 160
 roomsNumeric: 3

@@ -249,7 +249,10 @@ hide_navbar: true
         {%- assign badge_type = "villa" -%}
       {%- endif -%}
 
+      {%- comment -%} تدقيق الصور (2026-10-17): البطاقات تعرض نسخة 4:3 مُحسّنة (cards/)
+          والصورة الأصلية تبقى مصدر صفحة التفاصيل واحتياطيًا لو فُقدت النسخة. {%- endcomment -%}
       {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: prop.image_file -%}
+      {%- assign card_url = site.baseurl | append: "/assets/img/properties/cards/" | append: prop.image_file -%}
       {%- assign price_num = prop.priceNumeric | default: 0 -%}
       {%- assign area_num = prop.areaNumeric | default: 0 -%}
       {%- assign rooms_num = prop.roomsNumeric | default: 0 -%}
@@ -276,13 +279,13 @@ hide_navbar: true
             وفك ترميزها يضيف مهام طويلة على الخيط الرئيسي.
             الحل المُعتمد: نُبقي التحميل الكسول + نضيف width/height لمنع CLS فقط.
           {%- endcomment -%}
-          <img src="{{ img_url }}"
+          <img src="{{ card_url }}"
                alt="{{ prop.title | escape }}"
                class="pl-card-img"
                width="400" height="300"
                loading="lazy"
                decoding="async"
-               onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp';this.style.objectFit='contain';this.style.padding='30px';">
+               onerror="this.onerror=null;this.src='{{ img_url }}';">
           {% else %}
           <div class="pl-card-img img-ph">
             <i class="fas fa-building img-ph-ico"></i>

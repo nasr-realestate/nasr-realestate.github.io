@@ -2214,7 +2214,8 @@ function renderGalleryCards(properties) {
     card.rel = "noopener";
     card.style.animationDelay = `${i * 0.04}s`;
 
-    const imgSrc = prop.image || "";
+    // تدقيق الصور (2026-10-17): البطاقات تعرض نسخة 4:3 الموحدة cards/ بدل الأصل الكامل
+    const imgSrc = String(prop.image || "").replace("/assets/img/properties/", "/assets/img/properties/cards/");
     const title = galleryText(prop.title);
     const price = galleryText(prop.price);
     const rawType = galleryText(prop.propertyType);

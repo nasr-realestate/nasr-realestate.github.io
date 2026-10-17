@@ -15,7 +15,7 @@ floor: "الدور المتكرر المميز (يوجد أسانسير)"
 finish: "هاي لوكس / فاخر"
 meta_title: "شقة للبيع في مربع نور الدين بهجت المنطقة الأولى | سمسار طلبك"
 description: "شقة فاخرة للبيع في مربع نور الدين بهجت بالمنطقة الأولى بمدينة نصر. تشطيب هاي لوكس جاهز للسكن الفوري، موقع استراتيجي بالقرب من شارع الطيران ومحاور مدينة نصر."
-image: "/assets/img/properties/nour-deen-main.webp"
+image: "/assets/img/properties/og/nour-deen-main.jpg"
 priceNumeric: 4500000
 areaNumeric: 160
 roomsNumeric: 3

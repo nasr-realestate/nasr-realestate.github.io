@@ -15,7 +15,7 @@ floor: "الدور الخامس (شقة 11)"
 finish: "سوبر لوكس (كالجديدة - سكن خفيف)"
 meta_title: "شقة 200م للبيع بمدينة نصر للمغتربين | 2 مكان بالجراج"
 description: "فرصة للمصريين بالخارج: شقة 200م للبيع في شارع عبد العظيم الغلمي مدينة نصر. مباني 2012، 2 باكية جراج، أسانسير، سوبر لوكس بحالة ممتازة. الدفع بتحويل دولاري."
-image: "/assets/img/properties/Abdel-Azim-Ghalmi-200m-Expats.webp"
+image: "/assets/img/properties/og/Abdel-Azim-Ghalmi-200m-Expats.jpg"
 priceNumeric: 7000000
 areaNumeric: 200
 roomsNumeric: 0

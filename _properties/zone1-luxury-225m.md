@@ -16,7 +16,7 @@ floor: "دور مميز"
 finish: "الترا سوبر لوكس (أرضيات أرو مسمار)"
 meta_title: "شقة 225م تشطيب فاخر للبيع في المنطقة الأولى مدينة نصر"
 description: "شقة 225م الترا سوبر لوكس للبيع في المنطقة الأولى بمدينة نصر. تشطيب أرو مسمار، 4 غرف، شامل الجراج والتكييفات. عمارة مبنية بكود الزلازل بموقع راقٍ."
-image: "/assets/img/properties/zuhair-sabri.webp"
+image: "/assets/img/properties/og/zuhair-sabri.jpg"
 priceNumeric: 7500000
 areaNumeric: 225
 roomsNumeric: 4

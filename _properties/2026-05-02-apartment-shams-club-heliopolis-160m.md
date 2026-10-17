@@ -15,7 +15,7 @@ floor: "الدور الأول علوي"
 finish: "تشطيب جيد (جاهزة للسكن)"
 meta_title: "شقة 160م للبيع أمام نادي الشمس مصر الجديدة | مسجلة شهر عقاري"
 description: "شقة 160م للبيع في مصر الجديدة أمام نادي الشمس مباشرة على شارع رئيسي. الدور الأول علوي، 3 غرف، 2 حمام، عقد مسجل. السعر 6.5 مليون قابل للتفاوض."
-image: "/assets/img/properties/El-Shams-Club-Heliopolis-160m.webp"
+image: "/assets/img/properties/og/El-Shams-Club-Heliopolis-160m.jpg"
 priceNumeric: 6500000
 areaNumeric: 160
 roomsNumeric: 3

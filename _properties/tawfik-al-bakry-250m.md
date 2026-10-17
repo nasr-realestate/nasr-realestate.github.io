@@ -16,7 +16,7 @@ floor: "الدور الثامن"
 finish: "نصف تشطيب / محارة"
 meta_title: "شقة 250م ناصية بحري للبيع في شارع توفيق البكري مدينة نصر"
 description: "شقة 250م ناصية بحري للبيع في شارع توفيق البكري خلف مستشفى حسبو. مسجلة شهر عقاري، حصة في الأرض، ليفينج روم 30م، وفراندة كبيرة. موقع راقٍ وهادئ."
-image: "/assets/img/properties/tawfiqal-Bakri-st.webp"
+image: "/assets/img/properties/og/tawfiqal-Bakri-st.jpg"
 priceNumeric: 5000000
 areaNumeric: 250
 roomsNumeric: 3

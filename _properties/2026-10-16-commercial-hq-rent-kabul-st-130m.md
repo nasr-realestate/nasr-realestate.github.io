@@ -8,6 +8,7 @@ category: commercial
 id: "kabul-st-commercial-hq-130m"
 slug: "commercial-hq-rent-kabul-street-nasr-city-130m"
 image_file: "Kabul-Commercial-HQ-130m.webp"
+image: "/assets/img/properties/og/Kabul-Commercial-HQ-130m.jpg"
 area: "130 متر مربع"
 rooms: "3 غرف + ريسبشن + بوفيه"
 bathrooms: "2 حمام"

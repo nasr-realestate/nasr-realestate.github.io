@@ -16,7 +16,7 @@ floor: "أرضي (مدخل خاص)"
 finish: "تشطيب جيد"
 meta_title: "شقة بحديقة خاصة ومدخل مستقل للبيع في المنطقة التاسعة مدينة نصر"
 description: "شقة 155م بحديقة 40م ومدخل خاص للبيع في المنطقة التاسعة شارع الطوخي. 3 غرف، 2 حمام، مسجلة شهر عقاري، تصلح سكني أو مقر إداري. استلام فوري."
-image: "/assets/img/properties/the-ninth-district-toukhi.webp"
+image: "/assets/img/properties/og/the-ninth-district-toukhi.jpg"
 priceNumeric: 5000000
 areaNumeric: 155
 roomsNumeric: 3

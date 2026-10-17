@@ -15,7 +15,7 @@ floor: "مبنى مستقل (Stand Alone)"
 finish: "نصف تشطيب (واجهات كاملة)"
 meta_title: "فيلا للبيع على التسعين الجنوبي التجمع | ترخيص فندقي"
 description: "فرصة استثمارية: فيلا 661م للبيع على التسعين الجنوبي مباشرة أمام فندق Dusit. رخصة نشاط فندقي/سكني. مبنى 5 أدوار، بجوار المونوريل. مطلوب 120 مليون."
-image: "/assets/img/properties/South-90th-St-Villa-Dusit-View.webp"
+image: "/assets/img/properties/og/South-90th-St-Villa-Dusit-View.jpg"
 priceNumeric: 120000000
 areaNumeric: 661
 roomsNumeric: 4

@@ -16,7 +16,7 @@ floor: "الدور السادس (يوجد أسانسير)"
 finish: "تشطيب كامل (سوبر لوكس)"
 meta_title: "شقة 175م للبيع في الحي الثامن مدينة نصر | حسن المأمون"
 description: "شقة 175م سوبر لوكس للبيع في الحي الثامن مدينة نصر. 3 غرف، ليفينج مستقل، ريسبشن 3 قطع. موقع استراتيجي بين حسن المأمون ومصطفى النحاس."
-image: "/assets/img/properties/hassan-maamoun-nahas-apartment-175m.webp"
+image: "/assets/img/properties/og/hassan-maamoun-nahas-apartment-175m.jpg"
 priceNumeric: 4500000
 areaNumeric: 175
 roomsNumeric: 3

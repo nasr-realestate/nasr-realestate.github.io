@@ -8,6 +8,7 @@ category: apartments
 id: "hayat-compound-furnished-200m"
 slug: "furnished-apartment-rent-hayat-compound-safarat-200m"
 image_file: "Hayat-Compound-Safarat-Furnished-200m.webp"
+image: "/assets/img/properties/og/Hayat-Compound-Safarat-Furnished-200m.jpg"
 area: "200 متر مربع + حديقة 50م"
 rooms: "2 غرفة نوم + ريسبشن"
 bathrooms: "2 حمام"

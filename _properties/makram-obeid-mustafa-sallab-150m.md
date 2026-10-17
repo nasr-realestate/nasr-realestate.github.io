@@ -15,7 +15,7 @@ floor: "الدور السابع (ليس الأخير)"
 finish: "تشطيب جيد (سكن فوري)"
 meta_title: "شقة 150م للبيع خلف مصطفى السلاب – مكرم عبيد"
 description: "شقة تمليك 150م للبيع خلف مصطفى السلاب من مكرم عبيد، 3 غرف، 2 حمام، أسانسير، غاز طبيعي، حصة في الأرض، سعر 4 مليون قابل للتفاوض."
-image: "/assets/img/properties/makram-obeid-sqlia.webp"
+image: "/assets/img/properties/og/makram-obeid-sqlia.jpg"
 priceNumeric: 4000000
 areaNumeric: 150
 roomsNumeric: 3

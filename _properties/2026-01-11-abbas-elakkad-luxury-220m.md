@@ -15,7 +15,7 @@ floor: "الدور الرابع (2 أسانسير)"
 finish: "ألترا سوبر لوكس (تصميم هندسي)"
 meta_title: "شقة 220م للبيع في عباس العقاد الرئيسي | تشطيب قصور | من المالك"
 description: "شقة 220م للبيع بعباس العقاد مباشرة فوق بنك الإمارات دبي. تشطيب مهندس ديكور، مسجلة شهر عقاري، تصلح سكني وإداري. فيو مفتوح، حصة بالأرض. استلام فوري."
-image: "/assets/img/properties/Abbas-Elakkad-Main-View.webp"
+image: "/assets/img/properties/og/Abbas-Elakkad-Main-View.jpg"
 priceNumeric: 8200000
 areaNumeric: 220
 roomsNumeric: 3

@@ -16,7 +16,7 @@ floor: "أرضي تجاري"
 finish: "بدون تشطيب (على الطوب)"
 meta_title: "صيدلية للبيع 32م في الحي العاشر مدينة نصر | استثمار لقطة"
 description: "صيدلية للبيع 32م في مدينة نصر صقر قريش. موقع متميز أمام مركز طبي وعيادات بمسجد، منطقة كثافة سكانية عالية جداً. السعر 1.85 مليون ج.م كاش."
-image: "/assets/img/properties/Pharmacy-for-sale.webp"
+image: "/assets/img/properties/og/Pharmacy-for-sale.jpg"
 priceNumeric: 1850000
 areaNumeric: 32
 roomsNumeric: 0

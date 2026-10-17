@@ -207,8 +207,26 @@ if (fs.existsSync('_requests')) {
 
 requests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+// ═══ Jekyll Data Files (_data/*.yml) — تدقيق الصور (2026-10-17) ═══
+// كانت المعاينة المحلية تفتقد site.data بينما Jekyll الحقيقي يقرأه،
+// فلا يمكن التحقق محليًا من أي قالب يستخدم _data (مثل image_dims.yml).
+const siteData = {};
+if (fs.existsSync('_data')) {
+  for (const f of fs.readdirSync('_data')) {
+    if (f.endsWith('.yml') || f.endsWith('.yaml')) {
+      try {
+        siteData[path.basename(f, path.extname(f))] =
+          yaml.load(fs.readFileSync(path.join('_data', f), 'utf8'));
+      } catch (err) {
+        console.warn(`_data/${f}: تعذر التحليل —`, err.message);
+      }
+    }
+  }
+}
+
 const site = {
   ...siteConfig,
+  data: siteData,
   properties,
   requests,
   time: new Date(),

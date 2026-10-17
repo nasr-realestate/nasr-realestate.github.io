@@ -16,7 +16,7 @@ floor: "الدور الخامس (يوجد 2 مصعد)"
 finish: "تشطيب جيد (تحتاج لمسات تحديث)"
 meta_title: "شقة 4 غرف للبيع في رابعة الاستثماري عباس العقاد | مدينة نصر"
 description: "شقة 160م للبيع في عمارات رابعة الاستثماري مدينة نصر. تقسيم نادر 4 غرف نوم، ريسبشن واسع، بلكونات متعددة. موقع استراتيجي قرب عباس العقاد وسعر لقطة."
-image: "/assets/img/properties/rabia-Investment.webp"
+image: "/assets/img/properties/og/rabia-Investment.jpg"
 priceNumeric: 4500000
 areaNumeric: 160
 roomsNumeric: 4

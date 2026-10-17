@@ -194,7 +194,7 @@ function createCard(p, idx) {
 
   card.innerHTML = `
     <div class="pg-card-img">
-      <img src="${escapeAttr(p.image)}" 
+      <img src="${escapeAttr(String(p.image || "").replace("/assets/img/properties/", "/assets/img/properties/cards/"))}" 
            alt="${escapeAttr(p.title)}" 
            loading="lazy"
            onerror="this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';">

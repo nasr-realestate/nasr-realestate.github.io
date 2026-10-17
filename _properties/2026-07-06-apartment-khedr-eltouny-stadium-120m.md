@@ -15,7 +15,7 @@ floor: "الدور الثامن"
 finish: "تشطيب حديث (جاهزة للسكن)"
 meta_title: "شقة 120م للبيع شارع خضر التوني الطيران مدينة نصر | تشطيب حديث"
 description: "شقة 120م للبيع بمدينة نصر شارع خضر التوني متفرع من الطيران بجوار محطة الاستاد. الدور الثامن، تشطيب حديث وجاهزة للسكن. السعر 4 مليون جنيه."
-image: "/assets/img/properties/Khedr-Eltouny-Stadium-120m.webp"
+image: "/assets/img/properties/og/Khedr-Eltouny-Stadium-120m.jpg"
 priceNumeric: 4000000
 areaNumeric: 120
 roomsNumeric: 0

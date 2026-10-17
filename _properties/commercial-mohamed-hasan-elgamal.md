@@ -15,7 +15,7 @@ floor: "الدور الأرضي المرتفع المميز"
 finish: "سوبر لوكس جاهز للتشغيل"
 meta_title: "مقر إداري وتجاري للبيع في شارع محمد حسن الجمل مدينة نصر | سمسار طلبك"
 description: "فرصة استثمارية نادرة. مقر إداري وتجاري مرخص رسمي للبيع بموقع حيوي في شارع محمد حسن الجمل المربع الذهبي بمدينة نصر. جاهز للتشغيل الفوري لجميع الأغراض."
-image: "/assets/img/properties/commercial-mohamed-hasan-elgamal-main.webp"
+image: "/assets/img/properties/og/commercial-mohamed-hasan-elgamal-main.jpg"
 priceNumeric: 6000000
 areaNumeric: 123
 roomsNumeric: 3

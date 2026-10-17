@@ -15,7 +15,7 @@ floor: "دور مميز (2 أسانسير)"
 finish: "تشطيب جيد"
 meta_title: "شقة 165م للبيع رابعة الاستثماري مدينة نصر | فيو دار الدفاع"
 description: "شقة 165م للبيع بعمارات رابعة الاستثماري مدينة نصر. 3 غرف، 2 حمام، ريسبشن 3 قطع، و3 بلكونات بفيو دار الدفاع وأول عباس العقاد. مدخل رخام و2 أسانسير. السعر 5 مليون."
-image: "/assets/img/properties/Rabaa-Investment-Abbas-Elakkad-165m.webp"
+image: "/assets/img/properties/og/Rabaa-Investment-Abbas-Elakkad-165m.jpg"
 priceNumeric: 5000000
 areaNumeric: 165
 roomsNumeric: 3

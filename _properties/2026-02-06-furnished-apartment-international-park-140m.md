@@ -15,7 +15,7 @@ floor: "الدور الثاني (مميز)"
 finish: "سوبر لوكس (فرش مستورد)"
 meta_title: "شقة للبيع بجوار الحديقة الدولية 140م | بالعفش والأجهزة"
 description: "شقة 140م للبيع بمدينة نصر بجوار الحديقة الدولية. تباع بالعفش المستورد والأجهزة. 2 غرفة، ريسبشن 4 قطع، دور ثاني. بسعر لقطة 3.4 مليون."
-image: "/assets/img/properties/International-Park-Furnished-140m.webp"
+image: "/assets/img/properties/og/International-Park-Furnished-140m.jpg"
 priceNumeric: 3400000
 areaNumeric: 140
 roomsNumeric: 2

@@ -15,7 +15,7 @@ floor: "الدور الرابع (يوجد 3 مصاعد)"
 finish: "الترا سوبر لوكس (تجديد شامل)"
 meta_title: "شقة 135م للبيع في رابعة العدوية طريق النصر | تشطيب مهندس"
 description: "شقة 135م الترا سوبر لوكس للبيع في ميدان رابعة العدوية بمدينة نصر. تشطيب حديث، شامل المطبخ و3 تكييفات."
-image: "/assets/img/properties/raba-nasr.webp"
+image: "/assets/img/properties/og/raba-nasr.jpg"
 priceNumeric: 5000000
 areaNumeric: 135
 roomsNumeric: 2

@@ -15,7 +15,7 @@ floor: "الدور الثاني"
 finish: "تحتاج تحديث (فرصة للديكور الخاص)"
 meta_title: "شقة 130م للبيع بالمنطقة السادسة مدينة نصر | متفرع من المقريف"
 description: "شقة 130م للبيع في المنطقة السادسة مدينة نصر، متفرع من محمد المقريف وقرب حديقة الطفل. واجهة بحري، الدور الثاني، حصة كبيرة بالأرض (عمارة 3 أدوار). السعر 4.2 مليون."
-image: "/assets/img/properties/Makarif-Street-6th-District-130m.webp"
+image: "/assets/img/properties/og/Makarif-Street-6th-District-130m.jpg"
 priceNumeric: 4200000
 areaNumeric: 130
 roomsNumeric: 2
