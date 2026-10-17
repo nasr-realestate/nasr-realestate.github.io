@@ -16,7 +16,7 @@ floor: "الدور الخامس (مميز)"
 finish: "تشطيب سوبر لوكس (جاهزة للسكن)"
 meta_title: "شقة 4 غرف للبيع في عباس العقاد مدينة نصر | فيو مفتوح"
 description: "شقة 4 غرف نوم للبيع في مدينة نصر متفرع من عباس العقاد. مساحة ضخمة، فيو مفتوح غير مجروحة نهائياً، تشطيب سوبر لوكس. خيارات شراء بالفرش أو بدونه."
-image: "/assets/img/properties/mohiedin.webp"
+image: "/assets/img/properties/og/mohiedin.jpg"
 priceNumeric: 5500000
 areaNumeric: 4
 roomsNumeric: 4

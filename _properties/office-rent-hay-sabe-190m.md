@@ -16,7 +16,7 @@ floor: "دور متكرر (يوجد مصعد)"
 finish: "تشطيب مكتبي (جاهز)"
 meta_title: "مقر إداري 190م للإيجار في شارع عبد الله العربي | مدينة نصر"
 description: "مقر إداري فخم 190م للإيجار في شارع عبد الله العربي الرئيسي بالحي السابع. 3 غرف مغلقة، ريسبشن واسع، تشطيب مكتبي جاهز، واجهة ناصية مميزة."
-image: "/assets/img/properties/administrator-abdullah-al-arabi.webp"
+image: "/assets/img/properties/og/administrator-abdullah-al-arabi.jpg"
 priceNumeric: 26000
 areaNumeric: 190
 roomsNumeric: 3

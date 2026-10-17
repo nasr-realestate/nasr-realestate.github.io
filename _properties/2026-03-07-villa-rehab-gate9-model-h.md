@@ -15,7 +15,7 @@ floor: "أرضي + أول + روف (مرخص)"
 finish: "تشطيب الشركة"
 meta_title: "فيلا للبيع بالرحاب نموذج H | رخصة حمام سباحة وروف"
 description: "فيلا نموذج H بالرحاب للبيع عند بوابة 9. أرض 300م، مباني 210م. حديقة غير مجروحة، رخصة حمام سباحة وغرف سطح مدفوعة. موقع راقي جداً."
-image: "/assets/img/properties/Al-Rehab-Villa-Model-H-Gate9.webp"
+image: "/assets/img/properties/og/Al-Rehab-Villa-Model-H-Gate9.jpg"
 priceNumeric: 25000000
 areaNumeric: 300
 roomsNumeric: 3

@@ -16,7 +16,7 @@ floor: "أرضي + ميزانين"
 finish: "طوب أحمر / محارة (مرونة التشطيب)"
 meta_title: "معرض تجاري 600م للبيع في المنطقة السادسة مدينة نصر | موقع استراتيجي"
 description: "معرض تجاري (Showroom) مساحة 600م للبيع في المنطقة السادسة متفرع من أحمد فخري. أرضي وميزانين، ركن لـ 6 سيارات، مسجل شهر عقاري. يصلح لجميع الأنشطة التجارية."
-image: "/assets/img/properties/trade-fair.webp"
+image: "/assets/img/properties/og/trade-fair.jpg"
 priceNumeric: 0
 areaNumeric: 600
 roomsNumeric: 0

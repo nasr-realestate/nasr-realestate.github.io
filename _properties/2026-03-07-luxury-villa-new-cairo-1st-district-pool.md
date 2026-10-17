@@ -15,7 +15,7 @@ floor: "بدروم + أرضي + أول + ثاني + روف"
 finish: "تشطيب كامل (سوبر لوكس)"
 meta_title: "فيلا 568م للبيع بالتجمع الخامس الحي الأول | حمام سباحة"
 description: "فيلا مستقلة 568م للبيع بالتجمع الخامس الحي الأول. تشطيب كامل، حمام سباحة، فيو حديقة. تصلح سكني أو فندقي. موقع استراتيجي قرب 5A Mall."
-image: "/assets/img/properties/New-Cairo-Villa-1st-District-Pool.webp"
+image: "/assets/img/properties/og/New-Cairo-Villa-1st-District-Pool.jpg"
 priceNumeric: 50000000
 areaNumeric: 568
 roomsNumeric: 0

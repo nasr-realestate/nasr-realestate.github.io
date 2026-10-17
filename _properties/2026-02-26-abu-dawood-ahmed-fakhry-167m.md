@@ -15,7 +15,7 @@ floor: "الدور السادس (2 أسانسير)"
 finish: "نصف تشطيب (على المحارة)"
 meta_title: "شقة 167م للبيع بين أبو داود وأحمد فخري مدينة نصر | نصف تشطيب"
 description: "شقة 167م للبيع في موقع مميز بين شارع أبو داود الظاهري وأحمد فخري. 3 غرف، 2 حمام، نصف تشطيب، حصة في الأرض. مباني التسعينات. السعر 5 مليون (قابل للتفاوض)."
-image: "/assets/img/properties/Abu-Dawood-Ahmed-Fakhry-View.webp"
+image: "/assets/img/properties/og/Abu-Dawood-Ahmed-Fakhry-View.jpg"
 priceNumeric: 5000000
 areaNumeric: 167
 roomsNumeric: 3

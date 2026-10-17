@@ -8,6 +8,11 @@ hide_navbar: true
 {%- comment -%} تحديد أول صورة للعرض {%- endcomment -%}
 {%- assign main_img = page.image_file | default: "" -%}
 {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: main_img -%}
+{%- comment -%} تدقيق الصور (2026-10-17): أبعاد الصورة الأصلية من _data/image_dims.yml —
+    يُعرض الإطار بنسبة الصورة الحقيقية فلا يُقص أي جزء من العقار (كان الإطار الثابت
+    16:10 يقص ~41% من الصور الطولية في المتوسط). إن غاب الإدخال نعود للسلوك القديم. {%- endcomment -%}
+{%- assign img_key = main_img | split: "." | first -%}
+{%- assign img_dims = site.data.image_dims[img_key] -%}
 
 {%- comment -%} ═══════════════════════════════════════════════════
    رسالة واتساب مؤهلة — قالب موحّد للأزرار الثلاثة
@@ -59,13 +64,15 @@ hide_navbar: true
   <!-- ═══ Gallery ═══ -->
   {% if main_img != "" %}
   <section class="pp-gallery">
-    <div class="pp-gallery-main">
+    <div class="pp-gallery-main{% if img_dims %} pp-gallery-main--natural{% endif %}"{% if img_dims %} style="aspect-ratio: {{ img_dims.w }} / {{ img_dims.h }}"{% endif %}>
       <!-- ⚠️ إصلاح (2026-09-24): صورة LCP لم تكن تحمل width/height/fetchpriority/decoding.
            كانت أكبر عنصر ظاهر يكتمل بعد 8.0 ثانية على الجوال. -->
+      <!-- ⚠️ إصلاح (2026-10-17): width/height الحقيقيان من ملف الأبعاد بدل 1200×750
+           الثابتة التي لم تطابق أي صورة فعلية، والإطار بنسبة الصورة نفسها (بلا قص). -->
       <img src="{{ img_url }}"
            alt="{{ page.title }}"
            id="ppMainImage"
-           width="1200" height="750"
+           {% if img_dims %}width="{{ img_dims.w }}" height="{{ img_dims.h }}"{% else %}width="1200" height="750"{% endif %}
            fetchpriority="high"
            decoding="async"
            onclick="ppOpenLightbox(this.src)">

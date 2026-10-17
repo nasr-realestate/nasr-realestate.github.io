@@ -15,7 +15,7 @@ floor: "الدور الخامس (أسانسير خاص بالوحدة)"
 finish: "ممتاز (مساحة تعادل شقتين)"
 meta_title: "شقة 215م للبيع بفيو الحديقة الدولية مدينة نصر | أسانسير خاص"
 description: "شقة VIP مساحة 215م (206م صافي) للبيع بشارع إبراهيم بن المهدي. تراس 75م بفيو مباشر على الحديقة الدولية. 3 غرف، 3 حمامات، أسانسير خاص بالشقة. السعر 5.75 مليون."
-image: "/assets/img/properties/International-Park-View-215m.webp"
+image: "/assets/img/properties/og/International-Park-View-215m.jpg"
 priceNumeric: 5750000
 areaNumeric: 215
 roomsNumeric: 3

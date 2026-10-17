@@ -15,7 +15,7 @@ floor: "الدور العاشر (عمارة 12 دور)"
 finish: "تشطيب جيد"
 meta_title: "شقة 160م للبيع في شارع حلمي حسن علي مدينة نصر | سعر لقطة"
 description: "شقة 160م صافي للبيع في شارع حلمي حسن علي موازي لمصطفى النحاس. مسجلة، حصة في الأرض، خيارات بالفرش أو بدونه. موقع استراتيجي قرب السراج مول."
-image: "/assets/img/properties/helmy-hassan-160m.webp"
+image: "/assets/img/properties/og/helmy-hassan-160m.jpg"
 priceNumeric: 3500000
 areaNumeric: 160
 roomsNumeric: 3

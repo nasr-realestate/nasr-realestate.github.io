@@ -15,7 +15,7 @@ floor: "الدور الأول (بعد الأرضي)"
 finish: "قابل للتحديث (مرونة في الديكور)"
 meta_title: "شقة 195م للبيع شارع عبد الحليم عبدالله مدينة نصر | المربع الذهبي"
 description: "شقة 195م للبيع بالدور الأول في المربع الذهبي بين عباس ومكرم (شارع عبد الحليم عبد الله). 3 غرف، ريسبشن 3 قطع، بلكونة بحري. السعر 5.5 مليون قابل للتفاوض."
-image: "/assets/img/properties/Abdul-Halim-Balcony-View-195m.webp"
+image: "/assets/img/properties/og/Abdul-Halim-Balcony-View-195m.jpg"
 priceNumeric: 5500000
 areaNumeric: 195
 roomsNumeric: 3

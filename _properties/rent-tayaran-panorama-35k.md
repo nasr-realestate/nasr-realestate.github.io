@@ -16,7 +16,7 @@ finish: "مفروش (فندقي فاخر)"
 extra_details: "ريسبشن 4 قطع - بحري بالكامل - غير مجروحة نهائياً."
 meta_title: "شقة فندقية بانوراما للإيجار في شارع الطيران | 35,000 ج.م"
 description: "شقة فندقية فاخرة للإيجار بشارع الطيران الرئيسي بمدينة نصر. 3 غرف (واحدة ماستر)، ريسبشن 4 قطع، فيو بانوراما غير مجروح. إقامة فندقية راقية بجوار فندق سونستا."
-image: "/assets/img/properties/mfroosh-tiran.webp"
+image: "/assets/img/properties/og/mfroosh-tiran.jpg"
 priceNumeric: 35000
 areaNumeric: 0
 roomsNumeric: 3

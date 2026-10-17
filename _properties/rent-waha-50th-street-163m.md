@@ -19,7 +19,7 @@ floor: "غير محدد"
 finish: "سوبر لوكس"
 meta_title: "شقة 163م للإيجار في الواحة ناصية شارع الخمسين | مدينة نصر"
 description: "شقة 163م للإيجار في الواحة مدينة نصر، ناصية على شارع الخمسين. 3 غرف وصالة كبيرة وحمامين ومطبخ وأسانسير. الإيجار 15,000 ج.م شهرياً. تواصل مع طارق طنطاوي."
-image: "/assets/img/properties/Apartment-Rent-Waha-50th-Street-163m.webp"
+image: "/assets/img/properties/og/Apartment-Rent-Waha-50th-Street-163m.jpg"
 status: available
 # 🎙️ الإعلان الصوتي — الدفعة الثالثة (2026-10-15)، لا تغيير على بيانات العقار الأصلية
 audio_ad: true

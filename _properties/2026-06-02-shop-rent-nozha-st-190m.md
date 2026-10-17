@@ -15,7 +15,7 @@ floor: "أرضي + ميزانين (علوي)"
 finish: "واجهة ممتازة وتاريخ تجاري ناجح"
 meta_title: "محل للايجار بشارع النزهة 190م | ميدان الساعة مدينة نصر"
 description: "محل تجاري للإيجار بشارع النزهة قرب دار الدفاع الجوي. مساحة 190م (110م أرضي + 80م علوي بسلم داخلي). يصلح لكافة الأنشطة الكبرى، جيم، مطعم، أو بلايستيشن. الإيجار 60 ألف."
-image: "/assets/img/properties/Nozha-Street-Shop-Rent-190m.webp"
+image: "/assets/img/properties/og/Nozha-Street-Shop-Rent-190m.jpg"
 priceNumeric: 60000
 areaNumeric: 190
 roomsNumeric: 0

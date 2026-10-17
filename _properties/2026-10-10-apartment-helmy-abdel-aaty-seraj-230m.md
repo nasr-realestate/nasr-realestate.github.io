@@ -8,6 +8,7 @@ category: apartments
 id: "helmy-abdel-aaty-seraj-230m"
 slug: "apartment-sale-helmy-abdel-aaty-seraj-mall-230m"
 image_file: "Helmy-Abdel-Aaty-Seraj-Garden-View-230m.webp"
+image: "/assets/img/properties/og/Helmy-Abdel-Aaty-Seraj-Garden-View-230m.jpg"
 area: "230 متر مربع"
 rooms: "3 غرف نوم + ريسبشن 4 قطع"
 bathrooms: "2 حمام"

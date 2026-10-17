@@ -16,7 +16,7 @@ floor: "الدور الأول (إداري)"
 finish: "سوبر لوكس (أرضيات HDF)"
 meta_title: "مكتب إداري 250م للبيع في معز الدولة مكرم عبيد | سمسار طلبك"
 description: "مكتب إداري فخم 250م للبيع في شارع معز الدولة متفرع من مكرم عبيد. دور أول، تشطيب سوبر لوكس، 3 غرف وريسبشن ضخم. موقع استراتيجي للشركات خلف حديقة الطفل."
-image: "/assets/img/properties/moez-al-Dawla-administrator.webp"
+image: "/assets/img/properties/og/moez-al-Dawla-administrator.jpg"
 priceNumeric: 6000000
 areaNumeric: 250
 roomsNumeric: 3

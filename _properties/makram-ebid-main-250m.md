@@ -16,7 +16,7 @@ floor: "الدور السادس"
 finish: "سوبر لوكس"
 meta_title: "شقة 250م للبيع في شارع مكرم عبيد الرئيسي مدينة نصر | مسجلة"
 description: "شقة 250م سوبر لوكس للبيع في شارع مكرم عبيد الرئيسي بمدينة نصر. مسجلة شهر عقاري، حصة في الأرض، دور سادس، 2 بلكونة. موقع استراتيجي للسكن أو الشركات الكبرى."
-image: "/assets/img/properties/mkram-ebid.webp"
+image: "/assets/img/properties/og/mkram-ebid.jpg"
 priceNumeric: 8000000
 areaNumeric: 250
 roomsNumeric: 3

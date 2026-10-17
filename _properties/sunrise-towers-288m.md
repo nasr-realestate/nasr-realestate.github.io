@@ -16,7 +16,7 @@ floor: "الدور السادس (الأمثل)"
 finish: "سوبر لوكس مودرن"
 meta_title: "شقة 288م للبيع في أبراج صن رايز حي السفارات مدينة نصر"
 description: "شقة 288م فاخرة للبيع في أبراج صن رايز حي السفارات. تشطيب مودرن، ريسبشن 4 قطع، فيو مفتوح بحري 100%، شامل الجراج وحصة الأرض. أمن وحراسة 24 ساعة."
-image: "/assets/img/properties/sunrise.webp"
+image: "/assets/img/properties/og/sunrise.jpg"
 priceNumeric: 7000000
 areaNumeric: 288
 roomsNumeric: 3

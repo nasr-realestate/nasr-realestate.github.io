@@ -16,7 +16,7 @@ floor: "الدور السادس (يوجد أسانسير)"
 finish: "الترا سوبر لوكس (رخام وتكييفات)"
 meta_title: "شقة 125م فندقية للبيع في أحمد قاسم جودة مدينة نصر"
 description: "شقة 125م الترا سوبر لوكس للبيع في شارع أحمد قاسم جودة بمدينة نصر. تشطيب رخام، شاملة التكييفات، بموقع استراتيجي عند تقاطع عباس العقاد ومصطفى النحاس."
-image: "/assets/img/properties/ahmed-kasem-gooda.webp"
+image: "/assets/img/properties/og/ahmed-kasem-gooda.jpg"
 priceNumeric: 4500000
 areaNumeric: 125
 roomsNumeric: 2

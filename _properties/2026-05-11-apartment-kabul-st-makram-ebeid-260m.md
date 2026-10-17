@@ -15,7 +15,7 @@ floor: "الدور الثالث (2 أسانسير ميتسوبيشي)"
 finish: "سوبر لوكس (ديكورات روشن وقطيفة)"
 meta_title: "شقة 260م للبيع بشارع كابول مكرم عبيد | عمارة حديثة ومسجلة"
 description: "شقة 260م فاخرة للبيع بمدينة نصر شارع كابول خلف السلاب. تصميم مستويين، 3 غرف وليفينج، 3 حمامات. عمارة حديثة بمدخل رخام و2 أسانسير. مسجلة بسعر 8 مليون."
-image: "/assets/img/properties/Kabul-Street-Makram-Ebeid-260m.webp"
+image: "/assets/img/properties/og/Kabul-Street-Makram-Ebeid-260m.jpg"
 priceNumeric: 8000000
 areaNumeric: 260
 roomsNumeric: 3

@@ -16,7 +16,7 @@ floor: "الدور السادس (يوجد مصعد)"
 finish: "تشطيب لوكس (ألوميتال)"
 meta_title: "شقة 170م للبيع في حي السفارات مدينة نصر | برج الصفوة"
 description: "شقة 170م للبيع في حي السفارات (برج الصفوة) مدينة نصر. 3 غرف، 3 حمام، ريسبشن مستويين فخم، بلكونة بحري بتهوية ممتازة. حصة في الأرض وتشطيب لوكس."
-image: "/assets/img/properties/hai-elswfarat.webp"
+image: "/assets/img/properties/og/hai-elswfarat.jpg"
 priceNumeric: 4500000
 areaNumeric: 170
 roomsNumeric: 3

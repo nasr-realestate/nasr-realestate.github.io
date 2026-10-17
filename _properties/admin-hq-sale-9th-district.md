@@ -16,7 +16,7 @@ floor: "أرضي (مداخل خاصة)"
 finish: "نصف تشطيب (مرونة في التصميم)"
 meta_title: "مقر شركة 356م للبيع في المنطقة التاسعة مدينة نصر | تمليك"
 description: "مقر إداري فخم 356م للبيع في المنطقة التاسعة بمدينة نصر. 3 مداخل خاصة، حديقة، كهرباء 3 فاز، حصة في الأرض والجراج. موقع استراتيجي بين المحاور الرئيسية."
-image: "/assets/img/properties/region-nine.webp"
+image: "/assets/img/properties/og/region-nine.jpg"
 priceNumeric: 8500000
 areaNumeric: 356
 roomsNumeric: 0

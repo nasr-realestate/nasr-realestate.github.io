@@ -8,6 +8,7 @@ category: commercial
 id: "hassanein-heikal-rent-73m"
 slug: "office-storage-rent-hassanein-heikal-nasr-city-73m"
 image_file: "Hassanein-Heikal-Office-Storage-73m.webp"
+image: "/assets/img/properties/og/Hassanein-Heikal-Office-Storage-73m.jpg"
 area: "73 متر مربع"
 rooms: "1 غرفة + ريسبشن"
 bathrooms: "1 حمام + مطبخ"

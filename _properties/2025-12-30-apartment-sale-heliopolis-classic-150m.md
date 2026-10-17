@@ -16,7 +16,7 @@ floor: "الدور الثالث"
 finish: "تشطيب قديم (يحتاج تجديد)"
 meta_title: "شقة 150م للبيع في مصر الجديدة | طراز كلاسيكي راقٍ"
 description: "شقة 150م للبيع في مصر الجديدة بمواصفات الزمن الجميل. أسقف عالية، ريسبشن ضخم، بلكونة على شارع مشجر. عمارة 1971 متينة جداً. سعر 4.5 مليون قابل للتفاوض."
-image: "/assets/img/properties/classic-heliopolis-apartment-150m.webp"
+image: "/assets/img/properties/og/classic-heliopolis-apartment-150m.jpg"
 priceNumeric: 4500000
 areaNumeric: 150
 roomsNumeric: 2

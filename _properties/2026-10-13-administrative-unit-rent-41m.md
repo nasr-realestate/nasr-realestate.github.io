@@ -8,6 +8,7 @@ category: commercial
 id: "luxury-admin-unit-41m-rent"
 slug: "administrative-unit-rent-nasr-city-41m"
 image_file: "Luxury-Administrative-Unit-41m.webp"
+image: "/assets/img/properties/og/Luxury-Administrative-Unit-41m.jpg"
 area: "41 متر مربع"
 rooms: "مساحة إدارية مفتوحة / عيادة"
 bathrooms: "مجهزة بالكامل"

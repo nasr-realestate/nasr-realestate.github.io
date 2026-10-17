@@ -1,0 +1,78 @@
+# ⚠️ سير عمل مؤقت (تدقيق الصور 2026-10-17) — يُحذف قبل الدمج
+# الهدف: التحقق أن تعديلات الصور تُبنى بنجاح بـ Jekyll الحقيقي (نسخة GitHub Pages)
+# قبل الدمج في master. لا ينشر شيئًا ولا يعدّل شيئًا — بناء وفحص فقط.
+name: TMP image-audit Jekyll build check
+
+on:
+  push:
+    branches: ["arena/82038d17-nasr-realestate-github-io"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jekyll-build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: false
+
+      - name: Install Jekyll (github-pages gem)
+        run: bundle install
+
+      - name: Build with Jekyll (as production)
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: Verify image outputs in the real build
+        run: |
+          set -euo pipefail
+          echo "── 1) نسخ البطاقات وOG موجودة في ناتج البناء"
+          CARDS=$(find _site/assets/img/properties/cards -name '*.webp' | wc -l)
+          OGS=$(find _site/assets/img/properties/og -name '*.jpg' | wc -l)
+          echo "cards=$CARDS og=$OGS"
+          test "$CARDS" -eq 103
+          test "$OGS" -eq 103
+
+          echo "── 2) صفحات العقارات تستخدم الإطار المتكيف وog الجديدة"
+          PORTAIT_PAGE=$(find _site/properties -name 'index.html' | head -100 | xargs grep -l 'pp-gallery-main--natural' | head -3 | wc -l)
+          echo "صفحات بالإطار المتكيف (عينة): $PORTAIT_PAGE"
+          test "$PORTAIT_PAGE" -ge 1
+          OG_COUNT=$(grep -rl 'og/.*\.jpg' _site/properties --include='index.html' | wc -l)
+          echo "صفحات تشير لصور OG: $OG_COUNT"
+          test "$OG_COUNT" -eq 103
+
+          echo "── 3) لا مرجعيات صور مكسورة في HTML المبني"
+          python3 - <<'PY'
+          import os, re, sys, glob
+          broken = []
+          checked = set()
+          pages = glob.glob('_site/**/*.html', recursive=True)
+          for p in pages:
+              html = open(p, encoding='utf-8', errors='replace').read()
+              srcs = re.findall(r'(?:src|content)="(/assets/img/[^"]+)"', html)
+              srcs += [m for m in re.findall(r"this\.src='([^']+)'", html) if m.startswith('/assets/')]
+              for s in srcs:
+                  if s in checked: continue
+                  checked.add(s)
+                  if not os.path.isfile('_site' + s):
+                      broken.append((p, s))
+          print(f"فُحص {len(pages)} صفحة HTML، {len(checked)} مسار صورة فريد")
+          print("مكسور:", len(broken))
+          for b in broken[:20]: print("  ❌", b)
+          sys.exit(1 if broken else 0)
+          PY
+
+          echo "── 4) الأيتام المؤرشفة خارج ناتج البناء"
+          test ! -d _site/_diag
+
+          echo "✅ بناء Jekyll الحقيقي سليم مع كل تعديلات الصور"

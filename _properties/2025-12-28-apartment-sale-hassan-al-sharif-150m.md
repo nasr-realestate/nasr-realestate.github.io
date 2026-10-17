@@ -16,7 +16,7 @@ floor: "الدور السابع (يوجد أسانسير)"
 finish: "سوبر لوكس"
 meta_title: "شقة 150م للبيع في شارع حسن الشريف مدينة نصر | سعر لقطة"
 description: "شقة 150م سوبر لوكس للبيع في شارع حسن الشريف بمدينة نصر. 3 غرف، 2 حمام، دور سابع بأسانسير، استلام فوري. موقع حيوي يربط حسن المأمون بالحي الثامن."
-image: "/assets/img/properties/hassan-al-sharif-apartment-150m.webp"
+image: "/assets/img/properties/og/hassan-al-sharif-apartment-150m.jpg"
 priceNumeric: 3500000
 areaNumeric: 150
 roomsNumeric: 3

@@ -16,7 +16,7 @@ floor: "الدور الأخير (يوجد عزل)"
 finish: "الترا مودرن (تشطيب 2023)"
 meta_title: "شقة 115م للبيع في الحي السابع مدينة نصر | تشطيب 2023"
 description: "شقة 115م الترا مودرن للبيع في الحي السابع مدينة نصر. تشطيب حديث بالكامل 2023، ريسبشن 3 قطع، عمارة عائلية راقية، حصة في الأرض والروف."
-image: "/assets/img/properties/elhai-elsabe.webp"
+image: "/assets/img/properties/og/elhai-elsabe.jpg"
 priceNumeric: 3250000
 areaNumeric: 115
 roomsNumeric: 2

@@ -15,7 +15,7 @@ floor: "الدور العاشر (بحري)"
 finish: "نصف تشطيب"
 meta_title: "شقة للبيع في أبراج الحياة الحي السابع 162م | تنازل مباشر"
 description: "شقة 162م نصف تشطيب للبيع بأبراج الحياة بجوار مستشفى الشرطة بالحي السابع. 3 غرف، دور 10 واجهة بحري. التنازل رسمياً بصندوق وزارة الداخلية. السعر 4.5 مليون."
-image: "/assets/img/properties/Al-Hayat-Towers-7th-District-162m.webp"
+image: "/assets/img/properties/og/Al-Hayat-Towers-7th-District-162m.jpg"
 priceNumeric: 4500000
 areaNumeric: 162
 roomsNumeric: 3

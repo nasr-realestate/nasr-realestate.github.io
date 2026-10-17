@@ -15,7 +15,7 @@ floor: "طابق مميز"
 finish: "تشطيب إداري ممتاز"
 meta_title: "شقة 200م للبيع تطل على عباس العقاد | مسجلة وتدر عائد 35 ألف"
 description: "فرصة استثمارية: شقة 200م للبيع بشارع عبد الحكيم الرفاعي تطل مباشرة على عباس العقاد. مسجلة شهر عقاري، مؤجرة بـ 35 ألف جنيه شهرياً (العقد ينتهي خلال شهر)."
-image: "/assets/img/properties/Abbas-Elakkad-Refaai-View-200m.webp"
+image: "/assets/img/properties/og/Abbas-Elakkad-Refaai-View-200m.jpg"
 priceNumeric: 7000000
 areaNumeric: 200
 roomsNumeric: 0

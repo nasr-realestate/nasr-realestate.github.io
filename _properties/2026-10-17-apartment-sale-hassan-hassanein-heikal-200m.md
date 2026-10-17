@@ -8,7 +8,7 @@ category: apartments
 id: "apartment-sale-hassan-hassanein-heikal-200m"
 slug: "apartment-sale-hassan-hassanein-heikal-200m"
 image_file: "Hassan-Hassanein-Heikal-200m.webp"
-image: "/assets/img/properties/Hassan-Hassanein-Heikal-200m.webp"
+image: "/assets/img/properties/og/Hassan-Hassanein-Heikal-200m.jpg"
 area: "200 متر مربع"
 rooms: "3 غرف نوم + ريسبشن 3 قطع"
 bathrooms: "3 حمامات"

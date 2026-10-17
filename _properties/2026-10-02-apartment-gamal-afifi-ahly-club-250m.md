@@ -8,6 +8,7 @@ category: apartments
 id: "gamal-afifi-ahly-club-250m"
 slug: "apartment-sale-gamal-afifi-ahly-club-250m"
 image_file: "Gamal-Afifi-Ahly-Club-Nasr-City-250m.webp"
+image: "/assets/img/properties/og/Gamal-Afifi-Ahly-Club-Nasr-City-250m.jpg"
 area: "250 متر مربع"
 rooms: "تقسيم واسع جداً للغرف والريسبشن"
 bathrooms: "مجهزة بالكامل"

@@ -17,7 +17,7 @@ furnished: false
 duration: "سنة"
 meta_title: "شقة 150م قانون جديد للإيجار في شارع الطيران مدينة نصر | ناصية مميزة"
 description: "شقة 150م قانون جديد للإيجار في ناصية عبد الحميد لطفي وتقاطع الطيران بمدينة نصر. 3 غرف نوم، ريسبشن بحري، موقع استراتيجي. الإيجار 13,000 ج.م شهرياً."
-image: "/assets/img/properties/Unfurnished-Apartment-Rent-Abdel-Hamid-Lotfy-Nasr-City.webp"
+image: "/assets/img/properties/og/Unfurnished-Apartment-Rent-Abdel-Hamid-Lotfy-Nasr-City.jpg"
 priceNumeric: 13000
 areaNumeric: 150
 roomsNumeric: 3

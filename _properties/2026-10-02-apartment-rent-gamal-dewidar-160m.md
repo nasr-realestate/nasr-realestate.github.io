@@ -8,6 +8,7 @@ category: apartments
 id: "gamal-dewidar-rent-160m"
 slug: "apartment-rent-gamal-dewidar-enppi-nasr-city-160m"
 image_file: "Gamal-Dewidar-ENPPI-Rent-160m.webp"
+image: "/assets/img/properties/og/Gamal-Dewidar-ENPPI-Rent-160m.jpg"
 area: "160 متر مربع"
 rooms: "2 غرفة نوم + ريسبشن 3 قطع"
 bathrooms: "1 حمام + مطبخ"

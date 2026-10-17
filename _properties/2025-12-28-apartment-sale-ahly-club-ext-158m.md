@@ -16,7 +16,7 @@ floor: "الدور التاسع (يوجد أسانسير)"
 finish: "سوبر لوكس (مودرن)"
 meta_title: "شقة 158م للبيع في امتداد النادي الأهلي | تشطيب مودرن"
 description: "شقة 158م للبيع في امتداد النادي الأهلي بمدينة نصر. تشطيب سوبر لوكس مودرن، مطبخ أمريكي، 3 غرف، موقع استراتيجي أمام شارع المدارس والجامعة الصينية."
-image: "/assets/img/properties/ahly-club-extension-apartment.webp"
+image: "/assets/img/properties/og/ahly-club-extension-apartment.jpg"
 priceNumeric: 4800000
 areaNumeric: 158
 roomsNumeric: 3

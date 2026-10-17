@@ -169,8 +169,12 @@ body_class: "homepage"
 
     <div class="hp-properties-grid">
       {%- assign latest_properties = site.properties | sort: 'date' | reverse -%}
-      {%- for prop in latest_props limit: 6 -%}
+      {%- comment -%} إصلاح (2026-10-17): الحلقة كانت تكرر على latest_props غير المعرف
+          فكان قسم بطاقات الرئيسية يُعرض فارغًا في الإنتاج. {%- endcomment -%}
+      {%- for prop in latest_properties limit: 6 -%}
         {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: prop.image_file -%}
+        {%- comment -%} تدقيق الصور (2026-10-17): نسخة بطاقة 4:3 موحّدة + width/height لمنع CLS {%- endcomment -%}
+        {%- assign card_url = site.baseurl | append: "/assets/img/properties/cards/" | append: prop.image_file -%}
         {%- assign badge_text = "🏠 للبيع" -%}
         {%- assign badge_type = "sale" -%}
 
@@ -191,11 +195,13 @@ body_class: "homepage"
         <a href="{{ prop.url | relative_url }}" class="hp-property-card">
           <div class="hp-property-img-wrap">
             {% if prop.image_file %}
-            <img src="{{ img_url }}"
+            <img src="{{ card_url }}"
                  alt="{{ prop.title | escape }}"
                  class="hp-property-img"
+                 width="800" height="600"
                  loading="lazy"
-                 onerror="this.src='{{ site.baseurl }}/assets/img/logo.webp';this.style.objectFit='contain';this.style.padding='30px';">
+                 decoding="async"
+                 onerror="this.onerror=null;this.src='{{ img_url }}';">
             {% else %}
             <div class="hp-property-img img-ph">
               <i class="fas fa-building img-ph-ico"></i>
