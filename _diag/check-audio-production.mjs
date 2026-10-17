@@ -19,10 +19,8 @@ const slug = 'shop-rent-request-beauty-center-nasr-city';
 const sourcePath = '_requests/2026-10-09-shop-rent-request-beauty-center-nasr-city.md';
 const audioUrl = `/assets/audio/requests/${slug}.mp3`;
 const expectedHash = '7d2de3cbe4b1496bafba873266907913be1af3dd45660a82b14a110d5cf4fa5b';
-const otherRequests = [
-  'apartment-rent-request-art-studio-large-reception-nasr-city',
-  'garage-rent-request-40-buses-ismail-qabbani',
-];
+const otherLiveRequests = ['garage-rent-request-40-buses-ismail-qabbani'];
+const expiredOtherRequests = ['apartment-rent-request-art-studio-large-reception-nasr-city'];
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -61,15 +59,18 @@ async function checkPages() {
   } else {
     assert.ok(await isGone(path), `${path}: an expired request must not stay published`);
   }
-  for (const other of otherRequests) {
+  for (const other of otherLiveRequests) {
     const page = await get(`/requests/${other}/`);
     assert.equal(page.status, 200);
     assert.ok(!(await page.text()).includes('id="rqAudioBox"'), `${other}: unexpected player`);
   }
+  for (const retired of expiredOtherRequests) {
+    assert.ok(await isGone(`/requests/${retired}/`), `${retired}: expired request must not stay published`);
+  }
   console.log(
     script
-      ? 'Production: request player + script + 17s; 2 others unchanged (200).'
-      : `Production: ${path} not published (expired request), 2 others unchanged (200).`,
+      ? 'Production: request player + script + 17s; live request unchanged (200), expired request absent.'
+      : `Production: ${path} not published (expired request); live request unchanged (200), expired request absent.`,
   );
 }
 

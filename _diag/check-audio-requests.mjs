@@ -15,11 +15,11 @@
 //    (2026-10-09 أصغر من أي حد لاحق)، فيعود الإخفاق يوميًا.
 //
 //    القاعدة المطبَّقة: **التوقعات تُشتق من المستودع**، لا من قائمة ملفات ثابتة.
-//      • المحمي بالهاش يبقى محميًا: الطلبات الحيّة، وبصمة MP3، ووسوم ID3، وترتيبها.
-//      • الطلب المنتهي معروف بالاسم والبصمة: لو عاد الملف يُفحص فورًا بكل
-//        صرامة الطلب الحيّ (البصمة المعلنة `originalSource` أدناه).
-//      • ملفه الصوتي الباقي يُفحص في كل تشغيل؛ ويُعلن بوصفه يتيمًا لا يُسقط البناء،
-//        لأن حذفه يتعارض مع كونه أصلًا منشورًا مفهرسًا.
+//      • الطلبات الحيّة المحمية فقط مطلوبة؛ بصماتها لا تتغيّر.
+//      • طلب الاستوديو الفني (2026-10-10) انتهى أجله وفق قاعدة السبعة أيام يوم 2026-10-17؛
+//        لا يُشترط بقاؤه. إذا عاد الملف، تُراجع بصمته الأصلية المحفوظة أدناه.
+//      • الطلب المنتهي ذو الإعلان الصوتي معروف بالاسم والبصمة: لو عاد الملف يُفحص
+//        فورًا بكل صرامة الطلب الحيّ؛ ويُفحص ملفه الصوتي الباقي ولا يُسقط البناء.
 //      • أي MP3 آخر بلا طلب حيّ = فشل: لا يتسلل ملف صوتي مجهول إلى المستودع.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -32,8 +32,12 @@ const AUDIO_DIR = path.join('assets', 'audio', 'requests');
 
 /** طلبات لا يُسمح بتغييرها: بصمة الملف كما هي. */
 const LOCKED_SOURCES = new Map([
-  ['apartment-rent-request-art-studio-large-reception-nasr-city', 'dec0f7ab05797d413ca35f2d702414f189fcda4f879d1c8e82bddd8da6e7261e'],
   ['garage-rent-request-40-buses-ismail-qabbani', 'a187978538248425d46c941565e533a45aa28ebb69f7558c1da138c692cf9ed4'],
+]);
+
+/** طلب قديم انتهى أجله؛ لا يُشترط وجوده لكن إن عاد يجب أن يكون بايتًا كما كان. */
+const RETIRED_SOURCE_ONLY = new Map([
+  ['apartment-rent-request-art-studio-large-reception-nasr-city', 'dec0f7ab05797d413ca35f2d702414f189fcda4f879d1c8e82bddd8da6e7261e'],
 ]);
 
 /**
@@ -157,9 +161,15 @@ for (const name of collection) {
   sourceBySlug.set(slug, { source, front });
 }
 
-// حرس حقيقي ضد الحذف غير المقصود: الطلبات التي نعرف أنها يجب أن تبقى موجودة.
+// الطلب المنتهي لا يُطلب بقاؤه؛ إن عاد، يمنع هذا الفحص تغيّر بياناته الأصلية.
+for (const [slug, expectedHash] of RETIRED_SOURCE_ONLY) {
+  const restored = sourceBySlug.get(slug);
+  if (restored) assert.equal(sha(restored.source), expectedHash, `${slug}: retired request changed if restored`);
+}
+
+// حرس ضد الحذف غير المقصود للطلبات الحيّة المعروفة.
 for (const slug of LOCKED_SOURCES.keys()) {
-  assert.ok(sourceBySlug.has(slug), `${slug}: a known request disappeared from _requests`);
+  assert.ok(sourceBySlug.has(slug), `${slug}: a known live request disappeared from _requests`);
 }
 
 const withAudio = new Set();
