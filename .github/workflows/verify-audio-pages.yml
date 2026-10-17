@@ -96,6 +96,9 @@ on:
       - 'assets/audio/properties/degla-landmark-122m-rent.mp3'
       - '_properties/2026-10-16-commercial-hq-rent-kabul-st-130m.md'
       - 'assets/audio/properties/commercial-hq-rent-kabul-street-nasr-city-130m.mp3'
+      # listing dated 2026-10-17: one new 200m apartment audio ad
+      - '_properties/2026-10-17-apartment-sale-hassan-hassanein-heikal-200m.md'
+      - 'assets/audio/properties/apartment-sale-hassan-hassanein-heikal-200m.mp3'
       # request batch 1: الطلب المؤهل الوحيد انتهى أجله وحُذف آليًا (d0ff0fd)، وبقي
       # إعلانه الصوتي المنشور؛ لذلك لا يُذكر مسار الملف المحذوف هنا (مسار غير موجود
       # لا يمكن أن يطابق تغييرًا)، وتبقى بقية مسارات الطلبات والأصل الصوتي مرصودة.
@@ -134,7 +137,7 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the 42 property audio pages and all other property pages
+      - name: Verify the 43 property audio pages and all other property pages
         run: node _diag/check-audio-batch3.mjs
       - name: Verify the request audio page and the two unchanged request pages
         run: node _diag/check-audio-requests.mjs

@@ -356,12 +356,14 @@ hide_navbar: true
       أسئلة شائعة
     </h2>
 
+    {% unless page.hide_price_negotiation_faq %}
     <details class="pp-faq-item">
       <summary>هل السعر قابل للتفاوض؟</summary>
       <div class="pp-faq-answer">
         يمكن مناقشة السعر مع المالك مباشرة. بعض العقارات عليها هامش تفاوض، وبعضها بسعر نهائي. تواصل مع طارق على واتساب لمعرفة التفاصيل.
       </div>
     </details>
+    {% endunless %}
 
     <details class="pp-faq-item">
       <summary>كيف أحجز معاينة للعقار؟</summary>

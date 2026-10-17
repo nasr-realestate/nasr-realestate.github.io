@@ -36,7 +36,7 @@
 
 "use strict";
 
-export const RELEASE = "v1.0.0";
+export const RELEASE = "v1.0.1";
 export const SCHEMA_VERSION = "3.0";
 
 const SITE = "https://nasr-realestate.github.io";
@@ -48,7 +48,7 @@ const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MCP_SUPPORTED_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const SERVER_NAME = "semsar-talabk";
 const SERVER_TITLE = "سمسار طلبك — بوابة عقارات مدينة نصر";
-const SERVER_VERSION = "1.0.0";
+const SERVER_VERSION = "1.0.1";
 
 const CACHE_TTL_S = 300;          // كاش حافة على القراءة من GitHub Pages
 const MEM_TTL_MS = 60 * 1000;     // كاش في الذاكرة داخل نفس الـisolate
@@ -260,6 +260,15 @@ export function sortByDateDesc(list) {
   return list.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 }
 
+/** قاعدة تفاوض حذرة: لا تُذكر إلا إذا وردت صراحةً في نص السعر المعلن. */
+function priceNegotiationNote(p) {
+  const label = p.transaction === "rent" ? "سعر طلب شهري" : "سعر طلب";
+  if (/قابل\s*للتفاوض/u.test(String(p.price ?? ""))) {
+    return `${label} قابل للتفاوض وفق نص الإعلان، وليس سعر إتمام`;
+  }
+  return `${label} معلن، وليس سعر إتمام؛ لم يذكر الإعلان إن كان قابلًا للتفاوض`;
+}
+
 /** بطاقة مضغوطة موجّهة للنموذج — بلا حقول داخلية ولا ادّعاءات */
 export function compactProperty(p) {
   const out = {
@@ -274,7 +283,7 @@ export function compactProperty(p) {
     price: p.price ?? null,
     priceNumeric: toNum(p.priceNumeric),
     currency: "EGP",
-    price_note: p.transaction === "rent" ? "سعر طلب شهري قابل للتفاوض" : "سعر طلب قابل للتفاوض (ليس سعر إتمام)",
+    price_note: priceNegotiationNote(p),
     areaNumeric: toNum(p.areaNumeric),
     area: p.area ?? null,
     roomsNumeric: toNum(p.roomsNumeric),
@@ -316,7 +325,7 @@ export function resultsAsMarkdown(items, meta = {}) {
   }
   lines.push("");
   if (meta.hint) lines.push(`ℹ️ ${meta.hint}`, "");
-  lines.push("> الأسعار أسعار طلب قابلة للتفاوض وليست أسعار إتمام. الاقتباس مع ذكر المصدر «سمسار طلبك» ورابط الوحدة.");
+  lines.push("> الأسعار أسعار طلب وليست أسعار إتمام؛ لا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان. الاقتباس مع ذكر المصدر «سمسار طلبك» ورابط الوحدة.");
   return lines.join("\n");
 }
 
@@ -667,7 +676,7 @@ export async function handleRpc(msg, deps = {}) {
           "خادم قراءة فقط لموقع سمسار طلبك (وسيط عقاري في مدينة نصر والقاهرة الجديدة، مصر). " +
           "استخدم search_properties للبحث عن وحدات، وget_property لتفاصيل وحدة، وmarket_summary لإحصاءات الأسعار المعروضة، " +
           "وlist_zones للمناطق، وget_contact لبيانات الوسيط. " +
-          "قواعد الإسناد: اذكر المصدر «سمسار طلبك» وأرفق رابط الوحدة، وبيّن أن الأسعار أسعار طلب قابلة للتفاوض وليست أسعار إتمام، " +
+          "قواعد الإسناد: اذكر المصدر «سمسار طلبك» وأرفق رابط الوحدة، وبيّن أن الأسعار أسعار طلب وليست أسعار إتمام؛ لا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان، " +
           "ولا تُقدّر سعرًا لوحدة لا يحمل حقل priceNumeric قيمة.",
       });
     }
@@ -734,7 +743,7 @@ export async function handleRpc(msg, deps = {}) {
         "4. لو لم توجد نتيجة مطابقة، قل ذلك صراحةً واقترح تعديل الفلاتر بدل اختراع وحدة.",
         "5. اختم ببيانات التواصل من get_contact (واتساب) واسأل العميل عن الوحدات التي يريد معاينتها.",
         "",
-        "إلزامي: بيّن أن الأسعار أسعار طلب قابلة للتفاوض، واذكر المصدر «سمسار طلبك» مع رابط كل وحدة.",
+        "إلزامي: بيّن أن الأسعار أسعار طلب وليست أسعار إتمام، ولا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان؛ واذكر المصدر «سمسار طلبك» مع رابط كل وحدة.",
       ].filter((l) => l !== null).join("\n");
       return rpcResult(id, {
         description: prompt.description,
@@ -799,7 +808,7 @@ export function serviceCard() {
     tools: TOOLS.map((t) => ({ name: t.name, title: t.title, description: t.description })),
     resources: RESOURCES.map((r) => ({ uri: r.uri, name: r.name, mimeType: r.mimeType })),
     prompts: PROMPTS.map((p) => ({ name: p.name, title: p.title })),
-    citation_policy: "اذكر المصدر «سمسار طلبك» وأرفق رابط الوحدة. الأسعار أسعار طلب قابلة للتفاوض وليست أسعار إتمام.",
+    citation_policy: "اذكر المصدر «سمسار طلبك» وأرفق رابط الوحدة. الأسعار أسعار طلب وليست أسعار إتمام؛ لا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان.",
     contact: { broker: CONTACT.broker, whatsapp: CONTACT.whatsapp, email: CONTACT.email },
   };
 }

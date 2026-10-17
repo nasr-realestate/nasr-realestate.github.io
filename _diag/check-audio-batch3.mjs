@@ -1,8 +1,7 @@
-// Batch-7 gate: six new audio ads (batch 7) + the 36 earlier ones, built-page verification only.
+// Property-audio gate: the 42 ads from batches 1–7 plus the new October 17 listing.
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
-// Successor of the batch-2 snapshot check: batch 7 widens the audio feature to 42
-// pages and locks every MP3 with SHA-256 (all earlier files must remain byte-identical).
+// Every enabled page is locked with its MP3 SHA-256; prior files must remain byte-identical.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
@@ -55,9 +54,10 @@ const lockedAudio = {
   'safarat-safwa-170m': '354f9b19411a5766e2d646462f4c52d371d7f2e6da8b1319265d8b3724e614cf',
   'degla-landmark-122m-rent': '65e10976244b9eda573541497a14f6efea58a211203933cb3d5ff5471434671e',
   'commercial-hq-rent-kabul-street-nasr-city-130m': 'a0952c86b1dbdb0d1e04cc91d3d8b00e5985aca995568fab9a0501771baafad5',
+  'apartment-sale-hassan-hassanein-heikal-200m': '7d738755536bb4a0808c0ebfb1bfce963d8c9b7992d89e3620123141b7966629',
 };
 
-// slugs that must show exactly one player (batches 1–7)
+// slugs that must show exactly one player (batches 1–7 plus the 2026-10-17 listing)
 const withPlayer = new Set(Object.keys(lockedAudio));
 
 function checkEnabledPage(slug, front, html, mp3bytes) {
@@ -73,6 +73,9 @@ function checkEnabledPage(slug, front, html, mp3bytes) {
   assert.equal(mp3bytes.subarray(0, 3).toString(), 'ID3', `${slug}: not ID3-tagged MP3`);
   assert.equal(createHash('sha256').update(mp3bytes).digest('hex'), lockedAudio[slug], `${slug}: MP3 drifted`);
   assert.ok(html.includes('نص الإعلان الصوتي'), `${slug}: script disclosure missing`);
+  if (slug === 'apartment-sale-hassan-hassanein-heikal-200m') {
+    assert.ok(!html.includes('<summary>هل السعر قابل للتفاوض؟</summary>'), `${slug}: generic negotiation FAQ is unconfirmed`);
+  }
   const spoken = grab(front, 'audio_script');
   const comm = parseComm(mp3bytes);
   assert.equal(comm, spoken, `${slug}: ID3 COMM mismatch`);

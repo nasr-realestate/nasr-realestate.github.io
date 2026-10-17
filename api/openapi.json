@@ -4,7 +4,7 @@
     "title": "سمسار طلبك — واجهة العقارات",
     "version": "1.0.0",
     "summary": "واجهة قراءة فقط لكل الوحدات المعروضة على موقع سمسار طلبك.",
-    "description": "واجهة ثابتة (static JSON) بلا مصادقة، مبنية من مجموعة _properties في مستودع الموقع. كل الاستجابات JSON وتتضمّن دائمًا schema_version. الأسعار أسعار طلب قابلة للتفاوض بالجنيه المصري.",
+    "description": "واجهة ثابتة (static JSON) بلا مصادقة، مبنية من مجموعة _properties في مستودع الموقع. كل الاستجابات JSON وتتضمّن دائمًا schema_version. الأسعار أسعار طلب معلنة بالجنيه المصري وليست أسعار إتمام؛ لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً.",
     "contact": {
       "name": "طارق طنطاوي — سمسار طلبك",
       "email": "samsar.talabak@mailo.com",
@@ -90,7 +90,7 @@
               "type": "string"
             },
             "description": "معرّف الوحدة",
-            "example": "commercial-hq-rent-kabul-street-nasr-city-130m"
+            "example": "apartment-sale-hassan-hassanein-heikal-200m"
           }
         ],
         "responses": {
