@@ -4,10 +4,11 @@
 ═══════════════════════════════════════════════════════════════════════
  scripts/audio/measure_voice_identity.py — قياس الهوية الصوتية
 ───────────────────────────────────────────────────────────────────────
- أداة قياس **جنائية/تدقيقية**، تعمل خارج CI عمدًا: تحتاج torch + resemblyzer
- (~5.4 GB) وهي غير متاحة في GitHub Actions لهذا المستودع، ولا يجوز أن يعتمد
- النشر عليها. بوابة CI الملزِمة هي scripts/audio/verify-voice-identity.mjs
- (بلا أي حزمة خارجية). انظر identityBand.notAvailableInCi في المواصفة.
+ أداة قياس **جنائية/تدقيقية**، تعمل خارج CI عمدًا: تحتاج PyTorch وResemblyzer
+ مع numpy/scipy/librosa/libsndfile، ولا يجوز أن يعتمد النشر عليها. لا تحتاج
+ webrtcvad: فك PCM وإعادة العينة يتمان مباشرة، واستدعاء preprocess_wav ممنوع.
+ بوابة CI الملزِمة هي scripts/audio/verify-voice-identity.mjs (بلا حزم خارجية).
+ انظر identityBand.notAvailableInCi في المواصفة.
 
  ما تقيسه فعليًا (لا أحكام سمعية ولا أرقام مخترعة):
    1. بصمة متحدث 256 بُعدًا لكل ملف (نموذج GE2E من حزمة resemblyzer على PyPI —
@@ -37,10 +38,13 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import itertools
 import json
+import math
 import os
 import sys
+import types
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 SPEC_PATH = os.path.join(ROOT, "_data", "voice_identity.json")
@@ -64,23 +68,39 @@ def load_dependencies():
     np = _need("numpy")
     sf = _need("soundfile")
     librosa = _need("librosa")
+    # Resemblyzer imports webrtcvad eagerly from resemblyzer.audio, even though
+    # this tool deliberately decodes/resamples PCM itself and only calls
+    # embed_utterance (never preprocess_wav/trim_long_silences). Keep VAD
+    # optional: provide an import-only stub that fails loudly if a future edit
+    # accidentally tries to use VAD. This avoids compiling webrtcvad / Python.h.
+    try:
+        __import__("webrtcvad")
+    except ModuleNotFoundError as exc:
+        if exc.name != "webrtcvad":
+            MISSING.append("resemblyzer dependencies (" + str(exc.name) + ")")
+        else:
+            vad_stub = types.ModuleType("webrtcvad")
+
+            def _vad_unavailable(*_args, **_kwargs):
+                raise RuntimeError("webrtcvad is intentionally optional; do not use Resemblyzer preprocess_wav")
+
+            vad_stub.Vad = _vad_unavailable
+            sys.modules["webrtcvad"] = vad_stub
     try:
         from resemblyzer import VoiceEncoder  # noqa: PLC0415
-    except Exception:  # noqa: BLE001
-        MISSING.append("resemblyzer")
+    except Exception as exc:  # noqa: BLE001
+        MISSING.append("resemblyzer (" + type(exc).__name__ + ": " + str(exc) + ")")
         VoiceEncoder = None
     if MISSING:
         sys.stderr.write(
             "\n❌ تبعيات ناقصة: " + ", ".join(sorted(set(MISSING))) + "\n"
-            "   هذه الأداة تعمل خارج CI عمدًا. للتشغيل المحلي:\n"
+            "   التثبيت المحلي المختبَر (لا يثبت webrtcvad ولا يحتاج Python.h):\n"
             "     python3 -m venv /tmp/audio-venv && . /tmp/audio-venv/bin/activate\n"
-            "     pip install numpy soundfile librosa resemblyzer\n"
-            "   ملاحظات مثبتة بالتجربة:\n"
-            "     • webrtcvad لا يُبنى بلا Python.h ⇒ لا تستدعِ preprocess_wav؛\n"
-            "       مرّر PCM مفكوكًا مباشرةً إلى embed_utterance.\n"
-            "     • resemblyzer يحتاج رقعة scipy.ndimage.morphology (أُزيلت في scipy≥1.11).\n"
-            "     • فك ترميز MP3 يأتي من libsndfile ≥ 1.1 داخل soundfile.\n"
-            "   بوابة CI لا تحتاج أيًا من هذا: scripts/audio/verify-voice-identity.mjs\n\n"
+            "     pip install torch==2.2.2 numpy==1.26.4 scipy==1.10.1 librosa==0.10.2.post1 soundfile==0.12.1\n"
+            "     pip install --no-deps resemblyzer==0.1.4\n"
+            "   ملحوظة: torch على PyPI يسحب مكتبات CUDA كبيرة حتى على CPU؛ استخدم بناء CPU متوافقًا\n"
+            "   إذا كان متاحًا في بيئتك، ولا تستدعِ resemblyzer.preprocess_wav.\n"
+            "   بوابة CI لا تحتاج هذه الحزم: scripts/audio/verify-voice-identity.mjs\n\n"
         )
         raise SystemExit(2)
     return np, sf, librosa, VoiceEncoder
@@ -119,9 +139,39 @@ def read_pcm16k(rel: str) -> "NP.ndarray":
     return mono
 
 
+MIN_EMBEDDING_SECONDS = 6.0
+
+
+def signal_quality_issue(mono, sample_rate: int = 16000) -> str | None:
+    """Minimal signal-quality gate; not a speech/music detector."""
+    if sample_rate != 16000:
+        return f"معدل العينة {sample_rate}Hz بدل 16000Hz"
+    if mono is None or len(mono) == 0:
+        return "الإشارة فارغة"
+    seconds = len(mono) / sample_rate
+    if seconds < MIN_EMBEDDING_SECONDS:
+        return f"الصوت قصير ({seconds:.2f} ث؛ الحد الأدنى {MIN_EMBEDDING_SECONDS:.1f} ث)"
+    peak = 0.0
+    square_sum = 0.0
+    for raw in mono:
+        sample = float(raw)
+        if not math.isfinite(sample):
+            return "الإشارة تحتوي NaN أو قيمة غير منتهية"
+        magnitude = abs(sample)
+        peak = max(peak, magnitude)
+        square_sum += sample * sample
+    rms = math.sqrt(square_sum / len(mono))
+    if peak < 1e-3 or rms < 1e-4:
+        return f"مستوى الإشارة منخفض جدًا (peak={peak:.6g}, rms={rms:.6g})"
+    return None
+
+
 def unit(vec) -> "NP.ndarray":
     v = NP.asarray(vec, dtype=float)
-    return v / (NP.linalg.norm(v) or 1.0)
+    norm = float(NP.linalg.norm(v))
+    if v.ndim != 1 or v.size != 256 or not NP.isfinite(v).all() or not math.isfinite(norm) or norm <= 1e-12:
+        raise ValueError("متجه بصمة المتحدث غير صالح: متوقع 256 قيمة منتهية وبمعيار موجب")
+    return v / norm
 
 
 def acoustic_profile(rel: str) -> dict:
@@ -280,27 +330,47 @@ def script_words(entry: dict) -> int | None:
     return len([w for w in str(text).split() if w.strip()])
 
 
-def build_embeddings(rels: list[str]):
-    encoder = VOICE_ENCODER(device="cpu", verbose=False)
-    return {rel: unit(encoder.embed_utterance(read_pcm16k(rel))) for rel in rels}, encoder
-
-
 def cmd_mp3(target: str) -> int:
     spec, log = load_spec(), load_log()
     ref_rel = spec["reference"]["repoPath"]
-    rels = sorted({target, ref_rel})
-    embeds, encoder = build_embeddings(rels)
-    cosine = 1.0 if target == ref_rel else round(float(NP.dot(embeds[target], embeds[ref_rel])), 4)
+    print(f"\nالملف: {target}")
+    print(f"  المرجع المعتمد: {ref_rel}")
+    try:
+        # Decode independently before inference so corrupt/short inputs are
+        # reported as inconclusive and never produce a fabricated cosine.
+        mono = read_pcm16k(target)
+        ref_mono = mono if target == ref_rel else read_pcm16k(ref_rel)
+        issue = signal_quality_issue(mono)
+        if issue:
+            print(f"  النتيجة: غير حاسمة — {issue}; لم تُستخرج بصمة ولم يُحسب cosine")
+            return 3
+        ref_issue = signal_quality_issue(ref_mono)
+        if ref_issue:
+            print(f"  النتيجة: غير حاسمة — المرجع غير صالح: {ref_issue}; لم يُحسب cosine")
+            return 3
+        encoder = VOICE_ENCODER(device="cpu", verbose=False)
+        embeds = {target: unit(encoder.embed_utterance(mono))}
+        if ref_rel not in embeds:
+            embeds[ref_rel] = unit(encoder.embed_utterance(ref_mono))
+        cosine = float(NP.dot(embeds[target], embeds[ref_rel]))
+        if not math.isfinite(cosine) or cosine < -1.00001 or cosine > 1.00001:
+            raise ValueError("نتيجة cosine غير صالحة أو خارج المجال [-1, 1]")
+        cosine = round(max(-1.0, min(1.0, cosine)), 4)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  النتيجة: غير حاسمة — تعذّر فك الصوت أو استخراج بصمة صالحة ({type(exc).__name__}: {exc}); لا cosine")
+        return 3
     thr = spec["identityBand"]["thresholds"]
     band = spec["identityBand"]["sameVoicePairs"]
     entry = next((e for e in log["entries"] if e["audioFile"] == target), {})
-    mono = read_pcm16k(target)
     thirds = third_embeddings(encoder, mono)
     cross = [round(float(NP.dot(a, b)), 4) for a, b in itertools.combinations(thirds, 2)] if len(thirds) == 3 else []
 
-    print(f"\nالملف: {target}")
-    print(f"  المرجع: {ref_rel}")
     print(f"  تشابه جيب التمام مع المرجع: {cosine}")
+    try:
+        encoder_version = importlib.metadata.version("resemblyzer")
+    except importlib.metadata.PackageNotFoundError:
+        encoder_version = "unknown"
+    print(f"  النموذج: GE2E/Resemblyzer {encoder_version} (256D; speaker embeddings + cosine)")
     print(f"  التصنيف وفق identityBand.thresholds: {classify(cosine, thr)}")
     print(f"  نطاق «نفس الصوت» المقاس سابقًا: min={band.get('min')} p5={band.get('p5')} median={band.get('median')}")
     print(f"  قرار السياسة: ", end="")
@@ -317,7 +387,8 @@ def cmd_mp3(target: str) -> int:
     print(f"  الإيقاع: {json.dumps(rhythm_profile(target, script_words(entry)), ensure_ascii=False)}")
     print(f"  الصوتيات: {json.dumps(acoustic_profile(target), ensure_ascii=False)}")
     print("\n⚠️  GE2E مُدرَّب على الإنجليزية: القيمة **النسبية** إلى نطاق المتن هي المعنى، لا الرقم المطلق.")
-    print("    لا شيء هنا يُغني عن معاينة المالك عبر add_voice.\n")
+    print("    فحوص الجودة هنا ترفض التلف/القصر/الصمت فقط؛ لا يوجد مصنِّف موثوق للموسيقى والضوضاء،")
+    print("    وأي تسجيل ملتبس يحتاج مراجعة بشرية. لا شيء هنا يُغني عن معاينة المالك عبر add_voice.\n")
     return 0
 
 
@@ -330,14 +401,50 @@ def cmd_all(out_path: str | None) -> int:
         if rel not in entries:
             sys.stderr.write(f"❌ {rel} غير مقيَّد في السجل — شغّل بوابة CI أولًا.\n")
             return 1
-    embeds, encoder = build_embeddings(rels)
+    signals = {}
+    inconclusive = {}
+    for rel in rels:
+        try:
+            mono = read_pcm16k(rel)
+            issue = signal_quality_issue(mono)
+            if issue:
+                inconclusive[rel] = issue
+            else:
+                signals[rel] = mono
+        except Exception as exc:  # noqa: BLE001
+            inconclusive[rel] = f"تعذّر فك الصوت ({type(exc).__name__}: {exc})"
+    if ref_rel not in signals:
+        sys.stderr.write(f"❌ المرجع غير قابل للقياس: {inconclusive.get(ref_rel, 'غير متاح')}\n")
+        return 3
+    encoder = VOICE_ENCODER(device="cpu", verbose=False)
+    embeds = {}
+    for rel, mono in signals.items():
+        try:
+            embeds[rel] = unit(encoder.embed_utterance(mono))
+        except Exception as exc:  # noqa: BLE001
+            inconclusive[rel] = f"تعذّر استخراج بصمة صالحة ({type(exc).__name__}: {exc})"
+    if ref_rel not in embeds:
+        sys.stderr.write(f"❌ تعذّر استخراج بصمة المرجع: {inconclusive.get(ref_rel, 'نتيجة غير صالحة')}\n")
+        return 3
     thr = spec["identityBand"]["thresholds"]
 
     per_file = {}
     control_pairs = []
     for rel in rels:
         entry = entries[rel]
-        mono = read_pcm16k(rel)
+        if rel not in embeds:
+            per_file[rel] = {
+                "slug": os.path.basename(rel)[:-4],
+                "cosineToReference": None,
+                "classification": "cannot-assess",
+                "reason": inconclusive[rel],
+                "productionSession": entry.get("productionSession"),
+                "origin": entry.get("origin"),
+                "rhythm": None,
+                "acoustic": None,
+            }
+            continue
+        mono = signals[rel]
         thirds = third_embeddings(encoder, mono)
         if len(thirds) == 3:
             control_pairs += [float(NP.dot(a, b)) for a, b in itertools.combinations(thirds, 2)]
@@ -352,13 +459,14 @@ def cmd_all(out_path: str | None) -> int:
             "acoustic": acoustic_profile(rel),
         }
 
-    groups = single_linkage(rels, embeds, thr["identicalVoice"])
+    groups = single_linkage(list(embeds), embeds, thr["identicalVoice"])
     ctrl = NP.array(control_pairs) if control_pairs else NP.array([0.0])
     result = {
         "_comment": [
             "ناتج scripts/audio/measure_voice_identity.py --all",
             "كل رقم قياس فعلي قابل للتكرار. GE2E مُدرَّب على الإنجليزية ⇒",
             "الحدود نسبية إلى هذا المتن ولا تُقرأ كحدود عالمية.",
+            "فحص الصوت يرفض التلف/القصر/الصمت؛ الموسيقى والضوضاء تحتاجان مراجعة بشرية.",
         ],
         "reference": {"path": ref_rel, "embedding256": [round(float(v), 5) for v in embeds[ref_rel]]},
         "sameVoiceBand": same_voice_band(entries, embeds),
