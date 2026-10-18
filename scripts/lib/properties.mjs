@@ -321,7 +321,10 @@ export function deriveZone(location = '') {
 
 /** تنقية الوصف إلى نص واحد نظيف */
 export function cleanDescription(d, fallback = '') {
-  const raw = text(d.description || fallback);
+  // meta_description هو الحقل الذي يحرره المالك للوصف التسويقي القصير؛
+  // نستخدمه احتياطيًا لو غاب description (jekyll-seo-tag يقرأ description فقط،
+  // لذلك تُضاف نسخة description في الـfront matter للصفحات التسويقية).
+  const raw = text(d.description || d.meta_description || fallback);
   return raw.replace(/\s+/g, ' ').trim();
 }
 
