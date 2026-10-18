@@ -53,6 +53,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
+      SITE_URL: https://nasr-realestate.github.io
       REPORT: _diag/sync-deploy-report.txt
       # the exact sets produced by the offline audit of _properties/*.md (see _worker/README.md)
       # last reviewed 2026-10-18: أُضيف عقارا 16 و17 أكتوبر إلى IN_SCOPE_IDS
@@ -311,10 +312,21 @@ jobs:
           report /tmp/verify_after_dry.json
           check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
           echo
+          # هل الـfeed المنشور يحمل source_sha256؟ مولّد الطبقة الآلية (deploy.yml) يضيفه،
+          # أما النشر من الفرع (legacy) فلا يشغّله؛ وحينها يستحيل «complete في تشغيل
+          # واحد» بنيويًا لأن كل الملفات تحتاج قراءة. نقرأ الـfeed نفسه بدل الافتراض.
+          SHA_COVER=$(curl -sS -m 60 "${SITE_URL}/ai-feed.json?sha_check=$(date +%s)" 2>/dev/null | jq '[.properties[]? | select((.source_sha256 // "") != "")] | length' 2>/dev/null || echo 0)
+          case "$SHA_COVER" in ''|*[!0-9]*) SHA_COVER=0;; esac
+          echo "feed source_sha256 coverage: ${SHA_COVER}/${EXPECTED_FILES}"
+          MAX_ATTEMPTS=14
+          if [ "$SHA_COVER" -lt "$EXPECTED_FILES" ]; then
+            MAX_ATTEMPTS=$(( (EXPECTED_FILES + 39) / 40 + 2 ))
+            echo "NOTE: الـfeed بلا source_sha256 (نشر من الفرع) — التقارب عبر تشغيلات متتالية؛ سقف المحاولات=$MAX_ATTEMPTS"
+          fi
           echo "=== 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ==="
           rm -f /tmp/ok*.json
           n=0; ok=0
-          while [ "$n" -lt 14 ] && [ "$ok" -lt 5 ]; do
+          while [ "$n" -lt "$MAX_ATTEMPTS" ] && [ "$ok" -lt 5 ]; do
             n=$((n+1))
             OUT="/tmp/attempt$n.json"
             echo "--- run attempt $n (successful runs so far: $ok) ---"
@@ -349,7 +361,12 @@ jobs:
           else
             LAST="/tmp/ok$ok.json"
           fi
-          check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          if [ "$SHA_COVER" -ge "$EXPECTED_FILES" ]; then
+            check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          else
+            echo "SKIP  final_pass_complete: الـfeed بلا source_sha256 (نشر من الفرع) — إثبات التغطية من جدول الحالة"
+          fi
+          check "state_files_tracked" "$(vget '.state.files_tracked' /tmp/verify_state.json)" "$EXPECTED_FILES"
           check "file_list_source"      "$(vget '.github.source' "$LAST")" "ai-feed.json"
           check "feed_total_matches_files" "$(vget '.github.feed_total' "$LAST")" "$(vget '.github.files_total' "$LAST")"
           echo

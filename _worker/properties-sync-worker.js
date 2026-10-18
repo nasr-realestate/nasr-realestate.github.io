@@ -556,7 +556,7 @@ async function loadState(db, stateTable = STATE_TABLE) {
   const map = new Map();
   try {
     const { results } = await db
-      .prepare(`SELECT external_id, file_path, blob_sha, content_hash FROM ${stateTable} WHERE source_id = ?`)
+      .prepare(`SELECT external_id, file_path, blob_sha, content_hash, last_synced_at FROM ${stateTable} WHERE source_id = ?`)
       .bind(SOURCE_ID)
       .all();
     for (const r of results || []) map.set(String(r.file_path), r);

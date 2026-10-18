@@ -122,7 +122,7 @@ function makeD1(config = {}) {
     if (/^SELECT external_id, file_path FROM properties_sync_state WHERE source_id = \?/.test(sql)) {
       return { results: [...state.syncState.values()].map((v) => ({ external_id: v.external_id, file_path: v.file_path })) };
     }
-    if (/^SELECT external_id, file_path, blob_sha, content_hash FROM properties_sync_state/.test(sql)) {
+    if (/^SELECT external_id, file_path, blob_sha, content_hash(, last_synced_at)? FROM properties_sync_state/.test(sql)) {
       return { results: [...state.syncState.values()].map((v) => ({ ...v })) };
     }
     if (/^SELECT id, name(, name_ar)?(, name_en)? FROM areas/.test(sql) || /^SELECT id, name/.test(sql)) {
@@ -259,6 +259,7 @@ function installGitHubMock(files, opts = {}) {
     feedStatus: opts.feedStatus || 429,
     omitSourcePath: Boolean(opts.omitSourcePath),
     duplicateSourcePath: Boolean(opts.duplicateSourcePath),
+    omitSha256: Boolean(opts.omitSha256),
     invalidJson: Boolean(opts.invalidJson),
     failFeed(times = 1, status = 429) { this.failuresLeft = times; this.feedStatus = status; },
     restore() { globalThis.fetch = original; },
@@ -280,7 +281,7 @@ function installGitHubMock(files, opts = {}) {
       const properties = files.map((f) => ({
         slug: f.name.replace(/\.md$/, ""),
         ...(mock.omitSourcePath ? {} : { source_path: `_properties/${f.name}` }),
-        source_sha256: f.sha || fakeSha(f.content),
+        source_sha256: mock.omitSha256 ? "" : f.sha || fakeSha(f.content),
       }));
       if (mock.duplicateSourcePath && properties.length) properties.push({ ...properties[0] });
       return new Response(JSON.stringify({
@@ -464,6 +465,46 @@ test("التشغيل الأول يُدخل، والثاني لا يغيّر شي
     assert.equal(second.body.db.updated, 0);
     assert.equal(second.body.github.fetched, 0, "التشغيل الثاني لا يجب أن يقرأ أي ملف");
     assert.equal(db.state.listings.length, 2, "لا يجب إنشاء أي duplicate");
+  } finally {
+    gh.restore();
+  }
+});
+
+test("feed بلا source_sha256: الميزانية تتقدّم عبر تشغيلات متتالية بلا تجويع ملفات", async () => {
+  // سبب الاختبار: نشر الصفحات من الفرع (legacy) لا يولّد source_sha256، ولا يوجد
+  // مسار سريع للـsha. لو لم يحمل جدول الحالة last_synced_at فلن يتقدّم الترتيب
+  // أبدًا ويعيد الـWorker قراءة أول 40 ملفًا في كل تشغيل (حادثة 2026-10-18).
+  const names = ["a", "b", "c", "d", "e"];
+  const files = names.map((n, i) => ({
+    name: `${n}.md`,
+    content: md({ ...FM_BASE, id: `"id-${n}"`, slug: `"slug-${n}"`, priceNumeric: 3000000 + i }),
+  }));
+  const gh = installGitHubMock(files, { omitSha256: true });
+  const db = makeD1();
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0", SYNC_FETCH_BUDGET: "2" };
+  try {
+    const fetchedSets = [];
+    for (let run = 1; run <= 3; run++) {
+      const before = gh.calls.raw.length;
+      const res = await syncViaHttp(env);
+      assert.equal(res.status, 200);
+      assert.equal(res.body.status, "success");
+      assert.equal(res.body.github.budget_exhausted, true, "الميزانية تُستهلك في كل تشغيل");
+      assert.equal(res.body.errors.length, 0);
+      fetchedSets.push(gh.calls.raw.slice(before));
+      await new Promise((r) => setTimeout(r, 5)); // يضمن اختلاف last_synced_at
+    }
+    assert.equal(fetchedSets[0].length, 2);
+    assert.equal(fetchedSets[1].length, 2);
+    const firstTwo = new Set([...fetchedSets[0], ...fetchedSets[1]]);
+    assert.equal(firstTwo.size, 4, "التشغيل الثاني يقرأ ملفات جديدة لا نفس الأربعة");
+    const covered = new Set([...firstTwo, ...fetchedSets[2]]);
+    for (const n of names) {
+      assert.ok(covered.has(`_properties/${n}.md`), `الملف ${n}.md لم يُقرأ في أي تشغيل`);
+    }
+    assert.equal(db.state.listings.length, 5, "كل الملفات الصالحة أُدخلت عبر التشغيلات");
+    const paths = [...db.state.syncState.values()].map((r) => r.file_path);
+    for (const n of names) assert.ok(paths.includes(`_properties/${n}.md`), `${n}.md بلا صف حالة`);
   } finally {
     gh.restore();
   }
