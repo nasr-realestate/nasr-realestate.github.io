@@ -127,7 +127,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify the live deployment (SHA · feed · MCP · every MP3)
+      - name: Verify the live deployment (SHA · feed · MCP · raw head · every MP3)
         env:
           EXPECTED_SHA: ${{ github.sha }}
           DEPLOY_VERIFY_TIMEOUT_S: "300"

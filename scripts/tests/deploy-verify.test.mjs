@@ -7,29 +7,62 @@ import path from 'node:path';
 
 import {
   classifyAudioResponse,
+  checkSocialHead,
+  extractSocialMeta,
   listAudioFiles,
   mcpHealthUrl,
   pollUntil,
   verifyDeployment,
 } from '../verify-deployment.mjs';
+import { parseFrontMatter } from '../lib/front-matter.mjs';
 
 const AUDIO = listAudioFiles();
+const PROPERTY_SRC = '_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md';
+const REQUEST_SRC = '_requests/2026-10-18-apartment-rent-art-studio-large-reception.md';
+const propertyDesc = String(parseFrontMatter(fs.readFileSync(PROPERTY_SRC, 'utf8')).data.description || '').replace(/\s+/g, ' ').trim();
+const requestDesc = String(parseFrontMatter(fs.readFileSync(REQUEST_SRC, 'utf8')).data.description || '').replace(/\s+/g, ' ').trim();
 const SIZE = new Map(AUDIO.map((a) => [a.url, a.bytes]));
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 }
 
-function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200 } = {}) {
+function pageHtml({ title = 'عنوان الصفحة', description = '', ogImageType = 'image/webp', duplicateDescription = false } = {}) {
+  const meta = [
+    `<meta name="description" content="${description}">`,
+    duplicateDescription ? `<meta name="description" content="${description}">` : '',
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">`,
+    ogImageType ? `<meta property="og:image:type" content="${ogImageType}">` : '',
+  ].filter(Boolean).join('\n');
+  return `<!doctype html><html dir="rtl"><head><title>${title}</title>\n${meta}\n</head><body></body></html>`;
+}
+
+function htmlResponse(html, status = 200) {
+  return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
+}
+
+function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/webp' } = {}) {
   const properties = Array.from({ length: feedCount ?? 103 }, (_, i) => ({ slug: `p-${i}` }));
   const calls = { audio: 0, feed: 0, health: 0 };
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url);
     if (u.pathname === '/.well-known/deploy-info.json') return jsonResponse({ sha, ref: 'master' });
     if (u.pathname === '/.well-known/mcp.json') return jsonResponse({ transport: { endpoint: 'https://mcp.test/mcp' } });
+    if (u.pathname === '/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/') {
+      return htmlResponse(pageHtml({ title: 'شقة 230م', description: propertyDesc, duplicateDescription }));
+    }
+    if (u.pathname === '/requests/apartment-rent-request-art-studio-large-reception-2026-10-18/') {
+      return htmlResponse(pageHtml({ title: 'مطلوب شقة', description: requestDesc, duplicateDescription }));
+    }
+    if (u.pathname === '/agent.html') {
+      return htmlResponse(pageHtml({ title: 'الوكيل العقاري الذكي', description: 'وصف صفحة الوكيل الذكي — احكي طلبك وابدأ المحادثة.', ogImageType: agentOgType }));
+    }
     if (u.pathname === '/health') { calls.health += 1; return jsonResponse({ status: 'ok', properties: mcpCount ?? properties.length }, mcpStatus); }
     if (u.pathname === '/ai-feed.json') { calls.feed += 1; return jsonResponse({ total_count: properties.length, properties, generated_at: '2026-10-18T00:00:00Z' }); }
-    if (['/', '/agent.html', '/sw.js', '/assets/css/style.min.css'].includes(u.pathname)) {
+    if (['/', '/sw.js', '/assets/css/style.min.css'].includes(u.pathname)) {
       return new Response('ok', { status: 200, headers: { 'content-type': u.pathname.endsWith('.css') ? 'text/css' : 'text/html' } });
     }
     if (u.pathname.startsWith('/assets/audio/')) {
@@ -77,6 +110,33 @@ test("listAudioFiles: كل MP3 منشور في assets/audio مذكور بمسا�
   assert.equal(new Set(AUDIO.map((a) => a.url)).size, AUDIO.length, 'لا تكرار');
 });
 
+test("extractSocialMeta: يعدّ الوسوم ويستخرج المحتوى", () => {
+  const meta = extractSocialMeta(pageHtml({ title: 'تي', description: 'وصف كامل', duplicateDescription: true }));
+  assert.equal(meta.descriptionCount, 2);
+  assert.equal(meta.ogDescriptionCount, 1);
+  assert.equal(meta.ogTitleCount, 1);
+  assert.equal(meta.twitterTitleCount, 1);
+  assert.equal(meta.description, 'وصف كامل');
+  assert.equal(meta.ogImageType, 'image/webp');
+});
+
+test("checkSocialHead: يمرّ ويطابق وصف المصدر، ويفشل عند التكرار/عدم التطابق", () => {
+  const good = checkSocialHead(pageHtml({ description: propertyDesc }), { kind: 'property' }, propertyDesc);
+  assert.equal(good.ok, true, JSON.stringify(good.problems));
+
+  const dup = checkSocialHead(pageHtml({ description: propertyDesc, duplicateDescription: true }), { kind: 'property' }, propertyDesc);
+  assert.equal(dup.ok, false);
+  assert.ok(dup.problems.some((p) => /عددها 2/.test(p)));
+
+  const mismatch = checkSocialHead(pageHtml({ description: 'وصف مختلف تمامًا لا يبدأ بالمصدر' }), { kind: 'property' }, propertyDesc);
+  assert.equal(mismatch.ok, false);
+  assert.ok(mismatch.problems.some((p) => /لا يبدأ بوصف المصدر/.test(p)));
+
+  const badAgent = checkSocialHead(pageHtml({ description: 'وصف', ogImageType: 'image/png' }), { kind: 'agent' }, '');
+  assert.equal(badAgent.ok, false);
+  assert.ok(badAgent.problems.some((p) => /og:image:type/.test(p)));
+});
+
 test("verifyDeployment: نجاح كامل عندما يتطابق SHA والعدد والصوت", async () => {
   const { fetchImpl, calls } = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103 });
   const r = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl, timeoutS: 1, delayMs: 1 });
@@ -86,6 +146,8 @@ test("verifyDeployment: نجاح كامل عندما يتطابق SHA والعد
   assert.equal(r.report.audio_checked, AUDIO.length);
   assert.equal(calls.audio, AUDIO.length);
   assert.equal(calls.feed, 1);
+  assert.equal(r.report.head['property-helmy'].ok, true);
+  assert.equal(r.report.head.agent.ok, true);
 });
 
 test("verifyDeployment: SHA مختلف أو MCP ناقص أو صوت مكسور ⇒ يفشل بصوت عالٍ", async () => {
@@ -98,6 +160,16 @@ test("verifyDeployment: SHA مختلف أو MCP ناقص أو صوت مكسور 
   const r2 = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badMcp.fetchImpl, mcpAttempts: 2, mcpDelayMs: 1 });
   assert.equal(r2.ok, false);
   assert.ok(r2.failures.some((f) => f.check === 'mcp_count'), JSON.stringify(r2.failures));
+
+  const badHead = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, duplicateDescription: true });
+  const rh = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badHead.fetchImpl });
+  assert.equal(rh.ok, false);
+  assert.ok(rh.failures.some((f) => f.check === 'head:property-helmy'), JSON.stringify(rh.failures));
+
+  const badAgentHead = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, agentOgType: 'image/png' });
+  const ra = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badAgentHead.fetchImpl });
+  assert.equal(ra.ok, false);
+  assert.ok(ra.failures.some((f) => f.check === 'head:agent'));
 
   const badAudio = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, audioStatus: 404 });
   const r3 = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badAudio.fetchImpl });

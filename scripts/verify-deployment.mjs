@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseFrontMatter } from './lib/front-matter.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -31,6 +32,86 @@ export const SITE_DEFAULT = 'https://nasr-realestate.github.io';
 export const MCP_CARD_PATH = '.well-known/mcp.json';
 
 const AUDIO_PREFIX = '/assets/audio/';
+
+// صفحات تُفحص بوكيل WhatsApp/Facebook (raw <head>) — نفس ما يراه مُولّد
+// المعاينة عند مشاركة الرابط، بلا JS وبلا تسجيل دخول.
+export const HEAD_TARGETS = [
+  {
+    id: 'property-helmy',
+    path: '/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/',
+    source: '_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md',
+    kind: 'property',
+  },
+  {
+    id: 'agent',
+    path: '/agent.html',
+    source: 'agent.html',
+    kind: 'agent',
+  },
+  {
+    id: 'request-current',
+    path: '/requests/apartment-rent-request-art-studio-large-reception-2026-10-18/',
+    source: '_requests/2026-10-18-apartment-rent-art-studio-large-reception.md',
+    kind: 'request',
+  },
+];
+
+export const SOCIAL_CRAWLER_UA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+
+const normText = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
+
+/** استخراج وسوم <head> التي يهمّها مُولّد المعاينة (عدّ + محتوى) */
+export function extractSocialMeta(html) {
+  const text = String(html || '');
+  const grab = (re) => [...text.matchAll(re)].map((m) => m[1]);
+  const descriptions = grab(/<meta\s+name=["']description["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const ogDescription = grab(/<meta\s+property=["']og:description["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const ogTitle = grab(/<meta\s+property=["']og:title["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const twitterTitle = grab(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const ogImageType = grab(/<meta\s+property=["']og:image:type["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const viewport = grab(/<meta\s+name=["']viewport["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const title = grab(/<title[^>]*>([\s\S]*?)<\/title>/gi);
+  return {
+    description: normText(descriptions[0]),
+    descriptionCount: descriptions.length,
+    ogDescription: normText(ogDescription[0]),
+    ogDescriptionCount: ogDescription.length,
+    ogTitleCount: ogTitle.length,
+    twitterTitleCount: twitterTitle.length,
+    ogImageType: normText(ogImageType[0]).toLowerCase(),
+    viewport: normText(viewport[0]),
+    title: normText(title[0]),
+  };
+}
+
+/** فحص واحد لصفحة: لا تكرار، وصف غير فارغ، ويطابق وصف المصدر */
+export function checkSocialHead(html, target, sourceText = '') {
+  const meta = extractSocialMeta(html);
+  const problems = [];
+  if (meta.descriptionCount !== 1) problems.push(`meta description عددها ${meta.descriptionCount} (المتوقع 1)`);
+  if (meta.ogDescriptionCount !== 1) problems.push(`og:description عددها ${meta.ogDescriptionCount} (المتوقع 1)`);
+  if (meta.ogTitleCount !== 1) problems.push(`og:title عددها ${meta.ogTitleCount} (المتوقع 1)`);
+  if (meta.twitterTitleCount > 1) problems.push(`twitter:title مكرر (${meta.twitterTitleCount})`);
+  if (!meta.description) problems.push('meta description فارغ');
+  if (!meta.ogDescription) problems.push('og:description فارغ');
+  if (!meta.title) problems.push('<title> فارغ');
+  if (meta.description && meta.title && meta.description === meta.title) {
+    problems.push('الوصف يساوي العنوان (سقط إلى fallback)');
+  }
+  if (sourceText && meta.description) {
+    const head = normText(sourceText).slice(0, 25);
+    if (head && !meta.description.startsWith(head)) {
+      problems.push('وصف <head> لا يبدأ بوصف المصدر (meta_description لم يصل)');
+    }
+  }
+  if (target.kind === 'agent') {
+    if (meta.ogImageType !== 'image/webp') problems.push(`og:image:type=${meta.ogImageType || '<none>'} (المتوقع image/webp)`);
+    if (!meta.viewport.includes('interactive-widget=resizes-content')) problems.push('viewport بلا interactive-widget=resizes-content');
+    if (!meta.viewport.includes('viewport-fit=cover')) problems.push('viewport بلا viewport-fit=cover');
+    if (/user-scalable=no|maximum-scale=1(\.0)?/.test(meta.viewport)) problems.push('viewport يعطّل التكبير');
+  }
+  return { ok: problems.length === 0, problems, meta };
+}
 
 /** قائمة كل ملفات MP3 المنشورة (مسار URL + حجم محلي للمقارنة) */
 export function listAudioFiles(root = ROOT) {
@@ -234,7 +315,31 @@ export async function verifyDeployment(opts = {}) {
     fail('mcp', String(err.message || err));
   }
 
-  // 5) كل ملفات الصوت
+  // 5) raw <head> كما يراه WhatsApp/Facebook (بلا JS)
+  report.head = {};
+  for (const target of HEAD_TARGETS) {
+    try {
+      const res = await fetchImpl(site + target.path, {
+        headers: { 'user-agent': SOCIAL_CRAWLER_UA, 'cache-control': 'no-cache' },
+        redirect: 'follow',
+      });
+      const html = await res.text();
+      let sourceText = '';
+      if (target.source.endsWith('.md')) {
+        try { sourceText = String(parseFrontMatter(fs.readFileSync(path.join(ROOT, target.source), 'utf8')).data.description || ''); }
+        catch { sourceText = ''; }
+      }
+      const checked = res.status === 200
+        ? checkSocialHead(html, target, sourceText)
+        : { ok: false, problems: [`HTTP ${res.status}`], meta: {} };
+      report.head[target.id] = { path: target.path, status: res.status, ok: checked.ok, problems: checked.problems, description: checked.meta?.description || '' };
+      for (const problem of checked.problems) fail(`head:${target.id}`, problem);
+    } catch (err) {
+      fail(`head:${target.id}`, String(err.message || err));
+    }
+  }
+
+  // 6) كل ملفات الصوت
   const audio = listAudioFiles(ROOT);
   report.audio_total = audio.length;
   if (!audio.length) fail('audio', 'لا ملفات MP3 في المستودع');
