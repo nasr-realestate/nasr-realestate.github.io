@@ -25,7 +25,8 @@ name: Deploy MCP Gateway
 on:
   workflow_dispatch:
   push:
-    branches: ["master", "main", "arena/**"]
+    # master فقط — لا نشر من فروع المراجعة (نفس درس 2026-10-18).
+    branches: ["master"]
     paths:
       - "_worker/mcp-worker.js"
       - "_worker/wrangler.mcp.toml"
@@ -63,6 +64,7 @@ jobs:
   deploy:
     name: Deploy nasr-ai-gateway
     needs: test
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

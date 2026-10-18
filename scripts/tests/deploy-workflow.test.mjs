@@ -52,6 +52,19 @@ test("cleanup-requests: بعد الدفع يُطلق deploy.yml صراحةً (GI
   assert.match(s, /"pushed=true" >> "\$GITHUB_OUTPUT"/);
 });
 
+test("لا نشر لأي Worker من فرع مراجعة: master فقط + حارس ref", () => {
+  for (const file of ['deploy-properties-sync.yml', 'deploy-mcp-gateway.yml']) {
+    const s = read(file);
+    // قسم on فقط، بلا تعليقات (التعليقات تشرح الحادثة وتذكر arena/ بالضرورة).
+    const on = s.slice(s.indexOf('\non:'), s.indexOf('permissions:'))
+      .split('\n').filter((line) => !line.trim().startsWith('#')).join('\n');
+    assert.doesNotMatch(on, /arena\//, `${file}: لا يجوز أن يعمل على فروع arena`);
+    assert.doesNotMatch(on, /"main"/, `${file}: لا فرع main`);
+    assert.match(on, /branches:\s*\[\s*"master"\s*\]/, `${file}: master فقط`);
+    assert.match(s, /if:\s*github\.ref == 'refs\/heads\/master'/, `${file}: حارس ref مطلوب قبل النشر`);
+  }
+});
+
 test("ملف package-lock مُتتبَّع فعلًا، وتعليق deploy.yml لا يدّعي العكس", () => {
   const tracked = execFileSync('git', ['ls-files', '--error-unmatch', 'package-lock.json'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(tracked, 'package-lock.json');
