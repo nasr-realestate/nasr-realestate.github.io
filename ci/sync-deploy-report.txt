@@ -1,220 +1,249 @@
 === Properties Sync Worker — deploy + verify ===
-ref:      master
-commit:   bb973b43f0f666754a468bdda6c1d35862ecb5c8
-run:      38633244891
-when:     2026-10-14T20:34:50Z
+ref:      arena/359183b5-nasr-realestate-github-io
+commit:   0ca3c8a499af00a20c5a5c4878fffb4c5af6a0d1
+run:      39146943970
+when:     2026-10-18T16:52:07Z
 credential: PRESENT
 
 TAP version 13
+# (node:2148) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/properties-sync-worker.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
 ok 1 - parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
   ---
-  duration_ms: 1.268588
+  duration_ms: 1.7813
   ...
 # Subtest: toNumber: أرقام عربية/فواصل/نصوص
 ok 2 - toNumber: أرقام عربية/فواصل/نصوص
   ---
-  duration_ms: 0.304125
+  duration_ms: 0.307998
   ...
 # Subtest: تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
 ok 3 - تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
   ---
-  duration_ms: 2.453863
+  duration_ms: 2.610933
   ...
 # Subtest: تصنيف نوع العقار من category
 ok 4 - تصنيف نوع العقار من category
   ---
-  duration_ms: 0.124437
+  duration_ms: 0.12756
   ...
 # Subtest: مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
 ok 5 - مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
   ---
-  duration_ms: 0.504905
+  duration_ms: 0.669046
   ...
 # Subtest: الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
 ok 6 - الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
   ---
-  duration_ms: 101.612278
+  duration_ms: 130.290193
   ...
 # Subtest: التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
 ok 7 - التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
   ---
-  duration_ms: 29.206264
+  duration_ms: 36.22964
   ...
 # Subtest: تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
 ok 8 - تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
   ---
-  duration_ms: 10.086297
+  duration_ms: 8.256201
   ...
 # Subtest: ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
 ok 9 - ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
   ---
-  duration_ms: 6.392908
+  duration_ms: 6.076028
   ...
 # Subtest: ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
 ok 10 - ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
   ---
-  duration_ms: 3.760679
+  duration_ms: 4.366255
   ...
 # Subtest: لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
 ok 11 - لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
   ---
-  duration_ms: 3.355603
+  duration_ms: 3.730669
   ...
 # Subtest: ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
 ok 12 - ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
   ---
-  duration_ms: 5.694313
+  duration_ms: 5.179224
   ...
 # Subtest: schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
 ok 13 - schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
   ---
-  duration_ms: 1.415719
+  duration_ms: 0.932737
   ...
 # Subtest: schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
 ok 14 - schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
   ---
-  duration_ms: 3.405417
+  duration_ms: 2.857851
   ...
 # Subtest: GET /sync افتراضيًا dry run: لا يكتب أي شيء
 ok 15 - GET /sync افتراضيًا dry run: لا يكتب أي شيء
   ---
-  duration_ms: 2.559861
+  duration_ms: 5.542745
   ...
 # Subtest: SYNC_TOKEN: يحمي التشغيل اليدوي
 ok 16 - SYNC_TOKEN: يحمي التشغيل اليدوي
   ---
-  duration_ms: 4.778317
+  duration_ms: 2.666266
   ...
 # Subtest: budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
 ok 17 - budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
   ---
-  duration_ms: 19.658684
+  duration_ms: 16.202581
   ...
 # Subtest: scheduled: يشغّل المزامنة عبر ctx.waitUntil
 ok 18 - scheduled: يشغّل المزامنة عبر ctx.waitUntil
   ---
-  duration_ms: 2.753221
+  duration_ms: 2.25865
   ...
 # Subtest: GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
 ok 19 - GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
   ---
-  duration_ms: 1.548248
+  duration_ms: 1.295196
   ...
 # Subtest: wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
 ok 20 - wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
   ---
-  duration_ms: 0.426108
+  duration_ms: 0.304853
   ...
 # Subtest: الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
 ok 21 - الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
   ---
-  duration_ms: 0.940558
+  duration_ms: 0.849073
   ...
 # Subtest: budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
 ok 22 - budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
   ---
-  duration_ms: 4.645914
+  duration_ms: 14.081276
   ...
 # Subtest: تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
 ok 23 - تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
   ---
-  duration_ms: 2.814623
+  duration_ms: 3.711761
   ...
 # Subtest: throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
 ok 24 - throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
   ---
-  duration_ms: 6.859056
+  duration_ms: 3.748796
   ...
 # Subtest: فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
 ok 25 - فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
   ---
-  duration_ms: 5.723797
+  duration_ms: 5.694951
   ...
 # Subtest: إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
 ok 26 - إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
   ---
-  duration_ms: 1.025195
+  duration_ms: 1.043693
   ...
 # Subtest: تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
 ok 27 - تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
   ---
-  duration_ms: 156.540922
+  duration_ms: 190.868351
   ...
 # Subtest: R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
 ok 28 - R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
   ---
-  duration_ms: 1.981746
+  duration_ms: 2.301073
   ...
 # Subtest: R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
 ok 29 - R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
   ---
-  duration_ms: 3.596924
+  duration_ms: 6.067676
   ...
 # Subtest: R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
 ok 30 - R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
   ---
-  duration_ms: 1.283662
+  duration_ms: 1.576635
   ...
 # Subtest: scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
 ok 31 - scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
   ---
-  duration_ms: 3.203825
+  duration_ms: 5.565178
   ...
 # Subtest: R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
 ok 32 - R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
   ---
-  duration_ms: 1.76377
+  duration_ms: 1.854599
   ...
 # Subtest: R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
 ok 33 - R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
   ---
-  duration_ms: 1.605183
+  duration_ms: 2.68909
   ...
 # Subtest: R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
 ok 34 - R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
   ---
-  duration_ms: 0.105718
+  duration_ms: 0.128662
   ...
 # Subtest: R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
 ok 35 - R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
   ---
-  duration_ms: 97.321255
+  duration_ms: 122.04574
   ...
 # Subtest: containsToken: الكلمة الكاملة مع الحروف الملتصقة
 ok 36 - containsToken: الكلمة الكاملة مع الحروف الملتصقة
   ---
-  duration_ms: 0.238187
+  duration_ms: 0.215641
   ...
 # Subtest: GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
 ok 37 - GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
   ---
-  duration_ms: 7.790986
+  duration_ms: 6.56803
   ...
 # Subtest: R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
 ok 38 - R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
   ---
-  duration_ms: 3.493269
+  duration_ms: 3.646645
   ...
 # Subtest: نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
 ok 39 - نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
   ---
-  duration_ms: 2.150258
+  duration_ms: 2.666126
   ...
 # Subtest: budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
 ok 40 - budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
   ---
-  duration_ms: 7.386967
+  duration_ms: 8.937975
   ...
-1..40
-# tests 40
+# Subtest: قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
+ok 41 - قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
+  ---
+  duration_ms: 2.896778
+  ...
+# Subtest: فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
+ok 42 - فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
+  ---
+  duration_ms: 1504.962046
+  ...
+# Subtest: feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
+ok 43 - feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
+  ---
+  duration_ms: 0.827831
+  ...
+# Subtest: feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
+ok 44 - feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
+  ---
+  duration_ms: 0.628104
+  ...
+# Subtest: GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
+ok 45 - GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
+  ---
+  duration_ms: 3508.008912
+  ...
+1..45
+# tests 45
 # suites 0
-# pass 40
+# pass 45
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 557.614206
+# duration_ms 5687.948219
 === preflight ===
 token verify (/user/tokens/verify): {"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}
 accounts lookup: {"success":true,"errors":[],"accounts":[{"id":"717c46b0d78a6f06589b8367a1a3cc5b","name":"Footcai.555@gmail.com's Account"}]}
@@ -238,31 +267,32 @@ Getting User settings...
 
 --- wrangler deploy (account 717c46b0d78a6f06589b8367a1a3cc5b) ---
 
- ⛅️ wrangler 4.86.0 (update available 4.151.0)
+ ⛅️ wrangler 4.86.0 (update available 4.151.1)
 ──────────────────────────────────────────────
 
 Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-Total Upload: 48.78 KiB / gzip: 12.99 KiB
+Total Upload: 55.78 KiB / gzip: 14.78 KiB
 Worker Startup Time: 1 ms
 Your Worker has access to the following bindings:
 Binding                      Resource         
 env.DB (nasr-market-db)      D1 Database      
 
-Uploaded nasr-properties-sync (3.45 sec)
-Deployed nasr-properties-sync triggers (1.41 sec)
+Uploaded nasr-properties-sync (1.59 sec)
+Deployed nasr-properties-sync triggers (0.74 sec)
   https://nasr-properties-sync.footcai-555.workers.dev
   schedule: 17 * * * *
-Current Version ID: a5ae3e36-bdb1-4a86-ba0a-1ce1e4a209d8
+Current Version ID: 26f4b64f-4bb1-466f-9edd-815143eb98ed
 wrangler deploy exit code: 0
 deployed URL from wrangler: https://nasr-properties-sync.footcai-555.workers.dev
 account: 717c46b0d78a6f06589b8367a1a3cc5b
 === post-deploy checks ===
+script: nasr-ai-gateway
 script: nasr-properties-sync
 script: noisy-bush-fd84
 script: royal-snow-ea32
 PASS  script_exists: true
 --- schedules ---
-{"result":{"schedules":[{"cron":"17 * * * *","created_on":"2026-10-05T21:28:40.761503Z","modified_on":"2026-10-14T20:35:10.183548Z"}]},"success":true,"errors":[],"messages":[]}
+{"result":{"schedules":[{"cron":"17 * * * *","created_on":"2026-10-05T21:28:40.761503Z","modified_on":"2026-10-14T20:47:59.364302Z"}]},"success":true,"errors":[],"messages":[]}
 PASS  cron_17: true
 --- settings (bindings) ---
 {"bindings":[{"name":"DB","type":"d1","namespace_id":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"}],"compatibility_date":"2026-09-01"}
@@ -272,7 +302,7 @@ PASS  d1_binding_DB: true
 --- public URL (retrying up to 60s for propagation) ---
 attempt 1: / -> 200
 PASS  worker_reachable: 200
-{"service":"nasr-properties-sync","status":"running","worker_version":"v1.0.4","logic_reprocess":false,"version":"v1.0.4","source":{"id":9,"name":"سمسار طلبك","base_url":"https://nasr-realestate.github.io"},"github":{"owner":"nasr-realestate","repo":"nasr-realestate.github.io","dir":"_properties","branch":"master"},"scheduler":"Cloudflare Cron","cron":"17 * * * *","cache_policy":{"clear_unmatched_area":true},"endpoints":{"info":"GET /","schema":"GET /schema","verify":"GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)","manual":"POST /sync (or GET /sync?dryRun=1)"},"read_only_sources":["price_snapshots","areas","other source rows"],"write_scope":{"table":"listings","filter":"source_id = 9","deletes":false},"scope_policy":{"in_scope":"مدينة نصر فقط","out_of_scope_action":"لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files","area_rule":"المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، ولا area_id عند غياب مطابقة واضحة"},"write_ready":true,"schema":{"listings_columns":["id","source_id","external_id","url","title","property_type","transaction_type",
+{"service":"nasr-properties-sync","status":"running","worker_version":"v1.1.0","logic_reprocess":false,"version":"v1.1.0","source":{"id":9,"name":"سمسار طلبك","base_url":"https://nasr-realestate.github.io"},"github":{"owner":"nasr-realestate","repo":"nasr-realestate.github.io","dir":"_properties","branch":"master","file_list":"ai-feed.json (single request)","feed_url":"https://nasr-realestate.github.io/ai-feed.json","fallback":"contents-api (only with GITHUB_TOKEN and a feed without source_path)"},"scheduler":"Cloudflare Cron","cron":"17 * * * *","cache_policy":{"clear_unmatched_area":true},"endpoints":{"info":"GET /","schema":"GET /schema","verify":"GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)","manual":"POST /sync (or GET /sync?dryRun=1)"},"read_only_sources":["price_snapshots","areas","other source rows"],"write_scope":{"table":"listings","filter":"source_id = 9","deletes":false},"scope_policy":{"in_scope":"مدينة نصر فقط","out_of_scope_action":"لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files","area_rule":"المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، 
 
 POST-DEPLOY CHECKS PASSED
 === worker facts ===
@@ -280,17 +310,19 @@ account_id: 717c46b0d78a6f06589b8367a1a3cc5b
 --- account workers.dev subdomain ---
 {"subdomain":"footcai-555"}
 --- scripts in the account ---
+nasr-ai-gateway
 nasr-properties-sync
 noisy-bush-fd84
 royal-snow-ea32
 --- raw D1 database list ---
-{"result":[{"uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf","name":"nasr-market-db","created_at":"2026-09-28T20:59:17.492Z","version":"production","num_tables":0,"file_size":626688,"jurisdiction":null}],"errors":[],"messages":[],"success":true,"result_info":{"count":1,"page":1,"per_page":100,"total_count":1}}
+{"result":[{"uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf","name":"nasr-market-db","created_at":"2026-09-28T20:59:17.492Z","version":"production","num_tables":0,"file_size":692224,"jurisdiction":null}],"errors":[],"messages":[],"success":true,"result_info":{"count":1,"page":1,"per_page":100,"total_count":1}}
 {"name":"nasr-market-db","uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"}
 
+expectations: files=103 in_scope=81
 account: 717c46b0d78a6f06589b8367a1a3cc5b
 --- target: https://nasr-properties-sync.footcai-555.workers.dev ---
   http 200 (attempt 1)
-{"service":"nasr-properties-sync","status":"running","worker_version":"v1.0.4","logic_reprocess":false,"version":"v1.0.4","source":{"id":9,"name":"سمسار طلبك","base_url":"https://nasr-realestate.github.io"},"github":{"owner":"nasr-realestate","repo":"nasr-realestate.github.io","dir":"_properties","branch":"master"},"scheduler":"Cloudflare Cron","cron":"17 * * * *","cache_policy":{"clear_unmatched_area":true},"endpoints":{"info":"GET /","schema":"GET /schema","verify":"GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)","manual":"POST /sync (or GET /sync?dryRun=1)"},"read_only_sources":["price_snapshots","areas","other source rows"],"write_scope":{"table":"listings","filter":"source_id = 9","deletes":false},"scope_policy":{"in_scope":"مدينة نصر فقط","out_of_scope_action":"لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files","area_rule":"المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، ولا area_id عند غياب مطابقة واضحة"},"write_ready":true,"schema":{"listings_columns":["id","source_id","external_id","url","title","property_type","transaction_type","area_id","area_m2","price","price_per_m2","floor","bedrooms","bathrooms","finishing","furnished","address","description","observed_at","raw_data","street_id","location_status","location_confidence","location_notes"],"missing_required":[],"state_table_exists":true,"ingestion_runs_columns":["id","sou
+{"service":"nasr-properties-sync","status":"running","worker_version":"v1.1.0","logic_reprocess":false,"version":"v1.1.0","source":{"id":9,"name":"سمسار طلبك","base_url":"https://nasr-realestate.github.io"},"github":{"owner":"nasr-realestate","repo":"nasr-realestate.github.io","dir":"_properties","branch":"master","file_list":"ai-feed.json (single request)","feed_url":"https://nasr-realestate.github.io/ai-feed.json","fallback":"contents-api (only with GITHUB_TOKEN and a feed without source_path)"},"scheduler":"Cloudflare Cron","cron":"17 * * * *","cache_policy":{"clear_unmatched_area":true},"endpoints":{"info":"GET /","schema":"GET /schema","verify":"GET /verify?in_scope=&out_of_scope=&invalid=&null_area=&rows= (read-only D1 report)","manual":"POST /sync (or GET /sync?dryRun=1)"},"read_only_sources":["price_snapshots","areas","other source rows"],"write_scope":{"table":"listings","filter":"source_id = 9","deletes":false},"scope_policy":{"in_scope":"مدينة نصر فقط","out_of_scope_action":"لا INSERT ولا UPDATE — يُسجَّل في out_of_scope_files","area_rule":"المنطقة الفرعية تتغلب على عقدة المدينة (الأخص يفوز)، ولا area_id عند غياب مطابقة واضحة"},"write_ready":true,"schema":{"listings_columns":["id","source_id","external_id","url","title","property_type","transaction_type","area_id","area_m2","price","price_per_m2","floor","bedrooms","bathrooms","finishing","furnished","address","descr
 
 === 1) real D1 schema (GET /schema) ===
 {"tables":{"listings":["id","source_id","external_id","url","title","property_type","transaction_type","area_id","area_m2","price","price_per_m2","floor","bedrooms","bathrooms","finishing","furnished","address","description","observed_at","raw_data","street_id","location_status","location_confidence","location_notes"],"ingestion_runs":["id","source_id","started_at","finished_at","records_found","records_added","records_updated","records_skipped","status","error_message","notes"],"sources":["id","name","source_type","base_url","description","created_at"],"areas":["id","name_ar","name_en","level","level_ar","description","verified","created_at","updated_at","area_type"],"properties_sync_state":true},"listings_table":"listings","state_table":"properties_sync_state","mapping":{"externalId":"external_id","sourceId":"source_id","sourceUrl":"url","title":"title","description":"description","transactionType":"transaction_type","propertyType":"property_type","price":"price","pricePeriod":null,"currency":null,"areaM2":"area_m2","areaId":"area_id","rooms":"bedrooms","bathrooms":"bathrooms","floor":"floor","finish":"finishing","status":null,"category":null,"street":"address","imageUrl":null,"publishedAt":null,"latitude":null,"longitude":null,"createdAt":null,"updatedAt":null,"contentHash":null},"run_mapping":{"sourceId":"source_id","runType":null,"status":"status","startedAt":"started_at","finishedAt":"finished_at","filesTotal":null,"inserted":null,"updated":"records_updated","unchanged":null,"invalid":null,"errorsCount":null,"details":"notes"},"missing_required":[]}
@@ -298,63 +330,40 @@ columns: external_id=external_id source_id=source_id missing_required=[]
 PASS  schema_required_columns: []
 
 === 2) read-only D1 report BEFORE (GET /verify) ===
-{"counts":{"listings_total":105,"source9_total":105,"source9_null_area":2,"areas_total":31,"price_snapshots_total":39},"duplicates":{"count":0,"sample":[]},"lists":{"in_scope":{"checked":81,"present":81},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":2},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
+{"counts":{"listings_total":107,"source9_total":107,"source9_null_area":5,"areas_total":31,"price_snapshots_total":39},"duplicates":{"count":0,"sample":[]},"lists":{"in_scope":{"checked":81,"present":81},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":5},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
 
 wrangler d1 execute usable: false (informational; the checklist uses the Worker binding report)
 
 === 3) dry run (GET /sync?dryRun=1) — must not write anything ===
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 162.158.90.40. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 162.158.90.40. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
   http 200 (attempt 1)
-{"status":"success","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":101,"fetched":0,"complete":true,"errors":[]}
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
   http 200 (attempt 1)
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit — retrying in 120s
+{"status":"error","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":["feed_missing_source_path:10th-district-180m"]}
 PASS  dryrun_flag: true
-FAIL  dryrun_read_the_tree: got 0, expected 98
-PASS  dryrun_wrote_nothing: 105/105
+FAIL  dryrun_read_the_tree: got 0, expected 103
+PASS  dryrun_wrote_nothing: 107/107
 
 === 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ===
 --- run attempt 1 (successful runs so far: 0) ---
   http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 2 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 3 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.64.217.5. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"ht"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 4 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.64.217.5. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"ht"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 5 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 172.64.217.4. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"ht"]}
-  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s
---- run attempt 6 (successful runs so far: 0) ---
-  http 200 (attempt 1)
-{"status":"success","dry_run":false,"inserted":0,"updated":0,"unchanged":81,"out_of_scope":0,"invalid":0,"files":101,"fetched":0,"budget_skipped":0,"complete":true,"missing":24,"errors":[]}
+{"status":"error","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":0,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":0,"errors":["feed_missing_source_path:10th-district-180m"]}
 PASS  run1_no_write_failures: 0
 PASS  final_pass_complete: true
+PASS  file_list_source: ai-feed.json
+FAIL  feed_total_matches_files: got 103, expected 0
 
 --- classification recorded in properties_sync_state (durable, across all runs) ---
-{"rows":102,"files_tracked":101,"in_scope":81,"invalid":8,"out_of_scope":12,"invalid_files":["_properties/2026-01-01-rent-furnished-batrawy-nasr-city.md","_properties/2026-01-13-shinzo-abe-axis-luxury-262m.md","_properties/2026-04-15-ground-floor-admin-seraj-mall.md","_properties/2026-05-11-commercial-saudi-buildings-golf-110m.md","_properties/nasr-street-furnished.md","_properties/rent-obour-buildings-salah-salem-35k.md","_properties/rent-tayaran-panorama-35k.md","_properties/showroom-ahmed-fakhry-600m.md"],"out_of_scope_files":["_properties/2025-12-28-apartment-sale-heliopolis-merghany-180m.md","_properties/2025-12-30-apartment-sale-heliopolis-classic-150m.md","_properties/2026-01-21-lavida-compound-rent-apartments.md","_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md","_properties/2026-03-07-villa-rehab-gate9-model-h.md","_properties/2026-03-07-villa-south-90th-dusit-hotel-license.md","_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md","_properties/andalus1-duplex-285m.md","_properties/banafseg2-showroom-340m.md","_properties/new-polis-130m.md","_properties/salam-city-218m-roof.md","_properties/sheraton-nozha-165m-rent.md"]}
-state: 101 files tracked · in-scope 81 · out-of-scope 12 · invalid 8
-FAIL  state_in_scope_78: got 81, expected 78
+{"rows":104,"files_tracked":103,"in_scope":83,"invalid":8,"out_of_scope":12,"invalid_files":["_properties/2026-01-01-rent-furnished-batrawy-nasr-city.md","_properties/2026-01-13-shinzo-abe-axis-luxury-262m.md","_properties/2026-04-15-ground-floor-admin-seraj-mall.md","_properties/2026-05-11-commercial-saudi-buildings-golf-110m.md","_properties/nasr-street-furnished.md","_properties/rent-obour-buildings-salah-salem-35k.md","_properties/rent-tayaran-panorama-35k.md","_properties/showroom-ahmed-fakhry-600m.md"],"out_of_scope_files":["_properties/2025-12-28-apartment-sale-heliopolis-merghany-180m.md","_properties/2025-12-30-apartment-sale-heliopolis-classic-150m.md","_properties/2026-01-21-lavida-compound-rent-apartments.md","_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md","_properties/2026-03-07-villa-rehab-gate9-model-h.md","_properties/2026-03-07-villa-south-90th-dusit-hotel-license.md","_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md","_properties/andalus1-duplex-285m.md","_properties/banafseg2-showroom-340m.md","_properties/new-polis-130m.md","_properties/salam-city-218m-roof.md","_properties/sheraton-nozha-165m-rent.md"]}
+state: 103 files tracked · in-scope 83 · out-of-scope 12 · invalid 8
+FAIL  state_in_scope: got 83, expected 81
 PASS  state_out_of_scope_12: 12
 PASS  state_invalid_8: 8
 out-of-scope files logged (12):
@@ -382,8 +391,8 @@ _properties/showroom-ahmed-fakhry-600m.md
 PASS  out_of_scope_files_listed: 12
 PASS  invalid_files_listed: 8
 durable reasons from the last ingestion_runs row:
-  started: 2026-10-14 20:57:03 status: success
-{"version":"v1.0.4","trigger":"manual","dry_run":false,"fetched":0,"missing":24,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":[],"area_unmatched":[],"duration_ms":1889}
+  started: 2026-10-18 16:58:57 status: error
+{"version":"v1.1.0","trigger":"manual","dry_run":false,"fetched":0,"missing":0,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":["feed_missing_source_path:10th-district-180m"],"area_unmatched":[],"duration_ms":1382}
 
 --- reasons sample (from the runs of this job) ---
 
@@ -395,13 +404,14 @@ PASS  no_change_run_updated: 0
 PASS  no_change_run_duplicates: 0
 
 === 6) checklist AFTER (GET /verify) ===
-{"counts":{"listings_total":105,"source9_total":105,"source9_null_area":2,"areas_total":31,"price_snapshots_total":39},"duplicates":0,"lists":{"in_scope":{"checked":81,"present":81},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":2},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
-source9 rows: before=105 after=105 | listings: 105 -> 105 | snapshots: 39 -> 39 | areas: 31 -> 31
-source 9 rows pre-existing in D1 before this sync: 105 (legacy ingestion — this Worker never deletes)
-per-id reconciliation: in-scope 81/78 present · out-of-scope 10/12 still in listings from a legacy ingestion · invalid 2/8 legacy
-FAIL  in_scope_78_present: got 81/81, expected 78/78
-PASS  null_area_preserved: 2
+{"counts":{"listings_total":107,"source9_total":107,"source9_null_area":5,"areas_total":31,"price_snapshots_total":39},"duplicates":0,"lists":{"in_scope":{"checked":81,"present":81},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":5},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
+source9 rows: before=107 after=107 | listings: 107 -> 107 | snapshots: 39 -> 39 | areas: 31 -> 31
+source 9 rows pre-existing in D1 before this sync: 107 (legacy ingestion — this Worker never deletes)
+per-id reconciliation: in-scope 81/81 present · out-of-scope 10/12 still in listings from a legacy ingestion · invalid 2/8 legacy
+PASS  in_scope_present: 81/81
+PASS  null_area_preserved: 5
 PASS  duplicates_none: 0
+FAIL  run_health_no_active_error: got true, expected false
 PASS  foreign_key_check: 0
 PASS  no_rows_deleted: true
 PASS  listings_total_not_shrunk: true
@@ -411,9 +421,9 @@ PASS  areas_unchanged: 31
 --- legacy rows outside the scope must be byte-identical before/after (proof this Worker never wrote them) ---
 out-of-scope ids already present in D1 before: 10 (absent: 2)
 invalid ids already present in D1 before:      2 (absent: 6)
-source-9 rows without an area before/after:    2 -> 2
+source-9 rows without an area before/after:    5 -> 5
 legacy area_id values cleared by the R1 rule: 0
-PASS  null_area_preserved_final: 2
+PASS  null_area_preserved_final: 5
 PASS  out_of_scope_rows_untouched: [{"area_id":1,"area_m2":180,"external_id":"heliopolis-badia-180m-lux","id":89,"price":4750000,"property_type":"apartment","source_id":9,"title":"شقة 180م تشطيب كلاسيك فاخر - خلف الميرغني (شارع البادية)","transaction_type":"sale"},{"area_id":1,"area_m2":135,"external_id":"lavida-rent-2units-jan26","id":91,"price":9000,"property_type":"apartment","source_id":9,"title":"شقق للإيجار في كمبوند لافيدا هليوبوليس الجديدة - فيو حمام سباحة وبارون","transaction_type":"rent"},{"area_id":1,"area_m2":150,"external_id":"masr-al-gdida-150m-classic","id":90,"price":4500000,"property_type":"apartment","source_id":9,"title":"شقة 150م كلاسيك بأسقف عالية - مصر الجديدة (الزمن الجميل)","transaction_type":"sale"},{"area_id":1,"area_m2":130,"external_id":"new-polis-130m","id":108,"price":4000000,"property_type":"apartment","source_id":9,"title":"شقة 130م بفيو مفتوح - كمبوند نيوبوليس (جوار مدينتي)","transaction_type":"sale"},{"area_id":1,"area_m2":300,"external_id":"rehab-villa-model-h-gate9","id":93,"price":25000000,"property_type":"villa","source_id":9,"title":"فيلا نموذج H للبيع بالرحاب - على السور بوابة 9 (حديقة خاصة)","transaction_type":"sale"},{"area_id":1,"area_m2":218,"external_id":"salam-city-218m-roof","id":109,"price":1100000,"property_type":"apartment","source_id":9,"title":"شقة 218م (بنتهاوس) بفيو مفتوح - مدينة السلام","transaction_type":"sale"},{"area_id":1,"area_m2":160,"external_id":"shams-club-heliopolis-160m","id":95,"price":6500000,"property_type":"apartment","source_id":9,"title":"شقة 160م مسجلة للبيع أمام نادي الشمس مباشرة – مصر الجديدة","transaction_type":"sale"},{"area_id":1,"area_m2":165,"external_id":"sheraton-nozha-165m-rent","id":111,"price":25000,"property_type":"apartment","source_id":9,"title":"شقة 165م واجهة (سكني/إداري) - شيراتون النزهة","transaction_type":"rent"},{"area_id":1,"area_m2":568,"external_id":"villa-new-cairo-1st-district-568m","id":92,"price":50000000,"property_type":"villa","source_id":9,"title":"فيلا فخمة 568م بالتجمع الخامس الحي الأول - مسبح خاص (نشاط فندقي)","transaction_type":"sale"},{"area_id":1,"area_m2":661,"external_id":"villa-south-90th-120m","id":94,"price":120000000,"property_type":"villa","source_id":9,"title":"فيلا 661م على التسعين الجنوبي مباشرة - أمام Dusit (رخصة فندقي)","transaction_type":"sale"}]
 PASS  invalid_rows_untouched: [{"area_id":1,"area_m2":130,"external_id":"rent-furnished-batrawy-30k","id":61,"price":30000,"property_type":"apartment","source_id":9,"title":"شقة مفروشة 3 غرف للإيجار - شارع البطراوي (جنينة مول)","transaction_type":"rent"},{"area_id":1,"area_m2":262,"external_id":"shinzo-abe-262m-4th-floor","id":64,"price":7000000,"property_type":"office","source_id":9,"title":"شقة 262م واجهة على محور شينزو آبي - تصلح سكني وإداري","transaction_type":"sale"}]
 
@@ -423,9 +433,9 @@ NOTE: PRAGMA integrity_check is refused by D1 (SQLITE_AUTH) for user queries; th
 
 === 8) run summaries ===
 --- /tmp/dryrun.json ---
-{"status":"error","dry_run":true,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"duplicates":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
+{"status":"error","dry_run":true,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"duplicates":0,"errors":["feed_missing_source_path:10th-district-180m"]}
 --- /tmp/run_last.json ---
-{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"duplicates":0,"errors":["github_tree_failed:403:{\"message\":\"API rate limit exceeded for 104.22.193.41. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)\",\"documentation_url\":\"h"]}
+{"status":"error","dry_run":false,"inserted":0,"updated":0,"unchanged":0,"out_of_scope":0,"invalid":0,"files":0,"fetched":0,"complete":true,"duplicates":0,"errors":["feed_missing_source_path:10th-district-180m"]}
 
 === VERIFICATION SUMMARY ===
-FAILED CHECKS: dryrun_read_the_tree|state_in_scope_78|in_scope_78_present
+FAILED CHECKS: dryrun_read_the_tree|feed_total_matches_files|state_in_scope|run_health_no_active_error
