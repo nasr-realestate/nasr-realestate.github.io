@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import { Liquid } from 'liquidjs';
 import { marked } from 'marked';
 import yaml from 'js-yaml';
+import { fileURLToPath } from 'node:url';
 
 // ═══ طبقة الذكاء الاصطناعي (2026-10-16) ═══
 // نفس المُولّدات التي يستخدمها نشر GitHub Pages (scripts/build-ai-artifacts.mjs)
@@ -152,7 +153,12 @@ if (fs.existsSync('_properties')) {
       const fullPath = path.join('_properties', file);
       const raw = fs.readFileSync(fullPath, 'utf8');
       const parsed = matter(raw);
-      const slug = file.replace(/\.md$/, '');
+      const fileSlug = file.replace(/\.md$/, '');
+      // Jekyll ينشر الوثيقة على /properties/<slug من الـfront matter>/ — اسم الملف
+      // مجرد اسم تخزين. المعاينة كانت تطابق اسم الملف فقط، فتحوّل 58 رابطًا من
+      // روابط الإنتاج إلى 404 محليًا. الآن الأولوية لـparsed.data.slug، واسم
+      // الملف يبقى alias نشطًا للملفات القديمة.
+      const slug = String(parsed.data.slug || '').trim() || fileSlug;
       const propData = {
         ...parsed.data,
         slug,
@@ -167,7 +173,8 @@ if (fs.existsSync('_properties')) {
       };
       properties.push(propData);
       propertiesMap.set(slug, propData);
-      if (parsed.data.slug) propertiesByFrontSlug.set(String(parsed.data.slug), propData);
+      propertiesMap.set(fileSlug, propData);
+      propertiesByFrontSlug.set(slug, propData);
     } catch (err) {
       console.warn(`Failed to load property ${file}:`, err.message);
     }
@@ -188,7 +195,8 @@ if (fs.existsSync('_requests')) {
       const fullPath = path.join('_requests', file);
       const raw = fs.readFileSync(fullPath, 'utf8');
       const parsed = matter(raw);
-      const slug = file.replace(/\.md$/, '');
+      const fileSlug = file.replace(/\.md$/, '');
+      const slug = String(parsed.data.slug || '').trim() || fileSlug;
       const reqData = {
         ...parsed.data,
         slug,
@@ -201,6 +209,7 @@ if (fs.existsSync('_requests')) {
       };
       requests.push(reqData);
       requestsMap.set(slug, reqData);
+      requestsMap.set(fileSlug, reqData);
     } catch (err) {
       console.warn(`Failed to load request ${file}:`, err.message);
     }
@@ -531,7 +540,12 @@ app.use(async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, HOST, () => {
-  console.log(`Server listening on http://${HOST}:${PORT}`);
-});
+// Start server — عند الاستيراد من الاختبارات لا نفتح منفذًا تلقائيًا.
+const IS_MAIN = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (IS_MAIN) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Server listening on http://${HOST}:${PORT}`);
+  });
+}
+
+export { app };
