@@ -14,10 +14,12 @@
 //    إعادة الملف ليست حلًا: الالتزام المجدول نفسه سيحذفه في أول تشغيل تالٍ
 //    (2026-10-09 أصغر من أي حد لاحق)، فيعود الإخفاق يوميًا.
 //
-//    القاعدة المطبَّقة: **التوقعات تُشتق من المستودع**، لا من قائمة ملفات ثابتة.
-//      • الطلبات الحيّة المحمية فقط مطلوبة؛ بصماتها لا تتغيّر.
-//      • طلب الاستوديو الفني (2026-10-10) انتهى أجله وفق قاعدة السبعة أيام يوم 2026-10-17؛
-//        لا يُشترط بقاؤه. إذا عاد الملف، تُراجع بصمته الأصلية المحفوظة أدناه.
+//    القاعدة المطبَّقة: **التوقعات تُشتق من المستودع**، لا من قائمة صفحات حية ثابتة.
+//      • جميع الطلبات مؤقتة وتُحذف آليًا بعد سبعة أيام؛ لذلك لا يُسقط الفحص البناء
+//        لمجرد انتهاء طلب حيّ سابق واختفائه من _requests.
+//      • طلب الاستوديو الفني (2026-10-10) انتهى أجله يوم 2026-10-17، وطلب الجراج
+//        المؤرخ 2026-10-11 انتهى أجله يوم 2026-10-18؛ إذا عاد أي منهما تُراجع
+//        بصمته الأصلية المحفوظة أدناه.
 //      • الطلب المنتهي ذو الإعلان الصوتي معروف بالاسم والبصمة: لو عاد الملف يُفحص
 //        فورًا بكل صرامة الطلب الحيّ؛ ويُفحص ملفه الصوتي الباقي ولا يُسقط البناء.
 //      • أي MP3 آخر بلا طلب حيّ = فشل: لا يتسلل ملف صوتي مجهول إلى المستودع.
@@ -30,14 +32,10 @@ import { grab, id3Frames, occurrences, parseComm, parseTextFrame } from './audio
 const outDir = process.argv[2] ?? '_site';
 const AUDIO_DIR = path.join('assets', 'audio', 'requests');
 
-/** طلبات لا يُسمح بتغييرها: بصمة الملف كما هي. */
-const LOCKED_SOURCES = new Map([
-  ['garage-rent-request-40-buses-ismail-qabbani', 'a187978538248425d46c941565e533a45aa28ebb69f7558c1da138c692cf9ed4'],
-]);
-
-/** طلب قديم انتهى أجله؛ لا يُشترط وجوده لكن إن عاد يجب أن يكون بايتًا كما كان. */
+/** طلبات انتهى أجلها؛ لا يُشترط وجودها لكن إن عادت يجب أن تطابق بصمتها الأصلية. */
 const RETIRED_SOURCE_ONLY = new Map([
   ['apartment-rent-request-art-studio-large-reception-nasr-city', 'dec0f7ab05797d413ca35f2d702414f189fcda4f879d1c8e82bddd8da6e7261e'],
+  ['garage-rent-request-40-buses-ismail-qabbani', 'a187978538248425d46c941565e533a45aa28ebb69f7558c1da138c692cf9ed4'],
 ]);
 
 /**
@@ -70,12 +68,6 @@ const METADATA = new Map([
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const isTrueField = (front, field) => new RegExp(`^${field}:\\s*true\\s*$`, 'm').test(front);
 const isFalseField = (front, field) => new RegExp(`^${field}:\\s*false\\s*$`, 'm').test(front);
-
-/** الطلبات المقفلة: بصمتها لا تتغيّر. */
-function checkLockedSource(slug, source) {
-  const expected = LOCKED_SOURCES.get(slug);
-  if (expected) assert.equal(sha(source), expected, `${slug}: a request that must stay untouched was modified`);
-}
 
 /** طلب منتهي عاد للظهور: يُفحص بنفس صرامة الطلب الحيّ. */
 function checkRetiredSourceReturned(slug, source, front) {
@@ -167,11 +159,6 @@ for (const [slug, expectedHash] of RETIRED_SOURCE_ONLY) {
   if (restored) assert.equal(sha(restored.source), expectedHash, `${slug}: retired request changed if restored`);
 }
 
-// حرس ضد الحذف غير المقصود للطلبات الحيّة المعروفة.
-for (const slug of LOCKED_SOURCES.keys()) {
-  assert.ok(sourceBySlug.has(slug), `${slug}: a known live request disappeared from _requests`);
-}
-
 const withAudio = new Set();
 for (const [slug, { source, front }] of sourceBySlug) {
   const html = await readFile(path.join(outDir, 'requests', slug, 'index.html'), 'utf8');
@@ -184,7 +171,6 @@ for (const [slug, { source, front }] of sourceBySlug) {
     assert.ok(!isTrueField(front, 'audio_ad') && (isFalseField(front, 'audio_ad') || !/^audio_ad:/m.test(front)), `${slug}: unclear audio opt-out`);
     checkRequestWithoutPlayer(slug, html);
   }
-  checkLockedSource(slug, source);
 }
 
 // ─── الملاذات الصوتية: نسخة البناء مطابقة، ولا يتيم إلا المعروف ────────────
