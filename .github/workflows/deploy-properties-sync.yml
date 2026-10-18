@@ -297,6 +297,9 @@ jobs:
             jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
             DERR="$(vget '.errors[0] // ""' /tmp/dryrun.json)"
             case "$DERR" in
+              feed_missing_source_path*)
+                echo "  الموقع المنشور ما زال يقدّم ai-feed.json قديمًا (بلا source_path) — قد يكون نشر الصفحات لم ينتهِ بعد؛ المحاولة بعد 45 ثانية"
+                sleep 45; continue;;
               github_feed_failed*|github_tree_failed*|*rate\ limit*) echo "  ai-feed.json fetch failed/rate-limited — retrying in 120s"; sleep 120; continue;;
             esac
             [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "$EXPECTED_FILES" ] && break
@@ -319,6 +322,10 @@ jobs:
             jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
             ERR1="$(vget '.errors[0] // ""' "$OUT")"
             case "$ERR1" in
+              feed_missing_source_path*)
+                echo "  الموقع المنشور ما زال يقدّم ai-feed.json قديمًا (بلا source_path) — قد يكون نشر الصفحات لم ينتهِ بعد؛ المحاولة بعد 45 ثانية"
+                sleep 45
+                continue;;
               github_feed_failed*|*rate\ limit*)
                 echo "  ai-feed.json fetch failed/rate-limited — retrying in 60s"
                 sleep 60
@@ -334,7 +341,14 @@ jobs:
             [ "$(vget '.github.complete' "$OUT")" = "true" ] && break
             sleep 63
           done
-          LAST="/tmp/ok$ok.json"
+          LAST="/tmp/attempt$n.json"
+          if [ "$ok" -eq 0 ]; then
+            # لا تشغيل مكتمل خلال المهلة: نفشل بصوت عالٍ وبرسالة تشرح السبب المحتمل
+            echo "FAIL  no_completed_run: لم يكتمل أي تشغيل خلال المهلة — الموقع المنشور قد يكون ما زال يقدّم ai-feed.json قديمًا (بلا source_path)"
+            FAILED="$FAILED|no_completed_run"
+          else
+            LAST="/tmp/ok$ok.json"
+          fi
           check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
           check "file_list_source"      "$(vget '.github.source' "$LAST")" "ai-feed.json"
           check "feed_total_matches_files" "$(vget '.github.feed_total' "$LAST")" "$(vget '.github.files_total' "$LAST")"
