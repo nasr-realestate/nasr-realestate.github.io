@@ -27,6 +27,10 @@ function normalize(text) {
     .split('\n')
     .map((line) => {
       if (line.startsWith('# آخر تحديث:')) return line.replace(/\d{4}-\d{2}-\d{2}.*$/, '<date>');
+      // ختم llms-full.txt نفسه بصيغة ماركداون — طابع يومي متغيّر بطبيعته مثل
+      // الخطين أعلاه، وكان يفلت من التطبيع فيُسقط الفاحص فحشًا زائفًا كل يوم
+      // جديد (الفرق الوحيد: التاريخ). المحتوى العقاري يُقارن كما هو.
+      if (line.startsWith('- **آخر تحديث**:')) return line.replace(/\d{4}-\d{2}-\d{2}.*$/, '<date>');
       if (line.startsWith('Data-Freshness:')) return line.replace(/\d{4}-\d{2}-\d{2}\s*$/, '<date>');
       return line;
     })
