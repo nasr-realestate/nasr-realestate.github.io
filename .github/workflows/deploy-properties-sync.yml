@@ -53,7 +53,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
       SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN }}
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
-      SITE_URL: https://nasr-realestate.github.io
       REPORT: _diag/sync-deploy-report.txt
       # the exact sets produced by the offline audit of _properties/*.md (see _worker/README.md)
       # last reviewed 2026-10-18: أُضيف عقارا 16 و17 أكتوبر إلى IN_SCOPE_IDS
@@ -315,18 +314,13 @@ jobs:
           # هل الـfeed المنشور يحمل source_sha256؟ مولّد الطبقة الآلية (deploy.yml) يضيفه،
           # أما النشر من الفرع (legacy) فلا يشغّله؛ وحينها يستحيل «complete في تشغيل
           # واحد» بنيويًا لأن كل الملفات تحتاج قراءة. نقرأ الـfeed نفسه بدل الافتراض.
-          SHA_COVER=$(curl -sS -m 60 "${SITE_URL}/ai-feed.json?sha_check=$(date +%s)" 2>/dev/null | jq '[.properties[]? | select((.source_sha256 // "") != "")] | length' 2>/dev/null || echo 0)
-          case "$SHA_COVER" in ''|*[!0-9]*) SHA_COVER=0;; esac
-          echo "feed source_sha256 coverage: ${SHA_COVER}/${EXPECTED_FILES}"
+          # ملاحظة: لا نستنتج وجود source_sha256 من استجابة الموقع (قد يخدم CDN
+          # نسخة قديمة). الـWorker نفسه يعلنها في كل تشغيل عبر github.source_sha_present.
           MAX_ATTEMPTS=14
-          if [ "$SHA_COVER" -lt "$EXPECTED_FILES" ]; then
-            MAX_ATTEMPTS=$(( (EXPECTED_FILES + 39) / 40 + 2 ))
-            echo "NOTE: الـfeed بلا source_sha256 (نشر من الفرع) — التقارب عبر تشغيلات متتالية؛ سقف المحاولات=$MAX_ATTEMPTS"
-          fi
           echo "=== 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ==="
           rm -f /tmp/ok*.json
           n=0; ok=0
-          while [ "$n" -lt "$MAX_ATTEMPTS" ] && [ "$ok" -lt 5 ]; do
+          while [ "$n" -lt "$MAX_ATTEMPTS" ] && [ "$ok" -lt 8 ]; do
             n=$((n+1))
             OUT="/tmp/attempt$n.json"
             echo "--- run attempt $n (successful runs so far: $ok) ---"
@@ -351,6 +345,10 @@ jobs:
             cp "$OUT" "/tmp/ok$ok.json"
             check "run${ok}_no_write_failures" "$(vget '.db.write_failures' "$OUT")" "0"
             [ "$(vget '.github.complete' "$OUT")" = "true" ] && break
+            if [ "$(vget '.github.source_sha_present' "$OUT")" = "false" ]; then
+              echo "NOTE: الـfeed المنشور بلا source_sha256 — إكمال 103 ملفًا في تشغيل واحد مستحيل مع ميزانية 40؛ نكتفي بتشغيل سليم ونثبت التغطية من جدول الحالة"
+              break
+            fi
             sleep 63
           done
           LAST="/tmp/attempt$n.json"
@@ -361,12 +359,11 @@ jobs:
           else
             LAST="/tmp/ok$ok.json"
           fi
-          if [ "$SHA_COVER" -ge "$EXPECTED_FILES" ]; then
-            check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          if [ "$(vget '.github.source_sha_present' "$LAST")" = "false" ]; then
+            echo "SKIP  final_pass_complete: الـfeed المنشور بلا source_sha256 — الاكتمال في تشغيل واحد غير ممكن بنيويًا؛ التغطية تُثبت من جدول الحالة"
           else
-            echo "SKIP  final_pass_complete: الـfeed بلا source_sha256 (نشر من الفرع) — إثبات التغطية من جدول الحالة"
+            check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
           fi
-          check "state_files_tracked" "$(vget '.state.files_tracked' /tmp/verify_state.json)" "$EXPECTED_FILES"
           check "file_list_source"      "$(vget '.github.source' "$LAST")" "ai-feed.json"
           check "feed_total_matches_files" "$(vget '.github.feed_total' "$LAST")" "$(vget '.github.files_total' "$LAST")"
           echo
@@ -374,6 +371,7 @@ jobs:
           report /tmp/verify_state.json
           jq -c '.state' /tmp/verify_state.json 2>/dev/null
           echo "state: $(vget '.state.files_tracked' /tmp/verify_state.json) files tracked · in-scope $(vget '.state.in_scope' /tmp/verify_state.json) · out-of-scope $(vget '.state.out_of_scope' /tmp/verify_state.json) · invalid $(vget '.state.invalid' /tmp/verify_state.json)"
+          check "state_files_tracked" "$(vget '.state.files_tracked' /tmp/verify_state.json)" "$EXPECTED_FILES"
           check "state_in_scope"        "$(vget '.state.in_scope' /tmp/verify_state.json)" "$EXPECTED_IN_SCOPE"
           check "state_out_of_scope_12" "$(vget '.state.out_of_scope' /tmp/verify_state.json)" "12"
           check "state_invalid_8"       "$(vget '.state.invalid' /tmp/verify_state.json)" "8"
@@ -410,7 +408,11 @@ jobs:
           echo "source 9 rows pre-existing in D1 before this sync: ${B_SRC9} (legacy ingestion — this Worker never deletes)"
           echo "per-id reconciliation: in-scope $(vget '.lists.in_scope.present' /tmp/verify_after.json)/$EXPECTED_IN_SCOPE present · out-of-scope $(vget '.lists.out_of_scope.present' /tmp/verify_after.json)/12 still in listings from a legacy ingestion · invalid $(vget '.lists.invalid.present' /tmp/verify_after.json)/8 legacy"
           check "in_scope_present"          "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "$EXPECTED_IN_SCOPE/$EXPECTED_IN_SCOPE"
-          check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "$B_ZERO"
+          # الحماية المطلوبة: ألّا يُمسح area_id قديم (أي ألّا يزيد عدد الصفوف بلا منطقة).
+          # نقصانه يعني أن ملفًا صار يطابق منطقة فرعية من جدول areas — إثراء وليس فقدانًا،
+          # ويُطبع الفرق صراحةً للمراجعة.
+          echo "null-area rows before/after: ${B_ZERO} -> ${A_ZERO} (النقص = مطابقة منطقة جديدة، وليس مسحًا)"
+          check "null_area_not_cleared"     "$([ "${A_ZERO:-0}" -le "${B_ZERO:-0}" ] && echo true)" "true"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
           check "run_health_no_active_error" "$(vget '.run_health.active' /tmp/verify_after.json)" "false"
           check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
@@ -424,7 +426,7 @@ jobs:
           echo "invalid ids already present in D1 before:      $(vget '.lists.invalid.present' /tmp/verify_before.json) (absent: $((8 - $(vget '.lists.invalid.present' /tmp/verify_before.json))))"
           echo "source-9 rows without an area before/after:    ${B_ZERO} -> ${A_ZERO}"
           echo "legacy area_id values cleared by the R1 rule: $(jq -s 'map(.db.area_cleared // 0) | add' /tmp/attempt*.json)"
-          check "null_area_preserved_final" "$A_ZERO" "$B_ZERO"
+          check "null_area_not_cleared_final" "$([ "${A_ZERO:-0}" -le "${B_ZERO:-0}" ] && echo true)" "true"
           check "out_of_scope_rows_untouched" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.out_of_scope' /tmp/verify_after.json)"
           check "invalid_rows_untouched"      "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_before.json)" "$(jq -S -c '.preexisting_rows.invalid'      /tmp/verify_after.json)"
           echo

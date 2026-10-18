@@ -415,6 +415,10 @@ async function githubFeed(env, log) {
     paths.add(f.path);
   }
   files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  // هل الـfeed يحمل بصمة محتوى لكل ملف؟ بدونها لا مسار سريع، و«complete في
+  // تشغيل واحد» مستحيل إذا زاد عدد الملفات على الميزانية. نُصدّرها صراحةً
+  // بدل تخمينها من الموقع (قد يخدم CDN نسخة قديمة).
+  if (log) log.source_sha_present = files.every((f) => Boolean(f.sha));
   return files;
 }
 
@@ -920,7 +924,7 @@ async function runSync(env, opts = {}) {
       files_total: 0, fetched: 0, skipped_unchanged: 0,
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
       complete: true, truncated: false,
-      feed_url: null, feed_generated_at: null, feed_total: null,
+      feed_url: null, feed_generated_at: null, feed_total: null, source_sha_present: null,
       retries: 0, last_http_status: null, rate_limit_remaining: null,
       rate_limit_reset: null, feed_error: null,
     },
