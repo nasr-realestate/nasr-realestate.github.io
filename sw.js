@@ -11,13 +11,13 @@
    • الاستراتيجية: Network-First مع السقوط على الكاش عند انقطاع الشبكة.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'smsar-v2';
+const CACHE_NAME = 'smsar-v3'; // رُفع 2026-10-18 لتحديث العملاء بعد تغيير قائمة الـprecache
 const OFFLINE_URL = '/agent.html';
 
 const PRECACHE_URLS = [
   '/',
   '/agent.html',
-  '/assets/css/style.css',
+  '/assets/css/style.min.css', // الملف الذي تُحمّله كل التخطيطات فعليًا (style.css مصدر فقط)
   '/assets/img/logo.webp',
   '/manifest.json',
 ];
