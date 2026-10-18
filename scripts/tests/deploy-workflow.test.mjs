@@ -117,11 +117,13 @@ test("sync verification: يكمل عبر تشغيلات عند غياب source_s
   // واحد (كل الملفات تحتاج قراءة وحد الميزانية 40). الفحص هنا يضمن أن الـworkflow
   // يقرأ تغطية الـsha من الـfeed ويخفّف شرط complete فقط في هذه الحالة.
   const s = read('deploy-properties-sync.yml');
-  assert.match(s, /SITE_URL:\s*https:\/\/nasr-realestate\.github\.io/);
-  assert.match(s, /SHA_COVER=\$\(curl[^\n]*source_sha256/);
-  assert.match(s, /if \[ "\$SHA_COVER" -lt "\$EXPECTED_FILES" \]/, 'سقف المحاولات يعتمد على تغطية الـsha');
-  assert.match(s, /if \[ "\$SHA_COVER" -ge "\$EXPECTED_FILES" \]; then\n\s+check "final_pass_complete"/);
+  // مصدر الحقيقة هو إعلان الـWorker نفسه، لا استجابة قد يخدعها كاش CDN.
+  assert.match(s, /github\.source_sha_present/);
+  assert.ok(!s.includes('SHA_COVER'), 'لا نستنتج البصمات من الموقع');
+  assert.ok(s.includes('.github.source_sha_present'), 'القرار من إعلان الـWorker');
+  assert.match(s, /check "final_pass_complete"/);
   assert.match(s, /check "state_files_tracked"/);
+  assert.match(s, /check "null_area_not_cleared"/);
 });
 
 test("أسماء ملفات workflows على master فريدة (لا تصادم عند تبديل المصدر)", () => {

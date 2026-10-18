@@ -491,6 +491,7 @@ test("feed بلا source_sha256: الميزانية تتقدّم عبر تشغي
       assert.equal(res.body.status, "success");
       assert.equal(res.body.github.budget_exhausted, true, "الميزانية تُستهلك في كل تشغيل");
       assert.equal(res.body.errors.length, 0);
+      assert.equal(res.body.github.source_sha_present, false, "غياب sha يجب أن يُعلن صراحةً");
       fetchedSets.push(gh.calls.raw.slice(before));
       await new Promise((r) => setTimeout(r, 5)); // يضمن اختلاف last_synced_at
     }
@@ -503,6 +504,9 @@ test("feed بلا source_sha256: الميزانية تتقدّم عبر تشغي
       assert.ok(covered.has(`_properties/${n}.md`), `الملف ${n}.md لم يُقرأ في أي تشغيل`);
     }
     assert.equal(db.state.listings.length, 5, "كل الملفات الصالحة أُدخلت عبر التشغيلات");
+    gh.omitSha256 = false; // نفس الـfeed لكن بالبصمات (نشر deploy.yml)
+    const withSha = await syncViaHttp(env);
+    assert.equal(withSha.body.github.source_sha_present, true, "الـfeed الحالي يحمل sha لكل ملف");
     const paths = [...db.state.syncState.values()].map((r) => r.file_path);
     for (const n of names) assert.ok(paths.includes(`_properties/${n}.md`), `${n}.md بلا صف حالة`);
   } finally {
