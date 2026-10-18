@@ -112,6 +112,18 @@ test("قوائم تصنيف deploy-properties-sync تغطّي كل ملفات _p
   assert.equal(inScope.length + outScope.length + invalid.length, fileIds.length);
 });
 
+test("sync verification: يكمل عبر تشغيلات عند غياب source_sha256 بدل فشل مستحيل", () => {
+  // النشر من الفرع (legacy) لا يولّد source_sha256، ومعه يستحيل complete في تشغيل
+  // واحد (كل الملفات تحتاج قراءة وحد الميزانية 40). الفحص هنا يضمن أن الـworkflow
+  // يقرأ تغطية الـsha من الـfeed ويخفّف شرط complete فقط في هذه الحالة.
+  const s = read('deploy-properties-sync.yml');
+  assert.match(s, /SITE_URL:\s*https:\/\/nasr-realestate\.github\.io/);
+  assert.match(s, /SHA_COVER=\$\(curl[^\n]*source_sha256/);
+  assert.match(s, /if \[ "\$SHA_COVER" -lt "\$EXPECTED_FILES" \]/, 'سقف المحاولات يعتمد على تغطية الـsha');
+  assert.match(s, /if \[ "\$SHA_COVER" -ge "\$EXPECTED_FILES" \]; then\n\s+check "final_pass_complete"/);
+  assert.match(s, /check "state_files_tracked"/);
+});
+
 test("أسماء ملفات workflows على master فريدة (لا تصادم عند تبديل المصدر)", () => {
   const names = workflows().map((f) => path.basename(f, path.extname(f)));
   assert.equal(new Set(names).size, names.length);
