@@ -75,6 +75,43 @@ test("ملف package-lock مُتتبَّع فعلًا، وتعليق deploy.yml 
   assert.match(s, /package-lock\.json \*\*مُتتبَّع في Git\*\*/);
 });
 
+test("قوائم تصنيف deploy-properties-sync تغطّي كل ملفات _properties بلا نقص أو تكرار", () => {
+  // سبب الاختبار: القوائم مكتوبة يدويًا داخل الـworkflow، وأي عقار جديد يُضاف
+  // إلى _properties ويُنسى هنا يجعل التحقّق الحقيقي بعد النشر يفشل بسبب قديم
+  // لا علاقة له بالكود. الفحص هنا ثابت (بلا شبكة) ويفشل برسالة تسمّي الناقص.
+  const s = read('deploy-properties-sync.yml');
+  const pick = (key) => {
+    const m = s.match(new RegExp(`${key}:\\s*"([^"]*)"`));
+    assert.ok(m, `${key} مفقود من الـworkflow`);
+    return m[1].split(',').map((x) => x.trim()).filter(Boolean);
+  };
+  const inScope = pick('IN_SCOPE_IDS');
+  const outScope = pick('OUT_OF_SCOPE_IDS');
+  const invalid = pick('INVALID_IDS');
+  const all = [...inScope, ...outScope, ...invalid];
+
+  assert.equal(new Set(all).size, all.length, 'معرّف مكرر بين القوائم');
+  assert.equal(outScope.length, 12, 'عدد خارج النطاق يجب أن يطابق اختبارات الـWorker');
+  assert.equal(invalid.length, 8, 'عدد غير الصالح يجب أن يطابق اختبارات الـWorker');
+
+  const dir = path.join(ROOT, '_properties');
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+  const fileIds = files.map((f) => {
+    const raw = fs.readFileSync(path.join(dir, f), 'utf8');
+    const fm = raw.startsWith('---') ? raw.split('---')[1] : '';
+    const m = fm.match(/^id:\s*"?([^"\n]+)"?/m);
+    assert.ok(m, `${f}: id مفقود من الـfront matter`);
+    return m[1].trim();
+  });
+
+  const listed = new Set(all);
+  const missing = fileIds.filter((id) => !listed.has(id));
+  assert.deepEqual(missing, [], `عقارات غير مصنّفة في الـworkflow: ${missing.join(', ')}`);
+  const ghosts = all.filter((id) => !fileIds.includes(id));
+  assert.deepEqual(ghosts, [], `معرّفات في الـworkflow بلا ملف: ${ghosts.join(', ')}`);
+  assert.equal(inScope.length + outScope.length + invalid.length, fileIds.length);
+});
+
 test("أسماء ملفات workflows على master فريدة (لا تصادم عند تبديل المصدر)", () => {
   const names = workflows().map((f) => path.basename(f, path.extname(f)));
   assert.equal(new Set(names).size, names.length);
