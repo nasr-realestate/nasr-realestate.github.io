@@ -67,34 +67,35 @@ test("a bot reply pins the chat to the bottom while the on-screen keyboard is op
   assert.equal(a.scrollBtn._classes.has("show"), false, "no «للأسفل» button while following the chat");
 });
 
-// ── 2) حتى لو reflow قلّب وضع القارئ غلط، الكيبورد المفتوح يفرض النزول ────────────────
-test("with the keyboard open the reply still scrolls down even if the reader state got flipped", () => {
+// ── 2) قارئ طالع يقرا والكيبورد مفتوح: الرد ما يخطفهوش (إلا بعد إرساله هو) ────────────────
+test("a reader who scrolled up stays put when a reply arrives, even with the keyboard open", () => {
   const vv = makeVv();
   const { a, chat } = setup({ visualViewport: vv });
   // (أ) سكرول وهمي أثناء انتقال الكيبورد: نافذة الانتقال بتحمي وضع القارئ — ما بيتقلبش
   vv.height = 460; vv.listeners.resize();                // الكيبورد لسه بيفتح (الانتقال شغّال)
   scrolledUp(chat);
   assert.equal(a.run("stickToBottom"), true, "a stray reflow scroll during the keyboard transition is ignored");
-  // (ب) وبعد ما الانتقال يخلص، لو سكرول حقيقي قلب الوضع — الكيبورد المفتوح بيفرض النزول برضه
+  // (ب) وبعد ما الانتقال يخلص، سكرول حقيقي بيقلب الوضع — الرد الجاي ما يخطفوش
   openKeyboard(a, vv);                                   // الكيبورد استقر (نافذة الانتقال خلصت)
   scrolledUp(chat);                                      // scroll حقيقي بعد انتهاء الانتقال
   assert.equal(a.run("stickToBottom"), false, "a real scroll after the transition still counts as reading upwards");
   chat.scrollHeight = 2400;
   a.run(`renderMsg("رد الوكيل", "bot")`);
-  assert.equal(chat.scrollTop, chat.scrollHeight, "the reply is visible without closing the keyboard");
+  assert.equal(chat.scrollTop, 0, "the reader is never yanked while reading older messages");
+  assert.equal(a.scrollBtn._classes.has("show"), true, "«للأسفل» appears so the reader can rejoin");
 });
 
-// ── 3) أندرويد القديم: مفيش فرق viewport يُقاس — التركيز على حقل الكتابة يكفي ─────────
-test("on a touch device with the composer focused, the reply pins even without a measurable viewport change", () => {
+// ── 3) التركيز وحده (من غير قياس viewport) ما يقلبش وضع القارئ ولا يزقّه ─────────────
+test("a focused composer alone never overrides a reader who scrolled up (touch or desktop)", () => {
   const { a, chat } = setup();
   a.win.matchMedia = () => ({ matches: true });          // جهاز لمس
   a.doc.activeElement = a.el("msgInput");                // الكيبورد مفتوح
   scrolledUp(chat);
   chat.scrollHeight = 2400;
   a.run(`renderMsg("رد الوكيل", "bot")`);
-  assert.equal(chat.scrollTop, chat.scrollHeight, "pinned like WhatsApp");
+  assert.equal(chat.scrollTop, 0, "focus is not consent to scroll");
 
-  // سطح مكتب (مؤشر دقيق) + قارئ طالع يقرا → ما نخطَفوش
+  // حتى على سطح المكتب: نفس القاعدة — القارئ فوق ما يتخطفش
   const desk = setup();
   desk.a.win.matchMedia = () => ({ matches: false });
   desk.a.doc.activeElement = desk.a.el("msgInput");

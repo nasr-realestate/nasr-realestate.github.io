@@ -8,13 +8,14 @@ custom_viewport: true   # وسم <viewport> خاص بالصفحة يُدرج م�
 image: "/assets/img/google-local.webp"
 description: "بتدور على عقار أو عايز تبيع أو تأجر؟ احكي طلبك للوكيل الذكي، وخليه يساعدك تبدأ خطوتك الجاية. اضغط وابدأ المحادثة."
 extra_head: |
-  <!-- ⭐ تثبيت شاشة المحادثة كتطبيق مدمج (App-like) — وسم viewport خاص بالصفحة (2026-10-12)
-       الأوامر الأربعة المطلوبة بتمنع التكبير على الموبايل (initial-scale + maximum-scale +
-       user-scalable)، ومعها viewport-fit=cover (المساحة الآمنة على آيفون) و
+  <!-- ⭐ وسم viewport خاص بالصفحة (2026-10-12، مُنقَّح 2026-10-18)
+       نحتاج فقط: viewport-fit=cover (المساحة الآمنة على آيفون) و
        interactive-widget=resizes-content (إصلاح لوحة المفاتيح 2026-10-11 — تحذير
-       «⚠️ لا تحذفها» في _layouts/app.html). القالب بيتخطّى وسمه لهذه الصفحة بفضل
-       `custom_viewport: true` في الـfront matter (أول وسم viewport بس هو اللي المتصفح بياخده). -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+       «⚠️ لا تحذفها» في _layouts/app.html).
+       ⚠️ maximum-scale=1 و user-scalable=no اتشالوا: كانوا يمنعون التكبير ويخالفون
+       WCAG 1.4.4 (نفس الإصلاح المطبَّق في القالب). القالب بيتخطّى وسمه لهذه الصفحة
+       بفضل `custom_viewport: true` (أول وسم viewport بس هو اللي المتصفح بياخده). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
@@ -722,12 +723,37 @@ extra_head: |
     }
     html.vv-active body.page-agent .header-status { display: none; }
     html.vv-active body.page-agent .header-avatar { width: 32px; height: 32px; }
+
+    /* ═══ 2026-10-18 — agent page only: compact header, composer in flow ═══
+       كل القواعد هنا محصورة في body.page-agent فلا تلمس أي صفحة أخرى.
+       الهدف: الهيدر ياخد أقل ارتفاع ممكن والرسائل تاخد الباقي، ومربع الكتابة
+       يفضل عنصر flex في التدفق (مش fixed) فوق الـsafe-area. */
+    body.page-agent #app > .header {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 4px);
+      padding-bottom: 4px;
+      min-height: 0;
+    }
+    body.page-agent .header-avatar { width: 34px; height: 34px; }
+    body.page-agent .header-name { font-size: 14.5px; }
+    body.page-agent .header-status { font-size: 11.5px; }
+    body.page-agent #app > .bottom-dock {
+      flex: 0 0 auto;
+      position: relative;
+      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
+    body.page-agent #app > .chat-area {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scroll-padding-block: 8px;
+    }
   </style>
 extra_scripts: |
   <script src="/assets/js/nasr-maps.js" defer></script>
 ---
 <div id="app">
-  <h1 class="sr-only">طارق طنطاوي — وكيل عقارات مدينة نصر</h1>
+  <h1 class="sr-only">وكيل طارق الذكي — وكيل عقارات مدينة نصر</h1>
 
   <header class="header">
     <button class="header-back" onclick="goBack()" title="رجوع" aria-label="رجوع">
@@ -738,12 +764,12 @@ extra_scripts: |
 
     <div class="header-info" onclick="openAbout()">
       <div class="header-name">
-        طارق طنطاوي
+        وكيل طارق الذكي
         <span class="header-badge">سمسار طلبك</span>
       </div>
       <div class="header-status" id="statusLine">
         <span class="status-dot"></span>
-        <span id="statusText">متصل الآن</span>
+        <span id="statusText">وكيل ذكي • متصل الآن</span>
         <span class="header-service">عقارات مدينة نصر</span>
       </div>
     </div>
@@ -843,7 +869,7 @@ extra_scripts: |
     <div class="privacy-icon">🏠</div>
     <div class="privacy-badge">
       <i class="fas fa-house ag-ai-ico"></i>
-      طارق طنطاوي — سمسار مدينة نصر
+      وكيل طارق الذكي — سمسار مدينة نصر
     </div>
     <h2 class="privacy-title" id="privacyTitle">قبل ما تبدأ، خليك عارف</h2>
     <p class="privacy-desc">
@@ -934,7 +960,7 @@ const GOOGLE_URL   = "https://maps.app.goo.gl/8QWS1BCPBViggDfa7";
 const VALUATION_URL = "/tools/valuation.html";
 const MAX_IMAGES   = 5;
 const FORM_VERSION = "v92";
-const STATUS_ONLINE = "متصل الآن";
+const STATUS_ONLINE = "وكيل ذكي • متصل الآن";
 const WORKER_REQUEST_TIMEOUT_MS = 20000;
 const WORKER_RETRY_DELAY_MS = 500;
 
@@ -1356,10 +1382,15 @@ function renderMsg(text, type = "bot", images, noScroll = false) {
   if (noScroll) return;
   // ⭐ المستخدم: نزول فوري. البوت: لو الكيبورد مفتوح → نزول بالقوة (زي واتساب)، وإلا السلوك الذكي القديم
   if (type === "user") {
-    forceScrollToBottom();
+    // رسالة المستخدم نفسه: النزول إلزامي — هو اللي بدأ الإرسال.
+    forceScrollToBottomWithRetries();
+  } else if (stickToBottom) {
+    // الرد الجديد: نتابع بس لو القارئ مع القاع. منع الكيبورد المفتوح ما بقاش
+    // يفرض التمرير — المستخدم اللي طلع يقرا رسائل قديمة ما يتخطفش.
+    forceScrollToBottomWithRetries();
   } else {
-    if (keyboardLikelyOpen() || stickToBottom) forceScrollToBottomWithRetries();
-    else scrollToBottom();
+    // قارئ فوق: ما نحركوش، ونظهر زر «للأسفل» بس.
+    scrollToBottom();
   }
 }
 
@@ -2013,7 +2044,12 @@ function syncViewport() {
   window.addEventListener("resize", scheduleWithSettle);
   window.addEventListener("orientationchange", scheduleWithSettle);
   window.addEventListener("pageshow", scheduleWithSettle);   // رجوع من الـback-forward cache
-  msgInput.addEventListener("focus", () => setTimeout(scheduleWithSettle, 0));  // التركيز بيسبق فتح الكيبورد
+  msgInput.addEventListener("focus", () => {
+    // التركيز بيسبق فتح الكيبورد — نعيد التثبيت بعد ما الـlayout يستقر، وبس لو
+    // القارئ كان متابع (الدالة نفسها تحترم وضع القارئ اللي طالع يقرا).
+    setTimeout(scheduleWithSettle, 0);
+    setTimeout(() => { scrollToBottom(); }, 60);
+  });
   msgInput.addEventListener("blur", () => setTimeout(scheduleWithSettle, 150)); // iOS مش دايمًا بيبعت resize عند القفل
   if (vv) scheduleWithSettle();
   // 🩺 شاشة القياس — بتشتغل بس بـ ?diag=1، ومساعد تشخيص مش جزء من تجربة العميل
@@ -2092,7 +2128,7 @@ msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftK
 // ═══ INIT ═══
 function startConversation() {
   stickToBottom = true; // محادثة جديدة: نتابع آخرها
-  renderMsg("أهلاً بيك 👋\nأنا طارق طنطاوي — وكيل عقاري في مدينة نصر، خبرة 15 سنة.\n\n🏆 Google Local Guide 7\n\nتشتري ولا تأجر ولا تبيع؟", "bot");
+  renderMsg("أهلاً بيك 👋\nأنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر. خبرة 15 سنة.\n\n🏆 Google Local Guide 7\n\nتشتري ولا تأجر ولا تبيع؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderButtons(["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
   const initialIntentRack = chatArea.querySelector(".btns-rack");
