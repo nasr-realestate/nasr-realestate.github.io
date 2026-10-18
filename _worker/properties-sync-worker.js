@@ -28,7 +28,10 @@
 // Cron Trigger: [triggers] crons = ["17 * * * *"]  (كل ساعة)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const WORKER_VERSION = "v1.0.4";
+const WORKER_VERSION = "v1.1.0";
+// نسخة قواعد المعالجة فقط. تتغير عند تغيير parsing/scope فقط، لا عند تغيير
+// طريقة الجلب — حتى لا يُعاد معالجة 103 ملفات بلا داعٍ بعد نشر نقل البيانات.
+const LOGIC_VERSION = "v1.0.4";
 // آخر مراجعة: 2026-10-14 — لم يتغيّر أي سلوك. يُنشر من .github/workflows/deploy-properties-sync.yml
 // (نشر + تحقق حقيقي على D1) عند أي تغيير في هذا الملف أو في اختباراته أو في wrangler.sync.toml.
 const SERVICE_NAME = "nasr-properties-sync";
@@ -312,33 +315,144 @@ function propertyTypeFromCategory(category) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// GitHub
+// GitHub — قائمة الملفات من ai-feed.json المنشور (طلب واحد)
 // ───────────────────────────────────────────────────────────────────────────
-async function githubTree(env, log) {
-  const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
-  const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/git/trees/${branch}?recursive=1`;
-  const headers = { "user-agent": WORKER_UA, "accept": "application/vnd.github+json" };
-  if (env.GITHUB_TOKEN) headers["authorization"] = `Bearer ${env.GITHUB_TOKEN}`;
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`github_tree_failed:${res.status}:${body.slice(0, 200)}`);
+// لماذا؟ Tree API كان يعطي قائمة الملفات في طلب واحد، لكنه يعتمد على حد
+// 60 طلبًا/ساعة للزوار المجهولين، وأي فشل فيه يوقف المزامنة كلها. الـfeed
+// المنشور هو مصدر الحقيقة نفسه الذي يقرأه الوكيل وخادم MCP، ويحمل لكل وحدة
+// `source_path` (يضيفه قالب Jekyll/المولّد) و`source_sha256` عند توفره.
+//
+// لا نستخدم أي API غير موثّق: feed أولًا. وإذا غاب source_path (نسخة قديمة
+// من الـfeed) وكان GITHUB_TOKEN متاحًا نستخدم Contents API الموثّق كاحتياط
+// واحد فقط. بلا توكن ⇒ خطأ واضح في /verify بدل تخمين أسماء ملفات.
+const FEED_FALLBACK_DELAYS = [500, 1000, 2000, 4000];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchWithRetry(url, { headers = {}, log = null, label = "fetch", attempts = 4 } = {}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let res = null;
+    try {
+      res = await fetch(url, { headers });
+    } catch (err) {
+      lastError = new Error(`${label}_network:${String(err.message || err).slice(0, 160)}`);
+    }
+    if (res) {
+      if (log) {
+        const remaining = res.headers.get("x-ratelimit-remaining");
+        const reset = res.headers.get("x-ratelimit-reset");
+        if (remaining !== null) log.rate_limit_remaining = Number(remaining);
+        if (reset !== null) log.rate_limit_reset = new Date(Number(reset) * 1000).toISOString();
+        log.last_http_status = res.status;
+      }
+      if (res.ok) return res;
+      const status = res.status;
+      lastError = new Error(`${label}_failed:${status}`);
+      // 404/422 أخطاء دائمة: لا فائدة من إعادة المحاولة
+      if (status === 404 || status === 422) break;
+      let delay = FEED_FALLBACK_DELAYS[Math.min(attempt - 1, FEED_FALLBACK_DELAYS.length - 1)];
+      const retryAfter = res.headers.get("retry-after");
+      if (retryAfter) {
+        const seconds = Number(retryAfter);
+        const parsed = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
+        if (Number.isFinite(parsed) && parsed > 0) delay = Math.min(parsed, 8000);
+      } else if ((status === 403 || status === 429) && log && log.rate_limit_remaining === 0 && log.rate_limit_reset) {
+        const wait = Date.parse(log.rate_limit_reset) - Date.now() + 1000;
+        if (Number.isFinite(wait) && wait > 0) delay = Math.min(wait, 8000);
+      }
+      if (log) log.retries = (log.retries || 0) + 1;
+      if (attempt < attempts) await sleep(Math.min(delay, 8000));
+    } else if (attempt < attempts) {
+      await sleep(FEED_FALLBACK_DELAYS[Math.min(attempt - 1, FEED_FALLBACK_DELAYS.length - 1)]);
+    }
   }
-  const data = await res.json();
+  throw lastError || new Error(`${label}_failed`);
+}
+
+function githubHeaders(env) {
+  const headers = { "user-agent": WORKER_UA, "accept": "application/vnd.github+json" };
+  if (env.GITHUB_TOKEN) headers.authorization = `Bearer ${env.GITHUB_TOKEN}`;
+  return headers;
+}
+
+/** قائمة الملفات من feed المنشور — طلب واحد. */
+async function githubFeed(env, log) {
+  const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
+  const base = String(env.SYNC_FEED_URL || `${SOURCE_BASE_URL}/ai-feed.json`);
+  const url = `${base}${base.includes("?") ? "&" : "?"}sync_ts=${Date.now()}`;
+  const res = await fetchWithRetry(url, {
+    headers: { "user-agent": WORKER_UA, accept: "application/json", "cache-control": "no-cache" },
+    log, label: "github_feed", attempts: 4,
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error("github_feed_invalid_json"); }
+  const properties = Array.isArray(data.properties) ? data.properties : [];
+  if (!properties.length) throw new Error("github_feed_empty");
+  if (log) {
+    log.feed_url = base;
+    log.feed_generated_at = data.generated_at || null;
+    log.feed_total = Number(data.total_count) || properties.length;
+    log.branch = branch;
+  }
   const prefix = `${GITHUB.dir}/`;
-  const files = (data.tree || [])
-    .filter((e) => e.type === "blob" && typeof e.path === "string" && e.path.startsWith(prefix) && e.path.endsWith(".md"))
-    .map((e) => ({ path: e.path, file: e.path.slice(prefix.length), sha: e.sha, size: e.size ?? null }))
-    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-  if (log) log.githubTruncated = Boolean(data.truncated);
+  const files = properties.map((p) => {
+    const sourcePath = String(p.source_path || "").trim();
+    if (!sourcePath.startsWith(prefix) || !sourcePath.endsWith(".md")) {
+      throw new Error(`feed_missing_source_path:${String(p.slug || p.id || "unknown").slice(0, 80)}`);
+    }
+    return {
+      path: sourcePath,
+      file: sourcePath.slice(prefix.length),
+      sha: String(p.source_sha256 || "").trim(),
+      size: null,
+    };
+  });
+  // نفس المسار مرتين = feed غير متسق؛ نرفض بدل كتابة صفوف مكررة.
+  const paths = new Set();
+  for (const f of files) {
+    if (paths.has(f.path)) throw new Error(`feed_duplicate_source_path:${f.path}`);
+    paths.add(f.path);
+  }
+  files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   return files;
 }
 
-async function githubRaw(env, path) {
+/** احتياط موثّق (Contents API) — فقط عند غياب source_path ومع وجود GITHUB_TOKEN. */
+async function githubContents(env, log) {
+  const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
+  const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.dir}?ref=${encodeURIComponent(branch)}`;
+  const res = await fetchWithRetry(url, { headers: githubHeaders(env), log, label: "github_contents", attempts: 3 });
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error("github_contents_unexpected_shape");
+  if (log) log.fallback_source = "contents-api";
+  return data
+    .filter((e) => e && e.type === "file" && typeof e.name === "string" && e.name.endsWith(".md"))
+    .map((e) => ({ path: `${GITHUB.dir}/${e.name}`, file: e.name, sha: String(e.sha || ""), size: e.size ?? null }))
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+async function githubFileList(env, log) {
+  try {
+    return await githubFeed(env, log);
+  } catch (err) {
+    const message = String(err.message || err);
+    // feed قديم بلا source_path: احتياط واحد فقط إن وُجد توكن (API موثّق، لا Tree).
+    if (message.startsWith("feed_missing_source_path") && env.GITHUB_TOKEN) {
+      log.feed_error = message;
+      return await githubContents(env, log);
+    }
+    log.feed_error = message.slice(0, 200);
+    throw err;
+  }
+}
+
+async function githubRaw(env, path, log) {
   const branch = envBranch(env.GITHUB_BRANCH, GITHUB.branch);
   const url = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${branch}/${path}`;
-  const res = await fetch(url, { headers: { "user-agent": WORKER_UA } });
-  if (!res.ok) throw new Error(`github_raw_failed:${res.status}:${path}`);
+  const res = await fetchWithRetry(url, {
+    headers: { "user-agent": WORKER_UA }, log, label: `github_raw:${path}`, attempts: 3,
+  });
   return await res.text();
 }
 
@@ -802,9 +916,13 @@ async function runSync(env, opts = {}) {
     worker_version: WORKER_VERSION,
     logic_reprocess: false,
     github: {
+      source: "ai-feed.json",
       files_total: 0, fetched: 0, skipped_unchanged: 0,
       missing_from_github: 0, budget_skipped: 0, budget_exhausted: false,
       complete: true, truncated: false,
+      feed_url: null, feed_generated_at: null, feed_total: null,
+      retries: 0, last_http_status: null, rate_limit_remaining: null,
+      rate_limit_reset: null, feed_error: null,
     },
     db: {
       inserted: 0, updated: 0, unchanged: 0, unchanged_invalid: 0, unchanged_out_of_scope: 0, area_cleared: 0,
@@ -906,10 +1024,18 @@ async function runSync(env, opts = {}) {
       }
     }
 
-    // 4) قائمة ملفات GitHub
-    const files = await githubTree(env, summary.github);
+    // 4) قائمة ملفات GitHub من feed المنشور (طلب واحد) — لا Tree API
+    const files = await githubFileList(env, summary.github);
     summary.github.files_total = files.length;
-    summary.github.truncated = Boolean(summary.github.githubTruncated);
+    summary.github.truncated = false;
+    // ترتيب الأولويات: الملفات غير المعالجة/الأقدم في جدول الحالة أولًا، حتى
+    // يكمل التشغيل الجزئي (budget) من حيث توقف بدل أن يعيد قراءة نفس الملفات.
+    files.sort((a, b) => {
+      const ta = (state.get(a.path) || {}).last_synced_at || "";
+      const tb = (state.get(b.path) || {}).last_synced_at || "";
+      if (ta !== tb) return ta < tb ? -1 : 1;
+      return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+    });
 
     const seenIds = new Set();      // external_ids اللي اتعالجت في التشغيل ده
     const excludedIds = new Set();  // external_ids الملفات خارج النطاق (R2) — مش «مختفية»
@@ -930,9 +1056,9 @@ async function runSync(env, opts = {}) {
       const priorLogic = priorByPath && priorByPath.content_hash
         ? String(priorByPath.content_hash).split(":")[0]
         : null;
-      const sameLogic = priorLogic === WORKER_VERSION;
+      const sameLogic = priorLogic === LOGIC_VERSION;
       if (priorByPath && !sameLogic) summary.logic_reprocess = true;
-      if (sameLogic && priorByPath && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
+      if (sameLogic && priorByPath && f.sha && priorByPath.blob_sha === f.sha && ((priorId && existing.has(priorId)) || priorInvalid || priorOutOfScope)) {
         summary.github.skipped_unchanged++;
         if (priorInvalid) summary.db.unchanged_invalid++;
         else if (priorOutOfScope) summary.db.unchanged_out_of_scope++;
@@ -948,7 +1074,7 @@ async function runSync(env, opts = {}) {
         continue;
       }
       fetchCount++;
-      const raw = await githubRaw(env, f.path);
+      const raw = await githubRaw(env, f.path, summary.github);
       summary.github.fetched++;
       const contentHash = await sha256Hex(raw);
 
@@ -956,7 +1082,7 @@ async function runSync(env, opts = {}) {
       if (!fm) {
         summary.invalid_files.push({ file: f.path, reason: "no_front_matter" });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${LOGIC_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -968,14 +1094,14 @@ async function runSync(env, opts = {}) {
         summary.out_of_scope_files.push({ file: f.path, reasons: built.outOfScopeReasons });
         summary.db.out_of_scope++;
         excludedIds.add(record.externalId);
-        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        if (stateEnabled) stateWrites.push([f.path, OOS_MARK + f.path, f.sha, `${LOGIC_VERSION}:${contentHash}`]);
         continue;
       }
 
       if (built.problems.length) {
         summary.invalid_files.push({ file: f.path, reason: built.problems.join(",") });
         summary.db.invalid++;
-        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        if (stateEnabled) stateWrites.push([f.path, INVALID_MARK + f.path, f.sha, `${LOGIC_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -994,7 +1120,7 @@ async function runSync(env, opts = {}) {
 
       if (dryRun) {
         summary.db[existingRow ? "updated" : "inserted"]++;
-        if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+        if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${LOGIC_VERSION}:${contentHash}`]);
         continue;
       }
 
@@ -1016,7 +1142,7 @@ async function runSync(env, opts = {}) {
       else if (result.action === "updated") summary.db.updated++;
       else summary.db.unchanged++;
 
-      if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${WORKER_VERSION}:${contentHash}`]);
+      if (stateEnabled) stateWrites.push([f.path, record.externalId, f.sha, `${LOGIC_VERSION}:${contentHash}`]);
     }
 
     // 5) ملفات موجودة في D1 ومختفية من GitHub ⇒ تُسجَّل فقط، بدون أي حذف.
@@ -1031,7 +1157,7 @@ async function runSync(env, opts = {}) {
 
     // 6) كتابة جدول الحالة (batch) — دايمًا مع صف علامة وقت آخر تشغيل
     if (stateEnabled && !dryRun) {
-      stateWrites.push([RUN_MARKER, RUN_MARKER, null, WORKER_VERSION]);
+      stateWrites.push([RUN_MARKER, RUN_MARKER, null, LOGIC_VERSION]);
       const stmts = stateWrites.map(([path, externalId, sha, hash]) =>
         db
           .prepare(
@@ -1116,6 +1242,9 @@ async function serviceInfo(env, request) {
     github: {
       owner: GITHUB.owner, repo: GITHUB.repo, dir: GITHUB.dir,
       branch: envBranch(env.GITHUB_BRANCH, GITHUB.branch),
+      file_list: "ai-feed.json (single request)",
+      feed_url: String(env.SYNC_FEED_URL || `${SOURCE_BASE_URL}/ai-feed.json`),
+      fallback: "contents-api (only with GITHUB_TOKEN and a feed without source_path)",
     },
     scheduler: "Cloudflare Cron",
     cron: "17 * * * *",
@@ -1184,6 +1313,40 @@ async function manyRows(db, sql, binds = []) {
   } catch (err) {
     return { error: String(err.message || err).slice(0, 160) };
   }
+}
+
+// صحة التشغيل كما يراها /verify: هل آخر خطأ أحدث من آخر نجاح؟
+// لا كتابة هنا إطلاقًا — الخطأ «يُمسَح» منطقيًا بمجرد تسجيل تشغيل ناجح أحدث.
+async function runHealth(db, runMap) {
+  const empty = { available: false, active: false, last_success: null, last_error: null };
+  if (!runMap || !runMap.status) return empty;
+  const rows = await manyRows(
+    db,
+    `SELECT rowid AS __rowid, * FROM ingestion_runs WHERE source_id = ? ORDER BY rowid DESC LIMIT 25`,
+    [SOURCE_ID]
+  );
+  if (!Array.isArray(rows)) return { ...empty, error: rows.error };
+  const shape = (r) => ({
+    rowid: r.__rowid,
+    status: runMap.status ? r[runMap.status] ?? null : null,
+    started_at: runMap.startedAt ? r[runMap.startedAt] ?? null : null,
+    finished_at: runMap.finishedAt ? r[runMap.finishedAt] ?? null : null,
+    errors_count: runMap.errorsCount ? r[runMap.errorsCount] ?? null : null,
+    details: runMap.details ? String(r[runMap.details] ?? "").slice(0, 1200) : null,
+  });
+  const statusOf = (r) => String(r[runMap.status] ?? "");
+  const success = rows.find((r) => statusOf(r) === "success");
+  const failure = rows.find((r) => statusOf(r) === "error" || statusOf(r) === "partial_success");
+  const active = Boolean(failure && (!success || Number(failure.__rowid) > Number(success.__rowid)));
+  return {
+    available: true,
+    active,
+    last_success: success ? shape(success) : null,
+    last_error: failure ? shape(failure) : null,
+    note: active
+      ? "آخر تشغيل فاشل أو جزئي أحدث من آخر نجاح — بيانات D1 قد تكون قديمة. رسالة الخطأ في last_error.details."
+      : "لا خطأ نشط: لا يوجد خطأ أحدث من آخر تشغيل ناجح.",
+  };
 }
 
 async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nullAreaIds = [], inScopeIds = [], rowLists = [] } = {}) {
@@ -1283,6 +1446,7 @@ async function verificationReport(env, { outOfScopeIds = [], invalidIds = [], nu
     source_name: SOURCE_NAME,
     checked_at: new Date().toISOString(),
     last_run: lastRunInfo,
+    run_health: await runHealth(db, schema.run_mapping),
     read_only: true,
     listings_table: listingsTable,
     mapping: { sourceId: sourceCol, externalId: externalCol, areaId: areaCol },

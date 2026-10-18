@@ -52,6 +52,7 @@ sitemap: false
       "title": {{ property.title | jsonify }},
       "url": {{ property.url | absolute_url | jsonify }},
       "slug": {{ property.slug | default: property.id | default: "" | jsonify }},
+      "source_path": {{ property.relative_path | default: property.path | default: "" | jsonify }},
 
       "transaction": {% if property.category contains "rent" or property.title contains "إيجار" or property.title contains "ايجار" or property.title contains "للإيجار" or property.title contains "للايجار" or property.title contains "شهرياً" or property.title contains "شهريا" %}"rent"{% else %}"sale"{% endif %},
 

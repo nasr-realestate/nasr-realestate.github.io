@@ -283,7 +283,7 @@ jobs:
           while [ "$dn" -lt 6 ]; do
             dn=$((dn+1))
             call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
-            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
+            jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
             DERR="$(vget '.errors[0] // ""' /tmp/dryrun.json)"
             case "$DERR" in
               github_tree_failed*|*rate\ limit*) echo "  GitHub tree API rate limit — retrying in 120s"; sleep 120; continue;;
@@ -305,12 +305,12 @@ jobs:
             OUT="/tmp/attempt$n.json"
             echo "--- run attempt $n (successful runs so far: $ok) ---"
             call "$OUT" POST "${SYNC_URL}/sync"
-            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
+            jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
             ERR1="$(vget '.errors[0] // ""' "$OUT")"
             case "$ERR1" in
-              github_tree_failed*|*rate\ limit*)
-                echo "  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s"
-                sleep 120
+              github_feed_failed*|*rate\ limit*)
+                echo "  ai-feed.json fetch failed/rate-limited — retrying in 60s"
+                sleep 60
                 continue;;
               github_raw_failed*|write_failed*|*internal_error*)
                 echo "  transient failure: ${ERR1:0:200} — retrying in 60s"
@@ -325,6 +325,8 @@ jobs:
           done
           LAST="/tmp/ok$ok.json"
           check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          check "file_list_source"      "$(vget '.github.source' "$LAST")" "ai-feed.json"
+          check "feed_total_matches_files" "$(vget '.github.feed_total' "$LAST")" "$(vget '.github.files_total' "$LAST")"
           echo
           echo "--- classification recorded in properties_sync_state (durable, across all runs) ---"
           report /tmp/verify_state.json
@@ -368,6 +370,7 @@ jobs:
           check "in_scope_present"          "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "$EXPECTED_IN_SCOPE/$EXPECTED_IN_SCOPE"
           check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "$B_ZERO"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
+          check "run_health_no_active_error" "$(vget '.run_health.active' /tmp/verify_after.json)" "false"
           check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
           check "no_rows_deleted"           "$([ "${A_TOT:-0}" -ge "${B_TOT:-0}" ] && echo true)" "true"
           check "listings_total_not_shrunk" "$([ "${A_SRC9:-0}" -ge "${B_SRC9:-0}" ] && echo true)" "true"

@@ -193,8 +193,11 @@ function makeD1(config = {}) {
       cols.forEach((c, i) => (row[c] = binds[i]));
       return { results: [], meta: { changes: 1 } };
     }
-    if (/^INSERT INTO ingestion_runs/.test(sql)) {
-      state.ingestionRuns.push(Object.fromEntries(binds.map((b, i) => [`b${i}`, b])));
+    if ((m = sql.match(/^INSERT INTO ingestion_runs \(([^)]*)\) VALUES/))) {
+      const cols = m[1].split(",").map((c) => c.trim());
+      const row = {};
+      cols.forEach((c, i) => (row[c] = binds[i]));
+      state.ingestionRuns.push(row);
       return { results: [], meta: { changes: 1 } };
     }
     if (/^INSERT INTO properties_sync_state/.test(sql)) {
@@ -204,6 +207,10 @@ function makeD1(config = {}) {
         blob_sha: blobSha, content_hash: contentHash, last_synced_at: lastSyncedAt,
       });
       return { results: [], meta: { changes: 1 } };
+    }
+    if (/^SELECT rowid AS __rowid, \* FROM ingestion_runs WHERE source_id = \?/.test(sql)) {
+      // DESC كما في SQL الحقيقي — الأحدث أولًا
+      return { results: state.ingestionRuns.map((r, i) => ({ __rowid: i + 1, ...r })).reverse() };
     }
     if (/^SELECT \* FROM ingestion_runs WHERE source_id = \?/.test(sql)) {
       const runs = state.ingestionRuns;
@@ -240,20 +247,46 @@ function fakeSha(text) {
   return `sha${h.toString(16)}`;
 }
 
-function installGitHubMock(files) {
-  const tree = files.map((f) => ({
-    path: `_properties/${f.name}`, type: "blob", sha: f.sha || fakeSha(f.content), size: f.content.length,
-  }));
-  const calls = { tree: 0, raw: [] };
+// GitHub mock: ai-feed.json هو مصدر قائمة الملفات (طلب واحد)، والقراءة من raw.
+// أي استدعاء لـTree API يُفشل الاختبار صراحةً — الطريق ده اتشال.
+function installGitHubMock(files, opts = {}) {
+  const calls = { feed: 0, raw: [], tree: 0 };
   const original = globalThis.fetch;
+  const retryHeaders = opts.retryAfter === false ? {} : { "retry-after": "0" };
+  const mock = {
+    calls,
+    failuresLeft: Number(opts.failFeedTimes || 0),
+    feedStatus: opts.feedStatus || 429,
+    omitSourcePath: Boolean(opts.omitSourcePath),
+    duplicateSourcePath: Boolean(opts.duplicateSourcePath),
+    invalidJson: Boolean(opts.invalidJson),
+    failFeed(times = 1, status = 429) { this.failuresLeft = times; this.feedStatus = status; },
+    restore() { globalThis.fetch = original; },
+    files,
+  };
   globalThis.fetch = async (url) => {
     const u = String(url);
-    if (u.includes("/git/trees/")) {
+    if (u.includes("/git/trees/") || u.includes("api.github.com")) {
       calls.tree++;
-      const liveTree = files.map((f) => ({
-        path: `_properties/${f.name}`, type: "blob", sha: f.sha || fakeSha(f.content), size: f.content.length,
+      return new Response("tree api is forbidden", { status: 403 });
+    }
+    if (u.includes("ai-feed.json")) {
+      calls.feed++;
+      if (mock.failuresLeft > 0) {
+        mock.failuresLeft--;
+        return new Response("rate limited", { status: mock.feedStatus, headers: retryHeaders });
+      }
+      if (mock.invalidJson) return new Response("<html>not json</html>", { status: 200 });
+      const properties = files.map((f) => ({
+        slug: f.name.replace(/\.md$/, ""),
+        ...(mock.omitSourcePath ? {} : { source_path: `_properties/${f.name}` }),
+        source_sha256: f.sha || fakeSha(f.content),
       }));
-      return new Response(JSON.stringify({ tree: liveTree, truncated: false }), { status: 200 });
+      if (mock.duplicateSourcePath && properties.length) properties.push({ ...properties[0] });
+      return new Response(JSON.stringify({
+        schema_version: "2.4", total_count: files.length,
+        generated_at: "2026-10-18T00:00:00.000Z", properties,
+      }), { status: 200, headers: { "content-type": "application/json" } });
     }
     const m = u.match(/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/);
     if (m) {
@@ -266,11 +299,7 @@ function installGitHubMock(files) {
     }
     return new Response("not found", { status: 404 });
   };
-  return {
-    calls,
-    restore() { globalThis.fetch = original; },
-    files,
-  };
+  return mock;
 }
 
 function md(fields, body = "") {
@@ -1281,6 +1310,107 @@ test("budget: إعادة المعالجة تستمر عبر التشغيلات �
     const fourth = await syncViaHttp(env);
     assert.equal(fourth.body.logic_reprocess, false, "خلصت إعادة المعالجة ⇒ المسار السريع");
     assert.equal(fourth.body.github.fetched, 0);
+  } finally {
+    gh.restore();
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// 41) مصدر قائمة الملفات: ai-feed.json (طلب واحد) — لا Tree API
+// ───────────────────────────────────────────────────────────────────────────
+test("قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API", async () => {
+  const gh = installGitHubMock([
+    { name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) },
+    { name: "b.md", content: md({ ...FM_BASE, id: '"b-1"', slug: '"b-1"' }) },
+  ]);
+  const db = makeD1();
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.status, "success");
+    assert.equal(gh.calls.feed, 1, "الـfeed لازم يُقرأ مرة واحدة في التشغيل");
+    assert.equal(gh.calls.tree, 0, "Tree API ممنوع — كان يسقط عند حد 60 طلبًا/ساعة");
+    assert.equal(res.body.github.source, "ai-feed.json");
+    assert.match(res.body.github.feed_url, /ai-feed\.json$/);
+    assert.equal(res.body.github.files_total, 2);
+    assert.equal(gh.calls.raw.length, 2, "قراءة محتوى الملفات فقط، بلا قائمة إضافية");
+  } finally {
+    gh.restore();
+  }
+});
+
+test("فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }], {
+    failFeedTimes: 2, feedStatus: 429,
+  });
+  const db = makeD1();
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.status, "success");
+    assert.equal(gh.calls.feed, 3, "محاولتان فاشلتان ثم نجاح");
+    assert.equal(res.body.github.retries, 2);
+    assert.equal(db.state.listings.length, 1);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }], {
+    omitSourcePath: true,
+  });
+  const db = makeD1();
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.status, "error");
+    assert.match(res.body.errors.join(" | "), /feed_missing_source_path/);
+    assert.equal(db.state.listings.length, 0, "لا كتابة عند غياب مصدر الملف");
+    assert.equal(gh.calls.raw.length, 0);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }], {
+    duplicateSourcePath: true,
+  });
+  const db = makeD1();
+  try {
+    const res = await syncViaHttp({ DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" });
+    assert.equal(res.body.status, "error");
+    assert.match(res.body.errors.join(" | "), /feed_duplicate_source_path/);
+    assert.equal(db.state.listings.length, 0);
+  } finally {
+    gh.restore();
+  }
+});
+
+test("GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق", async () => {
+  const gh = installGitHubMock([{ name: "a.md", content: md({ ...FM_BASE, id: '"a-1"' }) }], {
+    failFeedTimes: 10, feedStatus: 500,
+  });
+  const db = makeD1({ allowSnapshotReads: true });
+  const env = { DB: db, SYNC_ALLOW_DDL: "1", SYNC_MIN_INTERVAL_S: "0" };
+  try {
+    const bad = await syncViaHttp(env);
+    assert.equal(bad.body.status, "error");
+
+    const before = await getViaHttp(env, "/verify");
+    assert.equal(before.status, 200);
+    assert.equal(before.body.run_health.available, true);
+    assert.equal(before.body.run_health.active, true, "خطأ أحدث من أي نجاح ⇒ نشط");
+    assert.equal(before.body.run_health.last_error.status, "error");
+    assert.match(before.body.run_health.last_error.details, /github_feed_failed/);
+    assert.equal(before.body.run_health.last_success, null);
+
+    gh.failFeed(0);
+    const good = await syncViaHttp(env);
+    assert.equal(good.body.status, "success");
+
+    const after = await getViaHttp(env, "/verify");
+    assert.equal(after.body.run_health.active, false, "النجاح اللاحق يمسح الخطأ منطقيًا (بلا DELETE)");
+    assert.equal(after.body.run_health.last_success.status, "success");
+    assert.equal(after.body.run_health.last_error.status, "error", "الخطأ التاريخي يبقى للتدقيق");
   } finally {
     gh.restore();
   }

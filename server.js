@@ -156,6 +156,8 @@ if (fs.existsSync('_properties')) {
       const propData = {
         ...parsed.data,
         slug,
+        relative_path: `_properties/${file}`,
+        path: `_properties/${file}`,
         id: `/properties/${slug}`,
         url: `/properties/${slug}/`,
         collection: 'properties',

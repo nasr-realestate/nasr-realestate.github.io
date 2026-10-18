@@ -17,6 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { parseFrontMatter } from './front-matter.mjs';
 
 /** أرقام عربية-هندية شائعة الاستخدام في النصوص العربية */
@@ -407,7 +408,14 @@ export function loadProperties(dir = '_properties', opts = {}) {
     const raw = fs.readFileSync(path.join(dir, file), 'utf8');
     const parsed = parseFrontMatter(raw);
     const slug = file.replace(/\.md$/, '');
-    out.push(normalizeProperty(parsed.data, slug, opts));
+    // بيانات المصدر: تُمكّن مزامنة D1 من قراءة قائمة الملفات من ai-feed.json
+    // في طلب واحد بدل GitHub Tree API (الذي يسقط عند حد المعدل).
+    out.push({
+      ...normalizeProperty(parsed.data, slug, opts),
+      // مسار نسبي من جذر المستودع (قابل للقراءة من الـWorker) مهما كان cwd.
+      source_path: path.relative(process.cwd(), path.join(dir, file)).split(path.sep).join('/'),
+      source_sha256: createHash('sha256').update(raw, 'utf8').digest('hex'),
+    });
   }
   out.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.slug.localeCompare(b.slug));
   return out;

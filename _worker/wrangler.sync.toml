@@ -13,7 +13,10 @@ database_id = "ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"
 crons = ["17 * * * *"]
 
 # ملاحظات:
-#  • GITHUB_TOKEN (اختياري): يرفع حد GitHub API من 60 لـ5000 طلب/ساعة. المستودع عام
+#  • GITHUB_TOKEN (اختياري): لم يبقَ لازمًا لقراءة القائمة — الـWorker يقرأ
+#    ai-feed.json المنشور في طلب واحد. يُستخدم فقط كاحتياط Contents API لو
+#    نسخة الـfeed بلا source_path، ويرفع حد GitHub من 60 لـ5000 طلب/ساعة.
+#  • SYNC_FEED_URL (اختياري): تجاوز رابط الـfeed (افتراضيًا رابط الموقع).
 #    والقراءة من raw.githubusercontent لا تحتاج توكن، فالتوكن اختياري تمامًا.
 #  • SYNC_TOKEN (اختياري لكن مُستحسن): لو مضبوط، لازم يُرسل كـ
 #    Authorization: Bearer <token> أو ?token=<token> مع POST /sync.
