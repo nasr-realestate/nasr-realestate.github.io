@@ -1,0 +1,68 @@
+// Tests: ناشر الصفحات الوحيد + تحقّق ما بعد النشر (المحور أ)
+// يقرأ ملفات .github/workflows كما هي، بلا شبكة وبلا GitHub API.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '..', '..');
+const WF = path.join(ROOT, '.github', 'workflows');
+const read = (name) => fs.readFileSync(path.join(WF, name), 'utf8');
+const workflows = () => fs.readdirSync(WF).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+
+test("ناشر واحد فقط لـPages: deploy.yml هو الوحيد الذي يرفع/ينشر", () => {
+  const publishers = workflows().filter((f) => {
+    const s = read(f);
+    return /deploy-pages@|upload-pages-artifact@/.test(s);
+  });
+  assert.deepEqual(publishers, ['deploy.yml']);
+});
+
+test("deploy.yml: master فقط، بلا main، ومجموعة concurrency واحدة بلا إلغاء", () => {
+  const s = read('deploy.yml');
+  const push = s.match(/on:\s*\n([\s\S]*?)\npermissions:/);
+  assert.ok(push, 'لم أجد قسم on');
+  assert.match(push[1], /branches:\s*\[\s*"master"\s*\]/, 'المصدر لازم يكون master وحده');
+  assert.doesNotMatch(push[1], /"main"/, 'لا مسار نشر من main');
+
+  const conc = s.match(/concurrency:\s*\n\s*group:\s*"([^"]+)"\s*\n\s*cancel-in-progress:\s*(\w+)/);
+  assert.ok(conc, 'قسم concurrency مفقود');
+  assert.equal(conc[1], 'pages-production', 'اسم المجموعة الموحّد');
+  assert.equal(conc[2], 'false', 'لا نلغي نشرًا جاريًا في منتصفه');
+});
+
+test("deploy.yml: يختم SHA داخل _site، والتحقق بعد النشر يعتمد عليه", () => {
+  const s = read('deploy.yml');
+  assert.match(s, /_site\/\.well-known\/deploy-info\.json/);
+  assert.match(s, /\$\{\{\s*github\.sha\s*\}\}/);
+  const verifyJob = s.slice(s.indexOf('  verify:'));
+  assert.match(verifyJob, /needs:\s*deploy/);
+  assert.match(verifyJob, /node scripts\/verify-deployment\.mjs/);
+  assert.match(verifyJob, /EXPECTED_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/);
+});
+
+test("cleanup-requests: بعد الدفع يُطلق deploy.yml صراحةً (GITHUB_TOKEN لا يُطلق workflows)", () => {
+  const s = read('cleanup-requests.yml');
+  assert.match(s, /actions:\s*write/, 'صلاحية actions مطلوبة لـworkflow_dispatch');
+  assert.match(s, /gh workflow run deploy\.yml --ref master/);
+  assert.match(s, /steps\.commit\.outputs\.pushed == 'true'/);
+  assert.match(s, /"pushed=true" >> "\$GITHUB_OUTPUT"/);
+});
+
+test("ملف package-lock مُتتبَّع فعلًا، وتعليق deploy.yml لا يدّعي العكس", () => {
+  const tracked = execFileSync('git', ['ls-files', '--error-unmatch', 'package-lock.json'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  assert.equal(tracked, 'package-lock.json');
+  const gitignore = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+  assert.doesNotMatch(gitignore, /^package-lock\.json\s*$/m);
+  const s = read('deploy.yml');
+  assert.doesNotMatch(s, /package-lock\.json مستثنى من Git/);
+  assert.match(s, /package-lock\.json \*\*مُتتبَّع في Git\*\*/);
+});
+
+test("أسماء ملفات workflows على master فريدة (لا تصادم عند تبديل المصدر)", () => {
+  const names = workflows().map((f) => path.basename(f, path.extname(f)));
+  assert.equal(new Set(names).size, names.length);
+});

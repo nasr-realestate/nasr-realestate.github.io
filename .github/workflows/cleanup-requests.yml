@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: write
+  # لازم لـworkflow_dispatch: دفعة GITHUB_TOKEN لا تُشغّل workflow_push،
+  # فنشغّل deploy.yml صراحةً بعد الحذف.
+  actions: write
 
 jobs:
   cleanup:
@@ -45,12 +48,24 @@ jobs:
           fi
 
       - name: Commit and Push Changes
+        id: commit
         run: |
           git config --global user.name "Simsar Talabak Bot"
           git config --global user.email "bot@nasr-realestate.com"
           if ! git diff-index --quiet HEAD; then
             git commit -m "System: Auto-cleanup of expired requests (7-day rule from front matter)"
             git push origin master
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
             echo "ℹ️ No changes to commit."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # ⚠️ الدفعة اللي بيعملها GITHUB_TOKEN لا تُطلق أي workflow (قاعدة GitHub
+      # لمنع الحلقات). فبدل ما الموقع يفضل على النسخة القديمة لحد أول push بشري،
+      # نطلق ناشر الصفحات الوحيد يدويًا.
+      - name: Trigger the Pages deploy (single publisher)
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref master
