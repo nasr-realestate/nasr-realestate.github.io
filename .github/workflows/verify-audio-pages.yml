@@ -127,6 +127,17 @@ on:
       # أول إعلان يُنتَج عبر مسار الإنتاج الموحّد (عقار جديد)
       - '_properties/2026-01-10-ground-floor-apartment-garden-nasr-city-156m.md'
       - 'assets/audio/properties/golden-square-garden-156m.mp3'
+      # batch 8 (five new property ads; scripts varied by property)
+      - '_properties/10th-district-180m.md'
+      - '_properties/2025-12-27-apartment-sale-near-seraj-mall-170m.md'
+      - '_properties/2025-12-28-apartment-sale-ahly-club-ext-158m.md'
+      - '_properties/2025-12-28-apartment-sale-hassan-al-sharif-150m.md'
+      - '_properties/2026-01-11-abbas-elakkad-luxury-220m.md'
+      - 'assets/audio/properties/10th-district-180m.mp3'
+      - 'assets/audio/properties/seraj-mall-apartment-170m.mp3'
+      - 'assets/audio/properties/ahly-club-ext-158m.mp3'
+      - 'assets/audio/properties/hassan-al-sharif-150m.mp3'
+      - 'assets/audio/properties/abbas-elakkad-220m-2026.mp3'
 
 permissions:
   contents: read
@@ -156,7 +167,7 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
-      - name: Verify the 44 property audio pages and all other property pages
+      - name: Verify the 49 property audio pages and all other property pages
         run: node _diag/check-audio-batch3.mjs
       - name: Verify the request audio page and the two unchanged request pages
         run: node _diag/check-audio-requests.mjs

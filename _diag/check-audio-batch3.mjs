@@ -1,5 +1,5 @@
-// Property-audio gate: the 43 ads from batches 1–7 (incl. the October 17 listing)
-// plus the first ad produced through the unified voice-identity pipeline (2026-10-18).
+// Property-audio gate: the 43 ads from batches 1–7 (incl. the October 17 listing),
+// the unified-pipeline ad (2026-10-18), and five ads from batch 8 (2026-10-19).
 // Usage after `bundle exec jekyll build`: node _diag/check-audio-batch3.mjs [siteDir]
 // _diag/ stays private to the source tree (Jekyll does not publish it).
 // Every enabled page is locked with its MP3 SHA-256; prior files must remain byte-identical.
@@ -11,7 +11,7 @@ import { grab, occurrences, parseComm } from './audio-check-utils.mjs';
 
 const outDir = process.argv[2] ?? '_site';
 
-// slug -> sha256 of the committed MP3 (batches 1–7 + the unified-pipeline test ad)
+// slug -> sha256 of each committed MP3 (batches 1–8 + unified-pipeline ads)
 const lockedAudio = {
   'apartment-sale-helmy-abdel-aaty-seraj-mall-230m': 'fb1ff292d14736bcb49593d834cfba58b246a1a6bc058f7ff83a74fda0e3720a',
   'furnished-apartment-rent-hayat-compound-safarat-200m': '42e7026d9dbca88d59483390760bf50bb457fa8b2ff762ba11f610211f8f85b9',
@@ -60,6 +60,12 @@ const lockedAudio = {
   //    استبدال أي ملف قائم). بصمته مقيّدة كذلك في _data/audio_voice_log.json
   //    وتتحقق منها بوابة scripts/audio/verify-voice-identity.mjs.
   'golden-square-garden-156m': 'bc8a10c088a1cf21e28a3145fbaf33d7c9dad93220b4d1b3000c88945833544f',
+  // 🎙️ 2026-10-19 — دفعة خمسة إعلانات جديدة عبر المسار الموحد.
+  '10th-district-180m': 'c0729a2614e0219b2aec6c635d1b6b615ed2e5b9d082a91b7bf060785b12c788',
+  'seraj-mall-apartment-170m': '5eb24cc1f7ff5ac6b6ded80de48b25a6b52f98eefcf414ac3d365fc21662b19f',
+  'ahly-club-ext-158m': '38ffca645030793c7841022496b8e7c2473b89f4522ac3c71a2c6aa392c1d209',
+  'hassan-al-sharif-150m': 'b85ae420f2d774d3b38fb4344ba62fd2d548550751ff61894472fb974d8aac56',
+  'abbas-elakkad-220m-2026': 'e25747b530a25b99480520dc42b7521770e41ca06ab3d2f6e07ed005f0802992',
 };
 
 // slugs that must show exactly one player (batches 1–7 plus the unified-pipeline ad)

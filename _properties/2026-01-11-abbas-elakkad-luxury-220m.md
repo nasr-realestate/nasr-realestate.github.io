@@ -21,6 +21,15 @@ areaNumeric: 220
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/abbas-elakkad-220m-2026.mp3"
+audio_duration: "26 ثانية"
+audio_script: "عايز مساحة واسعة على عباس العقاد الرئيسي؟ شقة ميتين وعشرين متر في المنطقة الأولى بمدينة نصر، ألترا سوبر لوكس. تلات غرف نوم وريسبشن تلات قطع وحمامين، في الدور الرابع ومعاها أسانسيرين. السعر تمانية مليون وميتين ألف جنيه. مسجلة شهر عقاري، وفيها فيو مفتوح وحصة في الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

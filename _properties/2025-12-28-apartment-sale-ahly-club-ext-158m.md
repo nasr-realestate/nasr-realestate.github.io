@@ -22,6 +22,15 @@ areaNumeric: 158
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/ahly-club-ext-158m.mp3"
+audio_duration: "29 ثانية"
+audio_script: "محتاج وحدة سكنية قريبة من الجامعة الصينية وامتداد النادي الأهلي؟ في مدينة نصر، قدام شارع المدارس. المساحة مية تمانية وخمسين متر، فيها تلات غرف منهم غرفة ماستر وحمامين. الدور التاسع ومعاها أسانسير. السعر أربعة مليون وتمانمية ألف جنيه. مطبخ أمريكي وتشطيب سوبر لوكس مودرن. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
