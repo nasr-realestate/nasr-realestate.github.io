@@ -1,249 +1,254 @@
 === Properties Sync Worker — deploy + verify ===
 ref:      master
-commit:   e500d09fbdff01c9c820cd1b3cbf71fb842f1577
-run:      39157121377
-when:     2026-10-18T19:05:15Z
+commit:   2cb98a03ad8e4f54658edb3ece35cc74c60236d0
+run:      39158190065
+when:     2026-10-18T19:18:59Z
 credential: PRESENT
 
 TAP version 13
-# (node:2155) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/properties-sync-worker.js is not specified and it doesn't parse as CommonJS.
+# (node:2256) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/properties-sync-worker.js is not specified and it doesn't parse as CommonJS.
 # Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 # To eliminate this warning, add "type": "module" to /home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/package.json.
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
 ok 1 - parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
   ---
-  duration_ms: 1.096336
+  duration_ms: 2.030353
   ...
 # Subtest: toNumber: أرقام عربية/فواصل/نصوص
 ok 2 - toNumber: أرقام عربية/فواصل/نصوص
   ---
-  duration_ms: 0.201845
+  duration_ms: 0.332331
   ...
 # Subtest: تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
 ok 3 - تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
   ---
-  duration_ms: 1.831357
+  duration_ms: 3.161726
   ...
 # Subtest: تصنيف نوع العقار من category
 ok 4 - تصنيف نوع العقار من category
   ---
-  duration_ms: 0.094353
+  duration_ms: 0.172553
   ...
 # Subtest: مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
 ok 5 - مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
   ---
-  duration_ms: 0.50335
+  duration_ms: 0.854075
   ...
 # Subtest: الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
 ok 6 - الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
   ---
-  duration_ms: 98.151067
+  duration_ms: 173.270027
   ...
 # Subtest: التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
 ok 7 - التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
   ---
-  duration_ms: 26.292227
+  duration_ms: 52.229151
+  ...
+# Subtest: feed بلا source_sha256: الميزانية تتقدّم عبر تشغيلات متتالية بلا تجويع ملفات
+ok 8 - feed بلا source_sha256: الميزانية تتقدّم عبر تشغيلات متتالية بلا تجويع ملفات
+  ---
+  duration_ms: 33.758086
   ...
 # Subtest: تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
-ok 8 - تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
+ok 9 - تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
   ---
-  duration_ms: 5.783409
+  duration_ms: 9.548296
   ...
 # Subtest: ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
-ok 9 - ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
+ok 10 - ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
   ---
-  duration_ms: 5.193968
+  duration_ms: 8.424977
   ...
 # Subtest: ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
-ok 10 - ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
+ok 11 - ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
   ---
-  duration_ms: 3.364894
+  duration_ms: 7.977221
   ...
 # Subtest: لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
-ok 11 - لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
+ok 12 - لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
   ---
-  duration_ms: 3.641092
+  duration_ms: 8.963714
   ...
 # Subtest: ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
-ok 12 - ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
+ok 13 - ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
   ---
-  duration_ms: 3.671834
+  duration_ms: 10.257721
   ...
 # Subtest: schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
-ok 13 - schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
+ok 14 - schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
   ---
-  duration_ms: 0.618124
+  duration_ms: 1.492848
   ...
 # Subtest: schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
-ok 14 - schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
+ok 15 - schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
   ---
-  duration_ms: 3.897333
+  duration_ms: 4.370584
   ...
 # Subtest: GET /sync افتراضيًا dry run: لا يكتب أي شيء
-ok 15 - GET /sync افتراضيًا dry run: لا يكتب أي شيء
+ok 16 - GET /sync افتراضيًا dry run: لا يكتب أي شيء
   ---
-  duration_ms: 3.44127
+  duration_ms: 6.684428
   ...
 # Subtest: SYNC_TOKEN: يحمي التشغيل اليدوي
-ok 16 - SYNC_TOKEN: يحمي التشغيل اليدوي
+ok 17 - SYNC_TOKEN: يحمي التشغيل اليدوي
   ---
-  duration_ms: 4.461421
+  duration_ms: 3.548578
   ...
 # Subtest: budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
-ok 17 - budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
+ok 18 - budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
   ---
-  duration_ms: 14.455683
+  duration_ms: 12.347134
   ...
 # Subtest: scheduled: يشغّل المزامنة عبر ctx.waitUntil
-ok 18 - scheduled: يشغّل المزامنة عبر ctx.waitUntil
+ok 19 - scheduled: يشغّل المزامنة عبر ctx.waitUntil
   ---
-  duration_ms: 1.73394
+  duration_ms: 2.45739
   ...
 # Subtest: GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
-ok 19 - GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
+ok 20 - GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
   ---
-  duration_ms: 0.961082
+  duration_ms: 1.477621
   ...
 # Subtest: wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
-ok 20 - wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
+ok 21 - wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
   ---
-  duration_ms: 0.234434
+  duration_ms: 0.356305
   ...
 # Subtest: الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
-ok 21 - الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
+ok 22 - الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
   ---
-  duration_ms: 0.684173
+  duration_ms: 1.138988
   ...
 # Subtest: budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
-ok 22 - budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
+ok 23 - budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
   ---
-  duration_ms: 11.318582
+  duration_ms: 17.128074
   ...
 # Subtest: تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
-ok 23 - تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
+ok 24 - تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
   ---
-  duration_ms: 1.997899
+  duration_ms: 3.412464
   ...
 # Subtest: throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
-ok 24 - throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
+ok 25 - throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
   ---
-  duration_ms: 2.398955
+  duration_ms: 4.777364
   ...
 # Subtest: فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
-ok 25 - فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
+ok 26 - فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
   ---
-  duration_ms: 5.336874
+  duration_ms: 7.190402
   ...
 # Subtest: إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
-ok 26 - إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
+ok 27 - إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
   ---
-  duration_ms: 0.746948
+  duration_ms: 0.871388
   ...
 # Subtest: تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
-ok 27 - تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
+ok 28 - تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
   ---
-  duration_ms: 141.038469
+  duration_ms: 231.361998
   ...
 # Subtest: R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
-ok 28 - R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
+ok 29 - R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
   ---
-  duration_ms: 1.844898
+  duration_ms: 3.309983
   ...
 # Subtest: R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
-ok 29 - R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
+ok 30 - R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
   ---
-  duration_ms: 4.199596
+  duration_ms: 7.561374
   ...
 # Subtest: R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
-ok 30 - R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
+ok 31 - R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
   ---
-  duration_ms: 1.397872
+  duration_ms: 2.140839
   ...
 # Subtest: scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
-ok 31 - scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
+ok 32 - scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
   ---
-  duration_ms: 2.801222
+  duration_ms: 4.89834
   ...
 # Subtest: R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
-ok 32 - R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
+ok 33 - R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
   ---
-  duration_ms: 1.380226
+  duration_ms: 2.195591
   ...
 # Subtest: R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
-ok 33 - R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
+ok 34 - R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
   ---
-  duration_ms: 1.989486
+  duration_ms: 3.286338
   ...
 # Subtest: R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
-ok 34 - R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
+ok 35 - R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
   ---
-  duration_ms: 0.090276
+  duration_ms: 0.152225
   ...
 # Subtest: R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
-ok 35 - R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
+ok 36 - R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
   ---
-  duration_ms: 96.161801
+  duration_ms: 162.528613
   ...
 # Subtest: containsToken: الكلمة الكاملة مع الحروف الملتصقة
-ok 36 - containsToken: الكلمة الكاملة مع الحروف الملتصقة
+ok 37 - containsToken: الكلمة الكاملة مع الحروف الملتصقة
   ---
-  duration_ms: 0.178119
+  duration_ms: 0.215051
   ...
 # Subtest: GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
-ok 37 - GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
+ok 38 - GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
   ---
-  duration_ms: 5.774606
+  duration_ms: 11.328552
   ...
 # Subtest: R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
-ok 38 - R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
+ok 39 - R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
   ---
-  duration_ms: 2.88563
+  duration_ms: 5.148708
   ...
 # Subtest: نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
-ok 39 - نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
+ok 40 - نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
   ---
-  duration_ms: 2.054555
+  duration_ms: 3.508073
   ...
 # Subtest: budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
-ok 40 - budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
+ok 41 - budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
   ---
-  duration_ms: 6.902095
+  duration_ms: 12.088912
   ...
 # Subtest: قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
-ok 41 - قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
+ok 42 - قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
   ---
-  duration_ms: 2.352565
+  duration_ms: 3.898162
   ...
 # Subtest: فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
-ok 42 - فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
+ok 43 - فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
   ---
-  duration_ms: 1504.559518
+  duration_ms: 1505.102472
   ...
 # Subtest: feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
-ok 43 - feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
+ok 44 - feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
   ---
-  duration_ms: 0.755513
+  duration_ms: 0.931681
   ...
 # Subtest: feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
-ok 44 - feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
+ok 45 - feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
   ---
-  duration_ms: 0.496802
+  duration_ms: 0.739211
   ...
 # Subtest: GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
-ok 45 - GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
+ok 46 - GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
   ---
-  duration_ms: 3507.901404
+  duration_ms: 3507.93764
   ...
-1..45
-# tests 45
+1..46
+# tests 46
 # suites 0
-# pass 45
+# pass 46
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 5528.939706
+# duration_ms 5913.912388
 === preflight ===
 token verify (/user/tokens/verify): {"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}
 accounts lookup: {"success":true,"errors":[],"accounts":[{"id":"717c46b0d78a6f06589b8367a1a3cc5b","name":"Footcai.555@gmail.com's Account"}]}
@@ -271,17 +276,17 @@ Getting User settings...
 ──────────────────────────────────────────────
 
 Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-Total Upload: 55.78 KiB / gzip: 14.78 KiB
+Total Upload: 55.80 KiB / gzip: 14.78 KiB
 Worker Startup Time: 1 ms
 Your Worker has access to the following bindings:
 Binding                      Resource         
 env.DB (nasr-market-db)      D1 Database      
 
-Uploaded nasr-properties-sync (1.83 sec)
-Deployed nasr-properties-sync triggers (1.00 sec)
+Uploaded nasr-properties-sync (1.72 sec)
+Deployed nasr-properties-sync triggers (0.91 sec)
   https://nasr-properties-sync.footcai-555.workers.dev
   schedule: 17 * * * *
-Current Version ID: 844a2021-761e-43d3-8f8f-b2088b7b8534
+Current Version ID: 5ed83a3b-60d4-4324-9a10-0ade3309ca0d
 wrangler deploy exit code: 0
 deployed URL from wrangler: https://nasr-properties-sync.footcai-555.workers.dev
 account: 717c46b0d78a6f06589b8367a1a3cc5b
@@ -315,7 +320,7 @@ nasr-properties-sync
 noisy-bush-fd84
 royal-snow-ea32
 --- raw D1 database list ---
-{"result":[{"uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf","name":"nasr-market-db","created_at":"2026-09-28T20:59:17.492Z","version":"production","num_tables":0,"file_size":692224,"jurisdiction":null}],"errors":[],"messages":[],"success":true,"result_info":{"count":1,"page":1,"per_page":100,"total_count":1}}
+{"result":[{"uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf","name":"nasr-market-db","created_at":"2026-09-28T20:59:17.492Z","version":"production","num_tables":0,"file_size":704512,"jurisdiction":null}],"errors":[],"messages":[],"success":true,"result_info":{"count":1,"page":1,"per_page":100,"total_count":1}}
 {"name":"nasr-market-db","uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"}
 
 expectations: files=103 in_scope=83
@@ -336,33 +341,35 @@ wrangler d1 execute usable: false (informational; the checklist uses the Worker 
 
 === 3) dry run (GET /sync?dryRun=1) — must not write anything ===
   http 200 (attempt 1)
-{"status":"success","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":29,"out_of_scope":7,"invalid":4,"fetched":40,"complete":false,"errors":[]}
+{"status":"success","dry_run":true,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":36,"out_of_scope":3,"invalid":1,"fetched":40,"complete":false,"errors":[]}
 PASS  dryrun_flag: true
 PASS  dryrun_read_the_feed: 103
 PASS  dryrun_wrote_nothing: 107/107
 
+feed source_sha256 coverage: 103/103
 === 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ===
 --- run attempt 1 (successful runs so far: 0) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":8,"unchanged":28,"out_of_scope":3,"invalid":1,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
 PASS  run1_no_write_failures: 0
 --- run attempt 2 (successful runs so far: 1) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":32,"out_of_scope":4,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
 PASS  run2_no_write_failures: 0
 --- run attempt 3 (successful runs so far: 2) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":32,"out_of_scope":5,"invalid":3,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
 PASS  run3_no_write_failures: 0
 --- run attempt 4 (successful runs so far: 3) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":33,"out_of_scope":5,"invalid":2,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
 PASS  run4_no_write_failures: 0
 --- run attempt 5 (successful runs so far: 4) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":103,"files":103,"inserted":0,"updated":0,"unchanged":27,"out_of_scope":7,"invalid":6,"fetched":40,"budget_skipped":63,"complete":false,"missing":null,"errors":[]}
 PASS  run5_no_write_failures: 0
 FAIL  final_pass_complete: got false, expected true
+FAIL  state_files_tracked: got , expected 103
 PASS  file_list_source: ai-feed.json
 PASS  feed_total_matches_files: 103
 
@@ -397,8 +404,8 @@ _properties/showroom-ahmed-fakhry-600m.md
 PASS  out_of_scope_files_listed: 12
 PASS  invalid_files_listed: 8
 durable reasons from the last ingestion_runs row:
-  started: 2026-10-18 19:10:18 status: success
-{"version":"v1.1.0","trigger":"manual","dry_run":false,"fetched":40,"missing":null,"duplicates":0,"out_of_scope":7,"out_of_scope_files":[{"file":"_properties/2025-12-28-apartment-sale-heliopolis-merghany-180m.md","reasons":["مصر الجديدة"]},{"file":"_properties/2025-12-30-apartment-sale-heliopolis-classic-150m.md","reasons":["مصر الجديدة"]},{"file":"_properties/2026-01-21-lavida-compound-rent-apartments.md","reasons":["هليوبوليس"]},{"file":"_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md","reasons":["التجمع الخامس","الشويفات"]},{"file":"_properties/2026-03-07-villa-rehab-gate9-model-h.md","reasons":["الرحاب"]},{"file":"_properties/2026-03-07-villa-south-90th-dusit-hotel-license.md","reasons":["شارع التسعين","التسعين الجنوبي"]},{"file":"_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md","reasons":["مصر الجديدة"]}],"invalid_files":[{"file":"_properties/2026-01-01-rent-furnished-batrawy-nasr-city.md","reason":"missing_area_m2"},{"file":"_properties/2026-01-13-shinzo-abe-axis-luxury-262m.md","reason":"missing_price"},{"file":"_properties/2026-04-15-ground-floor-admin-seraj-mall.md","reason":"missing_area_m2"},{"file":"_properties/2026-05-11-commercial-saudi-buildings-golf-110m.md","reason":"missing_price"}],"errors":[],"area_unmatched":[],"duration_ms":1934}
+  started: 2026-10-18 19:24:19 status: success
+{"version":"v1.1.0","trigger":"manual","dry_run":false,"fetched":40,"missing":null,"duplicates":0,"out_of_scope":7,"out_of_scope_files":[{"file":"_properties/salam-city-218m-roof.md","reasons":["مدينة السلام"]},{"file":"_properties/sheraton-nozha-165m-rent.md","reasons":["شيراتون","مساكن شيراتون"]},{"file":"_properties/2026-01-21-lavida-compound-rent-apartments.md","reasons":["هليوبوليس"]},{"file":"_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md","reasons":["التجمع الخامس","الشويفات"]},{"file":"_properties/2026-03-07-villa-rehab-gate9-model-h.md","reasons":["الرحاب"]},{"file":"_properties/2026-03-07-villa-south-90th-dusit-hotel-license.md","reasons":["شارع التسعين","التسعين الجنوبي"]},{"file":"_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md","reasons":["مصر الجديدة"]}],"invalid_files":[{"file":"_properties/rent-obour-buildings-salah-salem-35k.md","reason":"missing_area_m2"},{"file":"_properties/rent-tayaran-panorama-35k.md","reason":"missing_area_m2"},{"file":"_properties/showroom-ahmed-fakhry-600m.md","reason":"missing_price"},{"file":"_properties/2026-01-13-shinzo-abe-axis-luxury-262m.md","reason":"missing_price"},{"file":"_properties/2026-04-15-ground-floor-admin-seraj-mall.md","reason":"missing_area_m2"},{"file":"_properties/2026-05-11-commercial-saudi-buildings-golf-110m.md","reason":"missing_price"}],"errors":[],"area_unmatched":[{"file":"_properties/police-towers-rent-280m.md","location":"حي السفارات - آخر شارع الطيران - أمام مستشفى الأندلس"}],"duration_ms":2349}
 
 --- reasons sample (from the runs of this job) ---
 _properties/2025-12-28-apartment-sale-heliopolis-merghany-180m.md :: مصر الجديدة
@@ -408,25 +415,34 @@ _properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md :: التجم
 _properties/2026-03-07-villa-rehab-gate9-model-h.md :: الرحاب
 _properties/2026-03-07-villa-south-90th-dusit-hotel-license.md :: شارع التسعين, التسعين الجنوبي
 _properties/2026-05-02-apartment-shams-club-heliopolis-160m.md :: مصر الجديدة
+_properties/andalus1-duplex-285m.md :: التجمع الخامس
+_properties/banafseg2-showroom-340m.md :: التجمع الأول
+_properties/new-polis-130m.md :: مدينتي, مستقبل سيتي, وادي دجلة, نيوبوليس
+_properties/salam-city-218m-roof.md :: مدينة السلام
+_properties/sheraton-nozha-165m-rent.md :: شيراتون, مساكن شيراتون
 _properties/2026-01-01-rent-furnished-batrawy-nasr-city.md :: missing_area_m2
 _properties/2026-01-13-shinzo-abe-axis-luxury-262m.md :: missing_price
 _properties/2026-04-15-ground-floor-admin-seraj-mall.md :: missing_area_m2
 _properties/2026-05-11-commercial-saudi-buildings-golf-110m.md :: missing_price
+_properties/nasr-street-furnished.md :: missing_area_m2
+_properties/rent-obour-buildings-salah-salem-35k.md :: missing_area_m2
+_properties/rent-tayaran-panorama-35k.md :: missing_area_m2
+_properties/showroom-ahmed-fakhry-600m.md :: missing_price
 
 === 5) idempotency: one more run with no source change ===
   http 200 (attempt 1)
-{"status":"success","inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"fetched":40,"complete":false}
+{"status":"success","inserted":0,"updated":0,"unchanged":37,"out_of_scope":2,"invalid":1,"fetched":40,"complete":false}
 PASS  no_change_run_inserted: 0
 PASS  no_change_run_updated: 0
 PASS  no_change_run_duplicates: 0
 
 === 6) checklist AFTER (GET /verify) ===
-{"counts":{"listings_total":107,"source9_total":107,"source9_null_area":5,"areas_total":31,"price_snapshots_total":39},"duplicates":0,"lists":{"in_scope":{"checked":83,"present":83},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":5},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
+{"counts":{"listings_total":107,"source9_total":107,"source9_null_area":4,"areas_total":31,"price_snapshots_total":39},"duplicates":0,"lists":{"in_scope":{"checked":83,"present":83},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":8,"present":2},"null_area":{"checked":5,"present":4},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
 source9 rows: before=107 after=107 | listings: 107 -> 107 | snapshots: 39 -> 39 | areas: 31 -> 31
 source 9 rows pre-existing in D1 before this sync: 107 (legacy ingestion — this Worker never deletes)
 per-id reconciliation: in-scope 83/83 present · out-of-scope 10/12 still in listings from a legacy ingestion · invalid 2/8 legacy
 PASS  in_scope_present: 83/83
-PASS  null_area_preserved: 5
+FAIL  null_area_preserved: got 4, expected 5
 PASS  duplicates_none: 0
 PASS  run_health_no_active_error: false
 PASS  foreign_key_check: 0
@@ -438,9 +454,9 @@ PASS  areas_unchanged: 31
 --- legacy rows outside the scope must be byte-identical before/after (proof this Worker never wrote them) ---
 out-of-scope ids already present in D1 before: 10 (absent: 2)
 invalid ids already present in D1 before:      2 (absent: 6)
-source-9 rows without an area before/after:    5 -> 5
+source-9 rows without an area before/after:    5 -> 4
 legacy area_id values cleared by the R1 rule: 0
-PASS  null_area_preserved_final: 5
+FAIL  null_area_preserved_final: got 4, expected 5
 PASS  out_of_scope_rows_untouched: [{"area_id":1,"area_m2":180,"external_id":"heliopolis-badia-180m-lux","id":89,"price":4750000,"property_type":"apartment","source_id":9,"title":"شقة 180م تشطيب كلاسيك فاخر - خلف الميرغني (شارع البادية)","transaction_type":"sale"},{"area_id":1,"area_m2":135,"external_id":"lavida-rent-2units-jan26","id":91,"price":9000,"property_type":"apartment","source_id":9,"title":"شقق للإيجار في كمبوند لافيدا هليوبوليس الجديدة - فيو حمام سباحة وبارون","transaction_type":"rent"},{"area_id":1,"area_m2":150,"external_id":"masr-al-gdida-150m-classic","id":90,"price":4500000,"property_type":"apartment","source_id":9,"title":"شقة 150م كلاسيك بأسقف عالية - مصر الجديدة (الزمن الجميل)","transaction_type":"sale"},{"area_id":1,"area_m2":130,"external_id":"new-polis-130m","id":108,"price":4000000,"property_type":"apartment","source_id":9,"title":"شقة 130م بفيو مفتوح - كمبوند نيوبوليس (جوار مدينتي)","transaction_type":"sale"},{"area_id":1,"area_m2":300,"external_id":"rehab-villa-model-h-gate9","id":93,"price":25000000,"property_type":"villa","source_id":9,"title":"فيلا نموذج H للبيع بالرحاب - على السور بوابة 9 (حديقة خاصة)","transaction_type":"sale"},{"area_id":1,"area_m2":218,"external_id":"salam-city-218m-roof","id":109,"price":1100000,"property_type":"apartment","source_id":9,"title":"شقة 218م (بنتهاوس) بفيو مفتوح - مدينة السلام","transaction_type":"sale"},{"area_id":1,"area_m2":160,"external_id":"shams-club-heliopolis-160m","id":95,"price":6500000,"property_type":"apartment","source_id":9,"title":"شقة 160م مسجلة للبيع أمام نادي الشمس مباشرة – مصر الجديدة","transaction_type":"sale"},{"area_id":1,"area_m2":165,"external_id":"sheraton-nozha-165m-rent","id":111,"price":25000,"property_type":"apartment","source_id":9,"title":"شقة 165م واجهة (سكني/إداري) - شيراتون النزهة","transaction_type":"rent"},{"area_id":1,"area_m2":568,"external_id":"villa-new-cairo-1st-district-568m","id":92,"price":50000000,"property_type":"villa","source_id":9,"title":"فيلا فخمة 568م بالتجمع الخامس الحي الأول - مسبح خاص (نشاط فندقي)","transaction_type":"sale"},{"area_id":1,"area_m2":661,"external_id":"villa-south-90th-120m","id":94,"price":120000000,"property_type":"villa","source_id":9,"title":"فيلا 661م على التسعين الجنوبي مباشرة - أمام Dusit (رخصة فندقي)","transaction_type":"sale"}]
 PASS  invalid_rows_untouched: [{"area_id":1,"area_m2":130,"external_id":"rent-furnished-batrawy-30k","id":61,"price":30000,"property_type":"apartment","source_id":9,"title":"شقة مفروشة 3 غرف للإيجار - شارع البطراوي (جنينة مول)","transaction_type":"rent"},{"area_id":1,"area_m2":262,"external_id":"shinzo-abe-262m-4th-floor","id":64,"price":7000000,"property_type":"office","source_id":9,"title":"شقة 262م واجهة على محور شينزو آبي - تصلح سكني وإداري","transaction_type":"sale"}]
 
@@ -450,9 +466,9 @@ NOTE: PRAGMA integrity_check is refused by D1 (SQLITE_AUTH) for user queries; th
 
 === 8) run summaries ===
 --- /tmp/dryrun.json ---
-{"status":"success","dry_run":true,"inserted":0,"updated":29,"unchanged":0,"out_of_scope":7,"invalid":4,"files":103,"fetched":40,"complete":false,"duplicates":0,"errors":[]}
+{"status":"success","dry_run":true,"inserted":0,"updated":36,"unchanged":0,"out_of_scope":3,"invalid":1,"files":103,"fetched":40,"complete":false,"duplicates":0,"errors":[]}
 --- /tmp/run_last.json ---
-{"status":"success","dry_run":false,"inserted":0,"updated":0,"unchanged":29,"out_of_scope":7,"invalid":4,"files":103,"fetched":40,"complete":false,"duplicates":0,"errors":[]}
+{"status":"success","dry_run":false,"inserted":0,"updated":0,"unchanged":37,"out_of_scope":2,"invalid":1,"files":103,"fetched":40,"complete":false,"duplicates":0,"errors":[]}
 
 === VERIFICATION SUMMARY ===
-FAILED CHECKS: final_pass_complete
+FAILED CHECKS: final_pass_complete|state_files_tracked|null_area_preserved|null_area_preserved_final
