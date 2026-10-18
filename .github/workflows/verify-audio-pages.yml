@@ -145,7 +145,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, pinned to full commit SHA
         with:
           node-version: '22'
-      # 🎙️ بوابة الهوية الصوتية قبل أي بناء: تعمل على المصدر فقط وبلا حزم
+      # 🎙️ بوابة مواصفة الصوت الموثقة قبل أي بناء: تعمل على المصدر فقط وبلا حزم
       #    خارجية، فتُسقط PR يغيّر المرجع أو إعدادات الصوت أو يستبدل ملفًا
       #    منشورًا أو ينتج إعلانًا خارج مسار الإنتاج الموحّد.
       - name: Verify the audio voice identity gate (reference, production log, every MP3)
