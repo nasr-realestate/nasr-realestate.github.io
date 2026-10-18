@@ -22,6 +22,15 @@ areaNumeric: 180
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/10th-district-180m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "مساحة عائلية وتشطيب ألترا سوبر لوكس في مدينة نصر؟ شقة مية وتمانين متر بالمنطقة العاشرة، عند أول محور شينزو آبي. تلات غرف نوم وريسبشن كبير وحمامين، في الدور التالت. المطلوب تلاتة مليون وسبعمية ألف جنيه. معاها حصة في الأرض والجراج، والاستلام فوري كاش. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
