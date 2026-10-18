@@ -108,6 +108,10 @@ export function buildFeed(properties, generatedAt) {
       title: p.title,
       url: p.url,
       slug: p.slug,
+      // مسار ملف الـfront matter في المستودع + بصمة محتواه — يقرأهما
+      // properties-sync-worker ليبني قائمة الملفات من الـfeed في طلب واحد.
+      source_path: p.source_path,
+      source_sha256: p.source_sha256,
       transaction: p.transaction,
       propertyType: p.propertyType,
       category: p.category,
@@ -133,6 +137,13 @@ export function buildFeed(properties, generatedAt) {
   };
 }
 
+// بيانات المصدر (source_path/source_sha256) عقد خاص بمزامنة D1 داخل ai-feed.json،
+// وليست جزءًا من واجهات القراءة العامة — تُنزع من كل مخرجات /api.
+function publicProperty(p) {
+  const { source_path, source_sha256, ...rest } = p;
+  return rest;
+}
+
 export function buildPropertyDocument(p, generatedAt) {
   return {
     schema_version: SCHEMA_VERSION,
@@ -155,7 +166,7 @@ export function buildPropertyDocument(p, generatedAt) {
       hours: 'السبت–الخميس 12:00–21:00 (الجمعة إجازة)',
     },
     property: {
-      ...p,
+      ...publicProperty(p),
       _derived: undefined,
       markdown_url: `${SITE}/api/properties/${p.slug}.md`,
       json_url: `${SITE}/api/properties/${p.slug}.json`,
@@ -231,7 +242,9 @@ function main() {
     total_count: properties.length,
     base_url: SITE,
     facets: buildFacets(properties),
-    properties: properties.map((p) => ({ ...p, _derived: undefined })),
+    // بيانات المصدر خاصة بالمزامنة وتُبقي في ai-feed.json فقط، حتى لا يتغير
+    // عقد /api/properties.json المنشور.
+    properties: properties.map((p) => ({ ...publicProperty(p), _derived: undefined })),
   }));
   written.push(write('api/openapi.json', renderOpenApi(properties)));
   written.push(write('search-data.json', renderSearchData(properties)));

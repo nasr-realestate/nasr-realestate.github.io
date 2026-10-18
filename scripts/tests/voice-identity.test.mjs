@@ -125,7 +125,7 @@ function expectGateFailure(label, mutateLog, mutateSpec, needle) {
 test("البوابة تنجح على المستودع الحقيقي (45 ملفًا مقيدًا)", () => {
   const r = spawnSync(process.execPath, [GATE], { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(r.status, 0, `البوابة سقطت على المستودع:\n${r.stdout}${r.stderr}`);
-  assert.match(r.stdout, /بوابة الهوية الصوتية: كل الفحوص الملزمة نجحت/);
+  assert.match(r.stdout, /بوابة ملف الصوت والصوت الموثّق: كل الفحوص الملزمة نجحت/);
   assert.match(r.stdout, new RegExp(`السجل: ${LOG.entries.length} ملفًا`));
 });
 
@@ -326,6 +326,29 @@ test("إعلان جديد بلا ownerOverride رغم cos تحت الحد يُس
     null,
     /ownerOverride/,
   );
+});
+
+test("ownerOverride ممنوع افتراضيًا: إعلان جديد خارج الاستثناءين الموثّقين يُسقط البوابة", () => {
+  expectGateFailure(
+    "ownerOverride-policy",
+    (log) => {
+      const e = log.entries.find((x) => x.origin === "produced-under-spec");
+      e.slug = "new-ad-outside-documented-exceptions";
+      e.ownerOverride = true;
+    },
+    null,
+    /ownerOverride ممنوع افتراضيًا|الاستثناءين الموثّقين/,
+  );
+});
+
+test("الاستثناءان الموثّقان يبقيان مقبولين (بدون توسيع القائمة)", () => {
+  const fx = fixture();
+  try {
+    const r = runGate(fx.root);
+    assert.equal(r.code, 0, `البوابة يجب أن تنجح مع الاستثناء الموثّق\n${r.out}`);
+  } finally {
+    fx.cleanup();
+  }
 });
 
 test("إعلان جديد بلا توثيق موافقة المالك يُسقط البوابة", () => {
@@ -541,7 +564,7 @@ test("checkScript لا يخلط «إنّ» الفصحى بـ«تاني» الم�
 // ─────────────────────────────────────────────────────────────────────
 //  11) توصيل البوابة في CI — وجود الملف وحده لا يكفي
 // ─────────────────────────────────────────────────────────────────────
-test("بوابة الهوية الصوتية موصولة في workflow", () => {
+test("بوابة ملف الصوت والصوت الموثّق موصولة في workflow", () => {
   const wf = fs.readFileSync(path.join(REPO_ROOT, ".github", "workflows", "verify-audio-pages.yml"), "utf8");
   assert.match(wf, /verify-voice-identity\.mjs/, "البوابة غير موصولة في verify-audio-pages.yml");
 });

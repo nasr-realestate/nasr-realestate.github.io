@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ═══════════════════════════════════════════════════════════════════
- *  scripts/audio/verify-voice-identity.mjs — بوابة الهوية الصوتية
+ *  scripts/audio/verify-voice-identity.mjs — بوابة ملف الصوت والصوت الموثّق
  * ───────────────────────────────────────────────────────────────────
  *  هذا هو الجزء الذي يُصلح مسار الإنتاج نفسه بدل معالجة الأعراض.
  *  يعمل على المصدر فقط: بلا بناء Jekyll وبلا أي حزمة خارجية، فيصلح لـ CI.
@@ -170,6 +170,16 @@ function checkNewAd(entry, rel, v, page) {
   }
   if (!entry.approval) fail(`${rel}: إعلان جديد بلا توثيق معاينة/موافقة المالك (approval)`);
 
+  // سياسة ownerOverride: ممنوع افتراضيًا للإعلانات الجديدة. يُسمح فقط
+  // للاستثناءين الموثّقين في المواصفة (وكلاهما مقيد في السجل بسبب مكتوب).
+  const overridePolicy = SPEC.identityBand.ownerOverridePolicy || {};
+  const documented = new Set(overridePolicy.documentedExceptions || []);
+  const documentedException = documented.has(entry.slug) || documented.has(entry.audioFile);
+  if (entry.ownerOverride === true && !documentedException) {
+    fail(`${rel}: ownerOverride ممنوع افتراضيًا لإعلان جديد — لا يُسمح به إلا للاستثناءين الموثّقين (${[...documented].join('، ')}).`);
+    return;
+  }
+
   const band = SPEC.identityBand.thresholds;
   const c = entry.speakerCosineToReference;
   if (typeof c !== 'number') { fail(`${rel}: إعلان جديد بلا قياس بصمة المتكلم`); return; }
@@ -277,12 +287,12 @@ checkRegistry();
 reportClassification();
 
 if (errors.length) {
-  console.error(`\n❌ بوابة الهوية الصوتية: ${errors.length} مخالفة`);
+  console.error(`\n❌ بوابة ملف الصوت والصوت الموثّق: ${errors.length} مخالفة`);
   errors.forEach((e, i) => console.error(`\n[${i + 1}] ${e}`));
   process.exit(1);
 }
 if (!quiet) {
-  console.log('\n✅ بوابة الهوية الصوتية: كل الفحوص الملزمة نجحت');
+  console.log('\n✅ بوابة ملف الصوت والصوت الموثّق: كل الفحوص الملزمة نجحت');
   console.log(`   المرجع: ${SPEC.reference.repoPath}`);
   console.log(`   السجل: ${ENTRIES.length} ملفًا مقيدًا · تنبيهات موروثَة موثَّقة: ${warnings.size}`);
 }

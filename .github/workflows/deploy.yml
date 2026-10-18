@@ -1,8 +1,10 @@
 name: Deploy Jekyll with Plugins
 
 on:
+  # ناشر واحد فقط: master عبر هذا الملف. لا يوجد فرع main (2026-10-18)،
+  # وإزالته من هنا تمنع مسار نشر ثانيًا لو أُنشئ مستقبلًا بالخطأ.
   push:
-    branches: ["master", "main"]
+    branches: ["master"]
   workflow_dispatch:
 
 permissions:
@@ -10,9 +12,12 @@ permissions:
   pages: write
   id-token: write
 
+# مجموعة واحدة لكل عمليات Pages: لا يتداخل نشران أبدًا. لا نلغي نشرًا
+# جاريًا في منتصفه (cancel-in-progress: false) حتى لا يبقى الموقع على نسخة
+# نصف مبنية؛ التشغيلات التالية تنتظر بالترتيب.
 concurrency:
-  group: "deploy-jekyll-own"
-  cancel-in-progress: true
+  group: "pages-production"
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -51,12 +56,23 @@ jobs:
         with:
           node-version: "22"
 
-      # ⚠️ بلا `npm install` عن قصد:
-      #    package-lock.json مستثنى من Git في هذا المستودع (انظر .gitignore)،
-      #    لذلك `npm ci` يفشل هنا. والمُولّد مستقل تمامًا — بلا أي حزمة خارجية —
-      #    فخطوة التثبيت تكلّف دقيقة كاملة مقابل لا شيء.
+      # ⚠️ بلا `npm install` عن قصد (تصحيح 2026-10-18):
+      #    package-lock.json **مُتتبَّع في Git** (كان التعليق القديم يقول العكس)،
+      #    فـ`npm ci` كان سينجح. لكن المُولّد ومعه بوابة الصوت والاختبارات
+      #    مستقلّة تمامًا — بلا أي حزمة خارجية — فالتثبيت يكلّف دقيقة مقابل لا شيء.
+      #    لو أُضيفت حزمة إلى scripts/* في المستقبل، أضف خطوة `npm ci` هنا.
       - name: Generate AI discovery layer into _site
         run: node scripts/build-ai-artifacts.mjs --out=_site
+
+      # ختم النشر: ملف عام صغير يقرأه التحقق بعد النشر ليتأكد أن CDN قدّم
+      # نسخة هذا الـcommit بالتحديد (بدل افتراض أن النشر تم).
+      - name: Stamp deploy info (commit SHA) into the artifact
+        run: |
+          mkdir -p _site/.well-known
+          printf '{"sha":"%s","ref":"%s","run_id":"%s","built_at":"%s"}\n' \
+            "${{ github.sha }}" "${{ github.ref_name }}" "${{ github.run_id }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > _site/.well-known/deploy-info.json
+          cat _site/.well-known/deploy-info.json
 
       - name: Verify the AI layer is complete and valid JSON
         run: |
@@ -64,7 +80,7 @@ jobs:
           node --test _worker/tests/mcp-gateway.test.mjs
           node --test scripts/tests/front-matter.test.mjs
 
-      # 🎙️ بوابة الهوية الصوتية — تسبق الرفع فلا يُنشر انحراف صامت.
+      # 🎙️ بوابة مواصفة الصوت الموثقة — تسبق الرفع فلا يُنشر انحراف صامت.
       #    تتحقق من: بصمة المرجع الذي اختاره المالك، بصمة إعدادات الصوت
       #    (encoding/id3/engine) مقابل سجل الإنتاج، أن كل MP3 مقيد في السجل،
       #    أن لا ملف منشور استُبدل، وأن وسوم كل ملف ونصه ومدته مطابقة لصفحته.
@@ -93,4 +109,26 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        
+
+  # ══════════════════════════════════════════════════════════════════
+  #  تحقّق ما بعد النشر — قراءة فقط، ويفشل بصوت عالٍ.
+  #  لا يوقف النشر (وقع بالفعل) ولا يعدّل أي شيء منشور؛ مجرد فشل واضح في
+  #  سجل التشغيل لو قدّم CDN نسخة قديمة أو نقص الصوت أو اختلف عدد MCP.
+  # ══════════════════════════════════════════════════════════════════
+  verify:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Checkout (قائمة الصوت للتحقق من الأحجام)
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify the live deployment (SHA · feed · MCP · raw head · every MP3)
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          DEPLOY_VERIFY_TIMEOUT_S: "300"
+        run: node scripts/verify-deployment.mjs

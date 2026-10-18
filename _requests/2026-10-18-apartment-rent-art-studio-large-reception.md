@@ -6,8 +6,10 @@ location: "مرونة كاملة في المنطقة — الأولوية لمد
 budget: "25,000 إلى 30,000 ج.م شهرياً"
 slug: "apartment-rent-request-art-studio-large-reception-2026-10-18"
 image_file: "social-requests.webp"
+image: "/assets/img/social-requests.png"
 meta_title: "مطلوب شقة للإيجار تصلح استوديو فني | غرفتين أو 3 وريسبشن كبير"
 meta_description: "طلب إيجار سكني لمجموعة فنانين: مطلوب شقة غرفتين أو 3 غرف وريسبشن كبير تصلح استوديو فني. الميزانية من 25 إلى 30 ألف جنيه شهريًا، مع مرونة كاملة في المنطقة."
+description: "طلب إيجار سكني لمجموعة فنانين: مطلوب شقة غرفتين أو 3 غرف وريسبشن كبير تصلح استوديو فني. الميزانية من 25 إلى 30 ألف جنيه شهريًا، مع مرونة كاملة في المنطقة."
 audio_ad: true
 audio_file: "/assets/audio/requests/apartment-rent-request-art-studio-large-reception-2026-10-18.mp3"
 audio_duration: "20 ثانية"

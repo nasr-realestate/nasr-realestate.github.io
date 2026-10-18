@@ -24,7 +24,10 @@ on:
         type: string
         default: "true"
   push:
-    branches: ["master", "arena/**"]
+    # master فقط. كان `arena/**` هنا، فأي push لفرع مراجعة يـ**نشر** الـWorker
+    # ويشغّل مزامنة D1 حقيقية — حادثة 2026-10-18 أثبتت ذلك. النشر من فرع
+    # مراجعة ممنوع؛ التفريعات تُختبر فقط (tests.yml).
+    branches: ["master"]
     paths:
       - "_worker/properties-sync-worker.js"
       - "_worker/tests/properties-sync.test.mjs"
@@ -34,8 +37,15 @@ on:
 permissions:
   contents: write   # only to publish the verification report to the ci/sync-report branch
 
+# نشر واحد في المرة، ولا إلغاء في المنتصف.
+concurrency:
+  group: properties-sync-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy-and-verify:
+    # حماية مزدوجة: حتى لو تغيّر trigger مستقبلًا، لا نشر من غير master.
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE || secrets.ARENA_CLOUDFLARE_TOKEN || secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || secrets.CF_TOKEN || secrets.CLOUDFLARE_D1_TOKEN }}
@@ -45,12 +55,13 @@ jobs:
       SYNC_URL: https://nasr-properties-sync.footcai-555.workers.dev
       REPORT: _diag/sync-deploy-report.txt
       # the exact sets produced by the offline audit of _properties/*.md (see _worker/README.md)
-      # last reviewed 2026-10-14: أُضيفت الثلاثة الجديدة إلى IN_SCOPE_IDS
+      # last reviewed 2026-10-18: أُضيف عقارا 16 و17 أكتوبر إلى IN_SCOPE_IDS
+      # (اختبار deploy-workflow يفشل تلقائيًا لو ظهر ملف في _properties خارج القوائم الثلاث)
       #   hayat-compound-furnished-200m · helmy-abdel-aaty-seraj-230m · luxury-admin-unit-41m-rent
       OUT_OF_SCOPE_IDS: "heliopolis-badia-180m-lux,masr-al-gdida-150m-classic,lavida-rent-2units-jan26,villa-new-cairo-1st-district-568m,rehab-villa-model-h-gate9,villa-south-90th-120m,shams-club-heliopolis-160m,andalus1-duplex-285m,banafseg2-showroom-340m,new-polis-130m,salam-city-218m-roof,sheraton-nozha-165m-rent"
       INVALID_IDS: "rent-furnished-batrawy-30k,shinzo-abe-262m-4th-floor,sherif-samy-ground-admin,saudi-buildings-golf-110m,nasr-street-furnished,obour-buildings-rent-47,rent-tayaran-panorama-35k,showroom-ahmed-fakhry-600m"
       NULL_AREA_IDS: "gamal-afifi-ahly-club-250m,admin-tayaran-st-400m,shop-tayaran-togari-400m,duplex-villa-badawy,police-towers-rent-280m"
-      IN_SCOPE_IDS: "luxury-admin-unit-41m-rent,helmy-abdel-aaty-seraj-230m,hayat-compound-furnished-200m,10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m"
+      IN_SCOPE_IDS: "luxury-admin-unit-41m-rent,helmy-abdel-aaty-seraj-230m,hayat-compound-furnished-200m,10th-district-180m,pharmacy-sale-10th-district-32m,makaryafi-260m,helmy-hassan-ali-160m,seraj-mall-apartment-170m,duplex-7th-district-150m,ahly-club-ext-158m,elnozha-saudi-170m,fouad-nasseem-150m,hassan-al-sharif-150m,helmy-hassan-ali-220m-lux,mustafa-elnahas-160m,golden-square-garden-156m,abbas-elakkad-220m-2026,shop-abbas-elakkad-60m-jan26,genena-mall-186m-office-residence,shop-rent-makram-ebeid-67m,int-park-140m-furnished,abu-dawood-fakhry-167m,abdel-azim-ghalmi-200m-expat,kabul-st-makram-ebeid-260m,truegate-compound-waha-108m,international-park-vip-215m,shop-rent-nozha-st-190m,al-hayat-towers-162m,khedr-eltouny-120m-sale,abbas-elakkad-refaai-200m,abdul-halim-abdullah-195m,makarif-6th-district-130m,rabaa-investment-165m,rent-abdel-hamid-lotfy-tayaran-150m,egyptair-nasr-city-125m-furnished,hassanein-heikal-rent-73m,gamal-afifi-ahly-club-250m,gamal-dewidar-rent-160m,al-azhar-rent-200m-luxury,admin-hq-enppi,admin-hq-sale-9th-district,admin-office-nahas-145m,admin-rent-nozha-main-260m,admin-tayaran-st-400m,ahmed-qasem-125m-lux,ali-amer-240m,commercial-elgamal-123m,shop-tayaran-togari-400m,degla-landmark-122m-rent,duplex-safarat-invest-220m,duplex-villa-badawy,green-hills-190m,hassan-maamoun-175m-lux,hay-sabe-115m,ibrahim-nawara-175m,ismail-wahby-160m-luxury,makram-ebid-177m,makram-ebid-main-250m,makram-obeid-sqlia-150m,mohie-eldin-abbas-akkad-4rooms,nasr-city-9th-garden,office-rent-hay-sabe-190m,office-sale-moez-eldawla-250m,police-towers-rent-280m,rabaa-eladawya-120m,rabaa-investment-160m,rabaa-square-135m-lux,rent-waha-50th-street-163m,republican-guard-197m,safarat-safwa-170m,sanhoori-luxury-250m,nour-deen-160m,shop-sale-abbas-akkad-invest,sunrise-towers-288m,sunview-mall-207m,taawuniyat-hassan-maamoun,tawfik-al-bakry-250m,tayaran-main-225m-luxury,zahraa-nasr-86m,zahraa-nasr-city-130m,zone1-luxury-225m,kabul-st-commercial-hq-130m,apartment-sale-hassan-hassanein-heikal-200m"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -283,16 +294,19 @@ jobs:
           while [ "$dn" -lt 6 ]; do
             dn=$((dn+1))
             call /tmp/dryrun.json GET "${SYNC_URL}/sync?dryRun=1"
-            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
+            jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, complete: .github.complete, errors}' /tmp/dryrun.json 2>/dev/null || head -c 1000 /tmp/dryrun.json
             DERR="$(vget '.errors[0] // ""' /tmp/dryrun.json)"
             case "$DERR" in
-              github_tree_failed*|*rate\ limit*) echo "  GitHub tree API rate limit — retrying in 120s"; sleep 120; continue;;
+              feed_missing_source_path*)
+                echo "  الموقع المنشور ما زال يقدّم ai-feed.json قديمًا (بلا source_path) — قد يكون نشر الصفحات لم ينتهِ بعد؛ المحاولة بعد 45 ثانية"
+                sleep 45; continue;;
+              github_feed_failed*|github_tree_failed*|*rate\ limit*) echo "  ai-feed.json fetch failed/rate-limited — retrying in 120s"; sleep 120; continue;;
             esac
             [ "$(vget '.github.files_total' /tmp/dryrun.json)" = "$EXPECTED_FILES" ] && break
             sleep 60
           done
           check "dryrun_flag" "$(vget '.dry_run' /tmp/dryrun.json)" "true"
-          check "dryrun_read_the_tree" "$(vget '.github.files_total' /tmp/dryrun.json)" "$EXPECTED_FILES"
+          check "dryrun_read_the_feed" "$(vget '.github.files_total' /tmp/dryrun.json)" "$EXPECTED_FILES"
           # في الـdry run العدادات تُظهر ما كان *سيحدث* — والدليل الحقيقي هو أن D1 لم تتغير
           report /tmp/verify_after_dry.json
           check "dryrun_wrote_nothing" "$(vget '.counts.source9_total' /tmp/verify_after_dry.json)/$(vget '.counts.listings_total' /tmp/verify_after_dry.json)" "$(vget '.counts.source9_total' /tmp/verify_before.json)/$(vget '.counts.listings_total' /tmp/verify_before.json)"
@@ -305,12 +319,16 @@ jobs:
             OUT="/tmp/attempt$n.json"
             echo "--- run attempt $n (successful runs so far: $ok) ---"
             call "$OUT" POST "${SYNC_URL}/sync"
-            jq -c '{status, dry_run, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, files: .github.files_total, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
+            jq -c '{status, dry_run, source: .github.source, feed_total: .github.feed_total, files: .github.files_total, inserted: .db.inserted, updated: .db.updated, unchanged: .db.unchanged, out_of_scope: .db.out_of_scope, invalid: .db.invalid, fetched: .github.fetched, budget_skipped: .github.budget_skipped, complete: .github.complete, missing: .github.missing_from_github, errors}' "$OUT" 2>/dev/null || head -c 1200 "$OUT"
             ERR1="$(vget '.errors[0] // ""' "$OUT")"
             case "$ERR1" in
-              github_tree_failed*|*rate\ limit*)
-                echo "  GitHub tree API rate limit (anonymous 60/h on the shared Worker IP) — retrying in 120s"
-                sleep 120
+              feed_missing_source_path*)
+                echo "  الموقع المنشور ما زال يقدّم ai-feed.json قديمًا (بلا source_path) — قد يكون نشر الصفحات لم ينتهِ بعد؛ المحاولة بعد 45 ثانية"
+                sleep 45
+                continue;;
+              github_feed_failed*|*rate\ limit*)
+                echo "  ai-feed.json fetch failed/rate-limited — retrying in 60s"
+                sleep 60
                 continue;;
               github_raw_failed*|write_failed*|*internal_error*)
                 echo "  transient failure: ${ERR1:0:200} — retrying in 60s"
@@ -323,8 +341,17 @@ jobs:
             [ "$(vget '.github.complete' "$OUT")" = "true" ] && break
             sleep 63
           done
-          LAST="/tmp/ok$ok.json"
+          LAST="/tmp/attempt$n.json"
+          if [ "$ok" -eq 0 ]; then
+            # لا تشغيل مكتمل خلال المهلة: نفشل بصوت عالٍ وبرسالة تشرح السبب المحتمل
+            echo "FAIL  no_completed_run: لم يكتمل أي تشغيل خلال المهلة — الموقع المنشور قد يكون ما زال يقدّم ai-feed.json قديمًا (بلا source_path)"
+            FAILED="$FAILED|no_completed_run"
+          else
+            LAST="/tmp/ok$ok.json"
+          fi
           check "final_pass_complete" "$(vget '.github.complete' "$LAST")" "true"
+          check "file_list_source"      "$(vget '.github.source' "$LAST")" "ai-feed.json"
+          check "feed_total_matches_files" "$(vget '.github.feed_total' "$LAST")" "$(vget '.github.files_total' "$LAST")"
           echo
           echo "--- classification recorded in properties_sync_state (durable, across all runs) ---"
           report /tmp/verify_state.json
@@ -368,6 +395,7 @@ jobs:
           check "in_scope_present"          "$(vget '.lists.in_scope.present' /tmp/verify_after.json)/$(vget '.lists.in_scope.checked' /tmp/verify_after.json)" "$EXPECTED_IN_SCOPE/$EXPECTED_IN_SCOPE"
           check "null_area_preserved"       "$(vget '.lists.null_area.present' /tmp/verify_after.json)" "$B_ZERO"
           check "duplicates_none"           "$(vget '.duplicates.count' /tmp/verify_after.json)" "0"
+          check "run_health_no_active_error" "$(vget '.run_health.active' /tmp/verify_after.json)" "false"
           check "foreign_key_check"         "$(vget '.integrity.foreign_key_check' /tmp/verify_after.json)" "0"
           check "no_rows_deleted"           "$([ "${A_TOT:-0}" -ge "${B_TOT:-0}" ] && echo true)" "true"
           check "listings_total_not_shrunk" "$([ "${A_SRC9:-0}" -ge "${B_SRC9:-0}" ] && echo true)" "true"
