@@ -35,4 +35,5 @@
 - نجاح `node scripts/audio/verify-voice-identity.mjs`: **51 ملفًا مقيدًا، 50 صفحة صوتية** (مع ملف الطلب المتقاعد غير المرتبط)، ولا مخالفة.
 - نجح فحص صفحات الصوت بعد تصيير العقارات الـ103 بخادم LiquidJS المحلي: **49 صفحة بمشغّل صوت، و54 صفحة بلا تغيير**.
 - نجح `node --test scripts/tests/voice-identity.test.mjs` (44/44)، و`npm test` (364/364)، و`npm run lint`، و`node --check _diag/check-audio-batch3.mjs`، و`git diff --check`.
+- زُوّدت ملفات API المولّدة للخمسة (`api/properties/*.json` و`api/properties.json`) بروابط MP3 الجديدة؛ اجتاز `node scripts/check-ai-artifacts-in-sync.mjs` (216 ملفًا) و`npm run build:ai:check`.
 - لا تغييرات في صفحات عقارية أخرى أو أصول صوتية سابقة؛ لا استبدال أو إعادة توليد لأي ملف منشور سابقًا. النشر الإنتاجي ينتظر دمج التغيير في `master`، وهو فرع النشر الوحيد.
