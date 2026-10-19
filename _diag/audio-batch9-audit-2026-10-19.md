@@ -1,9 +1,9 @@
 # تدقيق ما قبل الدفعة الشاملة — كل الإعلانات الصوتية العقارية القائمة
 
-**التاريخ:** 2026-10-19 (Africa/Cairo)  
-**النطاق:** ملفات `assets/audio/properties/*.mp3` (49 ملفًا) وصفحاتها في `_properties/` وسجل `_data/audio_voice_log.json`  
-**الأدوات:** `scripts/audio/produce-audio-ad.mjs --verify` (ترميز + وسوم + مدة + بصمة)، `scripts/audio/measure_voice_identity.py` (GE2E/Resemblyzer 0.1.4، قياس فعلي)، قراءة front matter، مراجعة نصية آلية.  
-**لا ادعاء استماع:** لم يُجرَ أي استماع بشري لهذه الملفات في هذه الجلسة. كل ما بالأسفل قياس آلي أو قراءة نص.  
+**التاريخ:** 2026-10-19 (Africa/Cairo)
+**النطاق:** ملفات `assets/audio/properties/*.mp3` (49 ملفًا) وصفحاتها في `_properties/` وسجل `_data/audio_voice_log.json`
+**الأدوات:** `scripts/audio/produce-audio-ad.mjs --verify` (ترميز + وسوم + مدة + بصمة)، `scripts/audio/measure_voice_identity.py` (GE2E/Resemblyzer 0.1.4، قياس فعلي)، قراءة front matter، مراجعة نصية آلية.
+**لا ادعاء استماع:** لم يُجرَ أي استماع بشري لهذه الملفات في هذه الجلسة. كل ما بالأسفل قياس آلي أو قراءة نص.
 
 ## 1) الحصيلة العددية
 

@@ -322,7 +322,13 @@ test("audio_file يشير إلى ملف غير موجود يُسقط البوا�
 test("إعلان جديد بلا ownerOverride رغم cos تحت الحد يُسقط البوابة", () => {
   expectGateFailure(
     "ownerOverride",
-    (log) => { const e = log.entries.find((x) => x.origin === "produced-under-spec"); e.ownerOverride = false; },
+    (log) => {
+      // نُثبّت القياس تحت حدّ «نفس الصوت» حتى يختبر النص شرط ownerOverride
+      // نفسه لا أول قيد في السجل (الترتيب يتغيّر مع كل دفعة استبدال).
+      const e = log.entries.find((x) => x.origin === "produced-under-spec");
+      e.ownerOverride = false;
+      e.speakerCosineToReference = 0.9;
+    },
     null,
     /ownerOverride/,
   );
