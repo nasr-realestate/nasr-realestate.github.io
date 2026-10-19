@@ -22,6 +22,15 @@ areaNumeric: 120
 roomsNumeric: 3
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/rabaa-eladawya-120m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "عايز شقة مية وعشرين متر بفيو على النصر في مدينة نصر؟ في رابعة العدوية، بجوار نادي الزهور ومستشفى تبارك. الدور التاني، والفيو مفتوح على الشارع والحديقة. تلات غرف نوم وريسبشن وحمام واحد. السعر تلاتة مليون جنيه. تصلح سكن أو مكتب أو عيادة، والتشطيب محتاج توضيب على ذوقك. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

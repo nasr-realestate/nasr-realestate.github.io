@@ -22,6 +22,15 @@ areaNumeric: 0
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/rent-tayaran-panorama-35k.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز شقة فندقية مفروشة على الطيران الرئيسي؟ في المربع الذهبي بمدينة نصر، أمام فندق سونستا. الدور السادس قبل الأخير. تلات غرف واحدة ماستر وريسبشن أربع قطع وحمامين. الإيجار خمسة وتلاتين ألف جنيه شهريًا. فرش فندقي فاخر والشقة جاهزة للسكن فورًا. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

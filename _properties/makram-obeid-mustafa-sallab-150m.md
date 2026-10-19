@@ -21,6 +21,15 @@ areaNumeric: 150
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/makram-obeid-sqlia-150m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "عايز شقة مية وخمسين متر ورا مصطفى السلاب في مكرم عبيد؟ في شارع صقلية بمدينة نصر، والدور السابع مش الأخير. تلات غرف نوم وريسبشن واسع وحمامين. السعر أربعة مليون جنيه، وقابل للتفاوض. تشطيب جيد وجاهزة للسكن، وفيه أسانسير وغاز طبيعي وحصة في الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

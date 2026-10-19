@@ -21,6 +21,15 @@ areaNumeric: 135
 roomsNumeric: 2
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/rabaa-square-135m-lux.mp3"
+audio_duration: "28 ثانية"
+audio_script: "عايز شقة مية وخمسة وتلاتين متر على ميدان رابعة؟ على طريق النصر في مدينة نصر. الدور الرابع، والعمارة فيها تلات مصاعد. اتنين غرف نوم وصالون وسفرة وحمامين. السعر خمسة مليون جنيه، شامل الأجهزة والمطبخ. التشطيب ألترا سوبر لوكس، وفيه تلات تكييفات والتجديد شامل. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

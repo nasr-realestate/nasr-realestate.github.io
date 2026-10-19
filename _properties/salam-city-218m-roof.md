@@ -22,6 +22,15 @@ areaNumeric: 218
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/salam-city-218m-roof.mp3"
+audio_duration: "29 ثانية"
+audio_script: "مهتم بشقة بنتهاوس ميتين وتمانتاشر متر بسعر لقطة؟ في مدينة السلام، ناصية شارع السادات ونور محمود. الدور الاتناشر وفيه مصعد، والفيو مفتوح على المطار. تلات غرف واسعة وريسبشن وحمامين. السعر مليون ومية ألف جنيه. معاها حق انتفاع بالروف، والتشطيب على الطوب الأحمر. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

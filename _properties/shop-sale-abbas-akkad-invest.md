@@ -22,6 +22,15 @@ areaNumeric: 212
 roomsNumeric: 0
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/shop-sale-abbas-akkad-invest.mp3"
+audio_duration: "27 ثانية"
+audio_script: "بتدور على محل ميتين واتناشر متر مؤجر بعائد شهري؟ في ثاني نمرة من شارع عباس العقاد بمدينة نصر. أرضي تجاري بمساحة مفتوحة وحمام واحد. السعر تلاتين مليون جنيه، وتسهيلات متاحة. تشطيب براند والمحل مؤجر وبيحقق عائد شهري. موقع حيوي على الشارع الرئيسي. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

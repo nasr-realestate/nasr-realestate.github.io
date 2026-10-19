@@ -21,6 +21,15 @@ areaNumeric: 160
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/helmy-hassan-ali-160m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "عايز شقة مية وستين متر صافي في مدينة نصر؟ في شارع حلمي حسن علي، موازي لمصطفى النحاس. الدور العاشر في عمارة اتناشر دور، والعمارة مسجلة. تلات غرف نوم وريسبشن واسع وحمامين. السعر تلاتة مليون وخمسمية ألف جنيه. معاها حصة في الأرض، وفيه خيار بالفرش أو من غيره. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

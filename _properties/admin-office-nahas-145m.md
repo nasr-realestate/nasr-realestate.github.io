@@ -22,6 +22,15 @@ areaNumeric: 145
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/admin-office-nahas-145m.mp3"
+audio_duration: "29 ثانية"
+audio_script: "محتاج مقر إداري مية وخمسة وأربعين متر على النحاس؟ في عمارات عثمان، شارع مصطفى النحاس الرئيسي بمدينة نصر. دور متوسط بواجهة بحرية. تلات غرف وريسبشن تلات قطع وحمامين. السعر خمسة مليون وخمسمية ألف جنيه. التشطيب تشطيب شركة وحالته جيدة، والموقع على الشارع الرئيسي. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

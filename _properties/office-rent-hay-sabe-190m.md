@@ -22,6 +22,15 @@ areaNumeric: 190
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/office-rent-hay-sabe-190m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "محتاج مقر إداري مية وتسعين متر على عبد الله العربي؟ في الحي السابع بمدينة نصر. دور متكرر وفيه مصعد. تلات غرف مغلقة وصالتين عمل وحمامين ومطبخ. الإيجار ستة وعشرين ألف جنيه شهريًا. تشطيب مكتبي وجاهز، والموقع على الشارع الرئيسي. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

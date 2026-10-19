@@ -22,6 +22,15 @@ areaNumeric: 160
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/mustafa-elnahas-160m.mp3"
+audio_duration: "29 ثانية"
+audio_script: "بتدور على شقة مية وستين متر بسعر لقطة في امتداد النحاس؟ في شارع السوق التجاري، امتداد مصطفى النحاس بمدينة نصر. الدور التاسع، والعمارة فيها أسانسيرين. تلات غرف نوم وريسبشن تلات قطع وحمامين. السعر اتنين مليون وستمية ألف جنيه. الفيو مفتوح، والعمارة حديثة بمداخل فندقية. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

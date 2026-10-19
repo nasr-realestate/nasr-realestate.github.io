@@ -22,6 +22,15 @@ areaNumeric: 32
 roomsNumeric: 0
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/pharmacy-sale-10th-district-32m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتدور على صيدلية جاهزة في الحي العاشر؟ محل إتنين وتلاتين متر في صقر قريش بمدينة نصر، بجوار مسجد أبو بكر الصديق. أمامه مركز طبي وعيادات. مساحة مفتوحة قابلة للتقسيم وحمام واحد. السعر مليون وتمانمية وخمسين ألف جنيه، سعر نهائي. الوحدة على الطوب وجاهزة للتجهيز على ذوقك. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -22,6 +22,15 @@ areaNumeric: 0
 roomsNumeric: 2
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/nasr-street-furnished.mp3"
+audio_duration: "27 ثانية"
+audio_script: "بتدور على شقة مفروشة فاخرة على شارع النصر؟ أمام المخابرات العامة وبجوار طيبة مول في مدينة نصر. الدور الثامن، والعمارة فيها تلات مصاعد. اتنين غرف نوم وريسبشن وحمامين. السعر أربعة مليون وميتين ألف جنيه، شامل الفرش. تشطيب سوبر لوكس بفرش فندقي وخطوات من الخدمات. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

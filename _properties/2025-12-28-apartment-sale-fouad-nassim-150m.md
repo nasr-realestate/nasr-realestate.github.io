@@ -22,6 +22,15 @@ areaNumeric: 150
 roomsNumeric: 2
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/fouad-nasseem-150m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز شقة مية وخمسين متر بفيو مفتوح خلف سونستا في مدينة نصر؟ في شارع أحمد فؤاد نسيم، خلف فندق سونستا. الدور الثالث، وفيه تلات بلكونات. اتنين غرف نوم وريسبشن واسع وحمامين. السعر أربعة مليون جنيه، وقابل للتفاوض. الفيو مفتوح على مدرسة طيبة، ومعاها حصة في الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

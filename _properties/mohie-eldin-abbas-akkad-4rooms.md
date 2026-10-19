@@ -22,6 +22,15 @@ areaNumeric: 4
 roomsNumeric: 4
 bathsNumeric: 3
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/mohie-eldin-abbas-akkad-4rooms.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتدور على أربع غرف نوم متفرعة من عباس العقاد؟ في شارع محي الدين عبد الحميد بمدينة نصر، والدور الخامس مميز. أربع غرف وريسبشن أربع قطع وتلات حمامات. السعر خمسة مليون وخمسمية ألف جنيه بدون فرش، وستة مليون بالفرش. تشطيب سوبر لوكس وجاهزة للسكن، والفيو مفتوح وغير مجروح. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
