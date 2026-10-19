@@ -131,7 +131,7 @@ test("end to end: Worker → 💎 button → valuation page → valuation Worker
   // ٢) agent.html بيستقبل نفس الرد (من غير ما نألّف ردود): بيرسم الزر ويحفظ الجلسة من غير الـGPS
   const agentBefore = bootAgent({ runTimers: true, fetchImpl: async () => new Response(JSON.stringify(gift.json), { status: 200 }) });
   await send(agentBefore, "لا");
-  const button = agentBefore.chatArea.querySelector(".valuation-link");
+  const button = agentBefore.el("valuationSlot").querySelector(".valuation-link");
   assert.ok(button, "the 💎 button is on screen");
   assert.equal(button.href, agentBefore.run(`buildValuationHref(${JSON.stringify(cta)})`));
   button.dispatch("click");
@@ -202,7 +202,7 @@ test("end to end: Worker → 💎 button → valuation page → valuation Worker
   assert.match(announcement, /📊 النطاق الأساسي: 8,280,000 – 10,440,000 ج\.م/);
   assert.match(announcement, /🟢 عينة قوية — مؤشر موثوق نسبيًا/);
   assert.match(announcement, /اسم حضرتك إيه؟/);
-  assert.equal(agentAfter.chatArea.querySelectorAll(".valuation-link").length, 0, "the button is gone once the step is done");
+  assert.equal(agentAfter.el("valuationSlot").querySelectorAll(".valuation-link").length, 0, "the button is gone once the step is done");
   assert.equal(agentAfter.sessionStorage.getItem("simsar_return_session"), null);
 
   // ٦) باقي التسجيل: الاسم والرقم والصور — واللي يتبعت لطارق فيه القسم الموسوم بنفس الأرقام
@@ -226,7 +226,7 @@ test("end to end (rent): a furnished-rent owner gets the furnished snapshot, lab
   const gift = await driveOwnerToGift({ rent: true, furnished: true, withGps: false, locationMessage: "المنطقة السادسة شارع عباس العقاد" });
   const agentBefore = bootAgent({ runTimers: true, fetchImpl: async () => new Response(JSON.stringify(gift.json), { status: 200 }) });
   await send(agentBefore, "لا");
-  const button = agentBefore.chatArea.querySelector(".valuation-link");
+  const button = agentBefore.el("valuationSlot").querySelector(".valuation-link");
   assert.deepEqual(Object.fromEntries(new URL(button.href, BASE).searchParams), {
     from: "agent", journey: "seller", area: "6th-district", size: "180", type: "apartment", deal: "rent", furnished: "yes", floor: "3", price: "9000",
   });
@@ -252,7 +252,7 @@ test("end to end (rent): a furnished-rent owner gets the furnished snapshot, lab
   const agentAfter = bootAgent({
     runTimers: true,
     search: link.search,
-    session: { simsar_return_session: (agentBefore.chatArea.querySelector(".valuation-link").dispatch("click"), agentBefore.sessionStorage.getItem("simsar_return_session")) },
+    session: { simsar_return_session: (agentBefore.el("valuationSlot").querySelector(".valuation-link").dispatch("click"), agentBefore.sessionStorage.getItem("simsar_return_session")) },
     fetchImpl: async (url, init) => agentWorker.fetch(new Request("https://agent.test/", {
       method: "POST", headers: { "Content-Type": "application/json", Origin: ORIGIN, "CF-Connecting-IP": nextIp() }, body: init.body,
     }), { GEMINI_API_KEY: "test-key" }),

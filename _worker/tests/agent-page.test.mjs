@@ -255,7 +255,8 @@ test("the chat is restored after the valuation round trip; the GPS pin is never 
     state.valuationCta = { intent: "seller", area: "المنطقة السادسة", size: 180, propertyType: "شقة", areaType: "sale" };
     renderValuationCta(state.valuationCta); saveState();`);
   assert.ok(!a1.sessionStorage.getItem("simsar_wa_v92").includes("secret street"), "saveState strips the GPS");
-  a1.chatArea.querySelector(".valuation-link").dispatch("click");
+  // 2026-10-19: زر 💎 اتنقل من مجرى المحادثة للوحة الإجابة الثابتة (متناول الإبهام) — نفس العنصر والنقر
+  a1.el("valuationSlot").querySelector(".valuation-link").dispatch("click");
   const saved = a1.sessionStorage.getItem("simsar_return_session");
   assert.ok(saved && !saved.includes("secret street") && !saved.includes('"gps"'), "saveReturnContext strips the GPS");
 
@@ -263,7 +264,7 @@ test("the chat is restored after the valuation round trip; the GPS pin is never 
   assert.equal(a2.run("state.formState.flowType"), "owner");
   assert.equal(a2.run("state.formState.stepIndex"), 27);
   assert.ok(a2.run("state.history.length") >= 2);
-  assert.ok(a2.chatArea.querySelector(".valuation-link"), "the 💎 button is back");
+  assert.ok(a2.el("valuationSlot").querySelector(".valuation-link"), "the 💎 button is back");
   assert.equal(a2.sessionStorage.getItem("simsar_return_session"), null, "the saved context is consumed");
   assert.equal(a2.run("state.valuationResult.estimate"), 9360000);
   assert.equal(a2.run("state.formState._version"), "v92");
@@ -294,7 +295,9 @@ test("T1.5: the page says it is the agent, not Tarek — greeting, header status
   assert.equal(a.el("statusText").textContent, "يكتب...");
   a.run("setTyping(false)");
   assert.equal(a.el("statusText").textContent, "وكيل ذكي • متصل الآن", "after typing the header goes back to the disclosure text");
-  assert.deepEqual(a.chatArea.querySelectorAll(".btn-glass").map(b => b.textContent), ["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
+  // 2026-10-19: خيارات الوكيل بقت في شريط الإجابة فوق الكيبورد (مش جوه مجرى المحادثة)
+  assert.deepEqual(a.el("actionRail").querySelectorAll(".chip").map(b => b.textContent), ["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
+  assert.equal(a.chatArea.querySelectorAll(".chip").length, 0, "quick replies never live inside the scroll area");
 });
 
 // ───────── زر 💎 ─────────
@@ -335,23 +338,23 @@ test("the 💎 button is one link, replaced on every reply and removed when the 
   let reply = { response: "قيّم عقارك", formState: { _version: "v92" }, valuationCta: SELLER_CTA, options: ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"] };
   const a = bootAgent({ fetchImpl: async (u, i) => fetchOk(reply, calls)(u, i) });
   await send(a, "كمّل");
-  let links = a.chatArea.querySelectorAll(".valuation-link");
+  let links = a.el("valuationSlot").querySelectorAll(".valuation-link");
   assert.equal(links.length, 1);
   assert.equal(links[0].textContent, "💎 قيّم عقارك");
   assert.equal(links[0].href, a.run(`buildValuationHref(${JSON.stringify(SELLER_CTA)})`));
-  assert.equal(a.chatArea.querySelectorAll(".valuation-cta-rack").length, 1);
-  assert.deepEqual(a.chatArea.querySelectorAll(".btn-glass").filter(b => !b._classes.has("valuation-link")).map(b => b.textContent), ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"]);
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-cta-rack").length, 1);
+  assert.deepEqual(a.el("actionRail").querySelectorAll(".chip").map(b => b.textContent), ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"]);
   assert.equal(a.run("state.valuationCta.intent"), "seller");
 
   await send(a, "تاني"); // نفس الرد: مفيش تكرار
-  assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 1);
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 1);
 
   reply = { response: "اسم حضرتك إيه؟", formState: { _version: "v92" } };
   await send(a, "تخطي السؤال ⏭");
-  assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 0, "the button disappears once the gift step is over");
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 0, "the button disappears once the gift step is over");
   assert.equal(a.run("state.valuationCta"), null);
   a.run("renderValuationCta('x'); renderValuationCta(null)");
-  assert.equal(a.chatArea.querySelectorAll(".valuation-link").length, 0);
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 0);
 });
 
 test("a failed or unreachable Worker shows a clear message, preserves the draft, and unlocks the input", async () => {
