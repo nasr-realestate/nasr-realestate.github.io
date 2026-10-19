@@ -22,6 +22,15 @@ areaNumeric: 115
 roomsNumeric: 2
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/hay-sabe-115m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "بتدور على شقة مية وخمستاشر متر متشطبة؟ في الحي السابع بمدينة نصر. الدور الأخير والعمارة معزولة. اتنين غرف نوم وريسبشن تلات قطع وحمام كبير. السعر تلاتة مليون وميتين وخمسين ألف جنيه. تشطيب ألترا مودرن وحصة في الأرض والروف. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
