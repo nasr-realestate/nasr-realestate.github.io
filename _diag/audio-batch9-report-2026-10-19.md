@@ -104,3 +104,22 @@
 ## 8) عقد الملفات
 
 MPEG-2 Layer III · 32 kbps · 24 kHz · أحادي · ≤30 ثانية · peak ≤ −0.5 dBFS · RMS −22…−17 dBFS · ID3v2.3 (`TIT2`/`TPE1`/`TALB`/`TDRC`/`TCON`/`TSSE`/`COMM`) · `TPE1 = سمسار طلبك — طارق طنطاوي` · `COMM = audio_script` حرفيًا · وسم الصفحة `audio_file` يعكس الـslug.
+
+## 9) النشر والتحقق الحيّ (بعد الدمج)
+
+- **PR #77** (الدفعة كاملة) و**PR #78** (سدّ خطوة `Verify the AI layer` في `deploy.yml`) دُمجا في `master`.
+- `Deploy Jekyll with Plugins`: **build ✅ · deploy ✅** — رُفع إصدار الموقع ونُشر.
+- التحقق الحيّ من داخل الشبكة المتاحة:
+
+| الفحص الحيّ | النتيجة |
+|---|---|
+| `https://nasr-realestate.github.io/.well-known/ai.txt` | ✅ «104 وحدة معروضة حتى 2026-10-19» — طبقة الذكاء المنشورة جديدة |
+| `…/api/properties.json` | ✅ `total_count: 104` · `generated_at: 2026-10-19T14:00:56Z` |
+| `…/api/properties/kabul-st-makram-ebeid-260m.json` | ✅ يحمل `audioFile` الصحيح |
+| `…/properties/kabul-st-makram-ebeid-260m/` | ✅ صفحة حيّة تلعب الإعلان: مدتها 29 ثانية، ونصّها المعروض هو **نص الموجة 9 الجديد** حرفًا بحرف |
+| `…/assets/audio/properties/kabul-st-makram-ebeid-260m.mp3` | ✅ موجود ويُقدَّم (مسار غير موجود يعيد صفحة 404، والموجود يُقدَّم كملف صوتي) |
+| `…/assets/audio/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m.mp3` (المرجع) | ✅ يُقدَّم سليمًا — لم يتغيّر |
+
+### الفحص الوحيد الأحمر بعد النشر — سببه بنية النشر لا الصوت
+
+`/.well-known/deploy-info.json` يعيد **404** على الموقع الحيّ، ومع ذلك `/.well-known/mcp.json` و`/.well-known/ai.txt` يعملان من نفس المجلد. وظيفة `verify` بعد النشر تعتمد على هذا الملف لتطابق SHA، فتفشل بـ`deploy_convergence`. أي أن الصوت منشور ومتحقَّق منه، والخطوة الحمراء ناتجة عن ملف ختم النشر المفقود من إصدار Pages — وهو عيب قائم قبل هذه الدفعة (فشلت نفس الخطوة في نشرَي `master` السابقين 2026-10-18) ولم أُصلحه هنا لأنه يخص بنية النشر لا نطاق الصوت: الإصلاح المقترح خطوة واحدة في `deploy.yml` — كتابة الختم أيضًا في مسار منشور فعليًا (أو التأكد من رفع `.well-known/deploy-info.json` داخل إصدار Pages) ثم إعادة التحقق.
