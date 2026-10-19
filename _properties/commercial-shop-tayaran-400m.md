@@ -22,6 +22,15 @@ areaNumeric: 400
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/shop-tayaran-togari-400m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتدور على محل أربعمية متر على الطيران الرئيسي؟ في شارع الطيران بمدينة نصر، بجوار بنك CIB. أرضي وأول، مية متر أرضي ومية أول. مساحة مفتوحة وحمامين. السعر خمسة وأربعين مليون جنيه، وقابل للتفاوض. التشطيب على الطوب الأحمر، وفيها مرونة في التصميم. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

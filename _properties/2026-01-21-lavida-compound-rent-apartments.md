@@ -21,6 +21,15 @@ areaNumeric: 135
 roomsNumeric: 3
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/lavida-rent-2units-jan26.mp3"
+audio_duration: "23 ثانية"
+audio_script: "بتدور على شقة مية وخمسة وتلاتين متر في كمبوند؟ في لافيدا هليوبوليس الجديدة على طريق السويس. متاح أكتر من وحدة في أدوار مختلفة، وفيو حمام سباحة. تلات غرف نوم وريسبشن وحمام. الإيجار تسعة آلاف جنيه شهريًا لكل وحدة. تشطيب سوبر لوكس. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
