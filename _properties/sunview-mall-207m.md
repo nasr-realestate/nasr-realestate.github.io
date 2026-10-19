@@ -22,6 +22,15 @@ areaNumeric: 207
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/sunview-mall-207m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز شقة ميتين وسبع متر جوه مول بخدمات؟ في مول صن فيو، شارع مصر للتعمير متفرع من مصطفى النحاس. الدور السابع، والتشطيب راقي وجاهز للسكن. تلات غرف نوم وريسبشن واسع وحمامين. السعر ستة مليون جنيه. المول فيه خدمات ورفاهية، والموقع قريب من النحاس. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

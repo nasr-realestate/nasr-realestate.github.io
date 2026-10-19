@@ -22,6 +22,15 @@ areaNumeric: 130
 roomsNumeric: 2
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/new-polis-130m.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتدور على شقة مية وتلاتين متر جوه كمبوند؟ في نيوبوليس بجوار مدينتي ومستقبل سيتي. الدور متكرر وفي موقع مميز. اتنين غرف نوم واحدة ماستر وريسبشن وحمامين. السعر أربعة مليون جنيه. التأسيس كامل كهرباء وسباكة ومحارة، والتسليم على نصف تشطيب. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

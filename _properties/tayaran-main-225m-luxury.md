@@ -22,6 +22,15 @@ areaNumeric: 225
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/tayaran-main-225m-luxury.mp3"
+audio_duration: "29 ثانية"
+audio_script: "محتاج شقة ميتين وخمسة وعشرين متر على الطيران الرئيسي؟ في مباني حديثة من سنة ألفين وأربعتاشر بمدينة نصر. الدور الحداشر معزول بالكامل، والفيو بانوراما. تلات غرف منهم ماستر وريسبشن وحمامين. السعر تمانية مليون جنيه، وقابل للتفاوض. تشطيب ألترا سوبر لوكس على أعلى مستوى. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
