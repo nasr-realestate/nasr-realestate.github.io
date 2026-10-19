@@ -1225,6 +1225,9 @@ extra_head: |
       body.page-agent .home-sub { margin-bottom: 8px; font-size: 12px; }
       body.page-agent .service-card { min-height: 96px; }
     }
+    @media (max-height: 620px) {
+      body.page-agent .composer-hint { display: none; }
+    }
     @media (max-height: 560px) {
       body.page-agent .home-hero { padding-bottom: 10px; }
       body.page-agent .home-title { font-size: 24px; }
@@ -1323,8 +1326,10 @@ extra_head: |
     body.page-agent .notif-icon-wrap,
     body.page-agent .notif-icon-wrap.green,
     body.page-agent .notif-icon-wrap.red {
-      background: rgba(201, 169, 97, 0.14);
+      background-color: rgba(201, 169, 97, 0.14);
+      background-image: none;
       color: var(--brand-accent);
+      font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
     }
     body.page-agent .menu-glass-item:hover { background: rgba(201, 169, 97, 0.10); }
     body.page-agent .menu-glass-item:focus-visible { background: rgba(201, 169, 97, 0.10); }
