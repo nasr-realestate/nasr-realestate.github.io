@@ -22,6 +22,15 @@ areaNumeric: 400
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/admin-tayaran-st-400m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "محتاج مقر إداري أربعمية متر مرخص على الطيران؟ في شارع الطيران، في عمارة بنك CIB بمدينة نصر. الدور الأول، ومساحة مفتوحة ومكاتب وحمامين. السعر خمسة وتلاتين مليون جنيه، شامل العفش والترخيص. تشطيب ألترا سوبر لوكس ومفروش، وتقدر تشغل من أول يوم. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -22,6 +22,15 @@ areaNumeric: 260
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/makaryafi-260m.mp3"
+audio_duration: "26 ثانية"
+audio_script: "محتاج ميتين وستين متر ألترا سوبر لوكس في المنطقة السادسة؟ في شارع الدكتور محمد المقريفي، المنطقة السادسة بمدينة نصر. الدور الثامن، والعمارة فيها أسانسيرين. تلات غرف نوم وليفينج وتلات حمامات. السعر ستة مليون جنيه. مسجلة شهر عقاري، وشاملة التكييفات والمطبخ، ومعاها حصة في الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -22,6 +22,15 @@ areaNumeric: 0
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/obour-buildings-rent-47.mp3"
+audio_duration: "24 ثانية"
+audio_script: "محتاج شقة تلات غرف للإيجار بفيو على صلاح سالم؟ في عمارات العبور بمدينة نصر، والدور الرابع مطل على الشارع. تلات غرف نوم وريسبشن واسع وحمامين. الإيجار خمسة وتلاتين ألف جنيه شهريًا. تشطيب سوبر لوكس وأول استخدام، والتجهيز مودرن. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
