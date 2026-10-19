@@ -15,6 +15,7 @@ floor: "الدور الخامس (بحري)"
 finish: "ألترا سوبر لوكس (شامل المطبخ والتكييف)"
 meta_title: "شقة 190م للبيع شارع بشار بن برد مكرم عبيد مدينة نصر | مسجلة"
 meta_description: "شقة 190م للبيع بمدينة نصر شارع بشار بن برد قرب مكرم عبيد. ألترا سوبر لوكس، دور خامس بحري، 3 غرف، مسجلة شهر عقاري. السعر 5.4 مليون تشمل المطبخ والتكييف."
+description: "شقة 190م للبيع بمدينة نصر شارع بشار بن برد قرب مكرم عبيد. ألترا سوبر لوكس، دور خامس بحري، 3 غرف، مسجلة شهر عقاري. السعر 5.4 مليون تشمل المطبخ والتكييف."
 # ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
 # المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
 # لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
@@ -25,31 +26,6 @@ audio_duration: "28 ثانية"
 audio_script: "عايز شقة مية وتسعين متر بحري في مكرم عبيد؟ في شارع بشار بن برد، أمام مسجد دار ابن الأرقم بمدينة نصر. الدور الخامس، ومعاها أسانسير. تلات غرف نوم وريسبشن تلات قطع وحمامين. السعر خمسة مليون وأربعمية ألف جنيه. مسجلة شهر عقاري، والسعر شامل المطبخ والتكييف. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 
 ---
-
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "5400000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع بشار بن برد - مكرم عبيد",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
 
 <div class="property-detail-wrapper">
 
