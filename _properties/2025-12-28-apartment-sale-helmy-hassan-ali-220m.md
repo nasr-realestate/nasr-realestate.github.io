@@ -22,6 +22,15 @@ areaNumeric: 220
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/helmy-hassan-ali-220m-lux.mp3"
+audio_duration: "28 ثانية"
+audio_script: "محتاج مساحة ميتين وعشرين متر بحري صريح في مدينة نصر؟ في شارع حلمي حسن علي، موازي لمصطفى النحاس. دور متكرر ومميز، والموقع هادي وراقي. تلات غرف كبار وريسبشن وحمامين. السعر خمسة مليون وخمسمية ألف جنيه. تشطيب لوكس محافظ عليه، ومعاها حصة في الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
