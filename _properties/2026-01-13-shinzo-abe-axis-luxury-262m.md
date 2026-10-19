@@ -21,8 +21,11 @@ areaNumeric: 262
 roomsNumeric: 4
 bathsNumeric: 3
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/shinzo-abe-262m-4th-floor.mp3"
+audio_duration: "25 ثانية"
+audio_script: "بتدور على شقة ميتين واتنين وستين متر على محور شينزو آبي الرئيسي؟ في مدينة نصر بمدخل فندقي، بالدور الرابع واتنين أسانسير. أربع غرف نوم منهم ماستر وليفينج وتلات حمامات. السعر مميز للمتر بالتقسيط، وعلى المحارة لتشطيبك. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

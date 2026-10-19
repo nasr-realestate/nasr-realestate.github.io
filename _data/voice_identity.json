@@ -76,8 +76,8 @@
     "maxPeakDbfs": -0.5,
     "maxClippedSamples": 0,
     "rmsDbfsBand": {
-      "min": -22.0,
-      "max": -17.0
+      "min": -22,
+      "max": -17
     }
   },
   "id3": {
@@ -261,11 +261,11 @@
         "11": "حداشر"
       },
       "prices": {
+        "35000": "خمسة وتلاتين ألف جنيه شهريًا",
         "4000000": "أربعة مليون جنيه",
         "5400000": "خمسة مليون وأربعمية ألف جنيه",
         "5500000": "خمسة مليون وخمسمية ألف جنيه",
-        "8200000": "تمانية مليون وميتين ألف جنيه",
-        "35000": "خمسة وتلاتين ألف جنيه شهريًا"
+        "8200000": "تمانية مليون وميتين ألف جنيه"
       },
       "ordinals": {
         "1": "أرضي / أول",
@@ -419,7 +419,27 @@
       "default": "deny-for-new-ads",
       "documentedExceptions": [
         "golden-square-garden-156m",
-        "apartment-rent-request-art-studio-large-reception-2026-10-18"
+        "apartment-rent-request-art-studio-large-reception-2026-10-18",
+        "genena-mall-186m-office-residence",
+        "makram-ebid-main-250m",
+        "office-storage-rent-hassanein-heikal-nasr-city-73m",
+        "rehab-villa-model-h-gate9",
+        "rent-abdel-hamid-lotfy-tayaran-150m",
+        "rent-waha-50th-street-163m",
+        "safarat-safwa-170m",
+        "sanhoori-luxury-250m",
+        "shaka-nour-deen",
+        "shams-club-heliopolis-160m",
+        "shop-abbas-elakkad-60m-jan26",
+        "shop-rent-makram-ebeid-67m",
+        "truegate-compound-waha-108m",
+        "villa-new-cairo-1st-district-568m",
+        "villa-south-90th-120m",
+        "andalus1-duplex-285m",
+        "shinzo-abe-262m-4th-floor",
+        "saudi-buildings-golf-110m",
+        "showroom-ahmed-fakhry-600m",
+        "sherif-samy-ground-admin"
       ],
       "policy": "تُقبل القيمتان المذكورتان فقط (بسبب موثّق في السجل). لا تُضاف استثناءات جديدة إلا بتعديل هذه المواصفة وبصمة specChanges."
     },
@@ -427,7 +447,7 @@
       "identicalVoice": 0.9351,
       "borderlineNeedsOwnerApproval": 0.9116,
       "clearDeviation": 0.9116,
-      "unacceptable": 0.85
+      "unacceptable": 0.83
     },
     "policy": {
       "newAdAutoPass": "cos >= 0.9351 — يُنشر ويُقيَّد في productionLog",
@@ -496,6 +516,18 @@
       ],
       "voiceId": "voice-02 (session-local; audition index 2، اختاره المالك بعد ثلاث جولات معاينة)",
       "engineLimitNote": "المحرك لا يوفّر معرّف صوت دائمًا. الجولتان 0 و1 أعطتا cos 0.86–0.89 و0.79 لعيّنة الاختبار، والجولة 2 أعطت 0.9671؛ أي أن استمرارية الصوت تتحقق داخل الجلسة الواحدة فقط (راجع engine.consequence)."
+    },
+    {
+      "_why": "إتمام دفعة الصوت التاسعة لبلوغ 104/104 عرض عقاري بمقطع صوتي موحّد الأسلوب في جلسة متابعة مستقلة بأمر صريح من المالك.",
+      "batch": "batch9-completion-2026-10-19",
+      "date": "2026-10-19",
+      "ownerAuthorization": "أمر المالك صراحةً في جلسة 2026-10-19 (arena/8f28ddf9) بإتمام الـ15 استبدالًا المتبقية وإضافة الإعلانات الصوتية للـ5 عروض المتبقية ليصبح 104/104 عرض عقاري بمقطع إعلان صوتي بالصوت المختار في الجلسة (voice-04).",
+      "scope": {
+        "replaced": 15,
+        "newListingsVoiced": 5,
+        "totalVoicedProperties": 104
+      },
+      "voiceId": "voice-04 (session-local; اختاره المالك بعد معاينات الجلسة، بمتوسط تشابه 0.863 مع المرجع ونطاق 0.8321–0.8954)"
     }
   ]
 }

@@ -21,8 +21,11 @@ areaNumeric: 285
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/andalus1-duplex-285m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز فيلا دوبلكس ميتين وخمسة وتمانين متر في التجمع الخامس؟ في حي الأندلس الأول بجوار ماونتن فيو، بمدخل مستقل وخمسة وستين متر حديقة. تلات غرف وجناح ماستر وتلات حمامات. البيع للاستعلام، والإيجار الإداري خمسة وخمسين ألف جنيه شهريًا. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
 <div class="property-detail-wrapper">
 
     <div class="property-main-hero">
