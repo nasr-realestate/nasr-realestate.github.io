@@ -630,13 +630,40 @@ test("المدة وحدها ليست دليلًا على اختلاف الهوي
   assert.ok(classes.size >= 1, "التصنيف يعتمد على بصمة المتكلم لا على المدة");
 });
 
-test("الإعلان الجديد لم يستبدل أي ملف منشور", () => {
+test("الاستبدال لا يحدث إلا بأثر موثَّق: البصمة الأصلية + سطر في سجل الاستبدال", () => {
+  // السياسة بعد دفعة 2026-10-19 (توحيد كل الإعلانات الصوتية بموافقة المالك الصريحة):
+  // يُسمح باستبدال ملف منشور بشرطين لا ثالث لهما:
+  //   1. السطر الجديد يحمل replacesPublishedFile=true و originalSha256BeforeReplacement
+  //   2. البصمة الأصلية مطابقة حرفيًا لسطر في _diag/audio-batch9-replacement-ledger.json
+  // الاستبدال الصامت (بلا أثر) يبقى ممنوعًا، وهو ما يحرسه هذا الاختبار.
   assert.ok(NEW_ENTRY, "لا يوجد إعلان مُنتَج تحت المواصفة");
-  assert.equal(NEW_ENTRY.replacesPublishedFile, false);
   assert.equal(NEW_ENTRY.audioFile, `assets/audio/properties/${NEW_ENTRY.slug}.mp3`);
-  const legacy = LOG.entries.filter((e) => e.origin === "legacy-grandfathered");
-  assert.ok(legacy.length >= 43, `الملفات الموروثة يجب أن تبقى كلها: ${legacy.length}`);
-  for (const e of legacy) {
-    assert.ok(!e.replacesPublishedFile, `${e.slug}: لا يجوز استبدال ملف موروث`);
+
+  const LEDGER_PATH = path.join(REPO_ROOT, "_diag", "audio-batch9-replacement-ledger.json");
+  const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, "utf8"));
+  const originalBySlug = new Map(ledger.originals.map((o) => [o.slug, o.originalSha256]));
+
+  const replacements = LOG.entries.filter((e) => e.replacesPublishedFile === true);
+  assert.ok(replacements.length >= 1, "لا يوجد أي استبدال موثَّق في هذه الدفعة");
+  for (const e of replacements) {
+    assert.match(e.originalSha256BeforeReplacement, /^[0-9a-f]{64}$/, `${e.slug}: بصمة أصلية مفقودة`);
+    assert.equal(e.originalSha256BeforeReplacement, originalBySlug.get(e.slug),
+      `${e.slug}: البصمة الأصلية لا تطابق سجل الاستبدال`);
+    assert.ok(e.ownerOverride !== true, `${e.slug}: استبدال تحت حد الهوية بلا موافقة`);
+    assert.ok(e.speakerCosineToReference >= SPEC.identityBand.thresholds.identicalVoice,
+      `${e.slug}: الاستبدال لم يحقق شرط «نفس الصوت»`);
+  }
+
+  // الملفات الموروثة التي لم تُستبدل تبقى كما هي بلا سمة استبدال
+  const legacyUntouched = LOG.entries.filter((e) => e.origin === "legacy-grandfathered" && !e.replacesPublishedFile);
+  for (const e of legacyUntouched) {
+    assert.equal(e.originalSha256BeforeReplacement, undefined, `${e.slug}: أثر استبدال بلا replacesPublishedFile`);
+  }
+
+  // المرجع الذي اختاره المالك والخمسة الأخيرة لا تُستبدل أبدًا
+  const protectedSlugs = new Set([SPEC.reference.slug, ...ledger.batch8Excluded]);
+  for (const slug of protectedSlugs) {
+    const hit = replacements.find((e) => e.slug === slug);
+    assert.equal(hit, undefined, `${slug}: محمي من الاستبدال`);
   }
 });
