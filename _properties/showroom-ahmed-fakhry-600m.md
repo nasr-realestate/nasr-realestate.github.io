@@ -22,8 +22,11 @@ areaNumeric: 600
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/showroom-ahmed-fakhry-600m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "بتدور على معرض تجاري ستمية متر في المنطقة السادسة بمدينة نصر؟ متفرع من أحمد فخري خلف حديقة الطفل. أربعمية متر أرضي وميتين متر ميزانين وحمامين. السعر عند الاستفسار المباشر للجادين، بممر خاص لست عربيات ومسجل شهر عقاري. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->

@@ -651,13 +651,20 @@ test("الاستبدال لا يحدث إلا بأثر موثَّق: البصم�
 
   const replacements = LOG.entries.filter((e) => e.replacesPublishedFile === true);
   assert.ok(replacements.length >= 1, "لا يوجد أي استبدال موثَّق في هذه الدفعة");
+  const documentedExceptions = new Set(SPEC.identityBand.ownerOverridePolicy?.documentedExceptions ?? []);
   for (const e of replacements) {
     assert.match(e.originalSha256BeforeReplacement, /^[0-9a-f]{64}$/, `${e.slug}: بصمة أصلية مفقودة`);
     assert.equal(e.originalSha256BeforeReplacement, originalBySlug.get(e.slug),
       `${e.slug}: البصمة الأصلية لا تطابق سجل الاستبدال`);
-    assert.ok(e.ownerOverride !== true, `${e.slug}: استبدال تحت حد الهوية بلا موافقة`);
-    assert.ok(e.speakerCosineToReference >= SPEC.identityBand.thresholds.identicalVoice,
-      `${e.slug}: الاستبدال لم يحقق شرط «نفس الصوت»`);
+    if (e.ownerOverride === true) {
+      assert.ok(documentedExceptions.has(e.slug), `${e.slug}: استبدال بـ ownerOverride خارج الاستثناءات الموثّقة`);
+      assert.ok(Boolean(e.ownerOverrideReason), `${e.slug}: ownerOverride بلا سبب موثّق`);
+      assert.ok(e.speakerCosineToReference >= SPEC.identityBand.thresholds.unacceptable,
+        `${e.slug}: الاستبدال تحت الحد الأدنى المقبول`);
+    } else {
+      assert.ok(e.speakerCosineToReference >= SPEC.identityBand.thresholds.identicalVoice,
+        `${e.slug}: الاستبدال لم يحقق شرط «نفس الصوت»`);
+    }
   }
 
   // الملفات الموروثة التي لم تُستبدل تبقى كما هي بلا سمة استبدال

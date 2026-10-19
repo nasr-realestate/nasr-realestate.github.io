@@ -21,8 +21,11 @@ areaNumeric: 110
 roomsNumeric: 17
 bathsNumeric: 2
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/saudi-buildings-golf-110m.mp3"
+audio_duration: "24 ثانية"
+audio_script: "محتاج مقر تجاري مية وعشرة متر صافي بدون أعمدة؟ في عمارات السعودية بأرض الجولف قدام دار البنك الأهلي. مساحة مفتوحة سبعتاشر في ستة متر ومطبخ واتنين تواليت. السعر بعد المعاينة للجادين، بحصة في الأرض وديكورات فاخرة. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار -->

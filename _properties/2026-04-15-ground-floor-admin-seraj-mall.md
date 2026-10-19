@@ -22,8 +22,11 @@ areaNumeric: 0
 roomsNumeric: 0
 bathsNumeric: 0
 status: available
+audio_ad: true
+audio_file: "/assets/audio/properties/sherif-samy-ground-admin.mp3"
+audio_duration: "26 ثانية"
+audio_script: "بتدور على شقة أرضي بترخيص إداري رسمي خلف السراج مول؟ في شارع شريف سامي بالحي التامن بمدينة نصر جنب مدرسة الصديق. الدور الأرضي سهل الوصول وجاهزة كعيادة أو شركة أو سكن. السعر أربعة مليون وخمسمية ألف جنيه كاش. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
 <div class="property-detail-wrapper">
 
     <!-- 2. الصورة الرئيسية للعقار (Hero Image) -->
