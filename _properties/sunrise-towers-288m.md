@@ -22,6 +22,15 @@ areaNumeric: 288
 roomsNumeric: 3
 bathsNumeric: 3
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/sunrise-towers-288m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز شقة ميتين وتمانية وتمانين متر بفيو بحري كامل في مدينة نصر؟ في أبراج صن رايز بحي السفارات. الدور السادس، والعمارة فيها أمن وحراسة على مدار اليوم. تلات غرف نوم وريسبشن أربع قطع وتلات حمامات. السعر سبعة مليون جنيه. تشطيب مودرن، والسعر شامل الجراج وحصة الأرض. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

@@ -22,6 +22,15 @@ areaNumeric: 125
 roomsNumeric: 2
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/ahmed-qasem-125m-lux.mp3"
+audio_duration: "27 ثانية"
+audio_script: "محتاج شقة مية وخمسة وعشرين متر عند تقاطع عباس والنحاس؟ في شارع أحمد قاسم جودة بمدينة نصر. الدور السادس، ومعاها أسانسير. اتنين غرف نوم كبار وريسبشن وحمام رئيسي. السعر أربعة مليون وخمسمية ألف جنيه. تشطيب ألترا سوبر لوكس برخام، والسعر شامل التكييفات. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

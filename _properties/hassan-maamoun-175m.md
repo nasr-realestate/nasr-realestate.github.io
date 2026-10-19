@@ -22,6 +22,15 @@ areaNumeric: 175
 roomsNumeric: 3
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/hassan-maamoun-175m-lux.mp3"
+audio_duration: "27 ثانية"
+audio_script: "عايز شقة مية وخمسة وسبعين متر بين حسن المأمون والنحاس؟ في الحي الثامن بمدينة نصر. الدور السادس، ومعاها أسانسير. تلات غرف وليفينج منفصل وريسبشن تلات قطع وحمام رئيسي. السعر أربعة مليون وخمسمية ألف جنيه. تشطيب كامل سوبر لوكس، والموقع بين حسن المأمون ومصطفى النحاس. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
