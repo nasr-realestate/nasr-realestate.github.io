@@ -22,6 +22,15 @@ areaNumeric: 356
 roomsNumeric: 0
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/admin-hq-sale-9th-district.mp3"
+audio_duration: "28 ثانية"
+audio_script: "عايز مقر شركة تلتمية وستة وخمسين متر في المنطقة التاسعة؟ المية والتلاتمية متر داخلي، ومعاهم ستة وخمسين متر حديقة. أرضي بمداخل خاصة. مساحة مفتوحة قابلة للتقسيم وحمامين. السعر تمانية مليون وخمسمية ألف جنيه تمليك. نصف تشطيب بمرونة كاملة في التصميم، وكهرباء تلات فاز. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

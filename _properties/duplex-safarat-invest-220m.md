@@ -22,6 +22,15 @@ areaNumeric: 220
 roomsNumeric: 3
 bathsNumeric: 2
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/duplex-safarat-invest-220m.mp3"
+audio_duration: "27 ثانية"
+audio_script: "محتاج دوبلكس ميتين وعشرين متر في حي السفارات؟ في الحي السابع بمدينة نصر، بدور حداشر واتناشر للخصوصية والفيو. تلات غرف وريسبشن واسع وحمامين. السعر أربعة مليون وتمانمية وخمسين ألف جنيه. تشطيب سوبر لوكس ووجهة بحري، والدورين بيدّوا خصوصية أعلى. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

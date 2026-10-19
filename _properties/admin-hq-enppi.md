@@ -22,6 +22,15 @@ areaNumeric: 500
 roomsNumeric: 8
 bathsNumeric: 4
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/admin-hq-enppi.mp3"
+audio_duration: "26 ثانية"
+audio_script: "محتاج مقر إداري خمسمية متر بجوار إنبي؟ في المنطقة الحرة بمدينة نصر، قريب من شركة إنبي والبترول. أرضي مرتفع وبيزمنت. تمانية غرف مغلقة وقاعة اجتماعات وأربع حمامات. السعر عشرين مليون جنيه. تشطيب لوكس بمباني حديثة من سنة ألفين وتمانية. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

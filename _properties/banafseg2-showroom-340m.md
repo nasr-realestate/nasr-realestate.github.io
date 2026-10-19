@@ -22,6 +22,15 @@ areaNumeric: 340
 roomsNumeric: 4
 bathsNumeric: 3
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/banafseg2-showroom-340m.mp3"
+audio_duration: "29 ثانية"
+audio_script: "محتاج معرض أو مقر بمساحة تلتمية وأربعين متر؟ في حي البنفسج التاني بالتجمع الأول، على شارع رئيسي. أرضي منخفض بمدخل خاص، وفيه مية وأربعين متر حديقة. أربع غرف ومساحات مفتوحة وتلات حمامات. السعر ستة مليون وسبعمية وخمسين ألف جنيه. يصلح معرض سيارات أو مقر شركة. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">

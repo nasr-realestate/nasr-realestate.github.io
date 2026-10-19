@@ -22,6 +22,15 @@ areaNumeric: 86
 roomsNumeric: 2
 bathsNumeric: 1
 status: available
+# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──
+# المصدر الوحيد للإعدادات: _data/voice_identity.json (المواصفة المركزية)
+# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في
+# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.
+audio_ad: true
+audio_file: "/assets/audio/properties/taawuniyat-hassan-maamoun.mp3"
+audio_duration: "28 ثانية"
+audio_script: "بتدور على شقة ستة وتمانين متر بسعر مناسب؟ في عمارات التعاونيات، آخر شارع حسن المأمون بمدينة نصر. الدور الخامس والأخير، والموقع حيوي. اتنين غرف نوم وصالة وحمام واحد. السعر مليون وستمية وخمسين ألف جنيه كاش. التشطيب قديم ومحتاج وش نظافة على ذوقك. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
+
 ---
 
 <div class="property-detail-wrapper">
