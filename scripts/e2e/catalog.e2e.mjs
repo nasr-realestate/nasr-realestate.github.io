@@ -10,12 +10,18 @@
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import fs from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const searchPaths = (process.env.NODE_PATH || '').split(path.delimiter).filter(Boolean);
 const { chromium } = require(require.resolve('playwright', { paths: [...searchPaths, process.cwd()] }));
 
 const BASE = (process.env.BASE || 'http://127.0.0.1:4100').replace(/\/$/, '');
+// الأحدث وعدد الوحدات داخل النطاق يُقرآن من البيانات المولّدة لا من ثوابت — كي لا
+// يفشل الاختبار عند إضافة عقار جديد (مثل شقة إسماعيل وهبي 2026-10-20).
+const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
+const NEWEST_SLUG = facets.catalog.order[0];
+const IN_AREA = facets.catalog.order.length;
 const results = [];
 function check(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail });
@@ -200,7 +206,7 @@ async function imagesOk(page, selector) {
   const home = await imagesOk(page, '.hp-property-card img');
   check('الرئيسية: 6 بطاقات أحدث العروض بصورها', home.length === 6 && home.every((x) => x.ok), home.filter((x) => !x.ok).map((x) => x.src).join(' '));
   const homeHrefs = await page.$$eval('.hp-property-card', (els) => els.map((a) => a.getAttribute('href')));
-  check('الرئيسية تبدأ ببطاقة بشار بن برد (الأحدث)', homeHrefs[0] === '/properties/apartment-sale-bashar-ibn-burd-makram-ebeid-190m/', homeHrefs[0]);
+  check('الرئيسية تبدأ بالبطاقة الأحدث داخل النطاق', homeHrefs[0] === `/properties/${NEWEST_SLUG}/`, `${homeHrefs[0]} مقابل ${NEWEST_SLUG}`);
 
   await page.goto(BASE + '/properties/apartment-sale-bashar-ibn-burd-makram-ebeid-190m/', { waitUntil: 'load' });
   const main = await imagesOk(page, '#ppMainImage');
@@ -221,7 +227,7 @@ async function imagesOk(page, selector) {
   await page.goto(BASE + '/property-images.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   const pg = await page.evaluate(() => document.querySelectorAll('.pg-card').length);
-  check('معرض الصور: يحمّل بطاقات (من ai-feed المنشور) ومقصور على مدينة نصر', pg === 0 || pg <= 92, `بطاقات=${pg} (0 = لا وصول للإنتاج من بيئة الاختبار)`);
+  check('معرض الصور: يحمّل بطاقات ومقصور على مدينة نصر', pg === 0 || pg === IN_AREA, `بطاقات=${pg} من ${IN_AREA} (0 = لا وصول للإنتاج من بيئة الاختبار)`);
   await ctx.close();
 }
 
