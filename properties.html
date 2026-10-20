@@ -93,7 +93,7 @@ hide_navbar: true
   "@id": "{{ site.url }}/ai-feed.json#dataset",
   "name": "سمسار طلبك — بيانات العقارات المعروضة",
   "alternateName": "Semsar Talabk property listings dataset",
-  "description": "بيانات كل الوحدات العقارية المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة) بصيغة JSON: المعرّف، العنوان، النوع، المعاملة (بيع/إيجار)، السعر الرقمي، المساحة، الغرف، الحمامات، التشطيب، الدور، الموقع، الصورة، والرابط. تتحدّث تلقائيًا مع كل نشر للموقع.",
+  "description": "بيانات كل الوحدات العقارية المعروضة على موقع سمسار طلبك (مدينة نصر) بصيغة JSON: المعرّف، العنوان، النوع، المعاملة (بيع/إيجار)، السعر الرقمي، المساحة، الغرف، الحمامات، التشطيب، الدور، الموقع، الصورة، والرابط. تتحدّث تلقائيًا مع كل نشر للموقع.",
   "url": "{{ site.url }}/ai-feed.json",
   "sameAs": [
     "{{ site.url }}/api/properties.json",
@@ -112,7 +112,7 @@ hide_navbar: true
   "temporalCoverage": {{ _temporal | jsonify }},
   "spatialCoverage": {
     "@type": "Place",
-    "name": "مدينة نصر والقاهرة الجديدة، القاهرة، مصر",
+    "name": "مدينة نصر، القاهرة، مصر",
     "geo": { "@type": "GeoCoordinates", "latitude": 30.067317, "longitude": 31.339143 }
   },
   "variableMeasured": [
@@ -161,7 +161,7 @@ hide_navbar: true
     <h1 class="pl-title">
       <i class="fas fa-city"></i> معرض العقارات
     </h1>
-    <p class="pl-subtitle">اكتشف أفضل العروض العقارية في مدينة نصر والقاهرة الجديدة</p>
+    <p class="pl-subtitle">شقق ومحلات ومكاتب للبيع والإيجار داخل مدينة نصر</p>
     <div class="pl-count-badge">
       <i class="fas fa-building"></i>
       <span id="plCount">{{ site.properties | size }} عقار متاح</span>

@@ -5,7 +5,7 @@
 # --- معلومات الموقع الأساسية ---
 title: "سمسار طلبك | طارق طنطاوي"
 title_separator: "|"
-description: "خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية."
+description: "خبير عقارات مدينة نصر منذ 2014: بيع وإيجار شقق، محلات، ومكاتب بأسعار السوق الواقعية."
 url: "https://nasr-realestate.github.io"
 baseurl: ""
 lang: "ar"
@@ -107,6 +107,59 @@ defaults:
       type: "requests"
     values:
       layout: "request_page"
+
+  # 2026-10-20 — وحدات خارج نطاق مدينة نصر (نفس OUT_OF_SCOPE_IDS في مزامنة D1،
+  # ومولّدة من _data/listing_facets.json). تبقى صفحاتها متاحة بالرابط المباشر
+  # (روابط واتساب قديمة) لكن خارج sitemap.xml، وnoindex من default.html.
+  # الاختبار scripts/tests/nasr-scope.test.mjs يُسقط CI لو اختلفت القائمة.
+  - scope:
+      path: "_properties/2025-12-28-apartment-sale-heliopolis-merghany-180m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2025-12-30-apartment-sale-heliopolis-classic-150m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2026-01-21-lavida-compound-rent-apartments.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2026-03-07-luxury-villa-new-cairo-1st-district-pool.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2026-03-07-villa-rehab-gate9-model-h.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2026-03-07-villa-south-90th-dusit-hotel-license.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/2026-05-02-apartment-shams-club-heliopolis-160m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/andalus1-duplex-285m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/banafseg2-showroom-340m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/new-polis-130m.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/salam-city-218m-roof.md"
+    values:
+      sitemap: false
+  - scope:
+      path: "_properties/sheraton-nozha-165m-rent.md"
+    values:
+      sitemap: false
 
 # --- تحسين الأداء والاستثناءات ---
 sass:

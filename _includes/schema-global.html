@@ -4,6 +4,11 @@
   2) geo: الإحداثيات القديمة 30.0635/31.311 تبعد ~2.8 كم عن دبوس Google Maps الحقيقي
      → الصحيح 30.067317 / 31.339143 (من رابط Google Maps المنشور في الموقع).
   3) aggregateRating.reviewCount: كان 195 بينما صفحة النشاط على Google Maps تُظهر 102 مراجعة (تحقق 2026-09-24).
+  4) (2026-10-20) نطاق الخدمة = مدينة نصر فقط (سياسة الموقع وD1): حُذفت القاهرة الجديدة/مصر الجديدة
+     من areaServed وknowsAbout ووصف Person، وحُذفت دائرة GeoCircle بنصف قطر 15 كم (كانت تغطي التجمع
+     ومصر الجديدة فعليًا). وحُذف aggregateRating: تقييم Google Maps للنشاط معروض على موقع النشاط نفسه
+     = «self-serving review» حسب إرشادات Google للبيانات المنظمة (غير مؤهل للنجوم، وخطر إجراء يدوي).
+     الرقم ما زال ظاهرًا للزائر في الصفحة الرئيسية مع رابط مصدره على خرائط Google — وهذا هو المكان الصحيح له.
   ⚠️ ملاحظة: لا تضع تعليقات HTML داخل <script type="application/ld+json"> — تُبطل الـ JSON.
 -->
 <!-- Verified from: https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7 (2026-09-24)
@@ -38,7 +43,7 @@
         "width": 512,
         "height": 512
       },
-      "description": "مستشار عقاري إستراتيجي وخبير مرشد محلي من المستوى السابع على Google، متخصص في إدارة وتوجيه الاستثمارات العقارية في مدينة نصر، هليوبوليس، والقاهرة الجديدة منذ عام 2014.",
+      "description": "مستشار عقاري إستراتيجي وخبير مرشد محلي من المستوى السابع على Google، متخصص في إدارة وتوجيه الاستثمارات العقارية في مدينة نصر منذ عام 2014.",
       "telephone": "+201147758857",
       "email": "samsar.talabak@mailo.com",
       "worksFor": {
@@ -49,13 +54,9 @@
         "Real Estate Investment",
         "Property Valuation",
         "Nasr City Real Estate Market",
-        "New Cairo Premium Properties",
-        "Heliopolis Real Estate",
         "الاستثمار العقاري",
         "تقييم العقارات",
         "سوق العقارات في مدينة نصر",
-        "عقارات القاهرة الجديدة",
-        "عقارات مصر الجديدة",
         "بيع وشراء العقارات",
         "تأجير الشقق والمكاتب والمحلات"
       ],
@@ -125,19 +126,13 @@
         }
       ],
       "areaServed": [
-        { "@type": "AdministrativeArea", "name": "مدينة نصر" },
-        { "@type": "AdministrativeArea", "name": "القاهرة الجديدة" },
-        { "@type": "AdministrativeArea", "name": "مصر الجديدة" }
+        {
+          "@type": "AdministrativeArea",
+          "name": "مدينة نصر",
+          "alternateName": "Nasr City",
+          "containedInPlace": { "@type": "City", "name": "القاهرة" }
+        }
       ],
-      "serviceArea": {
-        "@type": "GeoCircle",
-        "geoMidpoint": {
-          "@type": "GeoCoordinates",
-          "latitude": 30.067317,
-          "longitude": 31.339143
-        },
-        "geoRadius": "15000"
-      },
       "makesOffer": [
         {
           "@type": "Offer",
@@ -172,14 +167,6 @@
           }
         }
       ],
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.7",
-        "reviewCount": "102",
-        "ratingCount": "102",
-        "bestRating": "5",
-        "worstRating": "1"
-      },
       "priceRange": "$$$",
       "currenciesAccepted": "EGP",
       "paymentAccepted": ["Cash", "Bank Transfer"],

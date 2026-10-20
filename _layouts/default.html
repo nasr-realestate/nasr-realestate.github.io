@@ -37,7 +37,17 @@
        3) rel="ai-catalog" / "mcp": تلميحات غير قياسية لكنها غير ضارّة
           ويقرأها عدد من أدوات الوكلاء — الاسم القياسي في /.well-known/ai.txt.
        ═══════════════════════════════════════════════════════ -->
-  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  {%- comment -%}
+    2026-10-20 — كان الوسم ثابتًا index,follow على كل صفحة، حتى 404 والوحدات خارج
+    مدينة نصر. الآن: page.robots إن وُجد، والوحدات خارج النطاق (حسب نفس سياسة D1 في
+    _data/listing_facets.json) تبقى متاحة لمن معه الرابط لكن noindex.
+  {%- endcomment -%}
+  {%- assign _robots = page.robots -%}
+  {%- if page.collection == "properties" -%}
+    {%- assign _facet = site.data.listing_facets.listings[page.slug] -%}
+    {%- if _facet and _facet.in_area == false -%}{%- assign _robots = "noindex, follow" -%}{%- endif -%}
+  {%- endif %}
+  <meta name="robots" content="{{ _robots | default: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' }}">
   <meta name="ai-content-policy" content="allow-indexing, allow-summarization, allow-agent-use; attribution-required">
 
   <link rel="alternate" type="application/json" href="{{ '/ai-feed.json' | absolute_url }}" title="AI Feed — بيانات كل العقارات (JSON)">
