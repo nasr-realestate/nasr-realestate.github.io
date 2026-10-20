@@ -15,32 +15,16 @@ floor: "الدور الأول العلوي"
 finish: "تشطيب ممتاز"
 meta_title: "شقة 145م للبيع في المنطقة التاسعة مدينة نصر | برج الديار"
 meta_description: "شقة 145م للبيع في مدينة نصر، شارع إسماعيل وهبي خلف مدرسة المنهل (المنطقة التاسعة). دور أول علوي، 3 غرف (1 ماستر)، مطبخ كبير، برج مرخص بـ 2 أسانسير."
+description: "شقة 145م للبيع في مدينة نصر، شارع إسماعيل وهبي خلف مدرسة المنهل (المنطقة التاسعة). دور أول علوي، 3 غرف (1 ماستر)، مطبخ كبير، برج مرخص بـ 2 أسانسير."
+# ── الحقول الرقمية وصورة المشاركة (2026-10-20) ──
+# مثل عقار بشار: بلا هذه الحقول يُسقط البحث والترتيب بالسعر/المساحة العقار،
+# وتعود صورة المشاركة للصورة العامة. السعر نصي («يحدد عند المعاينة») فلا
+# priceNumeric له — الترتيب بالسعر يضعه في آخر القائمة كأي سعرٍ مجهول.
+image: "/assets/img/properties/og/Ismail-Wahby-9th-District-145m.jpg"
+areaNumeric: 145
+roomsNumeric: 3
+bathsNumeric: 2
 ---
-
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "availability": "https://schema.org/InStock",
-    "description": "السعر يحدد عند المعاينة للتواصل مع المالك"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع إسماعيل وهبي - المنطقة التاسعة",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
 
 <div class="property-detail-wrapper">
 

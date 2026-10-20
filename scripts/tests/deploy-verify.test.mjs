@@ -16,6 +16,11 @@ import {
 } from '../verify-deployment.mjs';
 import { parseFrontMatter } from '../lib/front-matter.mjs';
 
+// عدد العقارات الحقيقي في المستودع (كان رقمًا ثابتًا 103، فانكسر الاختبار فور
+// إضافة عقار بشار بن برد 2026-10-19 رغم أن verifyDeployment نفسه سليم).
+const REPO_COUNT = fs.readdirSync(new URL('../../_properties/', import.meta.url))
+  .filter((f) => f.endsWith('.md')).length;
+
 const AUDIO = listAudioFiles();
 const PROPERTY_SRC = '_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md';
 const REQUEST_SRC = '_requests/2026-10-18-apartment-rent-art-studio-large-reception.md';
@@ -45,7 +50,7 @@ function htmlResponse(html, status = 200) {
 }
 
 function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/webp' } = {}) {
-  const properties = Array.from({ length: feedCount ?? 103 }, (_, i) => ({ slug: `p-${i}` }));
+  const properties = Array.from({ length: feedCount ?? REPO_COUNT }, (_, i) => ({ slug: `p-${i}` }));
   const calls = { audio: 0, feed: 0, health: 0 };
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url);
@@ -138,11 +143,11 @@ test("checkSocialHead: يمرّ ويطابق وصف المصدر، ويفشل ع
 });
 
 test("verifyDeployment: نجاح كامل عندما يتطابق SHA والعدد والصوت", async () => {
-  const { fetchImpl, calls } = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103 });
+  const { fetchImpl, calls } = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT });
   const r = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl, timeoutS: 1, delayMs: 1 });
   assert.equal(r.ok, true, JSON.stringify(r.failures));
-  assert.equal(r.report.feed.properties, 103);
-  assert.equal(r.report.mcp.properties, 103);
+  assert.equal(r.report.feed.properties, REPO_COUNT);
+  assert.equal(r.report.mcp.properties, REPO_COUNT);
   assert.equal(r.report.audio_checked, AUDIO.length);
   assert.equal(calls.audio, AUDIO.length);
   assert.equal(calls.feed, 1);
@@ -151,27 +156,27 @@ test("verifyDeployment: نجاح كامل عندما يتطابق SHA والعد
 });
 
 test("verifyDeployment: SHA مختلف أو MCP ناقص أو صوت مكسور ⇒ يفشل بصوت عالٍ", async () => {
-  const badSha = fakeSite({ sha: 'older', feedCount: 103, mcpCount: 103 });
+  const badSha = fakeSite({ sha: 'older', feedCount: REPO_COUNT, mcpCount: REPO_COUNT });
   const r1 = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badSha.fetchImpl, timeoutS: 1, delayMs: 1 });
   assert.equal(r1.ok, false);
   assert.ok(r1.failures.some((f) => f.check === 'deploy_convergence'));
 
-  const badMcp = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 102 });
+  const badMcp = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT - 1 });
   const r2 = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badMcp.fetchImpl, mcpAttempts: 2, mcpDelayMs: 1 });
   assert.equal(r2.ok, false);
   assert.ok(r2.failures.some((f) => f.check === 'mcp_count'), JSON.stringify(r2.failures));
 
-  const badHead = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, duplicateDescription: true });
+  const badHead = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT, duplicateDescription: true });
   const rh = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badHead.fetchImpl });
   assert.equal(rh.ok, false);
   assert.ok(rh.failures.some((f) => f.check === 'head:property-helmy'), JSON.stringify(rh.failures));
 
-  const badAgentHead = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, agentOgType: 'image/png' });
+  const badAgentHead = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT, agentOgType: 'image/png' });
   const ra = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badAgentHead.fetchImpl });
   assert.equal(ra.ok, false);
   assert.ok(ra.failures.some((f) => f.check === 'head:agent'));
 
-  const badAudio = fakeSite({ sha: 'abc123', feedCount: 103, mcpCount: 103, audioStatus: 404 });
+  const badAudio = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT, audioStatus: 404 });
   const r3 = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badAudio.fetchImpl });
   assert.equal(r3.ok, false);
   assert.equal(r3.report.audio_failed, AUDIO.length);
