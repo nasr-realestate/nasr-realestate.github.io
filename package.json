@@ -13,6 +13,7 @@
     "build:ai:check": "node scripts/build-ai-artifacts.mjs --check",
     "test": "node --test _worker/tests/*.test.mjs scripts/tests/*.test.mjs",
     "facets": "node scripts/build-listing-facets.mjs",
+    "check:site": "node scripts/check-built-site.mjs _site",
     "test:ai": "node --test _worker/tests/ai-artifacts.test.mjs _worker/tests/mcp-gateway.test.mjs scripts/tests/front-matter.test.mjs",
     "build:site": "node scripts/build-ai-artifacts.mjs --out=_site",
     "lint:sonar": "eslint ."
