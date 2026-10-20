@@ -25,9 +25,12 @@ User-agent: *
 Allow: /
 Allow: /ai-feed.json
 Allow: /search-data.json
-# ─── اكتشاف الوكلاء (ARD) — قناة robots التي تتفحصها ard-schema أولًا ───
-Agentmap: /.well-known/ai-catalog.json
-
+# ⚠️ لا يوجد هنا توجيه Agentmap (ARD) — متعمّد وموثّق (2026-10-21):
+# تدقيق SEO الخاص بـLighthouse يرفض أي توجيه robots لا يعرفه (Unknown
+# directive) وأنزل النتيجة 96 ← 92. اكتشاف كتالوج ARD لا يفقد شيئًا:
+# له قناتان تعملان — <link rel="ai-catalog"> في رأس كل صفحة، والمسار
+# القياسي /.well-known/ai-catalog.json. القاعدة: لا توجيه في هذا الملف
+# إلا من قائمة {User-agent, Allow, Disallow, Sitemap} وحارس يمنع غيرها.
 Allow: /ai-catalog.json
 Allow: /llms.txt
 Allow: /llms-full.txt

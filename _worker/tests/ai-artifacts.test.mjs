@@ -479,9 +479,13 @@ test('the layout declares rel="ai-catalog" at the canonical well-known path, and
     "the pointer must lead to the conforming catalog — pointing at /api/properties.json was the original Lighthouse failure");
 
   const robots = fs.readFileSync(path.join(REPO_ROOT, "robots.txt"), "utf8");
-  const agentmap = robots.match(/^Agentmap:\s*(\S+)$/m);
-  assert.ok(agentmap, "robots.txt must expose the ARD Agentmap discovery channel");
-  assert.equal(agentmap[1], "/.well-known/ai-catalog.json", "Agentmap must agree with the rel pointer");
+  const KNOWN = new Set(["User-agent", "Allow", "Disallow", "Sitemap", "Crawl-delay", "Noindex", "Host"]);
+  for (const line of robots.split(/\r?\n/)) {
+    const m = line.match(/^([A-Za-z][A-Za-z-]*):/);
+    if (m && !line.trim().startsWith("#")) assert.ok(KNOWN.has(m[1]),
+      `robots directive "${m[1]}" is unknown to Lighthouse's SEO robots-txt auditor — it treats unknown directives as invalid and drops the SEO score (measured 2026-10-21: Agentmap cost 96→92). ARD discovery works via the rel link and the well-known path without it.`);
+  }
+  assert.ok(!/^Agentmap:/m.test(robots), "Agentmap must stay out of robots.txt — the audit above explains why (ARD discovery keeps working via rel + well-known)");
 
   const court = mcpToolDefinitions().length;
   assert.ok(court >= 5, "gateway tools contract assumed here shrank — catalog MCP entry would then lie");
