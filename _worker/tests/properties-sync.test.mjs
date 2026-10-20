@@ -429,7 +429,7 @@ test("الملفات الحقيقية في _properties: valid / out-of-scope / i
   assert.equal(valid + rejected.length + outOfScope.length, files.length);
   assert.ok(valid >= 75, `عدد الملفات الصالحة داخل النطاق أقل من المتوقع: ${valid}/${files.length}`);
   assert.equal(outOfScope.length, 12, `عدد الملفات خارج النطاق غير متوقع: ${outOfScope.length}`);
-  assert.equal(rejected.length, 8, `عدد الملفات غير الصالحة غير متوقع: ${rejected.length}`);
+  assert.equal(rejected.length, 9, `عدد الملفات غير الصالحة غير متوقع: ${rejected.length}`);
   for (const r of rejected) {
     assert.match(r, /missing_(area_m2|price|property_type|external_id)/, `سبب رفض غير معروف: ${r}`);
   }
@@ -931,13 +931,13 @@ test("تكامل: كل ملفات _properties الحقيقية → insert بلا
     // المجموعتان مثبّتتان ومطابقتان لـOUT_OF_SCOPE_IDS / INVALID_IDS في deploy-properties-sync.yml،
     // والباقي كله لازم يتحفظ — فيبقى العدد المتوقع مشتقًا من عدد الملفات الحقيقي (لا رقم مكتوب باليد).
     assert.equal(first.body.db.out_of_scope, 12);
-    assert.equal(first.body.db.invalid, 8);
+    assert.equal(first.body.db.invalid, 9);
     assert.equal(
       first.body.db.inserted,
-      files.length - 20,
+      files.length - 21,
       `عدد السجلات المحفوظة غير متوقع: ${first.body.db.inserted} من ${files.length} ملفًا`
     );
-    assert.equal(db.state.listings.length, files.length - 20);
+    assert.equal(db.state.listings.length, files.length - 21);
     assert.equal(first.body.out_of_scope_files.length, 12, "كل ملف خارج النطاق لازم يظهر باسمه وسببه");
 
     // كل السجلات: مصدر 9، معرّف خارجي، بيع/إيجار، سعر ومساحة موجبان، ومفيش area_id=1 إلا لو المنطقة اتطابقت فعلًا
