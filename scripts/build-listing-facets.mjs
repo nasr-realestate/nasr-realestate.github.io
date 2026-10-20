@@ -13,23 +13,34 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderListingFacets } from './lib/listing-facets.mjs';
+import { renderListingFacets, catalogPageStubs } from './lib/listing-facets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET = path.join(ROOT, '_data', 'listing_facets.json');
 
 const fresh = renderListingFacets(ROOT);
+const stubs = catalogPageStubs(JSON.parse(fresh));
+const PAGE_DIR = path.join(ROOT, 'properties', 'page');
+const existingStubs = fs.existsSync(PAGE_DIR)
+  ? fs.readdirSync(PAGE_DIR).filter((f) => f.endsWith('.html')).map((f) => `properties/page/${f}`)
+  : [];
+
 if (process.argv.includes('--check')) {
   const committed = fs.existsSync(TARGET) ? fs.readFileSync(TARGET, 'utf8') : '';
-  if (committed !== fresh) {
-    console.error('❌ _data/listing_facets.json قديم — نفّذ: node scripts/build-listing-facets.mjs');
+  const staleStubs = existingStubs.filter((p) => !stubs.has(p));
+  const badStubs = [...stubs].filter(([p, c]) => !fs.existsSync(path.join(ROOT, p)) || fs.readFileSync(path.join(ROOT, p), 'utf8') !== c);
+  if (committed !== fresh || staleStubs.length || badStubs.length) {
+    console.error('❌ _data/listing_facets.json أو صفحات الترقيم قديمة — نفّذ: node scripts/build-listing-facets.mjs');
     process.exit(1);
   }
-  console.log('✅ _data/listing_facets.json مطابق للمصدر');
+  console.log('✅ _data/listing_facets.json وصفحات الترقيم مطابقة للمصدر');
 } else {
   fs.writeFileSync(TARGET, fresh, 'utf8');
+  fs.mkdirSync(PAGE_DIR, { recursive: true });
+  for (const p of existingStubs) if (!stubs.has(p)) fs.unlinkSync(path.join(ROOT, p));
+  for (const [p, c] of stubs) fs.writeFileSync(path.join(ROOT, p), c, 'utf8');
   const data = JSON.parse(fresh);
-  console.log(`[listing-facets] ${data.totals.all} عقار · داخل مدينة نصر ${data.totals.in_area} · خارج النطاق ${data.totals.out_of_area}`);
+  console.log(`[listing-facets] صفحات المعرض: ${data.catalog.total_pages} · ${data.totals.all} عقار · داخل مدينة نصر ${data.totals.in_area} · خارج النطاق ${data.totals.out_of_area}`);
   for (const [key, s] of Object.entries(data.segments)) {
     console.log(`  ${key}: ${s.count}${s.indexable ? '' : ' (أقل من حد الفهرسة)'}`);
   }

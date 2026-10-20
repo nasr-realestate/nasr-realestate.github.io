@@ -1,0 +1,20 @@
+---
+layout: null
+sitemap: false
+---
+{%- comment -%}
+  بيانات البحث في المعرض (2026-10-20) — عقارات مدينة نصر فقط، بترتيب المعرض
+  الثابت (catalog.order). يقرأها assets/js/catalog.js عند أول بحث/فلترة.
+  مفاتيح قصيرة لتصغير الحجم: u رابط · t عنوان · l موقع · p نص السعر · d بيع/إيجار
+  · y النوع · pn/an/rn/bn أرقام السعر/المساحة/الغرف/الحمامات · o الترتيب · i صورة البطاقة · f صورة احتياطية
+{%- endcomment -%}
+{%- assign _facets = site.data.listing_facets -%}
+[
+{%- for _slug in _facets.catalog.order -%}
+{%- assign _f = _facets.listings[_slug] -%}
+{%- assign _p = site.properties | where: "slug", _slug | first -%}
+{%- if _p -%}
+{"u":{{ _p.url | relative_url | jsonify }},"t":{{ _p.title | jsonify }},"l":{{ _p.location | default: "مدينة نصر" | jsonify }},"p":{{ _p.price | jsonify }},"d":{{ _f.deal | jsonify }},"y":{{ _f.type | jsonify }},"pn":{{ _f.price | jsonify }},"an":{{ _f.area | jsonify }},"rn":{{ _f.rooms | jsonify }},"bn":{{ _f.baths | jsonify }},"o":{{ forloop.index0 }},"i":{% if _f.card_image %}{{ _f.card_image | relative_url | jsonify }}{% else %}null{% endif %},"f":{% if _f.image and _f.image != _f.card_image %}{{ _f.image | relative_url | jsonify }}{% else %}null{% endif %}}{% unless forloop.last %},{% endunless %}
+{%- endif -%}
+{%- endfor -%}
+]

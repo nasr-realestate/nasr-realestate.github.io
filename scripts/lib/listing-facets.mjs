@@ -78,6 +78,7 @@ export function buildListingFacets(root) {
   const config = JSON.parse(fs.readFileSync(path.join(root, '_data', 'landing_segments.json'), 'utf8'));
   const segments = config.segments || [];
   const minIndex = Number(config.min_listings_for_index) || 6;
+  const perPage = Number(config.catalog_per_page) || 24;
   const dir = path.join(root, '_properties');
   const imgDir = path.join(root, 'assets', 'img', 'properties');
 
@@ -103,6 +104,7 @@ export function buildListingFacets(root) {
       baths: positive(norm.bathsNumeric),
       // مصدر صورة البطاقة: النسخة 4:3 إن وُجدت، وإلا الأصل (لا 404 ثم onerror)،
       // وإلا null (عنصر نائب بلا صورة وهمية).
+      date: String(data.date || '').slice(0, 10),
       card_image: card ? `/assets/img/properties/cards/${imageFile}` : original ? `/assets/img/properties/${imageFile}` : null,
       image: original ? `/assets/img/properties/${imageFile}` : null,
       segments: [],
@@ -133,6 +135,11 @@ export function buildListingFacets(root) {
     };
   }
 
+  // ترتيب المعرض الثابت (الأحدث ثم slug) — نفس الترتيب في كل صفحات الترقيم وفي البحث.
+  const catalogOrder = Object.keys(listings)
+    .filter((slug) => listings[slug].in_area)
+    .sort((a, b) => (listings[b].date > listings[a].date ? 1 : listings[b].date < listings[a].date ? -1 : a < b ? -1 : 1));
+
   return {
     _comment: 'مولّد آليًا — لا تعدّله يدويًا. node scripts/build-listing-facets.mjs',
     min_listings_for_index: minIndex,
@@ -143,6 +150,11 @@ export function buildListingFacets(root) {
       in_area_sale: inArea.filter((l) => l.deal === 'sale').length,
       in_area_rent: inArea.filter((l) => l.deal === 'rent').length,
     },
+    catalog: {
+      per_page: perPage,
+      total_pages: Math.max(1, Math.ceil(catalogOrder.length / perPage)),
+      order: catalogOrder,
+    },
     out_of_area_slugs: Object.keys(listings).filter((s) => !listings[s].in_area).sort(),
     segments: segmentStats,
     listings,
@@ -151,4 +163,34 @@ export function buildListingFacets(root) {
 
 export function renderListingFacets(root) {
   return `${JSON.stringify(buildListingFacets(root), null, 2)}\n`;
+}
+
+/**
+ * صفحات الترقيم الثابتة /properties/page/N/ (N ≥ 2). Jekyll على GitHub Pages لا
+ * يرقّم المجموعات (jekyll-paginate للتدوينات فقط ولا إضافات مخصصة)، فنولّد
+ * ملفات قصيرة يعرض كل منها شريحة من catalog.order عبر _includes/catalog-body.html.
+ * @returns {Map<string,string>} مسار نسبي ← محتوى
+ */
+export function catalogPageStubs(facets) {
+  const out = new Map();
+  const total = facets.catalog.total_pages;
+  for (let n = 2; n <= total; n += 1) {
+    out.set(`properties/page/${n}.html`, [
+      '---',
+      '# مولّد آليًا — node scripts/build-listing-facets.mjs (لا تعدّله يدويًا)',
+      'layout: default',
+      'body_class: page-properties',
+      `title: "معرض عقارات مدينة نصر — صفحة ${n} من ${total}"`,
+      `description: "صفحة ${n} من ${total} في معرض سمسار طلبك: شقق ومحلات ومكاتب للبيع والإيجار داخل مدينة نصر، بالسعر والمساحة والموقع لكل عرض."`,
+      `permalink: /properties/page/${n}/`,
+      'image: "/assets/img/social-properties.png"',
+      'hide_navbar: true',
+      `catalog_page: ${n}`,
+      '---',
+      '{% include schema-catalog.html %}',
+      '{% include catalog-body.html %}',
+      '',
+    ].join('\n'));
+  }
+  return out;
 }

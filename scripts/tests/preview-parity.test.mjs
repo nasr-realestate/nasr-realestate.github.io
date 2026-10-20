@@ -130,3 +130,23 @@ test("زحف الروابط الداخلية: 0 روابط مكسورة", async 
   assert.deepEqual(broken, [], `روابط مكسورة في المعاينة: ${broken.slice(0, 10).join(" · ")}`);
   assert.ok(seen.size >= 550, `عدد الروابط المزحوفة أقل من المتوقع: ${seen.size}`);
 });
+
+// 2026-10-20 — المعرض المرقّم وبيانات البحث في المعاينة كما في Jekyll.
+test("المعاينة: /properties/ وصفحات الترقيم وبيانات البحث تُخدَم مثل Jekyll", async () => {
+  const facets = JSON.parse(fs.readFileSync(path.join(ROOT, "_data/listing_facets.json"), "utf8"));
+  const { per_page: per, total_pages: pages, order } = facets.catalog;
+  const seen = new Set();
+  for (let n = 1; n <= pages; n += 1) {
+    const r = await get(n === 1 ? "/properties/" : `/properties/page/${n}/`);
+    assert.equal(r.status, 200, `page ${n}`);
+    const slugs = [...r.body.matchAll(/class="pl-card" data-slug="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(slugs, order.slice((n - 1) * per, n * per), `ترتيب/محتوى الصفحة ${n}`);
+    slugs.forEach((s) => seen.add(s));
+  }
+  assert.equal(seen.size, order.length, "كل عقار داخل مدينة نصر يظهر في صفحة واحدة");
+  const data = await get("/assets/data/catalog.json");
+  assert.equal(data.status, 200);
+  const rows = JSON.parse(data.body);
+  assert.equal(rows.length, order.length);
+  assert.deepEqual(rows.map((x) => x.u.split("/")[2]), order);
+});

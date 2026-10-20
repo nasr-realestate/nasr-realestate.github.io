@@ -1,0 +1,209 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════════
+  جسم معرض العقارات (2026-10-20) — /properties/ و/properties/page/N/
+  • كل صفحة تعرض شريحة HTML حقيقية من catalog.order (عقارات مدينة نصر فقط،
+    الأحدث أولًا) + روابط ترقيم <a href> قابلة للزحف — لا «تحميل المزيد» بالـ JS.
+    قبل: صفحة واحدة 413KB فيها كل الـ104 بطاقة بما فيها 12 خارج النطاق.
+  • البحث والفلاتر (assets/js/catalog.js) تعمل على كل العقارات لا على الشريحة
+    فقط: عند أول تفاعل تُحمَّل assets/data/catalog.json وتُعرض النتائج مكان الشريحة.
+  • بلا JS: الشريحة والترقيم يعملان كاملين، ونموذج البحث GET إلى /properties/.
+═══════════════════════════════════════════════════════════════
+{%- endcomment -%}
+{%- assign _facets = site.data.listing_facets -%}
+{%- assign _per = _facets.catalog.per_page -%}
+{%- assign _pages = _facets.catalog.total_pages -%}
+{%- assign _total = _facets.catalog.order | size -%}
+{%- assign _pg = page.catalog_page | default: 1 | plus: 0 -%}
+{%- assign _offset = _pg | minus: 1 | times: _per -%}
+{%- assign _from = _offset | plus: 1 -%}
+{%- assign _to = _offset | plus: _per -%}
+{%- if _to > _total -%}{%- assign _to = _total -%}{%- endif -%}
+{%- capture _wa_text -%}السلام عليكم أ. طارق، وصلت إليك من معرض العقارات في موقع سمسار طلبك وأبحث عن عقار في مدينة نصر.{%- endcapture -%}
+<div class="pl-container">
+
+  <nav class="pl-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home" aria-hidden="true"></i> الرئيسية</a>
+    <span class="sep" aria-hidden="true">›</span>
+    {%- if _pg > 1 %}
+    <a href="{{ '/properties/' | relative_url }}">العقارات</a>
+    <span class="sep" aria-hidden="true">›</span>
+    <span class="current" aria-current="page">صفحة {{ _pg }}</span>
+    {%- else %}
+    <span class="current" aria-current="page">العقارات</span>
+    {%- endif %}
+  </nav>
+
+  <header class="pl-header">
+    <h1 class="pl-title">
+      <i class="fas fa-city" aria-hidden="true"></i> عقارات للبيع والإيجار في مدينة نصر{% if _pg > 1 %} — صفحة {{ _pg }}{% endif %}
+    </h1>
+    <p class="pl-subtitle">شقق ومحلات ومكاتب داخل مدينة نصر فقط، بالسعر والمساحة والموقع كما أعلنها المالك — مع طارق طنطاوي منذ 2014.</p>
+    <div class="pl-count-badge">
+      <i class="fas fa-building" aria-hidden="true"></i>
+      <span id="plCount" data-default="{{ _total }} عرضًا في مدينة نصر">{{ _total }} عرضًا في مدينة نصر</span>
+    </div>
+  </header>
+
+  <form class="pl-toolbar" id="plForm" role="search" action="{{ '/properties/' | relative_url }}" method="get" novalidate>
+    <div class="pl-search-row">
+      <div class="pl-search">
+        <label for="plSearch" class="pl-sr-only">ابحث في عقارات مدينة نصر</label>
+        <input type="search"
+               id="plSearch"
+               name="q"
+               placeholder="مثال: شقة للبيع 3 غرف أقل من 5 مليون"
+               autocomplete="off"
+               enterkeyhint="search"
+               aria-describedby="plHint">
+        <button type="submit" class="pl-search-btn" aria-label="بحث"><i class="fas fa-search" aria-hidden="true"></i></button>
+      </div>
+      <div class="pl-sort">
+        <i class="fas fa-sort-amount-down" aria-hidden="true"></i>
+        <label for="plSort" class="pl-sr-only">ترتيب النتائج</label>
+        <select id="plSort" name="sort">
+          <option value="newest">الأحدث</option>
+          <option value="price-asc">الأرخص سعرًا</option>
+          <option value="price-desc">الأغلى سعرًا</option>
+          <option value="area-desc">الأكبر مساحة</option>
+          <option value="area-asc">الأصغر مساحة</option>
+          <option value="rooms-desc">الأكثر غرفًا</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pl-chips" role="group" aria-label="نوع المعاملة">
+      <button type="button" class="pl-chip active" data-deal="" aria-pressed="true"><i class="fas fa-th-large" aria-hidden="true"></i> بيع وإيجار</button>
+      <button type="button" class="pl-chip" data-deal="sale" aria-pressed="false"><i class="fas fa-tag" aria-hidden="true"></i> للبيع</button>
+      <button type="button" class="pl-chip" data-deal="rent" aria-pressed="false"><i class="fas fa-key" aria-hidden="true"></i> للإيجار</button>
+    </div>
+    <div class="pl-chips" role="group" aria-label="نوع العقار">
+      <button type="button" class="pl-chip active" data-type="" aria-pressed="true">كل الأنواع</button>
+      <button type="button" class="pl-chip" data-type="apartment" aria-pressed="false"><i class="fas fa-home" aria-hidden="true"></i> شقق</button>
+      <button type="button" class="pl-chip" data-type="villa" aria-pressed="false"><i class="fas fa-building" aria-hidden="true"></i> دوبلكس وفيلات</button>
+      <button type="button" class="pl-chip" data-type="shop" aria-pressed="false"><i class="fas fa-store" aria-hidden="true"></i> محلات</button>
+      <button type="button" class="pl-chip" data-type="office" aria-pressed="false"><i class="fas fa-briefcase" aria-hidden="true"></i> مكاتب وإداري</button>
+    </div>
+
+    <details class="pl-more" id="plMore">
+      <summary>السعر والمساحة والغرف</summary>
+      <div class="pl-more-grid">
+        <div class="pl-field">
+          <label for="plPmin">السعر من (ج.م)</label>
+          <input type="text" id="plPmin" name="pmin" inputmode="numeric" placeholder="مثال: 2000000" autocomplete="off">
+        </div>
+        <div class="pl-field">
+          <label for="plPmax">السعر إلى (ج.م)</label>
+          <input type="text" id="plPmax" name="pmax" inputmode="numeric" placeholder="مثال: 5000000" autocomplete="off">
+        </div>
+        <div class="pl-field">
+          <label for="plAmin">المساحة من (م²)</label>
+          <input type="text" id="plAmin" name="amin" inputmode="numeric" placeholder="100" autocomplete="off">
+        </div>
+        <div class="pl-field">
+          <label for="plAmax">المساحة إلى (م²)</label>
+          <input type="text" id="plAmax" name="amax" inputmode="numeric" placeholder="200" autocomplete="off">
+        </div>
+        <div class="pl-field">
+          <label for="plRooms">عدد الغرف</label>
+          <select id="plRooms" name="rooms">
+            <option value="">أي عدد</option>
+            <option value="1">1 أو أكثر</option>
+            <option value="2">2 أو أكثر</option>
+            <option value="3">3 أو أكثر</option>
+            <option value="4">4 أو أكثر</option>
+          </select>
+        </div>
+      </div>
+      <p class="pl-field-note">سعر الإيجار شهري. العروض التي لم يُعلن سعرها أو مساحتها لا تظهر عند تحديد حد لهما.</p>
+    </details>
+
+    <div class="pl-toolbar-foot">
+      <p id="plHint" class="pl-hint">يفهم البحث «شقه» و«شقة»، والأرقام العربية ٣ و3، و«150 متر» و«أقل من 5 مليون».</p>
+      <button type="button" id="plReset" class="pl-reset" hidden><i class="fas fa-times" aria-hidden="true"></i> مسح كل الفلاتر</button>
+    </div>
+  </form>
+
+  <div class="pl-understood" id="plUnderstood" hidden></div>
+  <p class="pl-status" id="plStatus" role="status" aria-live="polite"></p>
+
+  <h2 class="pl-grid-heading" id="plHeading">
+    <i class="fas fa-list-ul" aria-hidden="true"></i>
+    <span id="plHeadingText" data-default="أحدث العروض">أحدث العروض</span>
+    <span class="pl-grid-heading-count" id="plHeadingCount" data-default="({{ _from }}–{{ _to }} من {{ _total }})">({{ _from }}–{{ _to }} من {{ _total }})</span>
+  </h2>
+
+  <section class="pl-grid" id="plGrid" aria-labelledby="plHeading">
+    {%- for _slug in _facets.catalog.order limit: _per offset: _offset -%}
+      {%- assign _prop = site.properties | where: "slug", _slug | first -%}
+      {%- if _prop -%}{% include property-card.html prop=_prop %}{%- endif -%}
+    {%- endfor -%}
+  </section>
+
+  <div class="pl-empty" id="plEmpty" hidden>
+    <i class="fas fa-search-minus" aria-hidden="true"></i>
+    <h2>لا توجد عروض مطابقة الآن</h2>
+    <p id="plEmptyText">لم نجد عرضًا منشورًا يطابق كل الشروط معًا.</p>
+    <div class="pl-suggest" id="plSuggest"></div>
+    <div class="pl-empty-actions">
+      <button type="button" class="pl-cta-btn secondary" id="plEmptyReset"><i class="fas fa-th-large" aria-hidden="true"></i> عرض كل العقارات</button>
+      <a class="pl-cta-btn primary" id="plEmptyWa" target="_blank" rel="noopener noreferrer"
+         href="{{ site.contact.whatsapp_url | default: 'https://wa.me/201147758857' }}?text={{ _wa_text | url_encode }}">
+        <i class="fab fa-whatsapp" aria-hidden="true"></i> اطلبه من طارق على واتساب
+      </a>
+    </div>
+  </div>
+
+  {%- if _pages > 1 %}
+  <nav class="pl-pager" id="plPager" aria-label="صفحات المعرض">
+    {%- if _pg > 1 -%}
+      {%- if _pg == 2 -%}{%- assign _prev = '/properties/' -%}{%- else -%}{%- capture _prev -%}/properties/page/{{ _pg | minus: 1 }}/{%- endcapture -%}{%- endif %}
+    <a class="pl-pager-link" href="{{ _prev | relative_url }}" rel="prev"><i class="fas fa-chevron-right" aria-hidden="true"></i> السابق</a>
+    {%- endif %}
+    <ol class="pl-pager-list">
+      {%- for _n in (1.._pages) %}
+      <li>
+        {%- if _n == _pg -%}
+        <span class="pl-pager-num current" aria-current="page">{{ _n }}</span>
+        {%- elsif _n == 1 -%}
+        <a class="pl-pager-num" href="{{ '/properties/' | relative_url }}" aria-label="صفحة 1">1</a>
+        {%- else -%}
+        {%- capture _href -%}/properties/page/{{ _n }}/{%- endcapture -%}
+        <a class="pl-pager-num" href="{{ _href | relative_url }}" aria-label="صفحة {{ _n }}">{{ _n }}</a>
+        {%- endif -%}
+      </li>
+      {%- endfor %}
+    </ol>
+    {%- if _pg < _pages %}
+      {%- capture _next -%}/properties/page/{{ _pg | plus: 1 }}/{%- endcapture %}
+    <a class="pl-pager-link" href="{{ _next | relative_url }}" rel="next">التالي <i class="fas fa-chevron-left" aria-hidden="true"></i></a>
+    {%- endif %}
+  </nav>
+  {%- endif %}
+
+  {%- if include.after_grid %}{{ include.after_grid }}{% endif %}
+
+  <section class="pl-cta-section">
+    <h2 class="pl-cta-title">لم تجد ما تبحث عنه؟</h2>
+    <p class="pl-cta-text">
+      ليست كل العروض منشورة على الموقع. أرسل مواصفاتك وميزانيتك لطارق طنطاوي،
+      أو تصفّح طلبات العملاء إن كنت مالكًا.
+    </p>
+    <div class="pl-cta-buttons">
+      <a href="{{ '/requests/' | relative_url }}" class="pl-cta-btn secondary">
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i> طلبات العملاء
+      </a>
+      <a href="{{ site.contact.whatsapp_url | default: 'https://wa.me/201147758857' }}?text={{ _wa_text | url_encode }}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="pl-cta-btn primary">
+        <i class="fab fa-whatsapp" aria-hidden="true"></i> تحدث مع طارق
+      </a>
+    </div>
+  </section>
+
+</div>
+
+<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/js/catalog.js' | relative_url }}" defer
+        data-catalog="{{ '/assets/data/catalog.json' | relative_url }}"
+        data-whatsapp="{{ site.contact.whatsapp_url | default: 'https://wa.me/201147758857' }}"></script>
