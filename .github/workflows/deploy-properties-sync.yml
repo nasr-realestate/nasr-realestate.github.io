@@ -238,6 +238,9 @@ jobs:
           # مشتقان من المستودع نفسه فلا يحتاجان تحديثًا يدويًا عند إضافة عقارات جديدة
           EXPECTED_FILES=$(ls _properties/*.md 2>/dev/null | wc -l | tr -d ' ')
           EXPECTED_IN_SCOPE=$(echo "$IN_SCOPE_IDS" | tr ',' '\n' | grep -c .)
+          # العدد المتوقع لغير الصالح من القائمة نفسها — كسر سابق (2026-10-20): الرقم
+          # اليدوي 8 تقادم بعد عقار «السعر عند المعاينة» (ismail) وأحمر فحص سليم.
+          EXPECTED_INVALID=$(echo "$INVALID_IDS" | tr ',' '\n' | grep -c .)
           echo "expectations: files=$EXPECTED_FILES in_scope=$EXPECTED_IN_SCOPE"
           API=https://api.cloudflare.com/client/v4
           ACCOUNT="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" "$API/accounts" | jq -r '.result[0].id // empty')}"
@@ -374,13 +377,13 @@ jobs:
           check "state_files_tracked" "$(vget '.state.files_tracked' /tmp/verify_state.json)" "$EXPECTED_FILES"
           check "state_in_scope"        "$(vget '.state.in_scope' /tmp/verify_state.json)" "$EXPECTED_IN_SCOPE"
           check "state_out_of_scope_12" "$(vget '.state.out_of_scope' /tmp/verify_state.json)" "12"
-          check "state_invalid_8"       "$(vget '.state.invalid' /tmp/verify_state.json)" "8"
+          check "state_invalid_count"  "$(vget '.state.invalid' /tmp/verify_state.json)" "$EXPECTED_INVALID"
           jq -r '.state.out_of_scope_files[]?' /tmp/verify_state.json | sort -u > /tmp/oos_seen.txt
           jq -r '.state.invalid_files[]?'      /tmp/verify_state.json | sort -u > /tmp/inv_seen.txt
           echo "out-of-scope files logged ($(wc -l < /tmp/oos_seen.txt)):"; cat /tmp/oos_seen.txt
           echo "invalid files logged ($(wc -l < /tmp/inv_seen.txt)):"; cat /tmp/inv_seen.txt
           check "out_of_scope_files_listed" "$(wc -l < /tmp/oos_seen.txt)" "12"
-          check "invalid_files_listed" "$(wc -l < /tmp/inv_seen.txt)" "8"
+          check "invalid_files_listed" "$(wc -l < /tmp/inv_seen.txt)" "$EXPECTED_INVALID"
           echo "durable reasons from the last ingestion_runs row:"
           jq -r '.last_run | "  started: \(.started_at) status: \(.status)"' /tmp/verify_state.json 2>/dev/null
           jq -r '.last_run.notes // ""' /tmp/verify_state.json 2>/dev/null | head -c 2000; echo
