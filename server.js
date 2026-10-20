@@ -65,7 +65,7 @@ engine.registerTag('seo', {
   render: (scope) => {
     const page = scope.environments.page || {};
     const site = scope.environments.site || {};
-    const title = page.title || site.title || 'سمسار طلبك | طارق طنطاوي';
+    const title = page.title || site.title || 'سمسار طلبك — طارق طنطاوي';
     const desc = page.description || site.description || '';
     const img = page.image || site.default_image || '/assets/img/social-home.png';
     const url = page.url || '/';
@@ -87,7 +87,7 @@ engine.registerTag('seo', {
 
 // Load site configuration
 let siteConfig = {
-  title: 'سمسار طلبك | طارق طنطاوي',
+  title: 'سمسار طلبك — طارق طنطاوي',
   title_separator: '|',
   description: 'خبير عقارات مدينة نصر منذ 2014: بيع وإيجار شقق، محلات، ومكاتب بأسعار السوق الواقعية.',
   url: '',
