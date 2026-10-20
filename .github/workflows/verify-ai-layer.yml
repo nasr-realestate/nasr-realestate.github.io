@@ -28,6 +28,13 @@ on:
       - '_properties/**'
       - '_diag/check-ai-layer-published.mjs'
       - '.github/workflows/verify-ai-layer.yml'
+      # 2026-10-20: فحص سلامة الموقع المبني (scripts/check-built-site.mjs) يعتمد
+      # على القوالب والبيانات وصفحات HTML أيضًا.
+      - '_layouts/**'
+      - '_includes/**'
+      - '_data/**'
+      - 'properties/**'
+      - '*.html'
   workflow_dispatch:
 
 permissions:
@@ -65,3 +72,9 @@ jobs:
 
       - name: Committed AI artifacts must match the generator
         run: node scripts/check-ai-artifacts-in-sync.mjs
+
+      # 2026-10-20: روابط داخلية مكسورة، sitemap/canonical/noindex، وحدات خارج
+      # مدينة نصر، H1/العناوين، JSON-LD (ولا AggregateRating/Review)، ترقيم
+      # المعرض وصفحات الهبوط — على ناتج البناء نفسه لا على القوالب.
+      - name: Built site integrity
+        run: node scripts/check-built-site.mjs _site

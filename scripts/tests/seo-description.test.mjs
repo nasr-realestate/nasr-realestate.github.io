@@ -33,7 +33,9 @@ test("كل ملف فيه meta_description له description مطابق (وإلا 
 
 test("كل عقار من الثمانية: وصف /api منشور كامل وليس العنوان", () => {
   const props = frontMatterFiles('_properties').filter(({ data }) => String(data.meta_description || '').trim());
-  assert.equal(props.length, 8, 'المجموعة المعلنة في التدقيق = 8 عقارات');
+  // المجموعة المعلنة في التدقيق كانت 8 عقارات؛ كل عقار جديد يحمل meta_description
+  // (مثل بشار بن برد 2026-10-19) يدخل نفس الفحص بدل أن يكسر عدًّا ثابتًا.
+  assert.ok(props.length >= 8, `المجموعة المعلنة في التدقيق ≥ 8 عقارات (الحالي ${props.length})`);
   for (const { file, data } of props) {
     const slug = String(data.slug || '').trim() || file.replace(/\.md$/, '');
     const jsonPath = path.join(ROOT, 'api', 'properties', `${slug}.json`);

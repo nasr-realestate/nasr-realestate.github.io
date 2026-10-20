@@ -92,7 +92,7 @@ test("قوائم تصنيف deploy-properties-sync تغطّي كل ملفات _p
 
   assert.equal(new Set(all).size, all.length, 'معرّف مكرر بين القوائم');
   assert.equal(outScope.length, 12, 'عدد خارج النطاق يجب أن يطابق اختبارات الـWorker');
-  assert.equal(invalid.length, 8, 'عدد غير الصالح يجب أن يطابق اختبارات الـWorker');
+  assert.equal(invalid.length, 9, 'عدد غير الصالح يجب أن يطابق اختبارات الـWorker');
 
   const dir = path.join(ROOT, '_properties');
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));

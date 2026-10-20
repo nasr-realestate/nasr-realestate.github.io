@@ -1,0 +1,128 @@
+---
+layout: default
+---
+{%- comment -%}
+═══════════════════════════════════════════════════════════════
+  صفحة هبوط لشريحة من عروض مدينة نصر (2026-10-20) — نوع/معاملة أو منطقة فرعية.
+  • الشرائح وقواعدها في _data/landing_segments.json، والأعضاء والأرقام محسوبة في
+    _data/listing_facets.json (scripts/lib/listing-facets.mjs) — نفس تصنيف
+    البطاقات وai-feed. الصفحة نفسها (properties/<key>.html) مولّدة آليًا بالعنوان
+    والوصف والحقائق من الأرقام الفعلية؛ CI يفشل لو صارت قديمة (--check).
+  • أقل من min_listings_for_index عرضًا ← noindex + خارج sitemap (لا صفحات رقيقة).
+  • كل العروض المطابقة HTML حقيقي (بلا JS)، الأحدث أولًا، داخل مدينة نصر فقط.
+═══════════════════════════════════════════════════════════════
+{%- endcomment -%}
+{%- assign _facets = site.data.listing_facets -%}
+{%- assign _seg = site.data.landing_segments.segments | where: "key", page.landing_key | first -%}
+{%- assign _st = _facets.segments[page.landing_key] -%}
+{%- assign _members = "" | split: "" -%}
+{%- for _slug in _facets.catalog.order -%}
+  {%- if _facets.listings[_slug].segments contains page.landing_key -%}{%- assign _members = _members | push: _slug -%}{%- endif -%}
+{%- endfor -%}
+{%- if _seg.kind == "area" -%}
+  {%- capture _catalog_q -%}?q={{ _seg.match | first | url_encode }}{%- endcapture -%}
+{%- elsif _seg.deal -%}
+  {%- capture _catalog_q -%}?deal={{ _seg.deal }}{%- endcapture -%}
+{%- else -%}
+  {%- assign _catalog_q = "" -%}
+{%- endif -%}
+{%- capture _wa_text -%}السلام عليكم أ. طارق، وصلت إليك من صفحة «{{ _seg.name }}» في موقع سمسار طلبك وأبحث عن عقار مناسب.{%- endcapture -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "@id": "{{ site.url }}{{ page.url }}#collection",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ _seg.name | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": "{{ site.url }}/" },
+      { "@type": "ListItem", "position": 2, "name": "العقارات", "item": "{{ site.url }}/properties/" },
+      { "@type": "ListItem", "position": 3, "name": {{ _seg.short | jsonify }}, "item": "{{ site.url }}{{ page.url }}" }
+    ]
+  },
+  "mainEntity": {
+    "@type": "ItemList",
+    "@id": "{{ site.url }}{{ page.url }}#itemlist",
+    "numberOfItems": {{ _members | size }},
+    "itemListOrder": "https://schema.org/ItemListOrderDescending",
+    "itemListElement": [
+      {%- for _slug in _members -%}
+      {%- assign _prop = site.properties | where: "slug", _slug | first %}
+      { "@type": "ListItem", "position": {{ forloop.index }}, "url": "{{ site.url }}{{ _prop.url }}", "name": {{ _prop.title | jsonify }} }{% unless forloop.last %},{% endunless %}
+      {%- endfor %}
+    ]
+  }
+}
+</script>
+
+<div class="pl-container">
+
+  <nav class="pl-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home" aria-hidden="true"></i> الرئيسية</a>
+    <span class="sep" aria-hidden="true">›</span>
+    <a href="{{ '/properties/' | relative_url }}">العقارات</a>
+    <span class="sep" aria-hidden="true">›</span>
+    <span class="current" aria-current="page">{{ _seg.short }}</span>
+  </nav>
+
+  <header class="pl-header">
+    <h1 class="pl-title">
+      <i class="fas {% if _seg.kind == 'area' %}fa-map-marker-alt{% elsif _seg.deal == 'rent' %}fa-key{% elsif _seg.deal == 'sale' %}fa-tag{% else %}fa-store{% endif %}" aria-hidden="true"></i> {{ _seg.name }}
+    </h1>
+    <p class="pl-subtitle">{{ page.landing_intro }}</p>
+  </header>
+
+  <dl class="pl-facts">
+    {%- for _f in page.landing_facts %}
+    <div class="pl-fact"><dt>{{ _f.label }}</dt><dd>{{ _f.value }}</dd></div>
+    {%- endfor %}
+  </dl>
+  <p class="pl-field-note">الأسعار والمساحات كما أعلنها الملاك وقت النشر{% if _st.rent_price %}، والإيجار شهري{% endif %}. القائمة تتحدّث تلقائيًا مع كل عرض جديد أو مُباع.</p>
+
+  <h2 class="pl-grid-heading" id="plHeading">
+    <i class="fas fa-list-ul" aria-hidden="true"></i>
+    <span>العروض المتاحة الآن</span>
+    <span class="pl-grid-heading-count">({{ _members | size }})</span>
+  </h2>
+
+  <section class="pl-grid" id="plGrid" aria-labelledby="plHeading">
+    {%- for _slug in _members -%}
+      {%- assign _prop = site.properties | where: "slug", _slug | first -%}
+      {%- if _prop -%}{% include property-card.html prop=_prop %}{%- endif -%}
+    {%- endfor -%}
+  </section>
+
+  <p class="pl-landing-more">
+    <a class="pl-cta-btn secondary" href="{{ '/properties/' | relative_url }}{{ _catalog_q }}">
+      <i class="fas fa-sliders-h" aria-hidden="true"></i> ابحث بالسعر والمساحة والغرف في كل عروض مدينة نصر
+    </a>
+  </p>
+
+  {% include browse-segments.html %}
+
+  <section class="pl-cta-section">
+    <h2 class="pl-cta-title">لم تجد المناسب في {{ _seg.short }}؟</h2>
+    <p class="pl-cta-text">
+      ليست كل العروض منشورة على الموقع. أرسل مواصفاتك وميزانيتك لطارق طنطاوي على واتساب،
+      أو تصفّح طلبات العملاء إن كنت مالكًا.
+    </p>
+    <div class="pl-cta-buttons">
+      <a href="{{ '/requests/' | relative_url }}" class="pl-cta-btn secondary">
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i> طلبات العملاء
+      </a>
+      <a href="{{ site.contact.whatsapp_url | default: 'https://wa.me/201147758857' }}?text={{ _wa_text | url_encode }}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="pl-cta-btn primary">
+        <i class="fab fa-whatsapp" aria-hidden="true"></i> تحدث مع طارق
+      </a>
+    </div>
+  </section>
+
+</div>

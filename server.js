@@ -65,7 +65,7 @@ engine.registerTag('seo', {
   render: (scope) => {
     const page = scope.environments.page || {};
     const site = scope.environments.site || {};
-    const title = page.title || site.title || 'سمسار طلبك | طارق طنطاوي';
+    const title = page.title || site.title || 'سمسار طلبك — طارق طنطاوي';
     const desc = page.description || site.description || '';
     const img = page.image || site.default_image || '/assets/img/social-home.png';
     const url = page.url || '/';
@@ -87,9 +87,9 @@ engine.registerTag('seo', {
 
 // Load site configuration
 let siteConfig = {
-  title: 'سمسار طلبك | طارق طنطاوي',
+  title: 'سمسار طلبك — طارق طنطاوي',
   title_separator: '|',
-  description: 'خبير عقارات مدينة نصر والقاهرة الجديدة منذ 2014. شقق، محلات، ومكاتب بأسعار السوق الواقعية.',
+  description: 'خبير عقارات مدينة نصر منذ 2014: بيع وإيجار شقق، محلات، ومكاتب بأسعار السوق الواقعية.',
   url: '',
   baseurl: '',
   lang: 'ar',
@@ -224,10 +224,11 @@ requests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 const siteData = {};
 if (fs.existsSync('_data')) {
   for (const f of fs.readdirSync('_data')) {
-    if (f.endsWith('.yml') || f.endsWith('.yaml')) {
+    // 2026-10-20: ‏Jekyll يقرأ _data/*.json أيضًا (listing_facets.json، landing_segments.json)
+    if (f.endsWith('.yml') || f.endsWith('.yaml') || f.endsWith('.json')) {
       try {
-        siteData[path.basename(f, path.extname(f))] =
-          yaml.load(fs.readFileSync(path.join('_data', f), 'utf8'));
+        const raw = fs.readFileSync(path.join('_data', f), 'utf8');
+        siteData[path.basename(f, path.extname(f))] = f.endsWith('.json') ? JSON.parse(raw) : yaml.load(raw);
       } catch (err) {
         console.warn(`_data/${f}: تعذر التحليل —`, err.message);
       }
@@ -285,6 +286,18 @@ async function renderFile(filePath, customPageData = {}) {
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// 2026-10-20 — ملف بيانات البحث يُولَّد بـ Liquid في Jekyll (front matter)، فيُصيَّر هنا قبل الملفات الساكنة.
+app.get('/assets/data/catalog.json', async (req, res, next) => {
+  try {
+    const raw = fs.readFileSync('assets/data/catalog.json', 'utf8');
+    const parsed = matter(raw);
+    const out = await engine.parseAndRender(parsed.content, { site, page: { ...parsed.data, url: req.path } });
+    res.type('application/json; charset=utf-8').send(out);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Static assets
 app.use('/assets', express.static(path.resolve('assets')));
 
@@ -336,6 +349,32 @@ app.get('/', async (req, res, next) => {
 app.get(['/properties', '/properties/'], async (req, res, next) => {
   try {
     const html = await renderFile('properties.html', { url: '/properties/' });
+    res.send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 2026-10-20 — صفحات ترقيم المعرض (properties/page/N.html بـ permalink /properties/page/N/)
+app.get(['/properties/page/:n', '/properties/page/:n/'], async (req, res, next) => {
+  try {
+    const n = String(req.params.n);
+    const file = path.join('properties', 'page', `${n}.html`);
+    if (!/^\d+$/.test(n) || !fs.existsSync(file)) return next();
+    const html = await renderFile(file, { url: `/properties/page/${n}/` });
+    res.send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 2026-10-20 — صفحات الهبوط (properties/<key>.html بـ permalink /properties/<key>/) قبل صفحات العقارات.
+app.get(['/properties/:key', '/properties/:key/'], async (req, res, next) => {
+  try {
+    const key = String(req.params.key);
+    const file = path.join('properties', `${key}.html`);
+    if (!/^[a-z0-9-]+$/.test(key) || !fs.existsSync(file)) return next();
+    const html = await renderFile(file, { url: `/properties/${key}/` });
     res.send(html);
   } catch (err) {
     next(err);

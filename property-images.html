@@ -1,7 +1,7 @@
 ---
 layout: default
 body_class: page-pgimages
-title: معرض العقارات | سمسار طلبك
+title: "معرض صور عقارات مدينة نصر"
 description: تصفح جميع العقارات المعروضة من سمسار طلبك - شقق، فيلات، محلات، مكاتب
 permalink: /property-images.html
 hide_navbar: true
@@ -67,6 +67,9 @@ hide_navbar: true
 // ═══════════════════════════════════════════
 const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
 const FALLBACK_IMG = "https://nasr-realestate.github.io/assets/img/logo.webp";
+// 2026-10-20: ai-feed يضم كل الوحدات (منها 12 خارج مدينة نصر لأغراض الأرشيف/الذكاء الاصطناعي).
+// واجهة الموقع تعرض مدينة نصر فقط — نفس القائمة التي يبنيها _data/listing_facets.json.
+const IN_AREA = new Set({{ site.data.listing_facets.catalog.order | jsonify }});
 const SITE_URL = "https://nasr-realestate.github.io";
 
 // ═══ STATE ═══
@@ -106,7 +109,7 @@ async function loadProperties() {
     const res = await fetch(AI_FEED_URL + "?_=" + Date.now(), { cache: "no-cache" });
     if (!res.ok) throw new Error("فشل تحميل البيانات");
     const feed = await res.json();
-    allProperties = (feed.properties || []).filter(p => p && p.image);
+    allProperties = (feed.properties || []).filter(p => p && p.image && IN_AREA.has(p.slug));
 
     if (!allProperties.length) {
       showEmpty("لا توجد عقارات متاحة حالياً");
@@ -197,7 +200,7 @@ function createCard(p, idx) {
       <img src="${escapeAttr(String(p.image || "").replace("/assets/img/properties/", "/assets/img/properties/cards/"))}" 
            alt="${escapeAttr(p.title)}" 
            loading="lazy"
-           onerror="this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';">
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escapeAttr(p.image)}';}else{this.onerror=null;this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';}">
       <span class="${badgeClass}">${badgeText}</span>
     </div>
     <div class="pg-card-body">

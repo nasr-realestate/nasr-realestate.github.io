@@ -1,0 +1,42 @@
+{%- comment -%}
+  CollectionPage + ItemList لصفحة المعرض الحالية فقط (2026-10-20). Google يكفيه
+  ListItem برابط وموضع في صفحات الملخص؛ تفاصيل كل عرض في RealEstateListing على
+  صفحته نفسها (_includes/schema-property.html). numberOfItems = كل عروض مدينة نصر.
+{%- endcomment -%}
+{%- assign _facets = site.data.listing_facets -%}
+{%- assign _per = _facets.catalog.per_page -%}
+{%- assign _pg = page.catalog_page | default: 1 | plus: 0 -%}
+{%- assign _offset = _pg | minus: 1 | times: _per -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "@id": "{{ site.url }}{{ page.url }}#collection",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": "{{ site.url }}/" },
+      { "@type": "ListItem", "position": 2, "name": "العقارات", "item": "{{ site.url }}/properties/" }{% if _pg > 1 %},
+      { "@type": "ListItem", "position": 3, "name": "صفحة {{ _pg }}", "item": "{{ site.url }}{{ page.url }}" }{% endif %}
+    ]
+  },
+  "mainEntity": {
+    "@type": "ItemList",
+    "@id": "{{ site.url }}{{ page.url }}#itemlist",
+    "numberOfItems": {{ _facets.catalog.order | size }},
+    "itemListOrder": "https://schema.org/ItemListOrderDescending",
+    "itemListElement": [
+      {%- for _slug in _facets.catalog.order limit: _per offset: _offset -%}
+      {%- assign _prop = site.properties | where: "slug", _slug | first %}
+      { "@type": "ListItem", "position": {{ _offset | plus: forloop.index }}, "url": "{{ site.url }}{{ _prop.url }}", "name": {{ _prop.title | jsonify }} }{% unless forloop.last %},{% endunless %}
+      {%- endfor %}
+    ]
+  }
+}
+</script>

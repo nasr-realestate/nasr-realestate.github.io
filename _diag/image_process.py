@@ -44,6 +44,25 @@ used = sorted(set(used))
 print(f"[i] صور عقارات مستخدمة: {len(used)}")
 assert len(used) == len(set(u.split(".")[0] for u in used)), "تعارض أسماء بلا امتداد!"
 
+# ── وضع «--only <image_file>» (2026-10-20) ──
+# يعالج صورة عقار واحدة أُضيفت حديثًا (مثل عقار بشار بن برد) دون إعادة توليد
+# 103 نسخة سليمة منشورة، ودون إعادة كتابة الشعار؛ ويُضيف سطر أبعادها إلى
+# _data/image_dims.yml فقط إن لم يكن موجودًا. الصورة يجب أن تكون مستخدمة فعلًا
+# في front matter عقار — لا نولّد نسخًا لصور غير مرتبطة بأي عقار.
+ONLY = None
+if "--only" in sys.argv:
+    ONLY = sys.argv[sys.argv.index("--only") + 1]
+    assert ONLY in used, f"{ONLY} غير مستخدمة في أي ملف _properties"
+    used = [ONLY]
+
+# ‏--card-y N (مع ‎--only‎ فقط): اختيار بداية نافذة قص البطاقة يدويًا عندما
+# تختار خوارزمية الطاقة تفصيلًا سقفيًا (ثريا) وتطرد مدخل الغرفة — قصة سيئة
+# للبطاقة وإن كانت «عالية الطاقة». لا يُغيّر سلوك أي صورة أخرى.
+CARD_Y = None
+if "--card-y" in sys.argv:
+    assert ONLY, "--card-y يعمل فقط مع --only"
+    CARD_Y = int(sys.argv[sys.argv.index("--card-y") + 1])
+
 def edge_energy(gray):
     """طاقة الحواف = مقدار التدرج الرمادي."""
     g = gray.astype(np.float32)
@@ -133,7 +152,12 @@ for name in used:
     orig_kb = os.path.getsize(src_path) / 1024
 
     # ── بطاقة 4:3 ──
-    crop, how = smart_crop(im, CARD_RATIO)
+    if CARD_Y is not None:
+        vis_h = min(h, int(round(w / CARD_RATIO)))
+        y0 = max(0, min(CARD_Y, h - vis_h))
+        crop, how = im.crop((0, y0, w, y0 + vis_h)), f"y={y0} (manual)"
+    else:
+        crop, how = smart_crop(im, CARD_RATIO)
     cw, ch = crop.size
     out_w = min(CARD_W, cw)
     out_h = round(out_w / CARD_RATIO)
@@ -164,6 +188,16 @@ for name in used:
     log.append(dict(name=name, orig=f"{w}x{h}", orig_kb=round(orig_kb, 1),
                     card_crop=how, card_out=f"{out_w}x{out_h}", card_kb=round(csize/1024, 1), card_q=q,
                     og_crop=how2, og_out=f"{out_w2}x{out_h2}", og_kb=round(osize/1024, 1), og_q=q2))
+
+if ONLY:
+    dims_path = os.path.join(DATA_DIR, "image_dims.yml")
+    existing = open(dims_path, encoding="utf-8").read()
+    base = os.path.splitext(ONLY)[0]
+    if f'"{base}":' not in existing:
+        with open(dims_path, "a", encoding="utf-8") as f:
+            f.write(dims_yml[-1] + "\n")
+    print(f"[✓] --only {ONLY}: {log[-1]}")
+    sys.exit(0)
 
 # ── شعار صغير ──
 logo = Image.open(os.path.join(ROOT, "assets/img/logo.webp"))

@@ -1,0 +1,62 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════════
+  بطاقة عقار موحّدة (2026-10-20) — المعرض وصفحات الترقيم وصفحات الهبوط.
+  الاستعمال: {% include property-card.html prop=prop %}
+  • التصنيف (بيع/إيجار، النوع) والأرقام من _data/listing_facets.json — نفس
+    منطق ai-feed و/api — بدل قواعد `title contains` المكررة في كل صفحة.
+  • الصورة: النسخة 4:3 (cards/) إن وُجدت فعلًا على القرص، وإلا الأصل، وإلا
+    عنصر نائب بلا صورة مستعارة. width/height = 4:3 لمنع CLS، وتحميل كسول
+    (قرار 2026-09-24 الموثّق: eager رفع TBT وLCP).
+  • نسخة JS المطابقة: renderCard() في assets/js/catalog.js — أي تعديل هنا
+    يجب أن ينعكس هناك (الاختبار catalog-search.test.mjs يقارن الحقول).
+═══════════════════════════════════════════════════════════════
+{%- endcomment -%}
+{%- assign _p = include.prop -%}
+{%- assign _f = site.data.listing_facets.listings[_p.slug] -%}
+{%- assign _deal = _f.deal | default: "sale" -%}
+{%- assign _type = _f.type | default: "apartment" -%}
+{%- case _type -%}
+  {%- when "villa" -%}{%- assign _tl = "دوبلكس/فيلا" -%}
+  {%- when "shop" -%}{%- assign _tl = "محل" -%}
+  {%- when "office" -%}{%- assign _tl = "مكتب/إداري" -%}
+  {%- when "clinic" -%}{%- assign _tl = "عيادة" -%}
+  {%- when "warehouse" -%}{%- assign _tl = "مخزن" -%}
+  {%- else -%}{%- assign _tl = "شقة" -%}
+{%- endcase -%}
+{%- if _deal == "rent" -%}{%- assign _dl = "للإيجار" -%}{%- else -%}{%- assign _dl = "للبيع" -%}{%- endif -%}
+{%- if _deal == "rent" -%}{%- assign _bc = "rent" -%}{%- elsif _type == "shop" or _type == "office" or _type == "clinic" or _type == "warehouse" -%}{%- assign _bc = _type | replace: "clinic", "office" | replace: "warehouse", "shop" -%}{%- else -%}{%- assign _bc = "sale" -%}{%- endif -%}
+{%- assign _ht = include.heading | default: "h3" -%}
+<a href="{{ _p.url | relative_url }}" class="pl-card" data-slug="{{ _p.slug }}">
+  <div class="pl-card-img-wrap">
+    {%- if _f.card_image %}
+    <img src="{{ _f.card_image | relative_url }}"
+         alt="{{ _p.title | escape }}"
+         class="pl-card-img"
+         width="400" height="300"
+         loading="lazy"
+         decoding="async"{% if _f.image and _f.image != _f.card_image %}
+         onerror="this.onerror=null;this.src='{{ _f.image | relative_url }}';"{% endif %}>
+    {%- else %}
+    <div class="pl-card-img img-ph" role="img" aria-label="لا توجد صورة لهذا العرض">
+      <i class="fas fa-building img-ph-ico" aria-hidden="true"></i>
+    </div>
+    {%- endif %}
+    <span class="pl-card-badge {{ _bc }}">{{ _tl }} {{ _dl }}</span>
+  </div>
+  <div class="pl-card-body">
+    <{{ _ht }} class="pl-card-title">{{ _p.title }}</{{ _ht }}>
+    <div class="pl-card-specs">
+      {%- if _f.area %}<span><i class="fas fa-ruler-combined" aria-hidden="true"></i> {{ _f.area }} م²</span>{% endif -%}
+      {%- if _f.rooms %}<span><i class="fas fa-bed" aria-hidden="true"></i> {{ _f.rooms }} غرف</span>{% endif -%}
+      {%- if _f.baths %}<span><i class="fas fa-bath" aria-hidden="true"></i> {{ _f.baths }} حمام</span>{% endif -%}
+    </div>
+    <div class="pl-card-location">
+      <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+      <span>{{ _p.location | default: "مدينة نصر" }}</span>
+    </div>
+    <div class="pl-card-footer">
+      <span class="pl-card-price">{{ _p.price }}</span>
+      <span class="pl-card-arrow" aria-hidden="true"><i class="fas fa-arrow-left"></i></span>
+    </div>
+  </div>
+</a>

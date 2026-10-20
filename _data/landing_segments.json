@@ -1,0 +1,97 @@
+{
+  "_comment": "تعريف صفحات الهبوط في مدينة نصر (2026-10-20). المصدر الوحيد لقواعد المطابقة: يقرأه scripts/build-listing-facets.mjs فيكتب _data/listing_facets.json، ويقرأه Jekyll لعرض الروابط. لا تُضف منطقة إلا إذا كان لها عدد كافٍ من العروض الحقيقية داخل مدينة نصر؛ الصفحة التي يقل عددها عن min_listings_for_index تُوسم noindex وتخرج من sitemap تلقائيًا.",
+  "min_listings_for_index": 6,
+  "catalog_per_page": 24,
+  "segments": [
+    {
+      "key": "apartments-for-sale",
+      "kind": "type",
+      "name": "شقق للبيع في مدينة نصر",
+      "short": "شقق للبيع",
+      "path": "/properties/apartments-for-sale/",
+      "deal": "sale",
+      "types": [
+        "apartment",
+        "villa"
+      ]
+    },
+    {
+      "key": "apartments-for-rent",
+      "kind": "type",
+      "name": "شقق للإيجار في مدينة نصر",
+      "short": "شقق للإيجار",
+      "path": "/properties/apartments-for-rent/",
+      "deal": "rent",
+      "types": [
+        "apartment",
+        "villa"
+      ]
+    },
+    {
+      "key": "commercial",
+      "kind": "type",
+      "name": "محلات ومكاتب ومقرات إدارية في مدينة نصر",
+      "short": "محلات ومكاتب",
+      "path": "/properties/commercial/",
+      "types": [
+        "shop",
+        "office",
+        "clinic",
+        "warehouse"
+      ]
+    },
+    {
+      "key": "makram-ebeid",
+      "kind": "area",
+      "name": "عقارات مكرم عبيد",
+      "short": "مكرم عبيد",
+      "path": "/properties/makram-ebeid/",
+      "match": [
+        "مكرم عبيد"
+      ]
+    },
+    {
+      "key": "abbas-el-akkad",
+      "kind": "area",
+      "name": "عقارات عباس العقاد",
+      "short": "عباس العقاد",
+      "path": "/properties/abbas-el-akkad/",
+      "match": [
+        "عباس العقاد"
+      ]
+    },
+    {
+      "key": "seventh-district",
+      "kind": "area",
+      "name": "عقارات الحي السابع وحي السفارات",
+      "short": "الحي السابع والسفارات",
+      "path": "/properties/seventh-district/",
+      "match": [
+        "الحي السابع",
+        "حي السفارات"
+      ]
+    },
+    {
+      "key": "mostafa-el-nahas",
+      "kind": "area",
+      "name": "عقارات مصطفى النحاس",
+      "short": "مصطفى النحاس",
+      "path": "/properties/mostafa-el-nahas/",
+      "match": [
+        "مصطفى النحاس"
+      ]
+    },
+    {
+      "key": "el-tayaran",
+      "kind": "area",
+      "name": "عقارات شارع الطيران",
+      "short": "شارع الطيران",
+      "path": "/properties/el-tayaran/",
+      "match": [
+        "شارع الطيران",
+        "الطيران الرئيسي",
+        "من الطيران"
+      ]
+    }
+  ]
+}
