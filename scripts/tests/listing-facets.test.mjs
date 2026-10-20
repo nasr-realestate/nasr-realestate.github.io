@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildListingFacets, renderListingFacets, locationMatches } from '../lib/listing-facets.mjs';
+import { buildListingFacets, renderListingFacets, locationMatches, landingPageStubs, landingDescription } from '../lib/listing-facets.mjs';
 import { parseFrontMatter } from '../lib/front-matter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -114,4 +114,57 @@ test('القوالب: لا اختيار عشوائي ولا قوائم من site
   const agent = fs.readFileSync(path.join(ROOT, 'agent.html'), 'utf8');
   assert.match(agent, /assets\/data\/catalog\.json/);
   assert.match(agent, /!scope \|\| scope\.has\(p\.slug\)/);
+});
+
+test('صفحات الهبوط: ملف مولّد لكل شريحة، رابطه = path، بلا تصادم مع روابط العقارات، وفهرسة حسب الحد', () => {
+  const stubs = landingPageStubs(facets, segmentsConfig.segments);
+  const slugs = new Set(Object.keys(facets.listings));
+  const paths = new Set();
+  for (const seg of segmentsConfig.segments) {
+    const file = `properties/${seg.key}.html`;
+    assert.ok(stubs.has(file), file);
+    assert.equal(fs.readFileSync(path.join(ROOT, file), 'utf8'), stubs.get(file), `${file} قديم — شغّل build-listing-facets`);
+    const { data } = parseFrontMatter(stubs.get(file));
+    assert.equal(data.permalink, seg.path);
+    assert.equal(seg.path, `/properties/${seg.key}/`);
+    assert.ok(!slugs.has(seg.key) && seg.key !== 'page', `${seg.key} يتصادم مع رابط عقار`);
+    assert.ok(!paths.has(seg.path)); paths.add(seg.path);
+    assert.doesNotMatch(String(data.title), /\|/, 'jekyll-seo-tag يشوّه «|»');
+    const st = facets.segments[seg.key];
+    assert.equal(st.indexable, st.count >= segmentsConfig.min_listings_for_index);
+    if (st.indexable) {
+      assert.ok(!('sitemap' in data) && !('robots' in data), `${seg.key} مفهرسة`);
+    } else {
+      assert.equal(String(data.sitemap), 'false');
+      assert.match(String(data.robots), /noindex/);
+    }
+    // الوصف والحقائق من الأرقام الفعلية
+    assert.match(String(data.description), new RegExp(`^${st.count} `));
+  }
+  // العناوين والأوصاف غير مكررة
+  const titles = [...stubs.values()].map((c) => parseFrontMatter(c).data.title);
+  const descs = [...stubs.values()].map((c) => parseFrontMatter(c).data.description);
+  assert.equal(new Set(titles).size, titles.length);
+  assert.equal(new Set(descs).size, descs.length);
+});
+
+test('صفحة هبوط تحت حد الفهرسة تُولَّد noindex وخارج sitemap تلقائيًا، والوصف لا يخترع أرقامًا', () => {
+  const seg = { key: 'x-area', kind: 'area', name: 'عقارات س', short: 'س', path: '/properties/x-area/', match: ['س'] };
+  const st = { count: 3, indexable: false, sale: 3, rent: 0, by_type: { apartment: 3 }, sale_price: { min: 1850000, max: 1850000 }, rent_price: null, area: { min: 120, max: 120 } };
+  const fake = { segments: { 'x-area': st } };
+  const { data } = parseFrontMatter(landingPageStubs(fake, [seg]).get('properties/x-area.html'));
+  assert.equal(String(data.sitemap), 'false');
+  assert.match(String(data.robots), /noindex/);
+  const d = landingDescription(seg, st);
+  assert.match(d, /^3 عروض في س، مدينة نصر\./);
+  assert.match(d, /1\.85 مليون/);           // لا تقريب يغيّر السعر المعلن
+  assert.doesNotMatch(d, /إيجار|للإيجار/);  // لا معلومة غير موجودة
+});
+
+test('الرئيسية والمعرض يربطان صفحات الهبوط بعدد الشريحة نفسه (لا عدّادات بقواعد مختلفة)', () => {
+  const home = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.doesNotMatch(home, /area_\d+_count/);
+  assert.match(home, /site\.data\.landing_segments\.segments/);
+  assert.match(fs.readFileSync(path.join(ROOT, '_includes/catalog-body.html'), 'utf8'), /include browse-segments\.html/);
+  assert.match(fs.readFileSync(path.join(ROOT, '_layouts/landing.html'), 'utf8'), /include browse-segments\.html/);
 });

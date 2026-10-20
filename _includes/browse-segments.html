@@ -1,0 +1,17 @@
+{%- comment -%}
+  روابط «تصفّح حسب المنطقة والنوع» (2026-10-20) — صفحات الهبوط المفهرسة فقط
+  (count ≥ min_listings_for_index)، بعددها الحالي من _data/listing_facets.json.
+  تظهر في المعرض وفي كل صفحة هبوط: روابط <a href> قابلة للزحف بين الصفحات الشقيقة.
+{%- endcomment -%}
+{%- assign _bf = site.data.listing_facets.segments -%}
+<nav class="pl-browse" aria-labelledby="plBrowseTitle">
+  <h2 id="plBrowseTitle"><i class="fas fa-map-signs" aria-hidden="true"></i> تصفّح عروض مدينة نصر حسب النوع والمنطقة</h2>
+  <ul class="pl-browse-list">
+    {%- for _seg in site.data.landing_segments.segments -%}
+    {%- assign _st = _bf[_seg.key] -%}
+    {%- if _st.indexable %}
+    <li><a href="{{ _seg.path | relative_url }}"{% if page.landing_key == _seg.key %} aria-current="page"{% endif %}>{{ _seg.short }} <small>({{ _st.count }})</small></a></li>
+    {%- endif -%}
+    {%- endfor %}
+  </ul>
+</nav>

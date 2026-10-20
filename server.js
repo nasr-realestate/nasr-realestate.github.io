@@ -368,6 +368,19 @@ app.get(['/properties/page/:n', '/properties/page/:n/'], async (req, res, next) 
   }
 });
 
+// 2026-10-20 — صفحات الهبوط (properties/<key>.html بـ permalink /properties/<key>/) قبل صفحات العقارات.
+app.get(['/properties/:key', '/properties/:key/'], async (req, res, next) => {
+  try {
+    const key = String(req.params.key);
+    const file = path.join('properties', `${key}.html`);
+    if (!/^[a-z0-9-]+$/.test(key) || !fs.existsSync(file)) return next();
+    const html = await renderFile(file, { url: `/properties/${key}/` });
+    res.send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get(['/properties/:slug', '/properties/:slug/'], async (req, res, next) => {
   try {
     const slug = req.params.slug;

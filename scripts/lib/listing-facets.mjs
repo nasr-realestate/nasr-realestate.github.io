@@ -216,3 +216,80 @@ export function catalogPageStubs(facets) {
   }
   return out;
 }
+
+const arNum = (n) => Number(n).toLocaleString('en-US');
+function fmtEGP(v) {
+  if (v >= 1e6) return `${(Math.round(v / 1e4) / 100).toString()} مليون`;
+  if (v >= 1e3) return `${arNum(Math.round(v / 1e3))} ألف`;
+  return arNum(v);
+}
+const offersAr = (n) => (n === 1 ? 'عرض واحد' : n === 2 ? 'عرضان' : n <= 10 ? `${n} عروض` : `${n} عرضًا`);
+
+/** وصف ميتا من الأرقام الفعلية فقط (لا صياغة تسويقية بلا مصدر). */
+export function landingDescription(seg, st) {
+  const place = seg.kind === 'area' ? `${seg.short}، مدينة نصر` : 'مدينة نصر';
+  const parts = [`${offersAr(st.count)} ${seg.kind === 'area' ? 'في' : 'من'} ${seg.kind === 'area' ? place : seg.short + ' في ' + place}`];
+  if (st.sale && st.rent) parts[0] += ` (${st.sale} للبيع و${st.rent} للإيجار)`;
+  const bits = [];
+  if (st.sale_price) bits.push(st.sale_price.min === st.sale_price.max ? `البيع ${fmtEGP(st.sale_price.min)} ج.م` : `البيع من ${fmtEGP(st.sale_price.min)} إلى ${fmtEGP(st.sale_price.max)} ج.م`);
+  if (st.rent_price) bits.push(st.rent_price.min === st.rent_price.max ? `الإيجار ${fmtEGP(st.rent_price.min)} ج.م شهريًا` : `الإيجار من ${fmtEGP(st.rent_price.min)} إلى ${fmtEGP(st.rent_price.max)} ج.م شهريًا`);
+  if (st.area) bits.push(st.area.min === st.area.max ? `مساحة ${st.area.min} م²` : `مساحات من ${st.area.min} إلى ${st.area.max} م²`);
+  return `${parts[0]}. ${bits.join('، ')}. الأسعار كما أعلنها الملاك — تواصل مع طارق طنطاوي.`;
+}
+
+const TYPE_PLURAL = { apartment: 'شقق', villa: 'دوبلكس/فيلات', shop: 'محلات', office: 'مكاتب وإداري', clinic: 'عيادات', warehouse: 'مخازن' };
+const fmtRange = (r, unit) => (r.min === r.max ? `${fmtEGP(r.min)} ${unit}` : `من ${fmtEGP(r.min)} إلى ${fmtEGP(r.max)} ${unit}`);
+
+/** حقائق الصفحة — كلها محسوبة من العروض المنشورة الآن، لا شيء مكتوب يدويًا. */
+export function landingFacts(st) {
+  const facts = [['العروض المنشورة', st.sale && st.rent ? `${st.count} (${st.sale} للبيع، ${st.rent} للإيجار)` : String(st.count)]];
+  if (st.sale_price) facts.push(['أسعار البيع المعلنة', fmtRange(st.sale_price, 'ج.م')]);
+  if (st.rent_price) facts.push(['الإيجار الشهري المعلن', fmtRange(st.rent_price, 'ج.م')]);
+  if (st.area) facts.push(['المساحات', st.area.min === st.area.max ? `${st.area.min} م²` : `من ${st.area.min} إلى ${st.area.max} م²`]);
+  const types = Object.entries(st.by_type || {}).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  if (types.length > 1) facts.push(['الأنواع', types.map(([t, n]) => `${TYPE_PLURAL[t] || t}: ${n}`).join(' · ')]);
+  return facts;
+}
+
+export function landingIntro(seg) {
+  if (seg.kind === 'area') {
+    return `العروض المنشورة لدى سمسار طلبك التي يذكر عنوانها المعلن ${seg.match.join(' أو ')} داخل مدينة نصر، مرتبة من الأحدث، بالسعر والمساحة وعدد الغرف كما أعلنها المالك.`;
+  }
+  const what = seg.deal === 'sale' ? 'الشقق والدوبلكسات المعروضة للبيع' : seg.deal === 'rent' ? 'الشقق المعروضة للإيجار' : 'المحلات والمكاتب والمقرات الإدارية المعروضة للبيع والإيجار';
+  return `كل ${what} داخل مدينة نصر لدى سمسار طلبك في صفحة واحدة، مرتبة من الأحدث، بالسعر والمساحة${seg.deal === 'rent' || seg.deal === 'sale' ? ' وعدد الغرف' : ''} كما أعلنها المالك.`;
+}
+
+export function landingTitle(seg) {
+  return seg.title || (seg.kind === 'area' ? `${seg.name} للبيع والإيجار — مدينة نصر` : `${seg.name} — عروض بالسعر والمساحة`);
+}
+
+/**
+ * صفحات الهبوط properties/<key>.html — تُولَّد من _data/landing_segments.json والأرقام الحالية.
+ * أقل من min_listings_for_index ← noindex + خارج sitemap تلقائيًا (لا صفحات رقيقة مفهرسة).
+ */
+export function landingPageStubs(facets, segments) {
+  const out = new Map();
+  for (const seg of segments) {
+    const st = facets.segments[seg.key];
+    const q = (v) => JSON.stringify(v);
+    const lines = [
+      '---',
+      '# مولّد آليًا — node scripts/build-listing-facets.mjs (لا تعدّله يدويًا؛ عدّل _data/landing_segments.json)',
+      'layout: landing',
+      'body_class: page-properties page-landing',
+      `title: ${q(landingTitle(seg))}`,
+      `description: ${q(landingDescription(seg, st))}`,
+      `permalink: ${seg.path}`,
+      'image: "/assets/img/social-properties.png"',
+      'hide_navbar: true',
+      `landing_key: ${seg.key}`,
+      `landing_intro: ${q(landingIntro(seg))}`,
+      'landing_facts:',
+      ...landingFacts(st).map(([k, v]) => `  - { label: ${q(k)}, value: ${q(v)} }`),
+    ];
+    if (!st.indexable) lines.push('sitemap: false', 'robots: "noindex, follow"');
+    lines.push('---', '');
+    out.set(`properties/${seg.key}.html`, lines.join('\n'));
+  }
+  return out;
+}

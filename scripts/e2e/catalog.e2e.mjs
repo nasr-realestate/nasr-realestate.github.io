@@ -225,6 +225,33 @@ async function imagesOk(page, selector) {
   await ctx.close();
 }
 
+// ─── صفحات الهبوط ───────────────────────────────────────
+{
+  const { ctx, page } = await openPage(390, 844, '/');
+  const homeAreas = await page.$$eval('.hp-area-card', (els) => els.map((a) => a.getAttribute('href')));
+  check('الرئيسية: بطاقات «تصفح حسب المنطقة والنوع» تربط صفحات الهبوط', homeAreas.length === 8 && homeAreas.every((h) => /^\/properties\/[a-z-]+\/$/.test(h)), homeAreas.join(' '));
+  await page.goto(BASE + '/properties/makram-ebeid/', { waitUntil: 'load' });
+  const lp = await page.evaluate(() => ({
+    h1: document.querySelector('h1').textContent.trim(),
+    cards: document.querySelectorAll('#plGrid .pl-card').length,
+    count: document.querySelector('.pl-grid-heading-count').textContent,
+    canonical: document.querySelector('link[rel=canonical]').href,
+    robots: document.querySelector('meta[name=robots]').content,
+    current: (document.querySelector('.pl-browse a[aria-current]') || {}).textContent || '',
+    overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+    locs: [...document.querySelectorAll('#plGrid .pl-card')].map((c) => c.textContent),
+    wa: [...document.querySelectorAll('a[href*="wa.me/"]')].map((a) => decodeURIComponent(a.href.replace(/\+/g, ' '))),
+  }));
+  check('هبوط مكرم عبيد: H1 + 10 بطاقات = العدّاد + canonical ذاتي + index', lp.h1.includes('مكرم عبيد') && lp.cards === 10 && lp.count.includes('10') &&
+    lp.canonical.endsWith('/properties/makram-ebeid/') && /^index/.test(lp.robots), `${lp.cards} | ${lp.robots}`);
+  check('هبوط مكرم عبيد: كل البطاقات تذكر مكرم عبيد', lp.locs.every((t) => t.includes('مكرم عبيد')), '');
+  check('هبوط مكرم عبيد: 390px بلا تمرير أفقي + رابط التصفح الحالي مميز', !lp.overflow && lp.current.includes('مكرم عبيد'), lp.current);
+  check('هبوط مكرم عبيد: واتساب يحمل اسم الصفحة', lp.wa.some((h) => h.includes('مكرم عبيد')), `${lp.wa.length}`);
+  const lImgs = await imagesOk(page, '#plGrid .pl-card img');
+  check('هبوط مكرم عبيد: كل الصور تُحمَّل', lImgs.length === 10 && lImgs.every((x) => x.ok), lImgs.filter((x) => !x.ok).map((x) => x.src).join(' '));
+  await ctx.close();
+}
+
 // ─── أحجام أخرى ─────────────────────────────────────────
 for (const [w, h] of [[360, 740], [768, 1024], [1366, 768]]) {
   const { ctx, page } = await openPage(w, h, '/properties/');
