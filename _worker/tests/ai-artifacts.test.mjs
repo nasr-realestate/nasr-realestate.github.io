@@ -37,6 +37,7 @@ import {
   renderAiTxt,
   renderMcpCard,
   renderOpenApi,
+  renderAiCatalog,
   renderSearchData,
   mcpToolDefinitions,
   SITE,
@@ -272,6 +273,8 @@ test("build-ai-artifacts writes the full artifact set and every JSON is parseabl
       ".well-known/mcp.json", ".well-known/mcp/server-card.json",
       // نسخ جذرية موازية: تأمين ضد حجب المجلدات النقطية + أدوات تقرأ الجذر فقط
       "ai.txt", "mcp.json",
+      // كتالوج ARD (Lighthouse «ard-schema»): نقطة قياسية + مرآة جذرية
+      ".well-known/ai-catalog.json", "ai-catalog.json",
     ];
     for (const rel of expected) assert.ok(fs.existsSync(path.join(tmp, rel)), `missing ${rel}`);
 
@@ -293,7 +296,7 @@ test("build-ai-artifacts writes the full artifact set and every JSON is parseabl
     assert.equal(count, expected.length + PROPS.length * 2);
 
     // المصدر واحد → المحتوى متطابق بالحرف بين النقطة والجذر
-    const pairs = [["ai.txt", ".well-known/ai.txt"], ["mcp.json", ".well-known/mcp.json"]];
+    const pairs = [["ai.txt", ".well-known/ai.txt"], ["mcp.json", ".well-known/mcp.json"], ["ai-catalog.json", ".well-known/ai-catalog.json"]];
     for (const [a, b] of pairs) {
       assert.equal(fs.readFileSync(path.join(tmp, a), "utf8"), fs.readFileSync(path.join(tmp, b), "utf8"), `${a} and ${b} must be identical`);
     }
@@ -386,4 +389,100 @@ test("schema-property.html derives numerics itself so a new file cannot regress"
   // لا يجوز أن يبقى السعر الافتراضي "0" في الـ JSON
   assert.doesNotMatch(src, /"price": "{{ price_num }}"\n\s*"availability"/, "price must never be emitted unconditionally");
   assert.match(src, /if price_num > 0/);
+});
+
+/* ───────────────── كتالوج ARD (ai-catalog.json) ───────────────── */
+
+// تدقيق Lighthouse 13.5 «ard-schema» منقول حرفيًا عن validate_manifest في
+// مجموعة مطابقة ARD؛ الاختبارات هنا تفرض نفس العقد على ما يولّده الموقع —
+// ولو سُحبت الإشارة أو انحرف المخطط يومًا يرسب الاختبار قبل Lighthouse.
+
+const ARD_IDENTIFIER = /^urn:air:[a-zA-Z0-9.-]+(:[a-zA-Z0-9._-]+)+$/;
+const ARD_ENTRY_KEYS = new Set([
+  "identifier", "displayName", "type", "url", "data", "description",
+  "tags", "capabilities", "representativeQueries", "version", "updatedAt",
+  "metadata", "trustManifest",
+]);
+const ARD_HOST_KEYS = new Set(["displayName", "identifier", "documentationUrl", "logoUrl", "trustManifest"]);
+
+function assertArdEntryConforms(entry, label) {
+  if ("updatedAt" in entry) assert.ok(!Number.isNaN(new Date(entry.updatedAt).getTime()) && /^\d{4}-\d{2}-\d{2}T/.test(entry.updatedAt) && /(Z|[+-]\d{2}:\d{2})$/.test(entry.updatedAt),
+    `${label}: updatedAt must be a valid RFC 3339 date-time (Lighthouse ard-schema parses it as date-time)`);
+  assert.ok(entry && typeof entry === "object" && !Array.isArray(entry), `${label}: entry must be an object`);
+  for (const k of Object.keys(entry)) assert.ok(ARD_ENTRY_KEYS.has(k), `${label}: unknown entry key "${k}"`);
+  assert.match(entry.identifier, ARD_IDENTIFIER, `${label}: identifier must be urn:air:<publisher>:<namespace>:<name>`);
+  assert.ok(typeof entry.displayName === "string" && entry.displayName, `${label}: displayName required`);
+  assert.ok(typeof entry.type === "string" && entry.type, `${label}: IANA media type required`);
+  assert.equal(Boolean(entry.url) + Boolean(entry.data), 1, `${label}: exactly one of url|data`);
+  if (entry.url) assert.match(entry.url, /^https:\/\//, `${label}: url must be absolute https`);
+  if (entry.representativeQueries) {
+    assert.ok(Array.isArray(entry.representativeQueries), `${label}: representativeQueries must be an array`);
+    assert.ok(entry.representativeQueries.length >= 2 && entry.representativeQueries.length <= 5,
+      `${label}: representativeQueries must hold 2–5 tasks`);
+  }
+  if (entry.metadata) for (const v of Object.values(entry.metadata)) {
+    assert.ok(["string", "number", "boolean"].includes(typeof v) || v === null, `${label}: metadata values must be scalar`);
+  }
+  if (entry.tags) assert.ok(entry.tags.every((t) => typeof t === "string" && t), `${label}: tags must be non-empty strings`);
+}
+
+function assertArdCatalogConforms(cat) {
+  assert.deepEqual(Object.keys(cat).filter((k) => k !== "host").sort(), ["entries", "specVersion"],
+    "root: only specVersion + host + entries are schema-defined fields");
+  assert.ok("specVersion" in cat && "entries" in cat, "root: specVersion and entries are required");
+  assert.equal(cat.specVersion, "1.0", 'specVersion enum is ["1.0"]');
+  assert.ok(Array.isArray(cat.entries) && cat.entries.length > 0, "entries must be a non-empty array");
+  if (cat.host) {
+    for (const k of Object.keys(cat.host)) assert.ok(ARD_HOST_KEYS.has(k), `host: unknown key "${k}"`);
+    assert.ok(typeof cat.host.displayName === "string" && cat.host.displayName, "host.displayName required");
+  }
+  cat.entries.forEach((e, i) => assertArdEntryConforms(e, `entries[${i}]`));
+}
+
+test("renderAiCatalog conforms to the ARD ai-catalog schema (Lighthouse ard-schema)", () => {
+  const cat = renderAiCatalog({ stamp: "2026-10-21T00:00:00.000Z" });
+  assertArdCatalogConforms(cat);
+
+  const mcpEntry = cat.entries.find((e) => e.type === "application/mcp-server-card+json");
+  assert.ok(mcpEntry, "the MCP gateway must be the lead callable entry");
+  assert.deepEqual(mcpEntry.capabilities, mcpToolDefinitions().map((t) => t.name),
+    "capabilities must be the real registered tool names, never inflated");
+
+  for (const e of cat.entries.filter((x) => x.url)) {
+    const rel = new URL(e.url).pathname.replace(/^\//, "");
+    assert.ok(fs.existsSync(path.join(REPO_ROOT, rel)) || rel.startsWith(".well-known/") && fs.existsSync(path.join(REPO_ROOT, rel)),
+      `${e.identifier}: url must resolve to a file the site actually serves (${rel})`);
+    assert.ok(new URL(e.url).host === new URL(SITE).host, `${e.identifier}: url host must be the site host`);
+  }
+});
+
+test("the checked-in catalog twins match the generator and each other (hard parity)", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-ard-"));
+  execFileSync(process.execPath, [path.join(REPO_ROOT, "scripts", "build-ai-artifacts.mjs"), `--out=${tmp}`], { stdio: "pipe" });
+  const gen = JSON.parse(fs.readFileSync(path.join(tmp, ".well-known", "ai-catalog.json"), "utf8"));
+  const genRoot = JSON.parse(fs.readFileSync(path.join(tmp, "ai-catalog.json"), "utf8"));
+  assert.deepEqual(genRoot, gen, "root mirror must equal the .well-known copy byte-for-byte (JSON)");
+  assertArdCatalogConforms(gen);
+
+  const checkedInWellKnown = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, ".well-known", "ai-catalog.json"), "utf8"));
+  const checkedInRoot = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "ai-catalog.json"), "utf8"));
+  const stamp = (o) => ({ ...o, entries: o.entries.map(({ updatedAt, ...rest }) => rest) });
+  assert.deepEqual(stamp(checkedInWellKnown), stamp(gen), "repo .well-known/ai-catalog.json drifted from the generator output");
+  assert.deepEqual(stamp(checkedInRoot), stamp(checkedInWellKnown), "root mirror drifted from the committed .well-known copy");
+});
+
+test('the layout declares rel="ai-catalog" at the canonical well-known path, and robots names an Agentmap', () => {
+  const layout = fs.readFileSync(path.join(REPO_ROOT, "_layouts", "default.html"), "utf8");
+  const rel = layout.match(/<link rel="ai-catalog"[^>]*>/);
+  assert.ok(rel, "default layout must declare the ARD catalog link");
+  assert.ok(rel[0].includes("/.well-known/ai-catalog.json"),
+    "the pointer must lead to the conforming catalog — pointing at /api/properties.json was the original Lighthouse failure");
+
+  const robots = fs.readFileSync(path.join(REPO_ROOT, "robots.txt"), "utf8");
+  const agentmap = robots.match(/^Agentmap:\s*(\S+)$/m);
+  assert.ok(agentmap, "robots.txt must expose the ARD Agentmap discovery channel");
+  assert.equal(agentmap[1], "/.well-known/ai-catalog.json", "Agentmap must agree with the rel pointer");
+
+  const court = mcpToolDefinitions().length;
+  assert.ok(court >= 5, "gateway tools contract assumed here shrank — catalog MCP entry would then lie");
 });

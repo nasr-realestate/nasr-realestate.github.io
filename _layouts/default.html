@@ -34,8 +34,10 @@
           إجابات المساعدين عن الوحدات إلى سطر بلا أسعار.
        2) rel="alternate": تُعرّف كل صفحة بنسختها المقروءة آليًا (JSON،
           Markdown، llms.txt) فيجدها الوكيل دون تخمين المسارات.
-       3) rel="ai-catalog" / "mcp": تلميحات غير قياسية لكنها غير ضارّة
-          ويقرأها عدد من أدوات الوكلاء — الاسم القياسي في /.well-known/ai.txt.
+       3) rel="ai-catalog": إشارة ARD (اقتراح specVersion 1.0) إلى كتالوج
+          حقيقي /.well-known/ai-catalog.json يولّده build-ai-artifacts — كانت
+          تشير إلى /api/properties.json (ليس كتالوج ARD) فرسب تدقيق Lighthouse
+          13.5 «ard-schema»، فأُعيدت الإشارة إلى ملف مطابق للمخطّط (2026-10-21).
        ═══════════════════════════════════════════════════════ -->
   {%- comment -%}
     2026-10-20 — كان الوسم ثابتًا index,follow على كل صفحة، حتى 404 والوحدات خارج
@@ -54,7 +56,7 @@
   <link rel="alternate" type="text/markdown" href="{{ '/llms-full.txt' | absolute_url }}" title="الكتالوج الكامل (Markdown)">
   <link rel="alternate" type="text/plain" href="{{ '/llms.txt' | absolute_url }}" title="llms.txt — دليل الموقع للنماذج">
   <link rel="describedby" type="application/json" href="{{ '/api/index.json' | absolute_url }}" title="دليل واجهة العقارات">
-  <link rel="ai-catalog" type="application/json" href="{{ '/api/properties.json' | absolute_url }}">
+  <link rel="ai-catalog" type="application/json" href="{{ '/.well-known/ai-catalog.json' | absolute_url }}">
   <link rel="mcp-server" href="https://nasr-ai-gateway.footcai-555.workers.dev/mcp">
   {%- if page.collection == "properties" %}
   <link rel="alternate" type="application/json" href="{{ '/api/properties/' | append: page.slug | append: '.json' | absolute_url }}" title="بيانات هذه الوحدة (JSON)">

@@ -1,0 +1,43 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "سمسار طلبك — عقارات مدينة نصر",
+    "identifier": "did:web:nasr-realestate.github.io",
+    "documentationUrl": "https://nasr-realestate.github.io/agent.html"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:nasr-realestate.github.io:mcp:semsar-gateway",
+      "displayName": "بوابة MCP — بحث واسترجاع الوحدات المعروضة",
+      "type": "application/mcp-server-card+json",
+      "url": "https://nasr-realestate.github.io/.well-known/mcp/server-card.json",
+      "description": "بطاقة خادم MCP للقراءة فقط (نقل streamable-http): خمس أدوات للبحث في الوحدات المعروضة واسترجاعها وملخص السوق وقائمة المناطق وبيانات التواصل الرسمية، مع بدائل JSON ثابتة مضمونة على الموقع.",
+      "tags": [
+        "real-estate",
+        "nasr-city",
+        "mcp",
+        "عقارات",
+        "مدينة نصر"
+      ],
+      "capabilities": [
+        "search_properties",
+        "get_property",
+        "market_summary",
+        "list_zones",
+        "get_contact"
+      ],
+      "representativeQueries": [
+        "ابحث عن شقة للبيع في مدينة نصر بميزانية لا تتجاوز 5 ملايين جنيه",
+        "اعرض تفاصيل وحدة معروضة برابطها أو اسمها المختصر",
+        "لخّص أسعار الوحدات المعروضة حسب النوع والمعاملة"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "metadata": {
+        "language": "ar",
+        "scope": "nasr-city",
+        "read_only": true
+      }
+    }
+  ]
+}

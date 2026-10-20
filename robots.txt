@@ -25,6 +25,10 @@ User-agent: *
 Allow: /
 Allow: /ai-feed.json
 Allow: /search-data.json
+# ─── اكتشاف الوكلاء (ARD) — قناة robots التي تتفحصها ard-schema أولًا ───
+Agentmap: /.well-known/ai-catalog.json
+
+Allow: /ai-catalog.json
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml

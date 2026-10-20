@@ -37,6 +37,7 @@ import {
   renderPropertyMarkdown,
   renderAiTxt,
   renderMcpCard,
+  renderAiCatalog,
   renderOpenApi,
   renderSearchData,
   MCP_GATEWAY_STATUS,
@@ -196,6 +197,7 @@ export function buildApiIndex(properties, generatedAt) {
       { path: '/search-data.json', method: 'GET', format: 'application/json', description: 'فهرس بحث خفيف' },
       { path: '/.well-known/ai.txt', method: 'GET', format: 'text/plain', description: 'سياسة استخدام المحتوى بواسطة AI' },
       { path: '/.well-known/mcp.json', method: 'GET', format: 'application/json', description: 'بطاقة خادم MCP' },
+      { path: '/.well-known/ai-catalog.json', method: 'GET', format: 'application/json', description: 'كتالوج ARD للاكتشاف الوكيل' },
       { path: '/sitemap.xml', method: 'GET', format: 'application/xml', description: 'خريطة الموقع' },
       { path: '/feed.xml', method: 'GET', format: 'application/rss+xml', description: 'تغذية RSS' },
     ],
@@ -262,6 +264,20 @@ function main() {
   //   المصدر واحد، والمحتوى متطابق، والاختبارات تتحقق من التطابق.
   written.push(write('ai.txt', renderAiTxt(properties, { stamp: generatedAt.slice(0, 10), mcpEndpoint: MCP_ENDPOINT })));
   written.push(write('mcp.json', card));
+
+  // كتالوج ARD (Lighthouse 13.5 «ard-schema»): <link rel="ai-catalog"> في
+  // صفحات الموقع يشير إليه، والمسار النقطي هو الافتراضي المعياري RFC 8615،
+  // والجذرية مرآة بنفس حماية النسخ الجذرية أعلاه. المصدر واحد والمحتوى متطابق.
+  // updatedAt = أحدث تاريخ محتوى للوحدات لا وقت البناء: يبقى الملف ثابتًا
+  // ما لم تتغيّر البيانات فعلًا، فيظل حارس الانحراف (check-ai-artifacts-in-sync)
+  // أخضر — بصمة ARD تتطلب المفتاح camelCase ولا يمكن للحارس تطبيعه.
+  const latestUnitDate = properties.map((p) => p.date).filter(Boolean).sort().at(-1) ?? generatedAt.slice(0, 10);
+  const catalogStamp = /T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(latestUnitDate)
+    ? new Date(latestUnitDate).toISOString()
+    : `${latestUnitDate}T00:00:00.000Z`;
+  const aiCatalog = renderAiCatalog({ stamp: catalogStamp });
+  written.push(write('.well-known/ai-catalog.json', aiCatalog));
+  written.push(write('ai-catalog.json', aiCatalog));
 
   for (const p of properties) {
     written.push(write(`api/properties/${p.slug}.json`, buildPropertyDocument(p, generatedAt)));

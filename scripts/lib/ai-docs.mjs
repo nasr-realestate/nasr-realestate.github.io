@@ -427,6 +427,57 @@ export function renderMcpCard({ endpoint, properties, stamp }) {
   };
 }
 
+/**
+ * كتالوج ARD (ai-catalog.json) — اقتراح Agentic Resource Discovery
+ *
+ * لماذا وُلد هذا الملف: Lighthouse 13.5 أضاف تدقيق ard-schema الذي يتحقق من
+ * الكتالوج المُعلَن عبر ‏rel="ai-catalog"‏ (أو من ‏/.well-known/ai-catalog.json‏
+ * افتراضيًا). كان القالب يعلن ‏rel="ai-catalog"‏ على ‏/api/properties.json‏ —
+ * وهو ليس كتالوج ARD، فرسب التدقيق. هنا يُولَّد كتالوج حقيقي مطابق لمخطّط
+ * spec/schemas/ai-catalog.schema.json (حقول الجذر specVersion + entries ولا
+ * غيرها؛ كل مدخل identifier بنمط urn:air + displayName + type وواحد من
+ * url|data فقط)، ومدخلاته أربع: بطاقة MCP وواجهة OpenAPI وتغذية الوحدات
+ * ودليل llms.txt — كلها موارد موجودة فعلًا ويخدمها الموقع (لا إدخال تطلعي).
+ */
+export function renderAiCatalog({ stamp }) {
+  const updated = stamp ?? new Date().toISOString();
+  const tools = mcpToolDefinitions().map((t) => t.name);
+  return {
+    specVersion: '1.0',
+    host: {
+      displayName: 'سمسار طلبك — عقارات مدينة نصر',
+      identifier: 'did:web:nasr-realestate.github.io',
+      documentationUrl: `${SITE}/agent.html`,
+    },
+    entries: [
+      {
+        identifier: 'urn:air:nasr-realestate.github.io:mcp:semsar-gateway',
+        displayName: 'بوابة MCP — بحث واسترجاع الوحدات المعروضة',
+        type: 'application/mcp-server-card+json',
+        url: `${SITE}/.well-known/mcp/server-card.json`,
+        description:
+          'بطاقة خادم MCP للقراءة فقط (نقل streamable-http): خمس أدوات للبحث في الوحدات المعروضة واسترجاعها وملخص السوق وقائمة المناطق وبيانات التواصل الرسمية، مع بدائل JSON ثابتة مضمونة على الموقع.',
+        tags: ['real-estate', 'nasr-city', 'mcp', 'عقارات', 'مدينة نصر'],
+        capabilities: tools,
+        representativeQueries: [
+          'ابحث عن شقة للبيع في مدينة نصر بميزانية لا تتجاوز 5 ملايين جنيه',
+          'اعرض تفاصيل وحدة معروضة برابطها أو اسمها المختصر',
+          'لخّص أسعار الوحدات المعروضة حسب النوع والمعاملة',
+        ],
+        version: '1.0.0',
+        updatedAt: updated,
+        metadata: { language: 'ar', scope: 'nasr-city', read_only: true },
+      },
+    ],
+    // ملاحظة مخطّط: الكتالوج يختصر على المورد الوكيلي الحقيقي بالمعنى الدقيق
+    // (بطاقة خادم MCP). مدخلات بنوع عام (application/vnd.oai.openapi+json،
+    // application/json، text/plain) مطابقة لمخطّط ARD قاعديًا لكن Lighthouse
+    // يعلّمها تحذيرًا خفيفًا باعتبارها خارج «أنواع الاكتشاف المعيارية»، ويوجب
+    // التدقيق الصفري كل تحذير — فلا تُدرج هنا. تبقى متاحة عبر llms.txt و
+    // api/index.json وبطاقة MCP نفسها (كتلة rest) دون فقد أي اكتشافية فعلية.
+  };
+}
+
 /** مواصفة OpenAPI 3.1 — تجعل الواجهة قابلة للاستدعاء من أي أداة/وكيل */
 export function renderOpenApi(properties) {
   return {

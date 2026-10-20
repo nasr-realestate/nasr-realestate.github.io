@@ -1,0 +1,91 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "سمسار طلبك — عقارات مدينة نصر",
+    "identifier": "did:web:nasr-realestate.github.io",
+    "documentationUrl": "https://nasr-realestate.github.io/agent.html"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:nasr-realestate.github.io:mcp:semsar-gateway",
+      "displayName": "بوابة MCP — بحث واسترجاع الوحدات المعروضة",
+      "type": "application/mcp-server-card+json",
+      "url": "https://nasr-realestate.github.io/.well-known/mcp/server-card.json",
+      "description": "بطاقة خادم MCP للقراءة فقط (نقل streamable-http): خمس أدوات للبحث في الوحدات المعروضة واسترجاعها وملخص السوق وقائمة المناطق وبيانات التواصل الرسمية، مع بدائل JSON ثابتة مضمونة على الموقع.",
+      "tags": [
+        "real-estate",
+        "nasr-city",
+        "mcp",
+        "عقارات",
+        "مدينة نصر"
+      ],
+      "capabilities": [
+        "search_properties",
+        "get_property",
+        "market_summary",
+        "list_zones",
+        "get_contact"
+      ],
+      "representativeQueries": [
+        "ابحث عن شقة للبيع في مدينة نصر بميزانية لا تتجاوز 5 ملايين جنيه",
+        "اعرض تفاصيل وحدة معروضة برابطها أو اسمها المختصر",
+        "لخّص أسعار الوحدات المعروضة حسب النوع والمعاملة"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-20T22:57:20.800Z",
+      "metadata": {
+        "language": "ar",
+        "scope": "nasr-city",
+        "read_only": true
+      }
+    },
+    {
+      "identifier": "urn:air:nasr-realestate.github.io:api:properties",
+      "displayName": "واجهة العقارات REST (مواصفة OpenAPI 3.1)",
+      "type": "application/vnd.oai.openapi+json",
+      "url": "https://nasr-realestate.github.io/api/openapi.json",
+      "description": "واجهة JSON ثابتة بلا مصادقة: كل الوحدات المعروضة مع الفلاتر، ووثيقة JSON/Markdown لكل وحدة على حدة.",
+      "tags": [
+        "openapi",
+        "rest",
+        "properties"
+      ],
+      "capabilities": [
+        "list-properties",
+        "get-property",
+        "filter-properties"
+      ],
+      "representativeQueries": [
+        "اذكر كل الوحدات المعروضة حاليًا",
+        "رشّح مكاتب إدارية للإيجار بمساحة 130 مترًا"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-20T22:57:20.800Z"
+    },
+    {
+      "identifier": "urn:air:nasr-realestate.github.io:dataset:ai-feed",
+      "displayName": "تغذية الوحدات المعروضة (JSON)",
+      "type": "application/json",
+      "url": "https://nasr-realestate.github.io/ai-feed.json",
+      "description": "وثيقة واحدة بكل الوحدات المعروضة: حقول رقمية صريحة (سعر/مساحة/غرف) وبصمة المصدر source_sha256 لكل وحدة.",
+      "tags": [
+        "dataset",
+        "feed",
+        "egp"
+      ],
+      "updatedAt": "2026-10-20T22:57:20.800Z"
+    },
+    {
+      "identifier": "urn:air:nasr-realestate.github.io:doc:llms",
+      "displayName": "دليل القراءة للنماذج (llms.txt)",
+      "type": "text/plain",
+      "url": "https://nasr-realestate.github.io/llms.txt",
+      "description": "خريطة قراءة مختصرة: أين يجد الوكيل الكتالوج الكامل وسياسة الاستخدام والإسناد المطلوب.",
+      "representativeQueries": [
+        "من أين أقرأ كتالوج عقارات موقع سمسار طلبك؟",
+        "ما سياسة الاقتباس والإسناد لبيانات هذا الموقع؟"
+      ],
+      "updatedAt": "2026-10-20T22:57:20.800Z"
+    }
+  ]
+}
