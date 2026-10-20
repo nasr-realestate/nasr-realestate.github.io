@@ -252,6 +252,27 @@ async function imagesOk(page, selector) {
   await ctx.close();
 }
 
+// ─── CLS بشروط Lighthouse الجوال (UA أندرويد ← ملفات خط Cairo مختلفة من Google Fonts) ───
+{
+  const UA = 'Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36';
+  for (const u of ['/', '/properties/', '/properties/makram-ebeid/']) {
+    const ctx = await browser.newContext({ viewport: { width: 412, height: 823 }, deviceScaleFactor: 1.75, isMobile: true, hasTouch: true, userAgent: UA, locale: 'ar-EG' });
+    const page = await ctx.newPage();
+    await page.addInitScript(() => {
+      window.__cls = 0;
+      new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
+    });
+    // شبكة جوال بطيئة (≈ Lighthouse) حتى يصل الخط بعد أول رسم — بدونها لا يُختبر شيء
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 1.6 * 1024 * 1024 / 8, uploadThroughput: 750 * 1024 / 8 });
+    await page.goto(BASE + u, { waitUntil: 'load', timeout: 90000 });
+    await page.waitForTimeout(3000);
+    const cls = await page.evaluate(() => window.__cls);
+    check(`CLS جوال ${u} < 0.1`, cls < 0.1, cls.toFixed(4));
+    await ctx.close();
+  }
+}
+
 // ─── أحجام أخرى ─────────────────────────────────────────
 for (const [w, h] of [[360, 740], [768, 1024], [1366, 768]]) {
   const { ctx, page } = await openPage(w, h, '/properties/');

@@ -5514,6 +5514,38 @@ body.page-properties .pl-browse-list a {
 body.page-properties .pl-browse-list a:hover,
 body.page-properties .pl-browse-list a[aria-current] { border-color: #d4af37; color: #d4af37; }
 body.page-properties .pl-browse-list small { color: #999; }
+/* CLS (2026-10-20, Lighthouse جوال): الأيقونات (Font Awesome) والخط (Cairo) يُحمَّلان
+   بعد أول رسم. قبل تحميل FA عرض <i> = 0 فيلتف العنوان والشرائح عند ظهوره (+38px)،
+   وline-height: normal للحقول أطول بخط Cairo (+23px) ← يُزاح المعرض كله لأسفل.
+   عرض ثابت للأيقونة (= fa-fw) وارتفاع سطر صريح للعناصر = نفس التخطيط قبل وبعد. */
+body.page-properties .pl-container i.fas,
+body.page-properties .pl-container i.fab { display: inline-block; width: 1.25em; text-align: center; }
+body.page-properties .pl-toolbar input,
+body.page-properties .pl-toolbar select,
+body.page-properties .pl-toolbar button,
+body.page-properties .pl-toolbar summary,
+body.page-properties .pl-chip { line-height: 1.5; }
+/* نفس السبب في واجهة الرئيسية: أيقونات شريط الثقة كانت بارتفاع 0 قبل FA (+38px)،
+   والعنوان يلتف لسطرين بخط Cairo على 360px ← سطران محجوزان على الجوال. */
+body.homepage .hp-hero i.fas,
+body.homepage .hp-hero i.fab { display: inline-block; width: 1.25em; height: 1em; line-height: 1; text-align: center; }
+body.homepage .hp-hero .hp-trust-item i.fas { display: block; width: auto; }
+@media (max-width: 400px) {
+  body.homepage .hp-hero h1.hp-hero-title { font-size: 1.7rem; }
+  body.homepage .hp-hero .hp-hero-subtitle { min-height: 5.4em; }
+}
+/* أزرار الواجهة في المنتصف: تغيّر عرض النص مع Cairo كان يُزيحها أفقيًا (CLS 0.19).
+   عرض متساوٍ من الحاوية لا من النص. */
+@media (max-width: 768px) {
+  body.homepage .hp-hero-actions .hp-btn { flex: 1 1 0; min-width: 0; max-width: 220px; justify-content: center; white-space: nowrap; }
+}
+@media (max-width: 768px) {
+  body.homepage .hp-hero-title { min-height: 2.4em; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 0.25em; }
+}
+body.homepage .hp-hero-contact span { display: block; white-space: nowrap; }
+body.homepage .hp-hero-contact a { color: #d4af37; font-weight: 700; text-decoration: none; display: inline-block; padding: 6px 2px; }
+/* select يتجاهل line-height في Chrome ويأخذ ارتفاعه من مقاييس الخط ← ارتفاع صريح */
+body.page-properties .pl-sort select { height: 48px; padding-top: 0; padding-bottom: 0; }
 /* صفحات الهبوط (2026-10-20): حقائق محسوبة من العروض المنشورة */
 body.page-landing .pl-facts {
     display: grid;
