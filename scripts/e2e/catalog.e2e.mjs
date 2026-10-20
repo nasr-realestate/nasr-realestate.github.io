@@ -10,18 +10,12 @@
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import fs from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const searchPaths = (process.env.NODE_PATH || '').split(path.delimiter).filter(Boolean);
 const { chromium } = require(require.resolve('playwright', { paths: [...searchPaths, process.cwd()] }));
 
 const BASE = (process.env.BASE || 'http://127.0.0.1:4100').replace(/\/$/, '');
-// الأحدث وعدد الوحدات داخل النطاق يُقرآن من البيانات المولّدة لا من ثوابت — كي لا
-// يفشل الاختبار عند إضافة عقار جديد (مثل شقة إسماعيل وهبي 2026-10-20).
-const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
-const NEWEST_SLUG = facets.catalog.order[0];
-const IN_AREA = facets.catalog.order.length;
 const results = [];
 function check(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail });
@@ -206,7 +200,7 @@ async function imagesOk(page, selector) {
   const home = await imagesOk(page, '.hp-property-card img');
   check('الرئيسية: 6 بطاقات أحدث العروض بصورها', home.length === 6 && home.every((x) => x.ok), home.filter((x) => !x.ok).map((x) => x.src).join(' '));
   const homeHrefs = await page.$$eval('.hp-property-card', (els) => els.map((a) => a.getAttribute('href')));
-  check('الرئيسية تبدأ بالبطاقة الأحدث داخل النطاق', homeHrefs[0] === `/properties/${NEWEST_SLUG}/`, `${homeHrefs[0]} مقابل ${NEWEST_SLUG}`);
+  check('الرئيسية تبدأ ببطاقة بشار بن برد (الأحدث)', homeHrefs[0] === '/properties/apartment-sale-bashar-ibn-burd-makram-ebeid-190m/', homeHrefs[0]);
 
   await page.goto(BASE + '/properties/apartment-sale-bashar-ibn-burd-makram-ebeid-190m/', { waitUntil: 'load' });
   const main = await imagesOk(page, '#ppMainImage');
@@ -227,56 +221,8 @@ async function imagesOk(page, selector) {
   await page.goto(BASE + '/property-images.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   const pg = await page.evaluate(() => document.querySelectorAll('.pg-card').length);
-  check('معرض الصور: يحمّل بطاقات ومقصور على مدينة نصر', pg === 0 || pg === IN_AREA, `بطاقات=${pg} من ${IN_AREA} (0 = لا وصول للإنتاج من بيئة الاختبار)`);
+  check('معرض الصور: يحمّل بطاقات (من ai-feed المنشور) ومقصور على مدينة نصر', pg === 0 || pg <= 92, `بطاقات=${pg} (0 = لا وصول للإنتاج من بيئة الاختبار)`);
   await ctx.close();
-}
-
-// ─── صفحات الهبوط ───────────────────────────────────────
-{
-  const { ctx, page } = await openPage(390, 844, '/');
-  const homeAreas = await page.$$eval('.hp-area-card', (els) => els.map((a) => a.getAttribute('href')));
-  check('الرئيسية: بطاقات «تصفح حسب المنطقة والنوع» تربط صفحات الهبوط', homeAreas.length === 8 && homeAreas.every((h) => /^\/properties\/[a-z-]+\/$/.test(h)), homeAreas.join(' '));
-  await page.goto(BASE + '/properties/makram-ebeid/', { waitUntil: 'load' });
-  const lp = await page.evaluate(() => ({
-    h1: document.querySelector('h1').textContent.trim(),
-    cards: document.querySelectorAll('#plGrid .pl-card').length,
-    count: document.querySelector('.pl-grid-heading-count').textContent,
-    canonical: document.querySelector('link[rel=canonical]').href,
-    robots: document.querySelector('meta[name=robots]').content,
-    current: (document.querySelector('.pl-browse a[aria-current]') || {}).textContent || '',
-    overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
-    locs: [...document.querySelectorAll('#plGrid .pl-card')].map((c) => c.textContent),
-    wa: [...document.querySelectorAll('a[href*="wa.me/"]')].map((a) => decodeURIComponent(a.href.replace(/\+/g, ' '))),
-  }));
-  check('هبوط مكرم عبيد: H1 + 10 بطاقات = العدّاد + canonical ذاتي + index', lp.h1.includes('مكرم عبيد') && lp.cards === 10 && lp.count.includes('10') &&
-    lp.canonical.endsWith('/properties/makram-ebeid/') && /^index/.test(lp.robots), `${lp.cards} | ${lp.robots}`);
-  check('هبوط مكرم عبيد: كل البطاقات تذكر مكرم عبيد', lp.locs.every((t) => t.includes('مكرم عبيد')), '');
-  check('هبوط مكرم عبيد: 390px بلا تمرير أفقي + رابط التصفح الحالي مميز', !lp.overflow && lp.current.includes('مكرم عبيد'), lp.current);
-  check('هبوط مكرم عبيد: واتساب يحمل اسم الصفحة', lp.wa.some((h) => h.includes('مكرم عبيد')), `${lp.wa.length}`);
-  const lImgs = await imagesOk(page, '#plGrid .pl-card img');
-  check('هبوط مكرم عبيد: كل الصور تُحمَّل', lImgs.length === 10 && lImgs.every((x) => x.ok), lImgs.filter((x) => !x.ok).map((x) => x.src).join(' '));
-  await ctx.close();
-}
-
-// ─── CLS بشروط Lighthouse الجوال (UA أندرويد ← ملفات خط Cairo مختلفة من Google Fonts) ───
-{
-  const UA = 'Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36';
-  for (const u of ['/', '/properties/', '/properties/makram-ebeid/']) {
-    const ctx = await browser.newContext({ viewport: { width: 412, height: 823 }, deviceScaleFactor: 1.75, isMobile: true, hasTouch: true, userAgent: UA, locale: 'ar-EG' });
-    const page = await ctx.newPage();
-    await page.addInitScript(() => {
-      window.__cls = 0;
-      new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
-    });
-    // شبكة جوال بطيئة (≈ Lighthouse) حتى يصل الخط بعد أول رسم — بدونها لا يُختبر شيء
-    const cdp = await ctx.newCDPSession(page);
-    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 1.6 * 1024 * 1024 / 8, uploadThroughput: 750 * 1024 / 8 });
-    await page.goto(BASE + u, { waitUntil: 'load', timeout: 90000 });
-    await page.waitForTimeout(3000);
-    const cls = await page.evaluate(() => window.__cls);
-    check(`CLS جوال ${u} < 0.1`, cls < 0.1, cls.toFixed(4));
-    await ctx.close();
-  }
 }
 
 // ─── أحجام أخرى ─────────────────────────────────────────

@@ -83,3 +83,35 @@ test('صورة البطاقة: موجودة على القرص دائمًا (لا
     assert.ok(fs.existsSync(path.join(ROOT, l.card_image)), `${slug}: ${l.card_image}`);
   }
 });
+
+test('عقارات مشابهة: حتمية، داخل مدينة نصر، نفس المعاملة، ليست العقار نفسه، وبصور موجودة', () => {
+  const again = buildListingFacets(ROOT);
+  for (const [slug, l] of Object.entries(facets.listings)) {
+    assert.deepEqual(l.related, again.listings[slug].related, `${slug}: غير حتمي`);
+    assert.ok(l.related.length > 0 && l.related.length <= 3, slug);
+    for (const r of l.related) {
+      const o = facets.listings[r];
+      assert.notEqual(r, slug);
+      assert.equal(o.in_area, true, `${slug} → ${r} خارج النطاق`);
+      assert.equal(o.deal, l.deal, `${slug} → ${r} معاملة مختلفة`);
+      assert.ok(o.card_image, `${slug} → ${r} بلا صورة بطاقة`);
+    }
+    const sameTypeAvailable = facets.catalog.order.some((s) => s !== slug && facets.listings[s].deal === l.deal && facets.listings[s].type === l.type);
+    if (sameTypeAvailable) assert.equal(facets.listings[l.related[0]].type, l.type, `${slug}: الأول يجب أن يكون من نفس النوع`);
+  }
+});
+
+test('القوالب: لا اختيار عشوائي ولا قوائم من site.properties الخام في الواجهات العامة', () => {
+  const pp = fs.readFileSync(path.join(ROOT, '_layouts/property_page.html'), 'utf8');
+  assert.doesNotMatch(pp.replace(/{%-?\s*comment[\s\S]*?endcomment\s*-?%}/g, ''), /\|\s*sample:/);
+  assert.match(pp, /listing_facets\.listings\[page\.slug\]\.related/);
+  const home = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.match(home, /for slug in site\.data\.listing_facets\.catalog\.order limit: 6/);
+  assert.doesNotMatch(home, /site\.properties \| sort: 'date' \| reverse/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'property-images.html'), 'utf8'),
+    /new Set\(\{\{ site\.data\.listing_facets\.catalog\.order \| jsonify \}\}\)/);
+  // agent.html تُختبر سكربتاته خامًا (بلا Liquid) في _worker/tests — فالنطاق يُجلب من catalog.json وقت التشغيل.
+  const agent = fs.readFileSync(path.join(ROOT, 'agent.html'), 'utf8');
+  assert.match(agent, /assets\/data\/catalog\.json/);
+  assert.match(agent, /!scope \|\| scope\.has\(p\.slug\)/);
+});

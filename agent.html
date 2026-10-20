@@ -3016,6 +3016,15 @@ function restoreFailedMessage(draft, historyEntry) {
 const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
 const PROPERTY_LIST_URL  = "https://nasr-realestate.github.io/properties/";
 const FALLBACK_CARD_IMG  = "https://nasr-realestate.github.io/assets/img/logo.webp";
+// 2026-10-20: معرض الوكيل يعرض وحدات مدينة نصر فقط (ai-feed يضم أيضًا 12 وحدة أرشيفية خارجها).
+// القائمة من بيانات المعرض نفسها (مدينة نصر فقط)؛ لو تعذّر تحميلها نعرض الـ feed كما هو.
+const GALLERY_SCOPE_URL = "https://nasr-realestate.github.io/assets/data/catalog.json";
+function galleryScope() {
+  return fetch(GALLERY_SCOPE_URL)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((rows) => (Array.isArray(rows) ? new Set(rows.map((x) => String(x.u || "").split("/").filter(Boolean).pop())) : null))
+    .catch(() => null);
+}
 let _galleryLoaded = false;
 let _galleryProperties = [];
 
@@ -3038,10 +3047,10 @@ async function fetchGalleryFeed() {
 
   try {
     // ⭐ v9.3: من غير كسر الكاش (?_=Date.now()) — المتصفح وCDN يديروا الكاش، فالفتح التاني فوري
-    const res = await fetch(AI_FEED_URL);
+    const [res, scope] = await Promise.all([fetch(AI_FEED_URL), galleryScope()]);
     if (!res.ok) throw new Error("feed error");
     const feed = await res.json();
-    _galleryProperties = (feed.properties || []).filter(p => p.image);
+    _galleryProperties = (feed.properties || []).filter(p => p.image && (!scope || scope.has(p.slug)));
 
     if (!_galleryProperties.length) { grid.style.display = "none"; empty.style.display = "block"; return; }
 
@@ -3097,7 +3106,7 @@ function renderGalleryCards(properties) {
 
     card.innerHTML = `
       <img class="gallery-card-img" src="${escHtml(imgSrc)}" alt="${escHtml(title)}" loading="lazy" decoding="async"
-           onerror="this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';">
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escHtml(String(prop.image || '').replace(/'/g, ''))}';}else{this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';}">
       <div class="gallery-card-body">
         ${price ? `<div class="gallery-card-price">${escHtml(price)}</div>` : ""}
         ${propertyType || area ? `

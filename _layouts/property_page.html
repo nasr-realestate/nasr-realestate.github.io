@@ -81,11 +81,18 @@ hide_navbar: true
            fetchpriority="high"
            decoding="async"
            onclick="ppOpenLightbox(this.src)">
+      {%- comment -%} 2026-10-20: الوسم من _data/listing_facets.json (نفس تصنيف البطاقات وai-feed)
+          بدل page.category وحده — كان محل للإيجار يظهر «للإيجار» ومحل للبيع «تجاري» بلا معاملة. {%- endcomment -%}
+      {%- assign pf = site.data.listing_facets.listings[page.slug] -%}
       <span class="pp-gallery-tag">
-        {% if page.category contains "rent" %}<i class="fas fa-key"></i> للإيجار
-        {% elsif page.category contains "commercial" %}<i class="fas fa-store"></i> تجاري
-        {% elsif page.category contains "office" or page.category contains "admin" %}<i class="fas fa-briefcase"></i> إداري
-        {% else %}<i class="fas fa-home"></i> للبيع{% endif %}
+        {%- case pf.type -%}
+          {%- when "shop" -%}<i class="fas fa-store" aria-hidden="true"></i> محل
+          {%- when "office" -%}<i class="fas fa-briefcase" aria-hidden="true"></i> مكتب/إداري
+          {%- when "clinic" -%}<i class="fas fa-briefcase" aria-hidden="true"></i> عيادة
+          {%- when "warehouse" -%}<i class="fas fa-warehouse" aria-hidden="true"></i> مخزن
+          {%- when "villa" -%}<i class="fas fa-building" aria-hidden="true"></i> دوبلكس/فيلا
+          {%- else -%}<i class="fas fa-home" aria-hidden="true"></i> شقة
+        {%- endcase %} {% if pf.deal == "rent" %}للإيجار{% else %}للبيع{% endif %}
       </span>
     </div>
 
@@ -104,18 +111,25 @@ hide_navbar: true
       {%- assign additional_imgs = additional_imgs | push: page.image_5 -%}
     {%- endif -%}
 
+    {%- comment -%}
+      2026-10-20: لا يوجد اليوم أي عقار بصور إضافية حقيقية (image_2..image_5 غير مستعملة في
+      الـ104 ملفًا، ولا صور غير مرجعة في assets/img/properties)، فلم تُضَف صور مستعارة.
+      عند إضافة صور حقيقية: image_2: "اسم-الملف.webp" في front matter يكفي — المصغّرات
+      أزرار قابلة للوصول بلوحة المفاتيح، بأبعاد ثابتة (لا CLS)، والملف غير الموجود لا يُعرض.
+    {%- endcomment -%}
     {% if additional_imgs.size > 0 %}
-    <div class="pp-gallery-thumbs">
-      <div class="pp-thumb active"
-           onclick="ppSwitchImage('{{ img_url }}', this)">
-        <img src="{{ img_url }}" alt="صورة رئيسية" loading="lazy">
-      </div>
+    <div class="pp-gallery-thumbs" role="group" aria-label="صور العقار">
+      <button type="button" class="pp-thumb active" aria-pressed="true" aria-label="الصورة 1"
+              onclick="ppSwitchImage('{{ img_url }}', this)">
+        <img src="{{ img_url }}" alt="" width="90" height="70" loading="lazy" decoding="async">
+      </button>
       {% for extra in additional_imgs %}
       {% assign extra_url = site.baseurl | append: "/assets/img/properties/" | append: extra %}
-      <div class="pp-thumb"
-           onclick="ppSwitchImage('{{ extra_url }}', this)">
-        <img src="{{ extra_url }}" alt="صورة إضافية" loading="lazy">
-      </div>
+      <button type="button" class="pp-thumb" aria-pressed="false" aria-label="الصورة {{ forloop.index | plus: 1 }}"
+              onclick="ppSwitchImage('{{ extra_url }}', this)">
+        <img src="{{ extra_url }}" alt="" width="90" height="70" loading="lazy" decoding="async"
+             onerror="this.closest('.pp-thumb').remove()">
+      </button>
       {% endfor %}
     </div>
     {% endif %}
@@ -321,11 +335,17 @@ hide_navbar: true
   </div>
 
   <!-- ═══ Related Properties ═══ -->
-  {%- assign related = site.properties | where_exp: "item", "item.url != page.url" -%}
-  {%- assign related_filtered = related | where: "category", page.category | sample: 3 -%}
-  {% if related_filtered.size == 0 %}
-    {%- assign related_filtered = related | sample: 3 -%}
-  {% endif %}
+  {%- comment -%}
+    2026-10-20: كانت `sample: 3` عشوائية في كل بناء (تتغير الصفحة بلا تغيير محتوى)، وتشمل
+    وحدات خارج مدينة نصر، وتحمّل الصورة الأصلية (حتى 1280px) بلا أبعاد. الآن حتمية من
+    listing_facets.related: نفس المعاملة، ثم نفس النوع، ثم نفس المنطقة، ثم أقرب سعر.
+  {%- endcomment -%}
+  {%- assign related_slugs = site.data.listing_facets.listings[page.slug].related -%}
+  {%- assign related_filtered = "" | split: "" -%}
+  {%- for rs in related_slugs -%}
+    {%- assign rp = site.properties | where: "slug", rs | first -%}
+    {%- if rp -%}{%- assign related_filtered = related_filtered | push: rp -%}{%- endif -%}
+  {%- endfor -%}
 
   {% if related_filtered.size > 0 %}
   <section class="pp-related">
@@ -335,13 +355,15 @@ hide_navbar: true
     </h2>
     <div class="pp-related-grid">
       {% for prop in related_filtered %}
-        {%- assign rel_img = site.baseurl | append: "/assets/img/properties/" | append: prop.image_file -%}
+        {%- assign rel_f = site.data.listing_facets.listings[prop.slug] -%}
         <a href="{{ prop.url | relative_url }}" class="pp-related-card">
-          {% if prop.image_file %}
-          <img src="{{ rel_img }}"
-               alt="{{ prop.title }}"
+          {% if rel_f.card_image %}
+          <img src="{{ rel_f.card_image | relative_url }}"
+               alt="{{ prop.title | escape }}"
                class="pp-related-img"
-               loading="lazy">
+               width="400" height="300"
+               loading="lazy"
+               decoding="async">
           {% else %}
           <div class="pp-related-img img-ph">
             <i class="fas fa-building img-ph-ico"></i>
@@ -353,7 +375,7 @@ hide_navbar: true
               <i class="fas fa-map-marker-alt"></i>
               {{ prop.location | truncate: 35 }}
             </div>
-            <div class="pp-related-price">{{ prop.price }}</div>
+            <div class="pp-related-price">{{ prop.price }}{% if rel_f.area %} <small class="pp-related-area">· {{ rel_f.area }} م²</small>{% endif %}</div>
           </div>
         </a>
       {% endfor %}
@@ -433,8 +455,8 @@ hide_navbar: true
   function ppSwitchImage(src, thumbEl) {
     const main = document.getElementById('ppMainImage');
     if (main) main.src = src;
-    document.querySelectorAll('.pp-thumb').forEach(t => t.classList.remove('active'));
-    if (thumbEl) thumbEl.classList.add('active');
+    document.querySelectorAll('.pp-thumb').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-pressed', 'false'); });
+    if (thumbEl) { thumbEl.classList.add('active'); thumbEl.setAttribute('aria-pressed', 'true'); }
   }
 
   function ppOpenLightbox(src) {

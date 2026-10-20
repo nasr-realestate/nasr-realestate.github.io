@@ -140,6 +140,28 @@ export function buildListingFacets(root) {
     .filter((slug) => listings[slug].in_area)
     .sort((a, b) => (listings[b].date > listings[a].date ? 1 : listings[b].date < listings[a].date ? -1 : a < b ? -1 : 1));
 
+  // «عقارات مشابهة» حتمية (كانت `sample: 3` عشوائية في كل بناء، تشمل وحدات خارج
+  // مدينة نصر، وبصور أصلية ثقيلة بلا أبعاد). المعيار: نفس المعاملة إلزامي، ثم نفس
+  // النوع، ثم نفس المنطقة (صفحة هبوط مشتركة)، ثم أقرب سعر، ثم ترتيب المعرض.
+  const orderIndex = new Map(catalogOrder.map((slug, i) => [slug, i]));
+  const areaKeys = new Set(segments.filter((s) => Array.isArray(s.match)).map((s) => s.key));
+  for (const [slug, l] of Object.entries(listings)) {
+    const myAreas = l.segments.filter((k) => areaKeys.has(k));
+    const myArea = myAreas.length ? myAreas : segmentMembers({ ...l, in_area: true }, locations[slug], segments).filter((k) => areaKeys.has(k));
+    const priceGap = (o) => (l.price && o.price ? Math.abs(Math.log(o.price / l.price)) : Infinity);
+    l.related = catalogOrder
+      .filter((s) => s !== slug && listings[s].deal === l.deal)
+      .map((s) => ({ s, o: listings[s] }))
+      .sort((a, b) => (
+        (Number(b.o.type === l.type) - Number(a.o.type === l.type)) ||
+        (Number(b.o.segments.some((k) => myArea.includes(k))) - Number(a.o.segments.some((k) => myArea.includes(k)))) ||
+        (priceGap(a.o) - priceGap(b.o)) ||
+        (orderIndex.get(a.s) - orderIndex.get(b.s))
+      ))
+      .slice(0, 3)
+      .map((x) => x.s);
+  }
+
   return {
     _comment: 'مولّد آليًا — لا تعدّله يدويًا. node scripts/build-listing-facets.mjs',
     min_listings_for_index: minIndex,

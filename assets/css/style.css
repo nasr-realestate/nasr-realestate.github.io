@@ -705,6 +705,10 @@ body.layout-property_page .pp-thumb {
     transition: border-color 0.2s;
     opacity: 0.6;
   }
+/* 2026-10-20: المصغّرات صارت <button> (لوحة مفاتيح/قارئ شاشة) */
+body.layout-property_page button.pp-thumb { padding: 0; background: none; font: inherit; color: inherit; }
+body.layout-property_page .pp-thumb:focus-visible { outline: 2px solid #fce205; outline-offset: 2px; opacity: 1; }
+body.layout-property_page .pp-related-area { color: #b0b0b0; font-weight: 600; font-size: 0.8em; }
 body.layout-property_page .pp-thumb.active, body.layout-property_page .pp-thumb:hover {
     border-color: #d4af37;
     opacity: 1;
