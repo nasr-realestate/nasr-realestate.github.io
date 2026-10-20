@@ -45,3 +45,13 @@ test('الرئيسية: العنوان يذكر مدينة نصر والبيع �
   assert.doesNotMatch(String(data.description), /\p{Extended_Pictographic}/u);
   assert.ok(String(data.description).length <= 170, `${String(data.description).length}`);
 });
+
+test('sitemap: ملفات HTML الساكنة غير الموجّهة للزوار مستبعدة، وأداة التقييم لها canonical', () => {
+  const cfg = fs.readFileSync(path.join(ROOT, '_config.yml'), 'utf8');
+  for (const p of ['og-generator.html', 'assets/tools']) {
+    assert.match(cfg, new RegExp(`path: "${p.replace('.', '\\.')}"\\n    values:\\n      sitemap: false`), p);
+  }
+  assert.match(fs.readFileSync(path.join(ROOT, 'og-generator.html'), 'utf8'), /name="robots" content="noindex/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'tools/valuation.html'), 'utf8'),
+    /rel="canonical" href="https:\/\/nasr-realestate\.github\.io\/tools\/valuation\.html"/);
+});

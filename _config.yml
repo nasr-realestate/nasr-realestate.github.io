@@ -108,6 +108,17 @@ defaults:
     values:
       layout: "request_page"
 
+  # 2026-10-20 — ملفات HTML ساكنة ليست صفحات للزوار: قالب توليد صور المشاركة
+  # (عرضه ثابت 1200px) وتحويلة قديمة إلى /tools/valuation.html — خارج sitemap.xml.
+  - scope:
+      path: "og-generator.html"
+    values:
+      sitemap: false
+  - scope:
+      path: "assets/tools"
+    values:
+      sitemap: false
+
   # 2026-10-20 — وحدات خارج نطاق مدينة نصر (نفس OUT_OF_SCOPE_IDS في مزامنة D1،
   # ومولّدة من _data/listing_facets.json). تبقى صفحاتها متاحة بالرابط المباشر
   # (روابط واتساب قديمة) لكن خارج sitemap.xml، وnoindex من default.html.
