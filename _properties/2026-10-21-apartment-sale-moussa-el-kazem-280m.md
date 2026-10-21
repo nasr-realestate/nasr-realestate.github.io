@@ -3,7 +3,7 @@ layout: property_page
 title: "شقة 280م صافي بفيو مفتوح وغير مجروح للبيع - شارع موسى الكاظم"
 date: 2026-10-21
 location: "شارع موسى الكاظم - مدينة نصر"
-price: "10,600,000 ج.م"
+price: "7,000,000 ج.م"
 category: apartments
 id: "moussa-el-kazem-280m-sale"
 slug: "apartment-sale-moussa-el-kazem-nasr-city-280m"
@@ -14,33 +14,15 @@ bathrooms: "مجهزة بالكامل"
 floor: "الدور السابع"
 finish: "مساحة ضخمة بفيو مفتوح"
 meta_title: "شقة 280م صافي للبيع شارع موسى الكاظم مدينة نصر | فيو مفتوح"
-meta_description: "شقة فاخرة 280م صافي للبيع بمدينة نصر شارع موسى الكاظم. الدور السابع، فيو مفتوح وغير مجروح، حصة في الأرض، إمكانية إضافة غرف. السعر 10.6 مليون جنيه."
+meta_description: "شقة فاخرة 280م صافي للبيع بمدينة نصر شارع موسى الكاظم. الدور السابع، فيو مفتوح وغير مجروح، حصة في الأرض، وإمكانية إضافة غرف. تم تخفيض السعر إلى 7 ملايين جنيه لسرعة البيع."
+description: "شقة فاخرة 280م صافي للبيع بمدينة نصر شارع موسى الكاظم. الدور السابع، فيو مفتوح وغير مجروح، حصة في الأرض، وإمكانية إضافة غرف. تم تخفيض السعر إلى 7 ملايين جنيه لسرعة البيع."
+priceNumeric: 7000000
+areaNumeric: 280
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-moussa-el-kazem-nasr-city-280m.mp3"
+audio_duration: "24 ثانية"
+audio_script: "بتدور على شقة واسعة بفيو مفتوح في مدينة نصر؟ شقة ميتين وتمانين متر صافي في شارع موسى الكاظم، بالدور السابع، فيها حصة في الأرض ومساحة مفتوحة تقدر تقسّمها وتضيف غرف حسب احتياجك. تم تخفيض السعر لسرعة البيع إلى سبعة مليون جنيه. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
-
-<!-- 1. كود الـ Schema التقني -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "RealEstateListing",
-  "name": "{{ page.title }}",
-  "description": "{{ page.meta_description }}",
-  "image": "{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}",
-  "datePosted": "{{ page.date }}",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "EGP",
-    "price": "10600000",
-    "availability": "https://schema.org/InStock"
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "شارع موسى الكاظم",
-    "addressLocality": "مدينة نصر",
-    "addressRegion": "القاهرة",
-    "addressCountry": "EG"
-  }
-}
-</script>
 
 <div class="property-detail-wrapper">
 
@@ -101,7 +83,7 @@ meta_description: "شقة فاخرة 280م صافي للبيع بمدينة نص
     <!-- 7. تنبيه البيع -->
     <div class="final-payment-alert">
         <i class="fas fa-handshake gold-text"></i>
-        <span>السعر المطلوب <strong>{{ page.price }}</strong> (بواقع 38,000 ج.م للمتر الصافي). تواصل معنا لترتيب معاينة هذه التحفة المعمارية.</span>
+        <span>السعر المطلوب <strong>{{ page.price }}</strong> تم تخفيض السعر إلى 7,000,000 جنيه لسرعة البيع، بمتوسط 25,000 جنيه للمتر الصافي. تواصل معنا لترتيب معاينة الشقة.</span>
     </div>
 
 </div>
