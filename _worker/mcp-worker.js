@@ -48,7 +48,7 @@ const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MCP_SUPPORTED_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const SERVER_NAME = "semsar-talabk";
 const SERVER_TITLE = "سمسار طلبك — بوابة عقارات مدينة نصر";
-const SERVER_VERSION = "1.0.1";
+const SERVER_VERSION = "1.0.2";
 
 const CACHE_TTL_S = 300;          // كاش حافة على القراءة من GitHub Pages
 const MEM_TTL_MS = 60 * 1000;     // كاش في الذاكرة داخل نفس الـisolate
@@ -108,6 +108,8 @@ function tidyUnitId(raw) {
 export function normAr(s) {
   return String(s ?? "")
     .replace(/[\u064B-\u0652\u0670\u0640]/g, "")
+    // أرقام عربية/فارسية ← غربية — بدونها «٣ غرف» لا يرى «3 غرف» أبدًا (عطل Manus 2026-10-21)
+    .replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) <= 0x0669 ? d.charCodeAt(0) - 0x0660 : d.charCodeAt(0) - 0x06F0))
     .replace(/[أإآٱ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
@@ -204,13 +206,115 @@ export function canonicalType(value) {
   return null;
 }
 
+/** كلمات عاطلة في الاستعلامات العربية الحرة — تُحذف من بقية النص النصي */
+const QUERY_FILLERS = ["في", "علي", "من", "عن", "قرب", "قريب", "حول", "حوالي", "جانب", "بجانب", "داخل", "لدي", "بدي", "اريد", "عايز", "ممكن", "لو", "سمحت", "وحدة", "عقار"];
+
+/** مرادفات المعاملة — كلمة واحدة تكفي */
+const TRANSACTION_ALIASES = [
+  { value: "sale", words: ["للبيع", "بيع", "شراء", "تمليك"] },
+  { value: "rent", words: ["للايجار", "لايجار", "ايجار", "تاجير", "تأجير", "شهري"] },
+];
+
+/**
+ * يقرأ الاستعلام العربي الحر ويفرز منه فلاتر مهيكلة صادقة + بقية نصية،
+ * بدل إلصاق النص كاملًا كسلسلة واحدة (وهو ما كان يُعيد 0 دائمًا).
+ *  - «٣ غرف» / «3 غرف نوم»      → min_rooms
+ *  - «للبيع» / «إيجار»          → transaction
+ *  - «شقة / محل / مكتب / فيلا»   → property_type (عبر canonicalType نفسه)
+ *  - «حتى ٣٠ ألف» / «أقل من 5 مليون» / «بحد أقصى …» → max_price
+ * ما لا يُفهم يبقى نصًا وتُطابَق كلماته على العنوان/الموقع/الوصف داخل
+ * filterProperties (كلمة بكلمة، بأي ترتيب). لا يُشتق سعر من لا شيء ولا
+ * تُخترع معلومة لم يردها النص.
+ */
+export function parseFreeQuery(raw) {
+  const src = normAr(raw);
+  const out = { filters: {}, text: "" };
+  if (!src) return out;
+
+  let text = ` ${src} `;
+
+  const roomMatch = text.match(/(\d+)\s*غرف(ه|ة)?(\s*نوم)?/u);
+  if (roomMatch) {
+    out.filters.min_rooms = Number(roomMatch[1]);
+    text = text.replace(roomMatch[0], " ");
+  }
+
+  // السقف السعري: صيغة سقف صريحة فقط («حتى ٣٠ ألف») — لا يصبح «٣٠» داهية
+  // في النص سعرًا من تلقائه (قد تكون تاريخًا أو مساحة — لا نخمن على العميل).
+  const priceMatch = text.match(/(?:حتي|حتى|اقل\s*من|بحد\s*اقصي|سقف)\s*(\d[\d.,]*)\s*(مليون|ملايين|الف|ألف|k|m)?/u);
+  if (priceMatch) {
+    const n = toNum(String(priceMatch[1]));
+    if (n !== null) {
+      const mult = /مليون|ملايين|m/u.test(priceMatch[2] ?? "") ? 1_000_000 : /الف|ألف|k/u.test(priceMatch[2] ?? "") ? 1_000 : 1;
+      if (n * mult >= 1000) out.filters.max_price = Math.round(n * mult);
+    }
+    text = text.replace(priceMatch[0], " ");
+  }
+
+  // المعاملة — أول كلمة تكسب
+  for (const { value, words } of TRANSACTION_ALIASES) {
+    const hit = words.find((w) => text.includes(` ${normAr(w)} `));
+    if (hit) {
+      out.filters.transaction = value;
+      text = text.replace(` ${normAr(hit)} `, " ");
+      break;
+    }
+  }
+
+  // النوع — عبر نفس جدول المرادفات المستخدم في الفلتر المهيكل
+  const tokens = text.split(/\s+/).filter(Boolean);
+  for (const t of tokens) {
+    const type = canonicalType(t);
+    if (type) { out.filters.property_type = type; text = text.replace(` ${t} `, " "); break; }
+  }
+
+  // البقية: تُنظّف من الحروف العاطلة وتُركب كنص نهائي
+  const remain = text.split(/\s+/).filter((t) => t && !QUERY_FILLERS.includes(t));
+  out.text = remain.join(" ").trim();
+  return out;
+}
+
+/**
+ * يخدم أدوات الترشيح (search/market/list_zones) من قائمة الوحدات داخل النطاق فقط;
+ * لا يطبّق على get_property حتى يبقى الرابط المباشر شغالًا لمن معه (startup، noindex — لا إبعاد).
+ */
+export function scopeList(list) {
+  return (Array.isArray(list) ? list : []).filter(IN_SCOPE);
+}
+
+/**
+ * يدمج استعلامًا حرًا مع الفلاتر الصريحة: الصريح الذي وصل في حقول الأداة يكسب،
+ * والمفكك من النص يسد الفراغ فقط. والنص الباقي من التفكيك يصبح query الفعلي.
+ */
+export function mergeQuery(args = {}) {
+  const explicit = { ...args };
+  const raw = typeof explicit.query === "string" ? explicit.query : "";
+  if (!raw.trim()) { delete explicit.limit; return explicit; }
+  const parsed = parseFreeQuery(raw);
+  const merged = { ...parsed.filters };
+  for (const [k, v] of Object.entries(explicit)) {
+    if (k === "query") continue;
+    if (v !== undefined && v !== null && v !== "") merged[k] = v;
+  }
+  if (parsed.text) merged.query = parsed.text;
+  return merged;
+}
 /**
  * يطبّق الفلاتر على قائمة الوحدات.
  * كل فلتر لا يطابق شيئًا يُقلّص النتيجة — لا يوجد أي «تسامح» صامت،
  * لأن التقريب في العقارات = معلومة خاطئة.
  */
+/** النطاق المُعلن للوسيط: مدينة نصر فقط (نفس سياسة موقع الواجهة وD1 في listing_facets).
+ *  التغذية تستضيف ملفات خارج النطاق توثيقيًا (روابط مباشرة/noindex)، لكنها لا
+ *  تدخل أبعاض البحث ولا ملخص السوق ولا قائمة المناطق — حتى لا يوصي مساعد
+ *  بوحدة خارج حقول الخدمة المعلنة (تحقيق Manus 2026-10-21: mcp.json كانت تقول
+ *  «مدينة نصر والقاهرة الجديدة» بينما نطاق الواجهة مدينة نصر).
+ *  in_nasr_city === false ← الموجب الوحيد للاستبعاد؛ غياب الحقل = داخل النطاق. */
+export const IN_SCOPE = (p) => p.in_nasr_city !== false;
+
 export function filterProperties(list, f = {}) {
   let out = Array.isArray(list) ? list.slice() : [];
+  out = out.filter(IN_SCOPE);
 
   if (f.transaction) {
     const want = normAr(f.transaction);
@@ -234,7 +338,15 @@ export function filterProperties(list, f = {}) {
   }
   if (f.query) {
     const want = normAr(f.query);
-    out = out.filter((p) => normAr(`${p.title} ${p.description} ${p.location} ${p.zone} ${p.finish} ${p.propertyType}`).includes(want));
+    // كل مفردة من الاستعلام يجب أن تُرى (بأي ترتيب) — وليس العبارة كلها كتلة واحدة،
+    // لأن «شقه للبيع ٣ غرف» ليست سلسلة فرعية في أي عنوان (عطل Manus: كانت يُعاد 0).
+    const terms = want ? want.split(/\s+/).filter(Boolean) : [];
+    if (terms.length) {
+      out = out.filter((p) => {
+        const hay = normAr(`${p.title} ${p.description} ${p.location} ${p.zone} ${p.finish} ${p.propertyType}`);
+        return terms.every((t) => hay.includes(t));
+      });
+    }
   }
   const min = toNum(f.min_price);
   const max = toNum(f.max_price);
@@ -471,7 +583,9 @@ export async function callTool(name, args = {}, deps = {}) {
   switch (name) {
     case "search_properties": {
       const limit = clampLimit(args.limit, 10);
-      const filtered = filterProperties(list, args);
+      const scope = scopeList(list);
+      const argsMerged = mergeQuery(args);
+      const filtered = filterProperties(scope ?? list, argsMerged);
       const items = sortByDateDesc(filtered).slice(0, limit).map(compactProperty);
       const usedFilter = Object.keys(args).some((k) => k !== "limit" && args[k] !== undefined && args[k] !== null && args[k] !== "");
       const text = resultsAsMarkdown(items, {
@@ -482,10 +596,12 @@ export async function callTool(name, args = {}, deps = {}) {
       });
       return {
         structuredContent: {
-          total_count: list.length,
+          total_count: scope.length,
           matched_count: filtered.length,
           returned: items.length,
-          filters: args,
+          scope: "مدينة نصر",
+          out_of_scope_units_withheld: list.length - scope.length,
+          filters: argsMerged,
           properties: items,
           citation: "سمسار طلبك — طارق طنطاوي (مدينة نصر، القاهرة)",
         },
@@ -512,6 +628,7 @@ export async function callTool(name, args = {}, deps = {}) {
         };
       }
       const p = compactProperty(hit);
+      const oosNote = IN_SCOPE(hit) ? null : `> ℹ️ هذه الوحدة في «${hit.zone || "منطقة خارج مدينة نصر"}» — خارج النطاق المُعلن في الموقع؛ تُعرض توثيقيًا لا ترشيحيًا، وأدوات البحث لا تقترحها.`;
       const details = [
         `# ${p.title}`,
         "",
@@ -534,11 +651,15 @@ export async function callTool(name, args = {}, deps = {}) {
         "",
         `> ${p.price_note}. للتواصل: واتساب ${CONTACT.whatsapp} (${CONTACT.broker}).`,
       ].filter(Boolean).join("\n");
+      if (oosNote) {
+        p.in_scope = false;
+        return { structuredContent: p, content: [{ type: "text", text: [oosNote, "", details].join("\n") }] };
+      }
       return { structuredContent: p, content: [{ type: "text", text: details }] };
     }
 
     case "market_summary": {
-      const scoped = filterProperties(list, {
+      const scoped = filterProperties(scopeList(list), {
         transaction: args.transaction,
         property_type: args.property_type,
         zone: args.zone,
@@ -558,7 +679,7 @@ export async function callTool(name, args = {}, deps = {}) {
     }
 
     case "list_zones": {
-      const zones = buildStats(list).by_zone;
+      const zones = buildStats(scopeList(list)).by_zone;
       const lines = ["## المناطق المخدومة", "", ...Object.entries(zones).map(([z, n]) => `- **${z}** — ${n} وحدة`)];
       return { structuredContent: { total_zones: Object.keys(zones).length, zones }, content: [{ type: "text", text: lines.join("\n") }] };
     }

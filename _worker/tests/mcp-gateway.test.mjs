@@ -13,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import worker, { __test, RELEASE, callTool, filterProperties, buildStats, compactProperty, handleRpc } from "../mcp-worker.js";
+import worker, { __test, RELEASE, callTool, filterProperties, buildStats, compactProperty, handleRpc, normAr, parseFreeQuery, mergeQuery, scopeList } from "../mcp-worker.js";
 import { loadProperties } from "../../scripts/lib/properties.mjs";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -465,4 +465,66 @@ test("compactProperty publishes a stable contract for downstream models", () => 
   ]);
   assert.equal(p.currency, "EGP");
   assert.ok(!("_derived" in p), "internal derivation flags must never leak to a client");
+});
+
+/* ═══ تحقيق Manus 2026-10-21: البحث الحر العربي والنطاق ═══ */
+
+test("normAr converts Arabic-Indic and Persian digits to Western (٣ غرف ≡ 3 غرف)", () => {
+  assert.equal(normAr("٣"), "3");
+  assert.equal(normAr("٣غرف, ٥.٥ مليون"), "3غرف, 5.5 مليون");
+  assert.equal("شقه".length === normAr("شقه").length && normAr("شقه") === normAr("شقه"), true);
+});
+
+test("parseFreeQuery lifts Manus' four live-missed queries into truthful structured filters", () => {
+  assert.deepEqual(parseFreeQuery("شقه للبيع ٣ غرف"),
+    { filters: { min_rooms: 3, transaction: "sale", property_type: "apartment" }, text: "" });
+  assert.deepEqual(parseFreeQuery("شقة للبيع 3 غرف"),
+    parseFreeQuery("شقه للبيع ٣ غرف"), "spelling variants must converge to the same query");
+  assert.deepEqual(parseFreeQuery("مكتب ايجار حتي ٣٠ الف"),
+    { filters: { max_price: 30000, transaction: "rent", property_type: "office" }, text: "" });
+  assert.deepEqual(parseFreeQuery("محل قرب مكرم عبيد"),
+    { filters: { property_type: "shop" }, text: "مكرم عبيد" });
+  assert.equal(parseFreeQuery("للاستعلام").filters.max_price ?? null, null,
+    "a bare number never becomes a price ceiling — no invented budgets");
+});
+
+test("free text matches term-by-term in any order, not as one long phrase", () => {
+  const list = filterProperties(FEED.properties, { query: "مكرم شقه" });
+  assert.ok(list.length >= 2, "word-order flexibility must keep the makram-ebeid apartments");
+  const listNoOrder = filterProperties(FEED.properties, { query: "شقه مكرم" });
+  assert.deepEqual(new Set(list.map((p) => p.slug)), new Set(listNoOrder.map((p) => p.slug)));
+});
+
+test("explicit filters beat parsed free-text on conflict — the caller's structured choice wins", () => {
+  const m = mergeQuery({ query: "شقه للبيع ٣ غرف", max_rooms: 2, min_rooms: 4 });
+  assert.equal(m.min_rooms, 4, "explicit min_rooms=4 outranks parsed 3");
+  assert.equal(m.transaction, "sale");
+});
+
+test("search_properties: شقه للبيع ٣ غرف no longer answers 0 — the exact Manus live miss", async () => {
+  const r = await callTool("search_properties", { query: "شقه للبيع ٣ غرف" }, { feed: FEED });
+  assert.equal(r.isError ?? false, false);
+  assert.ok(r.structuredContent.matched_count >= 10, `expected a real answer vs 0 (got ${r.structuredContent.matched_count})`);
+  assert.ok(r.structuredContent.properties.every((p) => p.roomsNumeric >= 3), "every hit honors the 3-room intent");
+});
+
+test("out-of-scope units vanish from search/market/zones but stay documentable by direct id", async () => {
+  const REAL_FEED = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "ai-feed.json"), "utf8"));
+  const oos = REAL_FEED.properties.filter((p) => p.in_nasr_city === false);
+  assert.ok(oos.length > 0, "fixture must contain out-of-scope units from the real feed");
+
+  for (const u of oos.slice(0, 3)) {
+    const r = await callTool("search_properties", { zone: u.zone }, { feed: REAL_FEED });
+    assert.equal((r.structuredContent.properties ?? []).some((p) => p.slug === u.slug), false,
+      `${u.zone} must not resurface out-of-scope ${u.slug} in search`);
+  }
+
+  const zones = await callTool("list_zones", {}, { feed: REAL_FEED });
+  for (const u of oos) assert.ok(!Object.keys(zones.structuredContent.zones).includes(u.zone),
+    `${u.zone} must not appear as a served zone`);
+
+  const hit = await callTool("get_property", { id: oos[0].slug }, { feed: REAL_FEED });
+  assert.equal(hit.isError ?? false, false, "direct link keeps working");
+  assert.equal(hit.structuredContent.in_scope, false);
+  assert.match(hit.content[0].text, /خارج النطاق المُعلن/, "the out-of-scope note must be visible to the model");
 });
