@@ -101,6 +101,12 @@ defaults:
       type: "properties"
     values:
       layout: "property_page"
+      # 2026-10-21 — تحليل Manus: jekyll-seo-tag يصنّف صفحات الوحدات BlogPosting
+      # في JSON-LD («صفحة عقار» ليست مقالًا)، وهي النتيجة غير الدلالية الوحيدة
+      # في تدقيقه. WebPage أصدق، وRealEstateListing وBreadcrumbList يبقيان من
+      # _includes/schema-property.html دون مسّ بها.
+      seo:
+        type: "WebPage"
 
   - scope:
       path: ""
