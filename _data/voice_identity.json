@@ -439,9 +439,11 @@
         "shinzo-abe-262m-4th-floor",
         "saudi-buildings-golf-110m",
         "showroom-ahmed-fakhry-600m",
-        "sherif-samy-ground-admin"
+        "sherif-samy-ground-admin",
+        "apartment-sale-ismail-wahby-9th-district-145m",
+        "apartment-sale-moussa-el-kazem-nasr-city-280m"
       ],
-      "policy": "تُقبل القيمتان المذكورتان فقط (بسبب موثّق في السجل). لا تُضاف استثناءات جديدة إلا بتعديل هذه المواصفة وبصمة specChanges."
+      "policy": "تُقبل الاستثناءات المذكورة فقط بأسباب وموافقة مالك موثقة في السجل. لا تُضاف استثناءات جديدة إلا بتعديل هذه المواصفة وبصمة specChanges."
     },
     "thresholds": {
       "identicalVoice": 0.9351,
@@ -528,6 +530,26 @@
         "totalVoicedProperties": 104
       },
       "voiceId": "voice-04 (session-local; اختاره المالك بعد معاينات الجلسة، بمتوسط تشابه 0.863 مع المرجع ونطاق 0.8321–0.8954)"
+    },
+    {
+      "_why": "استكمال صوتي للعرضين المنشورين حديثًا بتوجيه المالك الصريح في جلسة 2026-10-21. اختار المالك المتحدث بعد المعاينات ووافق على النشر رغم اختلاف القياس عن حد البصمة.",
+      "batch": "new-listings-audio-2026-10-21",
+      "date": "2026-10-21",
+      "ownerAuthorization": "أمر المالك صراحةً بإكمال الإعلانين ونشرهما؛ وبعد إبلاغه بنتائج القياس وافق أن الصوتين المختارين قريبان بما يكفي للنشر.",
+      "scope": {
+        "newListingsVoiced": 2,
+        "slugs": [
+          "apartment-sale-ismail-wahby-9th-district-145m",
+          "apartment-sale-moussa-el-kazem-nasr-city-280m"
+        ]
+      },
+      "voiceId": "voice-03 (session-local; اختاره المالك بعد معاينات الجلسة)",
+      "measuredCosines": {
+        "apartment-sale-ismail-wahby-9th-district-145m": 0.9109,
+        "apartment-sale-moussa-el-kazem-nasr-city-280m": 0.8895
+      },
+      "approvalReason": "المالك قال إن الصوتين قريبان جدًا وأمر بإكمالهما ونشرهما. القياسات أقل من حد sameVoice=0.9116 لكنها أعلى من الحد غير المقبول=0.83؛ لذلك سُجل ownerOverride صريح لكل إعلان.",
+      "engineLimitNote": "المحرك لا يوفّر استنساخًا للصوت المرجعي أو معرّفًا دائمًا. تُذكر القيم المقاسة بصدق ولا يُدّعى تطابق مطابق."
     }
   ]
 }

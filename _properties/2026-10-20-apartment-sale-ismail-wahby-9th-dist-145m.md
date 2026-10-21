@@ -24,6 +24,10 @@ image: "/assets/img/properties/og/Ismail-Wahby-9th-District-145m.jpg"
 areaNumeric: 145
 roomsNumeric: 3
 bathsNumeric: 2
+audio_ad: true
+audio_file: "/assets/audio/properties/apartment-sale-ismail-wahby-9th-district-145m.mp3"
+audio_duration: "25 ثانية"
+audio_script: "بتدور على شقة واسعة في المنطقة التاسعة بمدينة نصر؟ شقة مية خمسة وأربعين متر في شارع إسماعيل وهبي، ورا مدرسة المنهل، دور أول علوي. تلات غرف منهم ماستر، حمامين ومطبخ كبير، وبرج مرخص فيه اتنين أسانسير. السعر يتحدد وقت المعاينة. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة."
 ---
 
 <div class="property-detail-wrapper">
