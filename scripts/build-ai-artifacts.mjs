@@ -176,6 +176,8 @@ export function buildPropertyDocument(p, generatedAt) {
 }
 
 export function buildApiIndex(properties, generatedAt) {
+  const scopeFlagsApi = JSON.parse(fs.readFileSync(path.join(ROOT, '_data', 'listing_facets.json'), 'utf8')).listings;
+  const scopeOutJ = Object.values(scopeFlagsApi).filter((l) => l && l.in_area === false).length;
   const facets = buildFacets(properties);
   return {
     schema_version: SCHEMA_VERSION,
@@ -184,6 +186,7 @@ export function buildApiIndex(properties, generatedAt) {
       'واجهة قراءة فقط بلا مصادقة لكل الوحدات المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة). مناسبة للنماذج والوكلاء: كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.',
     generated_at: generatedAt,
     total_count: properties.length,
+    scope: { name: 'مدينة نصر', in_nasr_city: properties.length - scopeOutJ, out_of_nasr_city: scopeOutJ },
     base_url: SITE,
     contact: { email: 'samsar.talabak@mailo.com', whatsapp: '+201147758857' },
     endpoints: [
@@ -235,6 +238,13 @@ function main() {
 
   const written = [];
   const feed = buildFeed(properties, generatedAt);
+  // ختم النطاق: بوابة MCP تقرأ في ai-feed.json حصرًا، ولا يجوز لها أن ترشّح
+  // وحدة خارج مدينة نصر (تحقيق Manus). الأعلام من listing_facets — نفس
+  // سياسة D1 والواجهة. الغياب = داخل النطاق (تعاقد البوابة IN_SCOPE).
+  const scopeFlags = JSON.parse(fs.readFileSync(path.join(ROOT, '_data', 'listing_facets.json'), 'utf8')).listings;
+  const stampScope = (u) => { const l = scopeFlags[u.slug]; if (l && l.in_area === false) u.in_nasr_city = false; return u; };
+  feed.properties = feed.properties.map(stampScope);
+  const scopeOut = feed.properties.filter((u) => u.in_nasr_city === false).length;
   written.push(write('ai-feed.json', feed));
   written.push(write('llms-full.txt', renderLlmsFull(properties)));
   written.push(write('api/index.json', buildApiIndex(properties, generatedAt)));
@@ -242,11 +252,12 @@ function main() {
     schema_version: SCHEMA_VERSION,
     generated_at: generatedAt,
     total_count: properties.length,
+    scope: { name: 'مدينة نصر', in_nasr_city: properties.length - scopeOut, out_of_nasr_city: scopeOut },
     base_url: SITE,
     facets: buildFacets(properties),
     // بيانات المصدر خاصة بالمزامنة وتُبقي في ai-feed.json فقط، حتى لا يتغير
     // عقد /api/properties.json المنشور.
-    properties: properties.map((p) => ({ ...publicProperty(p), _derived: undefined })),
+    properties: properties.map((p) => stampScope({ ...publicProperty(p), _derived: undefined })),
   }));
   written.push(write('api/openapi.json', renderOpenApi(properties)));
   written.push(write('search-data.json', renderSearchData(properties)));

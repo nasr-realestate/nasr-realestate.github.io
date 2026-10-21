@@ -490,3 +490,37 @@ test('the layout declares rel="ai-catalog" at the canonical well-known path, and
   const court = mcpToolDefinitions().length;
   assert.ok(court >= 5, "gateway tools contract assumed here shrank — catalog MCP entry would then lie");
 });
+
+/* ═══ Manus 2026-10-21: مزامنة الإصدار/التاريخ/ختم النطاق ═══ */
+
+test("MCP card version and ai-catalog entry stay pinned to the live worker SERVER_VERSION", () => {
+  const workerSrc = fs.readFileSync(path.join(REPO_ROOT, "_worker", "mcp-worker.js"), "utf8");
+  const m = workerSrc.match(/const SERVER_VERSION = "([^"]+)"/);
+  assert.ok(m, "worker must declare SERVER_VERSION");
+  const card = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "mcp.json"), "utf8"));
+  assert.equal(card.version, m[1], `card ${card.version} != live worker ${m[1]} — Manus spotted the 1.0.0/1.0.1 drift`);
+  const cat = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, ".well-known", "ai-catalog.json"), "utf8"));
+  const mcpEntry = cat.entries.find((e) => e.type === "application/mcp-server-card+json");
+  assert.equal(mcpEntry.version, m[1], "the ARD catalog advertises the same live gateway version");
+});
+
+test("llms.txt freshness date tracks the newest unit — never lags the feed", () => {
+  const llms = fs.readFileSync(path.join(REPO_ROOT, "llms.txt"), "utf8");
+  const dm = llms.match(/آخر تحديث\*\*[::]\s*(\d{4}-\d{2}-\d{2})/);
+  assert.ok(dm, "llms.txt must declare an update date");
+  const newest = PROPS.map((p) => p.date).filter(Boolean).sort().at(-1).slice(0, 10);
+  assert.equal(dm[1], newest, `llms says ${dm[1]} but the newest unit is ${newest} (Manus: 17≠20 October)`);
+});
+
+test("ai-feed stamps in_nasr_city from the D1 facet policy 12/93 exactly, and API scope sums honestly", () => {
+  const feed = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "ai-feed.json"), "utf8"));
+  const facets = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "_data", "listing_facets.json"), "utf8"));
+  const expectOut = Object.entries(facets.listings).filter(([, l]) => l && l.in_area === false).map(([slug]) => slug).sort();
+  const gotOut = feed.properties.filter((p) => p.in_nasr_city === false).map((p) => p.slug).sort();
+  assert.deepEqual(gotOut, expectOut);
+  for (const p of feed.properties) assert.ok(p.in_nasr_city === undefined || p.in_nasr_city === false,
+    "only the exclusion flag 'false' may appear — absence means in-scope (IN_SCOPE contract)");
+
+  const api = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "api", "index.json"), "utf8"));
+  assert.equal(api.scope.in_nasr_city + api.scope.out_of_nasr_city, api.total_count);
+});
