@@ -245,24 +245,53 @@ const site = {
 };
 
 // Render helper with nested layouts
-async function renderPage(templateContent, pageData) {
+async function renderPage(templateContent, pageData, { markdown = false } = {}) {
   let content = await engine.parseAndRender(templateContent, {
     site,
     page: pageData,
   });
 
-  let currentLayout = pageData.layout || 'default';
-  let currentData = { ...pageData };
+  // ⚠️ إصلاح (2026-10-22): في Jekyll يبقى page.layout هو تخطيط المستند نفسه
+  // (مثل property_page) مهما تعمّقت سلسلة التخطيطات، و`layout` وحدها هي التي تتغيّر.
+  // كان هذا المُصيِّر يدمج front matter التخطيط الأب في pageData، فيصير
+  // page.layout = "default" في القوالب — أي أن <body class="layout-default">
+  // بدل layout-property_page/request_page/landing. النتيجة: كل CSS المُنطَّق
+  // بـ body.layout-* على صفحات العقارات والطلبات وصفحات الهبوط كان يسقط في
+  // المعاينة المحلية فقط، فتظهر الصفحة بعرض كامل بلا max-width ولا تنسيق.
+  // الحل: نحتفظ باسم تخطيط المستند في page.layout، ونتابع السلسلة في متغيّر آخر.
+  //
+  // ⚠️ إصلاح ثانٍ (2026-10-22): `layout: null` في luxury-gallery.html تعني في
+  // Jekyll «بلا تخطيط» (صفحة مستند HTML كامل بذاتها)، وكان `pageData.layout ||
+  // 'default'` يعاملها كصفحة عادية فيلفّها في default.html → مستندان متداخلان،
+  // وclass body.page-luxury يضيع فتظهر الصفحة بلا تنسيقها السينمائي.
+  // نفرّق الآن بين «غير موجودة» (⇒ default) و«null صريحة» (⇒ بلا تخطيط).
+  //
+  // ⚠️ إصلاح ثالث (2026-10-22): صفحات الطلبات (_requests/*.md) نصوص Markdown
+  // خالصة، وكانت تُحقن في القالب خامًا فتظهر ## و ** حرفيًا للزائر. Jekyll يحوّل
+  // Markdown إلى HTML قبل حقن `content` في التخطيط — نفعل الشيء نفسه هنا.
+  // (لا نطبّقه على صفحات العقارات لأن نصوصها HTML جاهز، وتمريرها على marked
+  // يفكك كتل HTML عند الأسطر الفارغة ويغيّر الشكل المنشور.)
+  const declaredLayout = Object.prototype.hasOwnProperty.call(pageData, 'layout') ? pageData.layout : undefined;
+  const skippedByNull = declaredLayout === null || declaredLayout === false;
+  const ownLayout = skippedByNull ? '' : (typeof declaredLayout === 'string' && declaredLayout.trim() ? declaredLayout.trim() : 'default');
+
+  if (markdown) content = marked.parse(content);
+
+  let currentLayout = skippedByNull ? null : ownLayout;
+  let currentData = { ...pageData, layout: ownLayout || pageData.layout };
+  const layoutChain = [];
 
   while (currentLayout && currentLayout !== 'none') {
     const layoutPath = path.join('_layouts', `${currentLayout}.html`);
     if (!fs.existsSync(layoutPath)) break;
     const layoutRaw = fs.readFileSync(layoutPath, 'utf8');
     const parsedLayout = matter(layoutRaw);
-    currentData = { ...currentData, ...parsedLayout.data };
+    layoutChain.push({ ...parsedLayout.data, layout: ownLayout });
+    currentData = { ...currentData, ...parsedLayout.data, layout: ownLayout };
     content = await engine.parseAndRender(parsedLayout.content, {
       site,
       page: currentData,
+      layout: layoutChain[layoutChain.length - 1],
       content,
     });
     currentLayout = parsedLayout.data.layout;
@@ -421,7 +450,7 @@ app.get(['/requests/:slug', '/requests/:slug/'], async (req, res, next) => {
       layout: reqItem.layout || 'request_page',
       content: reqItem.htmlContent,
     };
-    const html = await renderPage(reqItem.rawContent, pageData);
+    const html = await renderPage(reqItem.rawContent, pageData, { markdown: true });
     res.send(html);
   } catch (err) {
     next(err);

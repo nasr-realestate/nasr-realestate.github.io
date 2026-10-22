@@ -65,12 +65,28 @@ hide_navbar: true
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
-const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
-const FALLBACK_IMG = "https://nasr-realestate.github.io/assets/img/logo.webp";
+const AI_FEED_URL = "/ai-feed.json";
+const FALLBACK_IMG = "/assets/img/logo.webp";
 // 2026-10-20: ai-feed يضم كل الوحدات (منها 12 خارج مدينة نصر لأغراض الأرشيف/الذكاء الاصطناعي).
 // واجهة الموقع تعرض مدينة نصر فقط — نفس القائمة التي يبنيها _data/listing_facets.json.
 const IN_AREA = new Set({{ site.data.listing_facets.catalog.order | jsonify }});
 const SITE_URL = "https://nasr-realestate.github.io";
+
+// ═══ صور آمنة للسياق الحالي (2026-10-22) ═══
+// ai-feed يصدر روابط صور مطلقة على نطاق الإنتاج (https://nasr-realestate.github.io/...).
+// داخل المعاينة المحلية لا يوجد وصول لذلك النطاق، فتظهر كل بطاقة بشعار الشركة.
+// نحَوِّل أي رابط لنفس الموقع إلى مسار نسبي: يعمل على الإنتاج وعلى المعاينة،
+// ويمنع أيضًا «mixed-content» لو تغيّر النطاق أو البروتوكول مستقبلًا.
+const SAME_SITE_HOST = 'nasr-realestate.github.io';
+function localImage(u) {
+  const raw = String(u || '').trim();
+  if (!raw) return '';
+  try {
+    const abs = new URL(raw, window.location.origin);
+    if (abs.host === SAME_SITE_HOST || abs.host === window.location.host) return abs.pathname + abs.search;
+    return raw;
+  } catch { return raw; }
+}
 
 // ═══ STATE ═══
 let allProperties = [];
@@ -197,10 +213,10 @@ function createCard(p, idx) {
 
   card.innerHTML = `
     <div class="pg-card-img">
-      <img src="${escapeAttr(String(p.image || "").replace("/assets/img/properties/", "/assets/img/properties/cards/"))}" 
+      <img src="${escapeAttr(localImage(p.image).replace("/assets/img/properties/", "/assets/img/properties/cards/"))}" 
            alt="${escapeAttr(p.title)}" 
            loading="lazy"
-           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escapeAttr(p.image)}';}else{this.onerror=null;this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';}">
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escapeAttr(localImage(p.image))}';}else{this.onerror=null;this.src='${FALLBACK_IMG}';this.style.objectFit='contain';this.style.padding='30px';}">
       <span class="${badgeClass}">${badgeText}</span>
     </div>
     <div class="pg-card-body">
