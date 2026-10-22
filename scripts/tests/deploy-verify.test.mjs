@@ -49,12 +49,14 @@ function htmlResponse(html, status = 200) {
   return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
-function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/webp' } = {}) {
+function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/webp', deployInfo = 'ok', styleBody = null } = {}) {
   const properties = Array.from({ length: feedCount ?? REPO_COUNT }, (_, i) => ({ slug: `p-${i}` }));
   const calls = { audio: 0, feed: 0, health: 0 };
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url);
-    if (u.pathname === '/.well-known/deploy-info.json') return jsonResponse({ sha, ref: 'master' });
+    if (u.pathname === '/.well-known/deploy-info.json') {
+      return deployInfo === 'ok' ? jsonResponse({ sha, ref: 'master' }) : htmlResponse('<html>404</html>', 404);
+    }
     if (u.pathname === '/.well-known/mcp.json') return jsonResponse({ transport: { endpoint: 'https://mcp.test/mcp' } });
     if (u.pathname === '/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/') {
       return htmlResponse(pageHtml({ title: 'شقة 230م', description: propertyDesc, duplicateDescription }));
@@ -68,7 +70,8 @@ function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpS
     if (u.pathname === '/health') { calls.health += 1; return jsonResponse({ status: 'ok', properties: mcpCount ?? properties.length }, mcpStatus); }
     if (u.pathname === '/ai-feed.json') { calls.feed += 1; return jsonResponse({ total_count: properties.length, properties, generated_at: '2026-10-18T00:00:00Z' }); }
     if (['/', '/sw.js', '/assets/css/style.min.css'].includes(u.pathname)) {
-      return new Response('ok', { status: 200, headers: { 'content-type': u.pathname.endsWith('.css') ? 'text/css' : 'text/html' } });
+      const body = u.pathname === '/assets/css/style.min.css' && styleBody !== null ? styleBody : 'ok';
+      return new Response(body, { status: 200, headers: { 'content-type': u.pathname.endsWith('.css') ? 'text/css' : 'text/html' } });
     }
     if (u.pathname.startsWith('/assets/audio/')) {
       calls.audio += 1;
@@ -181,6 +184,21 @@ test("verifyDeployment: SHA مختلف أو MCP ناقص أو صوت مكسور 
   assert.equal(r3.ok, false);
   assert.equal(r3.report.audio_failed, AUDIO.length);
   assert.ok(r3.failures.some((f) => f.check === 'audio'));
+});
+
+test("verifyDeployment: ناشر legacy بلا deploy-info.json ⇒ يُقبل إن طابقت بصمة style.min.css", async () => {
+  const localStyle = fs.readFileSync(new URL('../../assets/css/style.min.css', import.meta.url));
+  const okSite = fakeSite({ feedCount: REPO_COUNT, mcpCount: REPO_COUNT, deployInfo: 'missing', styleBody: localStyle });
+  const rOk = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: okSite.fetchImpl, timeoutS: 1, delayMs: 1 });
+  assert.equal(rOk.ok, true, JSON.stringify(rOk.failures));
+  assert.equal(rOk.report.deploy_info.method, 'style-hash');
+  assert.match(String(rOk.report.stamp_missing), /404/);
+
+  // ملف منشور قديم ⇒ فشل صريح رغم غياب الختم
+  const staleSite = fakeSite({ feedCount: REPO_COUNT, mcpCount: REPO_COUNT, deployInfo: 'missing', styleBody: Buffer.from('/* old build */') });
+  const rStale = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: staleSite.fetchImpl, timeoutS: 1, delayMs: 1 });
+  assert.equal(rStale.ok, false);
+  assert.ok(rStale.failures.some((f) => f.check === 'deploy_convergence'));
 });
 
 test("verifyDeployment: feed أكثر من المستودع يفشل (لا نشر جزئي صامت)", async () => {

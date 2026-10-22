@@ -20,6 +20,7 @@
  *  ملاحظة: كل الطلبات GET/HEAD فقط. لا سرّ ولا مصادقة.
  * ═══════════════════════════════════════════════════════════════════════
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -213,6 +214,34 @@ async function getJson(fetchImpl, url) {
   return { status: res.status, headers: res.headers, text, json };
 }
 
+const STYLE_MIN_PATH = 'assets/css/style.min.css';
+
+/**
+ * تقارب بديل عندما لا يوجد ختم الـSHA على الموقع.
+ * السبب الواقعي (2026-10-22): إعداد GitHub Pages لهذا المستودع
+ * `build_type: legacy` (نشر من الفرع master)، فيبني GitHub الموقع بنفسه بعد
+ * تشغيل deploy.yml ويمسح `_site/.well-known/deploy-info.json` الذي يختمه
+ * الـworkflow — مع أن المحتوى المنشور مطابق للفرع. بدل تفشيل التحقق كذبًا،
+ * نقارن بايتات `assets/css/style.min.css` المنشور بنسخة المستودع: أي اختلاف
+ * يعني أن CDN يقدّم بناءً قديمًا (وهو ما يجب أن يفشل).
+ */
+async function contentConvergence(fetchImpl, site) {
+  const localPath = path.join(ROOT, STYLE_MIN_PATH);
+  let local;
+  try { local = fs.readFileSync(localPath); } catch { return { ok: false, error: 'لا ملف style.min.css محليًا للمقارنة' }; }
+  const localHash = crypto.createHash('sha256').update(local).digest('hex');
+  try {
+    const res = await fetchImpl(`${site}/${STYLE_MIN_PATH}?ts=${Date.now()}&n=${Math.random()}`, { headers: { 'cache-control': 'no-cache' }, redirect: 'follow' });
+    if (res.status !== 200) return { ok: false, error: `${STYLE_MIN_PATH} HTTP ${res.status}` };
+    const remote = Buffer.from(await res.arrayBuffer());
+    const remoteHash = crypto.createHash('sha256').update(remote).digest('hex');
+    if (remoteHash !== localHash) return { ok: false, error: `style.min.css منشور مختلف عن المستودع (${remoteHash.slice(0, 12)} ≠ ${localHash.slice(0, 12)})` };
+    return { ok: true, value: { method: 'style-hash', sha256: localHash } };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+}
+
 async function mapLimit(items, limit, fn) {
   const results = new Array(items.length);
   let index = 0;
@@ -259,8 +288,18 @@ export async function verifyDeployment(opts = {}) {
     return sha === expectedSha ? { ok: true, value: r.json } : { ok: false, error: `sha=${sha || '<none>'} ≠ ${expectedSha}` };
   }, { attempts, delayMs, onAttempt: (i, last) => { report.last_convergence_attempt = { attempt: i, error: last?.error || null }; } });
 
-  if (!convergence.ok) fail('deploy_convergence', convergence.error || 'timeout');
-  else report.deploy_info = convergence.value;
+  if (convergence.ok) {
+    report.deploy_info = convergence.value;
+  } else if (/deploy-info HTTP 404/.test(String(convergence.error || ''))) {
+    // لا ختم على الموقع ⇒ ناشر legacy يبني من الفرع. نقبل التقارب إن كان
+    // الملف المنشور مطابقًا بايتًا ببايت لنسخة المستودع، وإلا نفشل بصوت عالٍ.
+    const fallback = await contentConvergence(fetchImpl, site);
+    report.stamp_missing = convergence.error || null;
+    if (fallback.ok) report.deploy_info = { ...fallback.value, note: 'deploy-info.json غير موجود (ناشر legacy) — تم التحقق من بصمة style.min.css' };
+    else fail('deploy_convergence', `${convergence.error} · بديل المحتوى فشل: ${fallback.error}`);
+  } else {
+    fail('deploy_convergence', convergence.error || 'timeout');
+  }
 
   // 2) الصفحات والأصول الأساسية
   for (const p of ['/', '/agent.html', '/sw.js', '/assets/css/style.min.css']) {
