@@ -78,83 +78,83 @@ body_class: "homepage"
 }
 </script>
 
-<!-- ═══ 1. Hero ═══ -->
+<!-- ═══ 1. Hero — عرض عقاري حي بهوية الشعار ═══ -->
+{%- assign hero_slug = site.data.listing_facets.catalog.order | first -%}
+{%- assign hero_listing = site.properties | where: "slug", hero_slug | first -%}
+{%- assign hero_fact = site.data.listing_facets.listings[hero_slug] -%}
 <section class="hp-hero">
-  <div class="hp-hero-badge">
-    <i class="fas fa-award"></i>
-    خبير عقارات مدينة نصر منذ 2014
+  <div class="hp-hero-layout">
+    <div class="hp-hero-copy">
+      <div class="hp-hero-badge">
+        <i class="fas fa-award" aria-hidden="true"></i>
+        عقارات مدينة نصر · منذ 2014
+      </div>
+
+      <h1 class="hp-hero-title">
+        عقارك القادم يبدأ<br><span>من مدينة نصر</span>
+      </h1>
+
+      <p class="hp-hero-subtitle">
+        <strong>بيع، شراء، إيجار، وتأجير</strong><br>
+        عروض حقيقية ببياناتها المعلنة، ومساعدة من طارق في كل خطوة.
+      </p>
+
+      <p class="hp-hero-contact">
+        <span>طارق طنطاوي — متخصص في عقارات مدينة نصر</span>
+        <span>للتواصل: <a href="tel:+201147758857" dir="ltr">01147758857</a></span>
+      </p>
+
+      <div class="hp-hero-actions">
+        <a href="{{ '/properties/' | relative_url }}" class="hp-btn primary">
+          <i class="fas fa-building" aria-hidden="true"></i>
+          تصفّح العروض
+        </a>
+        <a href="{{ '/agent.html' | relative_url }}" class="hp-btn secondary">
+          <i class="fas fa-comments" aria-hidden="true"></i>
+          احكِ للوكيل طلبك
+        </a>
+      </div>
+    </div>
+
+    {% if hero_listing and hero_fact.card_image %}
+    <a class="hp-hero-visual" href="{{ hero_listing.url | relative_url }}" aria-label="عرض تفاصيل العقار: {{ hero_listing.title | escape }}">
+      <img src="{{ hero_fact.card_image | relative_url }}"
+           alt="{{ hero_listing.title | escape }}"
+           width="1200" height="900"
+           loading="eager" fetchpriority="high" decoding="async">
+      <span class="hp-hero-visual-shade" aria-hidden="true"></span>
+      <span class="hp-hero-visual-caption">
+        <span class="hp-hero-visual-kicker"><i class="fas fa-location-dot" aria-hidden="true"></i> من العروض المنشورة</span>
+        <strong class="hp-hero-visual-title">{{ hero_listing.title | escape }}</strong>
+        <span class="hp-hero-visual-meta">
+          {% if hero_fact.area %}<span>{{ hero_fact.area }} م²</span>{% endif %}
+          {% if hero_listing.price %}<b>{{ hero_listing.price | escape }}</b>{% endif %}
+        </span>
+      </span>
+      <span class="hp-hero-visual-open" aria-hidden="true"><i class="fas fa-arrow-up-left"></i></span>
+    </a>
+    {% endif %}
   </div>
 
-  <h1 class="hp-hero-title">
-    عقارات للبيع والإيجار في <span>مدينة نصر</span>
-  </h1>
-
-  <p class="hp-hero-subtitle">
-    <strong>شقق ومحلات ومكاتب داخل مدينة نصر فقط</strong><br>
-    بالسعر والمساحة كما أعلنها المالك، مع استشارة مجانية
-  </p>
-
-  {%- comment -%} سطران مقصودان (2026-10-20): الفقرة الملتفة تلقائيًا كانت تنكسر في موضع مختلف
-       قبل/بعد تحميل خط Cairo فيقفز الرقم بين السطرين (CLS 0.17 في Lighthouse جوال). {%- endcomment %}
-  <p class="hp-hero-contact">
-    <span>طارق طنطاوي — عقارات مدينة نصر منذ 2014</span>
-    <span>للتواصل: <a href="tel:+201147758857" dir="ltr">01147758857</a></span>
-  </p>
-
-  <div class="hp-hero-actions">
-    <a href="{{ '/properties/' | relative_url }}" class="hp-btn primary">
-      <i class="fas fa-building"></i>
-      تصفح العروض
-    </a>
-    <a href="{{ '/requests/' | relative_url }}" class="hp-btn secondary">
-      <i class="fas fa-clipboard-list"></i>
-      طلبات العملاء
-    </a>
-  </div>
-
-  <div class="hp-trust-strip">
+  <div class="hp-trust-strip" aria-label="مؤشرات المصداقية">
     <div class="hp-trust-item">
-      <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
-         target="_blank" rel="noopener noreferrer"
-         class="u-cred-link"
-         title="سمسار طلبك — البراند على خرائط جوجل · سنة التأسيس 2014"
-         aria-label="سنة التأسيس 2014 — افتح صفحة «سمسار طلبك» (البراند) على خرائط جوجل">
-        <i class="fas fa-calendar-check"></i>
-        <div class="hp-trust-item-value">2014</div>
-        <div class="hp-trust-item-label">سنة التأسيس</div>
+      <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener noreferrer" class="u-cred-link" title="سمسار طلبك — البراند على خرائط جوجل · سنة التأسيس 2014" aria-label="سنة التأسيس 2014 — افتح صفحة «سمسار طلبك» على خرائط جوجل">
+        <i class="fas fa-calendar-check" aria-hidden="true"></i><div class="hp-trust-item-value">2014</div><div class="hp-trust-item-label">سنة التأسيس</div>
       </a>
     </div>
     <div class="hp-trust-item">
-      <a href="https://maps.app.goo.gl/8QWS1BCPBViggDfa7"
-         target="_blank" rel="noopener noreferrer"
-         class="u-cred-link"
-         title="Google Local Guide Level 7 — الملف الشخصي الموثق لطارق طنطاوي على خرائط جوجل"
-         aria-label="Google Local Guide Level 7 — افتح الملف الشخصي الموثق لطارق طنطاوي على خرائط جوجل">
-        <i class="fas fa-medal"></i>
-        <div class="hp-trust-item-value">Level 7</div>
-        <div class="hp-trust-item-label">Google Local Guide</div>
+      <a href="https://maps.app.goo.gl/8QWS1BCPBViggDfa7" target="_blank" rel="noopener noreferrer" class="u-cred-link" title="Google Local Guide Level 7 — الملف الشخصي لطارق طنطاوي على خرائط جوجل" aria-label="Google Local Guide Level 7 — افتح الملف الشخصي لطارق طنطاوي">
+        <i class="fas fa-medal" aria-hidden="true"></i><div class="hp-trust-item-value">Level 7</div><div class="hp-trust-item-label">Google Local Guide</div>
       </a>
     </div>
     <div class="hp-trust-item">
-      <a href="https://maps.app.goo.gl/8QWS1BCPBViggDfa7"
-         target="_blank" rel="noopener noreferrer"
-         class="u-cred-link"
-         title="أكثر من 17 مليون مشاهدة لصور طارق طنطاوي على خرائط جوجل"
-         aria-label="أكثر من 17 مليون مشاهدة — افتح الملف الشخصي الموثق على خرائط جوجل">
-        <i class="fas fa-eye"></i>
-        <div class="hp-trust-item-value">17M+</div>
-        <div class="hp-trust-item-label">مشاهدة</div>
+      <a href="https://maps.app.goo.gl/8QWS1BCPBViggDfa7" target="_blank" rel="noopener noreferrer" class="u-cred-link" title="أكثر من 17 مليون مشاهدة لصور طارق طنطاوي على خرائط جوجل" aria-label="أكثر من 17 مليون مشاهدة — افتح الملف الشخصي الموثق على خرائط جوجل">
+        <i class="fas fa-eye" aria-hidden="true"></i><div class="hp-trust-item-value">17M+</div><div class="hp-trust-item-label">مشاهدة</div>
       </a>
     </div>
     <div class="hp-trust-item">
-      <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7"
-         target="_blank" rel="noopener noreferrer"
-         class="u-cred-link"
-         title="تقييمات العملاء على Google — صفحة نشاط «سمسار طلبك» (4.7 من 102 مراجعة)"
-         aria-label="4.7 من 102 مراجعة — افتح تقييمات العملاء على خرائط جوجل">
-        <i class="fas fa-star"></i>
-        <div class="hp-trust-item-value">4.7</div>
-        <div class="hp-trust-item-label">تقييم Google</div>
+      <a href="https://maps.app.goo.gl/jQBJvzfxA4vzo6Qe7" target="_blank" rel="noopener noreferrer" class="u-cred-link" title="تقييمات العملاء على Google — صفحة نشاط سمسار طلبك" aria-label="4.7 من 102 مراجعة — افتح تقييمات العملاء على خرائط جوجل">
+        <i class="fas fa-star" aria-hidden="true"></i><div class="hp-trust-item-value">4.7</div><div class="hp-trust-item-label">تقييم Google</div>
       </a>
     </div>
   </div>

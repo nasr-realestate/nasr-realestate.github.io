@@ -96,7 +96,7 @@ const ANSWERS = [
   [/مدة العقد/, () => "سنة"],
   [/المدة المطلوبة/, () => "شهري"],
   [/مستوى الأثاث/, () => "جيد"],
-  [/تفاصيل مهمة/, () => "لا"],
+  [/تفاصيل مهمة|في تفصيلة مهمة عن العقار/, () => "لا"],
 ];
 export async function driveOwnerToGift({ rent = false, furnished = true, withGps = true, locationMessage = ADDRESS, post = agentPost } = {}) {
   const opts = { price: rent ? "9000" : "9500000", furnished, locationMessage };
