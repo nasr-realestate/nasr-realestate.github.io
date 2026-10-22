@@ -1651,7 +1651,7 @@ extra_head: |
 <!-- ═══ عن طارق ═══ -->
 <div class="wa-dialog-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
   <div class="wa-dialog ag-about-dialog" role="dialog" aria-modal="true" aria-label="عن طارق طنطاوي">
-    <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="ag-about-avatar" onerror="this.style.display='none'">
+    <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}" alt="طارق طنطاوي" class="ag-about-avatar" onerror="this.style.display='none'">
     <div class="ag-about-name">طارق طنطاوي</div>
     <div class="ag-about-sub">سمسار مدينة نصر — متخصص منذ 2014<br>Google Local Guide Level 7</div>
     <div class="ag-stats">
@@ -3062,12 +3062,25 @@ function restoreFailedMessage(draft, historyEntry) {
 
 
 // ═══ GALLERY ═══
-const AI_FEED_URL = "https://nasr-realestate.github.io/ai-feed.json";
-const PROPERTY_LIST_URL  = "https://nasr-realestate.github.io/properties/";
-const FALLBACK_CARD_IMG  = "https://nasr-realestate.github.io/assets/img/logo.webp";
+// ⚠️ 2026-10-22: كانت كل البيانات تُطلب من النطاق المطلق، فتفشل في أي معاينة
+// محلية/فرعية (المعرض كان يظهر فارغًا أو بصور الشعار). المسارات النسبية تعمل
+// في المكانين، مع دالة localImage لتحويل روابط ai-feed المطلقة لنفس الموقع.
+const AI_FEED_URL = "/ai-feed.json";
+const PROPERTY_LIST_URL  = "/properties/";
+const FALLBACK_CARD_IMG  = "/assets/img/logo.webp";
+const SAME_SITE_HOST_AGENT = "nasr-realestate.github.io";
+function localImage(u) {
+  const raw = String(u || "").trim();
+  if (!raw) return "";
+  try {
+    const abs = new URL(raw, window.location.origin);
+    if (abs.host === SAME_SITE_HOST_AGENT || abs.host === window.location.host) return abs.pathname + abs.search;
+    return raw;
+  } catch { return raw; }
+}
 // 2026-10-20: معرض الوكيل يعرض وحدات مدينة نصر فقط (ai-feed يضم أيضًا 12 وحدة أرشيفية خارجها).
 // القائمة من بيانات المعرض نفسها (مدينة نصر فقط)؛ لو تعذّر تحميلها نعرض الـ feed كما هو.
-const GALLERY_SCOPE_URL = "https://nasr-realestate.github.io/assets/data/catalog.json";
+const GALLERY_SCOPE_URL = "/assets/data/catalog.json";
 function galleryScope() {
   return fetch(GALLERY_SCOPE_URL)
     .then((r) => (r.ok ? r.json() : null))
@@ -3143,7 +3156,7 @@ function renderGalleryCards(properties) {
     card.style.animationDelay = `${i * 0.04}s`;
 
     // تدقيق الصور (2026-10-17): البطاقات تعرض نسخة 4:3 الموحدة cards/ بدل الأصل الكامل
-    const imgSrc = String(prop.image || "").replace("/assets/img/properties/", "/assets/img/properties/cards/");
+    const imgSrc = localImage(prop.image).replace("/assets/img/properties/", "/assets/img/properties/cards/");
     const title = galleryText(prop.title);
     const price = galleryText(prop.price);
     const rawType = galleryText(prop.propertyType);
@@ -3155,7 +3168,7 @@ function renderGalleryCards(properties) {
 
     card.innerHTML = `
       <img class="gallery-card-img" src="${escHtml(imgSrc)}" alt="${escHtml(title)}" loading="lazy" decoding="async"
-           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escHtml(String(prop.image || '').replace(/'/g, ''))}';}else{this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';}">
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${escHtml(localImage(prop.image).replace(/'/g, ''))}';}else{this.onerror=null;this.src='${FALLBACK_CARD_IMG}';this.style.objectFit='contain';this.style.padding='18px';}">
       <div class="gallery-card-body">
         ${price ? `<div class="gallery-card-price">${escHtml(price)}</div>` : ""}
         ${propertyType || area ? `

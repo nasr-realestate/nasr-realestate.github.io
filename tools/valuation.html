@@ -221,7 +221,8 @@
 
     .footer-note { text-align: center; color: var(--dim); font-size: 0.75rem; padding: 2rem 0 1rem; line-height: 1.9; }
     .footer-note strong { color: var(--gold); }
-    .footer-note a { color: var(--muted); }
+    /* 2026-10-22: روابط التذييل كانت 23px — هدف لمس صغير جدًا على الجوال */
+    .footer-note a { color: var(--muted); display: inline-flex; align-items: center; min-height: 40px; padding: 0 4px; }
 
     .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1f1b10; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; z-index: 9999; animation: fadeIn 0.3s; max-width: 90vw; text-align: center; }
 

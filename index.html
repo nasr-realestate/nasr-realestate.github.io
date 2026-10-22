@@ -131,7 +131,7 @@ body_class: "homepage"
           {% if hero_listing.price %}<b>{{ hero_listing.price | escape }}</b>{% endif %}
         </span>
       </span>
-      <span class="hp-hero-visual-open" aria-hidden="true"><i class="fas fa-arrow-up-left"></i></span>
+      <span class="hp-hero-visual-open" aria-hidden="true"><i class="fas fa-arrow-left"></i></span>
     </a>
     {% endif %}
   </div>
@@ -405,7 +405,7 @@ body_class: "homepage"
     <div class="hp-agent-strip">
       <!-- أداء (2026-10-02): الصورة في القسم السادس (أسفل الشاشة) فصارت lazy،
            ومع width/height يمنع أي CLS عند وصولها. الحجم الفعلي من CSS (80/64 بكسل) -->
-      <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp"
+      <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
            alt="طارق طنطاوي"
            class="hp-agent-avatar"
            loading="lazy" width="80" height="80"

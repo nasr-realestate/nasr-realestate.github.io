@@ -77,7 +77,7 @@ audio_script: "محتاج دوبلكس ميتين وعشرين متر في حي 
         <h2 class="detail-title"><i class="fas fa-building"></i> تفاصيل الوحدة السكنية</h2>
         <div class="technical-specs">
             <div class="spec-item"><span><i class="fas fa-layer-group gold-text"></i> التقسيم:</span> <strong>دوبلكس (11 + 12)</strong></div>
-            <div class="spec-item"><span><i class="fas fa-check-shield gold-text"></i> الأمان:</span> <strong>عزل مائي وحراري تام</strong></div>
+            <div class="spec-item"><span><i class="fas fa-shield-halved gold-text"></i> الأمان:</span> <strong>عزل مائي وحراري تام</strong></div>
             <div class="spec-item"><span><i class="fas fa-file-signature gold-text"></i> القانونية:</span> <strong>مسجل صحة توقيع</strong></div>
             <div class="spec-item"><span><i class="fas fa-clock gold-text"></i> المباني:</span> <strong>بناء قوي (سنة 2000)</strong></div>
         </div>

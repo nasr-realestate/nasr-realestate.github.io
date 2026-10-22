@@ -3758,6 +3758,172 @@ body.homepage .hp-hero-badge {
     z-index: 2;
   }
 body.homepage .hp-hero-badge i { font-size: 0.9rem; }
+
+/* ═══════════════════════════════════════════════
+   ⚠️ إصلاح (2026-10-22) — تخطيط الـHero كان بلا أي CSS
+   –––––––––––––––––––––––––––––––––––––––––──────
+   index.html يستعمل .hp-hero-layout / .hp-hero-copy / .hp-hero-visual
+   (بطاقة عرض حقيقية بصورة وسعر) لكن قواعدها لم تُكتب في الملف إطلاقًا:
+   كانت الصورة تُعرض بعرض الشاشة الكامل بطول 1676px، ونصّ الشرح (كيكر/عنوان/
+   سعر) ينزل تحتها كنص أزرق عارٍ فوق الصورة، وبلا أي ظل أو زوايا.
+   النتيجة: أول ما يراه الزائر في الرئيسية — أي «العين قبل الفم» — كان مكسورًا.
+   هنا التخطيط الكامل: عمودان على الشاشات العريضة (نص + بطاقة عرض)، وعمود واحد
+   على الجوال، بظل ناعم وزوايا مستديرة وتغطية سفلية تجعل العنوان والسعر مقروءين
+   فوق أي صورة.
+   ═══════════════════════════════════════════════ */
+body.homepage .hp-hero-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: center;
+    gap: 2.5rem;
+    max-width: 1180px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    text-align: right;
+}
+body.homepage .hp-hero-copy { min-width: 0; }
+body.homepage .hp-hero-copy .hp-hero-subtitle {
+    margin-right: 0;
+    margin-left: 0;
+}
+body.homepage .hp-hero-copy .hp-hero-actions { justify-content: flex-start; }
+body.homepage .hp-hero-copy .hp-hero-contact { color: #b0b0b0; }
+
+/* بطاقة العرض داخل الـHero */
+body.homepage .hp-hero-visual {
+    position: relative;
+    display: block;
+    isolation: isolate;
+    aspect-ratio: 4 / 3;
+    border-radius: 22px;
+    overflow: hidden;
+    background: #0d0d0d;
+    border: 1px solid rgba(66, 197, 65, 0.28);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 2px 0 rgba(255, 255, 255, 0.04) inset;
+    text-decoration: none;
+    transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+body.homepage .hp-hero-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.01);
+    transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+body.homepage .hp-hero-visual:hover,
+body.homepage .hp-hero-visual:focus-visible {
+    transform: translateY(-4px);
+    border-color: rgba(66, 197, 65, 0.6);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+}
+body.homepage .hp-hero-visual:hover img,
+body.homepage .hp-hero-visual:focus-visible img { transform: scale(1.06); }
+body.homepage .hp-hero-visual:focus-visible { outline: 2px solid #7ce386; outline-offset: 4px; }
+body.homepage .hp-hero-visual-shade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg,
+        rgba(5, 5, 5, 0) 34%,
+        rgba(5, 5, 5, 0.55) 66%,
+        rgba(5, 5, 5, 0.95) 100%);
+}
+body.homepage .hp-hero-visual-caption {
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.15rem 1.25rem 1.1rem;
+    color: #f5f5f5;
+    text-align: right;
+}
+body.homepage .hp-hero-visual-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    padding: 3px 10px;
+    margin-bottom: 2px;
+    border-radius: 999px;
+    background: rgba(66, 197, 65, 0.16);
+    border: 1px solid rgba(66, 197, 65, 0.4);
+    color: #7ce386;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.6;
+}
+body.homepage .hp-hero-visual-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.5;
+    color: #ffffff;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
+}
+body.homepage .hp-hero-visual-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #cfcfcf;
+}
+body.homepage .hp-hero-visual-meta b {
+    color: #42c541;
+    font-weight: 900;
+    font-size: 0.95rem;
+    unicode-bidi: isolate;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+body.homepage .hp-hero-visual-open {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 3;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(5, 5, 5, 0.62);
+    border: 1px solid rgba(66, 197, 65, 0.45);
+    color: #7ce386;
+    font-size: 0.85rem;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: background 0.25s ease, transform 0.25s ease;
+}
+body.homepage .hp-hero-visual:hover .hp-hero-visual-open {
+    background: #1f7a2e;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* الشاشات المتوسطة: عمود واحد والعرض في المنتصف */
+@media (max-width: 1024px) {
+    body.homepage .hp-hero-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.75rem;
+        text-align: center;
+    }
+    body.homepage .hp-hero-copy .hp-hero-subtitle { margin-right: auto; margin-left: auto; }
+    body.homepage .hp-hero-copy .hp-hero-actions { justify-content: center; }
+    body.homepage .hp-hero-visual {
+        max-width: 560px;
+        width: 100%;
+        margin: 0 auto;
+        aspect-ratio: 16 / 11;
+        border-radius: 18px;
+    }
+}
 body.homepage .hp-hero-title {
     font-size: 3rem;
     font-weight: 900;
@@ -7612,3 +7778,136 @@ a.u-cred-text:focus-visible {
    ═══════════════════════════════════════════════════════════════ */
 body.layout-property_page .pp-gallery-main--natural { max-height: 85vh; }
 body.layout-property_page .pp-gallery-main--natural img { object-fit: contain; }
+/* ═══════════════════════════════════════════════════════════════
+   🩹 حزمة إصلاحات شاملة (2026-10-22) — «العين قبل الفم»
+   ═══════════════════════════════════════════════════════════════
+   مراجعة كاملة للموقع (118 صفحة × جوال/سطح مكتب) كشفت:
+   1) مساحة بيضاء عمياء بين الـHero وبطاقة «أحدث العقارات» في الرئيسية.
+   2) زر الوكيل العائم (صورة طارق) يقع فوق أول بطاقة في الشبكات على الجوال.
+   3) شعار الموقع العائم يحجب breadcrumb صفحات العقارات والطلبات أعلى الجوال.
+   4) أهداف لمس أقل من 32px في التذييل وروابط المصدر (u-cred-*).
+   كل القواعد هنا مُنطّقة بـ body class — لا تمسّ أي صفحة أخرى.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1) الرئيسية: تقليل الفراغ الميت حول شريط المصداقية ───────── */
+body.homepage .hp-hero { padding-bottom: 2.25rem; }
+body.homepage .hp-trust-strip { margin-top: 0.25rem; }
+body.homepage .hp-section:first-of-type { padding-top: 2.75rem; }
+
+/* ── 2) مساحة آمنة لزر الوكيل العائم ───────────────────────────── */
+@media (max-width: 700px) {
+  body.page-requests .rl-container,
+  body.page-pgimages .pg-container,
+  body.homepage .hp-section { padding-bottom: 2rem; }
+}
+
+/* ── 3) مساحة أعلى الصفحة للزرين العائمين على الجوال ───────────
+   في الجوال يقع ☰ في (16,16) والشعار في (عرض−64,16) فوق المحتوى مباشرةً:
+   فكانا يحجبان أول سطر من كل صفحة — مسار التنقل في العقارات/المعرض/الطلبات،
+   سطر «الرئيسية» في من نحن/تواصل معنا، وسطر العنوان في إضافة عقار.
+   الحل: حجز شريط 68px أعلى <main> على الشاشات الصغيرة فقط، فيبدو الزرّان
+   كشريط علوي ثابت والمحتوى يبدأ تحتهما دائمًا (بلا أي تراكب في أي صفحة). */
+@media (max-width: 700px) {
+  /* كل صفحات القالب المشترك (site-shell في default.html) — لا تُذكر صفحة الوكيل
+     هنا إطلاقًا: لها قالبها الخاص (app.html) الذي يدير ارتفاعه بنفسه. */
+  body.site-shell main { padding-top: 68px; }
+  body .pp-breadcrumb,
+  body .pl-breadcrumb,
+  body .rl-breadcrumb,
+  body .rq-breadcrumb,
+  body .ab-breadcrumb,
+  body .ct-breadcrumb { min-height: 40px; }
+  body .pp-breadcrumb a,
+  body .pl-breadcrumb a,
+  body .rl-breadcrumb a,
+  body .rq-breadcrumb a,
+  body .ab-breadcrumb a,
+  body .ct-breadcrumb a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* شريط أرقام «من نحن»: كان 4 صفوف طويلة على الجوال → شبكة 2×2 مضغوطة */
+@media (max-width: 700px) {
+  body.page-about .ab-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    text-align: center;
+  }
+  body.page-about .ab-stat { padding: 0.5rem 0.25rem; }
+}
+
+/* ── 4) أهداف اللمس: 40–44px في التذييل وروابط المصدر ────────── */
+body .ft-link,
+body .ft-link-strong,
+body .ft-link-dim,
+body .ft-support-tel,
+body .ft-legal-link,
+body .footer-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+@media (max-width: 700px) {
+  body .ft-link,
+  body .ft-link-strong,
+  body .ft-link-dim,
+  body .ft-support-tel,
+  body .ft-legal-link { min-height: 44px; }
+}
+a.u-cred-text,
+a.u-cred-inline,
+a.u-goldtext,
+a.hp-agent-badge.u-cred-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+@media (max-width: 700px) {
+  a.u-cred-text, a.u-cred-inline { min-height: 40px; }
+}
+
+/* أرقام الهاتف كروابط (tel:) — هدف لمس مريح في كل الصفحات */
+body a[href^="tel:"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* ── 4b) استكمال أهداف اللمس (كل المقاسات) ───────────────────── */
+/* مسارات التنقل: كانت روابطها بارتفاع 22px على سطح المكتب */
+body .pp-breadcrumb a,
+body .pl-breadcrumb a,
+body .rl-breadcrumb a,
+body .rq-breadcrumb a,
+body .ab-breadcrumb a,
+body .ct-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+}
+a.u-cred-badge { display: inline-flex; align-items: center; min-height: 32px; }
+/* زر «توسيع الفوتر»: كان عرضه 10px بعد إضافة الحشو الرأسي (أيقونة فقط) */
+body .footer-toggle-btn {
+  min-width: 44px;
+  justify-content: center;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+/* شريط تنقل صفحة «قيّم عقارك» (الصفحة الوحيدة التي تُظهره) */
+body.page-valuation .nav-link { min-height: 44px; }
+
+/* ── 5) شاشة الترحيب في «بوابة النخبة» على الجوال ─────────────── */
+@media (max-width: 700px) {
+  body.page-luxury .ui-overlay { right: 72px; }
+  body.page-luxury .ui-brand { font-size: 0.8rem; }
+  body.page-luxury .ui-exit { white-space: nowrap; }
+}
