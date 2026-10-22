@@ -71,7 +71,7 @@ test("skipping, going back and typing: the gift never traps the owner or loses p
   assert.ok(back.json.valuationCta, "…with its button");
 
   const backAgain = await agentPost({ message: "⬅️ رجوع", formState: gift.json.formState, history: [] });
-  assert.match(backAgain.json.response, /في أي تفاصيل مهمة تانية/);
+  assert.match(backAgain.json.response, /في تفصيلة مهمة عن العقار|سنة البناء التقريبية/);
   assert.equal(backAgain.json.valuationCta, undefined);
 
   // أي كلام عادي على خطوة الهدية = كمّل (مفيش حاجة بتتعلّق)

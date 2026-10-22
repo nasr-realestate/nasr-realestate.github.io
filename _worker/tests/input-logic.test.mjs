@@ -50,6 +50,24 @@ async function driveBuyerToNameStep() {
   assert.fail("driver never reached the buyer name step");
 }
 
+test("owner listing asks for approximate building year or condition in optional notes; buyer flow stays separate", async () => {
+  let r = await post("💰 أبيع", {});
+  let fs = r.json.formState;
+  for (const answer of ["شقة", "شارع عباس العقاد المنطقة السادسة", "180", "9500000", "3", "2", "ثالث", "سوبر لوكس"]) {
+    r = await post(answer, fs);
+    fs = r.json.formState;
+  }
+  assert.match(String(r.json.response), /سنة البناء التقريبية|حالة الوحدة/);
+  r = await post("سنة البناء 2015 والحالة جيدة", fs);
+  assert.match(String(r.json.formState.data.notes), /2015/);
+  assert.match(String(r.json.formState.data.notes), /جيدة/);
+  assert.equal(r.json.formState.flowType, "owner");
+
+  const buyer = await post("🔍 أشتري", {});
+  assert.equal(buyer.json.formState.flowType, "buyer");
+  assert.doesNotMatch(String(buyer.json.response), /سنة البناء التقريبية/);
+});
+
 // ═════════════════ A. phone/price confusion (the reported defect) ═════════════════
 test("A-1: a correct price and a later phone answer keep the price untouched (the reported defect)", async () => {
   let fs = await driveOwnerToNameStep("9500000");

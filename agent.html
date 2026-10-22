@@ -28,8 +28,8 @@ extra_head: |
        واجهة وكيل «سمسار طلبك» — تصميم 2026-10-19
        ───────────────────────────────────────────────────────────────
        كل القواعد محصورة في body.page-agent (ما عدا :root color-scheme)
-       فما بتلمسش أي صفحة أخرى. الملفات المشتركة (style.css / style.min.css)
-       ما اتعدّلتش: الطبقة دي بتحمّل بعدها وبتكسب بالترتيب + الخصوصية.
+       فما بتلمسش أي صفحة أخرى. الملفات المشتركة تستخدم الآن لوحة الشعار نفسها.
+       تظل قواعد الوكيل محصورة هنا لمنع أي تسرّب إلى الصفحات الأخرى.
        الفكرة: «مكتب استشارات» مش تطبيق مراسلة — مساحة هادئة، بطاقات خدمات
        واضحة، وخطوات دائمًا في متناول الإبهام فوق لوحة الكتابة.
        ═══════════════════════════════════════════════════════════════ */
@@ -40,21 +40,21 @@ extra_head: |
       max-height: 100vh; max-height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none;
-      background: #0b1220;
+      background: #050505;
     }
     body.page-agent {
-      --ink:          #0b1220;
-      --ink-2:        #0f1929;
-      --panel:        #121e30;
-      --panel-2:      #16243a;
-      --line:         rgba(201, 169, 97, 0.20);
+      --ink:          #050505;
+      --ink-2:        #090d09;
+      --panel:        #0c110c;
+      --panel-2:      #111811;
+      --line:         rgba(66, 197, 65, 0.20);
       --line-soft:    rgba(255, 255, 255, 0.07);
-      --gold:         #c9a961;
-      --gold-hi:      #e6cf95;
-      --gold-ink:     #171208;
-      --text:         #f3efe7;
-      --muted:        #9aa8ba;
-      --muted-2:      #74839a;
+      --gold:         #42c541;
+      --gold-hi:      #7ce386;
+      --gold-ink:     #041204;
+      --text:         #f5f7f5;
+      --muted:        #b0b0b0;
+      --muted-2:      #869086;
       --danger:       #ff7a88;
       --ok:           #6fd3a8;
       --font:         'Cairo', 'Segoe UI', Tahoma, sans-serif;
@@ -64,28 +64,28 @@ extra_head: |
       --dock-h:       150px;
 
       /* ربط توكنات style.css المشتركة بالهوية الجديدة */
-      --bg-glass:          rgba(18, 30, 48, 0.82);
-      --bg-glass-strong:   rgba(18, 30, 48, 0.94);
-      --bg-glass-light:    rgba(18, 30, 48, 0.62);
+      --bg-glass:          rgba(12, 17, 12, 0.82);
+      --bg-glass-strong:   rgba(12, 17, 12, 0.94);
+      --bg-glass-light:    rgba(12, 17, 12, 0.62);
       --border-glass:      var(--line);
       --border-subtle:     var(--line-soft);
-      --header-bg:         rgba(11, 18, 32, 0.94);
+      --header-bg:         rgba(12, 17, 12, 0.94);
       --header-text:       var(--text);
       --header-sub:        var(--muted);
       --bubble-in:         var(--panel);
-      --bubble-out:        #22364f;
+      --bubble-out:        #1f7a2e;
       --text-primary:      var(--text);
       --text-secondary:    var(--muted);
       --text-tertiary:     var(--muted-2);
       --accent:            var(--gold);
-      --accent-dark:       #a8894a;
+      --accent-dark:       #1f7a2e;
       --tick-blue:         var(--gold);
 
       font-family: var(--font);
       color: var(--text);
       background:
-        radial-gradient(1200px 520px at 110% -10%, rgba(201, 169, 97, 0.09), transparent 60%),
-        radial-gradient(900px 480px at -20% 110%, rgba(60, 110, 160, 0.10), transparent 60%),
+        radial-gradient(1200px 520px at 110% -10%, rgba(66, 197, 65, 0.09), transparent 60%),
+        radial-gradient(900px 480px at -20% 110%, rgba(66, 197, 65, 0.035), transparent 60%),
         var(--ink);
     }
     body.page-agent *, body.page-agent *::before, body.page-agent *::after { box-sizing: border-box; }
@@ -114,7 +114,7 @@ extra_head: |
       flex-direction: column;
       direction: rtl;
       background:
-        radial-gradient(700px 300px at 100% 0%, rgba(201, 169, 97, 0.055), transparent 65%),
+        radial-gradient(700px 300px at 100% 0%, rgba(66, 197, 65, 0.055), transparent 65%),
         var(--ink);
       border-inline: 1px solid rgba(255, 255, 255, 0.03);
     }
@@ -163,13 +163,13 @@ extra_head: |
       flex: 0 0 40px;
     }
     body.page-agent .header-back:hover,
-    body.page-agent .header-back:active { background: rgba(201, 169, 97, 0.10); color: var(--gold-hi); }
+    body.page-agent .header-back:active { background: rgba(66, 197, 65, 0.10); color: var(--gold-hi); }
     body.page-agent .header-avatar {
       width: 38px; height: 38px;
       border-radius: 50%;
       object-fit: cover;
-      border: 1.5px solid rgba(201, 169, 97, 0.55);
-      box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.07);
+      border: 1.5px solid rgba(66, 197, 65, 0.55);
+      box-shadow: 0 0 0 3px rgba(66, 197, 65, 0.07);
       flex: 0 0 38px;
     }
     body.page-agent .header-info { flex: 1 1 auto; min-width: 0; cursor: pointer; }
@@ -183,9 +183,9 @@ extra_head: |
     body.page-agent .header-badge {
       flex: 0 0 auto;
       padding: 2px 7px;
-      border: 1px solid rgba(201, 169, 97, 0.38);
+      border: 1px solid rgba(66, 197, 65, 0.38);
       border-radius: 999px;
-      background: rgba(201, 169, 97, 0.10);
+      background: rgba(66, 197, 65, 0.10);
       color: var(--gold-hi);
       font-size: 9px;
       font-weight: 700;
@@ -205,7 +205,7 @@ extra_head: |
     body.page-agent .status-dot {
       width: 6px; height: 6px; border-radius: 50%;
       background: var(--gold);
-      box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.12);
+      box-shadow: 0 0 0 3px rgba(66, 197, 65, 0.12);
       animation: agPulse 2.4s infinite;
     }
     body.page-agent .header-status.typing .status-dot { animation: none; opacity: .55; }
@@ -220,7 +220,7 @@ extra_head: |
       display: flex; align-items: center; justify-content: center;
     }
     body.page-agent .header-btn:hover,
-    body.page-agent .header-btn:active { background: rgba(201, 169, 97, 0.10); color: var(--gold-hi); }
+    body.page-agent .header-btn:active { background: rgba(66, 197, 65, 0.10); color: var(--gold-hi); }
     body.page-agent #summaryBtn { display: none; }
     body.page-agent #app.is-session #summaryBtn { display: flex; }
     body.page-agent #backBtn.is-home-btn i { transform: scaleX(-1); }
@@ -252,7 +252,7 @@ extra_head: |
       border-width: 1px;
       visibility: visible; opacity: 1; pointer-events: auto;
     }
-    body.page-agent .notif-icon-wrap { width: 32px; height: 32px; border-radius: 9px; background: rgba(201, 169, 97, 0.12); font-size: 15px; }
+    body.page-agent .notif-icon-wrap { width: 32px; height: 32px; border-radius: 9px; background: rgba(66, 197, 65, 0.12); font-size: 15px; }
     body.page-agent .notif-title { font-size: 12.5px; }
     body.page-agent .notif-sub { font-size: 11.5px; }
 
@@ -278,7 +278,7 @@ extra_head: |
       width: 210px; height: 210px;
       z-index: 0;
       opacity: .55;
-      background: radial-gradient(circle at 70% 30%, rgba(201, 169, 97, .16), transparent 62%);
+      background: radial-gradient(circle at 70% 30%, rgba(66, 197, 65, .16), transparent 62%);
       pointer-events: none;
     }
     body.page-agent .home-eyebrow,
@@ -353,7 +353,7 @@ extra_head: |
       border-radius: 18px;
       border: 1px solid var(--line-soft);
       background:
-        linear-gradient(155deg, rgba(201, 169, 97, 0.055), transparent 46%),
+        linear-gradient(155deg, rgba(66, 197, 65, 0.055), transparent 46%),
         var(--panel);
       color: var(--text);
       text-align: start;
@@ -361,20 +361,20 @@ extra_head: |
       transition: transform .16s ease, border-color .16s ease, background .16s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    body.page-agent .service-card:hover { border-color: rgba(201, 169, 97, 0.30); }
+    body.page-agent .service-card:hover { border-color: rgba(66, 197, 65, 0.30); }
     body.page-agent .service-card:active { transform: scale(0.975); }
     body.page-agent .service-card::after {
       content: "";
       position: absolute; inset-inline-start: 13px; bottom: 11px;
       width: 22px; height: 1px;
-      background: rgba(201, 169, 97, 0.45);
+      background: rgba(66, 197, 65, 0.45);
     }
     body.page-agent .service-ico {
       width: 34px; height: 34px;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px;
-      background: rgba(201, 169, 97, 0.10);
-      border: 1px solid rgba(201, 169, 97, 0.22);
+      background: rgba(66, 197, 65, 0.10);
+      border: 1px solid rgba(66, 197, 65, 0.22);
       color: var(--gold-hi);
       font-size: 14px;
     }
@@ -388,8 +388,8 @@ extra_head: |
       margin-top: 12px;
       padding: 12px 13px;
       border-radius: 16px;
-      border: 1px solid rgba(201, 169, 97, 0.34);
-      background: linear-gradient(140deg, rgba(201, 169, 97, 0.13), rgba(201, 169, 97, 0.03));
+      border: 1px solid rgba(66, 197, 65, 0.34);
+      background: linear-gradient(140deg, rgba(66, 197, 65, 0.13), rgba(66, 197, 65, 0.03));
       color: var(--text);
       text-align: start;
       cursor: pointer;
@@ -421,7 +421,7 @@ extra_head: |
       padding: 10px 12px;
       border-radius: 13px;
       border: 1px solid var(--line-soft);
-      background: rgba(18, 30, 48, 0.62);
+      background: rgba(12, 17, 12, 0.94);
       color: var(--muted);
       font-size: 11.5px;
       font-weight: 700;
@@ -429,7 +429,7 @@ extra_head: |
       cursor: pointer;
     }
     body.page-agent .home-quick > *:hover,
-    body.page-agent .home-quick > *:active { border-color: rgba(201, 169, 97, 0.3); color: var(--text); }
+    body.page-agent .home-quick > *:active { border-color: rgba(66, 197, 65, 0.3); color: var(--text); }
     body.page-agent .home-quick i { color: var(--gold); font-size: 13px; width: 15px; text-align: center; }
     body.page-agent .home-note {
       margin: 16px 2px 4px;
@@ -448,7 +448,7 @@ extra_head: |
       display: flex; align-items: center; gap: 10px;
       padding: 8px 14px;
       border-bottom: 1px solid var(--line-soft);
-      background: rgba(15, 25, 41, 0.75);
+      background: rgba(12, 17, 12, 0.94);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
@@ -484,7 +484,7 @@ extra_head: |
       padding: 8px 11px;
       border-radius: 11px;
       border: 1px solid var(--line);
-      background: rgba(201, 169, 97, 0.07);
+      background: rgba(66, 197, 65, 0.07);
       color: var(--gold-hi);
       font-size: 11px;
       font-weight: 800;
@@ -524,8 +524,8 @@ extra_head: |
       max-width: 100%;
       padding: 5px 8px;
       border-radius: 9px;
-      border: 1px solid rgba(201, 169, 97, 0.16);
-      background: rgba(201, 169, 97, 0.055);
+      border: 1px solid rgba(66, 197, 65, 0.16);
+      background: rgba(66, 197, 65, 0.055);
       font-size: 10.5px;
       line-height: 1.5;
     }
@@ -577,13 +577,13 @@ extra_head: |
     body.page-agent .msg-bot {
       align-self: flex-start;
       border-end-start-radius: 5px;
-      background: linear-gradient(160deg, #16243a, #121e30);
+      background: linear-gradient(160deg, #111811, #0c110c);
     }
     body.page-agent .msg-user {
       align-self: flex-end;
       border-end-end-radius: 5px;
       background: linear-gradient(155deg, #28405e, #1f3149);
-      border-color: rgba(201, 169, 97, 0.16);
+      border-color: rgba(66, 197, 65, 0.16);
     }
     body.page-agent .msg-bot + .msg-bot,
     body.page-agent .msg-user + .msg-user { margin-top: -3px; }
@@ -624,7 +624,7 @@ extra_head: |
     body.page-agent .msg-return { white-space: normal; }
     body.page-agent .msg-error {
       border-color: rgba(255, 122, 136, 0.28);
-      background: linear-gradient(160deg, rgba(255, 122, 136, 0.09), rgba(18, 30, 48, .9));
+      background: linear-gradient(160deg, rgba(255, 122, 136, 0.09), rgba(12, 17, 12, .9));
     }
     body.page-agent .msg-error .error-head {
       display: flex; align-items: center; gap: 6px;
@@ -638,8 +638,8 @@ extra_head: |
       margin-top: 8px;
       padding: 7px 12px;
       border-radius: 9px;
-      border: 1px solid rgba(201, 169, 97, 0.38);
-      background: rgba(201, 169, 97, 0.10);
+      border: 1px solid rgba(66, 197, 65, 0.38);
+      background: rgba(66, 197, 65, 0.10);
       color: var(--gold-hi);
       font-size: 11px; font-weight: 800;
       cursor: pointer;
@@ -688,7 +688,7 @@ extra_head: |
       width: 20px; height: 20px;
       display: inline-flex; align-items: center; justify-content: center;
       border-radius: 6px;
-      background: rgba(201, 169, 97, 0.14);
+      background: rgba(66, 197, 65, 0.14);
       color: var(--gold);
       font-size: 9.5px; font-weight: 900;
     }
@@ -733,7 +733,7 @@ extra_head: |
       font-size: 10px; font-weight: 600;
     }
     body.page-agent .result-pick {
-      border: 1px solid rgba(201, 169, 97, 0.45);
+      border: 1px solid rgba(66, 197, 65, 0.45);
       background: linear-gradient(135deg, var(--gold-hi), var(--gold));
       color: var(--gold-ink);
     }
@@ -782,7 +782,7 @@ extra_head: |
       flex: 0 0 auto;
       z-index: 50;
       padding: 6px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
-      background: linear-gradient(to top, var(--ink) 72%, rgba(11, 18, 32, 0.86) 90%, transparent);
+      background: var(--ink);
       border-top: 1px solid transparent;
     }
     body.page-agent .agent-state {
@@ -881,7 +881,7 @@ extra_head: |
       padding: 8px 13px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(201, 169, 97, 0.07);
+      background: rgba(66, 197, 65, 0.07);
       color: var(--text);
       font-size: 11.5px;
       font-weight: 700;
@@ -924,8 +924,8 @@ extra_head: |
       transition: border-color .18s ease, box-shadow .18s ease;
     }
     body.page-agent .input-glass:focus-within {
-      border-color: rgba(201, 169, 97, 0.45);
-      box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.12), 0 10px 26px rgba(0, 0, 0, 0.26);
+      border-color: rgba(66, 197, 65, 0.45);
+      box-shadow: 0 0 0 3px rgba(66, 197, 65, 0.12), 0 10px 26px rgba(0, 0, 0, 0.26);
       outline: none;
     }
     body.page-agent .input-field {
@@ -955,14 +955,14 @@ extra_head: |
     }
     body.page-agent .input-icon-btn { background: transparent; color: var(--muted); font-size: 16px; }
     body.page-agent .input-icon-btn:hover,
-    body.page-agent .input-icon-btn.active { background: rgba(201, 169, 97, 0.10); color: var(--gold-hi); }
+    body.page-agent .input-icon-btn.active { background: rgba(66, 197, 65, 0.10); color: var(--gold-hi); }
     body.page-agent .send-btn-glass {
       background: linear-gradient(135deg, var(--gold-hi), var(--gold));
       color: var(--gold-ink);
       font-size: 15px;
-      box-shadow: 0 4px 12px rgba(201, 169, 97, 0.20);
+      box-shadow: 0 4px 12px rgba(66, 197, 65, 0.20);
     }
-    body.page-agent .send-btn-glass:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(201, 169, 97, 0.30); }
+    body.page-agent .send-btn-glass:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(66, 197, 65, 0.30); }
     body.page-agent .send-btn-glass:active { transform: scale(.95); }
     body.page-agent .send-btn-glass:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
     body.page-agent .composer-hint {
@@ -1059,7 +1059,7 @@ extra_head: |
       font-size: 12.5px;
     }
     body.page-agent .menu-glass-item:hover,
-    body.page-agent .menu-glass-item:active { background: rgba(201, 169, 97, 0.10); }
+    body.page-agent .menu-glass-item:active { background: rgba(66, 197, 65, 0.10); }
     body.page-agent .menu-glass-item .mi-icon { font-size: 14px; width: 18px; }
     body.page-agent .menu-glass-sep { background: var(--line-soft); }
 
@@ -1090,15 +1090,15 @@ extra_head: |
       margin-bottom: 12px;
       border-radius: 13px;
       font-size: 19px;
-      background: rgba(201, 169, 97, 0.12);
-      border: 1px solid rgba(201, 169, 97, 0.28);
+      background: rgba(66, 197, 65, 0.12);
+      border: 1px solid rgba(66, 197, 65, 0.28);
       box-shadow: none;
     }
     body.page-agent .privacy-badge {
       padding: 4px 9px;
       border-radius: 999px;
-      background: rgba(201, 169, 97, 0.08);
-      border: 1px solid rgba(201, 169, 97, 0.26);
+      background: rgba(66, 197, 65, 0.08);
+      border: 1px solid rgba(66, 197, 65, 0.26);
       color: var(--gold-hi);
       font-size: 10px;
       margin-bottom: 9px;
@@ -1127,7 +1127,7 @@ extra_head: |
       color: var(--gold-ink);
       font-size: 13.5px;
       font-weight: 900;
-      box-shadow: 0 8px 22px rgba(201, 169, 97, 0.20);
+      box-shadow: 0 8px 22px rgba(66, 197, 65, 0.20);
       margin-bottom: 6px;
     }
     body.page-agent .privacy-skip { padding: 8px; font-size: 11px; color: var(--muted-2); }
@@ -1146,11 +1146,11 @@ extra_head: |
     body.page-agent .wa-dialog-message { font-size: 12px; line-height: 1.7; color: var(--muted); margin-bottom: 16px; }
     body.page-agent .wa-dialog-btn { min-height: 40px; padding: 8px 16px; border-radius: 9px; font-size: 12px; }
     body.page-agent .wa-dialog-btn.cancel { color: var(--gold); }
-    body.page-agent .wa-dialog-btn.cancel:hover { background: rgba(201, 169, 97, 0.09); }
+    body.page-agent .wa-dialog-btn.cancel:hover { background: rgba(66, 197, 65, 0.09); }
     body.page-agent .wa-dialog-btn.danger { color: var(--danger); }
     body.page-agent .wa-dialog-btn.danger:hover { background: rgba(255, 122, 136, 0.07); }
     body.page-agent .ag-about-dialog { text-align: center; max-width: 320px; padding: 22px 18px 16px; }
-    body.page-agent .ag-about-avatar { width: 66px; height: 66px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(201, 169, 97, .5); margin-bottom: 8px; }
+    body.page-agent .ag-about-avatar { width: 66px; height: 66px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(66, 197, 65, .5); margin-bottom: 8px; }
     body.page-agent .ag-about-name { font-size: 16px; font-weight: 900; color: var(--text); }
     body.page-agent .ag-about-sub { font-size: 10.5px; color: var(--muted); margin: 3px 0 12px; line-height: 1.6; }
     body.page-agent .ag-stats { display: flex; gap: 7px; margin-bottom: 12px; }
@@ -1161,8 +1161,8 @@ extra_head: |
       display: flex; align-items: center; justify-content: center; gap: 7px;
       min-height: 42px; margin-bottom: 8px;
       border-radius: 10px;
-      border: 1px solid rgba(201, 169, 97, 0.32);
-      background: rgba(201, 169, 97, 0.07);
+      border: 1px solid rgba(66, 197, 65, 0.32);
+      background: rgba(66, 197, 65, 0.07);
       color: var(--gold-hi);
       font-size: 11px; font-weight: 800;
       text-decoration: none;
@@ -1175,32 +1175,32 @@ extra_head: |
     body.page-agent .gallery-handle { background: rgba(255,255,255,.14); }
     body.page-agent .gallery-header { padding: 10px 15px; border-bottom-color: var(--line-soft); }
     body.page-agent .gallery-header-title { font-size: 13px; font-weight: 900; }
-    body.page-agent .gallery-header-count { background: rgba(201,169,97,.10); color: var(--gold); font-size: 10px; }
+    body.page-agent .gallery-header-count { background: rgba(66, 197, 65,.10); color: var(--gold); font-size: 10px; }
     body.page-agent .gallery-close-btn { width: 32px; height: 32px; background: rgba(255,255,255,.05); color: var(--muted); font-size: 12px; }
     body.page-agent .gallery-grid { gap: 9px; padding: 12px; }
     body.page-agent .gallery-card { border-radius: 14px; border: 1px solid var(--line-soft); background: var(--panel); overflow: hidden; }
-    body.page-agent .gallery-card:hover { box-shadow: 0 8px 24px rgba(201,169,97,.14); }
+    body.page-agent .gallery-card:hover { box-shadow: 0 8px 24px rgba(66, 197, 65,.14); }
     body.page-agent .gallery-card-body { padding: 8px 9px 9px; }
     body.page-agent .gallery-card-price { color: var(--gold-hi); font-size: 12px; }
     body.page-agent .gallery-card-type, body.page-agent .gallery-card-area { background: rgba(255,255,255,.05); color: var(--muted); font-size: 9px; }
     body.page-agent .gallery-card-location { color: var(--muted); font-size: 9.5px; }
     body.page-agent .gallery-card-title { color: var(--text); font-size: 10.5px; }
-    body.page-agent .gallery-card-arrow { background: rgba(201,169,97,.9); color: var(--gold-ink); }
-    body.page-agent .gallery-spinner { border-color: rgba(201,169,97,.22); border-top-color: var(--gold); }
+    body.page-agent .gallery-card-arrow { background: rgba(66, 197, 65,.9); color: var(--gold-ink); }
+    body.page-agent .gallery-spinner { border-color: rgba(66, 197, 65,.22); border-top-color: var(--gold); }
     body.page-agent .gallery-loading, body.page-agent .gallery-empty { color: var(--muted); font-size: 11.5px; }
     body.page-agent .gallery-skel { background: var(--panel); border-radius: 14px; }
 
     /* ═══ منتقي الموقع (nasr-maps.js) — ألوان الصفحة الليلية ═══ */
     body.page-agent .nm-pk-input { background: var(--panel-2); border-color: var(--line); color: var(--text); }
     body.page-agent .nm-pk-input::placeholder { color: var(--muted-2); }
-    body.page-agent .nm-pk-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,169,97,.14); }
+    body.page-agent .nm-pk-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(66, 197, 65,.14); }
     body.page-agent .nm-pk-results { background: var(--panel-2); border-color: var(--line); }
-    body.page-agent .nm-pk-item:hover, body.page-agent .nm-pk-item:focus { background: rgba(201,169,97,.09); }
+    body.page-agent .nm-pk-item:hover, body.page-agent .nm-pk-item:focus { background: rgba(66, 197, 65,.09); }
     body.page-agent .nm-pk-btn { background: var(--panel-2); border-color: var(--line); color: var(--text); }
-    body.page-agent .nm-pk-btn.nm-pk-manual { background: transparent; border-color: rgba(201,169,97,.3); }
+    body.page-agent .nm-pk-btn.nm-pk-manual { background: transparent; border-color: rgba(66, 197, 65,.3); }
     body.page-agent .nm-pk-confirm { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
-    body.page-agent .nm-pk-spinner { border-color: rgba(201,169,97,.25); border-top-color: var(--gold); }
-    body.page-agent .nm-pk-result-box.nm-pending { border-color: rgba(201,169,97,.5); }
+    body.page-agent .nm-pk-spinner { border-color: rgba(66, 197, 65,.25); border-top-color: var(--gold); }
+    body.page-agent .nm-pk-result-box.nm-pending { border-color: rgba(66, 197, 65,.5); }
     body.page-agent .nm-pk-item-txt strong, body.page-agent .nm-pk-title, body.page-agent .nm-pk-result-label { color: var(--text); }
     body.page-agent .nm-pk-sub, body.page-agent .nm-pk-r1, body.page-agent .nm-pk-r2 { color: var(--muted); }
     body.page-agent .nm-pk-head { border-color: var(--line-soft); }
@@ -1246,9 +1246,9 @@ extra_head: |
       }
     }
     @keyframes agPulse {
-      0% { box-shadow: 0 0 0 0 rgba(201, 169, 97, .28); }
-      70% { box-shadow: 0 0 0 6px rgba(201, 169, 97, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(201, 169, 97, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(66, 197, 65, .28); }
+      70% { box-shadow: 0 0 0 6px rgba(66, 197, 65, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(66, 197, 65, 0); }
     }
     @keyframes agMsgIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -1256,55 +1256,55 @@ extra_head: |
     }
   
     /* ═══ طبقة الداكن (مطابقة حرفيًا لكتلة @media prefers-color-scheme في style.css
-       لصفحة الوكيل). دي نقطة البداية اللي الهوية الذهبية بتبني عليها —
+       لصفحة الوكيل). دي نقطة البداية اللي هوية الشعار بتبني عليها —
        الاختبارات بتقارن كل إعلان هنا بالكتلة الأصلية. ═══ */
     html.page-agent, body.page-agent {
-    --bg-app:           #0b141a;
-    --bg-glass:         rgba(30, 45, 61, 0.65);
-    --bg-glass-strong:  rgba(30, 45, 61, 0.85);
-    --bg-glass-light:   rgba(30, 45, 61, 0.45);
+    --bg-app:           #050505;
+    --bg-glass:         rgba(12, 17, 12, 0.65);
+    --bg-glass-strong:  rgba(12, 17, 12, 0.85);
+    --bg-glass-light:   rgba(12, 17, 12, 0.45);
     --border-glass:     rgba(255, 255, 255, 0.08);
     --border-subtle:    rgba(255, 255, 255, 0.05);
-    --header-bg:        #202c33;
-    --header-text:      #e9edef;
-    --header-sub:       #8696a0;
-    --bubble-in:        rgba(30, 45, 61, 0.92);
-    --bubble-out:       #005c4b;
-    --text-primary:     #e9edef;
-    --text-secondary:   #8696a0;
+    --header-bg:        #0c110c;
+    --header-text:      #ffffff;
+    --header-sub:       #b0b0b0;
+    --bubble-in:        rgba(12, 17, 12, 0.92);
+    --bubble-out:       #1f7a2e;
+    --text-primary:     #ffffff;
+    --text-secondary:   #b0b0b0;
     --text-tertiary:    #667781;
-    --accent:           #1f7a2e;
-    --accent-dark:      #00a884;
-    --tick-blue:        #53bdeb;
+    --accent:           #42c541;
+    --accent-dark:      #1f7a2e;
+    --tick-blue:        #7ce386;
     --danger:           #ff4d6d;
     }
     body.page-agent .chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
-    /* خلفية الوضع الليلي في واتساب */body.page-agent .chat-area { background-color: #0b141a; }
+    /* خلفية الوكيل الداكنة */body.page-agent .chat-area { background-color: #050505; }
     body.page-agent .chat-area::after { content: none; }
-    body.page-agent .msg-user { background: var(--bubble-out); color: #e9edef; }
+    body.page-agent .msg-user { background: var(--bubble-out); color: #ffffff; }
     body.page-agent .privacy-warn { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.2); }
-    body.page-agent .wa-dialog { background: #202c33; }
-    body.page-agent .wa-dialog-title { color: #e9edef; }
-    body.page-agent .wa-dialog-message { color: #8696a0; }
+    body.page-agent .wa-dialog { background: #0c110c; }
+    body.page-agent .wa-dialog-title { color: #ffffff; }
+    body.page-agent .wa-dialog-message { color: #b0b0b0; }
     body.page-agent .wa-dialog-btn.danger { color: #ff4d6d; }
     body.page-agent .wa-dialog-btn.danger:hover { background: rgba(255,77,109,0.1); }
 
     /* ═══════════════════════════════════════════════════════════════
-       🟡 هوية طارق طنطاوي
+       🟢 هوية سمسار طلبك — أسود وأخضر
        ───────────────────────────────────────────────────────────────
-       الطبقة الأخيرة: بتوثّق التوكنات على لوحة «مكتب استشارات» (كحلي + ذهبي)
+       الطبقة الأخيرة: بتوثّق التوكنات على لوحة «مكتب استشارات» (أسود + أخضر الشعار)
        وبتثبّت الأسطح اللي لسه جاية من style.css. كل ما بعد العلامة دي
        لازم يفضل بعيد عن ألوان واتساب — وكارت واتساب الرسمي مستثنى وبياخد ألوانه من style.css قبلي.
        ═══════════════════════════════════════════════════════════════ */
     html.page-agent {
-      --brand-bg: #0b1220;
-      --brand-panel: #101a29;
-      --brand-in: #16243a;
-      --brand-out: #233a55;
-      --brand-accent: #c9a961;
-      --brand-text: #f3efe7;
-      --brand-sub: #9fb0c6;
-      --brand-wallpaper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'%3E%3Ccircle cx='23' cy='23' r='1.1' fill='%23c9a961' fill-opacity='0.11'/%3E%3C/svg%3E");
+      --brand-bg: #050505;
+      --brand-panel: #0c110c;
+      --brand-in: #0c110c;
+      --brand-out: #1f7a2e;
+      --brand-accent: #42c541;
+      --brand-text: #ffffff;
+      --brand-sub: #b0b0b0;
+      --brand-wallpaper: none;
     }
     body.page-agent {
       --bg-app: var(--brand-bg);
@@ -1322,25 +1322,25 @@ extra_head: |
     body.page-agent .msg-user .msg-ticks svg { visibility: hidden; }
     body.page-agent .msg-user .msg-ticks::after { color: var(--brand-accent); }
     body.page-agent .status-dot { background: var(--brand-accent); }
-    /* شارة التنبيه كانت بتاخد أخضر واتساب من style.css — على لوحة الهوية تبقى ذهبية */
+    /* شارة التنبيه تستخدم أخضر الشعار على لوحة الوكيل، لا أخضر واتساب */
     body.page-agent .notif-icon-wrap,
     body.page-agent .notif-icon-wrap.green,
     body.page-agent .notif-icon-wrap.red {
-      background-color: rgba(201, 169, 97, 0.14);
+      background-color: rgba(66, 197, 65, 0.14);
       background-image: none;
       color: var(--brand-accent);
       font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
     }
-    body.page-agent .menu-glass-item:hover { background: rgba(201, 169, 97, 0.10); }
-    body.page-agent .menu-glass-item:focus-visible { background: rgba(201, 169, 97, 0.10); }
+    body.page-agent .menu-glass-item:hover { background: rgba(66, 197, 65, 0.10); }
+    body.page-agent .menu-glass-item:focus-visible { background: rgba(66, 197, 65, 0.10); }
     body.page-agent .input-glass:focus-within {
-      border-color: rgba(201, 169, 97, 0.55);
-      box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.14), 0 10px 26px rgba(0, 0, 0, 0.28);
+      border-color: rgba(66, 197, 65, 0.55);
+      box-shadow: 0 0 0 3px rgba(66, 197, 65, 0.14), 0 10px 26px rgba(0, 0, 0, 0.28);
     }
     body.page-agent .privacy-overlay { background: rgba(9, 13, 17, 0.86); }
     body.page-agent .privacy-badge {
-      background: rgba(201, 169, 97, 0.12);
-      border-color: rgba(201, 169, 97, 0.34);
+      background: rgba(66, 197, 65, 0.12);
+      border-color: rgba(66, 197, 65, 0.34);
       color: var(--brand-accent);
     }
     body.page-agent .wa-dialog-btn.cancel { color: var(--brand-accent); }
@@ -1348,6 +1348,31 @@ extra_head: |
     body.page-agent .nm-pk-input { background: var(--brand-panel); }
     body.page-agent .nm-pk-results { background: var(--brand-panel); }
     body.page-agent .nm-pk-confirm { background: var(--brand-accent); }
+
+    body.page-agent .service-grid { display: flex; flex-direction: column; gap: 15px; }
+    body.page-agent .service-lane { min-width: 0; }
+    body.page-agent .service-lane-heading {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      margin: 0 2px 8px; color: var(--text); font-size: 12px;
+    }
+    body.page-agent .service-lane-heading strong { font-size: 13px; font-weight: 900; }
+    body.page-agent .service-lane-heading span { color: var(--muted-2); font-size: 10.5px; }
+    body.page-agent .service-lane-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    body.page-agent .service-card {
+      min-width: 0; min-height: 104px; padding: 12px;
+      border-color: rgba(255,255,255,.08); background: #0c110c;
+      transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+    }
+    body.page-agent .service-card:hover { border-color: rgba(66,197,65,.48); background: #101710; }
+    body.page-agent .service-card:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+    body.page-agent .service-card::after { background: rgba(66,197,65,.7); }
+    body.page-agent .service-ico { background: rgba(66,197,65,.09); border-color: rgba(66,197,65,.2); }
+    body.page-agent .service-title { font-size: 13px; }
+    body.page-agent .service-sub { font-size: 10.5px; line-height: 1.5; }
+    @media (max-width: 360px) {
+      body.page-agent .service-lane-cards { grid-template-columns: minmax(0, 1fr); }
+      body.page-agent .service-card { min-height: 82px; }
+    }
   </style>
 ---
 <div id="app" class="is-home">
@@ -1429,17 +1454,17 @@ extra_head: |
       <div class="home-hero">
         <div class="home-eyebrow">سمسار طلبك · مدينة نصر</div>
         <h2 class="home-title">قول طلبك…<br><span>والباقي علينا</span></h2>
-        <p class="home-sub">شراء، إيجار، أو عرض عقارك للبيع. الوكيل الذكي يرتّب التفاصيل، وطارق يكمّل معاك.</p>
+        <p class="home-sub">اختار مسارك: تبحث عن عقار أو تعرض عقارك للبيع والإيجار. نجمع التفاصيل المناسبة لكل حالة، وطارق يكمل معاك.</p>
         <div class="home-trust">
-          <span><i class="fas fa-medal"></i> 15 سنة خبرة</span>
+          <span><i class="fas fa-medal"></i> خبرة منذ 2014</span>
           <span><i class="fas fa-star"></i> Google Local Guide 7</span>
           <span><i class="fas fa-shield-halved"></i> بياناتك في الجلسة بس</span>
         </div>
       </div>
 
       <div class="home-section-label">
-        <span>اختر خدمتك</span>
-        <span>خطوة واحدة</span>
+        <span>اختار المسار المناسب</span>
+        <span>٤ خدمات واضحة</span>
       </div>
       <div class="service-grid" id="serviceGrid" role="group" aria-label="خدمات الوكيل"></div>
 
@@ -1628,7 +1653,7 @@ extra_head: |
   <div class="wa-dialog ag-about-dialog" role="dialog" aria-modal="true" aria-label="عن طارق طنطاوي">
     <img src="https://nasr-realestate.github.io/assets/img/team/tareq.webp" alt="طارق طنطاوي" class="ag-about-avatar" onerror="this.style.display='none'">
     <div class="ag-about-name">طارق طنطاوي</div>
-    <div class="ag-about-sub">سمسار مدينة نصر — خبرة 15 سنة<br>Google Local Guide Level 7</div>
+    <div class="ag-about-sub">سمسار مدينة نصر — متخصص منذ 2014<br>Google Local Guide Level 7</div>
     <div class="ag-stats">
       <div class="ag-stat"><span class="ag-stat-num">17M+</span><span class="ag-stat-lbl">مشاهدة</span></div>
       <div class="ag-stat"><span class="ag-stat-num">430</span><span class="ag-stat-lbl">صورة</span></div>
@@ -1665,10 +1690,14 @@ const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><
 
 // الخدمات الأربعة = نفس أزرار الـWorker (ROUTE_BTNS) بالحرف — مفيش قدرة مخترعة.
 const SERVICES = Object.freeze([
-  { icon: "fa-house", title: "أشتري عقار", sub: "شقة، فيلا، محل أو مكتب", send: "🔍 أشتري" },
-  { icon: "fa-key", title: "أستأجر", sub: "سكن، مكتب أو محل تجاري", send: "🏠 أستأجر" },
-  { icon: "fa-hand-holding-dollar", title: "أبيع عقاري", sub: "تسعير وعرض على طارق", send: "💰 أبيع" },
-  { icon: "fa-building", title: "أؤجّر عقاري", sub: "إيجار سكني أو تجاري", send: "🔑 أأجر" },
+  { icon: "fa-house", title: "أشتري عقار", sub: "المنطقة، المساحة، والميزانية", send: "🔍 أشتري", lane: "search" },
+  { icon: "fa-key", title: "أستأجر", sub: "المكان، نوع العقار، والإيجار", send: "🏠 أستأجر", lane: "search" },
+  { icon: "fa-hand-holding-dollar", title: "أبيع عقاري", sub: "الموقع، المساحة، السعر، والصور", send: "💰 أبيع", lane: "owner" },
+  { icon: "fa-building", title: "أؤجّر عقاري", sub: "تفاصيل الوحدة وسعر الإيجار", send: "🔑 أأجر", lane: "owner" },
+]);
+const SERVICE_LANES = Object.freeze([
+  { id: "search", title: "بدور على عقار", subtitle: "شراء أو إيجار" },
+  { id: "owner", title: "عندي عقار", subtitle: "بيع أو تأجير" },
 ]);
 
 // ═══ STATE ═══
@@ -2136,16 +2165,36 @@ function startService(label) {
 function buildServices() {
   if (!serviceGrid) return;
   serviceGrid.innerHTML = "";
-  SERVICES.forEach(s => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "service-card svc-btn";
-    b.setAttribute("aria-label", s.title);
-    b.innerHTML = `<span class="service-ico"><i class="fas ${s.icon}" aria-hidden="true"></i></span>
-      <span class="service-title">${s.title}</span>
-      <span class="service-sub">${s.sub}</span>`;
-    b.onclick = () => startService(s.send);
-    serviceGrid.appendChild(b);
+  SERVICE_LANES.forEach(lane => {
+    const section = document.createElement("section");
+    section.className = `service-lane service-lane-${lane.id}`;
+    section.setAttribute("aria-label", `${lane.title} — ${lane.subtitle}`);
+
+    const heading = document.createElement("div");
+    heading.className = "service-lane-heading";
+    const title = document.createElement("strong");
+    title.textContent = lane.title;
+    const subtitle = document.createElement("span");
+    subtitle.textContent = lane.subtitle;
+    heading.appendChild(title);
+    heading.appendChild(subtitle);
+    section.appendChild(heading);
+
+    const cards = document.createElement("div");
+    cards.className = "service-lane-cards";
+    SERVICES.filter(service => service.lane === lane.id).forEach(s => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "service-card svc-btn";
+      b.setAttribute("aria-label", s.title);
+      b.innerHTML = `<span class="service-ico"><i class="fas ${s.icon}" aria-hidden="true"></i></span>
+        <span class="service-title">${s.title}</span>
+        <span class="service-sub">${s.sub}</span>`;
+      b.onclick = () => startService(s.send);
+      cards.appendChild(b);
+    });
+    section.appendChild(cards);
+    serviceGrid.appendChild(section);
   });
 }
 
@@ -2726,14 +2775,14 @@ function startViewportDiag() {
   wrap.setAttribute("dir", "ltr");
   wrap.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(8,12,16,.95);" +
     "color:#e8e6e3;font:11px/1.5 ui-monospace,SFMono-Regular,monospace;padding:6px 8px;" +
-    "border-bottom:1px solid #c9a961;max-height:45vh;overflow:auto";
+    "border-bottom:1px solid #42c541;max-height:45vh;overflow:auto";
   const pre = document.createElement("pre");
   pre.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-word";
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = "📋 انسخ الأرقام";
-  btn.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #c9a961;" +
-    "background:#1a2229;color:#c9a961;font:700 12px Cairo,sans-serif";
+  btn.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #42c541;" +
+    "background:#0c110c;color:#42c541;font:700 12px Cairo,sans-serif";
   wrap.appendChild(pre);
   wrap.appendChild(btn);
   document.body.appendChild(wrap);
@@ -3478,7 +3527,7 @@ const ROUTE_BTNS = ["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "�
 
 function startConversation() {
   stickToBottom = true; // محادثة جديدة: نتابع آخرها
-  renderMsg("أهلاً بيك 👋\nأنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر. خبرة 15 سنة.\n\n🏆 Google Local Guide 7\n\nتشتري ولا تأجر ولا تبيع؟", "bot");
+  renderMsg("أهلاً بيك 👋\nأنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر. متخصص منذ 2014.\n\n🏆 Google Local Guide 7\n\nبتدور على عقار ولا عندك عقار تبيعه أو تأجره؟", "bot");
   state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
   renderOptions(ROUTE_BTNS);
 }
