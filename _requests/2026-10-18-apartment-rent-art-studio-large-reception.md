@@ -38,7 +38,6 @@ audio_script: "مطلوب شقة للإيجار تصلح استوديو فني �
 <div style="background: rgba(10, 132, 255, 0.05); padding: 35px; border-radius: 20px; border: 1px solid #0a84ff; text-align: center; margin-top: 45px;">
     <h3 style="color: #fff; margin-bottom: 12px; font-size: 1.5rem; font-weight: 800;">هل تملك شقة غرفتين أو 3 غرف بريسبشن كبير؟</h3>
     <p style="color: #88c7ff; margin-bottom: 30px; font-size: 1rem;">الطلب جدي ومباشر لمجموعة فنانين تبحث عن مساحة سكنية تصلح استوديو فني. إذا كانت شقتك مناسبة، أبقِ صورها جاهزة وأرسلها أولًا لترتيب المعاينة.</p>
-
     <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
         <a href="https://wa.me/201147758857?text={{ 'لدي شقة تناسب طلب الاستوديو الفني (ريسبشن كبير): ' | append: page.title | url_encode }}"
            style="background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; width: 100%; max-width: 300px; padding: 18px; border-radius: 50px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; box-sizing: border-box;">

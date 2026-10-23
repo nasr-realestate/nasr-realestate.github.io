@@ -81,6 +81,32 @@ test("delimiters, quotes, comments, blank lines and scalars are handled", () => 
   assert.ok(!("عنوان" in data));
 });
 
+test("block lists (`key:` then `- item`) are read as arrays — طلبات بـ requirements", () => {
+  const doc = [
+    "---",
+    "title: \"طلب مكتب\"",
+    "requirements:",
+    "  - \"نوع التعاقد: إيجار إداري.\"",
+    "  - \"الميزانية: من 10,000 إلى 15,000 جنيه شهرياً.\"",
+    "  - سطر بدون تنصيص # تعليق",
+    "budget_num: 15000",
+    "audio_ad: false",
+    "empty_list:",
+    "---",
+    "",
+    "المحتوى",
+  ].join("\n");
+  const { data } = parseFrontMatter(doc);
+  assert.deepEqual(data.requirements, [
+    "نوع التعاقد: إيجار إداري.",
+    "الميزانية: من 10,000 إلى 15,000 جنيه شهرياً.",
+    "سطر بدون تنصيص",
+  ]);
+  assert.equal(data.budget_num, 15000);
+  assert.equal(data.audio_ad, false);
+  assert.equal(data.empty_list, null, "مفتاح بلا قيمة وليس بعده عناصر = null مثل YAML");
+});
+
 test("a '#' inside quotes is not treated as a comment", () => {
   const { data } = parseFrontMatter('---\ntitle: "وحدة # 12 في المربع"\nprice: 5000000 # سعر كاش\n---\n');
   assert.equal(data.title, "وحدة # 12 في المربع");

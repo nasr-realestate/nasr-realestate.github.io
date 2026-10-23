@@ -16,6 +16,7 @@
  *    • `key: value` — القيم: نص عادي، أو نص بين "..." أو '...'
  *    • أسطر التعليقات التي تبدأ بـ #، والأسطر الفارغة
  *    • قوائم `[a, b]` البسيطة على سطر واحد
+ *    • القوائم الكتلية (سطر `key:` ثم أسطر `- عنصر`) — تُستخدم في متطلبات الطلبات
  *    • booleans و null وأرقام (تُحوَّل لأنواعها)
  *
  *  غير المدعوم عن قصد (لا يوجد في المستودع): الكتل المتعددة `|` و`>`
@@ -93,16 +94,32 @@ export function parseFrontMatter(raw) {
   const content = lines.slice(end + 1).join('\n');
   const data = {};
 
+  // مفتاح قد تكون قيمته قائمة كتلية (`key:` ثم أسطر `- عنصر`) — نتبعه حتى
+  // نعرف أين نضيف العناصر. أي مفتاح بقيمة على نفس السطر يُنهي التتبّع.
+  let listKey = null;
+
   for (const rawLine of matter.split('\n')) {
     if (rawLine.trim() === '') continue;
     if (rawLine.trimStart().startsWith('#')) continue;
     if (/^\s/.test(rawLine)) {
-      // سطر متابعة/متداخل — لا يوجد في هذا المستودع، ولا نتظاهر بفهمه
+      const item = rawLine.trim().match(/^-(?:\s+(.*))?$/);
+      if (listKey && item) {
+        if (!Array.isArray(data[listKey])) data[listKey] = [];
+        data[listKey].push(coerce(stripTrailingComment(item[1] ?? '')));
+      }
+      // سطر متابعة آخر (كتلة نصية/كائن متداخل) — غير موجود في المستودع
       continue;
     }
     const m = rawLine.match(/^([A-Za-z_][A-Za-z0-9_-]*):(.*)$/);
     if (!m) continue;
-    data[m[1]] = coerce(stripTrailingComment(m[2]));
+    const valueRaw = stripTrailingComment(m[2]);
+    if (valueRaw.trim() === '') {
+      data[m[1]] = null;
+      listKey = m[1];
+    } else {
+      data[m[1]] = coerce(valueRaw);
+      listKey = null;
+    }
   }
 
   return { data, content, matter, hasFrontMatter: true };
