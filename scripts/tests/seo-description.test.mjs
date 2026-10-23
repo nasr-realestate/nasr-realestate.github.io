@@ -47,11 +47,15 @@ test("كل عقار من الثمانية: وصف /api منشور كامل ول�
   }
 });
 
-test("الطلب الحالي: description في المصدر + JSON-LD لا يسقط إلى العنوان", () => {
+test("كل طلب منشور: description في المصدر + JSON-LD لا يسقط إلى العنوان", () => {
   const files = frontMatterFiles('_requests');
-  assert.equal(files.length, 1);
-  const { data } = files[0];
-  assert.ok(String(data.description || '').trim());
+  // كان العدد مثبتًا على 1 (طلب واحد). أي طلب جديد يُنشر يوسّع الفحص بدل أن
+  // يكسر الاختبار — نفس الدرس المطبق على العقارات أعلاه.
+  assert.ok(files.length >= 1, `لا توجد طلبات في _requests (${files.length})`);
+  for (const { file, data } of files) {
+    assert.ok(String(data.description || '').trim(), `${file}: description مفقود`);
+    assert.ok(norm(data.description).length > 40, `${file}: description قصير جدًا`);
+  }
   const layout = read('_layouts/request_page.html');
   assert.match(layout, /"description":\s*\{\{\s*page\.description\s*\|\s*default:\s*page\.title\s*\|\s*jsonify\s*\}\}/);
 });
