@@ -19,6 +19,18 @@ hide_navbar: true
    الحقول تُطبع فقط إن كانت موجودة فعلًا في ملف الطلب (بدون أسطر فارغة) {%- endcomment -%}
 {%- comment -%} كود الطلب: نفس الكود الظاهر في رابط الطلب (page.id يعرضه Jekyll بمسار المجموعة) {%- endcomment -%}
 {%- assign wa_code = page.slug | default: page.id -%}
+{%- comment -%} تسمية عربية لنوع العقار داخل رسالة واتساب: كان يُطبع الكود اللاتيني
+   الخام (office / shop …) في قراءة غير مفهومة للعميل. القيمة الأصلية تبقى كما هي
+   في الـfront matter (يستخدمها الشريط العلوي وschema والتصنيف). {%- endcomment -%}
+{%- assign property_type_label = page.property_type -%}
+{%- case page.property_type -%}
+  {%- when "office" -%}{%- assign property_type_label = "مكتب إداري" -%}
+  {%- when "shop" -%}{%- assign property_type_label = "محل تجاري" -%}
+  {%- when "apartment" -%}{%- assign property_type_label = "شقة" -%}
+  {%- when "villa" -%}{%- assign property_type_label = "فيلا/دوبلكس" -%}
+  {%- when "clinic" -%}{%- assign property_type_label = "عيادة" -%}
+  {%- when "warehouse" -%}{%- assign property_type_label = "مخزن" -%}
+{%- endcase -%}
 {%- capture wa_text -%}
 السلام عليكم أ. طارق،
 
@@ -27,7 +39,7 @@ hide_navbar: true
 📋 {{ page.title }}
 {% if page.location %}📍 المنطقة: {{ page.location }}
 {% endif -%}
-{% if page.property_type %}🏢 النوع المطلوب: {{ page.property_type }}
+{% if property_type_label and property_type_label != "" %}🏢 النوع المطلوب: {{ property_type_label }}
 {% endif -%}
 {% if page.budget %}💰 الميزانية: {{ page.budget }}
 {% endif -%}
