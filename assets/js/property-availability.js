@@ -7,8 +7,7 @@
   if (!prompt) return;
   var property = prompt.getAttribute('data-property');
   var close = prompt.querySelector('[data-availability-close]');
-  var contact = prompt.querySelector('[data-availability-contact]');
-  if (!property || !close || !contact) return;
+  if (!property || !close) return;
 
   var key = 'smsar:availability:' + property;
   var shown = false;
@@ -34,6 +33,7 @@
     document.removeEventListener('visibilitychange', onVisibility);
   }
   function dismiss() {
+    shown = true;
     remember();
     stopObserving();
     // A user action may collapse the card; the automatic reveal never changes
@@ -75,8 +75,12 @@
     }, { once: true });
   }
 
+  // This is a reminder for the existing inquiry flow, not a second action.
+  // Once the visitor uses an inquiry button, do not remind them to ask again.
+  document.querySelectorAll('#ppWaBtn, .pp-agent-btn, .pp-floating-wa').forEach(function (link) {
+    link.addEventListener('click', dismiss); // Never cancel navigation or analytics.
+  });
   close.addEventListener('click', closePrompt);
-  contact.addEventListener('click', dismiss); // Let the real link navigate normally.
   prompt.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape' || !shown) return;
     event.preventDefault();

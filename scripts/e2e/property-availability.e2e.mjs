@@ -2,8 +2,8 @@
 // Optional browser test (not ordinary CI): supply puppeteer-core and axe-core
 // through NODE_PATH and Chrome via CHROME_BIN. Uses BASE (default local preview).
 // CHROME_ARGS_JSON is an optional JSON array for sandbox-specific Chrome flags.
-// No real WhatsApp message/navigation: the CTA's default navigation is verified
-// using a local intercepted probe, after validating its original WhatsApp URL.
+// No real WhatsApp message/navigation: the combined primary button's native
+// navigation is tested with a local probe after validating its WhatsApp URL.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -55,7 +55,8 @@ try {
     const after = await page.$eval(selector, el => el.getBoundingClientRect().height);
     assert.ok(Math.abs(after - before) < 1, 'reveal must not resize the card');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'ppWaBtn', 'no automatic focus stealing');
-    const href = await page.$eval('[data-availability-contact]', el => el.href);
+    assert.equal(await page.$eval(selector, el => el.querySelectorAll('a').length), 0, 'reminder must have no duplicate contact button');
+    const href = await page.$eval('#ppWaBtn', el => el.href);
     const url = new URL(href);
     assert.equal(url.hostname, 'wa.me');
     assert.equal(url.pathname, '/201147758857');
@@ -63,6 +64,9 @@ try {
     assert.ok(text.includes(property));
     assert.ok(text.includes('موسى الكاظم'));
     assert.ok(text.includes('التأكد'));
+    assert.ok(text.includes('معرفة التفاصيل'));
+    assert.ok(text.includes('موعد للمعاينة'));
+    assert.ok(await page.$eval('#ppWaBtn', el => el.textContent.includes('اسأل عن التفاصيل والتوافر')));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     assert.ok(overflow <= 1);
     await page.addScriptTag({ path: axePath });
@@ -81,17 +85,17 @@ try {
       await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, `availability-${width}.png`) });
     }
 
-    // Native link activation must survive the CTA hiding its own card.
+    // The one combined primary action keeps its native navigation.
     const probe = base + '/__availability_probe__';
     await page.setRequestInterception(true);
     page.on('request', req => {
       if (req.url() === probe) return req.respond({ status: 200, contentType: 'text/html', body: '<p>Local CTA probe</p>' });
       return req.continue();
     });
-    await page.$eval('[data-availability-contact]', (el, destination) => {
+    await page.$eval('#ppWaBtn', (el, destination) => {
       el.href = destination; el.target = '_self';
     }, probe);
-    await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click('[data-availability-contact]')]);
+    await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click('#ppWaBtn')]);
     assert.equal(page.url(), probe);
     await page.goto(base + property, { waitUntil: 'load' });
     assert.equal(await page.$eval(selector, el => el.hidden), true, 'must not repeat for the same property/session');
@@ -104,7 +108,7 @@ try {
     assert.equal(await page.$eval(selector, el => el.hidden), true);
     assert.equal(await page.evaluate(() => document.activeElement.id), 'ppDescription');
     assert.deepEqual(errors, []);
-    console.log(`PASS ${width}px: reading trigger, stable reveal, CTA, close, accessibility, print, session flag`);
+    console.log(`PASS ${width}px: reading trigger, stable text-only reminder, combined CTA, close, accessibility, print, session flag`);
     await page.close();
   }
   const oldBrowser = await open(390, { noJs: true });
