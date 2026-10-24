@@ -34,8 +34,8 @@
   {% include schema-global.html %}
 
   <!-- ملف الأنماط الموحّد (v4.0) — أقسام هذه الصفحة مُنطَّقة بـ body class -->
-  <!-- ⚠️ أداء (2026-10-02): النسخة المُصغَّرة style.min.css (ملف مُولَّد من style.css) -->
-  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261022-brand-refresh' | relative_url }}">
+  <!-- ⚠️ أداء (2026-10-24): أنماط حسب نوع الصفحة — core + نطاق الصفحة فقط. -->
+  {% include css.html %}
 
   <!-- ═══════════════════════════════════════════════
        ⚠️ إصلاح (2026-09-24):
@@ -44,12 +44,42 @@
        الآن قالب SEO (jekyll-seo-tag) هو المصدر الوحيد لكل وسوم الـ <head> التعريفية.
        ═══════════════════════════════════════════════ -->
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="{{ '/assets/css/fa-subset.css' | relative_url }}">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
   <!-- Google Tag Manager — نفس حاوية default.html (GTM-5BTRF7NP) لتوحيد القياس
        على كل صفحات الموقع بما فيها الوكيل. 2026-10-22 تدقيق GA4/GTM. -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+  <!-- ═══ Google Tag Manager — تحميل مؤجَّل (2026-10-24) ═══
+       كان gtm.js يُحمَّل فورًا في <head>: ~100 ك.ب JavaScript من طرف ثالث
+       يُنافس الصورة الرئيسية على النطاق الترددي ويستهلك المعالج (TBT) قبل
+       أول رسم — وهو أكثر بند يخفض درجة الجوال في PageSpeed.
+       الآن: طبقة dataLayer تُهيَّأ فورًا (فلا يُفقد أي حدث — الأحداث تُحفظ
+       وتُرسل عند التحميل)، وملف gtm.js يُطلب بعد اكتمال تحميل الصفحة أو عند
+       أول تفاعل حقيقي من الزائر، أيهما أسبق. القياس لا يتأثر. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    (function () {
+      var loaded = false;
+      function loadGtm() {
+        if (loaded) return;
+        loaded = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP';
+        document.head.appendChild(s);
+      }
+      function schedule() {
+        if ('requestIdleCallback' in window) requestIdleCallback(loadGtm, { timeout: 2500 });
+        else setTimeout(loadGtm, 1200);
+      }
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule, { once: true });
+      ['scroll', 'pointerdown', 'keydown'].forEach(function (ev) {
+        window.addEventListener(ev, loadGtm, { once: true, passive: true });
+      });
+    })();
+  </script>
 
   {{ page.extra_head }}
 </head>

@@ -11,13 +11,22 @@
    • الاستراتيجية: Network-First مع السقوط على الكاش عند انقطاع الشبكة.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'smsar-v3'; // رُفع 2026-10-18 لتحديث العملاء بعد تغيير قائمة الـprecache
+// ⚠️ 2026-10-24: رُفع إلى v4 بعد تقسيم الأنماط حسب نوع الصفحة. بدونه يظل
+// الزائر العائد يخدم HTML قديمًا من الكاش يشير إلى style.min.css بينما
+// الصفحات الجديدة تستخدم route-*.min.css — فلا يتغيّر شيء عنده ولا يرى التحسين.
+const CACHE_NAME = 'smsar-v4';
 const OFFLINE_URL = '/agent.html';
 
 const PRECACHE_URLS = [
   '/',
   '/agent.html',
-  '/assets/css/style.min.css', // الملف الذي تُحمّله كل التخطيطات فعليًا (style.css مصدر فقط)
+  // الأنماط صارت ملفًا لكل نوع صفحة (scripts/build-css.mjs)؛ نُبقي الملف
+  // القديم في القائمة لأنه ما زال احتياط الصفحات غير المسجّلة.
+  '/assets/css/style.min.css',
+  '/assets/css/route-home.min.css',
+  '/assets/css/route-agent.min.css',
+  '/assets/css/route-property.min.css',
+  '/assets/css/fa-subset.css',
   '/assets/img/logo.webp',
   '/manifest.json',
 ];

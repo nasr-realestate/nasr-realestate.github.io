@@ -74,13 +74,26 @@ hide_navbar: true
            كانت أكبر عنصر ظاهر يكتمل بعد 8.0 ثانية على الجوال. -->
       <!-- ⚠️ إصلاح (2026-10-17): width/height الحقيقيان من ملف الأبعاد بدل 1200×750
            الثابتة التي لم تطابق أي صورة فعلية، والإطار بنسبة الصورة نفسها (بلا قص). -->
+      {%- comment -%}
+        ⚠️ أداء (2026-10-24): كانت الصورة الكاملة (حتى 2048px · 147 ك.ب) تُنزل
+        كاملة على الجوال لعرض ~358px. الآن srcset بنسخة 800px (≈40 ك.ب) +
+        الأصل للشاشات الكبيرة، مع الحفاظ على نفس أبعاد العرض (بلا CLS).
+        النسخ تُولَّد بـ: node scripts/images/build-image-variants.mjs
+      {%- endcomment -%}
+      {%- assign img_800 = img_url | replace: '.webp', '-800w.webp' -%}
+      {%- assign img_800_url = site.baseurl | append: '/assets/img/properties/' | append: main_img | replace: '.webp', '-800w.webp' -%}
       <img src="{{ img_url }}"
            alt="{{ page.title }}"
            id="ppMainImage"
            {% if img_dims %}width="{{ img_dims.w }}" height="{{ img_dims.h }}"{% else %}width="1200" height="750"{% endif %}
+           {%- if img_dims %}
+           srcset="{{ img_800_url }} 800w, {{ img_url }} {{ img_dims.w }}w"
+           sizes="(max-width: 1100px) 100vw, 1100px"
+           {%- endif %}
            fetchpriority="high"
            decoding="async"
-           onclick="ppOpenLightbox(this.src)">
+           onclick="ppOpenLightbox(this.getAttribute('data-full') || this.src)"
+           data-full="{{ img_url }}">
       {%- comment -%} 2026-10-20: الوسم من _data/listing_facets.json (نفس تصنيف البطاقات وai-feed)
           بدل page.category وحده — كان محل للإيجار يظهر «للإيجار» ومحل للبيع «تجاري» بلا معاملة. {%- endcomment -%}
       {%- assign pf = site.data.listing_facets.listings[page.slug] -%}
@@ -299,13 +312,23 @@ hide_navbar: true
   <!-- ═══ Content (الوصف من ملف العقار) ═══ -->
   {% if content and content != "" %}
   <div class="pp-description">
-    {{ content }}
+    {%- comment -%}
+      ⚠️ أداء (2026-10-24): كل ملفات العقارات تحتوي داخل متنها على
+      <div class="property-main-hero"> بالصورة نفسها المعروضة في المعرض أعلاه —
+      أي أن الزائر كان ينزّل الصورة الكاملة (حتى 2048px · 147 ك.ب) ويراها
+      مرتين في الصفحة. نخفي هذا التكرار بـ CSS (في style.css) ونضيف
+      loading="lazy" لصورته هنا كطبقة أمان: بلا صندوق تخطيط لا يحمّلها المتصفح.
+    {%- endcomment -%}
+    {%- assign dup_img = '<img src="' | append: img_url | append: '"' -%}
+    {%- assign lazy_img = '<img loading="lazy" decoding="async" src="' | append: img_url | append: '"' -%}
+    {%- assign safe_content = content | replace: dup_img, lazy_img -%}
+    {{ safe_content }}
   </div>
   {% endif %}
 
   <!-- ═══ Agent Card ═══ -->
   <div class="pp-agent-card">
-    <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
+    <img src="{{ '/assets/img/team/tareq-160.webp' | relative_url }}"
          alt="طارق طنطاوي"
          class="pp-agent-avatar"
          onerror="this.style.display='none'">

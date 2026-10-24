@@ -4330,7 +4330,9 @@ body.homepage .hp-property-card:hover .hp-property-arrow {
   position: relative;
   padding: 4rem 2rem;
   border-radius: 24px;
-  background-image: url('/assets/img/properties/apartment-180m-nasr-city.webp');
+  /* 2026-10-24: نسخة مخصّصة للخلفية (900px · q45 ≈50 ك.ب) بدل الأصل
+     1080×1420 · 84 ك.ب — والخلفية مغطاة بتدرّج أسود 92% أصلًا فلا فرق بصري. */
+  background-image: url('/assets/img/properties/apartment-180m-nasr-city-cinematic.webp');
   background-size: cover;
   background-position: center;
   overflow: hidden;
@@ -7609,6 +7611,13 @@ a.u-cred-text:focus-visible {
    والصورة تُعرض contain = العقار كامل بلا قص ولا تشويه، مع سقف 85vh
    للصور الطويلة جدًا.
    ═══════════════════════════════════════════════════════════════ */
+
+/* ⚠️ أداء + تكرار بصري (2026-10-24): متن كل عقار يحتوي على نسخة ثانية من صورة
+   المعرض (‎.property-main-hero) داخل قسم «مواصفات العقار» — فكانت الصورة
+   الكاملة (حتى 2048px · 147 ك.ب) تُنزَّل مرة أخرى وتظهر مرتين في الصفحة.
+   المعرض أعلاه يعرضها بالأبعاد الصحيحة وsrcset، فلا داعي للتكرار. */
+body.layout-property_page .pp-description .property-main-hero { display: none; }
+
 body.layout-property_page .pp-gallery-main--natural { max-height: 85vh; }
 body.layout-property_page .pp-gallery-main--natural img { object-fit: contain; }
 

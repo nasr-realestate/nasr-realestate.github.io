@@ -16,7 +16,10 @@
     "check:site": "node scripts/check-built-site.mjs _site",
     "test:ai": "node --test _worker/tests/ai-artifacts.test.mjs _worker/tests/mcp-gateway.test.mjs scripts/tests/front-matter.test.mjs",
     "build:site": "node scripts/build-ai-artifacts.mjs --out=_site",
-    "lint:sonar": "eslint ."
+    "lint:sonar": "eslint .",
+    "css": "node scripts/build-css.mjs",
+    "images": "node scripts/images/build-image-variants.mjs",
+    "css:check": "node scripts/build-css.mjs --check"
   },
   "dependencies": {
     "express": "^4.21.2",
@@ -27,6 +30,8 @@
   },
   "devDependencies": {
     "eslint": "^10.12.0",
-    "eslint-plugin-sonarjs": "^4.2.2"
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "@fortawesome/fontawesome-free": "6.5.1",
+    "clean-css": "^5.3.3"
   }
 }

@@ -70,17 +70,17 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <!-- أداء (2026-10-02): يُوفّر رحلة ذهاب/إياب (DNS+TLS ≈ 300 مللي ثانية على الجوال)
        قبل أول طلب لـ GTM بدلاً من اكتشافه متأخراً أثناء التحليل -->
   <link rel="preconnect" href="https://www.googletagmanager.com">
 
   <!-- CSS المحلي أولاً (غير محجوب لجهة خارجية)
-       ⚠️ أداء (2026-10-02): نُخدم النسخة المُصغَّرة style.min.css بدل style.css
-       (250 ك.ب → 180 ك.ب خام، و40 ك.ب → 28 ك.ب بعد gzip أي −30%).
-       style.min.css ملف مُولَّد — المصدر الذي يُعدَّل هو style.css، ثم يُعاد تصغيره:
-         npx cleancss -O1 -o assets/css/style.min.css assets/css/style.css -->
-  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261022-brand-refresh' | relative_url }}">
+       ⚠️ أداء (2026-10-24): لم يبقَ ملف واحد لكل الموقع. يُبنى من style.css
+       ملف core.min.css + ملف لكل نوع صفحة، ويُحمَّل للصفحة ما تحتاجه فقط
+       (الرئيسية 58 ك.ب بدل 193 ك.ب). التفاصيل في _includes/css.html.
+       المصدر الذي يُعدَّل هو style.css، ثم:  node scripts/build-css.mjs
+       (ويبقى style.min.css مبنيًا كاحتياط للصفحات غير المسجّلة) -->
+  {% include css.html %}
 
   <!-- ═══════════════════════════════════════════════
        الخطوط وأيقونات Font Awesome — تحميل غير محجوب للعرض
@@ -94,12 +94,47 @@
         media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"></noscript>
 
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
+  <!-- ═══ الأيقونات (2026-10-24): ملف مقتطع محلي بدل 3 أصول من cdnjs
+       كان: all.min.css (~100 ك.ب) + fa-solid-900.woff2 (153 ك.ب) + fa-brands (115 ك.ب)
+             = ≈368 ك.ب لكل صفحة، وأغلبها أيقونات لا نستخدمها (1950 أيقونة، نستخدم 171).
+       الآن: fa-subset.css (9 ك.ب) + خطّان مقتطعان (17 ك.ب + 1 ك.ب) = ≈27 ك.ب.
+       المولّد: python3 scripts/fonts/subset-icons.py — أي أيقونة جديدة تحتاج تشغيله
+       (اختبار scripts/tests/icons-subset.test.mjs يمنع النشر لو نسيت). -->
+  <link rel="preload" href="{{ '/assets/fonts/fa-solid-subset.woff2' | relative_url }}"
+        as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ '/assets/css/fa-subset.css' | relative_url }}">
 
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5BTRF7NP');</script>
+  <!-- ═══ Google Tag Manager — تحميل مؤجَّل (2026-10-24) ═══
+       كان gtm.js يُحمَّل فورًا في <head>: ~100 ك.ب JavaScript من طرف ثالث
+       يُنافس الصورة الرئيسية على النطاق الترددي ويستهلك المعالج (TBT) قبل
+       أول رسم — وهو أكثر بند يخفض درجة الجوال في PageSpeed.
+       الآن: طبقة dataLayer تُهيَّأ فورًا (فلا يُفقد أي حدث — الأحداث تُحفظ
+       وتُرسل عند التحميل)، وملف gtm.js يُطلب بعد اكتمال تحميل الصفحة أو عند
+       أول تفاعل حقيقي من الزائر، أيهما أسبق. القياس لا يتأثر. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    (function () {
+      var loaded = false;
+      function loadGtm() {
+        if (loaded) return;
+        loaded = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP';
+        document.head.appendChild(s);
+      }
+      function schedule() {
+        if ('requestIdleCallback' in window) requestIdleCallback(loadGtm, { timeout: 2500 });
+        else setTimeout(loadGtm, 1200);
+      }
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule, { once: true });
+      ['scroll', 'pointerdown', 'keydown'].forEach(function (ev) {
+        window.addEventListener(ev, loadGtm, { once: true, passive: true });
+      });
+    })();
+  </script>
 
   
 </head>
@@ -137,7 +172,7 @@
     <!-- صورة طارق -->
     <!-- ⚠️ إصلاح: كان loading="lazy" على عنصر ثابت (fixed) ظاهر فوراً → يؤخر ظهور الزر.
          وأضيف width/height لمنع أي CLS. -->
-    <img src="{{ '/assets/img/team/tareq.webp' | relative_url }}"
+    <img src="{{ '/assets/img/team/tareq-160.webp' | relative_url }}"
          alt="طارق طنطاوي"
          width="54" height="54"
          loading="eager" decoding="async">
