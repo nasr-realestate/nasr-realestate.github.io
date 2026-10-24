@@ -1,0 +1,51 @@
+<script>
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  (function () {
+    var requested = false;
+    var scheduled = false;
+    var interactions = ['scroll', 'pointerdown', 'keydown'];
+
+    function loadGtm() {
+      if (requested) return;
+      requested = true;
+      interactions.forEach(function (name) { window.removeEventListener(name, schedule); });
+      var script = document.createElement('script');
+      script.async = true;
+      script.fetchPriority = 'low';
+      script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP';
+      document.head.appendChild(script);
+    }
+
+    function idle() {
+      if (window.scheduler && window.scheduler.postTask) {
+        window.scheduler.postTask(loadGtm, { priority: 'background' }).catch(loadGtm);
+      } else if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(loadGtm, { timeout: 2500 });
+      } else {
+        window.setTimeout(loadGtm, 0);
+      }
+    }
+
+    function paint() {
+      // rAF alone runs before paint; yielding a task inside it lets paint finish.
+      window.requestAnimationFrame(function () { window.setTimeout(idle, 0); });
+    }
+
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      if (document.fonts && document.fonts.ready) {
+        Promise.resolve(document.fonts.ready).then(paint, paint);
+      } else {
+        paint();
+      }
+    }
+
+    if (document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, { once: true });
+    interactions.forEach(function (name) {
+      window.addEventListener(name, schedule, { once: true, passive: true });
+    });
+  })();
+</script>

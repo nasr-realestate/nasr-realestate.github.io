@@ -5,3 +5,8 @@
 {%- endcomment -%}
 <link rel="preload" href="{{ '/assets/fonts/cairo-arabic-400-normal.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{{ '/assets/css/cairo.css?v=20261024-local' | relative_url }}">
+
+{%- if page.body_class == 'homepage' %}
+<!-- The hero uses 900 immediately. Discover it before CSS/font fallback layout. -->
+<link rel="preload" href="{{ '/assets/fonts/cairo-arabic-900-normal.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+{%- endif %}

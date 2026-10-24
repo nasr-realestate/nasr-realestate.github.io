@@ -7662,7 +7662,8 @@ body.homepage .hp-hero-badge {
   color: var(--brand-green-soft);
 }
 body.homepage .hp-hero-title {
-  max-width: 12ch;
+  max-width: 6.65em;
+  min-height: 3.6em;
   margin: 0 0 1rem;
   font-size: clamp(2.35rem, 5vw, 4.15rem);
   line-height: 1.2;
@@ -7865,7 +7866,8 @@ body.homepage .hp-final-cta {
 body.homepage .hp-final-cta h2 span { color: var(--brand-green); }
 body.homepage .hp-final-cta-buttons .hp-btn.primary { color: #fff; }
 body.homepage .hp-agent-name { color: var(--brand-green-soft); }
-body.homepage .hp-agent-badge { color: var(--brand-green-soft); }
+/* Dark ink on the green credibility badge: 1.41:1 previously, > 8:1 now. */
+body.homepage .hp-agent-badge { color: #050505; }
 body.homepage .hp-bottom-btn { min-height: 46px; }
 
 .floating-menu-btn {
@@ -7913,7 +7915,7 @@ body.homepage .hp-bottom-btn { min-height: 46px; }
 }
 @media (max-width: 480px) {
   body.homepage .hp-hero { padding: 2rem 1rem 1.25rem; }
-  body.homepage .hp-hero-title { max-width: 13ch; font-size: clamp(2.1rem, 10vw, 2.65rem); }
+  body.homepage .hp-hero-title { max-width: 7.2em; font-size: clamp(2.1rem, 10vw, 2.65rem); }
   body.homepage .hp-hero-visual { min-height: 245px; border-radius: 18px; }
   body.homepage .hp-hero-visual-caption { inset-inline: 14px; bottom: 14px; }
   body.homepage .hp-hero-actions { display: grid; grid-template-columns: 1fr 1fr; }
