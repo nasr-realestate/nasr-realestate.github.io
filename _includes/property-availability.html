@@ -1,0 +1,29 @@
+{%- comment -%}
+  Non-modal availability invitation, not an availability assertion. Keep it in
+  the description flow, not above the first viewport or over existing widgets.
+  Archived/out-of-area listings and explicit opt-outs do not get this invitation.
+{%- endcomment -%}
+{%- assign availability_facet = site.data.listing_facets.listings[page.slug] -%}
+{%- assign availability_status = page.status | default: '' | strip | downcase -%}
+{%- unless availability_facet.in_area == false or page.availability_prompt == false or availability_status == 'sold' or availability_status == 'rented' or availability_status == 'unavailable' -%}
+{%- assign availability_home = site.url | default: 'https://nasr-realestate.github.io' -%}
+{%- capture availability_text -%}
+السلام عليكم أ. طارق، العقار ده مناسب لطلبي وأرغب في التأكد إنه ما زال متاحًا قبل تنسيق الخطوة الجاية.
+العقار: {{ page.title }}
+كود العقار: {{ page.slug | default: page.id }}
+الرابط: {{ availability_home }}{{ page.url | relative_url }}
+{%- endcapture -%}
+<aside class="pp-availability" data-availability-prompt
+       data-property="{{ page.slug | default: page.id | escape }}"
+       aria-labelledby="ppAvailabilityTitle">
+  <button type="button" class="pp-availability-close" data-availability-close
+          aria-label="إغلاق تنبيه التأكد من التوافر">×</button>
+  <h2 id="ppAvailabilityTitle">العقار مناسب لطلبك؟</h2>
+  <p data-availability-message role="status" aria-live="polite" aria-atomic="true">خلّينا نتأكد لك إنه ما زال متاحًا، وننسّق الخطوة الجاية.</p>
+  <a class="pp-availability-contact" data-availability-contact
+     href="https://wa.me/201147758857?text={{ availability_text | url_encode }}"
+     target="_blank" rel="noopener noreferrer">تأكد من التوافر عبر واتساب</a>
+</aside>
+<noscript><style>body.layout-property_page .pp-availability { visibility: visible; }</style></noscript>
+<script src="{{ '/assets/js/property-availability.js?v=20261024' | relative_url }}" defer></script>
+{%- endunless -%}

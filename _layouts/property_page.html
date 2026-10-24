@@ -311,7 +311,8 @@ hide_navbar: true
 
   <!-- ═══ Content (الوصف من ملف العقار) ═══ -->
   {% if content and content != "" %}
-  <div class="pp-description">
+  <div class="pp-description" id="ppDescription">
+    {% include property-availability.html %}
     {%- comment -%}
       ⚠️ أداء (2026-10-24): كل ملفات العقارات تحتوي داخل متنها على
       <div class="property-main-hero"> بالصورة نفسها المعروضة في المعرض أعلاه —
