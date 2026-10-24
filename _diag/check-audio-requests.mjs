@@ -29,6 +29,20 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { grab, id3Frames, occurrences, parseComm, parseTextFrame } from './audio-check-utils.mjs';
 
+/**
+ * أرشيف الإعلانات الصوتية للطلبات — يُستخدم لمعرفة أي ملف صوتي مسموح له بالبقاء
+ * بعد حذف طلبه تلقائيًا (قاعدة السبعة أيام في cleanup-requests.yml).
+ * قبل 2026-10-24 كان المسموح ملفًا واحدًا مثبتًا بالاسم؛ أي إعلان طلب جديد
+ * كان سيُسقط البناء لحظة انتهاء صلاحية طلبه. الآن: أي slug مُوثَّق في السجل
+ * بحقل `retiresWithRequest: true` (أو `retiredAt`) يُقبل أرشيفًا موثَّقًا.
+ */
+const VOICE_LOG = JSON.parse(await readFile(path.join('_data', 'audio_voice_log.json'), 'utf8'));
+const ARCHIVED_SLUGS = new Set(
+  (VOICE_LOG.entries ?? [])
+    .filter((e) => e && (e.retiredAt || e.retiresWithRequest === true))
+    .map((e) => e.slug),
+);
+
 const outDir = process.argv[2] ?? '_site';
 const AUDIO_DIR = path.join('assets', 'audio', 'requests');
 
@@ -57,13 +71,17 @@ const EXPECTED_MP3 = new Map([[RETIRED.slug, RETIRED.mp3Sha]]);
 const EXPECTED_DURATION = new Map([[RETIRED.slug, RETIRED.duration]]);
 
 const ID_FRAMES = ['TIT2', 'TPE1', 'TALB', 'TDRC', 'TCON', 'TSSE', 'COMM'];
+// ⚠️ 2026-10-24: TDRC كان مثبتًا على «2026-10-15» (تاريخ أول دفعة إعلانات طلبات)
+// فيفشل أي إعلان طلب جديد بتاريخ إنتاج مختلف. المواصفة (_data/voice_identity.json
+// → id3.perAdValues.TDRC) تقول: تاريخ الإنتاج بصيغة YYYY-MM-DD. لذلك صار
+// التثبيت على **شكل** التاريخ لا على قيمته، مع بقاء كل الوسوم الأخرى ثابتة.
 const METADATA = new Map([
   ['TPE1', 'سمسار طلبك — طارق طنطاوي'],
   ['TALB', 'إعلانات سمسار طلبك'],
-  ['TDRC', '2026-10-15'],
   ['TCON', 'إعلان عقاري'],
   ['TSSE', 'Lavf59.27.100'],
 ]);
+const TDRC_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const isTrueField = (front, field) => new RegExp(`^${field}:\\s*true\\s*$`, 'm').test(front);
@@ -97,9 +115,23 @@ function checkMp3Bytes(slug, bytes, script) {
   for (const [id, value] of METADATA) {
     assert.equal(parseTextFrame(frames.find((frame) => frame.id === id)), value, `${slug}: ${id} value`);
   }
+  assert.match(parseTextFrame(frames.find((frame) => frame.id === 'TDRC')) ?? '', TDRC_RE, `${slug}: TDRC must be YYYY-MM-DD`);
   if (slug === RETIRED.slug) assert.ok(parseTextFrame(frames[0]).includes(RETIRED.titleIncludes), `${slug}: TIT2 request title`);
+  // ⚠️ 2026-10-24: المواصفة المركزية (_data/voice_identity.json → id3.comm) تعتمد
+  // وصف «نص الإعلان» للملفات الجديدة، بينما هذا الفحص كان يشترط وصفًا فارغًا
+  // (سلوك الدفعات القديمة قبل 2026-10-18). صار يقبل الاثنين ويشترط اللغة
+  // والبوم فقط — مع بقاء مقارنة نص التعليق بالسيناريو كما هي أدناه.
   const comm = frames.at(-1).body;
-  assert.deepEqual([...comm.subarray(1, 8)], [97, 114, 97, 255, 254, 0, 0], `${slug}: COMM must be ara with an empty description`);
+  assert.equal(comm[0], 1, `${slug}: COMM must be UTF-16`);
+  assert.equal(comm.toString('ascii', 1, 4), 'ara', `${slug}: COMM language must be ara`);
+  assert.deepEqual([...comm.subarray(4, 6)], [255, 254], `${slug}: COMM must carry a UTF-16 BOM`);
+  const commDesc = (() => {
+    let pos = 6;
+    const parts = [];
+    while (pos + 1 < comm.length && (comm[pos] !== 0 || comm[pos + 1] !== 0)) { parts.push(comm.subarray(pos, pos + 2)); pos += 2; }
+    return Buffer.concat(parts).toString('utf16le').replace(/\uFEFF/g, '');
+  })();
+  assert.ok(commDesc === '' || commDesc === 'نص الإعلان', `${slug}: COMM description must be empty or «نص الإعلان» (وجد: «${commDesc}»)`);
   // مقارنة COMM بنص الإعلان ممكنة فقط حين تكون الصفحة موجودة (النص مصدره front matter).
   if (script !== undefined) assert.equal(parseComm(bytes), script, `${slug}: COMM must equal audio_script verbatim`);
 }
@@ -184,12 +216,13 @@ for (const file of mp3Files) {
   assert.equal(sha(builtBytes), sha(sourceBytes), `${slug}: built MP3 differs from the source asset`);
   checkMp3Bytes(slug, sourceBytes, undefined);
   if (withAudio.has(slug)) continue;
-  assert.equal(slug, RETIRED.slug, `${slug}: an audio file exists for a request that is neither live-and-opted-in nor the known retired one`);
+  const archived = slug === RETIRED.slug || ARCHIVED_SLUGS.has(slug);
+  assert.ok(archived, `${slug}: an audio file exists for a request that is neither live-and-opted-in nor an archived (documented) one`);
   orphans.push(file);
 }
 
 if (orphans.length) {
-  console.log(`ℹ️  ${orphans.join(', ')}: طلب منتهي حُذف آليًا بقاعدة السبعة أيام (d0ff0fd) وصفحته لم تعد في البناء؛ الملف الصوتي المنشور باقٍ ومُتحقَّق منه.`);
+  console.log(`ℹ️  ${orphans.join(', ')}: طلب منتهي حُذف آليًا بقاعدة السبعة أيام وصفحته لم تعد في البناء؛ الملف الصوتي المنشور باقٍ ومُتحقَّق منه (مؤرشف في _data/audio_voice_log.json).`);
 }
 console.log(
   `${collection.length} request page(s): ${withAudio.size} with an audio player, ${collection.length - withAudio.size} without` +
