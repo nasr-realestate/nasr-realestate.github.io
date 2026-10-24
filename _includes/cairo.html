@@ -1,0 +1,7 @@
+{%- comment -%}
+  Self-hosted OFL Cairo, same shared weights as before (400/600/700/900).
+  Arabic regular is preloaded; Unicode subsets download only when used.
+  npm run fonts regenerates committed files, npm run fonts:check checks drift.
+{%- endcomment -%}
+<link rel="preload" href="{{ '/assets/fonts/cairo-arabic-400-normal.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ '/assets/css/cairo.css?v=20261024-local' | relative_url }}">

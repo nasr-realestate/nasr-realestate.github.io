@@ -122,7 +122,12 @@ function classify(block) {
       if (!sel) continue;
       const found = scopesForSelector(sel);
       if (found.length) found.forEach((s) => innerScopes.add(s));
-      else hasGlobal = true;
+      // A comma list may mix a shared selector and a page-scoped one. Keep the
+      // entire block in every route so the shared selector is never dropped
+      // (notably reduced-motion on the contact ring).
+      if (sel.split(',').some((part) => part.trim() && !scopesForSelector(part).length)) {
+        hasGlobal = true;
+      }
     }
     if (innerScopes.size === 0) return { core: true, scopes: [] };
     if (hasGlobal) return { core: true, scopes: [] };
@@ -187,6 +192,17 @@ function main() {
   for (const scope of SCOPES) {
     const stale = path.join(OUT_DIR, `${scope}.min.css`);
     if (fs.existsSync(stale)) fs.unlinkSync(stale);
+  }
+
+  // ⚠️ 2026-10-24: style.min.css هو احتياط أي مسار غير مسجّل (وسابقًا يُبنى
+  // بأمر يدوي `npx cleancss` فلا يبقى متزامنًا مع المصدر). صار يُبنى هنا مع
+  // البقية، و`--check` يتحقق منه أيضًا — فلا ينشر الموقع احتياطًا قديمًا.
+  const fullMin = `${minify(css)}\n`;
+  const fullPath = path.join(OUT_DIR, 'style.min.css');
+  const fullExisting = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : null;
+  if (fullExisting !== fullMin) {
+    if (checkOnly) stale.push('style.min.css');
+    else fs.writeFileSync(fullPath, fullMin, 'utf8');
   }
 
   const mapJson = `${JSON.stringify(manifest, null, 2)}\n`;
