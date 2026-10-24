@@ -124,6 +124,16 @@ defaults:
       path: "assets/tools"
     values:
       sitemap: false
+  # 2026-10-24 — ملف تحقّق Google Search Console: محتواه سطر واحد ثابت
+  # («google-site-verification: google1201055475d84276.html») ولا يمكن إضافة
+  # front matter له (يتغيّر محتواه فيفشل التحقق). لكن Jekyll يبنيه كصفحة
+  # افتراضية فيدخل sitemap.xml بلا canonical، فيفشل فحص سلامة البناء
+  # (scripts/check-built-site.mjs) — كان قائمًا على master قبل هذا التغيير.
+  # الحل: إبقاء الملف كما هو حرفيًا واستثناؤه من sitemap فقط.
+  - scope:
+      path: "google1201055475d84276.html"
+    values:
+      sitemap: false
 
   # 2026-10-20 — وحدات خارج نطاق مدينة نصر (نفس OUT_OF_SCOPE_IDS في مزامنة D1،
   # ومولّدة من _data/listing_facets.json). تبقى صفحاتها متاحة بالرابط المباشر
