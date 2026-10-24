@@ -176,10 +176,12 @@ hide_navbar: true
       </div>
       <div class="rq-budget-value">{{ page.budget }}</div>
     </div>
+    {% unless page.budget_negotiable == false %}
     <span class="rq-budget-note">
       <i class="fas fa-handshake"></i>
       الميزانية قابلة للتفاوض
     </span>
+    {% endunless %}
   </div>
   {% endif %}
 
@@ -326,12 +328,14 @@ hide_navbar: true
       </div>
     </details>
 
+    {% unless page.budget_negotiable == false %}
     <details class="rq-faq-item">
       <summary>ما المقصود بـ"الميزانية قابلة للتفاوض"؟</summary>
       <div class="rq-faq-answer">
         الميزانية المعروضة هي الحد الأقصى المرصود من العميل. في بعض الأحيان يمكن التفاوض على السعر النهائي حسب مواصفات العقار وجودته.
       </div>
     </details>
+    {% endunless %}
 
     <details class="rq-faq-item">
       <summary>هل توجد طلبات أخرى مشابهة؟</summary>

@@ -680,3 +680,54 @@ test("الاستبدال لا يحدث إلا بأثر موثَّق: البصم�
     assert.equal(hit, undefined, `${slug}: محمي من الاستبدال`);
   }
 });
+
+// A newly produced request must pass exactly the same speaker gate as properties,
+// including after the scheduled 7-day deletion of its source page.
+test('new request audio retains identity checks before and after source retirement', () => {
+  const entry = LOG.entries.find(e => e.slug === 'shop-rent-request-women-beauty-center-nasr-city-150plus-2026-10-24');
+  assert.ok(entry);
+  const fx = fixture();
+  try {
+    for (const rel of [entry.audioFile, entry.propertySource]) {
+      const dest = path.join(fx.root, rel);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      if (fs.existsSync(path.join(REPO_ROOT, rel))) fs.copyFileSync(path.join(REPO_ROOT, rel), dest);
+      else {
+        // The actual request may already have expired. Construct a fixture page
+        // from its public scalar snapshot, then exercise deletion again.
+        const fields = Object.entries(entry.publishedRequest).filter(([, v]) => !Array.isArray(v));
+        fs.writeFileSync(dest, '---\n' + fields.map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join('\n') + '\n---\n');
+      }
+    }
+    const destLog = path.join(fx.root, '_data/audio_voice_log.json');
+    const log = JSON.parse(fs.readFileSync(destLog, 'utf8'));
+    const requestEntry = JSON.parse(JSON.stringify(entry));
+    log.entries.push(requestEntry);
+    log.totals.audioFiles = log.entries.length;
+    const save = () => fs.writeFileSync(destLog, JSON.stringify(log));
+    save();
+    let r = runGate(fx.root);
+    assert.equal(r.code, 0, r.out);
+    fs.unlinkSync(path.join(fx.root, entry.propertySource));
+    r = runGate(fx.root);
+    assert.equal(r.code, 0, r.out);
+    requestEntry.speakerCosineToReference = 0.8;
+    save();
+    r = runGate(fx.root);
+    assert.equal(r.code, 1);
+    assert.match(r.out, /تحت الحد المرفوض/);
+    requestEntry.speakerCosineToReference = 0.85;
+    requestEntry.ownerOverride = true;
+    save();
+    r = runGate(fx.root);
+    assert.equal(r.code, 1);
+    assert.match(r.out, /ownerOverride ممنوع/);
+    requestEntry.ownerOverride = false;
+    requestEntry.speakerCosineToReference = entry.speakerCosineToReference;
+    requestEntry.retiresWithRequest = false;
+    save();
+    r = runGate(fx.root);
+    assert.equal(r.code, 1, 'unknown orphan must remain blocked');
+    assert.match(r.out, /غير مرتبط/);
+  } finally { fx.cleanup(); }
+});
