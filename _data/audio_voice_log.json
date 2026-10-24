@@ -28,15 +28,15 @@
   "measuredAt": "2026-10-21",
   "measurementTool": "scripts/audio/measure_voice_identity.py",
   "totals": {
-    "audioFiles": 108,
-    "linkedToPublishedPages": 107,
+    "audioFiles": 109,
+    "linkedToPublishedPages": 108,
     "retiredOrphans": 1,
     "ownerChosenReference": 1,
-    "producedUnderSpec": 105,
+    "producedUnderSpec": 107,
     "legacyGrandfathered": 1,
     "byClassification": {
       "reference": 1,
-      "clear-difference": 24,
+      "clear-difference": 25,
       "compatible-with-reference": 83
     }
   },
@@ -3895,6 +3895,53 @@
       "replacesPublishedFile": false,
       "originalSha256BeforeReplacement": null,
       "note": "إعلان جديد؛ اعتماد المالك الصريح للنشر بعد معاينة الصوت المختار؛ تسجيل الانحراف بالقياس دون ادعاء تطابق"
+    },
+    {
+      "slug": "request-office-rent-ahly-hassan-maamoun-2026-10-23",
+      "audioFile": "assets/audio/requests/request-office-rent-ahly-hassan-maamoun-2026-10-23.mp3",
+      "propertySource": "_requests/2026-10-23-request-office-rent-ahly-hassan-maamoun.md",
+      "origin": "produced-under-request-standard",
+      "productionSession": "requests b3 (2026-10-24) — معيار إعلانات الطلبات: _diag/check-audio-requests.mjs + scripts/audio/verify-voice-identity.mjs",
+      "producedAt": "2026-10-24",
+      "engine": "Arena built-in TTS",
+      "voiceId": "voice-00",
+      "voiceIdScope": "session-local",
+      "voiceIdPersistent": false,
+      "auditionRounds": 1,
+      "auditionLanguage": "ar-EG",
+      "auditionTextSource": "نص الإعلان حرفيًا (نفس الملف المنطوق) — المعاينة كانت على النص نفسه فاختار المالك voice-00",
+      "speakerCosineToReference": 0.8501,
+      "sameVoiceBandMin": 0.9116,
+      "sameVoiceBandP5": 0.9351,
+      "classification": "clear-difference",
+      "approval": "owner-in-session",
+      "approvalReason": "المالك اختار الصوت بنفسه في الجلسة (add_voice) بعد سماع المعاينة على نص الإعلان ذاته؛ انحراف الهوية عن المرجع سلوك معروف للمحرك (لا Voice ID دائم ولا reference conditioning) وموثَّق في المواصفة.",
+      "ownerOverride": true,
+      "ownerOverrideReason": "cos=0.8501 تحت حد الهوية 0.9116 — المحرك لا يقبل MP3 مرجعيًا (SPEC.engine.hardLimit)، والاختيار البشري هو الضابط الوحيد المتاح.",
+      "ownerOverrideApprovedBy": "مالك المشروع",
+      "identityLimit": "لا يوجد في المحرك أي مدخل يقبل ملف MP3 مرجعي أو Voice ID دائم — أفضل متاح = معاينة بشرية في كل جلسة + قياس موضوعي نسبي.",
+      "durationSeconds": 19.824,
+      "durationLabel": "20 ثانية",
+      "bytes": 81396,
+      "sha256": "142f2209a557d75476017a0ad794fb08b93f55a52ab4426bc5473f0346beff05",
+      "script": "عايز شقة إيجار إداري تصلح مكتب خاص في محيط النادي الأهلي وحسن المأمون؟ في مدينة نصر، وقريبة من المحاور الرئيسية والمواصلات. الإيجار من عشرة لخمستاشر ألف جنيه في الشهر. لو عجبك، كلمني دلوقتي على واتساب سمسار طلبك ونحدد معاينة.",
+      "consistencyTriads": [
+        0.9502,
+        0.9434,
+        0.9455
+      ],
+      "consistencyMean": 0.9464,
+      "measuredWith": "scripts/audio/measure_voice_identity.py (resemblyzer 0.1.4 / GE2E 256D)",
+      "measuredAt": "2026-10-24",
+      "rhythm": {
+        "audioSeconds": 19.76,
+        "voicedSeconds": 15.66,
+        "voicedRatio": 0.793,
+        "pauseCount": 13,
+        "pauseMaxSeconds": 0.5
+      },
+      "retiresWithRequest": true,
+      "retiresWithRequestNote": "الطلبات تُحذف آليًا بعد 7 أيام من تاريخها (cleanup-requests.yml). الملف الصوتي يبقى منشورًا ومُتحقَّقًا ببصمته، فيُسجَّل هنا كأصل مؤرشف حتى لا يُسقط البناء عند الحذف."
     }
   ]
 }
