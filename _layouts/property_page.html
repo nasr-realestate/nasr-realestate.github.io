@@ -29,6 +29,7 @@ hide_navbar: true
 {%- assign wa_code  = page.slug | default: page.id -%}
 {%- assign wa_price_label = "السعر" -%}
 {%- if page.category contains "rent" -%}{%- assign wa_price_label = "الإيجار الشهري" -%}{%- endif -%}
+{%- assign wa_home = site.url | default: 'https://nasr-realestate.github.io' -%}
 {%- capture wa_text -%}
 السلام عليكم أ. طارق،
 
@@ -50,9 +51,9 @@ hide_navbar: true
 {% if page.finish %}✨ التشطيب: {{ page.finish }}
 {% endif %}
 🔗 رابط العقار:
-{{ site.url }}{{ page.url }}
+{{ wa_home }}{{ page.url | relative_url }}
 
-أرجو إفادتي بالتفاصيل والتوافر.
+أرغب في التأكد من أن العقار ما زال متاحًا، ومعرفة التفاصيل قبل تنسيق موعد للمعاينة.
 {%- endcapture -%}
 
 <div class="pp-container">
@@ -240,7 +241,7 @@ hide_navbar: true
        rel="noopener noreferrer"
        class="pp-action-btn wa"
        id="ppWaBtn">
-      <i class="fab fa-whatsapp"></i> استفسار واتساب
+      <i class="fab fa-whatsapp"></i> اسأل عن التفاصيل والتوافر
     </a>
 
     <a href="tel:+201147758857"
@@ -426,7 +427,7 @@ hide_navbar: true
     <details class="pp-faq-item">
       <summary>كيف أحجز معاينة للعقار؟</summary>
       <div class="pp-faq-answer">
-        اضغط على زر "استفسار واتساب" أو "اتصل الآن" — وسيتم تحديد موعد المعاينة في أقرب وقت. المعاينات متاحة أيام السبت–الخميس، من 12 ظهراً حتى 9 مساءً.
+        اضغط على زر "اسأل عن التفاصيل والتوافر" أو "اتصل الآن" للتأكد من التوافر والتفاصيل أولًا، ثم تنسيق موعد مناسب للمعاينة. المعاينات متاحة أيام السبت–الخميس، من 12 ظهراً حتى 9 مساءً.
       </div>
     </details>
 
@@ -459,7 +460,7 @@ hide_navbar: true
    target="_blank"
    rel="noopener noreferrer"
    class="pp-floating-wa"
-   aria-label="تواصل واتساب">
+   aria-label="اسأل عن تفاصيل العقار وتوافره عبر واتساب">
   <i class="fab fa-whatsapp"></i>
 </a>
 

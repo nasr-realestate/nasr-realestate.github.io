@@ -21,7 +21,7 @@ function target() {
 function boot({ stored = new Map(), property = 'unit-a', blockedStorage = false, io = true, missing = false } = {}) {
   let now = 0, id = 0, callback, disconnected = 0, focusCount = 0, options;
   const pending = new Map();
-  const close = target(), contact = target(), message = { textContent: 'خلّينا نتأكد لك إنه ما زال متاحًا، وننسّق الخطوة الجاية.' };
+  const close = target(), inquiry = target(), message = { textContent: 'خلّينا نتأكد لك إنه ما زال متاحًا، وننسّق الخطوة الجاية.' };
   const description = { ...target(), attrs: new Map(),
     hasAttribute(name) { return this.attrs.has(name); },
     setAttribute(name, value) { this.attrs.set(name, value); },
@@ -32,10 +32,11 @@ function boot({ stored = new Map(), property = 'unit-a', blockedStorage = false,
   const prompt = { ...target(), hidden: false,
     getAttribute: name => name === 'data-property' ? property : null,
     classList: { add: name => classes.add(name) },
-    querySelector: s => ({ '[data-availability-close]': close, '[data-availability-contact]': contact, '[data-availability-message]': message })[s],
+    querySelector: s => ({ '[data-availability-close]': close, '[data-availability-message]': message })[s],
     closest: () => description,
   };
-  const document = { ...target(), visibilityState: 'visible', querySelector: () => missing ? null : prompt };
+  const document = { ...target(), visibilityState: 'visible', querySelector: () => missing ? null : prompt,
+    querySelectorAll: () => [inquiry] };
   const window = {
     sessionStorage: {
       getItem: key => { if (blockedStorage) throw Error('denied'); return stored.get(key) ?? null; },
@@ -52,7 +53,7 @@ function boot({ stored = new Map(), property = 'unit-a', blockedStorage = false,
   // No fetch, window.open, alerts or focus APIs are provided: auto-contact fails.
   vm.runInNewContext(code, { window, document });
   return {
-    prompt, close, contact, description, document, pending, stored, classes,
+    prompt, close, inquiry, description, document, pending, stored, classes,
     disconnected: () => disconnected, focused: () => focusCount,
     options: () => options,
     intersect: (visible, ratio = 1) => callback?.([{ target: prompt, isIntersecting: visible, intersectionRatio: ratio }]),
@@ -112,11 +113,26 @@ test('closing and Escape hide the invitation and preserve keyboard context', () 
   }
 });
 
-test('CTA leaves the native user-initiated link action intact; denied storage is safe', () => {
+test('text-only reminder works and can close when storage is denied', () => {
   const a = boot({ blockedStorage: true }); a.intersect(true); a.advance(2000);
-  a.contact.fire('click', { preventDefault() { assert.fail('native navigation must not be cancelled'); } });
-  assert.equal(a.prompt.hidden, true); assert.equal(a.focused(), 0);
+  assert.equal(a.classes.has('is-visible'), true);
+  a.close.fire('click');
+  assert.equal(a.prompt.hidden, true); assert.equal(a.focused(), 1);
   a.intersect(true); a.advance(5000); assert.equal(a.pending.size, 0);
+});
+
+test('using the existing inquiry button suppresses a later reminder without cancelling navigation', () => {
+  const a = boot({ blockedStorage: true });
+  a.intersect(true); a.advance(1000);
+  a.inquiry.fire('click', { preventDefault() { assert.fail('must preserve the native inquiry'); } });
+  assert.equal(a.prompt.hidden, true);
+  a.intersect(true); a.advance(5000);
+  assert.equal(a.pending.size, 0);
+  assert.equal(a.classes.has('is-visible'), false);
+  const b = boot();
+  b.inquiry.fire('click');
+  const revisited = boot({ stored: b.stored });
+  assert.equal(revisited.prompt.hidden, true);
 });
 
 test('no observer gets a static callout; pages without a prompt do nothing', () => {
@@ -136,19 +152,13 @@ function context({ inArea = true, status = 'available', enabled = true } = {}) {
   };
 }
 
-test('message identifies the property and asks for verification, not a stock promise', async () => {
+test('reminder is text only and directs users to the combined primary action', async () => {
   const h = await engine.parseAndRender(template, context());
   assert.equal((h.match(/data-availability-prompt/g) || []).length, 1);
-  const href = h.match(/href="(https:\/\/wa.me\/[^\"]+)"/)[1];
-  const url = new URL(href);
-  assert.equal(url.pathname, '/201147758857');
-  const text = url.searchParams.get('text');
-  assert.ok(text.includes('شقة 200م & اختبار "العنوان"'));
-  assert.ok(text.includes('https://nasr-realestate.github.io/properties/example/'));
-  assert.ok(text.includes('التأكد'));
+  assert.match(h, /قبل ترتيب المعاينة/);
+  assert.match(h, /اسأل عن التفاصيل والتوافر/);
   assert.match(h, /aria-live="polite"/);
-  assert.match(h, /target="_blank" rel="noopener noreferrer"/);
-  assert.doesNotMatch(h, /aria-modal|role="dialog"|autofocus|window.open/);
+  assert.doesNotMatch(h, /<a\b|wa\.me|data-availability-contact|aria-modal|role="dialog"|autofocus|window.open/);
   assert.match(h, /<noscript>/);
 });
 
@@ -178,6 +188,20 @@ test('rendered property has one invitation inside its description, other pages h
     assert.ok(html.indexOf('id="ppDescription"') < html.indexOf('data-availability-prompt'));
     assert.ok(html.indexOf('data-availability-prompt') < html.indexOf('class="pp-agent-card"'));
     assert.ok(html.includes('id="ppMainImage"'));
+    const primary = html.match(/<a[^>]+id="ppWaBtn"[^>]*>[\s\S]*?<\/a>/)[0];
+    assert.ok(primary.includes('اسأل عن التفاصيل والتوافر'));
+    const href = primary.match(/href="([^"]+)"/)[1].replace(/&amp;/g, '&');
+    const url = new URL(href);
+    assert.equal(url.pathname, '/201147758857');
+    const message = url.searchParams.get('text');
+    assert.ok(message.includes('ما زال متاحًا'));
+    assert.ok(message.includes('معرفة التفاصيل'));
+    assert.ok(message.includes('موعد للمعاينة'));
+    assert.ok(message.includes('https://nasr-realestate.github.io/properties/apartment-sale-moussa-el-kazem-nasr-city-280m/'));
+    const inquiries = [...html.matchAll(/<a[^>]+href="(https:\/\/wa.me\/201147758857\?text=[^"]+)"[^>]+class="(?:pp-action-btn wa|pp-agent-btn|pp-floating-wa)"/g)];
+    assert.equal(inquiries.length, 3);
+    assert.ok(inquiries.every(m => m[1] === inquiries[0][1]));
+    assert.doesNotMatch(html, /data-availability-contact|pp-availability-contact|استفسار واتساب/);
     for (const p of ['/', '/requests/', '/agent.html', '/properties/']) {
       const h = await (await fetch(base + p)).text();
       assert.doesNotMatch(h, /data-availability-prompt|property-availability.js/);
