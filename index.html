@@ -193,7 +193,10 @@ body_class: "homepage"
         <a href="{{ prop.url | relative_url }}" class="hp-property-card">
           <div class="hp-property-img-wrap">
             {% if f.card_image %}
+            {%- assign preview = site.data.home_previews[f.card_image] -%}
             <img src="{{ f.card_image | relative_url }}"
+                 {% if preview %}srcset="{{ preview.src | relative_url }} 400w, {{ f.card_image | relative_url }} {{ preview.original_width }}w"
+                 sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 1000px) 50vw, 400px"{% endif %}
                  alt="{{ prop.title | escape }}"
                  class="hp-property-img"
                  width="800" height="600"

@@ -50,37 +50,9 @@
 
   <!-- Google Tag Manager — نفس حاوية default.html (GTM-5BTRF7NP) لتوحيد القياس
        على كل صفحات الموقع بما فيها الوكيل. 2026-10-22 تدقيق GA4/GTM. -->
-  <!-- ═══ Google Tag Manager — تحميل مؤجَّل (2026-10-24) ═══
-       كان gtm.js يُحمَّل فورًا في <head>: ~100 ك.ب JavaScript من طرف ثالث
-       يُنافس الصورة الرئيسية على النطاق الترددي ويستهلك المعالج (TBT) قبل
-       أول رسم — وهو أكثر بند يخفض درجة الجوال في PageSpeed.
-       الآن: طبقة dataLayer تُهيَّأ فورًا (فلا يُفقد أي حدث — الأحداث تُحفظ
-       وتُرسل عند التحميل)، وملف gtm.js يُطلب بعد اكتمال تحميل الصفحة أو عند
-       أول تفاعل حقيقي من الزائر، أيهما أسبق. القياس لا يتأثر. -->
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-    (function () {
-      var loaded = false;
-      function loadGtm() {
-        if (loaded) return;
-        loaded = true;
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5BTRF7NP';
-        document.head.appendChild(s);
-      }
-      function schedule() {
-        if ('requestIdleCallback' in window) requestIdleCallback(loadGtm, { timeout: 2500 });
-        else setTimeout(loadGtm, 1200);
-      }
-      if (document.readyState === 'complete') schedule();
-      else window.addEventListener('load', schedule, { once: true });
-      ['scroll', 'pointerdown', 'keydown'].forEach(function (ev) {
-        window.addEventListener(ev, loadGtm, { once: true, passive: true });
-      });
-    })();
-  </script>
+  <!-- Same analytics container: GTM-5BTRF7NP. Queue events immediately; yield
+       to fonts/paint before fetching analytics. No fixed score-oriented delay. -->
+  {% include analytics.html %}
 
   {{ page.extra_head }}
 </head>
