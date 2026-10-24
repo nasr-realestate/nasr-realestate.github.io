@@ -225,7 +225,7 @@ body:not(.page-agent):not(.page-add):not(.page-luxury):not(.page-valuation):not(
       outline: none;
       padding: 0;
       text-decoration: none;
-      animation: agentPulse 2.5s infinite;
+      /* Fixed shadow; compositor ring is defined below. */
     }
 .agent-float-btn:hover {
       transform: scale(1.08);
@@ -1096,7 +1096,7 @@ body.layout-property_page .pp-faq-answer {
     box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5);
     text-decoration: none;
     z-index: 9999;
-    animation: ppWaPulse 2.5s infinite;
+    /* Fixed shadow; compositor ring is defined below. */
     transition: transform 0.2s;
   }
 body.layout-property_page .pp-floating-wa:hover {
@@ -1619,7 +1619,7 @@ body.layout-request_page .rq-faq-answer {
     box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5);
     text-decoration: none;
     z-index: 9999;
-    animation: rqWaPulse 2.5s infinite;
+    /* Fixed shadow; compositor ring is defined below. */
     transition: transform 0.2s;
   }
 body.layout-request_page .rq-floating-wa:hover { transform: scale(1.1); }
@@ -7125,26 +7125,11 @@ body.page-generator .btn-group { grid-template-columns: 1fr; }
 
 /* ── fadeInUp (القاعدة) ── */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-/* ── agentPulse (زر الوكيل) ── */
-@keyframes agentPulse {
-      0%, 100% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4), 0 2px 8px rgba(0,0,0,0.2); }
-      50% { box-shadow: 0 4px 28px rgba(37, 211, 102, 0.7), 0 2px 8px rgba(0,0,0,0.2); }
-    }
 /* ── agentDotPulse (زر الوكيل) ── */
 @keyframes agentDotPulse {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.6; transform: scale(1.2); }
     }
-/* ── ppWaPulse (صفحة property_page) ── */
-@keyframes ppWaPulse {
-    0%, 100% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5); }
-    50% { box-shadow: 0 8px 32px rgba(37, 211, 102, 0.8); }
-  }
-/* ── rqWaPulse (صفحة request_page) ── */
-@keyframes rqWaPulse {
-    0%, 100% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.5); }
-    50% { box-shadow: 0 8px 32px rgba(37, 211, 102, 0.8); }
-  }
 /* ── e404pulse (صفحة 404) ── */
 @keyframes e404pulse {
     0%, 100% {
@@ -8078,4 +8063,54 @@ body.page-valuation .nav-link { min-height: 44px; }
   body.page-luxury .ui-overlay { right: 72px; }
   body.page-luxury .ui-brand { font-size: 0.8rem; }
   body.page-luxury .ui-exit { white-space: nowrap; }
+}
+
+/* Rendering performance — 2026-10-24.
+   Keep all content in HTML, searchable and accessible, while letting supporting
+   browsers skip off-screen layout/paint. auto remembers the measured size once
+   a section is visited. No JS visibility toggles or hidden navigation targets. */
+@supports (content-visibility: auto) {
+  body.homepage .hp-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+  body.layout-property_page .pp-description .detail-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
+  }
+}
+
+/* Previously these fixed buttons animated box-shadow indefinitely (repaint on
+   every frame). Keep the original static shadow; animate only a decorative
+   ring's transform/opacity. The real link and its hit area do not move. */
+@keyframes contactRing {
+  0% { transform: scale(.94); opacity: .55; }
+  70%, 100% { transform: scale(1.3); opacity: 0; }
+}
+.agent-float-btn::after,
+body.layout-property_page .pp-floating-wa::after,
+body.layout-request_page .rq-floating-wa::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(37, 211, 102, .5);
+  pointer-events: none;
+  animation: contactRing 2.5s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-float-btn::after,
+  body.layout-property_page .pp-floating-wa::after,
+  body.layout-request_page .rq-floating-wa::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+/* Print needs the complete document, not estimated off-screen boxes. */
+@media print {
+  body.homepage .hp-section,
+  body.layout-property_page .pp-description .detail-section {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
 }

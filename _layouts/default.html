@@ -68,8 +68,6 @@
        الهدف: شعار الموقع في نتائج Google بدل شعار GitHub الافتراضي ═══ -->
   {% include favicon.html %}
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- أداء (2026-10-02): يُوفّر رحلة ذهاب/إياب (DNS+TLS ≈ 300 مللي ثانية على الجوال)
        قبل أول طلب لـ GTM بدلاً من اكتشافه متأخراً أثناء التحليل -->
   <link rel="preconnect" href="https://www.googletagmanager.com">
@@ -82,17 +80,7 @@
        (ويبقى style.min.css مبنيًا كاحتياط للصفحات غير المسجّلة) -->
   {% include css.html %}
 
-  <!-- ═══════════════════════════════════════════════
-       الخطوط وأيقونات Font Awesome — تحميل غير محجوب للعرض
-       (كانا يحجبان العرض ~1.8 ثانية على الجوال حسب Lighthouse)
-       ═══════════════════════════════════════════════ -->
-  <!-- preload يخفّف زمن التبديل (font swap) وبالتالي يقلّل الـ CLS -->
-  <link rel="preload" as="style"
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap">
-  <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"
-        media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"></noscript>
+  {% include cairo.html %}
 
   <!-- ═══ الأيقونات (2026-10-24): ملف مقتطع محلي بدل 3 أصول من cdnjs
        كان: all.min.css (~100 ك.ب) + fa-solid-900.woff2 (153 ك.ب) + fa-brands (115 ك.ب)
