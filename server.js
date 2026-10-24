@@ -313,58 +313,86 @@ async function renderFile(filePath, customPageData = {}) {
 }
 
 // ═══ ضغط gzip للمعاينة (2026-10-24) ═══
-// GitHub Pages يخدم HTML/CSS/JS مضغوطة (gzip/brotli). وكانت المعاينة المحلية
-// تُرسلها خامًا، فأي قياس أداء محلي يبالغ في الحجم والزمن بنسبة 4–7×.
-// نضغط الأنواع النصية فقط بنفس ما يفعله الإنتاج، فأرقام المعاينة تقترب من
-// أرقام الموقع الحقيقي. (لا يمسّ الصوت/الصور ولا طلبات Range.)
+// GitHub Pages يخدم HTML/CSS/JS مضغوطة. المعاينة المحلية كانت تُرسلها خامًا،
+// فأي قياس أداء محلي يبالغ في الحجم والزمن 4–7×. هنا نضغط الأنواع النصية فقط.
+//
+// ⚠️ قيود الأمان (بعد إخفاق CI واحد): لا نلمس أي استجابة بدأت تتدفق فعليًا
+// (headersSent) ولا أي طلب Range/HEAD، وكل الخطوات داخل try/catch تسقط إلى
+// الإرسال الخام. النسخة الأولى كانت تحذف Content-Length بعد بدء الترويسات
+// فترمي استثناءً وتقطع الاتصال ⇒ «fetch failed» في زحف الروابط.
 const COMPRESSIBLE = /^(text\/|application\/(json|javascript|xml|manifest\+json)|image\/svg)/i;
-const GZIP_MAX_BYTES = 6 * 1024 * 1024;
+const GZIP_MIN_BYTES = 1024;
+const GZIP_MAX_BYTES = 4 * 1024 * 1024;
+
 app.use((req, res, next) => {
-  const accept = String(req.headers['accept-encoding'] || '');
-  if (!/\bgzip\b/.test(accept) || req.method === 'HEAD' || req.headers.range) return next();
+  const acceptsGzip = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+  if (!acceptsGzip || req.method === 'HEAD' || req.headers.range) return next();
 
   const chunks = [];
   let size = 0;
-  let decided = false;
-  let compress = false;
-
-  const decide = () => {
-    if (decided) return;
-    decided = true;
-    const type = String(res.getHeader('content-type') || '');
-    compress = COMPRESSIBLE.test(type)
-      && !res.getHeader('content-encoding')
-      && size <= GZIP_MAX_BYTES;
-    if (compress) res.removeHeader('Content-Length');
-  };
+  let bypass = false;
 
   const write = res.write.bind(res);
   const end = res.end.bind(res);
 
+  const flushRaw = () => {
+    if (chunks.length) {
+      const body = Buffer.concat(chunks);
+      chunks.length = 0;
+      if (!res.headersSent) res.setHeader('Content-Length', body.length);
+      write(body);
+    }
+  };
+
   res.write = (chunk, encoding, cb) => {
-    if (chunk) { chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding)); size += chunks[chunks.length - 1].length; }
-    decide();
-    if (compress) { if (typeof encoding === 'function') encoding(); if (typeof cb === 'function') cb(); return true; }
-    return write(chunk, encoding, cb);
+    if (bypass || res.headersSent) {
+      flushRaw();
+      return write(chunk, encoding, cb);
+    }
+    if (chunk) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding);
+      chunks.push(buf);
+      size += buf.length;
+      if (size > GZIP_MAX_BYTES) { bypass = true; flushRaw(); }
+    }
+    if (typeof encoding === 'function') encoding();
+    else if (typeof cb === 'function') cb();
+    return true;
   };
 
   res.end = (chunk, encoding, cb) => {
-    if (chunk) { chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding)); size += chunks[chunks.length - 1].length; }
-    decide();
-    if (!compress) { if (chunks.length) write(Buffer.concat(chunks)); return end(undefined, undefined, typeof chunk === 'function' ? chunk : cb); }
-    const body = Buffer.concat(chunks);
-    const gz = zlib.gzipSync(body, { level: 6 });
-    res.setHeader('Content-Encoding', 'gzip');
-    res.setHeader('Vary', 'Accept-Encoding');
-    res.setHeader('Content-Length', gz.length);
-    write(gz);
-    return end(undefined, undefined, typeof chunk === 'function' ? chunk : cb);
+    const done = typeof chunk === 'function' ? chunk : (typeof encoding === 'function' ? encoding : cb);
+    if (chunk && typeof chunk !== 'function') {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding);
+      chunks.push(buf);
+      size += buf.length;
+    }
+    try {
+      const type = String(res.getHeader('content-type') || '');
+      const canCompress = !bypass && !res.headersSent && size >= GZIP_MIN_BYTES
+        && size <= GZIP_MAX_BYTES && COMPRESSIBLE.test(type) && !res.getHeader('content-encoding');
+      if (canCompress) {
+        const gz = zlib.gzipSync(Buffer.concat(chunks), { level: 6 });
+        chunks.length = 0;
+        res.setHeader('Content-Encoding', 'gzip');
+        res.setHeader('Vary', 'Accept-Encoding');
+        res.setHeader('Content-Length', gz.length);
+        write(gz);
+      } else {
+        flushRaw();
+      }
+    } catch {
+      // أي التباس في الترويسات ⇒ نُرسل الخام كما هو (لا نكسر الاستجابة أبدًا)
+      try { flushRaw(); } catch { /* تجاهل */ }
+    }
+    return end(undefined, undefined, done);
   };
 
   next();
 });
 
 // Middleware
+app.use(express.json({ limit: '20mb' }));// Middleware
 app.use(express.json({ limit: '20mb' }));// Middleware
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
