@@ -31,7 +31,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseFrontMatter } from '../lib/front-matter.mjs';
-import { SPEC, verifyFile, checkScript, loadProperty } from './produce-audio-ad.mjs';
+import { SPEC, verifyFile, checkScript, loadProperty, isRequestSource } from './produce-audio-ad.mjs';
 import { specFingerprint } from './spec-fingerprint.mjs';
 
 /**
@@ -143,9 +143,18 @@ function pagesByAudioFile() {
   return map;
 }
 
+// Archiving is restricted to a registered request source and its matching MP3.
+function archivedRequest(entry) {
+  return entry.retiresWithRequest === true && isRequestSource(entry.propertySource)
+    && entry.audioFile === `assets/audio/requests/${entry.slug}.mp3`;
+}
+
 // ---------------------------------------- 3) قواعد الإعلان الجديد
 function checkNewAd(entry, rel, v, page) {
-  const property = entry.propertySource ? loadProperty(entry.propertySource) : null;
+  const sourceExists = entry.propertySource && fs.existsSync(path.join(ROOT, entry.propertySource));
+  let property = null;
+  if (sourceExists) property = loadProperty(entry.propertySource);
+  else if (archivedRequest(entry)) property = { rel: entry.propertySource };
   const script = String(entry.script || (page && page.script) || '');
   if (!script) { fail(`${rel}: لا يوجد نص موثَّق في السجل`); return; }
 
@@ -223,7 +232,7 @@ function checkRegistry() {
     if (entry.bytes && size !== entry.bytes) fail(`${f}: الحجم ${size} ≠ ${entry.bytes} في السجل`);
 
     const page = pages.get(f) || null;
-    if (!page && !entry.legacyNote) fail(`${f} غير مرتبط بأي صفحة audio_ad: true وليس موثَّقًا بـ legacyNote`);
+    if (!page && !entry.legacyNote && !archivedRequest(entry)) fail(`${f} غير مرتبط بأي صفحة audio_ad: true وليس موثَّقًا بـ legacyNote`);
 
     const v = verifyFile(abs, page ? String(page.script) : null);
     for (const p of v.problems) fail(`${f}: ${p}`);

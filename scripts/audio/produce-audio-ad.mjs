@@ -225,6 +225,14 @@ export function loadProperty(propertyPath) {
   };
 }
 
+/** Preserve the collection in the public MP3 path; requests are not properties. */
+export function isRequestSource(rel) {
+  return /^_requests\/[^/]+\.md$/.test(String(rel || '').replaceAll('\\', '/'));
+}
+export function audioFileFor(property) {
+  return `assets/audio/${isRequestSource(property.rel) ? 'requests' : 'properties'}/${property.slug}.mp3`;
+}
+
 // ── 1) فحص النص ─────────────────────────────────────────────────────
 
 export function checkScript(script, property) {
@@ -258,8 +266,9 @@ export function checkScript(script, property) {
   if (wordCount(firstSentence) > 16) warnings.push('الـHook أطول من 16 كلمة — المرجع 10-11 كلمة.');
 
   // الـ CTA
-  const ctaOk = [SPEC.script.cta.canonical, ...SPEC.script.cta.canonicalVariants]
-    .some((c) => norm.includes(normalize(c)));
+  const allowedCtas = [SPEC.script.cta.canonical, ...SPEC.script.cta.canonicalVariants];
+  if (isRequestSource(property?.rel)) allowedCtas.push(...(SPEC.script.cta.requestCanonicalVariants || []));
+  const ctaOk = allowedCtas.some((c) => norm.includes(normalize(c)));
   if (!ctaOk) {
     const legacy = norm.includes(normalize(SPEC.script.cta.legacyThirdPerson));
     if (legacy) errors.push(`الـCTA بصيغة الغائب الموروثة. الجديد يعتمد الصيغة المرجعية: «${SPEC.script.cta.canonical}»`);
@@ -297,7 +306,7 @@ export function checkScript(script, property) {
 
 // ── 2) كتلة front matter ────────────────────────────────────────────
 
-function frontMatterBlock(slug, script, durationLabel) {
+function frontMatterBlock(property, script, durationLabel) {
   return [
     '',
     '# ── 🎙️ الإعلان الصوتي — مُنتَج عبر مسار الإنتاج الموحّد ──',
@@ -305,7 +314,7 @@ function frontMatterBlock(slug, script, durationLabel) {
     '# لا تُعدَّل هذه الحقول يدويًا ولا تُغيَّر إعدادات الصوت دون قيد في',
     '# _data/audio_voice_log.json — البوابة scripts/audio/verify-voice-identity.mjs تمنع النشر.',
     'audio_ad: true',
-    `audio_file: "/assets/audio/properties/${slug}.mp3"`,
+    `audio_file: "/${audioFileFor(property)}"`,
     `audio_duration: "${durationLabel}"`,
     `audio_script: "${script.replace(/"/g, '\\"')}"`,
   ].join('\n');
@@ -450,7 +459,7 @@ function main() {
     if (result.errors.length) fail(`${result.errors.length} مخالفة في النص — لا يُنتَج صوت قبل إصلاحها.`);
     ok('النص مطابق للمواصفة المركزية.');
     console.log(`\n--- كتلة front matter (تُضاف قبل --- الختامية في ${property.rel}) ---`);
-    console.log(frontMatterBlock(property.slug, script, `${seconds} ثانية`));
+    console.log(frontMatterBlock(property, script, `${seconds} ثانية`));
     process.exit(0);
   }
 
@@ -487,7 +496,7 @@ function main() {
       expected = property.data.audio_script ?? null;
       if (!expected) fail(`${property.rel}: لا يوجد audio_script في front matter`);
       const declared = property.data.audio_file;
-      const want = `/assets/audio/properties/${property.slug}.mp3`;
+      const want = `/${audioFileFor(property)}`;
       if (declared !== want) fail(`audio_file = «${declared}» والمطلوب «${want}» (المسار يجب أن يعكس الـslug)`);
     } else if (script) expected = script;
     const v = verifyFile(abs(mp3), expected);
@@ -530,7 +539,7 @@ function main() {
 
     const v = verifyFile(abs(mp3), property.data.audio_script ?? null);
     if (v.problems.length) { v.problems.forEach((p) => console.error(`❌ ${p}`)); fail('لا يُقيَّد ملف غير مطابق للمواصفة.'); }
-    const audioFile = `assets/audio/properties/${property.slug}.mp3`;
+    const audioFile = audioFileFor(property);
     if (path.relative(ROOT, abs(mp3)).split(path.sep).join('/') !== audioFile) {
       fail(`مسار الملف يجب أن يكون ${audioFile} (يعكس الـslug) — وُجد ${path.relative(ROOT, abs(mp3))}`);
     }
@@ -575,6 +584,11 @@ function main() {
       script: scriptText,
       words: wordCount(scriptText),
       linkedToPublishedPage: property.data.audio_ad === true,
+      ...(isRequestSource(property.rel) ? {
+        retiresWithRequest: true,
+        publishedRequest: property.data,
+        retiresWithRequestNote: 'Request expires under the existing 7-day cleanup; keep the registered audio asset as an archive.',
+      } : {}),
       replacesPublishedFile: flag('replaces'),
       originalSha256BeforeReplacement: arg('original-sha256'),
       note: arg('note'),
