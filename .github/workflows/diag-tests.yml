@@ -1,0 +1,32 @@
+name: diag-tests
+on:
+  push:
+    branches: ["arena/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: deps
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: suite
+        run: |
+          set +e
+          node --test $(ls _worker/tests/*.test.mjs scripts/tests/*.test.mjs | tr '\n' ' ') > /tmp/out.txt 2>&1
+          code=$?
+          echo "exit=$code"
+          grep -E "^not ok" /tmp/out.txt | head -5 | while IFS= read -r line; do
+            echo "::error title=FAILED TEST::$line"
+          done
+          grep -nE "^not ok" -A 22 /tmp/out.txt | head -60 | while IFS= read -r l; do
+            echo "::error title=FAILED DETAIL::$(echo "$l" | cut -c1-400)"
+          done
+          tail -40 /tmp/out.txt
+          exit $code
