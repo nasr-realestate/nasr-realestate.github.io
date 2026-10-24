@@ -1,4 +1,5 @@
 import express from 'express';
+import zlib from 'node:zlib';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -311,7 +312,60 @@ async function renderFile(filePath, customPageData = {}) {
   return renderPage(parsed.content, pageData);
 }
 
+// ═══ ضغط gzip للمعاينة (2026-10-24) ═══
+// GitHub Pages يخدم HTML/CSS/JS مضغوطة (gzip/brotli). وكانت المعاينة المحلية
+// تُرسلها خامًا، فأي قياس أداء محلي يبالغ في الحجم والزمن بنسبة 4–7×.
+// نضغط الأنواع النصية فقط بنفس ما يفعله الإنتاج، فأرقام المعاينة تقترب من
+// أرقام الموقع الحقيقي. (لا يمسّ الصوت/الصور ولا طلبات Range.)
+const COMPRESSIBLE = /^(text\/|application\/(json|javascript|xml|manifest\+json)|image\/svg)/i;
+const GZIP_MAX_BYTES = 6 * 1024 * 1024;
+app.use((req, res, next) => {
+  const accept = String(req.headers['accept-encoding'] || '');
+  if (!/\bgzip\b/.test(accept) || req.method === 'HEAD' || req.headers.range) return next();
+
+  const chunks = [];
+  let size = 0;
+  let decided = false;
+  let compress = false;
+
+  const decide = () => {
+    if (decided) return;
+    decided = true;
+    const type = String(res.getHeader('content-type') || '');
+    compress = COMPRESSIBLE.test(type)
+      && !res.getHeader('content-encoding')
+      && size <= GZIP_MAX_BYTES;
+    if (compress) res.removeHeader('Content-Length');
+  };
+
+  const write = res.write.bind(res);
+  const end = res.end.bind(res);
+
+  res.write = (chunk, encoding, cb) => {
+    if (chunk) { chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding)); size += chunks[chunks.length - 1].length; }
+    decide();
+    if (compress) { if (typeof encoding === 'function') encoding(); if (typeof cb === 'function') cb(); return true; }
+    return write(chunk, encoding, cb);
+  };
+
+  res.end = (chunk, encoding, cb) => {
+    if (chunk) { chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding)); size += chunks[chunks.length - 1].length; }
+    decide();
+    if (!compress) { if (chunks.length) write(Buffer.concat(chunks)); return end(undefined, undefined, typeof chunk === 'function' ? chunk : cb); }
+    const body = Buffer.concat(chunks);
+    const gz = zlib.gzipSync(body, { level: 6 });
+    res.setHeader('Content-Encoding', 'gzip');
+    res.setHeader('Vary', 'Accept-Encoding');
+    res.setHeader('Content-Length', gz.length);
+    write(gz);
+    return end(undefined, undefined, typeof chunk === 'function' ? chunk : cb);
+  };
+
+  next();
+});
+
 // Middleware
+app.use(express.json({ limit: '20mb' }));// Middleware
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 

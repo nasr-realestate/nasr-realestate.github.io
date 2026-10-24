@@ -1,0 +1,32 @@
+{%- comment -%}
+═══════════════════════════════════════════════════════════════════════
+  css.html — تحميل أنماط نوع الصفحة فقط (2026-10-24)
+───────────────────────────────────────────────────────────────────────
+  قبل: كل صفحة تحمّل style.min.css كاملًا (193 ك.ب / 31 ك.ب gzip)، و79% منه
+        أنماط صفحات أخرى لا تُستخدم في الصفحة المفتوحة.
+  بعد: ملف واحد لكل نوع صفحة، مبني من نفس المصدر وبترتيب المصدر حرفيًا:
+        الرئيسية 52 ك.ب · صفحة العقار 41 · المعرض 44 · الوكيل 66
+        (بدل 193 ك.ب لكل صفحة).
+
+  الملفات وخريطتها تُولَّد بـ: node scripts/build-css.mjs
+  (المصدر الذي يُعدَّل يبقى assets/css/style.css — وstyle.min.css يبقى مبنيًا
+   كاحتياط للصفحات ذات تركيبة غير مسجّلة.)
+═══════════════════════════════════════════════════════════════════════
+{%- endcomment -%}
+{%- assign css_body = page.body_class | default: 'default-page' | strip -%}
+{%- assign css_layout = page.layout | default: '' | strip -%}
+{%- capture css_key -%}{{ css_body }}|{{ css_layout }}{%- endcapture -%}
+{%- assign css_found = false -%}
+{%- for css_pair in site.data.css_scopes -%}
+  {%- if css_pair[0] == css_key -%}
+    {%- assign css_found = true -%}
+    {%- for css_file in css_pair[1] -%}
+  <link rel="stylesheet" href="{{ '/assets/css/' | append: css_file | relative_url }}?v=20261024-perf">
+    {%- endfor -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- unless css_found -%}
+  {%- comment -%} احتياط: تركيبة (body_class|layout) جديدة غير مسجّلة في
+     scripts/build-css.mjs — نحمّل الملف الكامل حتى لا تفقد الصفحة تنسيقها. {%- endcomment -%}
+  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261024-perf' | relative_url }}">
+{%- endunless -%}
