@@ -252,6 +252,14 @@
           "priceIsMonthly": {
             "type": "boolean"
           },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "city",
+              "archive"
+            ],
+            "description": "city = داخل مدينة نصر (قابلة للترشيح) · archive = خارج المدينة (أرشفة ورابط مباشر فقط، لا تُرشَّح)"
+          },
           "currency": {
             "type": "string",
             "const": "EGP"

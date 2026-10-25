@@ -325,7 +325,7 @@ export function mcpToolDefinitions() {
       name: 'search_properties',
       title: 'البحث في العقارات',
       description:
-        'ابحث في الوحدات المعروضة بموقع سمسار طلبك (مدينة نصر والقاهرة الجديدة). يدعم التصفية بنوع المعاملة (sale/rent)، نوع العقار (apartment/villa/shop/office/warehouse)، المنطقة، نطاق السعر، نطاق المساحة، عدد الغرف، والتشطيب. يُعيد قائمة مضغوطة قابلة للاقتباس مع رابط كل وحدة.',
+        'ابحث في الوحدات المعروضة للبيع والإيجار داخل مدينة نصر فقط (هذا هو نطاق الخدمة المعلن؛ الوحدات الأرشيفية خارج المدينة لا تُرشَّح ولا تُعاد من هذه الأداة). يدعم التصفية بنوع المعاملة (sale/rent)، نوع العقار (apartment/villa/shop/office/warehouse/clinic)، المنطقة أو الشارع، نطاق السعر، نطاق المساحة، عدد الغرف، والتشطيب. يُعيد قائمة مضغوطة قابلة للاقتباس مع رابط كل وحدة.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -568,6 +568,11 @@ export function renderOpenApi(properties) {
             price: { type: 'string' },
             priceNumeric: { type: ['integer', 'null'] },
             priceIsMonthly: { type: 'boolean' },
+            scope: {
+              type: 'string',
+              enum: ['city', 'archive'],
+              description: 'city = داخل مدينة نصر (قابلة للترشيح) · archive = خارج المدينة (أرشفة ورابط مباشر فقط، لا تُرشَّح)',
+            },
             currency: { type: 'string', const: 'EGP' },
             area: { type: 'string' },
             areaNumeric: { type: ['integer', 'null'] },

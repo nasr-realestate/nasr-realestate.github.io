@@ -73,3 +73,28 @@ test('روابط معرض النخبة اليدوية تشير لوحدات دا
     assert.equal(facets.listings[slug].in_area, true, `خارج النطاق: ${slug}`);
   }
 });
+
+// ═══ اختبار رجوع من التدقيق العملي (2026-10-25): تعارض وصف MCP والنطاق ═══
+test('وثائق MCP لا تعِد بمناطق خارج مدينة نصر، ووصف البحث مطابق للنطاق المعلن', () => {
+  for (const f of ['mcp.json', '.well-known/mcp.json', '.well-known/mcp/server-card.json']) {
+    const card = JSON.parse(read(f));
+    const search = (card.tools || []).find((t) => t.name === 'search_properties');
+    assert.ok(search, `${f}: أداة البحث موجودة`);
+    assert.doesNotMatch(search.description, OTHER_AREAS, `${f}: وصف أداة البحث`);
+    assert.match(search.description, /مدينة نصر فقط/);
+    assert.doesNotMatch(JSON.stringify(card.description || ''), /والقاهرة الجديدة/, `${f}: وصف الخادم`);
+  }
+});
+
+test('كل وحدة في API تحمل scope صريحًا: city للترشيح وarchive للأرشفة فقط', () => {
+  const api = JSON.parse(read('api/properties.json'));
+  const archive = facets.out_of_area_slugs || [];
+  assert.ok(archive.length > 0, 'توجد وحدات أرشيفية خارج النطاق (وإلا فالاختبار بلا معنى)');
+  for (const p of api.properties) {
+    assert.ok(p.scope === 'city' || p.scope === 'archive', `${p.slug}: ${p.scope}`);
+    assert.equal(p.scope === 'archive', archive.includes(p.slug), p.slug);
+    if (p.scope === 'archive') assert.equal(p.in_nasr_city, false, p.slug);
+  }
+  const feed = JSON.parse(read('ai-feed.json'));
+  for (const p of feed.properties) assert.ok(p.scope === 'city' || p.scope === 'archive', p.slug);
+});
