@@ -84,8 +84,14 @@ function readRepoCatalog() {
   const properties = loadProperties(path.join(ROOT, '_properties'));
   const card = JSON.parse(fs.readFileSync(path.join(ROOT, 'mcp.json'), 'utf8'));
   const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'api/index.json'), 'utf8'));
+  // سياسة النطاق (2026-10-25): أدوات البحث لا ترشّح إلا وحدات مدينة نصر، فعددها
+  // المتوقَّع هو in_area — لا كل ملفات _properties. الفرق يجب أن يظهر صريحًا في
+  // out_of_scope_units_withheld الذي تعلنه الأداة.
+  const facets = JSON.parse(fs.readFileSync(path.join(ROOT, '_data/listing_facets.json'), 'utf8'));
+  const scoped = Object.values(facets.listings || {}).filter((l) => l && l.in_area !== false).length;
   return {
     count: properties.length,
+    in_scope: scoped,
     index_count: index.total_count,
     card_counts_properties: card.counts?.properties ?? null,
     card_tools: (card.tools ?? []).map((tool) => tool.name),
@@ -288,9 +294,14 @@ async function checkToolsCall(catalog) {
   s.expect('search_properties: بلا isError', searchOut?.isError !== true, JSON.stringify(searchOut?.structuredContent?.error ?? search.json?.error ?? null));
   s.expect('search_properties: نص النتيجة غير فارغ', String(searchOut?.content?.[0]?.text ?? '').length > 20, `${String(searchOut?.content?.[0]?.text ?? '').length} حرفًا`);
   s.expect(
-    'search_properties: total_count === كتالوج المستودع',
-    searchOut?.structuredContent?.total_count === catalog.count,
-    `الواقع ${String(searchOut?.structuredContent?.total_count)} · المستودع ${catalog.count}`,
+    'search_properties: total_count === الوحدات داخل مدينة نصر',
+    searchOut?.structuredContent?.total_count === catalog.in_scope,
+    `الواقع ${String(searchOut?.structuredContent?.total_count)} · داخل النطاق ${catalog.in_scope}`,
+  );
+  s.expect(
+    'search_properties: داخل النطاق + المحجوب خارج النطاق = كتالوج المستودع',
+    (searchOut?.structuredContent?.total_count ?? -1) + (searchOut?.structuredContent?.out_of_scope_units_withheld ?? 0) === catalog.count,
+    `الواقع ${String(searchOut?.structuredContent?.total_count)} + ${String(searchOut?.structuredContent?.out_of_scope_units_withheld)} · المستودع ${catalog.count}`,
   );
   s.expect('search_properties: أعاد وحدات', (searchOut?.structuredContent?.properties?.length ?? 0) > 0, `${searchOut?.structuredContent?.properties?.length ?? 0} وحدة`);
   s.note('search_returned', searchOut?.structuredContent?.returned ?? null);
@@ -299,7 +310,7 @@ async function checkToolsCall(catalog) {
   const summary = await postRpc(4, 'tools/call', { name: 'market_summary', arguments: {} });
   const summaryOut = summary.json?.result;
   s.expect('market_summary: بلا isError', summaryOut?.isError !== true, JSON.stringify(summary.json?.error ?? null));
-  s.expect('market_summary: total === كتالوج المستودع', summaryOut?.structuredContent?.total === catalog.count, `الواقع ${String(summaryOut?.structuredContent?.total)}`);
+  s.expect('market_summary: total === الوحدات داخل مدينة نصر', summaryOut?.structuredContent?.total === catalog.in_scope, `الواقع ${String(summaryOut?.structuredContent?.total)} · داخل النطاق ${catalog.in_scope}`);
   s.note('market_total', summaryOut?.structuredContent?.total ?? null);
 
   const contact = await postRpc(5, 'tools/call', { name: 'get_contact', arguments: {} });
