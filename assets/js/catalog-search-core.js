@@ -8,6 +8,11 @@
  *    أرقام ٠-٩ و۰-۹ ← 0-9، فواصل الآلاف (، ٬ ,) وعلامة العشري (٫).
  *  • parseQuery: يفهم «شقه للبيع»، «3 غرف»، «شقة 150 متر»، «أقل من 5 مليون»،
  *    «من 2 إلى 3 مليون»، «إيجار تحت 20 ألف»، «غرفتين»، «مليون ونص»...
+ *  • حدود صارمة (2026-10-25، من التدقيق العملي): «أقل من/تحت/دون» حصرية
+ *    (maxExclusive) و«أكبر من/فوق» حصرية (minExclusive)، و«حتى/لحد/بحد أقصى»
+ *    شاملة. «بالضبط/تمامًا» تعني مساواة تامة (exact) لا كلمة بحث، و«شهريًا»
+ *    وحدة سعر (monthly) تعني إيجارًا ولا تصفّر النتائج. كل لفظ يبقى ظاهرًا في
+ *    understood بلغة المستخدم: «أقل من 20 ألف شهريًا» لا «حتى 20 ألف».
  *    والرقم بلا وحدة (مثل «عمارة 12» أو «المنطقة 10») لا يتحول إلى فلتر:
  *    يبقى نصًا، إلا لو كان واضحًا أنه سعر (≥ 20,000).
  *  • كل ما فُهم يُعاد في understood[] مع النص الأصلي (src) لعرضه كشرائح قابلة للحذف.
@@ -68,9 +73,18 @@
   var N = '(\\d+(?:\\.\\d+)?)';
   // وحدة المال: مليون (+ ونص/وربع) | ألف | k | جنيه
   var MONEY = '(?:\\s*(مليون|ملايين|مليار|الف|الاف|k|ك)(?:\\s*(?:و\\s*)?(نص|نصف|ربع))?|\\s*(جنيه|ج|جم|egp))';
-  var MAX_W = '(?:اقل\\s+من|تحت|حتي|لحد|بحد\\s+اقصي|اقصاه|اقصي|ميزانيه|ميزانيتي|max|لا\\s+يزيد\\s+عن|مايزيدش\\s+عن)';
-  var MIN_W = '(?:اكثر\\s+من|اكبر\\s+من|اعلي\\s+من|فوق|لا\\s+يقل\\s+عن|علي\\s+الاقل|min|من\\s+اول)';
+  // ─── حدود صارمة (2026-10-25): «أقل من/تحت/دون» و«أكبر من/فوق» حصرية،
+  //     و«حتى/لحد/بحد أقصى/ميزانية» شاملة — لأن المستخدم يقصد الاثنين مختلفين.
+  var EXC_MAX = '(?:اقل\\s+من|تحت|دون)';
+  var INC_MAX = '(?:حتي|لحد|بحد\\s+اقصي|اقصاه|اقصي|ميزانيه|ميزانيتي|max|لا\\s+يزيد\\s+عن|مايزيدش\\s+عن)';
+  var EXC_MIN = '(?:اكثر\\s+من|اكبر\\s+من|اعلي\\s+من|فوق|min)';
+  var INC_MIN = '(?:لا\\s+يقل\\s+عن|علي\\s+الاقل|من\\s+اول)';
+  var MAX_W = '(?:' + EXC_MAX + '|' + INC_MAX + ')';
+  var MIN_W = '(?:' + EXC_MIN + '|' + INC_MIN + ')';
   var AROUND_W = '(?:في\\s+حدود|حدود|حوالي|تقريبا|بحوالي)';
+  // «بالضبط» تعني مساواة تامة، و«شهريًا» وحدة سعر لا كلمة بحث نصية.
+  var EXACT_W = '(?:بالضبط|بالظبط|تماما|exactly)';
+  var MONTHLY_W = '(?:شهريا|شهري|بالشهر|كل\\s+شهر|في\\s+الشهر|ل\\s*\\/\\s*شهر|\\/\\s*شهر|monthly)';
   var AREA_U = '\\s*(?:م2|متر\\s*مربع|مترمربع|متر|م|m2|sqm|m)(?![\\u0621-\\u064Aa-z0-9])';
   var ROOM_U = '\\s*(?:غرف|غرفه|اوض|اوضه|حجرات|حجره|اوضات)(?:\\s+نوم)?(?![\\u0621-\\u064A])';
   var BATH_U = '\\s*(?:حمام|حمامات)(?![\\u0621-\\u064A])';
@@ -110,10 +124,16 @@
 
   function rangeLabel(kind, r) {
     var f = kind === 'price' ? fmtMoney : function (v) { return v + 'م²'; };
-    if (r.approx) return 'حوالي ' + f(r.approx);
-    if (r.min != null && r.max != null) return 'من ' + f(r.min) + ' إلى ' + f(r.max);
-    if (r.max != null) return 'حتى ' + f(r.max);
-    return 'من ' + f(r.min) + ' فأكثر';
+    var label;
+    if (r.exact) label = 'بالضبط ' + f(r.exact);
+    else if (r.approx) label = 'حوالي ' + f(r.approx);
+    else if (r.min != null && r.max != null && r.min === r.max) label = 'بالضبط ' + f(r.min);
+    else if (r.min != null && r.max != null) label = 'من ' + f(r.min) + ' إلى ' + f(r.max);
+    else if (r.max != null) label = (r.maxExclusive ? 'أقل من ' : 'حتى ') + f(r.max);
+    else label = (r.minExclusive ? 'أكبر من ' : 'من ') + f(r.min) + (r.minExclusive ? '' : ' فأكثر');
+    // السعر الشهري يُعلن وحدته صراحةً: «حتى 20 ألف شهريًا» لا «حتى 20 ألف».
+    if (kind === 'price' && r.monthly) label += ' شهريًا';
+    return label;
   }
 
   /**
@@ -134,10 +154,38 @@
     }
     function setRange(kind, r, raw) {
       if (out[kind]) return false;
+      if (kind === 'price' && monthly) r.monthly = true;
       out[kind] = r;
       out.understood.push({ kind: kind, label: rangeLabel(kind, r), src: raw.trim() });
     }
     function around(v) { return { min: Math.round(v * 0.85), max: Math.round(v * 1.15), approx: v }; }
+    function exactRange(v) { return { min: v, max: v, exact: v }; }
+    /** حد من كلمة مقارنة: «أقل من/تحت/دون» و«أكبر من/فوق» حصرية، «حتى/لحد/ميزانية» شاملة. */
+    function cmpRange(cmp, v) {
+      if (new RegExp('^' + EXC_MAX + '$').test(cmp)) return { min: null, max: v, maxExclusive: true };
+      if (new RegExp('^' + INC_MAX + '$').test(cmp)) return { min: null, max: v };
+      if (new RegExp('^' + EXC_MIN + '$').test(cmp)) return { min: v, max: null, minExclusive: true };
+      if (new RegExp('^' + INC_MIN + '$').test(cmp)) return { min: v, max: null };
+      return exact ? exactRange(v) : around(v);
+    }
+
+    // ── «شهريًا» وحدة سعر لا كلمة بحث (2026-10-25): تُفهم كإيجار شهري وتُزال من
+    //    نص البحث، بدل أن تصير tokenًا إلزاميًا فيعنوان الإعلان فتصفّر النتائج.
+    var monthly = false;
+    var mm = s.match(new RegExp('(?:^|\\s)(' + MONTHLY_W + ')(?=\\s|$)'));
+    if (mm) {
+      monthly = true;
+      s = s.replace(new RegExp('(^|\\s)' + MONTHLY_W + '(?=\\s|$)', 'g'), ' ');
+      out.understood.push({ kind: 'period', label: 'إيجار شهري', src: mm[1] });
+      if (!out.deal) out.deal = 'rent';
+    }
+
+    // ── «بالضبط/تمامًا» مساواة تامة لا كلمة بحث (C09): تُزال ويُعلَّم النطاق exact.
+    var exact = false;
+    if (new RegExp('(?:^|\\s)' + EXACT_W + '(?=\\s|$)').test(s)) {
+      exact = true;
+      s = s.replace(new RegExp('(^|\\s)' + EXACT_W + '(?=\\s|$)', 'g'), ' ');
+    }
 
     // «مليون ونص» بلا رقم ← 1.5 مليون
     s = s.replace(/(\s)(مليون|الف)(?=\s*(?:و\s*)?(?:نص|نصف|ربع)?\s)/g, function (m0, sp, u, off, all) {
@@ -152,14 +200,12 @@
         if (va == null || vb == null) return false;
         return setRange('price', { min: Math.min(va, vb), max: Math.max(va, vb) }, raw);
       });
-    // ── السعر مع مقارنة
+    // ── السعر مع مقارنة (حصرية/شاملة كما في cmpRange)
     take(new RegExp('\\s(' + MAX_W + '|' + MIN_W + '|' + AROUND_W + ')\\s+' + N + MONEY + '(?=\\s)', 'g'),
       function (raw, cmp, a, u, f, p) {
         var v = moneyValue(a, u, f, p);
         if (v == null) return false;
-        var r = new RegExp('^' + MAX_W + '$').test(cmp) ? { min: null, max: v }
-          : new RegExp('^' + MIN_W + '$').test(cmp) ? { min: v, max: null } : around(v);
-        return setRange('price', r, raw);
+        return setRange('price', cmpRange(cmp, v), raw);
       });
 
     // ── المساحة: نطاق ثم مقارنة ثم رقم+وحدة
@@ -169,15 +215,12 @@
       });
     take(new RegExp('\\s(' + MAX_W + '|' + MIN_W + '|' + AROUND_W + ')\\s+' + N + AREA_U, 'g'),
       function (raw, cmp, a) {
-        var v = +a;
-        var r = new RegExp('^' + MAX_W + '$').test(cmp) ? { min: null, max: v }
-          : new RegExp('^' + MIN_W + '$').test(cmp) ? { min: v, max: null } : around(v);
-        return setRange('area', r, raw);
+        return setRange('area', cmpRange(cmp, +a), raw);
       });
     take(new RegExp('\\s(?:مساحه\\s+)?' + N + AREA_U, 'g'), function (raw, a) {
       var v = +a;
       if (!(v >= 15 && v <= 5000)) return false;
-      return setRange('area', around(v), raw);
+      return setRange('area', exact ? exactRange(v) : around(v), raw);
     });
 
     // ── الغرف
@@ -206,12 +249,12 @@
     take(new RegExp('\\s' + N + MONEY + '(?=\\s)', 'g'), function (raw, a, u, f, p) {
       var v = moneyValue(a, u, f, p);
       if (v == null) return false;
-      return setRange('price', around(v), raw);
+      return setRange('price', exact ? exactRange(v) : around(v), raw);
     });
     take(/\s(\d{5,})(?=\s)/g, function (raw, a) {
       var v = +a;
       if (v < 20000) return false;
-      return setRange('price', around(v), raw);
+      return setRange('price', exact ? exactRange(v) : around(v), raw);
     });
 
     // ── «المنطقه 7» ← «المنطقه السابعه» ؛ «الحي 7» ← «الحي السابع»
@@ -269,8 +312,9 @@
   function inRange(v, r) {
     if (!r) return true;
     if (v == null || !(v > 0)) return false; // قيمة مجهولة لا تُحسب مطابقة لفلتر رقمي
-    if (r.min != null && v < r.min) return false;
-    if (r.max != null && v > r.max) return false;
+    // الحد الحصري يستبعد القيمة المساوية نفسها: «أكبر من 150م» لا يعرض 150م.
+    if (r.min != null && (r.minExclusive ? v <= r.min : v < r.min)) return false;
+    if (r.max != null && (r.maxExclusive ? v >= r.max : v > r.max)) return false;
     return true;
   }
 
@@ -283,9 +327,11 @@
     if (c.deal && item.d !== c.deal) return false;
     if (c.types && c.types.length && c.types.indexOf(item.y) === -1) return false;
     if (!inRange(item.pn, c.price)) return false;
+    // «شهريًا» تعني إيجارًا: سعر شهري لا يطابق وحدة بيع أبدًا (C11a/C11b).
+    if (c.price && c.price.monthly && item.d !== 'rent') return false;
     // سعر بمقياس البيع (حد أعلى ≥ مليون أو حد أدنى ≥ 200 ألف) لا يطابق إيجارًا شهريًا
     // صادف أنه «أقل من 5 مليون» حرفيًا — هذا ليس ما يقصده الباحث.
-    if (c.price && item.d === 'rent' && !c.deal &&
+    if (c.price && !c.price.monthly && item.d === 'rent' && !c.deal &&
       ((c.price.max != null && c.price.max >= 1e6) || (c.price.min != null && c.price.min >= 2e5))) return false;
     if (!inRange(item.an, c.area)) return false;
     if (!inRange(item.rn, c.rooms)) return false;
@@ -314,11 +360,27 @@
 
   /** دمج معايير النص مع الفلاتر: الفلتر الصريح والنص كلاهما يُطبّق. */
   function combine(parsed, ui) {
+    /** تقاطع نطاقين مع الحفاظ على الحصرية: عند تساوي الحدَّين يفوز الحصري. */
     function both(a, b) {
       if (!a) return b || null;
       if (!b) return a;
-      return { min: Math.max(a.min == null ? -Infinity : a.min, b.min == null ? -Infinity : b.min),
-        max: Math.min(a.max == null ? Infinity : a.max, b.max == null ? Infinity : b.max) };
+      var lo = a.min, loX = a.minExclusive === true, hi = a.max, hiX = a.maxExclusive === true;
+      if (b.min != null) {
+        if (lo == null || b.min > lo) { lo = b.min; loX = b.minExclusive === true; }
+        else if (b.min === lo) loX = loX || b.minExclusive === true;
+      }
+      if (b.max != null) {
+        if (hi == null || b.max < hi) { hi = b.max; hiX = b.maxExclusive === true; }
+        else if (b.max === hi) hiX = hiX || b.maxExclusive === true;
+      }
+      var r = { min: lo == null ? null : lo, max: hi == null ? null : hi };
+      if (loX) r.minExclusive = true;
+      if (hiX) r.maxExclusive = true;
+      if (a.monthly || b.monthly) r.monthly = true;
+      if (a.exact != null) r.exact = a.exact;
+      else if (b.exact != null && lo != null && hi != null && lo !== hi) r.exact = b.exact;
+      if (a.approx != null && lo != null && hi != null && a.exact == null) r.approx = a.approx;
+      return r;
     }
     var types = parsed.types;
     if (ui.types && ui.types.length) {

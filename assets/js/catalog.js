@@ -138,9 +138,12 @@
     return b;
   }
 
+  // ألفاظ فهمناها وليست جزءًا من وصف الإعلان: تُزال مع الشرط الذي أنتجته.
+  var DROPPED_WORDS = /\s(?:بالضبط|بالظبط|تماما|exactly)(?=\s)/g;
+
   /** يحذف جزءًا فهمه المحلل من نص البحث (يعمل على النص بعد التطبيع). */
   function removeFromQuery(src) {
-    var n = S.normalize(state.q);
+    var n = S.normalize(state.q).replace(DROPPED_WORDS, ' ').replace(/\s+/g, ' ').trim();
     var cands = [src, src.replace(/^1 /, '')];
     for (var i = 0; i < cands.length; i++) {
       var at = (' ' + n + ' ').indexOf(' ' + cands[i] + ' ');

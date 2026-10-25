@@ -183,7 +183,7 @@ export function buildApiIndex(properties, generatedAt) {
     schema_version: SCHEMA_VERSION,
     name: 'سمسار طلبك — واجهة العقارات',
     description:
-      'واجهة قراءة فقط بلا مصادقة لكل الوحدات المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة). مناسبة للنماذج والوكلاء: كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.',
+      'واجهة قراءة فقط بلا مصادقة للوحدات المنشورة على موقع سمسار طلبك. النطاق المعلن للخدمة هو مدينة نصر: كل وحدة تحمل scope="city" (داخل المدينة، قابلة للترشيح) أو scope="archive" (خارج المدينة — مصر الجديدة/القاهرة الجديدة/الرحاب/التجمع — أرشفة ورابط مباشر فقط، ولا يجوز ترشيحها كبديل لطلب داخل مدينة نصر؛ وللتوافق يبقى in_nasr_city=false). كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.',
     generated_at: generatedAt,
     total_count: properties.length,
     scope: { name: 'مدينة نصر', in_nasr_city: properties.length - scopeOutJ, out_of_nasr_city: scopeOutJ },
@@ -242,7 +242,16 @@ function main() {
   // وحدة خارج مدينة نصر (تحقيق Manus). الأعلام من listing_facets — نفس
   // سياسة D1 والواجهة. الغياب = داخل النطاق (تعاقد البوابة IN_SCOPE).
   const scopeFlags = JSON.parse(fs.readFileSync(path.join(ROOT, '_data', 'listing_facets.json'), 'utf8')).listings;
-  const stampScope = (u) => { const l = scopeFlags[u.slug]; if (l && l.in_area === false) u.in_nasr_city = false; return u; };
+  // التدقيق (2026-10-25): «غياب العلم = داخل النطاق» كان التباسًا. الآن كل وحدة
+  // تحمل scope صريحًا: 'city' (مدينة نصر، قابلة للترشيح) أو 'archive' (خارج
+  // المدينة: رابط مباشر وأرشفة فقط، لا تُرشَّح). in_nasr_city يبقى للتوافق.
+  const stampScope = (u) => {
+    const l = scopeFlags[u.slug];
+    const archive = !!(l && l.in_area === false);
+    if (archive) u.in_nasr_city = false;
+    u.scope = archive ? 'archive' : 'city';
+    return u;
+  };
   feed.properties = feed.properties.map(stampScope);
   const scopeOut = feed.properties.filter((u) => u.in_nasr_city === false).length;
   written.push(write('ai-feed.json', feed));

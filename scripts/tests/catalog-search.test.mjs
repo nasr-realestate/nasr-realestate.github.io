@@ -70,13 +70,16 @@ test('parseQuery: الاستعلامات الطبيعية المطلوبة', () 
   p = S.parseQuery('شقة 150 متر');
   assert.equal(p.area.approx, 150); assert.ok(p.area.min < 150 && p.area.max > 150);
   p = S.parseQuery('أقل من 5 مليون');
-  assert.deepEqual(plain(p.price), { min: null, max: 5000000 });
+  // 2026-10-25: «أقل من» حصرية — الحد المساوي لا يطابق
+  assert.deepEqual(plain(p.price), { min: null, max: 5000000, maxExclusive: true });
   p = S.parseQuery('من 2 الى 3 مليون');
   assert.deepEqual(plain(p.price), { min: 2000000, max: 3000000 });
   p = S.parseQuery('إيجار تحت 20 ألف');
-  assert.equal(p.deal, 'rent'); assert.deepEqual(plain(p.price), { min: null, max: 20000 });
+  assert.equal(p.deal, 'rent'); assert.deepEqual(plain(p.price), { min: null, max: 20000, maxExclusive: true });
   p = S.parseQuery('اكبر من 150م');
-  assert.deepEqual(plain(p.area), { min: 150, max: null });
+  assert.deepEqual(plain(p.area), { min: 150, max: null, minExclusive: true });
+  p = S.parseQuery('حتى 150م');
+  assert.deepEqual(plain(p.area), { min: null, max: 150 });
   p = S.parseQuery('غرفتين');
   assert.deepEqual(plain(p.rooms), { min: 2, max: 2 });
   p = S.parseQuery('3 غرف او اكثر 2 حمام');
@@ -127,6 +130,69 @@ test('فلاتر الواجهة مع النص: AND، والتعارض يعطي �
   for (const it of r) { assert.equal(it.d, 'sale'); assert.equal(it.y, 'apartment'); assert.ok(it.pn <= 5000000 && it.rn >= 3); }
   assert.equal(run('للبيع', { deal: 'rent' }).length, 0);
   assert.equal(run('', {}).length, ITEMS.length, 'بلا قيود = كل عقارات مدينة نصر');
+});
+
+// ═══ اختبار رجوع من التدقيق العملي (2026-10-25): حدود صارمة + «شهريًا» + «بالضبط» ═══
+test('التدقيق ١–٢: «بالضبط» مساواة تامة و«أكبر من» حصرية', () => {
+  const p = S.parseQuery('شقة 150 متر بالضبط');
+  assert.deepEqual(plain(p.area), { min: 150, max: 150, exact: 150 });
+  assert.deepEqual(plain(p.text), [], '«بالضبط» ليست كلمة بحث نصية');
+  const exact = run('شقة 150 متر بالضبط');
+  assert.ok(exact.length > 0, 'توجد وحدات 150م في البيانات');
+  for (const it of exact) assert.equal(it.an, 150, it.u);
+
+  const over = run('شقة أكبر من 150 متر');
+  assert.ok(over.length > 0);
+  for (const it of over) assert.ok(it.an > 150, `${it.u} = ${it.an}`);
+
+  const around = run('شقة 150 متر');
+  assert.ok(around.every((it) => it.an >= 128 && it.an <= 173), 'الرقم بلا «بالضبط» نافذة تقريب');
+  assert.ok(around.some((it) => it.an !== 150), 'التقريب يوسّع النافذة فعلًا');
+});
+
+test('التدقيق ٣–٥: «شهريًا» وحدة سعر لا كلمة بحث', () => {
+  for (const q of ['شقة أقل من 20000 جنيه شهرياً', 'شقة للإيجار أقل من 20 ألف جنيه شهرياً']) {
+    const p = S.parseQuery(q);
+    assert.equal(p.deal, 'rent', q);
+    assert.equal(p.price.monthly, true, q);
+    assert.equal(p.price.maxExclusive, true, q);
+    assert.deepEqual(plain(p.text), [], `${q}: لا كلمات نصية متبقية`);
+    const r = run(q);
+    assert.ok(r.length > 0, `${q}: الإيجارات الشهرية يجب أن تُطابق`);
+    for (const it of r) { assert.equal(it.d, 'rent'); assert.ok(it.pn < 20000, String(it.pn)); }
+    assert.ok(!r.some((it) => it.pn === 20000), 'أقل من 20,000 تستبعد 20,000');
+  }
+  const inc = run('شقة للإيجار حتى 20000 جنيه شهرياً');
+  assert.ok(inc.some((it) => it.pn === 20000), '«حتى» تشمل 20,000');
+  assert.equal(S.parseQuery('شقة للإيجار حتى 20000 جنيه شهرياً').price.maxExclusive, undefined);
+  for (const it of inc) { assert.equal(it.d, 'rent'); assert.ok(it.pn <= 20000); }
+  // «شهريًا» لا تُطابق بيعًا أبدًا
+  assert.ok(run('شقة 20000 جنيه شهريا').every((it) => it.d === 'rent'));
+  assert.deepEqual(plain(S.parseQuery('شقة للبيع 5 مليون شهرياً').text), []);
+});
+
+test('التدقيق ٦–٧: «أقل من 5 مليون» تستبعد 5,000,000 و«حتى» تشملها', () => {
+  const lt = run('شقة للبيع أقل من 5 مليون');
+  assert.ok(lt.length > 0);
+  for (const it of lt) { assert.equal(it.d, 'sale'); assert.ok(it.pn < 5000000, String(it.pn)); }
+  const upTo = run('شقة للبيع حتى 5 مليون');
+  assert.ok(upTo.some((it) => it.pn === 5000000), 'حتى = شاملة');
+  assert.ok(upTo.length > lt.length);
+  // القيد الصريح في الفلاتر يحافظ على الحصرية أيضًا
+  const ui = run('', { price: { min: null, max: 5000000, maxExclusive: true } });
+  assert.ok(ui.every((it) => !(it.d === 'sale' && it.pn === 5000000)));
+});
+
+test('التدقيق ٨–١٢: التكافؤ والنطاق والتعارض', () => {
+  assert.deepEqual(run('شقة ٣ غرف').map((x) => x.u), run('شقة 3 غرف').map((x) => x.u));
+  for (const it of run('شقة 3 غرف')) assert.ok(it.rn >= 3);
+  const approx = S.parseQuery('شقة 200 متر تقريبًا');
+  assert.equal(approx.area.approx, 200);
+  assert.ok(approx.area.min < 200 && approx.area.max > 200);
+  assert.equal(run('شقة للبيع', { deal: 'rent' }).length, 0);
+  for (const q of ['فيلا للبيع في الرحاب', 'التجمع الخامس']) assert.equal(run(q).length, 0, q);
+  // الأرقام غير الأبعاد لا تصبح فلاتر
+  assert.equal(S.parseQuery('عمارة 12').area, null);
 });
 
 test('القيم المجهولة: لا تطابق فلترًا رقميًا وتُرتَّب في النهاية', () => {
