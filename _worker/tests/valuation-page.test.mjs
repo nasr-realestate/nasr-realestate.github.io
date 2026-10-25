@@ -449,3 +449,27 @@ test("the agent journey auto-runs once the area list is loaded and the link is c
   assert.equal(partial.el("result").classList.contains("show"), false);
   assert.equal(partial.el("area").value, "المنطقة السادسة");
 });
+
+// ═══════════ اختبار رجوع من التدقيق العملي (2026-10-25): V02 ═══════════
+test("audit V02: a fallback estimate never claims high confidence and shows the snapshot date on its own row", async () => {
+  const fb = await pageWithAreas();
+  await runValuationWith(fb.page, { propertyType: "محل تجاري", size: "80" });
+  assert.equal(fb.page.el("fallbackNotice").classList.contains("show"), true, "the Worker answered from the city snapshot");
+  const fbConfidence = fb.page.el("confidence");
+  assert.doesNotMatch(fbConfidence.textContent, /عالية/, "fallback must not read as a local high-confidence estimate");
+  assert.match(fbConfidence.textContent, /محدودة/);
+  assert.match(fbConfidence.getAttribute("class") || fbConfidence.className || "", /\blow\b/);
+  assert.equal(fb.page.el("confidenceWarning").classList.contains("show"), true);
+  assert.match(fb.page.el("confidenceWarningText").textContent, /مدينة نصر/, "the warning names the scope actually used");
+
+  const normal = await pageWithAreas();
+  await runValuationWith(normal.page);
+  assert.doesNotMatch(normal.page.el("confidence").textContent, /محدودة — بيانات/);
+
+  // تاريخ اللقطة في سطر مستقل عن «فترة البيانات» — لا خلط بين calculated_at و period
+  for (const p of [fb.page, normal.page]) {
+    assert.ok(p.el("snapshotUpdated"), "the snapshot-updated row exists");
+    assert.doesNotMatch(p.el("marketPeriod").textContent, /آخر تحديث/, "the period row no longer carries the update date");
+    assert.notEqual(p.el("snapshotUpdated").textContent.trim(), "");
+  }
+});

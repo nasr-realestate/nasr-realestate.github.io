@@ -409,7 +409,7 @@
 
       <div class="low-confidence-warning" id="confidenceWarning" role="status" aria-live="polite" aria-hidden="true">
         <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-        <span>العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.</span>
+        <span id="confidenceWarningText">العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.</span>
       </div>
 
       <div class="fallback-notice" id="fallbackNotice" role="status" aria-live="polite" aria-hidden="true">
@@ -441,6 +441,10 @@
         <div class="meta-item">
           <div class="meta-label">فترة البيانات</div>
           <div class="meta-value" id="marketPeriod">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">آخر تحديث للقطة</div>
+          <div class="meta-value" id="snapshotUpdated" style="font-size:0.9rem">—</div>
         </div>
         <div class="meta-item full">
           <div class="meta-label" id="marketRangeLabel">نطاق سعر المتر (P25 – P75)</div>
@@ -1072,7 +1076,12 @@ function showResult(data, inputs, asking) {
   $('fallbackNotice').setAttribute('aria-hidden', String(!usedFallback));
   const sampleCount = Number(data.sample_count);
   $('sampleCount').textContent = hasNumericValue(data.sample_count) && sampleCount >= 0 ? fmt(sampleCount) : 'غير متاح';
-  $('marketPeriod').textContent = data.period || (data.updated_at ? `آخر تحديث: ${data.updated_at}` : 'غير محددة في السجل');
+  $('marketPeriod').textContent = data.period || 'غير محددة في السجل';
+  /* تاريخ اللقطة منفصل عن «فترة البيانات»: التدقيق (V02) رصد calculated_at أقدم من period
+     فكان الخلط يوهم بأن البيانات أحدث ممّا هي. */
+  const snapshotAt = String(data.calculated_at || data.updated_at || '').trim();
+  const updatedEl = $('snapshotUpdated');
+  if (updatedEl) updatedEl.textContent = snapshotAt || 'غير مسجل في السجل';
 
   const perMeterRange = data.price_per_m2_range || {};
   $('marketRange').textContent = hasNumericValue(perMeterRange.low) && hasNumericValue(perMeterRange.high)
@@ -1086,14 +1095,25 @@ function showResult(data, inputs, asking) {
       : 'حدود العينة غير مسجلة';
   }
 
-  const knownConfidence = ['high', 'medium', 'low'].includes(data.confidence) ? data.confidence : 'unknown';
+  /* التدقيق (V02): تقدير مبني على fallback لبيانات المدينة العامة لا يجوز أن يحمل
+     ثقة «عالية» موضعية — الثقة هنا للمنطقة العامة لا للعنوان المطلوب. */
+  const storedConfidence = ['high', 'medium', 'low'].includes(data.confidence) ? data.confidence : 'unknown';
+  const knownConfidence = usedFallback && storedConfidence === 'high' ? 'medium' : storedConfidence;
   const confidence = $('confidence');
-  confidence.className = 'confidence ' + knownConfidence;
-  confidence.textContent = knownConfidence === 'high' ? '● عالية'
-    : knownConfidence === 'medium' ? '● متوسطة'
-      : knownConfidence === 'low' ? '● منخفضة' : '● غير محددة';
+  confidence.className = 'confidence ' + (usedFallback ? 'low' : knownConfidence);
+  confidence.textContent = usedFallback
+    ? (storedConfidence === 'unknown' ? '● محدودة — بيانات مدينة نصر العامة' : '● محدودة — نطاق غير محلي')
+    : knownConfidence === 'high' ? '● عالية'
+      : knownConfidence === 'medium' ? '● متوسطة'
+        : knownConfidence === 'low' ? '● منخفضة' : '● غير محددة';
   const cw = $('confidenceWarning');
-  const showCw = knownConfidence === 'low' || knownConfidence === 'unknown';
+  const showCw = usedFallback || knownConfidence === 'low' || knownConfidence === 'unknown';
+  const cwText = $('confidenceWarningText');
+  if (cwText) {
+    cwText.textContent = showCw && usedFallback
+      ? `الثقة محدودة: الأرقام مبنية على بيانات «${areaShown}» العامة لا على «${requestedArea || areaShown}» — لا تمثل سعر إتمام مؤكدًا.`
+      : 'العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.';
+  }
   cw.classList.toggle('show', showCw);
   cw.setAttribute('aria-hidden', String(!showCw));
 
