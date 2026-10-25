@@ -4,8 +4,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 import {
+  HEAD_TARGETS,
+  requestHeadTargets,
   classifyAudioResponse,
   checkSocialHead,
   extractSocialMeta,
@@ -23,9 +26,10 @@ const REPO_COUNT = fs.readdirSync(new URL('../../_properties/', import.meta.url)
 
 const AUDIO = listAudioFiles();
 const PROPERTY_SRC = '_properties/2026-10-10-apartment-helmy-abdel-aaty-seraj-230m.md';
-const REQUEST_SRC = '_requests/2026-10-18-apartment-rent-art-studio-large-reception.md';
+const REQUEST_TARGET = HEAD_TARGETS.find(t => t.kind === 'request');
+const REQUEST_SRC = REQUEST_TARGET?.source;
 const propertyDesc = String(parseFrontMatter(fs.readFileSync(PROPERTY_SRC, 'utf8')).data.description || '').replace(/\s+/g, ' ').trim();
-const requestDesc = String(parseFrontMatter(fs.readFileSync(REQUEST_SRC, 'utf8')).data.description || '').replace(/\s+/g, ' ').trim();
+const requestDesc = REQUEST_SRC ? String(parseFrontMatter(fs.readFileSync(REQUEST_SRC, 'utf8')).data.description || '').replace(/\s+/g, ' ').trim() : '';
 const SIZE = new Map(AUDIO.map((a) => [a.url, a.bytes]));
 
 function jsonResponse(data, status = 200) {
@@ -61,7 +65,7 @@ function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpS
     if (u.pathname === '/properties/apartment-sale-helmy-abdel-aaty-seraj-mall-230m/') {
       return htmlResponse(pageHtml({ title: 'شقة 230م', description: propertyDesc, duplicateDescription }));
     }
-    if (u.pathname === '/requests/apartment-rent-request-art-studio-large-reception-2026-10-18/') {
+    if (REQUEST_TARGET && u.pathname === REQUEST_TARGET.path) {
       return htmlResponse(pageHtml({ title: 'مطلوب شقة', description: requestDesc, duplicateDescription }));
     }
     if (u.pathname === '/agent.html') {
@@ -216,4 +220,19 @@ test("pollUntil: يتوقف عند أول نجاح ويعيد عدد المحا�
   const r = await pollUntil(async () => { n += 1; return { ok: n === 3, value: n }; }, { attempts: 5, delayMs: 1, sleep: async () => {} });
   assert.equal(r.ok, true);
   assert.equal(r.attempts, 3);
+});
+
+
+test('request social targets follow live source files, including an empty collection after expiry', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'request-head-targets-'));
+  try {
+    assert.deepEqual(requestHeadTargets(root), []);
+    fs.mkdirSync(path.join(root, '_requests'));
+    const file = path.join(root, '_requests', '2026-10-25-example.md');
+    fs.writeFileSync(file, '---\nslug: sample-request\n---\n');
+    assert.equal(requestHeadTargets(root)[0].path, '/requests/sample-request/');
+    fs.unlinkSync(file);
+    assert.deepEqual(requestHeadTargets(root), []);
+    assert.ok(HEAD_TARGETS.every(t => fs.existsSync(t.source)));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
