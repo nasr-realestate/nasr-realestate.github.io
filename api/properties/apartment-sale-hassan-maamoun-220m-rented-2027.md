@@ -19,6 +19,7 @@
 
 - **صفحة الوحدة**: https://nasr-realestate.github.io/properties/apartment-sale-hassan-maamoun-220m-rented-2027/
 - **نسخة JSON**: https://nasr-realestate.github.io/api/properties/apartment-sale-hassan-maamoun-220m-rented-2027.json
+- **الصورة**: https://nasr-realestate.github.io/assets/img/properties/hassan-maamoun-220m.webp
 
 ## التواصل
 
