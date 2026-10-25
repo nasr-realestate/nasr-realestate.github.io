@@ -7,7 +7,7 @@ price: "8,000,000 ج.م"
 category: apartments
 id: "hassan-maamoun-220m-rented-2027"
 slug: "apartment-sale-hassan-maamoun-220m-rented-2027"
-image: "/assets/img/social-properties.png"
+image: "/assets/img/properties/hassan-maamoun-220m.webp
 # لم تصل صورة للشقة بعد؛ لا image_file ولا صورة لوحدة أخرى.
 # المسار المقترح عند وصول الصورة: assets/img/properties/Hassan-Maamoun-220m-Rented-2027.webp
 area: "220 متر مربع"
