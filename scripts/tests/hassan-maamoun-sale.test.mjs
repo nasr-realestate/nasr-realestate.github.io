@@ -24,7 +24,11 @@ test('Hassan Maamoun: sale price and existing tenancy remain distinct, without i
   assert.equal(data.finish, undefined);
   assert.equal(data.image_file, 'hassan-maamoun-220m.webp');
   assert.equal(data.image, '/assets/img/properties/og/hassan-maamoun-220m.jpg');
-  assert.notEqual(data.audio_ad, true);
+  assert.equal(data.audio_ad, true);
+  assert.equal(data.audio_file, `/assets/audio/properties/${slug}.mp3`);
+  assert.equal(data.audio_duration, '27 ثانية');
+  assert.match(data.audio_script, /مؤجرة لحد نهاية ألفين سبعة وعشرين/);
+  assert.match(data.audio_script, /بتلاتة وعشرين ألف جنيه شهريًا/);
   assert.match(source, /3 بلكونات/);
   assert.match(source, /ليست خالية للتسليم الفوري/);
   assert.match(source, /نسخة عقد الإيجار/);
@@ -46,7 +50,7 @@ test('Hassan Maamoun: sale classification, eight-million price and tenancy reach
   assert.equal(item.image, property.image);
 });
 
-test('Hassan Maamoun: live renderer has valid sale schema, tenancy warning, actual gallery image and no unpublished player', async () => {
+test('Hassan Maamoun: live renderer has valid sale schema, tenancy warning, actual gallery image and one published audio player', async () => {
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -64,7 +68,21 @@ test('Hassan Maamoun: live renderer has valid sale schema, tenancy warning, actu
     assert.match(html, /23,000 جنيه شهريًا/);
     assert.match(html, /نهاية 2027/);
     assert.match(html, /سيتي ستارز/);
-    assert.doesNotMatch(html, /<audio\b/);
+    assert.equal((html.match(/<audio\b/g) || []).length, 1);
+    const player = html.match(/<audio\b[^>]*>/)[0];
+    assert.match(player, /preload="none"/);
+    assert.doesNotMatch(player, /autoplay/);
+    assert.ok(player.includes(data.audio_file));
+    const audioResponse = await fetch(base + data.audio_file);
+    assert.equal(audioResponse.status, 200);
+    assert.match(audioResponse.headers.get('content-type'), /audio\/mpeg/);
+    const audio = Buffer.from(await audioResponse.arrayBuffer());
+    const registered = JSON.parse(fs.readFileSync(new URL('../../_data/audio_voice_log.json', import.meta.url), 'utf8')).entries.find(e => e.slug === slug);
+    assert.equal(audio.length, registered.bytes);
+    assert.equal(createHash('sha256').update(audio).digest('hex'), registered.sha256);
+    const rangeResponse = await fetch(base + data.audio_file, { headers: { range: 'bytes=0-0' } });
+    assert.equal(rangeResponse.status, 206);
+    assert.equal(rangeResponse.headers.get('content-range'), `bytes 0-0/${registered.bytes}`);
     const gallery = html.match(/<img[^>]+id="ppMainImage"[^>]*>/)[0];
     assert.match(gallery, /src="[^"]*\/hassan-maamoun-220m.webp"/);
     assert.match(gallery, /width="1280" height="960"/);
@@ -95,4 +113,20 @@ test('Hassan Maamoun: original owner photo is unchanged and every image variant 
   const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
   assert.equal(facets.listings[slug].card_image, '/assets/img/properties/cards/hassan-maamoun-220m.webp');
   assert.equal(facets.catalog.order[0], slug);
+});
+
+
+test('Hassan Maamoun: audio is registered under the unchanged standard with session-approved review-band identity', () => {
+  const log = JSON.parse(fs.readFileSync(new URL('../../_data/audio_voice_log.json', import.meta.url), 'utf8'));
+  const spec = JSON.parse(fs.readFileSync(new URL('../../_data/voice_identity.json', import.meta.url), 'utf8'));
+  const entry = log.entries.find(e => e.slug === slug);
+  assert.equal(entry.origin, 'produced-under-spec');
+  assert.equal(entry.script, data.audio_script);
+  assert.equal(entry.approval, 'owner-in-session');
+  assert.equal(entry.ownerOverride, false);
+  assert.equal(entry.voiceIdPersistent, false);
+  assert.equal(entry.classification, 'possible-deviation-review');
+  assert.ok(entry.speakerCosineToReference >= spec.identityBand.thresholds.borderlineNeedsOwnerApproval);
+  assert.ok(entry.speakerCosineToReference < spec.identityBand.thresholds.identicalVoice);
+  assert.ok(entry.durationSeconds <= spec.encoding.maxDurationSeconds);
 });
