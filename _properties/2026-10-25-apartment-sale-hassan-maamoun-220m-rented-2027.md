@@ -8,8 +8,6 @@ category: apartments
 id: "hassan-maamoun-220m-rented-2027"
 slug: "apartment-sale-hassan-maamoun-220m-rented-2027"
 image: "/assets/img/properties/hassan-maamoun-220m.webp
-# لم تصل صورة للشقة بعد؛ لا image_file ولا صورة لوحدة أخرى.
-# المسار المقترح عند وصول الصورة: assets/img/properties/Hassan-Maamoun-220m-Rented-2027.webp
 area: "220 متر مربع"
 rooms: "3 غرف نوم + ريسبشن 4 قطع"
 bathrooms: "3 حمامات"
