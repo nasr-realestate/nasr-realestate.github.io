@@ -123,7 +123,9 @@
   "name": {{ page.title | jsonify }},
   "description": {{ page.description | default: page.title | jsonify }},
   "identifier": {{ page.slug | default: page.id | jsonify }},
+  {%- if page.image_file and page.image_file != "" %}
   "image": ["{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"],
+  {%- endif %}
   "datePosted": "{{ page.date | date_to_xmlschema }}",
   "inLanguage": "ar-EG",
   "isPartOf": { "@id": "{{ site.url }}/properties/#collection" },

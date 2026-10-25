@@ -79,7 +79,15 @@ body_class: "homepage"
 </script>
 
 <!-- ═══ 1. Hero — عرض عقاري حي بهوية الشعار ═══ -->
-{%- assign hero_slug = site.data.listing_facets.catalog.order | first -%}
+{%- comment -%} أول عرض له صورة حقيقية؛ العروض بلا صورة تظل في أحدث العقارات. {%- endcomment -%}
+{%- assign hero_slug = nil -%}
+{%- for candidate_slug in site.data.listing_facets.catalog.order -%}
+  {%- assign candidate_fact = site.data.listing_facets.listings[candidate_slug] -%}
+  {%- if candidate_fact.card_image -%}
+    {%- assign hero_slug = candidate_slug -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
 {%- assign hero_listing = site.properties | where: "slug", hero_slug | first -%}
 {%- assign hero_fact = site.data.listing_facets.listings[hero_slug] -%}
 <section class="hp-hero">

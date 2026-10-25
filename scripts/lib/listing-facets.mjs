@@ -150,7 +150,7 @@ export function buildListingFacets(root) {
     const myArea = myAreas.length ? myAreas : segmentMembers({ ...l, in_area: true }, locations[slug], segments).filter((k) => areaKeys.has(k));
     const priceGap = (o) => (l.price && o.price ? Math.abs(Math.log(o.price / l.price)) : Infinity);
     l.related = catalogOrder
-      .filter((s) => s !== slug && listings[s].deal === l.deal)
+      .filter((s) => s !== slug && listings[s].deal === l.deal && listings[s].card_image)
       .map((s) => ({ s, o: listings[s] }))
       .sort((a, b) => (
         (Number(b.o.type === l.type) - Number(a.o.type === l.type)) ||

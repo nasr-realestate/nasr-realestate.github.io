@@ -34,6 +34,21 @@ export const MCP_CARD_PATH = '.well-known/mcp.json';
 
 const AUDIO_PREFIX = '/assets/audio/';
 
+/** Requests expire after seven days; never verify a deleted historical request. */
+export function requestHeadTargets(root = ROOT) {
+  const dir = path.join(root, '_requests');
+  if (!fs.existsSync(dir)) return [];
+  const requests = fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort().reverse();
+  for (const file of requests) {
+    const { data } = parseFrontMatter(fs.readFileSync(path.join(dir, file), 'utf8'));
+    if (data.slug) return [{
+      id: 'request-current', path: `/requests/${data.slug}/`,
+      source: `_requests/${file}`, kind: 'request',
+    }];
+  }
+  return [];
+}
+
 // صفحات تُفحص بوكيل WhatsApp/Facebook (raw <head>) — نفس ما يراه مُولّد
 // المعاينة عند مشاركة الرابط، بلا JS وبلا تسجيل دخول.
 export const HEAD_TARGETS = [
@@ -49,12 +64,7 @@ export const HEAD_TARGETS = [
     source: 'agent.html',
     kind: 'agent',
   },
-  {
-    id: 'request-current',
-    path: '/requests/apartment-rent-request-art-studio-large-reception-2026-10-18/',
-    source: '_requests/2026-10-18-apartment-rent-art-studio-large-reception.md',
-    kind: 'request',
-  },
+  ...requestHeadTargets(ROOT),
 ];
 
 export const SOCIAL_CRAWLER_UA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
