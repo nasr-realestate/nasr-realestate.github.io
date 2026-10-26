@@ -4,7 +4,7 @@ A fourth Worker (`nasr-ai-gateway`, added 2026-10-16) exposes the site's listing
 
 | Repository file | Wrangler config | Cloudflare Worker | Version | Role |
 | --- | --- | --- | --- | --- |
-| `_worker/worker.js` | `_worker/wrangler.agent.toml` (`main = "worker.js"`) | `royal-snow-ea32` | **v9.3-W** (`release:` في ترويسة الملف، آخر نشر 2026-10-14) | The conversational agent used by `agent.html` (chat + `POST /upload-images`) |
+| `_worker/worker.js` | `_worker/wrangler.agent.toml` (`main = "worker.js"`) | `royal-snow-ea32` | **v10.0-chat** in the repository (`release:` header); the **live** module stays v9.3-W (deployed 2026-10-14) until the owner runs the configure workflow | The agent behind `agent.html`: `POST /chat` (Gemini-first, v10) + the legacy `POST /` formState chat and `POST /upload-images` (kept for compatibility) |
 | `_worker/valuation-worker.js` | `_worker/wrangler.valuation.toml` (`main = "valuation-worker.js"`) | `noisy-bush-fd84` | **v6.2**, contract `d1-price-snapshots-v2` | The valuation API used by `tools/valuation.html` (`GET /areas`, `POST /api`) |
 | `_worker/properties-sync-worker.js` | `_worker/wrangler.sync.toml` (`main = "properties-sync-worker.js"`) | `nasr-properties-sync` | **v1.0.4** | GitHub `_properties/*.md` → D1 `listings` (source_id = 9), hourly Cron + manual HTTP trigger |
 | `_worker/mcp-worker.js` | `_worker/wrangler.mcp.toml` (`main = "mcp-worker.js"`) | `nasr-ai-gateway` | **v1.0.1** | Read-only MCP server + JSON API over the public `ai-feed.json` — no binding, no secret, no D1 |
@@ -12,6 +12,31 @@ A fourth Worker (`nasr-ai-gateway`, added 2026-10-16) exposes the site's listing
 **Each Worker is one self-contained file and imports nothing.** There is no shared module: the legacy shared D1 reader (`market-data`) was never imported by either Worker (Wrangler only bundles what is imported, so it was never deployed) and has been removed. The static `assets/data/market-data.json` is a different file: the valuation page reads only area *descriptions* from it (names, level, landmarks, streets) — never prices, confidence or fallbacks.
 
 Bindings and settings required by both Workers: the `DB` D1 binding to `nasr-market-db` (declared in both TOML files) and `workers_dev = true`. The **live** agent Worker runs `compatibility_date = "2026-09-04"` (the 2026-09-01 values in older notes were never its production date — `wrangler.agent.toml` now mirrors the live settings and is documentation only). Since 2026-10-10 the agent Worker also binds `PUSH_SUBS` → KV namespace `nasr-push-subs` for Web Push subscriptions (see `PUSH-NOTIFICATIONS.md`). `GEMINI_MODEL` (a plain-text variable that existed since the first deployment but was unused until v9.3) is now read by the code: if Google rejects the name (400/404) the Worker falls back to the built-in `gemini-3.5-flash-lite` once, so a wrong variable can never turn the agent silent. v9.3 also caches `ai-feed.json` at the Cloudflare edge (`cf.cacheTtl = 300`) — a newly published listing can take up to 5 minutes to appear in the agent's gallery. Deployment of the agent Worker is gated by `EXPECTED_WORKER_SHA256` in `.github/workflows/push-notify-setup.yml`: any change to `_worker/worker.js` requires updating that fingerprint deliberately (`release:` in the file header is the human-readable twin of that fingerprint, and the read-only audit compares it against the live module). Secrets: the **agent** Worker keeps `GEMINI_API_KEY`, `IMGBB_API_KEY` (and now `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `PUSH_SEND_SECRET` for Web Push — never stored in this repository); the **valuation** Worker needs no secret. `ALLOWED_ORIGINS` is an optional comma-separated plain variable for extra CORS origins — the site origin is already allowed by default in code. The agent Worker does **not** read prices from D1; its property listings come from `ai-feed.json`.
+
+## Agent Worker — `POST /chat` (v10.0-chat, Gemini-first)
+
+`agent.html` now sends **every** visitor message (greetings, general questions, corrections, quick-reply chips) to `POST /chat` after a one-time explicit consent in the page. The route is stateless and independent of the legacy `POST /` formState chat, which is left untouched for compatibility (the new page no longer calls it, and no longer uploads images).
+
+| Request field | Meaning |
+| --- | --- |
+| `consent` | must equal `"gemini-v1"`, otherwise `412 consent_required` before anything else happens |
+| `message` | the visitor's text (≤ 1000 characters) |
+| `state` | the short structured state returned by the previous turn (role, operation, property type, location, area, price + kind, optional owner details) — sanitised field by field |
+| `history` | the last ≤ 10 messages `{role, text}` from page memory (each capped at 600 characters before Gemini) |
+| `focus` *(optional)* | a listing slug the visitor asked about («اسأل عنه») |
+| `valuation` *(optional)* | the numbers returned by the valuation tool, sent once after the round trip; reaches Gemini only as numbers and only for owners |
+
+Per message: sanitise the client state → redact phone/national ID/card/IBAN/e-mail/password and exact building numbers → deterministic parse of the user's own words → one Gemini `generateContent` call (JSON mode + `responseSchema` + minimal thinking for the model family — `thinkingLevel: "low"` on Gemini 3.x, `thinkingBudget: 0` on 2.5 Flash, 128 on 2.5 Pro; each rejected setting (`400`) is retried with a simpler one, an env model rejected with `404` falls back to the built-in model; 20 s budget; errors carry content-free `diag` timings) → merge Gemini's proposed patch **only where the user's words support it** (deal conflicts or seeker/owner ambiguity become one clarifying question; a buy↔rent switch drops the old price) → search / comparables from `ai-feed.json` (Nasr City rows only; comparison needs ≥ 3 published asking prices of the same type and deal, location first then the whole city, always labelled as asking prices with count and data date) → ground Gemini's reply (numbers must come from the user, the data or the published site facts; no availability, «sent/registered», legal, rent-commission, deposit or price-verdict claims without data; site links only; one question per reply; ≤ 700 characters).
+
+Errors are explicit — never a canned local answer: `503 gemini_unconfigured` (no key), `503 gemini_unavailable` / `gemini_busy`, `504 gemini_timeout`, `502 gemini_invalid`, `429 rate_limited` (15 per 30 s per IP, shared with the legacy route), `413`, `415`, `400`. The Worker logs nothing but Gemini's HTTP status code, and touches no D1, KV, ImgBB or WhatsApp.
+
+Deployment order (merging the PR deploys **only** GitHub Pages, never the Worker): run **Push Notifications Setup → configure** (it can be dispatched on the PR branch; it uploads this single file after the `EXPECTED_WORKER_SHA256` gate and then probes `OPTIONS /chat` → 204, `POST /chat` without consent → 412, and **one synthetic consented message («أهلا», no customer data; only the HTTP code, model and reply length are logged)** that must come back `ok` from Gemini for a `SUCCESS` verdict) and only then merge, so the new page never meets an old or broken Worker. If the page does meet an old Worker, it shows «الخادم مش جاهز» and offers the local search — it never renders the legacy answer as a Gemini reply. The same check by hand:
+
+```bash
+curl -sS -X POST https://royal-snow-ea32.footcai-555.workers.dev/chat \
+  -H "Origin: https://nasr-realestate.github.io" -H "Content-Type: application/json" \
+  --data '{"consent":"gemini-v1","message":"أهلا"}' | jq '{ok, error, provider, reply}'
+```
 
 ## MCP Gateway — `nasr-ai-gateway` (v1.0.1)
 

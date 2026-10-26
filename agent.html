@@ -125,16 +125,9 @@ extra_head: |
        بنقولها صريحة هنا، وكل القواعد اللي بعدها بتفترض direction: rtl. */
     html.page-agent, body.page-agent { direction: rtl; }
     body.page-agent #app > .header { flex: 0 0 auto; }
-    body.page-agent #app > .home-view { flex: 1 1 auto; min-height: 0; }
+
     body.page-agent #app > .chat-area { flex: 1 1 auto; min-height: 0; }
     body.page-agent #app > .bottom-dock { flex: 0 0 auto; }
-    body.page-agent #app.is-home > .chat-area { display: none; }
-    body.page-agent #app.is-session > .home-view { display: none; }
-    body.page-agent #app.is-home > .session-bar,
-    body.page-agent #app.is-home > .session-summary,
-    body.page-agent #app.is-home > .agent-state,
-    body.page-agent #app.is-home > .action-rail,
-    body.page-agent #app.is-home > .scroll-btn { display: none !important; }
 
     /* ═══ الهيدر ═══ */
     body.page-agent .header {
@@ -219,9 +212,6 @@ extra_head: |
     }
     body.page-agent .header-btn:hover,
     body.page-agent .header-btn:active { background: rgba(66, 197, 65, 0.10); color: var(--gold-hi); }
-    body.page-agent #summaryBtn { display: none; }
-    body.page-agent #app.is-session #summaryBtn { display: flex; }
-    body.page-agent #backBtn.is-home-btn i { transform: scaleX(-1); }
 
     /* ═══ إشعار داخلي — شريط رفيع تحت الهيدر ═══ */
     body.page-agent #app > .inapp-notif {
@@ -255,190 +245,8 @@ extra_head: |
     body.page-agent .notif-sub { font-size: 11.5px; }
 
     /* ═══ الرئيسية ═══ */
-    body.page-agent #app > .home-view {
-      overflow-y: auto;
-      overflow-x: hidden;
-      overscroll-behavior: contain;
-      padding: 18px 16px 10px;
-      scrollbar-width: thin;
-    }
-    body.page-agent .home-inner { max-width: 520px; margin: 0 auto; }
-    body.page-agent .home-hero {
-      position: relative;
-      padding: 6px 2px 18px;
-      isolation: isolate;
-    }
+
     /* لمعة ذهبية هادئة أعلى اليمين بدل الزخرفة الخطية (الخطوط كانت بتعدّي على العنوان) */
-    body.page-agent .home-hero::before {
-      content: "";
-      position: absolute;
-      inset: -40px -30px auto auto;
-      width: 210px; height: 210px;
-      z-index: 0;
-      opacity: .55;
-      background: radial-gradient(circle at 70% 30%, rgba(66, 197, 65, .16), transparent 62%);
-      pointer-events: none;
-    }
-    body.page-agent .home-eyebrow,
-    body.page-agent .home-title,
-    body.page-agent .home-sub,
-    body.page-agent .home-trust { position: relative; z-index: 1; }
-    body.page-agent .home-eyebrow {
-      display: inline-flex; align-items: center; gap: 7px;
-      color: var(--gold);
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 1.4px;
-      margin-bottom: 10px;
-    }
-    body.page-agent .home-eyebrow::before {
-      content: "";
-      width: 18px; height: 1px; background: var(--gold); opacity: .7;
-    }
-    body.page-agent .home-title {
-      margin: 0 0 10px;
-      font-size: clamp(29px, 8.6vw, 38px);
-      font-weight: 900;
-      line-height: 1.18;
-      letter-spacing: -0.8px;
-      color: var(--text);
-    }
-    body.page-agent .home-title span { color: var(--gold-hi); }
-    body.page-agent .home-sub {
-      margin: 0 0 12px;
-      max-width: 34ch;
-      text-align: start;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.75;
-    }
-    body.page-agent .home-trust {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      margin-bottom: 18px;
-    }
-    body.page-agent .home-trust span {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 9px;
-      border: 1px solid var(--line-soft);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 10.5px;
-      font-weight: 600;
-    }
-    body.page-agent .home-trust i { color: var(--gold); font-size: 9px; }
-
-    body.page-agent .home-section-label {
-      display: flex; align-items: center; justify-content: space-between;
-      margin: 0 2px 9px;
-      color: var(--muted-2);
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: .6px;
-    }
-    body.page-agent .service-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    body.page-agent .service-card {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      min-height: 108px;
-      padding: 13px 13px 12px;
-      border-radius: 18px;
-      border: 1px solid var(--line-soft);
-      background:
-        linear-gradient(155deg, rgba(66, 197, 65, 0.055), transparent 46%),
-        var(--panel);
-      color: var(--text);
-      text-align: start;
-      cursor: pointer;
-      transition: transform .16s ease, border-color .16s ease, background .16s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    body.page-agent .service-card:hover { border-color: rgba(66, 197, 65, 0.30); }
-    body.page-agent .service-card:active { transform: scale(0.975); }
-    body.page-agent .service-card::after {
-      content: "";
-      position: absolute; inset-inline-start: 13px; bottom: 11px;
-      width: 22px; height: 1px;
-      background: rgba(66, 197, 65, 0.45);
-    }
-    body.page-agent .service-ico {
-      width: 34px; height: 34px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 10px;
-      background: rgba(66, 197, 65, 0.10);
-      border: 1px solid rgba(66, 197, 65, 0.22);
-      color: var(--gold-hi);
-      font-size: 14px;
-    }
-    body.page-agent .service-title { font-size: 14px; font-weight: 800; line-height: 1.25; }
-    body.page-agent .service-sub { font-size: 10.5px; color: var(--muted); line-height: 1.45; }
-    body.page-agent .service-card:last-child .service-sub { padding-bottom: 8px; }
-
-    body.page-agent .resume-card {
-      width: 100%;
-      display: flex; align-items: center; gap: 11px;
-      margin-top: 12px;
-      padding: 12px 13px;
-      border-radius: 16px;
-      border: 1px solid rgba(66, 197, 65, 0.34);
-      background: linear-gradient(140deg, rgba(66, 197, 65, 0.13), rgba(66, 197, 65, 0.03));
-      color: var(--text);
-      text-align: start;
-      cursor: pointer;
-    }
-    body.page-agent .resume-card .resume-ico {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--gold); color: var(--gold-ink);
-      flex: 0 0 34px; font-size: 13px;
-    }
-    body.page-agent .resume-copy { flex: 1 1 auto; min-width: 0; }
-    body.page-agent .resume-title { display: block; font-size: 12.5px; font-weight: 800; }
-    body.page-agent .resume-sub {
-      display: block; margin-top: 1px;
-      color: var(--muted); font-size: 10.5px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    body.page-agent .resume-card > i { color: var(--gold); font-size: 12px; }
-
-    body.page-agent .home-quick {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 14px;
-    }
-    body.page-agent .home-quick > * {
-      display: flex; align-items: center; gap: 8px;
-      min-height: 46px;
-      padding: 10px 12px;
-      border-radius: 13px;
-      border: 1px solid var(--line-soft);
-      background: rgba(12, 17, 12, 0.94);
-      color: var(--muted);
-      font-size: 11.5px;
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    body.page-agent .home-quick > *:hover,
-    body.page-agent .home-quick > *:active { border-color: rgba(66, 197, 65, 0.3); color: var(--text); }
-    body.page-agent .home-quick i { color: var(--gold); font-size: 13px; width: 15px; text-align: center; }
-    body.page-agent .home-note {
-      margin: 16px 2px 4px;
-      padding-top: 12px;
-      border-top: 1px solid var(--line-soft);
-      color: var(--muted-2);
-      font-size: 10px;
-      line-height: 1.65;
-      display: flex; gap: 7px; align-items: flex-start;
-    }
-    body.page-agent .home-note i { color: var(--gold); margin-top: 2px; font-size: 10px; }
 
     /* ═══ وضع البحث المحلي / المحادثة السحابية ═══ */
     body.page-agent #app > .request-mode {
@@ -451,96 +259,6 @@ extra_head: |
     body.page-agent .request-mode-link { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: #7ce386; }
 
     /* ═══ شريط الجلسة + ملخص الطلب ═══ */
-    body.page-agent #app > .session-bar {
-      flex: 0 0 auto;
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 14px;
-      border-bottom: 1px solid var(--line-soft);
-      background: rgba(12, 17, 12, 0.94);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    body.page-agent .session-progress { flex: 1 1 auto; min-width: 0; }
-    body.page-agent .session-progress-top {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      margin-bottom: 5px;
-    }
-    body.page-agent .session-progress-text {
-      color: var(--text);
-      font-size: 10.5px;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    body.page-agent .session-progress-pct { color: var(--gold); font-size: 10px; font-weight: 800; direction: ltr; }
-    body.page-agent .session-progress-track {
-      height: 3px; border-radius: 99px;
-      background: rgba(255, 255, 255, 0.08);
-      overflow: hidden;
-    }
-    body.page-agent .session-progress-fill {
-      height: 100%; width: 0%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--gold), var(--gold-hi));
-      transition: width .35s ease;
-    }
-    body.page-agent .summary-chip {
-      flex: 0 0 auto;
-      display: inline-flex; align-items: center; gap: 5px;
-      min-height: 38px;
-      padding: 8px 11px;
-      border-radius: 11px;
-      border: 1px solid var(--line);
-      background: rgba(66, 197, 65, 0.07);
-      color: var(--gold-hi);
-      font-size: 11px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    body.page-agent .summary-chip .summary-count {
-      min-width: 17px; height: 17px;
-      padding-inline: 4px;
-      display: inline-flex; align-items: center; justify-content: center;
-      border-radius: 99px;
-      background: var(--gold);
-      color: var(--gold-ink);
-      font-size: 9px;
-      font-weight: 900;
-    }
-    body.page-agent #app > .session-summary {
-      flex: 0 0 auto;
-      max-height: 41vh;
-      overflow-y: auto;
-      padding: 12px 14px 13px;
-      border-bottom: 1px solid var(--line-soft);
-      background: var(--ink-2);
-    }
-    body.page-agent .summary-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 9px;
-    }
-    body.page-agent .summary-head strong { color: var(--text); font-size: 12px; font-weight: 800; }
-    body.page-agent .summary-close {
-      width: 30px; height: 30px; border-radius: 9px;
-      border: 1px solid var(--line-soft); background: transparent;
-      color: var(--muted); font-size: 11px; cursor: pointer;
-    }
-    body.page-agent .summary-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-    body.page-agent .summary-item {
-      display: inline-flex; align-items: baseline; gap: 5px;
-      max-width: 100%;
-      padding: 5px 8px;
-      border-radius: 9px;
-      border: 1px solid rgba(66, 197, 65, 0.16);
-      background: rgba(66, 197, 65, 0.055);
-      font-size: 10.5px;
-      line-height: 1.5;
-    }
-    body.page-agent .summary-item b { color: var(--muted-2); font-weight: 600; }
-    body.page-agent .summary-item span { color: var(--text); font-weight: 700; overflow-wrap: anywhere; }
-    body.page-agent .summary-empty { color: var(--muted); font-size: 11.5px; line-height: 1.7; }
-    body.page-agent .summary-note { margin: 9px 0 0; color: var(--muted-2); font-size: 10px; line-height: 1.6; }
 
     /* ═══ المحادثة ═══ */
     body.page-agent .chat-area {
@@ -628,8 +346,7 @@ extra_head: |
     /* خطأ + إعادة محاولة */
     /* الرسائل البنائية (خطأ/عودة من التقييم) مبنيّة HTML: ما نورّثش pre-wrap من الفقاعة
        عشان المسافات في القالب ما تعملش فراغ كبير. */
-    body.page-agent .msg-error,
-    body.page-agent .msg-return { white-space: normal; }
+    body.page-agent .msg-error{ white-space: normal; }
     body.page-agent .msg-error {
       border-color: rgba(255, 122, 136, 0.28);
       background: linear-gradient(160deg, rgba(255, 122, 136, 0.09), rgba(12, 17, 12, .9));
@@ -782,7 +499,6 @@ extra_head: |
       cursor: pointer;
     }
     body.page-agent .scroll-btn.show { display: flex; }
-    body.page-agent #app.is-home .scroll-btn { display: none; }
 
     /* ═══ لوحة الإجابة السفلية ═══ */
     body.page-agent #app > .bottom-dock {
@@ -811,7 +527,6 @@ extra_head: |
     body.page-agent .agent-state.is-typing .agent-dot { background: var(--gold); animation: agPulse 1.4s infinite; box-shadow: none; }
     body.page-agent .agent-state.is-error { color: var(--danger); }
     body.page-agent .agent-state.is-error .agent-dot { background: var(--danger); box-shadow: none; }
-    body.page-agent #app.is-home .agent-state { display: none; }
 
     /* كارت واتساب — بيحتفظ بألوان واتساب الرسمية (زر تواصل حقيقي) */
     body.page-agent .wa-wrapper { display: none; margin: 0 0 7px; }
@@ -845,10 +560,8 @@ extra_head: |
 
     /* كارت التقييم (💎) — زر ذهبي في متناول الإبهام.
        ألوان الزر نفسه وأبعاده جاية من .valuation-link في style.css (إحنا ما بنعيدش تعريفه هنا
-       عشان ما نكسرش هوية الزر الذهبي المثبتة باختبار). */
-    /* لوحة الإجابة على الرئيسية: التقييم مش مكانه هنا (مكانه في «اختصارات») وبيفضل
+       عشان ما نكسرش هوية الزر الذهبي المثبتة باختبار). *//* لوحة الإجابة على الرئيسية: التقييم مش مكانه هنا (مكانه في «اختصارات») وبيفضل
        في المحادثة كزر ذهبي فوق الكيبورد. */
-    body.page-agent #app.is-home #valuationSlot { display: none; }
     body.page-agent #valuationSlot { margin: 0 0 7px; }
     body.page-agent #valuationSlot:empty { display: none; }
     body.page-agent .valuation-cta-rack { display: block; }
@@ -908,7 +621,6 @@ extra_head: |
     }
     body.page-agent .chip-quiet { border-color: var(--line-soft); background: transparent; color: var(--muted); }
     body.page-agent .chip-danger { border-color: rgba(255, 122, 136, 0.28); background: rgba(255, 122, 136, 0.055); color: var(--danger); }
-    body.page-agent .chip-map { border-color: rgba(111, 211, 168, 0.30); background: rgba(111, 211, 168, 0.07); color: var(--ok); }
 
     /* حالة فارغة داخل الشات */
     body.page-agent .chat-empty {
@@ -985,33 +697,6 @@ extra_head: |
     body.page-agent #app.is-session .composer-hint { display: none; }
 
     /* شريط الصور المرفقة */
-    body.page-agent .img-strip {
-      display: none;
-      gap: 6px;
-      padding: 0 4px 6px;
-      overflow-x: auto;
-    }
-    body.page-agent .img-strip.show { display: flex; }
-    body.page-agent .img-strip-item {
-      position: relative;
-      width: 52px; height: 52px;
-      flex: 0 0 52px;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-    }
-    body.page-agent .img-strip-item img { width: 100%; height: 100%; object-fit: cover; }
-    body.page-agent .img-strip-rm {
-      position: absolute; top: 2px; inset-inline-end: 2px;
-      width: 17px; height: 17px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(0, 0, 0, 0.66);
-      color: #fff;
-      font-size: 9px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-    }
 
     /* التوست */
     body.page-agent #app > .bottom-dock > .toast {
@@ -1212,39 +897,21 @@ extra_head: |
     body.page-agent .nm-pk-item-txt strong, body.page-agent .nm-pk-title, body.page-agent .nm-pk-result-label { color: var(--text); }
     body.page-agent .nm-pk-sub, body.page-agent .nm-pk-r1, body.page-agent .nm-pk-r2 { color: var(--muted); }
     body.page-agent .nm-pk-head { border-color: var(--line-soft); }
-    body.page-agent .map-picker-host { width: 100%; }
 
     /* ═══ استجابة الشاشات ═══ */
     @media (max-width: 380px) {
-      body.page-agent .home-view { padding: 14px 12px 8px; }
-      body.page-agent .home-title { font-size: 27px; }
-      body.page-agent .service-card { min-height: 102px; padding: 11px; }
-      body.page-agent .service-title { font-size: 13px; }
-      body.page-agent .service-sub { font-size: 10px; }
+
       body.page-agent .header-avatar { width: 34px; height: 34px; flex-basis: 34px; }
       body.page-agent .header-name { font-size: 13.5px; gap: 5px; }
       body.page-agent .header-badge { font-size: 8px; padding-inline: 5px; }
       body.page-agent .header-status { font-size: 10px; }
       body.page-agent .chip { font-size: 11px; min-height: 38px; padding: 7px 11px; }
     }
-    @media (max-height: 700px) {
-      body.page-agent .home-hero { padding-bottom: 10px; }
-      body.page-agent .home-title { font-size: clamp(24px, 7.4vw, 30px); }
-      body.page-agent .home-sub { margin-bottom: 8px; font-size: 12px; }
-      body.page-agent .service-card { min-height: 96px; }
-    }
+
     @media (max-height: 620px) {
       body.page-agent .composer-hint { display: none; }
     }
-    @media (max-height: 560px) {
-      body.page-agent .home-hero { padding-bottom: 10px; }
-      body.page-agent .home-title { font-size: 24px; }
-      body.page-agent .home-sub { display: none; }
-      body.page-agent .home-trust { display: none; }
-      body.page-agent .home-note { display: none; }
-      body.page-agent .service-card { min-height: 88px; }
-      body.page-agent #app > .session-summary { max-height: 32vh; }
-    }
+
     @media (prefers-reduced-motion: reduce) {
       body.page-agent *, body.page-agent *::before, body.page-agent *::after {
         scroll-behavior: auto !important;
@@ -1262,7 +929,7 @@ extra_head: |
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: none; }
     }
-  
+
     /* ═══ طبقة الداكن (مطابقة حرفيًا لكتلة @media prefers-color-scheme في style.css
        لصفحة الوكيل). دي نقطة البداية اللي هوية الشعار بتبني عليها —
        الاختبارات بتقارن كل إعلان هنا بالكتلة الأصلية. ═══ */
@@ -1357,37 +1024,186 @@ extra_head: |
     body.page-agent .nm-pk-results { background: var(--brand-panel); }
     body.page-agent .nm-pk-confirm { background: var(--brand-accent); }
 
-    body.page-agent .service-grid { display: flex; flex-direction: column; gap: 15px; }
-    body.page-agent .service-lane { min-width: 0; }
-    body.page-agent .service-lane-heading {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-      margin: 0 2px 8px; color: var(--text); font-size: 12px;
+    /* ═══ محادثة Gemini أولًا (2026-10-27) — المحادثة هي البداية مباشرة ═══ */
+    body.page-agent #app > .request-mode[hidden] { display: none !important; }
+    body.page-agent #app.is-local .header-status { color: var(--brand-sub); }
+    body.page-agent #app.is-local .status-dot { background: var(--brand-sub); animation: none; box-shadow: none; }
+
+    /* ملخص الطلب: سطر واحد قابل للفتح والتعديل — مش خطوة إجبارية */
+    body.page-agent #app > .chat-summary {
+      flex: 0 0 auto;
+      min-width: 0;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      background: var(--brand-panel);
     }
-    body.page-agent .service-lane-heading strong { font-size: 13px; font-weight: 900; }
-    body.page-agent .service-lane-heading span { color: var(--muted-2); font-size: 10.5px; }
-    body.page-agent .service-lane-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-    body.page-agent .service-card {
-      min-width: 0; min-height: 104px; padding: 12px;
-      border-color: rgba(255,255,255,.08); background: #0c110c;
-      transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+    body.page-agent .summary-toggle {
+      display: flex; align-items: center; gap: 7px;
+      width: 100%; min-width: 0; min-height: 40px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(66, 197, 65, 0.22);
+      background: rgba(66, 197, 65, 0.06);
+      color: var(--brand-text);
+      font-size: 12px; font-weight: 700;
+      text-align: start;
+      cursor: pointer;
     }
-    body.page-agent .service-card:hover { border-color: rgba(66,197,65,.48); background: #101710; }
-    body.page-agent .service-card:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
-    body.page-agent .service-card::after { background: rgba(66,197,65,.7); }
-    body.page-agent .service-ico { background: rgba(66,197,65,.09); border-color: rgba(66,197,65,.2); }
-    body.page-agent .service-title { font-size: 13px; }
-    body.page-agent .service-sub { font-size: 10.5px; line-height: 1.5; }
-    @media (max-width: 360px) {
-      body.page-agent .service-lane-cards { grid-template-columns: minmax(0, 1fr); }
-      body.page-agent .service-card { min-height: 82px; }
+    body.page-agent .summary-toggle .summary-kicker { flex: 0 0 auto; color: var(--brand-accent); font-weight: 800; }
+    body.page-agent .summary-toggle .summary-line {
+      flex: 1 1 auto; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    body.page-agent .summary-toggle i { flex: 0 0 auto; color: var(--brand-sub); font-size: 11px; transition: transform .16s ease; }
+    body.page-agent .summary-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+    body.page-agent .summary-panel { padding: 8px 2px 4px; }
+    body.page-agent .summary-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    body.page-agent .sum-chip {
+      display: inline-flex; align-items: center; gap: 2px;
+      max-width: 100%;
+      padding: 2px 3px 2px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(66, 197, 65, 0.20);
+      background: rgba(66, 197, 65, 0.06);
+      color: var(--brand-text);
+      font-size: 11.5px; font-weight: 700;
+      line-height: 1.4;
+    }
+    body.page-agent .sum-chip-label { padding-inline: 2px; overflow-wrap: anywhere; }
+    body.page-agent .sum-chip button {
+      flex: 0 0 auto;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 0; background: transparent;
+      color: var(--brand-sub);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    body.page-agent .sum-chip button:hover { background: rgba(66, 197, 65, 0.12); color: var(--brand-text); }
+    body.page-agent .summary-hint { margin: 7px 2px 0; color: var(--muted-2); font-size: 10.5px; line-height: 1.6; }
+
+    /* رد Gemini: علامة صغيرة توضّح مصدر الكلام */
+    body.page-agent .ai-tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(66, 197, 65, 0.28);
+      color: var(--brand-accent);
+      font-size: 9px; font-weight: 800; letter-spacing: .2px;
+      direction: ltr;
+    }
+
+    /* لوحة «من بيانات الموقع»: نتائج/مقارنة/تنبيهات — منفصلة عن كلام Gemini */
+    body.page-agent .msg-data { width: 100%; max-width: 100%; white-space: normal; }
+    /* الفقاعة مبنية HTML: المسافات بين العناصر ما تتحولش سطور فاضية — والسطور الحقيقية جوه نص الرد بس */
+    body.page-agent .msg-ai { white-space: normal; }
+    body.page-agent .msg-ai .msg-content { white-space: pre-wrap; }
+    body.page-agent .data-head {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 6px;
+      color: var(--brand-accent);
+      font-size: 10.5px; font-weight: 800;
+    }
+    body.page-agent .data-line {
+      margin: 0 0 6px;
+      color: var(--brand-text);
+      font-size: 12px; line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+    body.page-agent .data-line.is-change { color: var(--gold-hi); font-weight: 700; }
+    body.page-agent .data-line.is-notice { color: var(--brand-sub); }
+    body.page-agent .data-sub { color: var(--muted-2); font-size: 10.5px; line-height: 1.6; margin: 0 0 6px; }
+    body.page-agent .cmp-box {
+      margin: 4px 0 8px;
+      padding: 9px 11px;
+      border-radius: 13px;
+      border: 1px solid rgba(66, 197, 65, 0.20);
+      background: rgba(66, 197, 65, 0.05);
+      font-size: 12px; line-height: 1.75;
+    }
+    body.page-agent .cmp-box strong { color: var(--gold-hi); }
+    body.page-agent .data-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    body.page-agent .data-actions a,
+    body.page-agent .data-actions button,
+    body.page-agent .error-actions a,
+    body.page-agent .error-actions button {
+      display: inline-flex; align-items: center; gap: 5px;
+      min-height: 38px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(66, 197, 65, 0.30);
+      background: rgba(66, 197, 65, 0.08);
+      color: var(--brand-text);
+      font-size: 11.5px; font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    body.page-agent .error-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    body.page-agent .error-actions .retry-btn { margin-top: 0; }
+    body.page-agent .result-avail { margin-top: 6px; color: var(--brand-sub); font-size: 10.5px; line-height: 1.6; }
+    body.page-agent .result-ask {
+      display: inline-flex; align-items: center; gap: 5px;
+      min-height: 34px;
+      padding: 6px 11px;
+      border-radius: 9px;
+      border: 1px solid rgba(66, 197, 65, 0.30);
+      background: transparent;
+      color: var(--brand-accent);
+      font-size: 11px; font-weight: 800;
+      cursor: pointer;
+    }
+    body.page-agent .result-card { background: var(--brand-panel); }
+    body.page-agent .msg-failed { opacity: .62; }
+    body.page-agent .msg-failed .msg-time::before { content: "مااتبعتش · "; color: var(--danger); }
+
+    /* شيت الموافقة: خيارات واضحة بنفس الوزن تقريبًا (الموافقة مش إجبار) */
+    body.page-agent .privacy-alt {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; min-height: 44px;
+      margin-top: 8px;
+      border-radius: 13px;
+      border: 1px solid rgba(66, 197, 65, 0.30);
+      background: transparent;
+      color: var(--brand-text);
+      font-size: 13px; font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    body.page-agent .privacy-link { display: block; margin-top: 10px; text-align: center; color: var(--gold-hi); font-size: 11.5px; }
+    /* الشيت أطول من بعض الشاشات (320×640): يفضل جوه الشاشة ويتمرر بدل ما يقص الأزرار */
+    body.page-agent .privacy-overlay { position: fixed; inset: 0; height: 100vh; height: 100dvh; }
+    body.page-agent .privacy-sheet {
+      max-height: calc(100vh - 8px); max-height: calc(100dvh - 8px);
+      overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    }
+    /* حقل الكتابة: حلقة التركيز على الصندوق كله (:focus-within) بدل مستطيل جوه الصندوق */
+    body.page-agent #msgInput:focus-visible { outline: none !important; }
+    /* شاشات قصيرة (320×640): اللوحة السفلية أخف عشان المحادثة تفضل ظاهرة —
+       حالة الكتابة موجودة في الهيدر أصلًا، وعنوان الردود السريعة مش ضروري */
+    @media (max-height: 720px) {
+      body.page-agent #agentState { display: none; }
+      body.page-agent .action-rail-head { display: none; }
+      body.page-agent #waWrapper .wa-sub { display: none; }
+      body.page-agent #waBtn { min-height: 44px; padding-block: 6px; }
+      body.page-agent #valuationSlot { margin-bottom: 5px; }
+      body.page-agent #valuationSlot a { min-height: 40px; padding: 6px 14px; font-size: 13px; }
+      body.page-agent .privacy-icon { display: none; }
+      body.page-agent .privacy-desc { margin-bottom: 9px; }
+      body.page-agent .privacy-rules { margin-bottom: 10px; }
+      body.page-agent .privacy-warn { margin-bottom: 10px; }
+    }
+    @media (max-width: 380px) {
+      body.page-agent .summary-toggle { font-size: 11.5px; }
+      body.page-agent .data-actions a, body.page-agent .data-actions button,
+      body.page-agent .error-actions a, body.page-agent .error-actions button { font-size: 11px; padding: 6px 10px; }
     }
   </style>
 ---
-<div id="app" class="is-home">
-  <h1 class="sr-only">وكيل طارق الذكي — وكيل عقارات مدينة نصر</h1>
+<div id="app" class="is-session">
+  <h1 class="sr-only">مساعد طارق الذكي — عقارات مدينة نصر</h1>
 
   <header class="header">
-    <button class="header-back" id="backBtn" onclick="headerBack()" title="رجوع" aria-label="رجوع">
+    <button class="header-back" id="backBtn" onclick="headerBack()" title="رجوع" aria-label="الرجوع للموقع">
       <i class="fas fa-arrow-right" id="backIcon"></i>
     </button>
 
@@ -1395,12 +1211,12 @@ extra_head: |
 
     <div class="header-info" onclick="openAbout()">
       <div class="header-name">
-        طارق طنطاوي
+        مساعد طارق
         <span class="header-badge">سمسار طلبك</span>
       </div>
       <div class="header-status" id="statusLine" role="status" aria-live="polite">
         <span class="status-dot"></span>
-        <span id="statusText">وكيل ذكي • متصل الآن</span>
+        <span id="statusText">مساعد ذكي بـGemini • جاهز</span>
       </div>
     </div>
 
@@ -1415,7 +1231,7 @@ extra_head: |
     <div class="notif-icon-wrap green" id="notifIcon">💬</div>
     <div class="notif-body">
       <div class="notif-title" id="notifTitle">محادثة جديدة</div>
-      <div class="notif-sub" id="notifSub">طارق جاهز للمساعدة</div>
+      <div class="notif-sub" id="notifSub">اكتب براحتك</div>
     </div>
     <button class="notif-close" onclick="hideInappNotif()" aria-label="إغلاق">
       <i class="fas fa-times"></i>
@@ -1424,18 +1240,22 @@ extra_head: |
 
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
-  <div class="menu-glass" id="menuGlass" role="menu" aria-label="قائمة الوكيل">
-    <button class="menu-glass-item" role="menuitem" onclick="goHome()">
-      <span class="mi-icon"><i class="fas fa-house"></i></span>
-      الرئيسية
-    </button>
-    <button class="menu-glass-item" role="menuitem" onclick="resumeChat()">
-      <span class="mi-icon"><i class="fas fa-comments"></i></span>
-      المحادثة الحالية
-    </button>
+  <div class="menu-glass" id="menuGlass" role="menu" aria-label="قائمة المساعد">
     <button class="menu-glass-item" role="menuitem" onclick="openGallery()">
       <span class="mi-icon"><i class="fas fa-images"></i></span>
       معرض العقارات
+    </button>
+    <a class="menu-glass-item" role="menuitem" id="menuWa" href="#" target="_blank" rel="noopener" onclick="closeMenu()">
+      <span class="mi-icon"><i class="fab fa-whatsapp"></i></span>
+      كلّم طارق على واتساب
+    </a>
+    <button class="menu-glass-item" role="menuitem" onclick="toggleMode()">
+      <span class="mi-icon"><i class="fas fa-search"></i></span>
+      <span id="menuModeLabel">بحث محلي بدون ذكاء اصطناعي</span>
+    </button>
+    <button class="menu-glass-item" role="menuitem" onclick="revokeConsent()">
+      <span class="mi-icon"><i class="fas fa-shield-halved"></i></span>
+      إلغاء موافقة Gemini
     </button>
     <button class="menu-glass-item" role="menuitem" onclick="openAbout()">
       <span class="mi-icon"><i class="fas fa-user-tie"></i></span>
@@ -1446,9 +1266,9 @@ extra_head: |
       بروفايلي على Google
     </button>
     <div class="menu-glass-sep"></div>
-    <button class="menu-glass-item" role="menuitem" onclick="startNewChat()">
+    <button class="menu-glass-item" role="menuitem" onclick="showNewChatDialog()">
       <span class="mi-icon"><i class="fas fa-rotate-right"></i></span>
-      طلب جديد
+      محادثة جديدة
     </button>
     <button class="menu-glass-item danger" role="menuitem" onclick="showDeleteDialog()">
       <span class="mi-icon"><i class="fas fa-trash-can"></i></span>
@@ -1456,82 +1276,26 @@ extra_head: |
     </button>
   </div>
 
-  <!-- ═══ الرئيسية: اختيار الخدمة ═══ -->
-  <section class="home-view" id="homeView" aria-label="اختر خدمتك">
-    <div class="home-inner">
-      <div class="home-hero">
-        <div class="home-eyebrow">سمسار طلبك · مدينة نصر</div>
-        <h2 class="home-title">قول طلبك…<br><span>والباقي علينا</span></h2>
-        <p class="home-sub">اختار مسارك: تبحث عن عقار أو تعرض عقارك للبيع والإيجار. نجمع التفاصيل المناسبة لكل حالة، وطارق يكمل معاك.</p>
-        <div class="home-trust">
-          <span><i class="fas fa-medal"></i> خبرة منذ 2014</span>
-          <span><i class="fas fa-star"></i> Google Local Guide 7</span>
-          <span><i class="fas fa-shield-halved"></i> البحث المحلي لا يرسل محادثتك</span>
-        </div>
-      </div>
-
-      <div class="home-section-label">
-        <span>اختار المسار المناسب</span>
-        <span>٤ خدمات واضحة</span>
-      </div>
-      <div class="service-grid" id="serviceGrid" role="group" aria-label="خدمات الوكيل"></div>
-
-      <button class="resume-card" id="resumeCard" onclick="resumeChat()" hidden>
-        <span class="resume-ico"><i class="fas fa-comments"></i></span>
-        <span class="resume-copy">
-          <span class="resume-title" id="resumeTitle">كمّل محادثتك</span>
-          <span class="resume-sub" id="resumeSub">آخر رسالة وطلبك محفوظين في الجلسة</span>
-        </span>
-        <i class="fas fa-arrow-left"></i>
-      </button>
-
-      <div class="home-quick">
-        <button type="button" onclick="openGallery()"><i class="fas fa-building"></i> معرض العقارات</button>
-        <a href="/tools/valuation.html?from=agent&amp;journey=valuation" onclick="prepareValuation()"><i class="fas fa-gem"></i> قيّم عقارك</a>
-        <a id="homeWa" href="#" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> واتساب مباشر</a>
-        <button type="button" onclick="openAbout()"><i class="fas fa-user-tie"></i> طارق مين؟</button>
-      </div>
-
-      <p class="home-note">
-        <i class="fas fa-circle-info"></i>
-        <span>كل الأسعار والتوافر مبدئيين، والتأكيد النهائي مع أ. طارق. ما تبعتش رقم قومي أو بيانات بنكية.</span>
-      </p>
-    </div>
-  </section>
-
-  <!-- 2026-10-26: البحث والمسودة المحلية افتراضيًا (بلا Worker ولا Gemini)؛ المحادثة السحابية اختيار صريح. -->
-  <div class="request-mode" id="requestModeBar">
+  <!-- وضع البحث المحلي: بديل صريح (بلا ذكاء اصطناعي ولا إرسال للمحادثة) — مش بيتفعّل لوحده أبدًا -->
+  <div class="request-mode" id="requestModeBar" hidden>
     <label class="request-mode-toggle" for="localRequestMode">
-      <input type="checkbox" id="localRequestMode" checked>
-      <span>بحث ومسودة محلية — لا نرسل المحادثة للسحابة</span>
+      <input type="checkbox" id="localRequestMode">
+      <span>بحث محلي بدون ذكاء اصطناعي — المحادثة مش بتتبعت لأي خادم</span>
     </label>
     <a class="request-mode-link" href="{{ '/privacy-policy.html' | relative_url }}#local-agent">التفاصيل</a>
   </div>
 
-  <!-- ═══ الجلسة: حالة الطلب ═══ -->
-  <div class="session-bar" id="sessionBar">
-    <div class="session-progress">
-      <div class="session-progress-top">
-        <span class="session-progress-text" id="progressText">محادثة حرة</span>
-        <span class="session-progress-pct" id="progressPct"></span>
-      </div>
-      <div class="session-progress-track" role="progressbar" aria-label="تقدم الطلب" aria-valuemin="0" aria-valuemax="100" id="progressTrack">
-        <div class="session-progress-fill" id="progressFill"></div>
-      </div>
-    </div>
-    <button class="summary-chip" id="summaryBtn" onclick="toggleSummary()" aria-expanded="false" aria-controls="summaryPanel">
-      <i class="fas fa-list-check"></i>
-      طلبك
-      <span class="summary-count" id="summaryCount">0</span>
+  <!-- ملخص اللي المساعد فهمه — للمراجعة والتعديل بس، مش طلب متسجل -->
+  <div class="chat-summary" id="summaryBar" hidden>
+    <button type="button" class="summary-toggle" id="summaryBtn" onclick="toggleSummary()" aria-expanded="false" aria-controls="summaryPanel">
+      <span class="summary-kicker">فهمت:</span>
+      <span class="summary-line" id="summaryLine"></span>
+      <i class="fas fa-chevron-down" aria-hidden="true"></i>
     </button>
-  </div>
-
-  <div class="session-summary" id="summaryPanel" hidden>
-    <div class="summary-head">
-      <strong>ملخص طلبك</strong>
-      <button class="summary-close" onclick="toggleSummary(false)" aria-label="إغلاق الملخص"><i class="fas fa-times"></i></button>
+    <div class="summary-panel" id="summaryPanel" hidden>
+      <div class="summary-chips" id="summaryChips"></div>
+      <p class="summary-hint" id="summaryHint">ده اللي فهمته من كلامك — مش طلب متسجل ومفيش حاجة اتبعتت. اضغط ✎ عشان تعدّل أو × عشان تشيل شرط.</p>
     </div>
-    <div id="summaryBody"></div>
   </div>
 
   <div class="chat-area" id="chatArea" role="log" aria-live="polite" aria-relevant="additions" aria-label="المحادثة">
@@ -1546,11 +1310,11 @@ extra_head: |
     <i class="fas fa-arrow-down"></i>
   </button>
 
-  <!-- ═══ لوحة الإجابة: الخيارات + الكتابة ═══ -->
+  <!-- ═══ لوحة الكتابة: ردود سريعة اختيارية + الكتابة الحرة ═══ -->
   <div class="bottom-dock" id="answerDock">
     <div class="agent-state" id="agentState" role="status" aria-live="polite">
       <span class="agent-dot"></span>
-      <span id="agentStateText">الوكيل جاهز</span>
+      <span id="agentStateText">اكتب براحتك — Gemini بيرد عليك</span>
     </div>
 
     <div id="valuationSlot"></div>
@@ -1559,70 +1323,64 @@ extra_head: |
       <a class="wa-glass-card" id="waBtn" href="#" target="_blank" rel="noopener">
         <div class="wa-icon"><i class="fab fa-whatsapp"></i></div>
         <div class="wa-text">
-          <div class="wa-title">
-            ابعت طلبك لطارق على واتساب
-            <span class="wa-title-tag">جاهز</span>
-          </div>
-          <div class="wa-sub" id="waSub">تم تأهيل طلبك — اضغط لاستكمال المعاينة</div>
+          <div class="wa-title" id="waTitle">ابعت الملخص لطارق على واتساب</div>
+          <div class="wa-sub" id="waSub">بيفتح واتساب برسالة جاهزة — مفيش حاجة بتتبعت غير لما تبعتها بنفسك</div>
         </div>
         <i class="fas fa-arrow-up-right-from-square wa-arrow" aria-hidden="true"></i>
       </a>
     </div>
 
-    <div class="img-strip" id="imgStrip"></div>
-
     <div class="toast" id="toast"></div>
 
     <div class="action-rail" id="actionRailWrap" hidden>
       <div class="action-rail-head">
-        <span id="railLabel">الخطوة الجاية — اختار بسرعة</span>
+        <span id="railLabel">ردود سريعة — اختيارية</span>
         <button class="rail-toggle" id="railToggle" onclick="toggleRail()" aria-expanded="false">
           كل الخيارات <i class="fas fa-chevron-down"></i>
         </button>
       </div>
-      <div class="action-rail-scroll" id="actionRail" role="toolbar" aria-label="خيارات سريعة"></div>
+      <div class="action-rail-scroll" id="actionRail" role="toolbar" aria-label="ردود سريعة"></div>
     </div>
 
     <div class="composer">
       <div class="input-glass">
-        <button class="input-icon-btn" type="button" onmousedown="event.preventDefault()" onclick="document.getElementById('fileInput').click()" title="إرفاق صور" aria-label="إرفاق صور">
-          <i class="fas fa-plus"></i>
-        </button>
-        <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="onFilesSelected(event)">
-        <input type="text" class="input-field" id="msgInput" placeholder="اكتب طلبك… مثال: شقة 150 متر في عباس العقاد" autocomplete="off" inputmode="text" enterkeyhint="send" maxlength="1000" aria-label="رسالتك للوكيل">
+        <input type="text" class="input-field" id="msgInput" placeholder="اكتب براحتك… مثال: عايز شقة إيجار في مكرم عبيد" autocomplete="off" inputmode="text" enterkeyhint="send" maxlength="1000" aria-label="رسالتك للمساعد">
         <button class="send-btn-glass" id="sendBtn" type="button" onmousedown="event.preventDefault()" onclick="sendMsg()" aria-label="إرسال">
-          <i class="fas fa-microphone icon-swap" id="sendIcon"></i>
+          <i class="fas fa-arrow-up icon-swap" id="sendIcon"></i>
         </button>
       </div>
-      <p class="composer-hint" id="composerHint">اختار خدمة من فوق أو اكتب طلبك — والوكيل يسأل الباقي.</p>
+      <p class="composer-hint" id="composerHint">الردود من Gemini، والعقارات والأسعار من بيانات الموقع بس.</p>
     </div>
   </div>
 </div>
 
-<!-- ═══ شيت الخصوصية ═══ -->
+<!-- ═══ موافقة Gemini — مرة واحدة قبل أول رسالة ═══ -->
 <div class="privacy-overlay" id="privacyOverlay">
   <div class="privacy-sheet" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
     <div class="privacy-handle"></div>
-    <div class="privacy-icon">🏠</div>
+    <div class="privacy-icon">🤖</div>
     <div class="privacy-badge">
       <i class="fas fa-shield-halved ag-ai-ico"></i>
-      وكيل طارق الذكي — سمسار مدينة نصر
+      مساعد سمسار طلبك — بيشتغل بـGemini
     </div>
-    <h2 class="privacy-title" id="privacyTitle">قبل ما تبدأ، خليك عارف</h2>
+    <h2 class="privacy-title" id="privacyTitle">قبل أول رسالة للمساعد</h2>
     <p class="privacy-desc">
-      دي مساحة مخصصة لـ <strong>سمسار طلبك</strong>، نرتب فيها طلبك العقاري بسرعة قبل ما يوصلك طارق.
+      المساعد بيستخدم <strong>Gemini</strong> (من Google) عشان يفهم كلامك ويرد عليك. محتاجين موافقتك مرة واحدة.
     </p>
     <ul class="privacy-rules">
-      <li><span class="rule-icon">✅</span><span>الوضع الافتراضي يبحث ويجهّز مسودتك داخل متصفحك: لا يرسل المحادثة للسحابة، ولا يحفظها بعد تحديث الصفحة، ولا يسجّل طلبًا.</span></li>
-      <li><span class="rule-icon">ℹ️</span><span>لو فعّلت المحادثة السحابية، رسائلك وسياقها تُرسل إلى Cloudflare وقد تُعالج بواسطة Gemini؛ مدد احتفاظ المزودين غير مضمونة من جهتنا.</span></li>
-      <li><span class="rule-icon">✅</span><span>كل سعر أو توافر مبدئي ويحتاج تأكيدًا مع طارق، وتقدر تكلمه على واتساب في أي وقت.</span></li>
+      <li><span class="rule-icon">📤</span><span>مع كل رسالة بيتبعت: نص رسالتك، وآخر 10 رسائل من المحادثة، وملخص قصير لطلبك — عن طريق خادم Cloudflare بتاعنا إلى Gemini.</span></li>
+      <li><span class="rule-icon">🗄️</span><span>إحنا مش بنحفظ نص المحادثة في قاعدة بيانات ولا سجلات، والمحادثة بتتمسح لما تقفل الصفحة. مدة احتفاظ Google ببيانات الطلبات مش مضمونة من جهتنا.</span></li>
+      <li><span class="rule-icon">🏠</span><span>العقارات والأسعار جاية من بيانات الموقع بس، والتوافر محتاج تأكيد من المالك. ومفيش حاجة بتتبعت لطارق إلا لو ضغطت بنفسك.</span></li>
     </ul>
     <div class="privacy-warn">
       <span class="privacy-warn-icon">⚠️</span>
-      <span>متبعتش بيانات حساسة: رقم قومي، بيانات بنكية، أرقام بطاقات، أو كلمات مرور.</span>
+      <span>ما تكتبش رقم قومي أو بيانات بنكية أو أرقام بطاقات أو كلمات سر — ولو اتكتبت بالغلط بنشيلها قبل الإرسال.</span>
     </div>
-    <button class="privacy-btn" onclick="acceptPrivacy()">فهمت — ابدأ طلبك</button>
-    <button class="privacy-skip" onclick="acceptPrivacy()">إغلاق</button>
+    <button class="privacy-btn" id="consentAccept" onclick="acceptConsent()">موافق — ابعت لـGemini</button>
+    <button class="privacy-alt" id="consentLocal" onclick="declineConsentLocal()"><i class="fas fa-search" aria-hidden="true"></i> لا، ابحث محليًا بدون ذكاء اصطناعي</button>
+    <a class="privacy-alt" id="consentWa" href="#" target="_blank" rel="noopener" onclick="closeConsent()"><i class="fab fa-whatsapp" aria-hidden="true"></i> كلّم طارق على واتساب مباشرة</a>
+    <button class="privacy-skip" onclick="closeConsent()">رجوع</button>
+    <a class="privacy-link" href="{{ '/privacy-policy.html' | relative_url }}#gemini-agent" target="_blank" rel="noopener">تفاصيل الخصوصية</a>
   </div>
 </div>
 
@@ -1676,6 +1434,7 @@ extra_head: |
       <div class="ag-stat"><span class="ag-stat-num">430</span><span class="ag-stat-lbl">صورة</span></div>
       <div class="ag-stat"><span class="ag-stat-num">151</span><span class="ag-stat-lbl">مراجعة كتبها</span></div>
     </div>
+    <p class="data-sub" style="text-align:center;margin-top:10px">المساعد الذكي في الصفحة دي مش طارق نفسه — بيساعدك ترتّب طلبك، وطارق بيكمّل معاك لما تكلمه.</p>
     <a href="https://maps.app.goo.gl/8QWS1BCPBViggDfa7" target="_blank" rel="noopener noreferrer" class="ag-maps-btn"
        title="Google Local Guide Level 7 — الملف الشخصي الموثق لطارق طنطاوي على خرائط جوجل">
       <i class="fas fa-map-marked-alt"></i>
@@ -1685,264 +1444,65 @@ extra_head: |
   </div>
 </div>
 
-<!-- Local search/draft core: needed only when a message is sent, so it never blocks first paint. -->
-<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}?v=20261026-reliable" defer></script>
-<script src="{{ '/assets/js/agent-request-core.js' | relative_url }}?v=20261026-reliable" defer></script>
+<!-- Local search/draft core: used only in the explicit local mode (no Worker, no Gemini). -->
+<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}?v=20261027-gemini" defer></script>
+<script src="{{ '/assets/js/agent-request-core.js' | relative_url }}?v=20261027-gemini" defer></script>
 <script>
 // ═══════════════════════════════════════════════════════════
-// CONFIG — عقد الـWorker كما هو، بلا أي تغيير
+// CONFIG — مساعد Gemini أولًا عبر الـWorker (POST /chat) · 2026-10-27
+// ───────────────────────────────────────────────────────────
+// • كل رسالة (تحية، سؤال عام، تصحيح، زر سريع) بتروح لـGemini عن طريق الـWorker بعد موافقة صريحة.
+// • مفتاح Gemini على الـWorker بس — المتصفح عمره ما بيشوفه.
+// • الحالة المنظمة + آخر 10 رسائل في ذاكرة الصفحة بس (لا sessionStorage ولا localStorage للمحادثة).
+//   الاستثناء الوحيد: رحلة أداة التقييم (💎) بتحفظ الحالة المنظمة مؤقتًا وتتمسح أول ما ترجع.
+// • لو Gemini وقع: رسالة واضحة + إعادة محاولة + بحث محلي اختياري — من غير أي تحويل صامت.
 // ═══════════════════════════════════════════════════════════
 const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
-const STORAGE_KEY  = "simsar_wa_v92";
-const RETURN_KEY   = "simsar_return_session";
-const PRIVACY_KEY  = "simsar_privacy_v1";
-const MODE_KEY     = "simsar_agent_mode"; // "cloud" only when the visitor explicitly chose the cloud chat
+const CHAT_URL     = WORKER_URL + "chat";
+const CHAT_CONSENT = "gemini-v1";
+const CONSENT_KEY  = "simsar_gemini_consent_v1"; // الموافقة بس (مش المحادثة) — تتلغي من القائمة
+const RETURN_KEY   = "simsar_return_session";    // رحلة التقييم فقط: الحالة المنظمة بلا نصوص المحادثة
+const LEGACY_KEYS  = ["simsar_wa_v92", "simsar_agent_mode"]; // مفاتيح الإصدار القديم — تتمسح
 const TAREK_WA     = "201147758857";
 // الملف الشخصي الموثق لطارق طنطاوي على Google Maps (Local Guide Level 7)
 const GOOGLE_URL   = "https://maps.app.goo.gl/8QWS1BCPBViggDfa7";
 const VALUATION_URL = "/tools/valuation.html";
-const MAX_IMAGES   = 5;
-const FORM_VERSION = "v92";
-const STATUS_ONLINE = "وكيل ذكي • متصل الآن";
-const WORKER_REQUEST_TIMEOUT_MS = 20000;
+const STATUS_ONLINE = "مساعد ذكي بـGemini • جاهز";
+const STATUS_LOCAL  = "بحث محلي • بدون ذكاء اصطناعي";
+const WORKER_REQUEST_TIMEOUT_MS = 30000; // ميزانية Gemini في الـWorker 20 ث + تحميل البيانات
 const WORKER_RETRY_DELAY_MS = 500;
+const HISTORY_MAX = 10;
+const MSG_MAX = 1000;
+const WELCOME = "أهلًا! بتدور على عقار، عندك عقار للبيع أو الإيجار، ولا عندك سؤال؟ اكتب براحتك.";
+const START_CHIPS = Object.freeze(["أبحث عن عقار", "أعرض عقاري", "عندي سؤال"]);
+const WA_AGENT_SOURCE = `السلام عليكم أ. طارق، وصلت إليك من المساعد الذكي على موقع سمسار طلبك.`;
 
 const TICKS_SVG = `<svg viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.196.697.697 0 0 0 .547-.27l6.846-8.418a.465.465 0 0 0 .098-.286.479.479 0 0 0-.148-.361l-.37-.387z"/></svg>`;
 
-// الخدمات الأربعة = نفس أزرار الـWorker (ROUTE_BTNS) بالحرف — مفيش قدرة مخترعة.
-const SERVICES = Object.freeze([
-  { icon: "fa-house", title: "أشتري عقار", sub: "المنطقة، المساحة، والميزانية", send: "🔍 أشتري", lane: "search" },
-  { icon: "fa-key", title: "أستأجر", sub: "المكان، نوع العقار، والإيجار", send: "🏠 أستأجر", lane: "search" },
-  { icon: "fa-hand-holding-dollar", title: "أبيع عقاري", sub: "الموقع، المساحة، السعر، والصور", send: "💰 أبيع", lane: "owner" },
-  { icon: "fa-building", title: "أؤجّر عقاري", sub: "تفاصيل الوحدة وسعر الإيجار", send: "🔑 أأجر", lane: "owner" },
-]);
-const SERVICE_LANES = Object.freeze([
-  { id: "search", title: "بدور على عقار", subtitle: "شراء أو إيجار" },
-  { id: "owner", title: "عندي عقار", subtitle: "بيع أو تأجير" },
-]);
-
-// ═══ STATE ═══
-// نفس عقد formState/history/imageUrls؛ الإضافات عرض فقط (options/progress/view)
-// وكلها بتتراجع للقيم الافتراضية لو الجلسة القديمة مفيهاش الحقول دي.
-let state = {
-  formState: { _version: FORM_VERSION },
-  history: [],
-  imageUrls: [],
-  pendingImages: [],
-  waMessage: null,
-  whatsappUrl: null,
-  valuationCta: null,
-  valuationResult: null,
-  _valuationSent: false,
-  options: [],
-  progress: null,
-  uiPending: null,
-  sessionStarted: false,
-  lastFailed: null,
-};
+// ═══ STATE — ذاكرة الصفحة فقط ═══
+function emptyState() {
+  return {
+    chat: null,            // الحالة المنظمة القصيرة اللي الـWorker بيرجّعها (بلا بيانات شخصية)
+    history: [],           // [{ role: "user"|"assistant", text }] — بيتبعت منها آخر 10 بس
+    summary: [],           // عناصر الملخص القابلة للتعديل
+    lastResponse: null,
+    lastFailed: null,
+    focus: null,           // عقار بيسأل عنه المستخدم (slug) — للرسالة الجاية بس
+    options: [],
+    valuationResult: null, // نتيجة أداة التقييم بعد الرجوع — تتبعت مرة واحدة مع الرسالة الجاية
+    _valuationSent: false,
+    pendingSend: null,     // رسالة مستنية الموافقة
+  };
+}
+let state = emptyState();
 let localDraft = null;
 function isLocalMode() { return !!document.getElementById("localRequestMode")?.checked; }
 let isSending = false;
 let _quickSend = false;
 let _summaryOpen = false;
+let _consentInMemory = false; // لو التخزين المحلي مقفول (تصفح خاص) الموافقة تفضل للصفحة دي بس
 const IS_TOUCH = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-
 const nowMs = () => (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
-
-let sessionGps = null;
-let mapPicker  = null;
-let mapPickerEl = null;
-
-function stripGps(fs) {
-  if (!fs || typeof fs !== "object") return fs;
-  const out = { ...fs };
-  if (out.data && typeof out.data === "object" && "gps" in out.data) {
-    const d = { ...out.data }; delete d.gps; out.data = d;
-  }
-  return out;
-}
-
-function saveState() {
-  if (isLocalMode()) return; // local drafts live in page memory only
-  try {
-    const { lastFailed, pendingImages, ...rest } = state;
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-      ...rest,
-      pendingImages: [],
-      formState: stripGps(state.formState)
-    }));
-  } catch {}
-}
-
-function loadState() {
-  try {
-    const s = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    if (!s) return;
-    const v = s.formState?._version;
-    if (v && v !== FORM_VERSION) { sessionStorage.removeItem(STORAGE_KEY); return; }
-    state = { ...state, ...s };
-    state.pendingImages = [];
-    state._valuationSent = !!s._valuationSent;
-    state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
-    state.options = Array.isArray(s.options) ? s.options.filter(x => typeof x === "string" && x.trim()).slice(0, 40) : [];
-    state.progress = (s.progress && Number.isFinite(Number(s.progress.current)) && Number.isFinite(Number(s.progress.total)))
-      ? s.progress : null;
-    state.sessionStarted = !!s.sessionStarted;
-    state.lastFailed = null;
-    if (state.valuationResult?.savedAt) {
-      const age = Date.now() - state.valuationResult.savedAt;
-      if (age > 24 * 60 * 60 * 1000) state.valuationResult = null;
-    }
-  } catch {}
-}
-
-// ═══ RETURN FROM VALUATION ═══
-function parseValuationFromUrl() {
-  const params = new URLSearchParams(location.search);
-  if (params.get("return") !== "valuation") return null;
-
-  const estimate = Number(params.get("estimate"));
-  if (!Number.isFinite(estimate) || estimate <= 0) return null;
-
-  const rawConfidence = String(params.get("confidence") || "").toLowerCase();
-  const confidence = ["high", "medium", "low"].includes(rawConfidence)
-    ? rawConfidence
-    : "unknown";
-
-  const clampNonNegative = (value) => {
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  };
-
-  const rawAreaType = String(params.get("areaType") || params.get("type") || "").toLowerCase();
-  const areaType = rawAreaType === "rent" || rawAreaType === "sale" ? rawAreaType : "";
-
-  const rawBasis = String(params.get("basis") || "");
-  const priceBasis = ["median_price_m2", "avg_price_m2"].includes(rawBasis) ? rawBasis : "";
-
-  return {
-    estimate: Math.round(estimate),
-    confidence,
-    samples: Math.round(clampNonNegative(params.get("samples"))),
-    perMeter: Math.round(clampNonNegative(params.get("perMeter"))),
-    p25: Math.round(clampNonNegative(params.get("p25"))),
-    p75: Math.round(clampNonNegative(params.get("p75"))),
-    priceBasis,
-    area: String(params.get("area") || "").slice(0, 100),
-    size: clampNonNegative(params.get("size")),
-    areaType,
-    savedAt: Date.now(),
-  };
-}
-
-function checkReturnFromValuation() {
-  const params = new URLSearchParams(location.search);
-  if (params.get("return") !== "valuation") return false;
-
-  const valuation = parseValuationFromUrl();
-
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null");
-    if (saved) {
-      const age = Date.now() - (saved.savedAt || 0);
-      if (age < 24 * 60 * 60 * 1000 && saved.state) {
-        state = { ...state, ...saved.state };
-        state.pendingImages = [];
-        state._valuationSent = false;
-        state.formState = { ...(state.formState || {}), _version: FORM_VERSION };
-        state.options = Array.isArray(state.options) ? state.options : [];
-        state.sessionStarted = true;
-      }
-      sessionStorage.removeItem(RETURN_KEY);
-    }
-  } catch {}
-
-  if (valuation) {
-    state.valuationResult = valuation;
-    state._valuationSent = false;
-    state.sessionStarted = true;
-    saveState();
-  }
-
-  const clean = new URL(window.location.href);
-  [
-    "return", "estimate", "confidence", "samples", "perMeter",
-    "p25", "p75", "basis",
-    "area", "size", "areaType", "type"
-  ].forEach(k => clean.searchParams.delete(k));
-  window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
-
-  return { returning: true, valuation };
-}
-
-function saveReturnContext() {
-  try {
-    sessionStorage.setItem(RETURN_KEY, JSON.stringify({
-      state: {
-        formState: stripGps(state.formState),
-        history: state.history,
-        imageUrls: state.imageUrls,
-        waMessage: state.waMessage,
-        whatsappUrl: state.whatsappUrl,
-        valuationCta: state.valuationCta,
-        valuationResult: state.valuationResult,
-        _valuationSent: state._valuationSent,
-        options: state.options,
-        progress: state.progress,
-        sessionStarted: true,
-      },
-      savedAt: Date.now()
-    }));
-    saveState();
-  } catch {}
-}
-
-function renderReturnBanner(valuation) {
-  const fmtN = n => Number(n || 0).toLocaleString('en-US');
-  const banner = document.createElement("div");
-  banner.className = "msg msg-bot msg-return";
-
-  if (valuation && valuation.estimate > 0) {
-    const confLabel = valuation.confidence === 'high' ? 'عالية'
-                    : valuation.confidence === 'medium' ? 'متوسطة'
-                    : valuation.confidence === 'low' ? 'منخفضة'
-                    : 'غير محددة';
-
-    const isRent = valuation.areaType === 'rent';
-    const unitSuffix = isRent ? ' / شهريًا' : '';
-
-    let lines = '';
-    lines += '💎 رجعت من التقييم<br>';
-    // area جاية من الرابط (مدخل غير موثوق) وداخلة في innerHTML — لازم تعقيم
-    const loc = escapeHtml(valuation.area || '—');
-    const szPart = valuation.size ? ' • ' + fmtN(valuation.size) + ' م²' : '';
-    lines += `📍 ${loc}${szPart}<br>`;
-    lines += `💰 <strong>${fmtN(valuation.estimate)} ج.م${unitSuffix}</strong><br>`;
-    if (valuation.p25 && valuation.p75) {
-      lines += `📊 النطاق (P25–P75): ${fmtN(valuation.p25)} – ${fmtN(valuation.p75)} ج.م/م²<br>`;
-    }
-    if (valuation.perMeter) {
-      const basisLabel = valuation.priceBasis === 'median_price_m2' ? ' (الوسيط)'
-                       : valuation.priceBasis === 'avg_price_m2' ? ' (المتوسط)' : '';
-      lines += `📏 سعر المتر${basisLabel}: ${fmtN(valuation.perMeter)} ج.م/م²<br>`;
-    }
-    lines += `🎯 الثقة: ${confLabel}`;
-    if (valuation.samples > 0) lines += ` (${valuation.samples} عينة)`;
-
-    banner.innerHTML = `
-      <span class="msg-content">${lines}<br><br>${isLocalMode() ? "المسودة المحلية لا تُحفظ بين الصفحات؛ اكتب طلبك من جديد لنكمل." : "نكمّل من النقطة اللي وقفنا عندها؟"}</span>
-      <div class="msg-time">${getTime()}</div>
-    `;
-  } else {
-    banner.innerHTML = `
-      <span class="msg-content">تمام، رجعت 👋<br>${isLocalMode() ? "المسودة المحلية لا تُحفظ بين الصفحات؛ اكتب طلبك من جديد لنكمل." : "نكمّل من النقطة اللي وقفنا عليها؟"}</span>
-      <div class="msg-time">${getTime()}</div>
-    `;
-  }
-
-  chatArea.insertBefore(banner, typingBubble);
-  forceScrollToBottom(); // الرجوع من التقييم: ننزل لبانر النتيجة دايمًا
-}
 
 // ═══ DOM REFS ═══
 const app          = document.getElementById("app");
@@ -1955,43 +1515,141 @@ const statusText   = document.getElementById("statusText");
 const statusLine   = document.getElementById("statusLine");
 const waWrapper    = document.getElementById("waWrapper");
 const waBtn        = document.getElementById("waBtn");
-const imgStrip     = document.getElementById("imgStrip");
 const scrollBtn    = document.getElementById("scrollBtn");
 const menuGlass    = document.getElementById("menuGlass");
 const menuOverlay  = document.getElementById("menuOverlay");
 const actionRailWrap = document.getElementById("actionRailWrap");
 const actionRail   = document.getElementById("actionRail");
 const railToggle   = document.getElementById("railToggle");
+const railLabel    = document.getElementById("railLabel");
 const valuationSlot = document.getElementById("valuationSlot");
-const summaryPanel = document.getElementById("summaryPanel");
+const summaryBar   = document.getElementById("summaryBar");
 const summaryBtn   = document.getElementById("summaryBtn");
-const summaryBody  = document.getElementById("summaryBody");
-const summaryCount = document.getElementById("summaryCount");
-const progressText = document.getElementById("progressText");
-const progressPct  = document.getElementById("progressPct");
-const progressFill = document.getElementById("progressFill");
-const progressTrack = document.getElementById("progressTrack");
+const summaryLine  = document.getElementById("summaryLine");
+const summaryPanel = document.getElementById("summaryPanel");
+const summaryChips = document.getElementById("summaryChips");
+const summaryHint  = document.getElementById("summaryHint");
 const agentState   = document.getElementById("agentState");
 const agentStateText = document.getElementById("agentStateText");
-const serviceGrid  = document.getElementById("serviceGrid");
-const resumeCard   = document.getElementById("resumeCard");
-const resumeSub    = document.getElementById("resumeSub");
-const backIcon     = document.getElementById("backIcon");
 const composerHint = document.getElementById("composerHint");
+const modeBar      = document.getElementById("requestModeBar");
+const backBtn      = document.getElementById("backBtn");
 
-// ═══ PRIVACY ═══
-function hasSeenPrivacy() { try { return !!localStorage.getItem(PRIVACY_KEY); } catch { return true; } }
-function markPrivacySeen() { try { localStorage.setItem(PRIVACY_KEY, "1"); } catch {} }
-function showPrivacy() { document.getElementById("privacyOverlay").classList.add("show"); }
-function acceptPrivacy() {
-  markPrivacySeen();
+// ═══ HELPERS ═══
+function getTime() { return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }); }
+function escapeHtml(text) { return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escapeAttr(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+// A-4: مصدر الصورة المسموح: https: / blob: / data:image / مسار صور الموقع نفسه
+const SAFE_IMG_SRC = /^(?:https:\/\/|blob:|data:image\/(?:png|jpe?g|webp|gif|bmp|avif|heic|heif);base64,|\/assets\/img\/[\w./-]+$)/i;
+// https links, or a same-site property path from the catalog (no other schemes).
+const SAFE_LINK = /^(?:https:\/\/[^\s<>"']+|\/properties\/[a-z0-9-]+\/)$/i;
+function formatMsg(text) {
+  return escapeHtml(text)
+    .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
+    // الرابط بيقف عند أول علامة اقتباس — عشان ما يقدرش يطلّع نفسه برّه خاصية href
+    .replace(/(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+function safeLink(url) { return SAFE_LINK.test(String(url || "")) ? escapeAttr(url) : ""; }
+function clearChildren(el) { if (!el) return; [...el.children].forEach(c => c.remove()); }
+function waLink(text) { return `https://wa.me/${TAREK_WA}?text=${encodeURIComponent(text)}`; }
+function fmtNum(n) { return Number(n || 0).toLocaleString("en-US"); }
+
+// ═══ الموافقة على Gemini (مرة واحدة، وتتلغي من القائمة) ═══
+function hasConsent() {
+  if (_consentInMemory) return true;
+  try { return localStorage.getItem(CONSENT_KEY) === CHAT_CONSENT; } catch { return false; }
+}
+function setConsent(on) {
+  _consentInMemory = !!on;
+  try { if (on) localStorage.setItem(CONSENT_KEY, CHAT_CONSENT); else localStorage.removeItem(CONSENT_KEY); } catch {}
+}
+function showConsent(pending) {
+  state.pendingSend = pending || null;
   const overlay = document.getElementById("privacyOverlay");
-  overlay.classList.add("hiding");
+  overlay.style.display = "";
+  overlay.classList.remove("hiding");
+  overlay.classList.add("show");
+}
+function closeConsent() {
+  const overlay = document.getElementById("privacyOverlay");
   overlay.classList.remove("show");
-  setTimeout(() => {
-    overlay.style.display = "none";
-    showInappNotif({ icon: "💬", iconClass: "green", title: "طارق جاهز يساعدك", sub: "اختار خدمة أو اكتب طلبك" });
-  }, 350);
+  const pending = state.pendingSend;
+  state.pendingSend = null;
+  // الرسالة اللي ما اتبعتتش ترجع خانة الكتابة — ما تضيعش
+  if (pending && pending.text && !msgInput.value.trim()) { msgInput.value = pending.text; updateSendIcon(); }
+}
+function acceptConsent() {
+  setConsent(true);
+  const pending = state.pendingSend;
+  state.pendingSend = null;
+  document.getElementById("privacyOverlay").classList.remove("show");
+  renderModeUi();
+  if (pending && pending.text) {
+    msgInput.value = pending.text;
+    state.focus = pending.focus || null;
+    _quickSend = !!pending.quick;
+    return sendMsg();
+  }
+  return undefined;
+}
+function declineConsentLocal() {
+  const pending = state.pendingSend;
+  state.pendingSend = null;
+  document.getElementById("privacyOverlay").classList.remove("show");
+  enterLocalMode({ announce: true });
+  if (pending && pending.text) { msgInput.value = pending.text; return sendMsg(); }
+  return undefined;
+}
+function revokeConsent() {
+  closeMenu();
+  const had = hasConsent();
+  setConsent(false);
+  showToast(had ? "اتلغت موافقة Gemini — هنسألك تاني قبل أي رسالة." : "مفيش موافقة محفوظة على Gemini.");
+}
+
+// ═══ الوضع: Gemini (الافتراضي بعد الموافقة) أو بحث محلي صريح ═══
+function renderModeUi() {
+  const local = isLocalMode();
+  if (modeBar) modeBar.hidden = !local;
+  app.classList.toggle("is-local", local);
+  if (!isSending) statusText.textContent = local ? STATUS_LOCAL : STATUS_ONLINE;
+  if (composerHint) composerHint.textContent = local
+    ? "بحث محلي في كتالوج مدينة نصر — مفيش ذكاء اصطناعي ولا إرسال للمحادثة."
+    : "الردود من Gemini، والعقارات والأسعار من بيانات الموقع بس.";
+  const label = document.getElementById("menuModeLabel");
+  if (label) label.textContent = local ? "رجوع لمساعد Gemini" : "بحث محلي بدون ذكاء اصطناعي";
+  setAgentState("idle", local ? "بحث محلي — بدون ذكاء اصطناعي" : "اكتب براحتك — Gemini بيرد عليك");
+  updateDockHeight();
+}
+function enterLocalMode({ announce = false } = {}) {
+  const box = document.getElementById("localRequestMode");
+  if (box) box.checked = true;
+  localDraft = null;
+  hideWA(); renderValuationCta(null);
+  renderModeUi();
+  renderSummaryBar();
+  if (announce) renderMsg("تمام — ده بحث محلي في كتالوج الموقع من غير ذكاء اصطناعي ومن غير إرسال المحادثة لأي خادم. اكتب طلبك (مثال: شقة للبيع في عباس العقاد حتى 5 مليون).", "bot");
+  renderOptions([]);
+}
+function exitLocalMode() {
+  const box = document.getElementById("localRequestMode");
+  if (box) box.checked = false;
+  localDraft = null;
+  renderModeUi();
+  renderSummaryBar();
+  renderMsg("رجعنا لمساعد Gemini — كمّل كلامك براحتك.", "bot");
+  renderOptions(state.chat ? [] : START_CHIPS);
+}
+function toggleMode() {
+  closeMenu();
+  if (isLocalMode()) exitLocalMode(); else enterLocalMode({ announce: true });
 }
 
 // ═══ IN-APP NOTIFICATION ═══
@@ -2032,344 +1690,121 @@ function closeWaDialog(confirmed) {
   waDialogCallback = null;
   if (confirmed && typeof cb === "function") setTimeout(() => cb(), 100);
 }
-
 function showNewChatDialog() {
   closeMenu();
   showWaDialog({
-    title: "طلب جديد؟",
-    message: "هتبدأ من الأول. الرسائل والبيانات الحالية هتتمسح.",
+    title: "محادثة جديدة؟",
+    message: "هنبدأ من الأول، والرسائل والملخص الحاليين هيتمسحوا من الصفحة.",
     okText: "ابدأ", cancelText: "إلغاء", okStyle: "danger",
-    onOk: () => { resetChat(); showInappNotif({ icon: "🔄", iconClass: "green", title: "طلب جديد", sub: "اختار خدمتك وابدأ" }); }
+    onOk: () => { resetChat(); showInappNotif({ icon: "🔄", iconClass: "green", title: "محادثة جديدة", sub: "اكتب براحتك" }); }
   });
 }
 function startNewChat() { showNewChatDialog(); }
-
 function showDeleteDialog() {
   closeMenu();
   showWaDialog({
     title: "حذف المحادثة؟",
-    message: "كل الرسائل والبيانات هتتمسح نهائيًا، ومش هتقدر ترجعها تاني.",
+    message: "كل الرسائل والملخص هيتمسحوا من الصفحة. إحنا أصلًا مش بنحفظ نص المحادثة عندنا.",
     okText: "حذف", cancelText: "إلغاء", okStyle: "danger",
-    onOk: () => { deleteChat(); showInappNotif({ icon: "🗑️", iconClass: "red", title: "تم الحذف", sub: "المحادثة والبيانات اتمسحت" }); }
+    onOk: () => { deleteChat(); showInappNotif({ icon: "🗑️", iconClass: "red", title: "تم الحذف", sub: "المحادثة اتمسحت" }); }
   });
 }
 
-// ═══ HELPERS ═══
-function getTime() { return new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }); }
-function escapeHtml(text) { return String(text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function escapeAttr(text) {
-  return String(text || "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-// A-4: مصدر الصورة المسموح: https: / blob: / data:image بس
-const SAFE_IMG_SRC = /^(?:https:\/\/|blob:|data:image\/(?:png|jpe?g|webp|gif|bmp|avif|heic|heif);base64,)/i;
-// https links from the Worker, or a same-site property path from the local catalog (no other schemes).
-const SAFE_LINK = /^(?:https:\/\/[^\s<>"']+|\/properties\/[a-z0-9-]+\/)$/i;
-function formatMsg(text) {
-  return escapeHtml(text)
-    .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
-    // الرابط بيقف عند أول علامة اقتباس — عشان ما يقدرش يطلّع نفسه برّه خاصية href
-    .replace(/(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-}
-function safeLink(url) { return SAFE_LINK.test(String(url || "")) ? escapeAttr(url) : ""; }
-
-// ═══════════════════════════════════════════════════════════
-// VIEWS — الرئيسية / الجلسة
-// ═══════════════════════════════════════════════════════════
-const backBtn = document.getElementById("backBtn");
-const railLabel = document.getElementById("railLabel");
-
-function isSessionView() { return app.classList.contains("is-session"); }
-function hasUserTurn() { return Array.isArray(state.history) && state.history.some(m => m && m.role === "user"); }
-
+// ═══ VIEW (المحادثة هي البداية — مفيش شاشة خدمات) ═══
+function isSessionView() { return true; }
+function switchView() { app.classList.add("is-session"); updateDockHeight(); }
 function updateDockHeight() {
   const dock = document.getElementById("answerDock");
   if (!dock || typeof dock.getBoundingClientRect !== "function") return;
   const h = Math.round(dock.getBoundingClientRect().height);
   if (h > 0) document.documentElement.style.setProperty("--dock-h", h + "px");
 }
-
-function updateBackButton() {
-  if (!backBtn) return;
-  const session = isSessionView();
-  backBtn.setAttribute("aria-label", session ? "الرجوع للرئيسية" : "الرجوع للموقع");
-  backBtn.title = session ? "الرئيسية" : "رجوع";
-  // في واجهة عربية، سهم «رجوع» بيتّجه يمين في الحالتين (نفس اتجاه الخروج للخلف)
-  backIcon.className = "fas fa-arrow-right";
-}
-
-function switchView(view, { scroll = true } = {}) {
-  const session = view === "session";
-  app.classList.toggle("is-session", session);
-  app.classList.toggle("is-home", !session);
-  if (session) state.sessionStarted = true;
-  updateBackButton();
-  closeSummary();
-  if (session) {
-    composerHint.hidden = true;
-    msgInput.placeholder = "اكتب رسالة… أو اختار من الأزرار";
-    renderOptions(state.options);
-    renderSessionMeta();
-    requestAnimationFrame(() => { updateDockHeight(); if (scroll) forceScrollToBottom(); });
-  } else {
-    composerHint.hidden = false;
-    msgInput.placeholder = "اكتب طلبك… مثال: شقة 150 متر في عباس العقاد";
-    actionRailWrap.hidden = true;
-    closeMapPicker();
-    refreshHomeResume();
-  }
-  saveState();
-}
-
-function goHome() {
-  closeMenu();
-  switchView("home");
-  refreshHomeResume();
-}
-
-function headerBack() {
-  if (isSessionView()) { goHome(); return; }
-  goBack();
-}
-
-function resumeChat() {
-  closeMenu();
-  switchView("session");
-  if (!state.history || !state.history.length) startConversation();
-  forceScrollToBottom();
-  refreshHomeResume();
-}
-
-function refreshHomeResume() {
-  if (!resumeCard) return;
-  const show = hasUserTurn();
-  resumeCard.hidden = !show;
-  if (!show) return;
-  const lastUser = [...state.history].reverse().find(m => m && m.role === "user");
-  const done = state.formState?.lifecycle === "completed" || !!state.whatsappUrl;
-  const title = resumeCard.querySelector ? resumeCard.querySelector(".resume-title") : null;
-  if (title) title.textContent = done ? "طلبك جاهز — راجع التفاصيل" : "كمّل محادثتك";
-  if (resumeSub) {
-    const preview = lastUser?.message ? String(lastUser.message).replace(/\s+/g, " ").slice(0, 70) : "طلبك محفوظ في الجلسة";
-    resumeSub.textContent = done ? "تقدر تبعته لطارق على واتساب أو تراجع اللي اتكتب" : preview;
-  }
-}
-
-function beginSend(label) {
-  switchView("session", { scroll: false });
-  msgInput.value = label;
-  updateSendIcon();
-  _quickSend = true;
-  sendMsg();
-}
-
-// خدمة من الرئيسية: بنحمي الطلب الشغّال من إن رسالة الخدمة تتفسّر كإجابة على سؤال حالي.
-function startService(label) {
-  if (isSending) return;
-  if (state.formState?.active) {
-    resumeChat();
-    showToast("عندك طلب شغّال — كمّله، أو ابدأ طلب جديد من القائمة");
-    return;
-  }
-  if (hasUserTurn() && state.formState?.lifecycle === "completed") {
-    showWaDialog({
-      title: "طلب جديد؟",
-      message: "طلبك السابق اتسجل. نبدأ طلب جديد من الأول؟",
-      okText: "ابدأ", cancelText: "رجعني",
-      onOk: () => { resetChat(); beginSend(label); }
-    });
-    return;
-  }
-  beginSend(label);
-}
-
-function buildServices() {
-  if (!serviceGrid) return;
-  serviceGrid.innerHTML = "";
-  SERVICE_LANES.forEach(lane => {
-    const section = document.createElement("section");
-    section.className = `service-lane service-lane-${lane.id}`;
-    section.setAttribute("aria-label", `${lane.title} — ${lane.subtitle}`);
-
-    const heading = document.createElement("div");
-    heading.className = "service-lane-heading";
-    const title = document.createElement("strong");
-    title.textContent = lane.title;
-    const subtitle = document.createElement("span");
-    subtitle.textContent = lane.subtitle;
-    heading.appendChild(title);
-    heading.appendChild(subtitle);
-    section.appendChild(heading);
-
-    const cards = document.createElement("div");
-    cards.className = "service-lane-cards";
-    SERVICES.filter(service => service.lane === lane.id).forEach(s => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "service-card svc-btn";
-      b.setAttribute("aria-label", s.title);
-      b.innerHTML = `<span class="service-ico"><i class="fas ${s.icon}" aria-hidden="true"></i></span>
-        <span class="service-title">${s.title}</span>
-        <span class="service-sub">${s.sub}</span>`;
-      b.onclick = () => startService(s.send);
-      cards.appendChild(b);
-    });
-    section.appendChild(cards);
-    serviceGrid.appendChild(section);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
-// حالة الوكيل + تقدّم الطلب + ملخص الطلب
-// ═══════════════════════════════════════════════════════════
+function headerBack() { goBack(); }
 function setAgentState(kind, text) {
   if (!agentState || !agentStateText) return;
   agentState.className = "agent-state" + (kind ? ` is-${kind}` : "");
   agentStateText.textContent = text;
 }
 
-function renderProgress() {
-  if (!progressText) return;
-  const fs = state.formState || {};
-  const p = state.progress;
-  const done = fs.lifecycle === "completed";
-  let text = "محادثة حرة";
-  let pct = 0;
-  let showBar = false;
-  if (p && Number(p.total) > 0) {
-    showBar = true;
-    pct = done ? 100 : Math.max(0, Math.min(100, Math.round(Number(p.pct) || 0)));
-    text = done ? "طلبك اتسجل" : `خطوة ${Number(p.current) || 1} من ${Number(p.total)}`;
-  } else if (done) {
-    showBar = true; pct = 100; text = "طلبك اتسجل";
-  } else if (fs.active) {
-    showBar = true; pct = 4; text = "طلبك شغّال";
-  }
-  progressText.textContent = text;
-  if (progressFill) progressFill.style.width = pct + "%";
-  if (progressPct) progressPct.textContent = showBar ? pct + "%" : "";
-  if (progressTrack) {
-    progressTrack.setAttribute("aria-valuenow", String(pct));
-    progressTrack.setAttribute("aria-valuetext", text);
-  }
-}
-
-function operationLabel() {
-  const fs = state.formState || {};
-  const flow = String(fs.flowType || "");
-  if (flow.startsWith("owner")) return fs.type === "rent" ? "تأجير عقار" : "بيع عقار";
-  if (flow.startsWith("buyer") || flow.startsWith("tenant")) return fs.type === "rent" ? "استئجار" : "شراء";
-  return "";
-}
-
-function numText(v) {
-  const n = Number(String(v == null ? "" : v).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[^\d.]/g, ""));
-  return Number.isFinite(n) && n > 0 ? n.toLocaleString("en-US") : "";
-}
-
-function maskPhone(v) {
-  const s = String(v || "").replace(/\s+/g, "");
-  if (s.length < 7) return s ? "•••" : "";
-  return s.slice(0, 3) + "••••" + s.slice(-3);
-}
-
-function summaryItems() {
-  if (localDraft && window.NasrAgent) return [["القيود الحالية", window.NasrAgent.summary(localDraft)], ["الحفظ", "مسودة محلية؛ لم تُرسل للمكتب"]];
-  const fs = state.formState || {};
-  const d = fs.data || {};
-  const items = [];
-  const add = (label, value) => {
-    if (value === null || value === undefined) return;
-    const v = String(value).trim();
-    if (!v || v === "—" || v === "__ANY__") return;
-    items.push([label, v]);
-  };
-  add("العملية", operationLabel());
-  add("نوع العقار", d.propertyType);
-  add("المنطقة", d.landmark && d.landmark !== "__ANY__" ? d.landmark : d.location);
-  add("المساحة", d.area ? `${numText(d.area) || d.area} م²` : "");
-  add(fs.type === "rent" ? "الميزانية الشهرية" : "الميزانية", d.budget ? (numText(d.budget) ? `${numText(d.budget)} ج.م` : d.budget) : "");
-  add(fs.flowType && String(fs.flowType).startsWith("owner") ? "السعر المطلوب" : "السعر", d.price ? (numText(d.price) ? `${numText(d.price)} ج.م` : d.price) : "");
-  add("غرف", d.rooms);
-  add("حمامات", d.baths);
-  add("الفرش", d.furnished);
-  add("التشطيب", d.finishing);
-  add("الدور", d.floor);
-  add("الاسم", d.ownerName || d.buyerName);
-  add("الهاتف", (d.ownerPhone || d.buyerPhone || d.phone) ? maskPhone(d.ownerPhone || d.buyerPhone || d.phone) : "");
-  add("صور", (state.imageUrls || []).length ? `${state.imageUrls.length} صورة` : "");
-  return items;
-}
-
-function renderSummary() {
-  if (!summaryBody || !summaryBtn) return;
-  const items = summaryItems();
-  if (summaryCount) summaryCount.textContent = String(items.length);
-  summaryBtn.hidden = items.length === 0;
-  if (!items.length) {
-    summaryBody.innerHTML = `<p class="summary-empty">لسه مفيش تفاصيل كفاية. كمّل الأسئلة أو اكتب طلبك وهتلاقي ملخص هنا.</p>`;
+// ═══ الملخص القابل للتعديل (مش خطوة إجبارية، ومش «طلب متسجل») ═══
+function summaryText(items) { return (items || []).map(x => x.label).filter(Boolean).join(" · "); }
+function renderSummaryBar() {
+  if (!summaryBar) return;
+  clearChildren(summaryChips);
+  if (isLocalMode()) {
+    const line = localDraft && window.NasrAgent ? String(window.NasrAgent.summary(localDraft) || "") : "";
+    summaryBar.hidden = !line;
+    if (summaryLine) summaryLine.textContent = line;
+    if (summaryHint) summaryHint.textContent = "مسودة بحث محلي في الصفحة دي بس — لم تُرسل لأي جهة. عدّل بالكتابة في المحادثة.";
+    updateDockHeight();
     return;
   }
-  summaryBody.innerHTML = `
-    <div class="summary-grid">
-      ${items.map(([k, v]) => `<span class="summary-item"><b>${escapeHtml(k)}</b><span>${escapeHtml(v)}</span></span>`).join("")}
-    </div>
-    <p class="summary-note">تقدر تعدّل أي حاجة بكتابتها في المحادثة، والوكيل هيحدّث الطلب.</p>
-  `;
+  const items = Array.isArray(state.summary) ? state.summary.filter(x => x && typeof x.label === "string" && x.label) : [];
+  summaryBar.hidden = items.length === 0;
+  if (summaryLine) summaryLine.textContent = summaryText(items);
+  if (summaryHint) summaryHint.textContent = "ده اللي فهمته من كلامك — مش طلب متسجل ومفيش حاجة اتبعتت. اضغط ✎ عشان تعدّل أو × عشان تشيل شرط.";
+  items.forEach(item => {
+    const chip = document.createElement("span");
+    chip.className = "sum-chip";
+    const label = document.createElement("span");
+    label.className = "sum-chip-label";
+    label.textContent = item.label;
+    chip.appendChild(label);
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "sum-edit";
+    edit.textContent = "✎";
+    edit.setAttribute("aria-label", `عدّل ${item.name || item.label}`);
+    edit.onclick = () => editSummary(item);
+    chip.appendChild(edit);
+    if (item.removable) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "sum-del";
+      del.textContent = "×";
+      del.setAttribute("aria-label", `شيل شرط ${item.name || item.label}`);
+      del.onclick = () => removeSummary(item);
+      chip.appendChild(del);
+    }
+    summaryChips.appendChild(chip);
+  });
+  if (!items.length) toggleSummary(false);
+  updateDockHeight();
 }
-
 function toggleSummary(force) {
   _summaryOpen = typeof force === "boolean" ? force : !_summaryOpen;
   if (summaryPanel) summaryPanel.hidden = !_summaryOpen;
-  if (summaryBtn) {
-    summaryBtn.setAttribute("aria-expanded", String(_summaryOpen));
-    summaryBtn.classList.toggle("is-open", _summaryOpen);
-  }
+  if (summaryBtn) summaryBtn.setAttribute("aria-expanded", String(_summaryOpen));
   requestAnimationFrame(updateDockHeight);
 }
 function closeSummary() { toggleSummary(false); }
-
-function renderSessionMeta() {
-  renderProgress();
-  renderSummary();
-  updateDockHeight();
+// ✎ = يجهّز جملة تعديل في خانة الكتابة (المستخدم يكملها ويبعتها — وتروح لـGemini زي أي رسالة)
+function editSummary(item) {
+  if (!item) return;
+  msgInput.value = `غيّر ${item.name || "ده"} إلى `;
+  updateSendIcon();
+  toggleSummary(false);
+  msgInput.focus({ preventScroll: true });
 }
+// × = رسالة صريحة «شيل شرط …» بتروح لـGemini (مفيش تعديل محلي صامت)
+function removeSummary(item) {
+  if (!item || !item.removable || isSending) return undefined;
+  toggleSummary(false);
+  return quickSend(`شيل شرط ${item.name || item.label}`);
+}
+function renderSessionMeta() { renderSummaryBar(); updateDockHeight(); }
 
-// ═══════════════════════════════════════════════════════════
-// الخيارات السريعة (options من الـWorker) — في متناول الإبهام
-// ═══════════════════════════════════════════════════════════
+// ═══ الردود السريعة (اختيارية دايمًا — الكتابة الحرة متاحة من أول لحظة) ═══
 function chipClass(label) {
   const s = String(label || "");
-  if (/ابعت على واتساب|احجز معاينة|تمام، ده اللي عايزه/.test(s)) return "chip-primary";
-  if (/^إلغاء|^🗑️|حذف/.test(s)) return "chip-danger";
-  if (/تخطي|رجوع|القائمة الأولى|طلب جديد|تخطي \(بدون صور\)|كمّل/.test(s)) return "chip-quiet";
+  if (/^كفاية|^شيل شرط/.test(s)) return "chip-quiet";
   return "";
 }
-
-function appendMapChip() {
-  if (!actionRail) return;
-  actionRail.querySelectorAll(".chip-map").forEach(el => el.remove());
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "chip chip-map";
-  btn.textContent = "📍 حدد على الخريطة";
-  btn.onclick = () => { if (!isSending) openMapPicker(false); };
-  actionRail.appendChild(btn);
-  actionRailWrap.hidden = !isSessionView();
-}
-
-// إفراغ حقيقي للأبناء (innerHTML لوحده ما بيكفيش لو DOM مصغّر بيستخدمه)
-function clearChildren(el) { if (!el) return; [...el.children].forEach(c => c.remove()); }
-
 function renderOptions(opts) {
   const clean = (Array.isArray(opts) ? opts : [])
     .filter(x => typeof x === "string" && x.trim())
     .map(x => x.trim())
-    .slice(0, 40);
+    .slice(0, 12);
   state.options = clean;
   if (!actionRail) return;
   clearChildren(actionRail);
@@ -2387,15 +1822,11 @@ function renderOptions(opts) {
     b.onclick = () => quickSend(o);
     actionRail.appendChild(b);
   });
-  if (state.uiPending && !state.uiPending.required) appendMapChip();
-  if (railLabel) railLabel.textContent = clean.length ? "الخطوة الجاية — اختار بسرعة" : "اكتب رسالتك";
-  actionRailWrap.hidden = clean.length === 0 || !isSessionView();
+  if (railLabel) railLabel.textContent = "ردود سريعة — اختيارية، وتقدر تكتب براحتك";
+  actionRailWrap.hidden = clean.length === 0;
   updateDockHeight();
 }
-
-// توافق مع الاسم القديم (أي كود/اختبار قديم بينادي renderButtons)
 function renderButtons(opts) { renderOptions(opts); }
-
 function toggleRail() {
   const expanded = actionRailWrap.classList.toggle("expanded");
   railToggle.setAttribute("aria-expanded", String(expanded));
@@ -2404,26 +1835,16 @@ function toggleRail() {
     : `كل الخيارات <i class="fas fa-chevron-down"></i>`;
   requestAnimationFrame(updateDockHeight);
 }
-
+// زر سريع = رسالة عادية (بتروح لـGemini بعد الموافقة، أو للبحث المحلي لو الوضع محلي)
 function quickSend(label) {
-  if (isSending) return;
-  switchView("session", { scroll: false });
+  if (isSending) return undefined;
   msgInput.value = label;
   updateSendIcon();
   _quickSend = true;
-  sendMsg();
+  return sendMsg();
 }
 
-function pickResult(index) {
-  const n = Number(index);
-  if (!Number.isInteger(n) || n < 1) return;
-  if (!state.options.includes(String(n))) { showToast("الاختيار ده مبقاش متاح — اختار من الأزرار الحالية"); return; }
-  quickSend(String(n));
-}
-
-// ═══════════════════════════════════════════════════════════
-// عرض رسائل الـWorker + بطاقات العقارات
-// ═══════════════════════════════════════════════════════════
+// ═══ بطاقات البحث المحلي (نفس الصيغة القديمة: «1. … / 💰 / 📐 / 📍 / 🔗») ═══
 function parseCardLine(line) {
   const t = String(line || "").replace(/^[│|•\-\s]+/, "").trim();
   if (!t) return null;
@@ -2432,98 +1853,51 @@ function parseCardLine(line) {
   if (/التفاصيل|الرابط/.test(t)) return { key: "url", value: val(/(?:التفاصيل|الرابط)\s*:\s*(.+)$/) };
   if (/المساحة/.test(t)) return { key: "area", value: val(/المساحة\s*:\s*(.+)$/) };
   if (/الغرف/.test(t)) return { key: "rooms", value: val(/الغرف\s*:\s*(.+)$/) };
-  if (/الحمامات/.test(t)) return { key: "baths", value: val(/الحمامات\s*:\s*(.+)$/) };
-  if (/الدور/.test(t)) return { key: "floor", value: val(/الدور\s*:\s*(.+)$/) };
-  if (/التشطيب/.test(t)) return { key: "finishing", value: val(/التشطيب\s*:\s*(.+)$/) };
   if (/السعر|الإيجار/.test(t) && t.includes(":")) return { key: "price", value: val(/(?:السعر(?: المبدئي| التقديري)?|الإيجار(?: الشهري| السنوي| الأسبوعي| التقديري)?)\s*:\s*(.+)$/) };
   if (t.includes("📍")) return { key: "location", value: t.replace(/^📍\s*/, "") };
-  if (t.includes("•")) {
-    const parts = t.split("•").map(x => x.trim()).filter(Boolean);
-    if (parts.length >= 2) return { key: "specs", value: parts };
-  }
   return null;
 }
-
 function parsePropertyCards(text) {
   const raw = String(text || "");
-  if (!/💰|📐|🔗|السعر|المساحة|التفاصيل/.test(raw) || !/•|\n/.test(raw)) return null;
+  if (!/💰|📐|🔗/.test(raw) || !/\n/.test(raw)) return null;
   const lines = raw.split("\n").map(l => String(l).replace(/\u00a0/g, " ").trim());
   const cards = [];
   const head = [];
   let current = null;
-  const startAt = i => {
-    const m = lines[i].match(/^\*?\s*(\d+)[.)]\s*(.+?)\s*\*?$/);
-    if (!m) return null;
-    const windowText = lines.slice(i + 1, i + 8).join(" ");
-    if (!/💰|📐|🔗|السعر|المساحة|التفاصيل|الغرف|الحمامات/.test(windowText)) return null;
-    return { index: Number(m[1]), title: m[2].replace(/\*+$/g, "").trim(), fields: {}, specs: [] };
-  };
   for (let i = 0; i < lines.length; i += 1) {
-    const start = startAt(i);
-    if (start) {
+    const m = lines[i].match(/^(\d+)[.)]\s*(.+)$/);
+    const windowText = lines.slice(i + 1, i + 6).join(" ");
+    if (m && /💰|📐|🔗/.test(windowText)) {
       if (current) cards.push(current);
-      current = start;
+      current = { index: Number(m[1]), title: m[2].trim(), fields: {} };
       continue;
     }
-    const line = lines[i];
     if (current) {
-      const parsed = parseCardLine(line);
-      if (parsed && parsed.key === "specs") {
-        const parts = parsed.value;
-        if (parts[0]) current.fields.type = parts[0];
-        if (parts[1]) current.fields.tx = parts[1];
-        if (parts[2]) current.fields.location = parts[2];
-        const priceLike = parts.find(p => /مبدئيًا|ج\.م/.test(p));
-        if (priceLike) current.fields.priceShort = priceLike.replace(/^مبدئيًا\s*/, "");
-      } else if (parsed) {
-        current.fields[parsed.key] = parsed.value;
-      } else if (line && !/^اختار رقم العقار|^تحب نحدد|^جاهزين|^اختار العقار/.test(line)) {
-        if (!current.fields.notes) current.fields.notes = line;
-      }
-    } else {
-      head.push(line);
-    }
+      const parsed = parseCardLine(lines[i]);
+      if (parsed) current.fields[parsed.key] = parsed.value;
+    } else head.push(lines[i]);
   }
   if (current) cards.push(current);
-
-  if (!cards.length) {
-    const idx = lines.findIndex(l => /^🎯\s*\*?.+\*?$/.test(l));
-    if (idx >= 0) {
-      const card = { index: null, title: lines[idx].replace(/^🎯\s*/, "").replace(/^\*+|\*+$/g, "").trim(), fields: {}, specs: [] };
-      for (let i = idx + 1; i < lines.length; i += 1) {
-        const parsed = parseCardLine(lines[i]);
-        if (parsed && parsed.key !== "specs") card.fields[parsed.key] = parsed.value;
-      }
-      cards.push(card);
-      head.push(...lines.slice(0, idx));
-    }
-  }
   if (!cards.length) return null;
   return { head: head.join("\n").trim(), cards };
 }
-
 function buildResultCard(card) {
   const f = card.fields || {};
-  const price = f.price || f.priceShort || "";
-  const specs = [f.area, f.rooms ? `${f.rooms} غرف` : "", f.baths ? `${f.baths} حمام` : "", f.floor, f.finishing].filter(Boolean);
-  const image = SAFE_IMG_SRC.test(String(f.image || "")) ? escapeAttr(f.image) : "";
   const url = safeLink(f.url);
-  const index = Number(card.index);
-  const canPick = Number.isInteger(index) && index > 0 && state.options.includes(String(index));
-  const meta = [f.type, f.tx, f.location].filter(Boolean).join(" • ");
+  const image = SAFE_IMG_SRC.test(String(f.image || "")) ? escapeAttr(f.image) : "";
+  const specs = [f.area, f.rooms ? `${f.rooms} غرف` : ""].filter(Boolean);
   return `<article class="result-card">
     ${image ? `<div class="result-media"><img src="${image}" alt="${escapeAttr(card.title)}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : ""}
     <div class="result-body">
       <div class="result-top">
-        <div class="result-price">${escapeHtml(price || "السعر عند التواصل")}</div>
-        ${index > 0 ? `<span class="result-index">${index}</span>` : ""}
+        <div class="result-price">${escapeHtml(f.price || "السعر عند التواصل")}</div>
+        ${card.index > 0 ? `<span class="result-index">${Number(card.index)}</span>` : ""}
       </div>
       <div class="result-title">${escapeHtml(card.title)}</div>
-      ${meta ? `<div class="result-meta"><i class="fas fa-location-dot" aria-hidden="true"></i><span>${escapeHtml(meta)}</span></div>` : ""}
+      ${f.location ? `<div class="result-meta"><i class="fas fa-location-dot" aria-hidden="true"></i><span>${escapeHtml(f.location)}</span></div>` : ""}
       ${specs.length ? `<div class="result-specs">${specs.map(s => `<span class="result-spec">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
       <div class="result-actions">
-        ${url ? `<a class="result-link" href="${url}" target="_blank" rel="noopener">التفاصيل <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : `<span class="result-link" hidden aria-hidden="true"></span>`}
-        ${canPick ? `<button type="button" class="result-pick" onclick="pickResult(${index})">اختار العقار ${index}</button>` : isLocalMode() ? "" : `<span class="result-note">الاختيار متاح وقت ما الوكيل يعرض الأرقام</span>`}
+        ${url ? `<a class="result-link" href="${url}" target="_blank" rel="noopener">التفاصيل <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : ""}
       </div>
     </div>
   </article>`;
@@ -2538,21 +1912,18 @@ function renderMsg(text, type = "bot", images, noScroll = false) {
     div.classList.add("msg-rich");
     if (parsed.head) html += `<span class="msg-content">${formatMsg(parsed.head)}</span>`;
     html += `<div class="result-block">${parsed.cards.map(buildResultCard).join("")}</div>`;
-  } else if (text && text.trim()) {
+  } else if (text && String(text).trim()) {
     html += `<span class="msg-content">${formatMsg(text)}</span>`;
   }
   if (images && images.length) {
-    const safe = images.map(src => {
-      if (!SAFE_IMG_SRC.test(String(src || ""))) return "";
-      return `<img src="${escapeAttr(src)}" loading="lazy" decoding="async" alt="صورة" onclick="window.open(this.src,'_blank','noopener')">`;
-    }).filter(Boolean);
+    const safe = images.map(src => (SAFE_IMG_SRC.test(String(src || "")) ? `<img src="${escapeAttr(src)}" loading="lazy" decoding="async" alt="صورة" onclick="window.open(this.src,'_blank','noopener')">` : "")).filter(Boolean);
     if (safe.length) html += `<div class="msg-imgs">${safe.join("")}</div>`;
   }
   const ticks = type === "user" ? `<span class="msg-ticks">${TICKS_SVG}</span>` : "";
   html += `<div class="msg-time">${getTime()} ${ticks}</div>`;
   div.innerHTML = html;
   chatArea.insertBefore(div, typingBubble);
-  if (noScroll) return;
+  if (noScroll) return div;
   if (type === "user") {
     // رسالة المستخدم نفسه: النزول إلزامي — هو اللي بدأ الإرسال.
     forceScrollToBottomWithRetries();
@@ -2561,36 +1932,172 @@ function renderMsg(text, type = "bot", images, noScroll = false) {
   } else {
     scrollToBottom();
   }
-}
-
-function renderErrorCard(text, retry = true) {
-  const div = document.createElement("div");
-  div.className = "msg msg-bot msg-error";
-  div.innerHTML = `
-    <div class="error-head"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> الرد مكتملش</div>
-    <span class="msg-content">${formatMsg(text)}</span>
-    ${retry ? `<button type="button" class="retry-btn" onclick="retryLast()"><i class="fas fa-rotate-right" aria-hidden="true"></i> جرّب تاني</button>` : ""}
-    <div class="msg-time">${getTime()}</div>
-  `;
-  chatArea.insertBefore(div, typingBubble);
-  if (stickToBottom) forceScrollToBottomWithRetries();
   return div;
 }
 
-function retryLast() {
-  if (isSending || !state.lastFailed) return;
-  msgInput.value = state.lastFailed.text || "";
-  updateSendIcon();
-  if (!msgInput.value.trim() && !state.pendingImages.length) {
-    showToast("اكتب رسالتك تاني — مسودة الرسالة مش محفوظة");
-    return;
+// ═══ رد Gemini + لوحة «من بيانات الموقع» ═══
+function appendBubble(div) {
+  chatArea.insertBefore(div, typingBubble);
+  if (stickToBottom) forceScrollToBottomWithRetries(); else scrollToBottom();
+  return div;
+}
+function renderGeminiReply(data) {
+  const div = document.createElement("div");
+  div.className = "msg msg-bot msg-ai";
+  // لو فحص الموقع حجب رد Gemini كله واستبدله بجملة أمينة، العلامة بتقول كده بدل «Gemini»
+  const replaced = !!(data.grounding && data.grounding.replaced);
+  const tag = replaced
+    ? `<span class="ai-tag" title="رد Gemini اتحجب لأنه فيه معلومة مش موثقة، والجملة دي من فحص الموقع">فحص الموقع</span>`
+    : `<span class="ai-tag" title="الرد ده مكتوب بواسطة Gemini">Gemini</span>`;
+  div.innerHTML = `<span class="msg-content">${formatMsg(data.reply)}</span><div class="msg-time">${tag} ${getTime()}</div>`;
+  return appendBubble(div);
+}
+const TYPE_AR = { apartment: "شقق", villa: "فيلات/دوبلكس", shop: "محلات", office: "مكاتب/عيادات", warehouse: "مخازن" };
+// «إعلان واحد / إعلانين / 3 إعلانات / 11 إعلانًا»
+function adsAr(n) { n = Number(n) || 0; return n === 1 ? "إعلان واحد" : n === 2 ? "إعلانين" : n >= 3 && n <= 10 ? `${n} إعلانات` : `${n} إعلانًا`; }
+// تاريخ ISO جوه نص عربي: عزل اتجاه عشان «2026-10-26» ما يتقلبش «26-10-2026»
+function isoDate(d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || "")) ? `<bdi dir="ltr">${d}</bdi>` : escapeHtml(d || ""); }
+// بيرجّع HTML آمن (التواريخ متحققة بصيغة ISO قبل العزل)
+function availabilityLine(card) {
+  const posted = /^\d{4}-\d{2}-\d{2}$/.test(String(card.datePosted || "")) ? `منشور ${isoDate(card.datePosted)}` : "تاريخ النشر غير مسجل";
+  const a = card.availability || {};
+  const conf = a.status === "confirmed_on_date" && /^\d{4}-\d{2}-\d{2}$/.test(String(a.lastConfirmedAt || ""))
+    ? `آخر تأكيد موثق من المالك: ${isoDate(a.lastConfirmedAt)} — وممكن يتغير بعده`
+    : "التوافر يحتاج تأكيد من المالك";
+  return `${posted} · ${conf}`;
+}
+function buildChatCard(card, index) {
+  const url = safeLink(card.url);
+  const image = SAFE_IMG_SRC.test(String(card.image || "")) ? escapeAttr(String(card.image).replace("/assets/img/properties/", "/assets/img/properties/cards/")) : "";
+  const fallbackImg = SAFE_IMG_SRC.test(String(card.image || "")) ? escapeAttr(card.image) : "";
+  const specs = [card.area, card.rooms ? `${card.rooms} غرف` : ""].filter(Boolean);
+  const slug = /^[a-z0-9-]+$/.test(String(card.slug || "")) ? card.slug : "";
+  return `<article class="result-card">
+    ${image ? `<div class="result-media"><img src="${image}" alt="${escapeAttr(card.title)}" loading="lazy" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${fallbackImg}';}else{this.parentNode.remove();}"></div>` : ""}
+    <div class="result-body">
+      <div class="result-top">
+        <div class="result-price">${escapeHtml(card.price || "السعر غير معلن")}</div>
+        <span class="result-index">${Number(index) + 1}</span>
+      </div>
+      <div class="result-title">${escapeHtml(card.title)}</div>
+      ${card.location ? `<div class="result-meta"><i class="fas fa-location-dot" aria-hidden="true"></i><span>${escapeHtml(card.location)}</span></div>` : ""}
+      ${specs.length ? `<div class="result-specs">${specs.map(s => `<span class="result-spec">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
+      <div class="result-avail">${availabilityLine(card)}</div>
+      <div class="result-actions">
+        ${url ? `<a class="result-link" href="${url}" target="_blank" rel="noopener">التفاصيل <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : ""}
+        ${slug ? `<button type="button" class="result-ask" data-slug="${escapeAttr(slug)}" onclick="askAbout(this.dataset.slug)">اسأل عنه</button>` : ""}
+      </div>
+    </div>
+  </article>`;
+}
+function comparablesHtml(c) {
+  if (!c || typeof c !== "object") return "";
+  const kind = `${TYPE_AR[c.propertyType] || "عقارات"} · ${c.deal === "rent" ? "إيجار" : "بيع"}`;
+  const monthly = c.monthly ? " شهريًا" : "";
+  const dataAt = c.dataAt ? `البيانات بتاريخ ${isoDate(c.dataAt)}` : "تاريخ البيانات غير متاح";
+  if (c.status !== "ok") {
+    return `<div class="cmp-box">📊 البيانات المنشورة مش كفاية لمقارنة موثوقة (${Number(c.count) ? adsAr(c.count) + " مشابهة بس" : "مفيش إعلانات مشابهة"} — ${escapeHtml(kind)} في ${escapeHtml(c.scopeLabel || "")})، فمش هنحكم على السعر.<br><span class="data-sub">${dataAt} · ${escapeHtml(c.note || "")}</span></div>`;
   }
-  sendMsg();
+  const pct = Math.abs(Number(c.diffPct) || 0);
+  const rel = c.verdict === "above" ? `أعلى بحوالي ${pct}% من` : c.verdict === "below" ? `أقل بحوالي ${pct}% من` : "قريب من";
+  const range = c.listingsFrom && c.listingsTo ? ` · الإعلانات من ${isoDate(c.listingsFrom)} لـ ${isoDate(c.listingsTo)}` : "";
+  return `<div class="cmp-box">📊 <strong>مقارنة استرشادية</strong> — ${adsAr(c.count)} منشورة (${escapeHtml(kind)} · ${escapeHtml(c.scopeLabel || "")})<br>
+    • وسيط سعر المتر في الإعلانات: <strong>${fmtNum(c.medianPerM2)} ج.م/م²${monthly}</strong><br>
+    • سعرك: ${fmtNum(c.ownPerM2)} ج.م/م²${monthly} — ${rel} الوسيط<br>
+    <span class="data-sub">${dataAt}${range} · ${escapeHtml(c.note || "")}</span></div>`;
+}
+function ownerReady(st) {
+  return !!(st && st.role === "owner" && st.operation && st.propertyType && st.location && st.area && st.price);
+}
+function renderDataPanel(data, prevChat) {
+  const parts = [];
+  if (data.changeNote) parts.push(`<p class="data-line is-change">${escapeHtml(data.changeNote)}</p>`);
+  for (const n of Array.isArray(data.notices) ? data.notices : []) {
+    if (n && typeof n.text === "string" && n.text) parts.push(`<p class="data-line is-notice">ℹ️ ${escapeHtml(n.text)}</p>`);
+  }
+  if (data.focus && typeof data.focus === "object") {
+    parts.push(`<p class="data-sub">العقار اللي بتسأل عنه:</p><div class="result-block">${buildChatCard(data.focus, 0)}</div>`);
+  }
+  const r = data.results;
+  if (r && typeof r === "object") {
+    const cards = Array.isArray(r.cards) ? r.cards : [];
+    if (Number(r.count) > 0) {
+      parts.push(`<p class="data-line">🏠 ${Number(r.count)} ${Number(r.count) === 1 ? "عقار منشور مطابق" : "عقارات منشورة مطابقة"} لكل شروطك في مدينة نصر${Number(r.count) > cards.length ? ` (بنعرض أحدث ${cards.length})` : ""}:</p>`);
+      parts.push(`<div class="result-block">${cards.map(buildChatCard).join("")}</div>`);
+    } else {
+      const alts = Array.isArray(r.alternatives) ? r.alternatives : [];
+      parts.push(`<p class="data-line">🏠 مفيش عقار منشور مطابق لكل الشروط دي، ومش هنوسّع البحث من نفسنا.${alts.length ? " ممكن تغيّر شرط واحد من الاقتراحات تحت:" : ""}</p>`);
+      if (alts.length) parts.push(`<p class="data-sub">${alts.map(a => `• ${escapeHtml(a.label)}`).join("<br>")}</p>`);
+    }
+  }
+  if (data.comparables) parts.push(comparablesHtml(data.comparables));
+  if (ownerReady(data.state) && !ownerReady(prevChat)) {
+    parts.push(`<div class="data-actions"><a href="/add-your-property.html" target="_blank" rel="noopener"><i class="fas fa-house" aria-hidden="true"></i> اعرض عقارك رسميًا</a></div>
+      <p class="data-sub">الصور اختيارية — تقدر تبعتها لطارق بعدين. ومفيش حاجة اتبعتت لحد دلوقتي.</p>`);
+  }
+  if (!parts.length) return null;
+  const div = document.createElement("div");
+  div.className = "msg msg-bot msg-data msg-rich";
+  div.innerHTML = `<div class="data-head"><i class="fas fa-clipboard-check" aria-hidden="true"></i> من بيانات الموقع — مش من Gemini</div>${parts.join("")}
+    <div class="msg-time">${getTime()}</div>`;
+  return appendBubble(div);
+}
+// «اسأل عنه»: الرسالة الجاية بتتبعت ومعاها معرّف العقار، والـWorker يجيب بياناته من الموقع
+function askAbout(slug) {
+  if (!/^[a-z0-9-]+$/.test(String(slug || ""))) return;
+  state.focus = String(slug);
+  if (!msgInput.value.trim()) msgInput.value = "عندي سؤال عن العقار ده: ";
+  updateSendIcon();
+  msgInput.focus({ preventScroll: true });
+  showToast("اكتب سؤالك عن العقار ده وابعته");
 }
 
-// ═══════════════════════════════════════════════════════════
-// زر التقييم — كارت ذهبي في لوحة الإجابة (نفس الرابط والوظيفة)
-// ═══════════════════════════════════════════════════════════
+// ═══ أزرار صريحة: واتساب (بضغطة منك) + 💎 التقييم ═══
+function hideWA() { waWrapper.classList.remove("show"); waBtn.href = "#"; }
+function showWA(url, title, sub) {
+  if (!url) return;
+  waBtn.href = url;
+  const t = document.getElementById("waTitle"); if (t && title) t.textContent = title;
+  const s = document.getElementById("waSub"); if (s && sub) s.textContent = sub;
+  waWrapper.classList.add("show");
+  updateDockHeight();
+}
+function summaryWaText(st, items) {
+  const line = summaryText(items);
+  const lead = st && st.role === "owner" ? "عندي عقار:" : st && st.role === "seeker" ? "بدوّر على:" : "عندي استفسار.";
+  return `${WA_AGENT_SOURCE}\n${lead}${line ? " " + line : ""}\n(ملخص من المحادثة مع المساعد — محتاج مراجعة معاك.)`;
+}
+const TYPE_TO_TOOL = { apartment: "شقة", villa: "فيلا", shop: "محل تجاري", office: "مكتب إداري", warehouse: "مخزن" };
+// «الدور التالت» / «دور 3» / «ارضي» ⇒ مفتاح الأداة («ثالث»…) — أي حاجة مش واضحة ما تتبعتش
+const FLOOR_WORDS = [["ارضي", "أرضي"], ["أرضي", "أرضي"], ["اول", "أول"], ["أول", "أول"], ["تاني", "ثاني"], ["ثاني", "ثاني"], ["تالت", "ثالث"], ["ثالث", "ثالث"],
+  ["رابع", "رابع"], ["خامس", "خامس"], ["سادس", "سادس"], ["سابع", "سابع"], ["تامن", "ثامن"], ["ثامن", "ثامن"], ["تاسع", "تاسع"], ["عاشر", "عاشر"]];
+const FLOOR_DIGITS = ["أرضي", "أول", "ثاني", "ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع", "عاشر"];
+function floorKey(text) {
+  const t = String(text || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/الدور|دور|الطابق|طابق/g, " ").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const digit = t.match(/^(\d{1,2})$/);
+  if (digit) return FLOOR_DIGITS[Number(digit[1])] || "";
+  const word = t.replace(/^ال/, "").replace(/[ةه]$/, "");
+  const hit = FLOOR_WORDS.find(([w]) => word === w);
+  return hit ? hit[1] : "";
+}
+function renderActions(data) {
+  const st = data.state || {};
+  if (ownerReady(st)) {
+    showWA(waLink(summaryWaText(st, data.summary)), "ابعت الملخص لطارق على واتساب", "بيفتح واتساب برسالة جاهزة — مفيش حاجة بتتبعت غير لما تبعتها بنفسك");
+    renderValuationCta({
+      intent: "seller", area: st.location || "", size: st.area?.value, propertyType: TYPE_TO_TOOL[st.propertyType] || "",
+      areaType: st.operation === "lease" ? "rent" : "sale", price: st.price?.value, finishing: st.finishing || "", floor: floorKey(st.floor),
+      rentCondition: st.furnished === "furnished" || st.furnished === "unfurnished" ? st.furnished : null,
+    });
+  } else if (data.contact) {
+    showWA(waLink(summaryWaText(st, data.summary)), "كلّم طارق على واتساب", "بيفتح واتساب — إنت اللي تبعت الرسالة");
+    renderValuationCta(null);
+  } else {
+    hideWA();
+    renderValuationCta(null);
+  }
+}
 function renderValuationCta(context) {
   if (!valuationSlot) return;
   clearChildren(valuationSlot);
@@ -2602,7 +2109,7 @@ function renderValuationCta(context) {
   link.className = "btn-glass valuation-link";
   link.href = buildValuationHref(context);
   link.textContent = "💎 قيّم عقارك";
-  link.setAttribute("aria-label", "افتح أداة تقييم العقار مع الاحتفاظ بسياق المحادثة");
+  link.setAttribute("aria-label", "افتح أداة تقييم العقار مع الاحتفاظ بملخص المحادثة");
   link.addEventListener("click", () => { saveReturnContext(); });
   wrap.appendChild(link);
   valuationSlot.appendChild(wrap);
@@ -2610,17 +2117,378 @@ function renderValuationCta(context) {
   updateDockHeight();
 }
 
+// ═══ أخطاء الخدمة: واضحة + إعادة محاولة + بحث محلي اختياري (مفيش رد متألف) ═══
+function renderChatError(head, text, { retry = true } = {}) {
+  const div = document.createElement("div");
+  div.className = "msg msg-bot msg-error";
+  div.innerHTML = `
+    <div class="error-head"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> ${escapeHtml(head)}</div>
+    <span class="msg-content">${formatMsg(text)}</span>
+    <div class="error-actions">
+      ${retry ? `<button type="button" class="retry-btn" onclick="retryLast()"><i class="fas fa-rotate-right" aria-hidden="true"></i> جرّب تاني</button>` : ""}
+      <button type="button" class="local-btn" onclick="useLocalForLast()"><i class="fas fa-search" aria-hidden="true"></i> ابحث محليًا بدون ذكاء اصطناعي</button>
+      <a class="wa-link" href="${escapeAttr(waLink(WA_AGENT_SOURCE))}" target="_blank" rel="noopener"><i class="fab fa-whatsapp" aria-hidden="true"></i> كلّم طارق</a>
+    </div>
+    <div class="msg-time">${getTime()}</div>`;
+  chatArea.insertBefore(div, typingBubble);
+  if (stickToBottom) forceScrollToBottomWithRetries();
+  return div;
+}
+function renderErrorCard(text, retry = true) { return renderChatError("الرد مكتملش", text, { retry }); }
+function markFailed(failed) {
+  if (failed?.el) failed.el.classList.add("msg-failed");
+  if (failed?.text && !msgInput.value.trim()) { msgInput.value = failed.text; updateSendIcon(); }
+}
+function retryLast() {
+  if (isSending || !state.lastFailed) return undefined;
+  const failed = state.lastFailed;
+  state.lastFailed = null;
+  if (failed.el) failed.el.remove();
+  msgInput.value = failed.text || "";
+  state.focus = failed.focus || null;
+  updateSendIcon();
+  if (!msgInput.value.trim()) { showToast("اكتب رسالتك تاني"); return undefined; }
+  return sendMsg();
+}
+// اختيار صريح من المستخدم: نفس الرسالة تتبحث محليًا (من غير Gemini ومن غير إرسال)
+function useLocalForLast() {
+  if (isSending) return undefined;
+  const failed = state.lastFailed;
+  state.lastFailed = null;
+  if (failed?.el) failed.el.remove();
+  enterLocalMode({ announce: true });
+  const text = failed?.text || msgInput.value.trim();
+  if (text) { msgInput.value = text; return sendMsg(); }
+  return undefined;
+}
+const CHAT_ERRORS = {
+  gemini_timeout: ["Gemini اتأخر", "Gemini اتأخر في الرد فوقفنا الطلب. مفيش رد متألف — جرّب تاني، أو استخدم البحث المحلي."],
+  gemini_busy: ["Gemini عليه ضغط", "Gemini عليه ضغط دلوقتي. جرّب تاني بعد شوية، أو استخدم البحث المحلي."],
+  gemini_invalid: ["رد غير صالح", "رد Gemini وصل بشكل غير صالح فما عرضناهوش. جرّب تاني."],
+  gemini_unavailable: ["المساعد متوقف مؤقتًا", "مساعد Gemini متوقف مؤقتًا. جرّب تاني بعد شوية، أو استخدم البحث المحلي، أو كلّم طارق مباشرة."],
+  gemini_unconfigured: ["المساعد مش متاح", "مساعد Gemini مش متاح على الخادم دلوقتي. تقدر تستخدم البحث المحلي أو تكلّم طارق مباشرة."],
+  rate_limited: ["رسايل كتير ورا بعض", "بتبعت رسايل كتير ورا بعض — استنى ثواني وجرّب تاني."],
+  payload_too_large: ["الرسالة طويلة", "الرسالة طويلة أوي — قصّرها وجرّب تاني."],
+};
+const STATUS_ERRORS = { 413: "payload_too_large", 429: "rate_limited", 502: "gemini_invalid", 503: "gemini_unavailable", 504: "gemini_timeout" };
+function handleChatFailure(status, data, failed) {
+  const code = (data && typeof data.error === "string" && data.error) || STATUS_ERRORS[status] || "";
+  console.warn("[agent] chat failed", { status, code: code || "invalid_response" });
+  if (status === 412 || code === "consent_required") {
+    setConsent(false);
+    if (failed.el) failed.el.remove();
+    showConsent({ text: failed.text, focus: failed.focus });
+    return;
+  }
+  state.lastFailed = failed;
+  markFailed(failed);
+  if (CHAT_ERRORS[code]) {
+    const [head, text] = CHAT_ERRORS[code];
+    renderChatError(head, text, { retry: code !== "payload_too_large" });
+    return;
+  }
+  if (status === 200) {
+    // الخادم رد بشكل مش متوقع (مثلًا Worker قديم من غير مسار /chat) — ما نعرضش أي حاجة كأنها رد
+    renderChatError("الخادم مش جاهز", "خادم المساعد لسه مش متحدّث لنسخة Gemini الجديدة، فما عرضناش أي رد. تقدر تستخدم البحث المحلي أو تكلّم طارق.");
+    return;
+  }
+  renderChatError("حصل خطأ مؤقت", `حصل خطأ مؤقت (HTTP ${Number(status) || 0}). رسالتك رجعت في خانة الكتابة؛ جرّب تاني.`);
+}
+
+async function fetchWorkerWithRetry(url, options) {
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    let timedOut = false;
+    const timeoutId = controller
+      ? setTimeout(() => { timedOut = true; controller.abort(); }, WORKER_REQUEST_TIMEOUT_MS)
+      : null;
+    try {
+      return await fetch(url, {
+        ...options,
+        ...(controller ? { signal: controller.signal } : {}),
+      });
+    } catch (err) {
+      lastError = err;
+      if (timedOut) {
+        lastError = new Error("Worker request timed out");
+        lastError.name = "TimeoutError";
+      }
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      // إعادة واحدة للانقطاع العابر فقط؛ ما نكررش لو الجهاز Offline أو الطلب عدى المهلة.
+      if (attempt > 0 || offline || timedOut) throw lastError;
+      await new Promise(resolve => setTimeout(resolve, WORKER_RETRY_DELAY_MS));
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    }
+  }
+  throw lastError;
+}
+
+// ═══ الإرسال ═══
+async function sendMsg() {
+  const quick = _quickSend; _quickSend = false;
+  if (isSending) return;
+  const txt = msgInput.value.trim().slice(0, MSG_MAX);
+  if (!txt) return;
+  if (isLocalMode()) { await sendLocalRequest(txt); return; }
+  if (!hasConsent()) {
+    // الموافقة الأول — والرسالة مستنية (مش بتضيع ومش بتتبعت)
+    msgInput.value = "";
+    updateSendIcon();
+    showConsent({ text: txt, focus: state.focus, quick });
+    return;
+  }
+  await sendChat(txt, quick);
+}
+
+async function sendChat(txt, quick) {
+  state.lastFailed = null;
+  msgInput.value = "";
+  updateSendIcon();
+  renderOptions([]);             // ما نسيبهاش قابلة للضغط أثناء الإرسال
+  hideInappNotif();
+  const userEl = renderMsg(txt, "user");
+  const focus = state.focus;
+  state.focus = null;
+  const valuation = state.valuationResult && !state._valuationSent ? state.valuationResult : null;
+  const payload = {
+    consent: CHAT_CONSENT,
+    message: txt,
+    state: state.chat,
+    history: state.history.slice(-HISTORY_MAX),
+    ...(focus ? { focus } : {}),
+    ...(valuation ? { valuation } : {}),
+  };
+  const failed = { text: txt, focus, el: userEl };
+
+  isSending = true;
+  sendBtn.disabled = true;
+  setTyping(true);
+  toggleTypingBubble(true);
+  let workerFetchError = null;
+  try {
+    let r;
+    try {
+      r = await fetchWorkerWithRetry(CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      workerFetchError = err;
+      throw err;
+    }
+    let data = null;
+    try { data = await r.json(); } catch { data = null; }
+    toggleTypingBubble(false);
+    setTyping(false);
+    const valid = r.ok && data && data.ok === true && typeof data.reply === "string" && data.reply.trim() && data.provider && data.provider.name === "gemini";
+    if (!valid) { handleChatFailure(r.status, data, failed); return; }
+
+    const prevChat = state.chat;
+    state.chat = data.state && typeof data.state === "object" ? data.state : state.chat;
+    state.summary = Array.isArray(data.summary) ? data.summary : [];
+    state.lastResponse = data;
+    state.history.push({ role: "user", text: txt }, { role: "assistant", text: String(data.reply) });
+    if (state.history.length > HISTORY_MAX * 2) state.history = state.history.slice(-HISTORY_MAX * 2);
+    if (valuation) state._valuationSent = true;
+
+    renderGeminiReply(data);
+    renderDataPanel(data, prevChat);
+    renderOptions(Array.isArray(data.quickReplies) ? data.quickReplies : []);
+    renderSummaryBar();
+    renderActions(data);
+  } catch (err) {
+    toggleTypingBubble(false); setTyping(false);
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    console.warn("[agent] send failed", { stage: workerFetchError ? "worker-fetch" : "response-ui", name: err?.name || "Error" });
+    state.lastFailed = failed;
+    markFailed(failed);
+    if (workerFetchError?.name === "TimeoutError") {
+      renderChatError("الرد اتأخر", "الرد اتأخر عن المعتاد فوقفنا الطلب، ومفيش رد متألف. رسالتك رجعت في خانة الكتابة؛ جرّب تاني.");
+    } else if (offline) {
+      renderChatError("الإنترنت مفصول", "الإنترنت عندك مفصول. رسالتك رجعت في خانة الكتابة؛ جرّب بعد ما الاتصال يرجع.");
+    } else if (workerFetchError) {
+      renderChatError("تعذّر الاتصال", "تعذّر الاتصال بخادم المساعد. رسالتك رجعت في خانة الكتابة؛ جرّب تاني.");
+    } else {
+      renderChatError("خلل في العرض", "الرد وصل لكن حصل خلل أثناء عرضه. جرّب تاني، ولو المشكلة استمرت حدّث الصفحة.");
+    }
+  } finally {
+    isSending = false;
+    sendBtn.disabled = false;
+    setTyping(false);
+    toggleTypingBubble(false);
+    // الكيبورد مفتوح أو رسالة مكتوبة بإيد المستخدم ⇒ نحافظ على التركيز؛ الأزرار السريعة ما تفتحش كيبورد على اللمس.
+    const keyboardOpen = keyboardLikelyOpen();
+    if (keyboardOpen || !(IS_TOUCH && quick)) msgInput.focus({ preventScroll: true });
+    forceScrollToBottomWithRetries();
+    updateDockHeight();
+  }
+}
+
+// ═══ البحث المحلي الصريح (بلا Worker ولا Gemini) — نفس نواة PR #104 ═══
+function offersAr(n) { return n === 1 ? "عرض واحد" : n === 2 ? "عرضان" : n <= 10 ? n + " عروض" : n + " عرضًا"; }
+async function sendLocalRequest(txt) {
+  if (!window.NasrAgent) { renderErrorCard("تعذر تحميل نواة البحث المحلية. أعد تحميل الصفحة؛ لم نرسل رسالتك لأي خادم.", false); return; }
+  switchView("session");
+  isSending = true; sendBtn.disabled = true;
+  msgInput.value = ""; updateSendIcon(); hideWA(); renderValuationCta(null); renderOptions([]);
+  renderMsg(txt, "user");
+  try {
+    // A property identifier is a lowercase token with at least two hyphens (token check, no backtracking).
+    const slug = txt.toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9-]/g, ""))
+      .find(t => /^[a-z0-9-]+$/.test(t) && t.split("-").length >= 3);
+    if (slug) {
+      const res = await fetch("/api/properties/" + encodeURIComponent(slug) + ".json");
+      if (res.status === 404) { renderMsg("لا يوجد عقار منشور بهذا المعرّف (404). لم ننشئ تفاصيل بديلة.", "bot"); return; }
+      if (!res.ok) throw new Error("property unavailable");
+      const record = await res.json();
+      const p = record && record.property;
+      const scope = await galleryScope();
+      if (!p || !scope || !scope.has(p.slug) || p.in_nasr_city === false) {
+        renderMsg("هذا السجل ليس ضمن كتالوج مدينة نصر المحلي، أو تعذر التحقق من نطاقه؛ لا نرشحه.", "bot");
+        return;
+      }
+      const confirmed = p.last_confirmed_at ? "آخر تأكيد موثق من المالك: " + p.last_confirmed_at + "، وقد يتغير بعده." : "لا يوجد تاريخ تأكيد موثق؛ التوافر يحتاج إلى تأكيد من المالك.";
+      renderMsg([p.title, (p.price || "السعر غير معلن") + (p.area ? " — " + p.area : ""), p.location || "",
+        "تاريخ النشر: " + (p.datePosted || "غير مسجل") + ". " + confirmed,
+        "العمولة المنشورة على الموقع للبيع 2.5% بعد إتمام الصفقة؛ الترخيص والتأمين وعمولة الإيجار غير منشورة ولا تُفترض.",
+        new URL("/properties/" + p.slug + "/", location.origin).href].filter(Boolean).join("\n"), "bot");
+      return;
+    }
+    const turn = window.NasrAgent.reduce(localDraft, txt);
+    localDraft = turn.draft;
+    renderMsg(turn.response, "bot");
+    renderOptions(turn.options);
+    if (turn.ready && localDraft.role === "search" && !localDraft.conflicts.length) {
+      const response = await fetch(GALLERY_SCOPE_URL);
+      if (!response.ok) throw new Error("catalog unavailable");
+      const rows = await response.json();
+      const found = window.NasrAgent.results(rows, localDraft);
+      if (found.length) {
+        // Same card format the page renders (parsePropertyCards); data comes from catalog.json only.
+        const detail = found.slice(0, 5).map((p, i) => [
+          (i + 1) + ". " + p.t,
+          "💰 السعر: " + (p.p || "غير معلن"),
+          p.an ? "📐 المساحة: " + p.an + " م²" : "",
+          p.l ? "📍 " + p.l : "",
+          "🔗 التفاصيل: " + p.u, // validated same-site path (/properties/<slug>/)
+        ].filter(Boolean).join("\n")).join("\n");
+        renderMsg("النتائج المطابقة لكل القيود في مدينة نصر: " + offersAr(found.length) + (found.length > 5 ? " (نعرض أول 5)" : "") + ". التوافر يحتاج إلى تأكيد.\n" + detail, "bot");
+      } else {
+        const alternatives = window.NasrAgent.suggestions(rows, localDraft);
+        renderMsg("لا توجد عروض منشورة في مدينة نصر تطابق كل القيود معًا، ولم نوسّع البحث تلقائيًا." +
+          (alternatives.length ? "\nبدائل محددة — كل منها يغيّر شرطًا واحدًا من طلبك:\n" + alternatives.map(a => "• " + a.label).join("\n") +
+            "\nاكتب مثلًا «بدون ميزانية» أو حدًا جديدًا لتطبيق أحدها." : "\nحتى بعد إزالة أي شرط واحد لا توجد نتائج؛ راجع النوع أو المعاملة."), "bot");
+      }
+    }
+    renderSessionMeta();
+  } catch {
+    renderMsg("تعذر تحميل البيانات. احتفظنا بالقيود في هذه الصفحة، ولم نفترض نتائج أو نرسل طلبًا؛ أعد المحاولة.", "bot");
+  } finally { isSending = false; sendBtn.disabled = false; updateDockHeight(); }
+}
+
+// ═══ RETURN FROM VALUATION ═══
+function parseValuationFromUrl() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("return") !== "valuation") return null;
+
+  const estimate = Number(params.get("estimate"));
+  if (!Number.isFinite(estimate) || estimate <= 0) return null;
+
+  const rawConfidence = String(params.get("confidence") || "").toLowerCase();
+  const confidence = ["high", "medium", "low"].includes(rawConfidence)
+    ? rawConfidence
+    : "unknown";
+
+  const clampNonNegative = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const rawAreaType = String(params.get("areaType") || params.get("type") || "").toLowerCase();
+  const areaType = rawAreaType === "rent" || rawAreaType === "sale" ? rawAreaType : "";
+
+  const rawBasis = String(params.get("basis") || "");
+  const priceBasis = ["median_price_m2", "avg_price_m2"].includes(rawBasis) ? rawBasis : "";
+
+  return {
+    estimate: Math.round(estimate),
+    confidence,
+    samples: Math.round(clampNonNegative(params.get("samples"))),
+    perMeter: Math.round(clampNonNegative(params.get("perMeter"))),
+    p25: Math.round(clampNonNegative(params.get("p25"))),
+    p75: Math.round(clampNonNegative(params.get("p75"))),
+    priceBasis,
+    area: String(params.get("area") || "").slice(0, 100),
+    size: clampNonNegative(params.get("size")),
+    areaType,
+    savedAt: Date.now(),
+  };
+}
+function checkReturnFromValuation() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("return") !== "valuation") return false;
+  const valuation = parseValuationFromUrl();
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null");
+    if (saved) {
+      const age = Date.now() - (saved.savedAt || 0);
+      if (age < 24 * 60 * 60 * 1000 && saved.chat && typeof saved.chat === "object") {
+        state.chat = saved.chat;
+        state.summary = Array.isArray(saved.summary) ? saved.summary : [];
+      }
+      sessionStorage.removeItem(RETURN_KEY); // سياق مؤقت — بيتمسح أول ما يتقري
+    }
+  } catch {}
+  if (valuation) { state.valuationResult = valuation; state._valuationSent = false; }
+  const clean = new URL(window.location.href);
+  ["return", "estimate", "confidence", "samples", "perMeter", "p25", "p75", "basis", "area", "size", "areaType", "type"]
+    .forEach(k => clean.searchParams.delete(k));
+  window.history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
+  return { returning: true, valuation };
+}
+// قبل فتح أداة التقييم: الحالة المنظمة + الملخص بس (بلا نصوص المحادثة) — وبتتمسح عند الرجوع
+function saveReturnContext() {
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify({ chat: state.chat, summary: state.summary, savedAt: Date.now() }));
+  } catch {}
+}
+function renderReturnBanner(valuation) {
+  const banner = document.createElement("div");
+  banner.className = "msg msg-bot msg-data";
+  let lines = "";
+  if (valuation && valuation.estimate > 0) {
+    const confLabel = valuation.confidence === "high" ? "عالية" : valuation.confidence === "medium" ? "متوسطة" : valuation.confidence === "low" ? "منخفضة" : "غير محددة";
+    const unitSuffix = valuation.areaType === "rent" ? " / شهريًا" : "";
+    // area جاية من الرابط (مدخل غير موثوق) وداخلة في innerHTML — لازم تعقيم
+    const loc = escapeHtml(valuation.area || "—");
+    const szPart = valuation.size ? " • " + fmtNum(valuation.size) + " م²" : "";
+    lines += "💎 رجعت من أداة التقييم<br>";
+    lines += `📍 ${loc}${szPart}<br>`;
+    lines += `💰 <strong>${fmtNum(valuation.estimate)} ج.م${unitSuffix}</strong><br>`;
+    if (valuation.p25 && valuation.p75) lines += `📊 النطاق (P25–P75): ${fmtNum(valuation.p25)} – ${fmtNum(valuation.p75)} ج.م/م²<br>`;
+    if (valuation.perMeter) {
+      const basisLabel = valuation.priceBasis === "median_price_m2" ? " (الوسيط)" : valuation.priceBasis === "avg_price_m2" ? " (المتوسط)" : "";
+      lines += `📏 سعر المتر${basisLabel}: ${fmtNum(valuation.perMeter)} ج.م/م²<br>`;
+    }
+    lines += `🎯 الثقة: ${confLabel}`;
+    if (valuation.samples > 0) lines += ` (${valuation.samples} عينة)`;
+    lines += "<br><span class=\"data-sub\">مؤشر استرشادي من أداة الموقع — مش تقييم مهني.</span>";
+  } else {
+    lines += "تمام، رجعت 👋";
+  }
+  const tail = state.chat ? "ملخصك رجع زي ما كان فوق — كمّل كلامك براحتك." : "اكتب طلبك أو سؤالك وهنكمل.";
+  banner.innerHTML = `<div class="data-head"><i class="fas fa-gem" aria-hidden="true"></i> من أداة التقييم</div><span class="msg-content">${lines}<br><br>${tail}</span><div class="msg-time">${getTime()}</div>`;
+  chatArea.insertBefore(banner, typingBubble);
+  forceScrollToBottom(); // الرجوع من التقييم: ننزل لبانر النتيجة دايمًا
+}
+
 // ═══ SCROLL ═══
 // scrollToBottom(): ذكي — بينزّل لآخر المحادثة بس لو القارئ قريب منها (أقل من 80px).
 //   لو القارئ طالع بيقرا فوق ما بنحرّكوش، وبنظهر زر «للأسفل» بس.
 // forceScrollToBottom(): صريح — لزر «للأسفل»، ولرسالة المستخدم نفسه، ولأول تحميل/رجوع من التقييم.
-//
-// ⭐ إصلاح «رد الوكيل بيختفي والكيبورد مفتوح» (2026-10-11) — المطلوب سلوك واتساب:
-//    الرسالة الجديدة تزق القديم لفوق، وتفضل آخر رسالة ظاهرة من غير ما المستخدم يقفل الكيبورد.
-//    الأسباب اللي اتعالجت:
-//    (1) تعيين scrollTop مرة واحدة قبل ما الـlayout يستقر (كيبورد/خط/صورة) كان بيسيبنا فوق القاع.
-//    (2) حدث scroll الناتج عن التمرير الآلي نفسه كان بيقلّب stickToBottom → الرسالة الجاية ما بتنزلش.
-//    (3) ما كانش فيه أي إعادة تثبيت لما مقاس الشات يتغيّر (فتح/قفل الكيبورد) أو المحتوى يزيد.
 const NEAR_BOTTOM_PX = 80;
 let stickToBottom = true; // آخر وضع معروف للقارئ — بيتحدّث من حدث scroll قبل ما المحتوى يتغيّر
 let _autoScrolling = false; // التمرير الحالي من الكود (تثبيت) مش من صوابع المستخدم
@@ -2675,7 +2543,6 @@ function keyboardLikelyOpen() {
     typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
 }
 // ═══ SCROLL BTN ═══
-// بيحدّث «وضع القارئ» (قريب من آخر المحادثة ولا لأ) وبيظهر/يخفي زر «للأسفل» على أساسه
 chatArea.addEventListener("scroll", () => {
   // ⭐ التمرير الناتج عن التثبيت الآلي نفسه مش تمرير من المستخدم — ما نقلبش stickToBottom بسببه
   if (_autoScrolling) return;
@@ -2686,10 +2553,7 @@ chatArea.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ═══ إعادة التثبيت التلقائي ═══
-// ⭐ إعادة تثبيت القاع لما مقاس الشات يتغيّر (فتح/قفل الكيبورد) أو المحتوى يزيد (رسالة/أزرار/صورة).
-//   بنثبّت بس لو القارئ لسه مع القاع — اللي طالع يقرا فوق ما بنزقّوش (نفس منطق واتساب).
 (function bindAutoPin() {
-  // المراقِبات مش مضمونة في كل متصفح — بنسجّلها لو متاحة بس
   if (typeof ResizeObserver === "function") {
     new ResizeObserver(() => pinIfStillSticky()).observe(chatArea);
   }
@@ -2701,17 +2565,11 @@ chatArea.addEventListener("scroll", () => {
 })();
 
 // ═══ لوحة مفاتيح الموبايل ═══
-// الفكرة كلها في سطر واحد: **الصندوق يتبع المساحة الظاهرة فعلًا** (visualViewport) مش 100dvh لوحده.
-//   • كروم أندرويد الحديث (مع interactive-widget=resizes-content في القالب): المتصفح بيصغّر الصفحة
-//     والـdvh بنفسه → المقاسين بيتساووا → إحنا مش بنتدخلش خالص (أقل JS = أقل أعطال).
-//   • سفاري آيفون والـWebViews اللي بتتجاهل الكلمة المفتاحية: الكيبورد بيغطّي من غير ما يصغّر الصفحة
-//     → هنا بنكتب --vv-h (المساحة الظاهرة) و --vv-top (إزاحة النافذة)، فيصغّر الصندوق ويقعد فوق الكيبورد.
-// مفيش تعويض مزدوج: لا transform ولا window.scrollTo وسط فتح الكيبورد (ده اللي كان بيعاند المتصفح).
+// الصندوق يتبع المساحة الظاهرة فعلًا (visualViewport) مش 100dvh لوحده — شوف ملاحظات 2026-10-11.
 function layoutViewportHeight() {
   const docEl = document.documentElement;
   return Math.round(docEl.clientHeight || window.innerHeight || 0);
 }
-// علَم «الانتقال الحالي» — بيمنع معالج scroll من قلب وضع القارئ أثناء إعادة الرسم
 let _vpTransitioning = false;
 let _vpTransitionTimer = 0;
 window.__vpTransitioning = () => _vpTransitioning;
@@ -2720,23 +2578,19 @@ function markVpTransition() {
   clearTimeout(_vpTransitionTimer);
   _vpTransitionTimer = setTimeout(() => { _vpTransitioning = false; }, 420);
 }
-// آخر قيمتين اتكتبوا فعلاً على الـCSS — بنقارن بيهم عشان نعرف هل الهندسة اتغيّرت فعلًا
 let _vvAppliedH = "";
 let _vvAppliedTop = "";
 function syncViewport() {
   const vv = window.visualViewport;
   if (!vv) return;
   const root = document.documentElement;
-  const wasSticky = stickToBottom; // ⭐ نحفظ وضع القارئ قبل أي تعديل، ونرفع علَم الانتقال
+  const wasSticky = stickToBottom;
   markVpTransition();
-  const zoomed = vv.scale > 1.01;                      // pinch-zoom: ما نتدخلش خالص
-  const visibleH = Math.round(vv.height);              // المساحة الظاهرة فعلًا
-  const offsetTop = Math.round(vv.offsetTop || 0);     // إزاحة النافذة الظاهرة عن الصفحة
-  const shift = offsetTop >= 8 ? offsetTop : 0;        // إزاحة صغيرة = تفاصيل شريط، مش زحزحة كيبورد
-  const covered = layoutViewportHeight() - visibleH;   // الجزء المغطّى (كيبورد/شريط متصفح)
-  // القرار بالهندسة بس: المساحة الظاهرة أقل من الصفحة بفرق حجم كيبورد؟ → نتدخّل.
-  // (ما بنتدخّلش على فرق شريط متصفح صغير، ولا لو المتصفح نفسه صغّر الصفحة، ولا وقت pinch-zoom.
-  //  وبنستبعد كمان «إزاحة عالقة» بعد قفل الكيبورد — iOS 26 بتسيب offsetTop قديم بعض المرات.)
+  const zoomed = vv.scale > 1.01;
+  const visibleH = Math.round(vv.height);
+  const offsetTop = Math.round(vv.offsetTop || 0);
+  const shift = offsetTop >= 8 ? offsetTop : 0;
+  const covered = layoutViewportHeight() - visibleH;
   const needsOverride = !zoomed && covered >= VISIBLE_AREA_MIN_PX;
   const prevH = _vvAppliedH;
   const prevTop = _vvAppliedTop;
@@ -2748,14 +2602,11 @@ function syncViewport() {
     root.style.removeProperty("--vv-h");
     root.style.removeProperty("--vv-top");
     root.classList.remove("vv-active");
-    // ⭐ نصفّر سكرول المستند القديم في الحالة العادية بس (مش وسط فتح الكيبورد) —
-    //    iOS 26 بيسيب إزاحة عالقة بعد قفل الكيبورد، وده بيلخبط أي محاولة لاحقة
     if (window.scrollY) window.scrollTo(0, 0);
   }
   _vvAppliedH = needsOverride ? visibleH + "px" : "";
   _vvAppliedTop = needsOverride ? shift + "px" : "";
   const changed = prevH !== _vvAppliedH || prevTop !== _vvAppliedTop;
-  // ⭐ نرجّع وضع القارئ زي ما كان (التقلّب كان من reflow مش تمرير حقيقي)، ونثبّت القاع لو متابع
   if (wasSticky) stickToBottom = true;
   if (wasSticky || changed) pinIfStillSticky();
 }
@@ -2763,8 +2614,6 @@ function syncViewport() {
   const vv = window.visualViewport;
   let raf = 0;
   const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; syncViewport(); }); };
-  // ⭐ سلسلة استقرار: الارتفاع النهائي بتيجي بعد أنيميشن الكيبورد — وساعات من غير أي حدث جديد،
-  //   فبنعيد القراءة كام مرة بعد آخر حدث (السلسلة الجديدة بتلغي القديمة، مش بتتراكم)
   let settleSeq = 0;
   const SETTLE_DELAYS = [50, 150, 350, 650];
   const scheduleWithSettle = () => {
@@ -2778,24 +2627,19 @@ function syncViewport() {
   }
   window.addEventListener("resize", scheduleWithSettle);
   window.addEventListener("orientationchange", scheduleWithSettle);
-  window.addEventListener("pageshow", scheduleWithSettle);   // رجوع من الـback-forward cache
+  window.addEventListener("pageshow", scheduleWithSettle);
   msgInput.addEventListener("focus", () => {
-    // التركيز بيسبق فتح الكيبورد — نعيد التثبيت بعد ما الـlayout يستقر، وبس لو
-    // القارئ كان متابع (الدالة نفسها تحترم وضع القارئ اللي طالع يقرا).
     setTimeout(scheduleWithSettle, 0);
     setTimeout(() => { scrollToBottom(); }, 60);
   });
-  msgInput.addEventListener("blur", () => setTimeout(scheduleWithSettle, 150)); // iOS مش دايمًا بيبعت resize عند القفل
+  msgInput.addEventListener("blur", () => setTimeout(scheduleWithSettle, 150));
   if (vv) scheduleWithSettle();
-  // 🩺 شاشة القياس — بتشتغل بس بـ ?diag=1، ومساعد تشخيص مش جزء من تجربة العميل
   if (/[?&]diag=1(?:&|$)/.test(location.search)) {
     try { startViewportDiag(); } catch (e) {}
   }
 })();
 
 // ═══ 🩺 شاشة القياس (?diag=1) ═══
-// بتعرض أرقام الهندسة الحقيقية على الجهاز: المساحة الظاهرة، إزاحة النافذة، مقاس الصندوق،
-// ومسافة قاع المحادثة عن آخر رسالة — للأعطال اللي بتظهر على الموبايل بس.
 function startViewportDiag() {
   const wrap = document.createElement("div");
   wrap.setAttribute("dir", "ltr");
@@ -2804,59 +2648,22 @@ function startViewportDiag() {
     "border-bottom:1px solid #42c541;max-height:45vh;overflow:auto";
   const pre = document.createElement("pre");
   pre.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-word";
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.textContent = "📋 انسخ الأرقام";
-  btn.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #42c541;" +
-    "background:#0c110c;color:#42c541;font:700 12px Cairo,sans-serif";
   wrap.appendChild(pre);
-  wrap.appendChild(btn);
   document.body.appendChild(wrap);
-  const log = [];
   function write() {
     const vv = window.visualViewport || {};
-    const app = document.getElementById("app");
-    const rect = app && app.getBoundingClientRect ? app.getBoundingClientRect() : { top: 0, height: 0 };
-    const root = document.documentElement;
     pre.textContent = [
-      "vv.h=" + Math.round(vv.height || 0) + "  vv.top=" + Math.round(vv.offsetTop || 0) +
-        "  scale=" + (vv.scale || 1).toFixed(2),
-      "innerH=" + window.innerHeight + "  clientH=" + layoutViewportHeight() +
-        "  scrollY=" + Math.round(window.scrollY || 0),
-      "app.top=" + Math.round(rect.top) + "  app.h=" + Math.round(rect.height) +
-        "  css --vv-h=" + (_vvAppliedH || "-") +
-        (root.classList.contains("vv-active") ? "  [vv-active]" : ""),
+      "vv.h=" + Math.round(vv.height || 0) + "  vv.top=" + Math.round(vv.offsetTop || 0) + "  scale=" + (vv.scale || 1).toFixed(2),
+      "innerH=" + window.innerHeight + "  clientH=" + layoutViewportHeight() + "  scrollY=" + Math.round(window.scrollY || 0),
       "chat h=" + Math.round(chatArea.clientHeight) + "  scrollH=" + Math.round(chatArea.scrollHeight) +
-        "  top=" + Math.round(chatArea.scrollTop) + "  fromBottom=" + Math.round(distanceFromBottom()) +
-        (stickToBottom ? "  sticky" : "  reader-up"),
-      "-- آخر الأحداث --",
-    ].concat(log.slice(-8)).join("\n");
+        "  fromBottom=" + Math.round(distanceFromBottom()) + (stickToBottom ? "  sticky" : "  reader-up"),
+    ].join("\n");
   }
-  function note(label) {
-    log.push(new Date().toLocaleTimeString("ar-EG") + "  " + label);
-    write();
-  }
-  const vvNow = window.visualViewport;
-  if (vvNow) { vvNow.addEventListener("resize", () => note("vv.resize")); vvNow.addEventListener("scroll", () => note("vv.scroll")); }
-  window.addEventListener("resize", () => note("win.resize"));
-  window.addEventListener("orientationchange", () => note("orientationchange"));
-  msgInput.addEventListener("focus", () => note("input.focus"));
-  msgInput.addEventListener("blur", () => note("input.blur"));
-  chatArea.addEventListener("scroll", () => note("chat.scroll"));
-  btn.addEventListener("click", () => {
-    const text = pre.textContent;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(
-        () => { btn.textContent = "✅ اتنسخ"; },
-        () => { btn.textContent = "⚠️ انسخه بإيدك"; }
-      );
-    } else { btn.textContent = "⚠️ انسخه بإيدك"; }
-  });
   write();
   setInterval(write, 300);
 }
 
-
+// ═══ التقييم: نفس روابط الأداة (slugs) ═══
 const AREA_SLUG_MAP = {
   'المنطقة الأولى': '1st-district',
   'المنطقة الثانية': '2nd-district',
@@ -2912,7 +2719,7 @@ const FLOOR_SLUG_MAP = {
   'رابع': '4',
   'خامس+': '5plus',
 };
-// أدوار الوكيل اللي بتتحوّل لـ«خامس+» في الأداة («أخير» و«بدروم» مش بتتبعت لأن معناها مش واضح)
+// أدوار المحادثة اللي بتتحوّل لـ«خامس+» في الأداة («أخير» و«بدروم» مش بتتبعت لأن معناها مش واضح)
 const FLOORS_5PLUS = ['خامس', 'سادس', 'سابع', 'ثامن', 'تاسع', 'عاشر'];
 
 function buildValuationHref(context) {
@@ -2951,13 +2758,13 @@ function buildValuationHref(context) {
     params.set("furnished", context.rentCondition === "furnished" ? "yes" : "no");
   }
 
-  /* ═══ تشطيب — slug فقط (لأن القيم عربية ثابتة من الـWorker) ═══ */
+  /* ═══ تشطيب — slug فقط (قيم عربية ثابتة) ═══ */
   if (context.finishing && context.finishing !== "سوبر لوكس") {
     const slug = FINISH_SLUG_MAP[context.finishing];
     if (slug) params.set("finish", slug);
   }
 
-  /* ═══ دور — slug فقط (خامس..عاشر في الوكيل = «خامس+» في الأداة) ═══ */
+  /* ═══ دور — slug فقط (خامس..عاشر = «خامس+» في الأداة) ═══ */
   const floorLabel = FLOORS_5PLUS.includes(context.floor) ? "خامس+" : context.floor;
   if (floorLabel && floorLabel !== "أرضي") {
     const slug = FLOOR_SLUG_MAP[floorLabel];
@@ -2976,122 +2783,8 @@ function buildValuationHref(context) {
   return `${VALUATION_URL}?${params.toString()}`;
 }
 
-
-const WA_AGENT_SOURCE = `السلام عليكم أ. طارق، وصلت إليك من الوكيل الذكي على موقع سمسار طلبك.`;
-function withAgentSource(url) {
-  try {
-    if (!url || typeof url !== "string") return url;
-    if (url.indexOf("wa.me/") === -1 && url.indexOf("api.whatsapp.com") === -1) return url;
-    const parts = url.split("text=");
-    if (parts.length < 2) return url;
-    const text = decodeURIComponent(parts.slice(1).join("text="));
-    if (text.indexOf("وصلت إليك من الوكيل الذكي") !== -1) return url; // لا تكرار عند الاستعادة
-    return parts[0] + "text=" + encodeURIComponent(WA_AGENT_SOURCE + "\n\n" + text);
-  } catch { return url; }
-}
-function showWA(url, msg) {
-  if (!url) return;
-  const finalUrl = withAgentSource(url);
-  waWrapper.classList.add("show");
-  waBtn.href = finalUrl;
-  state.whatsappUrl = finalUrl;
-  state.waMessage = msg;
-}
-function hideWA() { waWrapper.classList.remove("show"); waBtn.href = "#"; }
-
-
-// ═══ IMAGES ═══
-function onFilesSelected(e) {
-  const files = [...(e.target.files || [])];
-  if (!files.length) return;
-  if (state.pendingImages.length + files.length > MAX_IMAGES) { showToast(`الحد الأقصى ${MAX_IMAGES} صور`); return; }
-  files.forEach(f => {
-    if (!f.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const base64 = ev.target.result.split(",")[1];
-      state.pendingImages.push({ base64, preview: ev.target.result });
-      renderImgStrip();
-      updateSendIcon();
-    };
-    reader.readAsDataURL(f);
-  });
-  e.target.value = "";
-}
-
-function renderImgStrip() {
-  if (!state.pendingImages.length) { imgStrip.classList.remove("show"); imgStrip.innerHTML = ""; return; }
-  imgStrip.classList.add("show"); imgStrip.innerHTML = "";
-  state.pendingImages.forEach((img, i) => {
-    const el = document.createElement("div");
-    el.className = "img-strip-item";
-    el.innerHTML = `<img src="${escapeAttr(img.preview)}" alt="معاينة ${i+1}"><button class="img-strip-rm" aria-label="إزالة ${i+1}" onclick="removeImg(${i})">✕</button>`;
-    imgStrip.appendChild(el);
-  });
-}
-
-function removeImg(i) { state.pendingImages.splice(i, 1); renderImgStrip(); updateSendIcon(); }
-
-async function uploadPendingImages() {
-  if (isLocalMode()) return []; // never upload from the local draft mode
-  if (!state.pendingImages.length) return [];
-  const base64s = state.pendingImages.map(x => x.base64);
-  try {
-    const r = await fetch(WORKER_URL.replace(/\/$/, "") + "/upload-images", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images: base64s })
-    });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return j.urls || [];
-  } catch { return []; }
-}
-
-async function fetchWorkerWithRetry(url, options) {
-  let lastError;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const controller = typeof AbortController === "function" ? new AbortController() : null;
-    let timedOut = false;
-    const timeoutId = controller
-      ? setTimeout(() => { timedOut = true; controller.abort(); }, WORKER_REQUEST_TIMEOUT_MS)
-      : null;
-    try {
-      return await fetch(url, {
-        ...options,
-        ...(controller ? { signal: controller.signal } : {}),
-      });
-    } catch (err) {
-      lastError = err;
-      if (timedOut) {
-        lastError = new Error("Worker request timed out");
-        lastError.name = "TimeoutError";
-      }
-      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-      // إعادة واحدة للانقطاع العابر فقط؛ ما نكررش لو الجهاز Offline أو الطلب عدى المهلة.
-      if (attempt > 0 || offline || timedOut) throw lastError;
-      await new Promise(resolve => setTimeout(resolve, WORKER_RETRY_DELAY_MS));
-    } finally {
-      if (timeoutId !== null) clearTimeout(timeoutId);
-    }
-  }
-  throw lastError;
-}
-
-function restoreFailedMessage(draft, historyEntry) {
-  const index = state.history.lastIndexOf(historyEntry);
-  if (index !== -1) state.history.splice(index, 1);
-  if (draft && !msgInput.value.trim()) {
-    msgInput.value = draft;
-    updateSendIcon();
-  }
-}
-
-
 // ═══ GALLERY ═══
-// ⚠️ 2026-10-22: كانت كل البيانات تُطلب من النطاق المطلق، فتفشل في أي معاينة
-// محلية/فرعية (المعرض كان يظهر فارغًا أو بصور الشعار). المسارات النسبية تعمل
-// في المكانين، مع دالة localImage لتحويل روابط ai-feed المطلقة لنفس الموقع.
+// المسارات النسبية تعمل في المعاينة والإنتاج، و localImage يحوّل روابط ai-feed المطلقة لنفس الموقع.
 const AI_FEED_URL = "/ai-feed.json";
 const PROPERTY_LIST_URL  = "/properties/";
 const FALLBACK_CARD_IMG  = "/assets/img/logo.webp";
@@ -3105,8 +2798,7 @@ function localImage(u) {
     return raw;
   } catch { return raw; }
 }
-// 2026-10-20: معرض الوكيل يعرض وحدات مدينة نصر فقط (ai-feed يضم أيضًا 12 وحدة أرشيفية خارجها).
-// القائمة من بيانات المعرض نفسها (مدينة نصر فقط)؛ لو تعذّر تحميلها نعرض الـ feed كما هو.
+// معرض المساعد يعرض وحدات مدينة نصر فقط (ai-feed يضم أيضًا وحدات أرشيفية خارجها).
 const GALLERY_SCOPE_URL = "/assets/data/catalog.json";
 function galleryScope() {
   return fetch(GALLERY_SCOPE_URL)
@@ -3135,7 +2827,6 @@ async function fetchGalleryFeed() {
   loading.style.display = "none";
 
   try {
-    // ⭐ v9.3: من غير كسر الكاش (?_=Date.now()) — المتصفح وCDN يديروا الكاش، فالفتح التاني فوري
     const [res, scope] = await Promise.all([fetch(AI_FEED_URL), galleryScope()]);
     if (!res.ok) throw new Error("feed error");
     const feed = await res.json();
@@ -3183,7 +2874,7 @@ function renderGalleryCards(properties) {
     card.rel = "noopener";
     card.style.animationDelay = `${i * 0.04}s`;
 
-    // تدقيق الصور (2026-10-17): البطاقات تعرض نسخة 4:3 الموحدة cards/ بدل الأصل الكامل
+    // البطاقات تعرض نسخة 4:3 الموحدة cards/ بدل الأصل الكامل
     const imgSrc = localImage(prop.image).replace("/assets/img/properties/", "/assets/img/properties/cards/");
     const title = galleryText(prop.title);
     const price = galleryText(prop.price);
@@ -3192,7 +2883,7 @@ function renderGalleryCards(properties) {
       ? GALLERY_PROPERTY_TYPE_LABELS[rawType]
       : rawType;
     const area = galleryText(prop.area);
-    const location = galleryText(prop.location) || galleryText(prop.zone);
+    const loc = galleryText(prop.location) || galleryText(prop.zone);
 
     card.innerHTML = `
       <img class="gallery-card-img" src="${escHtml(imgSrc)}" alt="${escHtml(title)}" loading="lazy" decoding="async"
@@ -3205,7 +2896,7 @@ function renderGalleryCards(properties) {
             ${area ? `<span class="gallery-card-area">${escHtml(area)}</span>` : ""}
           </div>
         ` : ""}
-        ${location ? `<div class="gallery-card-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>${escHtml(location)}</span></div>` : ""}
+        ${loc ? `<div class="gallery-card-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>${escHtml(loc)}</span></div>` : ""}
         ${title ? `<div class="gallery-card-title">${escHtml(title)}</div>` : ""}
       </div>
       <div class="gallery-card-arrow"><i class="fas fa-arrow-left"></i></div>
@@ -3217,321 +2908,6 @@ function renderGalleryCards(properties) {
 }
 
 function escHtml(str) { return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-
-
-// New journeys reuse the same parser, catalog, renderer and property API, without
-// sending conversation text to an LLM or invoking owner-submission endpoints.
-function offersAr(n) { return n === 1 ? "عرض واحد" : n === 2 ? "عرضان" : n <= 10 ? n + " عروض" : n + " عرضًا"; }
-async function sendLocalRequest(txt, hasImgs) {
-  if (!window.NasrAgent) { renderErrorCard("تعذر تحميل نواة البحث المحلية. أعد تحميل الصفحة؛ لم نرسل رسالتك للسحابة.", false); return; }
-  if (hasImgs) { renderMsg("المسودة المحلية لا ترفع الصور. أزل المرفقات واكتب المواصفات فقط؛ لم نرفع أي صورة.", "bot"); return; }
-  switchView("session", { scroll: false });
-  isSending = true; sendBtn.disabled = true;
-  msgInput.value = ""; updateSendIcon(); hideWA(); renderValuationCta(null); renderOptions([]);
-  renderMsg(txt, "user");
-  try {
-    // A property identifier is a lowercase token with at least two hyphens (token check, no backtracking).
-    const slug = txt.toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9-]/g, ""))
-      .find(t => /^[a-z0-9-]+$/.test(t) && t.split("-").length >= 3);
-    if (slug) {
-      const res = await fetch("/api/properties/" + encodeURIComponent(slug) + ".json");
-      if (res.status === 404) { renderMsg("لا يوجد عقار منشور بهذا المعرّف (404). لم ننشئ تفاصيل بديلة.", "bot"); return; }
-      if (!res.ok) throw new Error("property unavailable");
-      const record = await res.json();
-      const p = record && record.property;
-      const scope = await galleryScope();
-      if (!p || !scope || !scope.has(p.slug) || p.in_nasr_city === false) {
-        renderMsg("هذا السجل ليس ضمن كتالوج مدينة نصر المحلي، أو تعذر التحقق من نطاقه؛ لا نرشحه.", "bot");
-        return;
-      }
-      const confirmed = p.last_confirmed_at ? "آخر تأكيد موثق من المالك: " + p.last_confirmed_at + "، وقد يتغير بعده." : "لا يوجد تاريخ تأكيد موثق؛ التوافر يحتاج إلى تأكيد من المالك.";
-      renderMsg([p.title, (p.price || "السعر غير معلن") + (p.area ? " — " + p.area : ""), p.location || "",
-        "تاريخ النشر: " + (p.datePosted || "غير مسجل") + ". " + confirmed,
-        "الترخيص والعمولة والتأمين غير منشورة ولا تُفترض.",
-        new URL("/properties/" + p.slug + "/", location.origin).href].filter(Boolean).join("\n"), "bot");
-      return;
-    }
-    const turn = window.NasrAgent.reduce(localDraft, txt);
-    localDraft = turn.draft;
-    renderMsg(turn.response, "bot");
-    renderOptions(turn.options);
-    if (turn.ready && localDraft.role === "search" && !localDraft.conflicts.length) {
-      const response = await fetch(GALLERY_SCOPE_URL);
-      if (!response.ok) throw new Error("catalog unavailable");
-      const rows = await response.json();
-      const found = window.NasrAgent.results(rows, localDraft);
-      if (found.length) {
-        // Same card format the page already renders (parsePropertyCards); data comes from catalog.json only.
-        const detail = found.slice(0, 5).map((p, i) => [
-          (i + 1) + ". " + p.t,
-          "💰 السعر: " + (p.p || "غير معلن"),
-          p.an ? "📐 المساحة: " + p.an + " م²" : "",
-          p.l ? "📍 " + p.l : "",
-          "🔗 التفاصيل: " + p.u, // validated same-site path (/properties/<slug>/)
-        ].filter(Boolean).join("\n")).join("\n");
-        renderMsg("النتائج المطابقة لكل القيود في مدينة نصر: " + offersAr(found.length) + (found.length > 5 ? " (نعرض أول 5)" : "") + ". التوافر يحتاج إلى تأكيد.\n" + detail, "bot");
-      } else {
-        const alternatives = window.NasrAgent.suggestions(rows, localDraft);
-        renderMsg("لا توجد عروض منشورة في مدينة نصر تطابق كل القيود معًا، ولم نوسّع البحث تلقائيًا." +
-          (alternatives.length ? "\nبدائل محددة — كل منها يغيّر شرطًا واحدًا من طلبك:\n" + alternatives.map(a => "• " + a.label).join("\n") +
-            "\nاكتب مثلًا «بدون ميزانية» أو حدًا جديدًا لتطبيق أحدها." : "\nحتى بعد إزالة أي شرط واحد لا توجد نتائج؛ راجع النوع أو المعاملة."), "bot");
-      }
-    }
-    renderSessionMeta();
-  } catch {
-    renderMsg("تعذر تحميل البيانات. احتفظنا بالقيود في هذه الصفحة، ولم نفترض نتائج أو نرسل طلبًا؛ أعد المحاولة.", "bot");
-  } finally { isSending = false; sendBtn.disabled = false; updateDockHeight(); }
-}
-
-// ═══════════════════════════════════════════════════════════
-// إرسال الرسالة — نفس حمولة الـWorker ونفس منطق الأخطاء
-// ═══════════════════════════════════════════════════════════
-async function sendMsg() {
-  const quick = _quickSend; _quickSend = false;
-  if (isSending) return;
-  const txt = msgInput.value.trim();
-  const hasImgs = state.pendingImages.length > 0;
-  if (!txt && !hasImgs) return;
-  if (isLocalMode()) {
-    await sendLocalRequest(txt, hasImgs);
-    return;
-  }
-  if (!isSessionView()) switchView("session", { scroll: false });
-
-  state.lastFailed = null;
-  msgInput.value = "";
-  updateSendIcon();
-  renderOptions([]);             // ما نسيبهاش قابلة للضغط أثناء الإرسال
-  hideWA();
-  hideInappNotif();
-
-  const localPreviews = state.pendingImages.map(p => p.preview);
-  renderMsg(txt || "📷 صور", "user", localPreviews.length ? localPreviews : undefined);
-  // سقف 1000 حرف (نفس سقف الـWorker): لصقة ضخمة واحدة ما تتحفظش في history فتكسر كل الطلبات اللي بعدها بـ413
-  const userHistoryEntry = { role: "user", message: (txt || "[صور]").slice(0, 1000) };
-  state.history.push(userHistoryEntry);
-
-  isSending = true;
-  sendBtn.disabled = true;
-  setAgentState("typing", "بيجهّز الرد…");
-
-  let imgUrls = [];
-  if (hasImgs) {
-    setTyping(true, "جاري رفع الصور...");
-    imgUrls = await uploadPendingImages();
-    state.pendingImages = [];
-    renderImgStrip();
-  }
-
-  setTyping(true);
-  toggleTypingBubble(true);
-
-  const shouldSendValuation = state.valuationResult && !state._valuationSent;
-  let workerFetchError = null;
-  let responseParsed = false;
-
-  try {
-    const payload = {
-      message: txt,
-      formState: state.formState || { _version: FORM_VERSION },
-      history: state.history.slice(-20),
-      imageUrls: imgUrls,
-      gps: sessionGps || undefined,
-      valuationResult: shouldSendValuation ? state.valuationResult : null,
-    };
-
-    let r;
-    const t0 = nowMs();
-    try {
-      r = await fetchWorkerWithRetry(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      workerFetchError = err;
-      throw err;
-    }
-
-    if (!r.ok) {
-      restoreFailedMessage(txt, userHistoryEntry);
-      toggleTypingBubble(false); setTyping(false);
-      state.lastFailed = { text: txt };
-      const cfRay = r.headers?.get?.("cf-ray") || "";
-      console.warn("[agent] Worker returned an HTTP error", { status: r.status, cfRay });
-      renderErrorCard(r.status === 429
-        ? "وصلت رسائل كتير بسرعة. استنى شوية وجرب تبعت تاني."
-        : "حصل خطأ مؤقت. جرّب تاني. رسالتك رجعت في خانة الكتابة.", r.status !== 429);
-      return;
-    }
-
-    const data = await r.json();
-    responseParsed = true;
-    const reply = data.response || "";
-    // تأخير «الكتابة» بيتحسب من زمن الرد الفعلي — الرد البطيء بطبيعته ما بنأخّرهوش أكتر
-    const delay = Number(data.typingDelay) || 0;
-    const wait = Math.min(delay, 1200) - (nowMs() - t0);
-    if (wait > 0) await new Promise(res => setTimeout(res, wait));
-
-    toggleTypingBubble(false);
-    setTyping(false);
-
-    state.progress = data.progress && typeof data.progress === "object" ? data.progress : state.progress;
-    if (data.formState) state.formState = data.formState;
-
-    // الخيارات قبل رسم الرد: بطاقات العقارات بتعرف تعرض زر «اختار» للاختيارات المتاحة
-    if (Array.isArray(data.options)) renderOptions(data.options);
-
-    if (reply) {
-      renderMsg(reply, "bot");
-      state.history.push({ role: "assistant", message: reply });
-    }
-
-    if (shouldSendValuation) state._valuationSent = true;
-
-    if (data.waMessage) state.waMessage = data.waMessage;
-
-    if (data.whatsappUrl) showWA(data.whatsappUrl, data.waMessage);
-    else if (data.canShareWhatsapp && data.waMessage) {
-      const url = `https://wa.me/${TAREK_WA}?text=${encodeURIComponent(data.waMessage)}`;
-      showWA(url, data.waMessage);
-    }
-
-    state.valuationCta = data.valuationCta || null;
-    renderValuationCta(state.valuationCta);
-
-    handleMapUi(data);
-
-    if (data.imageUrls?.length) {
-      state.imageUrls = [...(state.imageUrls || []), ...data.imageUrls].slice(-MAX_IMAGES);
-    }
-
-    renderSessionMeta();
-    refreshHomeResume();
-    saveState();
-    updateDockHeight();
-
-  } catch (err) {
-    toggleTypingBubble(false); setTyping(false);
-    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-    const onlineState = typeof navigator === "undefined" || typeof navigator.onLine !== "boolean"
-      ? "unknown"
-      : navigator.onLine;
-    console.warn("[agent] send failed", {
-      stage: workerFetchError ? "worker-fetch" : (responseParsed ? "response-ui" : "response-json"),
-      name: err?.name || "Error",
-      online: onlineState,
-    });
-    if (!responseParsed) restoreFailedMessage(txt, userHistoryEntry);
-    state.lastFailed = { text: txt };
-    if (workerFetchError?.name === "TimeoutError") {
-      renderErrorCard("الرد اتأخر عن المعتاد. رسالتك رجعت في خانة الكتابة؛ جرّب تاني.");
-    } else if (offline) {
-      renderErrorCard("الإنترنت عندك مفصول. احتفظنا برسالتك في خانة الكتابة؛ جرّب بعد عودة الاتصال.");
-    } else if (workerFetchError) {
-      renderErrorCard("تعذّر الاتصال بالخادم. جرّب تاني. رسالتك رجعت في خانة الكتابة.");
-    } else if (responseParsed) {
-      renderErrorCard("وصل الرد لكن حصل خلل مؤقت أثناء عرضه. لو المشكلة مستمرة، حدّث الصفحة.", false);
-    } else {
-      renderErrorCard("الرد وصل بشكل غير مكتمل. رسالتك رجعت في خانة الكتابة؛ جرّب تاني.");
-    }
-  } finally {
-    isSending = false;
-    sendBtn.disabled = false;
-    setTyping(false);
-    setAgentState("idle", "الوكيل جاهز — اكتب أو اختار");
-    // لو الكيبورد أصلاً مفتوح (أو على جهاز لمس والرسالة اتكتبت بإيد المستخدم)، نحافظ على
-    // التركيز (زي أي محادثة) — رسائل أزرار الردود السريعة ما بتفتحش كيبورد.
-    const keyboardOpen = keyboardLikelyOpen();
-    if (keyboardOpen || !(IS_TOUCH && quick)) {
-      msgInput.focus({ preventScroll: true });
-    }
-    // تأكيد نهائي إن الرد/الرسالة ظاهرين فوق الكيبورد
-    forceScrollToBottomWithRetries();
-    updateDockHeight();
-  }
-}
-
-// ═══ MAP PICKER ═══
-function lockInput(placeholder) {
-  msgInput.disabled = true;
-  msgInput.placeholder = placeholder || "اختار الموقع من الخريطة 👆";
-  const box = document.querySelector ? document.querySelector(".input-glass") : null;
-  if (box) box.classList.add("is-locked");
-}
-function unlockInput() {
-  msgInput.disabled = false;
-  msgInput.placeholder = isSessionView() ? "اكتب رسالة… أو اختار من الأزرار" : "اكتب طلبك… مثال: شقة 150 متر في عباس العقاد";
-  const box = document.querySelector ? document.querySelector(".input-glass") : null;
-  if (box) box.classList.remove("is-locked");
-  updateDockHeight();
-}
-function closeMapPicker() {
-  if (mapPicker) { try { mapPicker.destroy(); } catch {} mapPicker = null; }
-  if (mapPickerEl) { mapPickerEl.remove(); mapPickerEl = null; }
-  chatArea.querySelectorAll(".nm-open-picker").forEach(b => b.remove());
-  if (actionRail) actionRail.querySelectorAll(".chip-map").forEach(b => b.remove());
-}
-
-function openMapPicker(required) {
-  if (!window.NasrMaps) { showToast("الخريطة مش جاهزة — اكتب العنوان يدويًا"); return; }
-  switchView("session", { scroll: false });
-  closeMapPicker();
-  mapPickerEl = document.createElement("div");
-  mapPickerEl.className = "map-picker-host";
-  chatArea.insertBefore(mapPickerEl, typingBubble);
-  mapPicker = window.NasrMaps.createPicker(mapPickerEl, {
-    required: !!required,
-    onToast: showToast,
-    onConfirm: (sel) => {
-      sessionGps = { lat: sel.lat, lng: sel.lng, address: sel.address };
-      state.uiPending = null;
-      closeMapPicker();
-      unlockInput();
-      msgInput.value = sel.address;
-      updateSendIcon();
-      _quickSend = true;
-      sendMsg();
-    },
-    onManual: () => {
-      sessionGps = null;
-      state.uiPending = null;
-      saveState();
-      closeMapPicker();
-      unlockInput();
-      msgInput.focus();
-      showToast("تمام — اكتب الشارع والمنطقة بالتفصيل");
-    }
-  });
-  if (required) lockInput();
-  forceScrollToBottom();
-}
-
-function renderOpenPickerChip() {
-  if (!actionRail) return;
-  actionRail.querySelectorAll(".chip-map").forEach(b => b.remove());
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "chip chip-map";
-  btn.textContent = "📍 حدد على الخريطة";
-  btn.onclick = () => { if (!isSending) openMapPicker(false); };
-  actionRail.insertBefore(btn, actionRail.firstChild);
-  actionRailWrap.hidden = !isSessionView();
-}
-
-function handleMapUi(data) {
-  closeMapPicker();
-  unlockInput();
-  if (data && data.ui === "map_picker" && data.formState?.active) {
-    const required = !!data.uiRequired;
-    state.uiPending = { required };
-    if (required) openMapPicker(true);
-    else renderOpenPickerChip();
-  } else {
-    state.uiPending = null;
-  }
-  if (data?.done || data?.formState?.lifecycle === "completed") sessionGps = null;
-}
 
 // ═══ NAVIGATION ═══
 function goBack() {
@@ -3548,7 +2924,7 @@ function closeMenu() { menuGlass.classList.remove("open"); menuOverlay.classList
 // ═══ MODALS ═══
 function openAbout() { closeMenu(); document.getElementById("aboutModal").classList.add("show"); }
 function closeAbout() { document.getElementById("aboutModal").classList.remove("show"); }
-function openGoogle() { closeMenu(); window.open(GOOGLE_URL, "_blank"); }
+function openGoogle() { closeMenu(); window.open(GOOGLE_URL, "_blank", "noopener"); }
 function prepareValuation() { saveReturnContext(); }
 
 // ═══ RESET / DELETE ═══
@@ -3557,71 +2933,44 @@ function clearConversationDom() {
   hideWA();
   renderValuationCta(null);
   renderOptions([]);
-  imgStrip.classList.remove("show");
-  imgStrip.innerHTML = "";
-  state.pendingImages = [];
   closeSummary();
 }
-
-function emptyState() {
-  localDraft = null;
-  return {
-    formState: { _version: FORM_VERSION },
-    history: [], imageUrls: [], pendingImages: [],
-    waMessage: null, whatsappUrl: null,
-    valuationCta: null, valuationResult: null,
-    _valuationSent: false,
-    options: [], progress: null, uiPending: null,
-    sessionStarted: false, lastFailed: null,
-  };
-}
-
 function resetChat() {
-  sessionGps = null;
-  closeMapPicker();
-  unlockInput();
   state = emptyState();
+  localDraft = null;
   clearConversationDom();
+  renderSummaryBar();
   updateSendIcon();
-  saveState();
   startConversation();
-  switchView("home");
-  showInappNotif({ icon: "🔄", iconClass: "green", title: "طلب جديد", sub: "اختار خدمتك وابدأ" });
 }
-
 function deleteChat() {
-  sessionStorage.removeItem(STORAGE_KEY);
-  sessionStorage.removeItem(RETURN_KEY);
-  sessionGps = null;
-  closeMapPicker();
-  unlockInput();
+  try { sessionStorage.removeItem(RETURN_KEY); LEGACY_KEYS.forEach(k => sessionStorage.removeItem(k)); } catch {}
   state = emptyState();
+  localDraft = null;
   clearConversationDom();
+  renderSummaryBar();
   updateSendIcon();
   startConversation();
-  switchView("home", { persist: false });
 }
 
 // ═══ أدوات الحالة الظاهرة ═══
 function updateSendIcon() {
   const hasText = msgInput.value.trim().length > 0;
-  const hasImgs = state.pendingImages.length > 0;
-  sendIcon.className = (hasText || hasImgs) ? "fas fa-arrow-up icon-swap" : "fas fa-microphone icon-swap";
+  sendIcon.className = "fas fa-arrow-up icon-swap";
+  sendBtn.setAttribute("aria-label", hasText ? "إرسال" : "إرسال (اكتب رسالة الأول)");
 }
-
 function setTyping(on, customText) {
   if (on) {
-    statusText.textContent = customText || "يكتب...";
+    statusText.textContent = customText || "Gemini بيكتب…";
     statusLine.classList.add("typing");
-    setAgentState("typing", customText || "بيجهّز الرد…");
+    setAgentState("typing", customText || "Gemini بيجهّز الرد…");
   } else {
-    statusText.textContent = STATUS_ONLINE;
+    statusText.textContent = isLocalMode() ? STATUS_LOCAL : STATUS_ONLINE;
     statusLine.classList.remove("typing");
-    setAgentState("idle", "الوكيل جاهز — اكتب أو اختار");
+    setAgentState("idle", isLocalMode() ? "بحث محلي — بدون ذكاء اصطناعي" : "اكتب براحتك — Gemini بيرد عليك");
   }
 }
 function toggleTypingBubble(on) { typingBubble.classList.toggle("active", !!on); }
-
 function showToast(msg, dur = 2400) {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -3631,102 +2980,60 @@ function showToast(msg, dur = 2400) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// INIT
+// INIT — المحادثة هي أول حاجة: ترحيب واحد + ردود سريعة اختيارية
 // ═══════════════════════════════════════════════════════════
-const ROUTE_BTNS = ["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"];
-
 function startConversation() {
-  stickToBottom = true; // محادثة جديدة: نتابع آخرها
-  renderMsg("أهلاً بيك 👋\nأنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر. متخصص منذ 2014.\n\n🏆 Google Local Guide 7\n\nبتدور على عقار ولا عندك عقار تبيعه أو تأجره؟", "bot");
-  state.history.push({ role: "assistant", message: "أهلاً بيك 👋" });
-  renderOptions(ROUTE_BTNS);
+  stickToBottom = true;
+  renderMsg(WELCOME, "bot");
+  renderOptions(START_CHIPS);
 }
 
-// The explicit cloud choice survives a reload/valuation round trip in the same tab; the default is local.
-try { if (sessionStorage.getItem(MODE_KEY) === "cloud") document.getElementById("localRequestMode").checked = false; } catch {}
-loadState();
-if (isLocalMode()) {
-  // A previous cloud transcript is neither revived nor kept once the page runs in local mode.
-  state = emptyState();
-  try { sessionStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(RETURN_KEY); } catch {}
-}
-
+// نسخة قديمة كانت بتحفظ نص المحادثة في الجلسة — بنمسحه ومش بنرجّعه.
+try { LEGACY_KEYS.forEach(k => sessionStorage.removeItem(k)); } catch {}
 const returnInfo = checkReturnFromValuation();
-const returningFromValuation = returnInfo && returnInfo.returning;
-const hadHistory = !!(state.history && state.history.length);
-
-if (hadHistory) {
-  // استعادة التاريخ بدون تمرير لكل رسالة — النزول مرة واحدة بعد الحلقة
-  state.history.forEach(m => {
-    renderMsg(m.message, m.role === "user" ? "user" : "bot", undefined, true);
-  });
-  if (state.valuationCta) renderValuationCta(state.valuationCta);
-  if (state.formState?.lifecycle === "completed" && state.whatsappUrl) {
-    showWA(state.whatsappUrl, state.waMessage);
-  }
-  renderOptions(state.options);
-  if (state.uiPending && state.formState?.active) {
-    const req = !!state.uiPending.required;
-    const restore = () => { if (window.NasrMaps) { req ? openMapPicker(true) : renderOpenPickerChip(); } };
-    if (window.NasrMaps) restore(); else window.addEventListener("load", restore, { once: true });
-  }
-  if (returningFromValuation) {
-    renderReturnBanner(returnInfo.valuation);
-    showInappNotif({
-      icon: "💎",
-      iconClass: "green",
-      title: "رجعت من التقييم",
-      sub: "كمّل من النقطة اللي وقفنا عندها"
-    });
-  }
+if (returnInfo && returnInfo.returning) {
+  renderReturnBanner(returnInfo.valuation);
+  renderOptions([]);
+  showInappNotif({ icon: "💎", iconClass: "green", title: "رجعت من التقييم", sub: "كمّل من النقطة اللي وقفنا عندها" });
 } else {
   startConversation();
-  if (returningFromValuation) renderReturnBanner(returnInfo.valuation);
 }
-
-renderSessionMeta();
+renderSummaryBar();
+renderModeUi();
 updateSendIcon();
 
 const modeControl = document.getElementById("localRequestMode");
 if (modeControl) modeControl.addEventListener("change", () => {
-  state = emptyState(); clearConversationDom();
-  try {
-    sessionStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(RETURN_KEY);
-    if (modeControl.checked) sessionStorage.removeItem(MODE_KEY); else sessionStorage.setItem(MODE_KEY, "cloud");
-  } catch {}
-  renderMsg(modeControl.checked ? "مسودة محلية جديدة؛ لا نرسل المحادثة للسحابة." : "محادثة سحابية: رسائلك وسياق المحادثة سيُرسلان إلى Cloudflare وقد يُعالجان بواسطة Gemini. لا ترسل بيانات حساسة.", "bot");
+  // نفس منطق القائمة: اختيار صريح، ورسالة توضّح الوضع الجديد
+  if (modeControl.checked) { modeControl.checked = false; enterLocalMode({ announce: true }); }
+  else { modeControl.checked = true; exitLocalMode(); }
 });
-const startSession = returningFromValuation || state.sessionStarted || hasUserTurn();
-switchView(startSession ? "session" : "home", { scroll: false, persist: false });
-if (startSession) forceScrollToBottom();
 
-buildServices();
-refreshHomeResume();
+const directWa = waLink(WA_AGENT_SOURCE);
+const menuWa = document.getElementById("menuWa");
+if (menuWa) menuWa.href = directWa;
+const consentWa = document.getElementById("consentWa");
+if (consentWa) consentWa.href = directWa;
 
-// رابط واتساب المباشر من الرئيسية (رسالة مصدر واحدة فقط)
-const homeWa = document.getElementById("homeWa");
-if (homeWa) homeWa.href = `https://wa.me/${TAREK_WA}?text=${encodeURIComponent(WA_AGENT_SOURCE)}`;
-
-if (!hasSeenPrivacy()) setTimeout(() => showPrivacy(), 400);
-if (!IS_TOUCH && startSession) msgInput.focus({ preventScroll: true });
+if (!IS_TOUCH) msgInput.focus({ preventScroll: true });
 
 // حالة الاتصال: توضيح صريح بدل رسالة خطأ مبهمة
 if (typeof window.addEventListener === "function") {
-  window.addEventListener("online", () => setAgentState("idle", "الإنترنت رجع — الوكيل جاهز"));
-  window.addEventListener("offline", () => setAgentState("error", "الإنترنت مفصول — الرسائل هتستنى"));
+  window.addEventListener("online", () => setAgentState("idle", "الإنترنت رجع — اكتب براحتك"));
+  window.addEventListener("offline", () => setAgentState("error", "الإنترنت مفصول — الرسائل مش هتوصل دلوقتي"));
 }
 
 // ═══ INPUT HANDLERS ═══
 msgInput.addEventListener("input", updateSendIcon);
 msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } });
-msgInput.addEventListener("focus", () => { if (!isSessionView()) return; setTimeout(updateDockHeight, 250); });
+msgInput.addEventListener("focus", () => { setTimeout(updateDockHeight, 250); });
 
 Object.assign(window, {
-  sendMsg, onFilesSelected, removeImg, scrollToBottom, forceScrollToBottom,
+  sendMsg, quickSend, retryLast, useLocalForLast, scrollToBottom, forceScrollToBottom,
   forceScrollToBottomWithRetries, resetChat, deleteChat, goBack, openMenu, closeMenu,
   openAbout, closeAbout, openGoogle, showNewChatDialog, showDeleteDialog, closeWaDialog,
-  acceptPrivacy, hideInappNotif, openGallery, closeGallery, toggleSummary, toggleRail,
-  pickResult, retryLast, headerBack, goHome, resumeChat, prepareValuation,
-  startConversation, startService, buildServices, switchView,
+  acceptConsent, declineConsentLocal, closeConsent, revokeConsent, toggleMode,
+  hideInappNotif, openGallery, closeGallery, toggleSummary, editSummary, removeSummary, toggleRail,
+  askAbout, headerBack, prepareValuation, startConversation, switchView, startNewChat,
 });
 </script>
