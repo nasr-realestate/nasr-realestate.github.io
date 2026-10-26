@@ -2832,7 +2832,9 @@ const CHAT_HEDGE_MS = 3000;   // تشخيص 2026-10-26: البديل (gemini-3.5
 // موديلات بديلة للطلب الاحتياطي ولما الموديل الأساسي يقع (503/ضغط): الموديل اللي مش موجود بيرجع 404 فورًا ويتخطى.
 // السبب (2026-10-26): gemini-3.5-flash-lite وحده كان بيرد في 6–8 ث ساعات، وساعات 503/مهلة بعد 16–22 ث.
 // تحديث 2026-10-26 من تشخيص النشر: gemini-2.5-flash-lite ⇒ 404 (اتسحب)، وعائلة Flash-Lite كلها كانت مضغوطة ⇒ Flash العادي الأول.
-const CHAT_ALT_MODELS = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash"];
+//   وفي run 40377323597 كل ردود البدائل الناجحة كانت من gemini-3.5-flash ⇒ الأول في القائمة.
+const CHAT_ALT_MODELS = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"];
+const CHAT_RETRY_BACKOFF_MS = 700;    // 503/429 «ضغط» غالبًا بيكون للطلب ده بس ⇒ إعادة واحدة لنفس الموديل بعد مهلة قصيرة
 const CHAT_HEDGE_ATTEMPT_MS = 7000;   // كل محاولة في المسار الاحتياطي ليها سقف — موديل بطيء ما يحجزش الباقي
 const CHAT_HISTORY_MAX = 10;
 const CHAT_HISTORY_MSG_MAX = 600;
@@ -3771,7 +3773,7 @@ async function chatAttempt(env, plan, system, contents, timeoutMs, ctx){
 }
 // مسار محاولات: 400 ⇒ إعداد أبسط، 404 ⇒ الموديل اللي بعده، 5xx ⇒ إعادة واحدة، والباقي نهائي
 async function chatLane(env, system, contents, plans, ctx, lane){
-  let retried = false;
+  const retried = new Set();
   for(let i = 0; i < plans.length; i++){
     if(ctx.done) return { ok: false, error: "cancelled" };
     const plan = plans[i];
@@ -3795,9 +3797,9 @@ async function chatLane(env, system, contents, plans, ctx, lane){
     if(res.status === 400) continue;                                   // إعداد مرفوض ⇒ الإعداد الأبسط
     const nextModel = plans.findIndex((x, k) => k > i && x.model !== plan.model);
     if(res.status === 404){ if(nextModel === -1) break; i = nextModel - 1; continue; }      // موديل مش موجود ⇒ اللي بعده
-    if(res.status >= 500 || res.status === 429){                        // ضغط/عطل عند الموديل ⇒ موديل تاني، أو إعادة واحدة
+    if(res.status >= 500 || res.status === 429){                        // ضغط/عطل ⇒ إعادة واحدة لنفس الموديل، وبعدها موديل تاني
+      if(!retried.has(plan.model) && ctx.deadline - Date.now() > ctx.backoff + 1500){ retried.add(plan.model); i -= 1; await chatSleep(ctx.backoff); continue; }
       if(nextModel !== -1){ i = nextModel - 1; continue; }
-      if(!retried){ retried = true; i -= 1; await chatSleep(300); continue; }
     }
     return { ok: false, error: res.status === 429 ? "gemini_busy" : "gemini_unavailable", model: plan.model };
   }
@@ -3816,7 +3818,9 @@ async function callGeminiChat(env, system, contents){
   const capEnv = Number(env.CHAT_HEDGE_ATTEMPT_MS);
   const attemptCap = Number.isFinite(capEnv) && capEnv >= 10 && capEnv <= 15000 ? capEnv : CHAT_HEDGE_ATTEMPT_MS;
   const started = Date.now();
-  const ctx = { deadline: started + CHAT_TIMEOUT_MS, attemptCap, attempts: [], controllers: new Set(), done: false };
+  const backoffEnv = Number(env.CHAT_RETRY_BACKOFF_MS);
+  const backoff = Number.isFinite(backoffEnv) && backoffEnv >= 0 && backoffEnv <= 3000 ? backoffEnv : CHAT_RETRY_BACKOFF_MS;
+  const ctx = { deadline: started + CHAT_TIMEOUT_MS, attemptCap, backoff, attempts: [], controllers: new Set(), done: false };
   const finish = r => {
     ctx.done = true;
     for(const c of ctx.controllers) c.abort();       // الطلب اللي اتأخر يتلغي — مفيش رد متأخر يتحسب

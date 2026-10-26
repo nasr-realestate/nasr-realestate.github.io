@@ -85,17 +85,19 @@ export function resetCalls() { calls.gemini.length = 0; calls.feed = 0; calls.un
 export function trappedEnv(over = {}) {
   const touched = [];
   const trap = name => new Proxy({}, { get(_t, prop) { touched.push(`${name}.${String(prop)}`); throw new Error(`${name} must not be used by /chat`); } });
-  const env = { GEMINI_API_KEY: "test-key", DB: trap("DB"), PUSH_SUBS: trap("PUSH_SUBS"), ...over };
+  const env = { ...TEST_ENV, DB: trap("DB"), PUSH_SUBS: trap("PUSH_SUBS"), ...over };
   Object.defineProperty(env, "IMGBB_API_KEY", { get() { touched.push("IMGBB_API_KEY"); return "imgbb-test"; }, enumerable: true });
   return { env, touched };
 }
 
+// بيئة الاختبار: من غير مهلة الإعادة الحقيقية (700ms) عشان السويت تفضل سريعة — الإعادة نفسها متختبرة
+export const TEST_ENV = Object.freeze({ GEMINI_API_KEY: "test-key", CHAT_RETRY_BACKOFF_MS: "0" });
 let seq = 0;
 export const nextIp = () => `chat-ip-${++seq}`;
 export async function chatRequest(body, { env, ip, headers = {}, method = "POST", raw } = {}) {
   const init = { method, headers: { Origin: ORIGIN, "Content-Type": "application/json", "CF-Connecting-IP": ip ?? nextIp(), ...headers } };
   if (method !== "GET" && method !== "OPTIONS") init.body = raw ?? JSON.stringify(body);
-  const res = await agentWorker.fetch(new Request("https://agent.test/chat", init), env ?? { GEMINI_API_KEY: "test-key" });
+  const res = await agentWorker.fetch(new Request("https://agent.test/chat", init), env ?? TEST_ENV);
   const text = await res.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = null; }
@@ -105,7 +107,7 @@ export async function chatRequest(body, { env, ip, headers = {}, method = "POST"
 // محادثة كاملة زي المتصفح: الحالة + آخر الرسائل في الذاكرة، والموافقة مع كل طلب
 export class Conversation {
   constructor({ env, state = null, history = [] } = {}) {
-    this.env = env ?? { GEMINI_API_KEY: "test-key" };
+    this.env = env ?? TEST_ENV;
     this.state = state;
     this.history = history;
     this.turns = [];
