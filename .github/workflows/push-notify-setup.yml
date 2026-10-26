@@ -55,8 +55,9 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
-  # أُعيد إلى verify بعد نشر v9.3-W بنجاح (run 38631030666: live == repo build ✅) — 2026-10-14
-  AUTO_MODE: "verify"
+  # ⚠️ مؤقت 2026-10-27: configure لنشر v10.0-chat بموافقة المالك الصريحة (workflow_dispatch غير متاح لتوكن الوكيل — 403).
+  #    يُعاد إلى verify فورًا بعد التشغيل، وقبل أي دمج إلى master.
+  AUTO_MODE: "configure"
 
 jobs:
   setup:
