@@ -1,3 +1,21 @@
+# ══════════════════════════════════════════════════════════════════════
+# SonarCloud — فحص جودة الكود فقط. لا ينشر شيئًا ولا علاقة له بنشر الموقع
+# (النشر = deploy.yml + «pages build and deployment»).
+# ────────────────────────────────────────────────────────────────────
+# حادثة 2026-10-26: من 13:01 UTC صار كل commit يظهر بعلامة ❌ حمراء رغم أن
+# كل عمليات النشر والاختبارات كانت ناجحة. السبب الوحيد: SonarCloud صار
+# يرفض SONAR_TOKEN المحفوظ في أسرار المستودع ({"valid":false} من
+# api/authentication/validate) — المفتاح انتهى أو أُلغي. آخر مسح ناجح كان
+# 2026-10-25 19:31 UTC، وإعادة تشغيل المسح القديم تفشل بنفس السبب.
+#
+# الحل: job صغير يتحقق من المفتاح قبل المسح (بدون طباعة قيمته أبدًا):
+#   • مقبول                 → المسح يعمل كالمعتاد، وأي فشل حقيقي فيه يظل أحمر.
+#   • مرفوض أو غير متاح     → job المسح يظهر «Skipped» (رمادي) مع تحذير ظاهر
+#                             وملخص فيه خطوات التجديد — لا علامة حمراء بسبب
+#                             مفتاح منتهي، ولا ادّعاء بأن المسح نجح.
+#   • تعذّر التحقق (SonarCloud لا يرد) → المسح يعمل كالمعتاد ليقرر بنفسه.
+# لاستعادة المسح الكامل يكفي تجديد SONAR_TOKEN في الأسرار — بلا تعديل هنا.
+# ══════════════════════════════════════════════════════════════════════
 name: SonarCloud Scan
 
 on:
@@ -8,19 +26,104 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  token:
+    name: SonarCloud token check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      scan: ${{ steps.check.outputs.scan }}
+      state: ${{ steps.check.outputs.state }}
+    steps:
+      - name: Validate SONAR_TOKEN with SonarCloud (validity only, value never printed)
+        id: check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # لا تُطبع قيمة المفتاح أبدًا: لا set -x ولا echo لها، وتصل إلى curl
+          # عبر stdin (ملف إعداد curl) فلا تظهر في سطر الأوامر ولا في قائمة العمليات.
+          state=unknown
+          http=000
+          body=""
+          if [ -z "${SONAR_TOKEN:-}" ]; then
+            state=missing
+          else
+            resp="$(printf 'user = "%s:"\n' "$SONAR_TOKEN" \
+              | curl -sS -m 20 --retry 2 --retry-delay 3 -K - -w '\n%{http_code}' \
+                  https://sonarcloud.io/api/authentication/validate 2>/dev/null)" || resp=""
+            if [ -n "$resp" ]; then
+              http="${resp##*$'\n'}"
+              body="${resp%$'\n'*}"
+            fi
+            case "$http" in
+              [0-9][0-9][0-9]) ;;
+              *) http=000 ;;
+            esac
+            compact="$(printf '%s' "$body" | tr -d ' \t\r\n')"
+            if [ "$http" = 200 ] && [[ "$compact" == *'"valid":true'* ]]; then
+              state=valid
+            elif [[ "$compact" == *'"valid":false'* ]] || [ "$http" = 401 ] || [ "$http" = 403 ]; then
+              state=invalid
+            fi
+          fi
+
+          case "$state" in
+            valid)
+              scan=true
+              echo "SONAR_TOKEN مقبول من SonarCloud — المسح يعمل كالمعتاد."
+              ;;
+            unknown)
+              scan=true
+              echo "::warning title=SonarCloud token check::تعذّر التحقق من SONAR_TOKEN (HTTP ${http}) — سيعمل المسح كالمعتاد ليقرر بنفسه."
+              ;;
+            missing)
+              scan=false
+              echo "::warning title=SonarCloud scan skipped (no token)::SONAR_TOKEN غير متاح لهذا التشغيل (غير موجود في الأسرار، أو PR من fork أو Dependabot). تم تخطي المسح؛ نشر الموقع غير متأثر."
+              ;;
+            *)
+              scan=false
+              echo "::warning title=SonarCloud scan skipped (SONAR_TOKEN rejected)::SonarCloud رفض SONAR_TOKEN (منتهي أو مُلغى). تم تخطي المسح بدل علامة حمراء على كل commit؛ نشر الموقع غير متأثر. التجديد: sonarcloud.io > My Account > Security > Generate Token، ثم GitHub > Settings > Secrets and variables > Actions > SONAR_TOKEN > Update secret."
+              ;;
+          esac
+          printf 'state=%s\nscan=%s\n' "$state" "$scan" >> "$GITHUB_OUTPUT"
+
+          if [ "$scan" = false ]; then
+            {
+              echo "## SonarCloud: تم تخطي المسح (${state})"
+              echo
+              echo "- نشر الموقع **غير متأثر**: هذا الفحص لجودة الكود فقط ولا ينشر شيئًا."
+              if [ "$state" = invalid ]; then
+                echo "- السبب: SonarCloud رفض \`SONAR_TOKEN\` (\`valid=false\`) — المفتاح منتهي أو مُلغى."
+              else
+                echo "- السبب: \`SONAR_TOKEN\` غير متاح لهذا التشغيل (غير موجود في الأسرار، أو PR من fork أو Dependabot)."
+              fi
+              echo
+              echo "### لاستعادة المسح الكامل (صاحب حساب SonarCloud فقط)"
+              echo "1. في sonarcloud.io: My Account > Security > Generate Token (من حساب له صلاحية على منظمة nasr-realestate، ومدة صلاحية طويلة)."
+              echo "2. في GitHub: Settings > Secrets and variables > Actions > \`SONAR_TOKEN\` > Update secret، والصق المفتاح الجديد."
+              echo "3. أول push أو PR بعدها يشغّل المسح تلقائيًا — بلا أي تعديل على الملفات."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   sonarcloud:
     name: SonarCloud Scan Action
+    needs: token
+    if: needs.token.outputs.scan == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0  # يجلب تاريخ Git بالكامل لحل تحذير Shallow Clone
 
+      # نفس الإصدار v3.1.0 الذي كان يعمل حتى 2026-10-25، مثبّت على SHA كاملة.
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3.1.0
+        uses: SonarSource/sonarcloud-github-action@383f7e52eae3ab0510c3cb0e7d9d150bbaeab838 # v3.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          
