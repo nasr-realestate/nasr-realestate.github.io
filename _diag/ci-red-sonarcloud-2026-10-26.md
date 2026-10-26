@@ -60,11 +60,49 @@ SonarCloud بقى يرفض المفتاح `SONAR_TOKEN` المحفوظ في أس
   - `SonarCloud Scan Action`: Skipped.
 - **باقي فحوص الـPR:** `node-tests` و`build-only` ✅. حالة الدمج `CLEAN`.
 
+### بعد الدمج على master (`19f3d3a`، 2026-10-26 الساعة 19:00 UTC)
+| الفحص | النتيجة |
+|---|---|
+| Deploy Jekyll with Plugins (run 40382794014) — build / deploy / verify | ✅ ✅ ✅ |
+| خطوة verify: «Verify the live deployment (SHA · feed · MCP · raw head · every MP3)» | ✅ الموقع الحي بيقدّم `19f3d3a` |
+| pages build and deployment (run 40382792985) | ✅ |
+| Worker & page tests (run 40382794050) | ✅ |
+| SonarCloud Scan (run 40382793915) | ✅ `SonarCloud token check` + تحذير «SONAR_TOKEN rejected»؛ و`SonarCloud Scan Action` ⊘ Skipped |
+| نشرتين `github-pages` (7340899809 و 7340899074) | ✅ `success` |
+
+كل الـcheck suites بتاعة GitHub Actions على `19f3d3a` نتيجتها `success`، ومفيش ولا فحص بـ`failure`.
+
 ## 6) لرجوع المسح الكامل (صاحب حساب SonarCloud بس، دقيقتين)
 1. في sonarcloud.io: My Account > Security > Generate Token. لازم يكون من حساب له صلاحية على منظمة `nasr-realestate`، ومدة صلاحية المفتاح طويلة.
 2. في GitHub: Settings > Secrets and variables > Actions > `SONAR_TOKEN` > Update secret.
 
 أول push أو PR بعدها هيشغّل المسح تلقائيًا، من غير تعديل أي ملف.
+
+### ⚠️ مهم قبل التجديد: بوابة الجودة على master فاشلة من 2026-10-12
+فيه علامة حمرا تانية أقدم، ومش بتبان في تبويب Actions.
+- **مصدرها:** فحص **«SonarCloud Code Analysis»**، وده بيتنشر من تطبيق SonarQube Cloud نفسه بعد كل مسح ناجح.
+- **آخر مرة نجحت على master:** PR #45 (`c7f1e8f`، 2026-10-12 الساعة 17:10 UTC).
+- **أول فشل:** `e8e3692` «feat: migrate from Jekyll to Node.js server» (2026-10-12 الساعة 22:55 UTC).
+  - الـcommit ده اتدفع على master **مباشرة من غير PR**.
+  - ضاف `server.js` (395 سطر) و`package.json` و`.env.example` و`metadata.json`.
+  - الشروط اللي فشلت فيه: `E Security Rating on New Code`، و`9.7% Duplication on New Code`.
+- **من وقتها:** كل merge على master لحد `035eae6` (2026-10-25) كان `Quality Gate failed`.
+  - آخر الشروط الفاشلة: `E Security Rating on New Code`، و`D Reliability Rating on New Code` (المطلوب ≥ A).
+- **الـPRs نفسها كانت نظيفة:** مثلًا PR #46 كان `Quality Gate passed` و`0 New issues`.
+  - تحليل الـPR بيبص على تغييرات الـPR بس.
+  - أما فشل master فجاي من كود دخل من غير PR.
+- **قائمة الأخطاء بالتحديد:** محتاجة صلاحية على SonarCloud. المشروع خاص، والـAPI العامة بترد على أي زائر بـ«Project doesn't exist».
+- **ليه فضلت فاشلة:**
+  - تعريف «New Code» الافتراضي للمنظمة هو `previous_version`، والمشروع ما بيحددش `sonar.projectVersion`.
+  - فغالبًا نافذة «الكود الجديد» مفتوحة من أول تحليل، وأي مشكلة دخلت من وقتها بتفضل محسوبة.
+- **النتيجة:**
+  - دلوقتي العلامة دي مش ظاهرة، لأن المسح متوقف لحد ما المفتاح يتجدد.
+  - بعد التجديد هيشتغل المسح، وتشغيلة Actions غالبًا هتفضل خضرا.
+  - بس فحص «SonarCloud Code Analysis» ممكن يرجّع ❌ جنب الـcommits لحد ما المشاكل دي تتصلح.
+- **الخطوة الجاية بعد التجديد:**
+  - نسحب القائمة بالتحديد بخطوة CI مؤقتة. هتستخدم المفتاح الجديد من غير ما تطبعه، وهتقرأ `api/issues/search` للـ`master` و`sinceLeakPeriod=true`.
+  - وبعدها نصلّح المشاكل، وغالبًا أولها في `server.js`. ده خادم المعاينة المحلي، ومش هو اللي بيخدم الموقع الحي؛ اللي بيخدمه GitHub Pages.
+  - أو صاحب الحساب يفتح صفحة المشاكل على SonarCloud مباشرة.
 
 ## 7) ملاحظات (مش أخطاء دلوقتي)
 - **أداة `SonarSource/sonarcloud-github-action`** مؤرشفة من SonarSource وبيوصوا ببديلها `sonarqube-scan-action`.
