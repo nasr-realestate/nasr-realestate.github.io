@@ -2829,6 +2829,9 @@ async function handlePush(request, env, url, ip){
 const CHAT_CONSENT = "gemini-v1";
 const CHAT_TIMEOUT_MS = 22000;
 const CHAT_HEDGE_MS = 6000;
+// موديلات بديلة للطلب الاحتياطي ولما الموديل الأساسي يقع (503/ضغط): الموديل اللي مش موجود بيرجع 404 فورًا ويتخطى.
+// السبب (2026-10-26): gemini-3.5-flash-lite وحده كان بيرد في 6–8 ث ساعات، وساعات 503/مهلة بعد 16–22 ث.
+const CHAT_ALT_MODELS = ["gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash"];
 const CHAT_HISTORY_MAX = 10;
 const CHAT_HISTORY_MSG_MAX = 600;
 const CHAT_REPLY_MAX = 700;
@@ -3781,14 +3784,13 @@ async function chatLane(env, system, contents, plans, ctx, lane){
     if(res.kind === "network") return { ok: false, error: "gemini_unavailable", model: plan.model };
     if(res.kind === "invalid") return { ok: false, error: "gemini_invalid", model: plan.model };
     console.warn("[chat] gemini status:", res.status);
-    if(res.status === 400) continue;
-    if(res.status === 404){
-      const next = plans.findIndex((x, k) => k > i && x.model !== plan.model);
-      if(next === -1) break;
-      i = next - 1;
-      continue;
+    if(res.status === 400) continue;                                   // إعداد مرفوض ⇒ الإعداد الأبسط
+    const nextModel = plans.findIndex((x, k) => k > i && x.model !== plan.model);
+    if(res.status === 404){ if(nextModel === -1) break; i = nextModel - 1; continue; }      // موديل مش موجود ⇒ اللي بعده
+    if(res.status >= 500 || res.status === 429){                        // ضغط/عطل عند الموديل ⇒ موديل تاني، أو إعادة واحدة
+      if(nextModel !== -1){ i = nextModel - 1; continue; }
+      if(!retried){ retried = true; i -= 1; await chatSleep(300); continue; }
     }
-    if(res.status >= 500 && !retried){ retried = true; i -= 1; await chatSleep(300); continue; }
     return { ok: false, error: res.status === 429 ? "gemini_busy" : "gemini_unavailable", model: plan.model };
   }
   return { ok: false, error: "gemini_unavailable", model: plans.at(-1)?.model };
@@ -3799,7 +3801,8 @@ const CHAT_ERROR_RANK = ["gemini_timeout", "gemini_busy", "gemini_unavailable", 
 async function callGeminiChat(env, system, contents){
   if(!env?.GEMINI_API_KEY) return { ok: false, error: "gemini_unconfigured", attempts: [] };
   const preferred = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.-]/g, "") || GEMINI_MODEL;
-  const models = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
+  const primary = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
+  const alternates = CHAT_ALT_MODELS.filter(m => !primary.includes(m));
   const hedgeEnv = Number(env.CHAT_HEDGE_MS);
   const hedgeMs = Number.isFinite(hedgeEnv) && hedgeEnv >= 10 && hedgeEnv <= 15000 ? hedgeEnv : CHAT_HEDGE_MS;
   const started = Date.now();
@@ -3810,12 +3813,13 @@ async function callGeminiChat(env, system, contents){
     return { ...r, attempts: [...ctx.attempts], ms: Date.now() - started };
   };
   const safe = p => p.catch(() => ({ ok: false, error: "gemini_unavailable" }));
-  const laneA = safe(chatLane(env, system, contents, chatPlans(models, true), ctx, "main"));
+  // المسار الأساسي: الموديل المضبوط (ثم المدمج، ثم البدائل لو وقع)؛ الاحتياطي: البدائل الأول (JSON بس)، ثم الأساسي
+  const laneA = safe(chatLane(env, system, contents, chatPlans([...primary, ...alternates], true), ctx, "main"));
   let hedgeTimer;
   const hedgeAt = new Promise(resolve => { hedgeTimer = setTimeout(() => resolve({ hedge: true }), hedgeMs); });
   const first = await Promise.race([laneA, hedgeAt]);
   if(!first.hedge){ clearTimeout(hedgeTimer); return finish(first); }
-  const laneB = safe(chatLane(env, system, contents, chatPlans(models, false), ctx, "hedge"));
+  const laneB = safe(chatLane(env, system, contents, chatPlans([...alternates, ...primary], false), ctx, "hedge"));
   const result = await new Promise(resolve => {
     const errors = [];
     const settle = r => {

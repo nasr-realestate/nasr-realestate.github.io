@@ -464,18 +464,27 @@ test("a slow Gemini answer is hedged: after CHAT_HEDGE_MS a second request (no s
   assert.equal(calls.gemini.length, 1);
 });
 
-test("a transient Gemini 5xx is retried once inside the budget; a second failure is an explicit 503", async () => {
+test("an overloaded model (5xx/429) switches to the next Gemini model; when every model fails it is an explicit 503", async () => {
   onGemini((call, n) => (n === 1 ? geminiStatus(503) : reply("تمام.")));
   const ok = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(ok.status, 200);
-  assert.equal(calls.gemini.length, 2);
+  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite"]);
+  assert.deepEqual(plain(calls.gemini[1].generationConfig.thinkingConfig), { thinkingBudget: 0 }, "2.5 Flash-Lite: no thinking");
+  assert.equal(ok.json.provider.model, "gemini-2.5-flash-lite");
   resetCalls();
   onGemini(() => geminiStatus(503));
   const bad = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(bad.status, 503);
   assert.equal(bad.json.error, "gemini_unavailable");
-  assert.equal(calls.gemini.length, 2, "one retry only");
-  assert.deepEqual(bad.json.diag.attempts.map(a => a.outcome), [503, 503]);
+  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash"],
+    "each model once, then one retry of the last");
+  assert.ok(bad.json.diag.attempts.every(a => a.outcome === 503));
+  resetCalls();
+  // a model name that does not exist (404) is skipped instantly
+  onGemini(call => (call.model === "gemini-2.5-flash-lite" ? geminiStatus(404) : call.model === "gemini-3.5-flash-lite" ? geminiStatus(503) : reply("تمام.")));
+  const skip = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
+  assert.equal(skip.status, 200);
+  assert.equal(skip.json.provider.model, "gemini-flash-lite-latest");
 });
 
 test("rate limiting applies per IP before Gemini is called", async () => {

@@ -76,9 +76,10 @@ jobs:
       # تحديث عمدي 2026-10-27: v10.0-chat (مسار POST /chat — Gemini أولًا بموافقة، والمسار القديم كما هو)
       #   + تفكير أقل لكل عائلة موديلات وميزانية 20 ث وتشخيص بلا محتوى بعد مهلة Gemini الحي (run 40371527664)
       #   + طلب احتياطي متوازي بعد 6 ث + تفكير minimal + إعادة واحدة لـ5xx (زمن Gemini الحي متذبذب: 5.9 ث ⇢ أكتر من 20 ث — runs 40374623851/40374625069)
+      #   + موديلات بديلة (2.5-flash-lite / flash-lite-latest / 2.5-flash) للطلب الاحتياطي وعند 503 — الموديل الأساسي كان مضغوط (run 40375550839: 0/3)
       #   السابق المنشور: 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
       #   راجع _diag/gemini-first-agent-2026-10-27.md · السابق: v9.3-W f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
-      EXPECTED_WORKER_SHA256: f15a7aa5180fc9644d366f1f5b49ccb3ec5d486759dc224312591975586b5481
+      EXPECTED_WORKER_SHA256: c1198862e08a6f045a3a39546ccdb7709ee21eb9711a9d6072f3fdc7ab62c249
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
