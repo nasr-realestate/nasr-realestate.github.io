@@ -62,7 +62,13 @@ export function installChatMock({ feed = FEED, feedStatus = 200 } = {}) {
       const body = JSON.parse(init.body);
       const call = { url, model: url.split("/models/")[1]?.split(":")[0], headers: init.headers, system: body?.system_instruction?.parts?.[0]?.text || "", contents: body?.contents || [], generationConfig: body?.generationConfig || {}, raw: init.body };
       calls.gemini.push(call);
-      const r = responder ? await responder(call, calls.gemini.length) : reply("تمام.");
+      // زي fetch الحقيقي: لو الطلب اتلغى (مهلة/طلب احتياطي سبق) الوعد بيترفض بـAbortError فورًا
+      const pending = Promise.resolve(responder ? responder(call, calls.gemini.length) : reply("تمام."));
+      let r;
+      if (init.signal) {
+        if (init.signal.aborted) throw abortError();
+        r = await Promise.race([pending, new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(abortError()), { once: true }))]);
+      } else r = await pending;
       if (r instanceof Error) throw r;
       if (r instanceof Response) return r;
       return geminiOk(r);

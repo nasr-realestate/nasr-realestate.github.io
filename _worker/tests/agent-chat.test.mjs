@@ -468,23 +468,36 @@ test("an overloaded model (5xx/429) switches to the next Gemini model; when ever
   onGemini((call, n) => (n === 1 ? geminiStatus(503) : reply("تمام.")));
   const ok = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(ok.status, 200);
-  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite"]);
-  assert.deepEqual(plain(calls.gemini[1].generationConfig.thinkingConfig), { thinkingBudget: 0 }, "2.5 Flash-Lite: no thinking");
-  assert.equal(ok.json.provider.model, "gemini-2.5-flash-lite");
+  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-flash-latest"]);
+  assert.deepEqual(plain(calls.gemini[1].generationConfig.thinkingConfig), { thinkingLevel: "minimal" }, "aliases get minimal thinking too");
+  assert.equal(ok.json.provider.model, "gemini-flash-latest");
   resetCalls();
   onGemini(() => geminiStatus(503));
   const bad = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(bad.status, 503);
   assert.equal(bad.json.error, "gemini_unavailable");
-  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash"],
+  assert.deepEqual(calls.gemini.map(g => g.model), ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash"],
     "each model once, then one retry of the last");
   assert.ok(bad.json.diag.attempts.every(a => a.outcome === 503));
   resetCalls();
   // a model name that does not exist (404) is skipped instantly
-  onGemini(call => (call.model === "gemini-2.5-flash-lite" ? geminiStatus(404) : call.model === "gemini-3.5-flash-lite" ? geminiStatus(503) : reply("تمام.")));
+  onGemini(call => (call.model === "gemini-flash-latest" ? geminiStatus(404) : call.model === "gemini-3.5-flash-lite" ? geminiStatus(503) : reply("تمام.")));
   const skip = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(skip.status, 200);
-  assert.equal(skip.json.provider.model, "gemini-flash-lite-latest");
+  assert.equal(skip.json.provider.model, "gemini-3.5-flash");
+});
+
+test("the hedge lane caps each attempt, so one slow alternative model cannot block the next one", async () => {
+  onGemini(async call => {
+    if (call.model === "gemini-3.5-flash-lite") { await new Promise(resolve => setTimeout(resolve, 900)); return reply("بطيء."); }
+    if (call.model === "gemini-flash-latest") { await new Promise(resolve => setTimeout(resolve, 900)); return reply("بطيء كمان."); }
+    return reply("من الموديل التالت.");
+  });
+  const r = await chatRequest({ consent: "gemini-v1", message: "أهلا" }, { env: { GEMINI_API_KEY: "k", CHAT_HEDGE_MS: "30", CHAT_HEDGE_ATTEMPT_MS: "150" } });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.reply, "من الموديل التالت.");
+  assert.equal(r.json.provider.model, "gemini-3.5-flash");
+  await new Promise(resolve => setTimeout(resolve, 950));
 });
 
 test("rate limiting applies per IP before Gemini is called", async () => {

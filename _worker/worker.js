@@ -2831,7 +2831,9 @@ const CHAT_TIMEOUT_MS = 22000;
 const CHAT_HEDGE_MS = 6000;
 // موديلات بديلة للطلب الاحتياطي ولما الموديل الأساسي يقع (503/ضغط): الموديل اللي مش موجود بيرجع 404 فورًا ويتخطى.
 // السبب (2026-10-26): gemini-3.5-flash-lite وحده كان بيرد في 6–8 ث ساعات، وساعات 503/مهلة بعد 16–22 ث.
-const CHAT_ALT_MODELS = ["gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash"];
+// تحديث 2026-10-26 من تشخيص النشر: gemini-2.5-flash-lite ⇒ 404 (اتسحب)، وعائلة Flash-Lite كلها كانت مضغوطة ⇒ Flash العادي الأول.
+const CHAT_ALT_MODELS = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash"];
+const CHAT_HEDGE_ATTEMPT_MS = 7000;   // كل محاولة في المسار الاحتياطي ليها سقف — موديل بطيء ما يحجزش الباقي
 const CHAT_HISTORY_MAX = 10;
 const CHAT_HISTORY_MSG_MAX = 600;
 const CHAT_REPLY_MAX = 700;
@@ -3720,8 +3722,9 @@ function chatThinkingConfigs(model){
   const m = String(model || "").toLowerCase();
   if(/^gemini-2\.5-pro/.test(m)) return [{ thinkingBudget: 128 }];
   if(/^gemini-2\.5/.test(m)) return [{ thinkingBudget: 0 }];
-  if(/^gemini-[3-9]/.test(m)) return [{ thinkingLevel: "minimal" }, { thinkingLevel: "low" }];
-  return [];
+  if(/^gemini-(?:1\.|2\.0)/.test(m)) return [];
+  // Gemini 3+ والأسماء المستعارة (…-latest) والأسماء الجديدة: «minimal» ثم «low» — والرفض (400) بيعدّي للإعداد اللي بعده
+  return [{ thinkingLevel: "minimal" }, { thinkingLevel: "low" }];
 }
 function chatPlans(models, schemaAllowed){
   const out = [];
@@ -3774,12 +3777,17 @@ async function chatLane(env, system, contents, plans, ctx, lane){
     const plan = plans[i];
     const remaining = ctx.deadline - Date.now();
     if(remaining < 800) return { ok: false, error: "gemini_timeout", model: plan.model };
+    const capped = Boolean(ctx.attemptCap) && lane === "hedge" && remaining > ctx.attemptCap + 800;
     const t0 = Date.now();
-    const res = await chatAttempt(env, plan, system, contents, remaining, ctx);
+    const res = await chatAttempt(env, plan, system, contents, capped ? ctx.attemptCap : remaining, ctx);
     if(res.kind === "cancelled") return { ok: false, error: "cancelled" };
     ctx.attempts.push({ lane, model: plan.model, schema: plan.schema, thinking: plan.thinking ? Object.values(plan.thinking)[0] : null, ms: Date.now() - t0,
       outcome: res.kind === "status" ? res.status : res.kind === "invalid" ? `invalid:${res.reason}` : res.kind });
     if(res.kind === "ok") return { ok: true, json: res.json, model: plan.model };
+    if(res.kind === "timeout" && capped){                                // سقف المحاولة الاحتياطية ⇒ الموديل اللي بعده
+      const next = plans.findIndex((x, k) => k > i && x.model !== plan.model);
+      if(next !== -1){ i = next - 1; continue; }
+    }
     if(res.kind === "timeout") return { ok: false, error: "gemini_timeout", model: plan.model };
     if(res.kind === "network") return { ok: false, error: "gemini_unavailable", model: plan.model };
     if(res.kind === "invalid") return { ok: false, error: "gemini_invalid", model: plan.model };
@@ -3805,8 +3813,10 @@ async function callGeminiChat(env, system, contents){
   const alternates = CHAT_ALT_MODELS.filter(m => !primary.includes(m));
   const hedgeEnv = Number(env.CHAT_HEDGE_MS);
   const hedgeMs = Number.isFinite(hedgeEnv) && hedgeEnv >= 10 && hedgeEnv <= 15000 ? hedgeEnv : CHAT_HEDGE_MS;
+  const capEnv = Number(env.CHAT_HEDGE_ATTEMPT_MS);
+  const attemptCap = Number.isFinite(capEnv) && capEnv >= 10 && capEnv <= 15000 ? capEnv : CHAT_HEDGE_ATTEMPT_MS;
   const started = Date.now();
-  const ctx = { deadline: started + CHAT_TIMEOUT_MS, attempts: [], controllers: new Set(), done: false };
+  const ctx = { deadline: started + CHAT_TIMEOUT_MS, attemptCap, attempts: [], controllers: new Set(), done: false };
   const finish = r => {
     ctx.done = true;
     for(const c of ctx.controllers) c.abort();       // الطلب اللي اتأخر يتلغي — مفيش رد متأخر يتحسب
