@@ -28,6 +28,19 @@
       .replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); });
   }
 
+  // Normalized spellings (أ/إ/آ ← ا، ة ← ه، ئ ← ي، ى ← ي) for common Egyptian/MSA amounts.
+  var NUM_WORDS = { 'واحد': 1, 'واحده': 1, 'اتنين': 2, 'اثنين': 2, 'اثنان': 2, 'تلات': 3, 'تلاته': 3, 'ثلاث': 3, 'ثلاثه': 3,
+    'اربع': 4, 'اربعه': 4, 'خمس': 5, 'خمسه': 5, 'ست': 6, 'سته': 6, 'سبع': 7, 'سبعه': 7, 'تماني': 8, 'تمانيه': 8,
+    'ثماني': 8, 'ثمانيه': 8, 'تسع': 9, 'تسعه': 9, 'عشر': 10, 'عشره': 10, 'حداشر': 11, 'اتناشر': 12, 'تلتاشر': 13,
+    'اربعتاشر': 14, 'خمستاشر': 15, 'ستاشر': 16, 'سبعتاشر': 17, 'تمنتاشر': 18, 'تسعتاشر': 19, 'عشرين': 20,
+    'تلاتين': 30, 'ثلاثين': 30, 'اربعين': 40, 'خمسين': 50, 'ستين': 60, 'سبعين': 70, 'تمانين': 80, 'ثمانين': 80,
+    'تسعين': 90, 'ميه': 100, 'مايه': 100, 'ميتين': 200, 'ميتي': 200, 'مايتين': 200, 'مايتي': 200, 'تلتميه': 300,
+    'ثلاثميه': 300, 'ثلاثمايه': 300, 'ربعميه': 400, 'اربعميه': 400, 'اربعمايه': 400, 'خمسميه': 500, 'خمسمايه': 500 };
+  var WORD_AMOUNT_RE = new RegExp('(^|\\s)([\\u0621-\\u064A]+)(?:\\s+(\\u0648[\\u0621-\\u064A]+))?(?:\\s+(\\u0648[\\u0621-\\u064A]+))?' +
+    '(?=\\s+(?:الف|الاف|مليون|ملايين|متر|م2|م|غرف|غرفه|اوض|اوضه|حمام|حمامات)(?=\\s|$))', 'g');
+  var OUT_OF_SCOPE_RE = /الرحاب|التجمع|القاهره الجديده|مدينتي|مصر الجديده|هليوبوليس|شيراتون|new cairo|rehab|fifth settlement|heliopolis/;
+  var IN_SCOPE_RE = /مدينه نصر|نصر سيتي|nasr city/;
+
   function normalize(s) {
     var t = toWesternDigits(s).toLowerCase()
       .replace(TASHKEEL, '')
@@ -43,26 +56,43 @@
     t = t.replace(/(\d),(?=\d{3}(?!\d))/g, "$1").replace(/(\d),(?=\d{3}(?!\d))/g, "$1");
     t = t.replace(/(\d),(\d)/g, '$1.$2');
     t = t.replace(/[^\u0621-\u064A0-9a-z.\s-]+/g, ' ').replace(/(^|\s)[.-]+|[.-]+(?=\s|$)/g, ' ');
-    return t.replace(/\s+/g, ' ').trim();
+    t = t.replace(/\s+/g, ' ').trim();
+    // Written amounts before a unit: «عشرين ألف» ← 20 ألف، «مئتين وخمسين متر» ← 250 متر.
+    t = t.replace(WORD_AMOUNT_RE, function (raw, lead, a, b, c) {
+      var sum = 0, parts = [a, b, c];
+      for (var i = 0; i < parts.length; i++) {
+        if (!parts[i]) continue;
+        var w = parts[i], v = NUM_WORDS[w];
+        if (v == null && i > 0 && w.charAt(0) === '\u0648') v = NUM_WORDS[w.slice(1)];
+        if (v == null) return raw;
+        sum += v;
+      }
+      return lead + sum;
+    });
+    return t.trim();
   }
 
   // ─── المفردات (بعد التطبيع) ───────────────────────────────────
   var DEAL_WORDS = [
-    [/^(لل)?(بيع|تمليك|شراء)$/, 'sale'],
-    [/^(لل|ل)?(ايجار|ايجارات|الايجار|ايجاري|اجار)$/, 'rent'],
+    // Conjunction/article forms count too («والإيجار»)، so a mixed request becomes a conflict.
+    [/^(?:و)?(?:لل|ال|ل)?(?:بيع|تمليك|شراء)$|^(?:buy|buying|sale|purchase)$/, 'sale'],
+    [/^(?:و)?(?:لل|ال|ل)?(?:ايجار|ايجارات|ايجاري|ايجارا|اجار)$|^(?:rent|rental|renting|lease)$/, 'rent'],
   ];
   var TYPE_WORDS = [
-    [/^(ال)?(شقه|شقق|شقتين)$/, ['apartment'], 'شقة'],
+    [/^(ال)?(شقه|شقق|شقتين)$|^(?:apartment|apartments|flat|flats)$/, ['apartment'], 'شقة'],
     [/^(ال)?(سكني|سكنيه)$/, ['apartment', 'villa'], 'سكني'],
-    [/^(ال)?(فيلا|فيلات|فلل|فيله|دوبلكس|دوبليكس|تاون)$/, ['villa'], 'فيلا/دوبلكس'],
-    [/^(ال)?(محل|محلات|صيدليه|معرض|شوروم)$/, ['shop'], 'محل'],
+    [/^(ال)?(فيلا|فيلات|فلل|فيله|دوبلكس|دوبليكس|تاون)$|^(?:villa|villas|duplex)$/, ['villa'], 'فيلا/دوبلكس'],
+    [/^(ال)?(محل|محلات|صيدليه|معرض|شوروم)$|^(?:shop|shops|store)$/, ['shop'], 'محل'],
     [/^(ال)?(تجاري|تجاريه|تجارى)$/, ['shop', 'office', 'clinic', 'warehouse'], 'تجاري/إداري'],
-    [/^(ال)?(مكتب|مكاتب|اداري|اداريه|مقر|مقرات)$/, ['office'], 'مكتب/إداري'],
+    [/^(ال)?(مكتب|مكاتب|اداري|اداريه|مقر|مقرات)$|^(?:office|offices)$/, ['office'], 'مكتب/إداري'],
     [/^(ال)?(عياده|عيادات)$/, ['clinic'], 'عيادة'],
     [/^(ال)?(مخزن|مخازن|مستودع)$/, ['warehouse'], 'مخزن'],
   ];
   var STOPWORDS = new Set(('في ب من الي عن او و ال علي مع عايز عاوز اريد ابحث محتاج نفسي ' +
-    'مدينه نصر بمدينه شارع بشارع شقه_dummy جنيه ج جم egp متر م فقط حوالي تقريبا').split(' '));
+    'مدينه نصر بمدينه شارع بشارع شقه_dummy جنيه ج جم egp متر م فقط حوالي تقريبا ' +
+    // Request fillers and English glue words are not words a listing title must contain.
+    'بميزانيه ميزانيه ميزانيتي معايا بل لكن معا اريدها عايزها عاوزها بدور لو سمحت ' +
+    'i want to a an the in of for with at near looking need please nasr city sqm le').split(' '));
   STOPWORDS.delete('شقه_dummy');
 
   var WORD_NUM = { 'واحد': 1, 'واحده': 1, 'اتنين': 2, 'اثنين': 2, 'ثلاث': 3, 'ثلاثه': 3, 'تلات': 3, 'تلاته': 3,
@@ -72,16 +102,16 @@
 
   var N = '(\\d+(?:\\.\\d+)?)';
   // وحدة المال: مليون (+ ونص/وربع) | ألف | k | جنيه
-  var MONEY = '(?:\\s*(مليون|ملايين|مليار|الف|الاف|k|ك)(?:\\s*(?:و\\s*)?(نص|نصف|ربع))?|\\s*(جنيه|ج|جم|egp))';
+  var MONEY = '(?:\\s*(مليون|ملايين|مليار|الف|الاف|k|ك|million|millions|thousand)(?:\\s*(?:و\\s*)?(نص|نصف|ربع))?|\\s*(جنيه|ج|جم|egp))';
   // ─── حدود صارمة (2026-10-25): «أقل من/تحت/دون» و«أكبر من/فوق» حصرية،
   //     و«حتى/لحد/بحد أقصى/ميزانية» شاملة — لأن المستخدم يقصد الاثنين مختلفين.
-  var EXC_MAX = '(?:اقل\\s+من|تحت|دون)';
-  var INC_MAX = '(?:حتي|لحد|بحد\\s+اقصي|اقصاه|اقصي|ميزانيه|ميزانيتي|max|لا\\s+يزيد\\s+عن|مايزيدش\\s+عن)';
-  var EXC_MIN = '(?:اكثر\\s+من|اكبر\\s+من|اعلي\\s+من|فوق|min)';
-  var INC_MIN = '(?:لا\\s+يقل\\s+عن|علي\\s+الاقل|من\\s+اول)';
+  var EXC_MAX = '(?:اقل\\s+من|تحت|دون|less\\s+than|under|below)';
+  var INC_MAX = '(?:بميزانيه|بميزانيتي|معايا|حتي|لحد|بحد\\s+اقصي|اقصاه|اقصي|ميزانيه|ميزانيتي|max|maximum|up\\s+to|لا\\s+يزيد\\s+عن|مايزيدش\\s+عن|لا\\s+تتجاوز|لا\\s+يتجاوز|ماتزيدش\\s+عن|ما\\s+تزيدش\\s+عن)';
+  var EXC_MIN = '(?:اكثر\\s+من|اكبر\\s+من|اعلي\\s+من|فوق|more\\s+than|over|above)';
+  var INC_MIN = '(?:لا\\s+يقل\\s+عن|علي\\s+الاقل|من\\s+اول|min|minimum|at\\s+least)';
   var MAX_W = '(?:' + EXC_MAX + '|' + INC_MAX + ')';
   var MIN_W = '(?:' + EXC_MIN + '|' + INC_MIN + ')';
-  var AROUND_W = '(?:في\\s+حدود|حدود|حوالي|تقريبا|بحوالي)';
+  var AROUND_W = '(?:في\\s+حدود|حدود|حوالي|تقريبا|بحوالي|about|around|approximately|approx)';
   // «بالضبط» تعني مساواة تامة، و«شهريًا» وحدة سعر لا كلمة بحث نصية.
   var EXACT_W = '(?:بالضبط|بالظبط|تماما|exactly)';
   var MONTHLY_W = '(?:شهريا|شهري|بالشهر|كل\\s+شهر|في\\s+الشهر|ل\\s*\\/\\s*شهر|\\/\\s*شهر|monthly)';
@@ -89,13 +119,23 @@
   var ROOM_U = '\\s*(?:غرف|غرفه|اوض|اوضه|حجرات|حجره|اوضات)(?:\\s+نوم)?(?![\\u0621-\\u064A])';
   var BATH_U = '\\s*(?:حمام|حمامات)(?![\\u0621-\\u064A])';
 
+  /** Is there a number with an area unit («150 متر»، «150م2»)? Token checks keep this linear. */
+  function hasAreaUnitToken(str) {
+    var toks = str.split(' ');
+    for (var i = 0; i < toks.length; i++) {
+      if (/^(?:م2|متر|م|m2|sqm|m)$/.test(toks[i]) && i > 0 && /^\d/.test(toks[i - 1])) return true;
+      if (/^\d+(?:\.\d+)?(?:م2|متر|م|m2|sqm|m)$/.test(toks[i])) return true;
+    }
+    return false;
+  }
+
   function moneyValue(num, unit, frac, plainUnit) {
     var v = parseFloat(num);
     if (!isFinite(v)) return null;
     var mul = 1;
-    if (unit === 'مليون' || unit === 'ملايين') mul = 1e6;
+    if (unit === 'مليون' || unit === 'ملايين' || unit === 'million' || unit === 'millions') mul = 1e6;
     else if (unit === 'مليار') mul = 1e9;
-    else if (unit === 'الف' || unit === 'الاف' || unit === 'k' || unit === 'ك') mul = 1e3;
+    else if (unit === 'الف' || unit === 'الاف' || unit === 'k' || unit === 'ك' || unit === 'thousand') mul = 1e3;
     var f = frac === 'ربع' ? 0.25 : frac ? 0.5 : 0;
     if (!unit && !plainUnit) return null;
     return Math.round((v + f) * mul);
@@ -142,9 +182,9 @@
    */
   function parseQuery(q) {
     var src = normalize(q);
-    var out = { text: [], deal: null, types: null, rooms: null, baths: null, area: null, price: null, understood: [] };
+    var out = { conflicts: [], outOfScope: OUT_OF_SCOPE_RE.test(src) && !IN_SCOPE_RE.test(src), text: [], deal: null, types: null, rooms: null, baths: null, area: null, price: null, understood: [] };
     if (!src) return out;
-    var s = ' ' + src + ' ';
+    var s = (' ' + src + ' ').replace(/\s(?:egp|le)\s+(?=\d)/g, ' ');
 
     function take(re, fn) {
       s = s.replace(re, function () {
@@ -155,6 +195,7 @@
     function setRange(kind, r, raw) {
       if (out[kind]) return false;
       if (kind === 'price' && monthly) r.monthly = true;
+      if (exact && (r.minExclusive || r.maxExclusive)) out.conflicts.push('شرط بالضبط يتعارض مع الحد الصارم؛ حدد أحدهما.');
       out[kind] = r;
       out.understood.push({ kind: kind, label: rangeLabel(kind, r), src: raw.trim() });
     }
@@ -166,7 +207,7 @@
       if (new RegExp('^' + INC_MAX + '$').test(cmp)) return { min: null, max: v };
       if (new RegExp('^' + EXC_MIN + '$').test(cmp)) return { min: v, max: null, minExclusive: true };
       if (new RegExp('^' + INC_MIN + '$').test(cmp)) return { min: v, max: null };
-      return exact ? exactRange(v) : around(v);
+      return exact && !hasAreaUnit ? exactRange(v) : around(v);
     }
 
     // ── «شهريًا» وحدة سعر لا كلمة بحث (2026-10-25): تُفهم كإيجار شهري وتُزال من
@@ -181,6 +222,7 @@
     }
 
     // ── «بالضبط/تمامًا» مساواة تامة لا كلمة بحث (C09): تُزال ويُعلَّم النطاق exact.
+    var hasAreaUnit = hasAreaUnitToken(s);
     var exact = false;
     if (new RegExp('(?:^|\\s)' + EXACT_W + '(?=\\s|$)').test(s)) {
       exact = true;
@@ -215,6 +257,7 @@
       });
     take(new RegExp('\\s(' + MAX_W + '|' + MIN_W + '|' + AROUND_W + ')\\s+' + N + AREA_U, 'g'),
       function (raw, cmp, a) {
+        if (!(+a >= 15 && +a <= 5000)) return false;
         return setRange('area', cmpRange(cmp, +a), raw);
       });
     take(new RegExp('\\s(?:مساحه\\s+)?' + N + AREA_U, 'g'), function (raw, a) {
@@ -223,19 +266,27 @@
       return setRange('area', exact ? exactRange(v) : around(v), raw);
     });
 
+    // ── مقارنة برقم مالي بلا وحدة («أقل من 20000»، «حتى 20000 شهريًا»): سعر فقط لو واضح أنه مال
+    //    (≥ 20,000، أو ≥ 1,000 مع «شهريًا») — «أكبر من 150» بلا وحدة لا يتحول إلى فلتر سعر.
+    take(new RegExp('\\s(' + MAX_W + '|' + MIN_W + '|' + AROUND_W + ')\\s+' + N + '(?=\\s)', 'g'), function (raw, cmp, a) {
+      var v = +a;
+      if (!(v >= 20000 || (monthly && v >= 1000))) return false;
+      return setRange('price', cmpRange(cmp, v), raw);
+    });
+
     // ── الغرف
     take(new RegExp('\\s' + N + ROOM_U + '(\\s+(?:او\\s+اكثر|فاكثر|فما\\s+فوق|واكثر))?', 'g'), function (raw, a, more) {
       var v = Math.round(+a);
       if (!(v >= 1 && v <= 12) || out.rooms) return false;
-      out.rooms = more ? { min: v, max: null } : { min: v, max: v };
-      out.understood.push({ kind: 'rooms', label: v + (more ? '+ ' : ' ') + 'غرف', src: raw.trim() });
+      out.rooms = { min: v, max: null };
+      out.understood.push({ kind: 'rooms', label: v + ' غرف أو أكثر', src: raw.trim() });
     });
     take(/\s(?:(غرفتين|اوضتين|حجرتين)|(?:(واحده|واحد|اتنين|اثنين|ثلاث|ثلاثه|تلات|تلاته|اربع|اربعه|خمس|خمسه|ست|سته)\s+(?:غرف|غرفه|اوض|اوضه|حجرات)|(?:غرفه|اوضه)\s+(واحده)))(?:\s+نوم)?(?=\s)/g,
       function (raw, two, word, one) {
         if (out.rooms) return false;
         var v = two ? 2 : one ? 1 : WORD_NUM[word];
-        out.rooms = { min: v, max: v };
-        out.understood.push({ kind: 'rooms', label: v + ' غرف', src: raw.trim() });
+        out.rooms = { min: v, max: null };
+        out.understood.push({ kind: 'rooms', label: v + ' غرف أو أكثر', src: raw.trim() });
       });
     // ── الحمامات
     take(new RegExp('\\s' + N + BATH_U, 'g'), function (raw, a) {
@@ -249,12 +300,12 @@
     take(new RegExp('\\s' + N + MONEY + '(?=\\s)', 'g'), function (raw, a, u, f, p) {
       var v = moneyValue(a, u, f, p);
       if (v == null) return false;
-      return setRange('price', exact ? exactRange(v) : around(v), raw);
+      return setRange('price', exact && !hasAreaUnit ? exactRange(v) : around(v), raw);
     });
     take(/\s(\d{5,})(?=\s)/g, function (raw, a) {
       var v = +a;
       if (v < 20000) return false;
-      return setRange('price', exact ? exactRange(v) : around(v), raw);
+      return setRange('price', exact && !hasAreaUnit ? exactRange(v) : around(v), raw);
     });
 
     // ── «المنطقه 7» ← «المنطقه السابعه» ؛ «الحي 7» ← «الحي السابع»
@@ -272,6 +323,7 @@
       for (var d = 0; d < DEAL_WORDS.length && !hit; d++) {
         if (DEAL_WORDS[d][0].test(w)) {
           hit = true;
+          if (out.deal && out.deal !== DEAL_WORDS[d][1]) out.conflicts.push('اختر البيع أو الإيجار؛ الطلب يتضمن المعاملتين.');
           if (!out.deal) {
             out.deal = DEAL_WORDS[d][1];
             out.understood.push({ kind: 'deal', label: out.deal === 'sale' ? 'للبيع' : 'للإيجار', src: w });
@@ -323,9 +375,10 @@
    * وما اختاره المستخدم في الفلاتر (منطق AND).
    */
   function matches(item, c) {
+    if (c.outOfScope || (c.conflicts && c.conflicts.length) || item.in_nasr_city === false || item.in_area === false) return false;
     if (!item._hay) prepare(item);
     if (c.deal && item.d !== c.deal) return false;
-    if (c.types && c.types.length && c.types.indexOf(item.y) === -1) return false;
+    if (c.types && c.types.indexOf(item.y) === -1) return false;
     if (!inRange(item.pn, c.price)) return false;
     // «شهريًا» تعني إيجارًا: سعر شهري لا يطابق وحدة بيع أبدًا (C11a/C11b).
     if (c.price && c.price.monthly && item.d !== 'rent') return false;
@@ -388,6 +441,8 @@
     }
     return {
       text: parsed.text || [],
+      outOfScope: parsed.outOfScope,
+      conflicts: (parsed.conflicts || []).concat(ui.deal && parsed.deal && ui.deal !== parsed.deal ? ['تعارض بين معاملة النص والفلتر اليدوي.'] : []),
       deal: ui.deal && parsed.deal && ui.deal !== parsed.deal ? '__none__' : (ui.deal || parsed.deal || null),
       types: types,
       price: both(parsed.price, ui.price),

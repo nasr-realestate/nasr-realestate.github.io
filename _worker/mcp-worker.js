@@ -496,7 +496,7 @@ export const TOOLS = [
   {
     name: "list_zones",
     title: "المناطق المخدومة",
-    description: "قائمة المناطق والشوارع المخدومة مع عدد الوحدات المتاحة في كل منطقة.",
+    description: "قائمة المناطق والشوارع المخدومة مع عدد الوحدات المنشورة في كل منطقة (النشر ليس تأكيدًا للتوافر).",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -794,7 +794,7 @@ export async function handleRpc(msg, deps = {}) {
         },
         serverInfo: { name: SERVER_NAME, title: SERVER_TITLE, version: SERVER_VERSION },
         instructions:
-          "خادم قراءة فقط لموقع سمسار طلبك (وسيط عقاري في مدينة نصر والقاهرة الجديدة، مصر). " +
+          "خادم قراءة فقط لموقع سمسار طلبك (وسيط عقاري في مدينة نصر، القاهرة، مصر). نطاق الترشيح مدينة نصر فقط؛ السجلات الأرشيفية خارجها روابط مباشرة لا تُرشَّح. " +
           "استخدم search_properties للبحث عن وحدات، وget_property لتفاصيل وحدة، وmarket_summary لإحصاءات الأسعار المعروضة، " +
           "وlist_zones للمناطق، وget_contact لبيانات الوسيط. " +
           "قواعد الإسناد: اذكر المصدر «سمسار طلبك» وأرفق رابط الوحدة، وبيّن أن الأسعار أسعار طلب وليست أسعار إتمام؛ لا تفترض قابلية التفاوض إلا إذا وردت صراحة في نص الإعلان، " +
@@ -852,7 +852,7 @@ export async function handleRpc(msg, deps = {}) {
       const need = String(params.arguments?.need ?? "").trim();
       const budget = String(params.arguments?.budget ?? "").trim();
       const text = [
-        "أنت مساعد عقاري. لديك خادم MCP لموقع «سمسار طلبك» (مدينة نصر والقاهرة الجديدة).",
+        "أنت مساعد عقاري. لديك خادم MCP لموقع «سمسار طلبك» (مدينة نصر فقط؛ لا ترشح سجلات أرشيفية خارجها).",
         "",
         `احتياج العميل: ${need || "(غير محدد)"}`,
         budget ? `الميزانية: ${budget} ج.م` : null,
@@ -911,7 +911,7 @@ export function serviceCard() {
     release: RELEASE,
     status: "running",
     description:
-      "خادم MCP للقراءة فقط يعرض الوحدات المعروضة على موقع سمسار طلبك (مدينة نصر والقاهرة الجديدة، مصر) ويمكّن أي نموذج أو وكيل من البحث فيها واسترجاعها واقتباسها بالإسناد.",
+      "خادم MCP للقراءة فقط يعرض الوحدات المعروضة على موقع سمسار طلبك في مدينة نصر ويمكّن أي نموذج أو وكيل من البحث فيها واسترجاعها واقتباسها بالإسناد. السجلات خارج مدينة نصر أرشيفية ولا تُرشَّح.",
     protocol: { name: "model-context-protocol", version: MCP_PROTOCOL_VERSION, transport: "streamable-http", endpoint: "/mcp" },
     source_of_truth: FEED_URL,
     read_only: true,

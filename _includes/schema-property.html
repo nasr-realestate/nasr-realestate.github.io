@@ -156,7 +156,7 @@
     {%- if price_num > 0 %}
     "price": "{{ price_num }}",
     {%- endif %}
-    "availability": "https://schema.org/InStock",
+    {%- comment -%} No live owner verification exists in this data source. Unknown is not InStock. {%- endcomment -%}
     "businessFunction": "{{ transaction_type }}",
     "seller": { "@id": "{{ site.url }}/#semsar-talabk" },
     "areaServed": { "@type": "City", "name": "القاهرة" },

@@ -8174,3 +8174,17 @@ body.layout-property_page .pp-availability-close {
 @media print {
   body.layout-property_page .pp-availability { display: none; }
 }
+
+/* 2026-10-26 — حالة توافر صريحة على صفحة العقار: «يحتاج إلى تأكيد» ما لم يوجد تاريخ تأكيد موثق. */
+body.layout-property_page .pp-availability-status {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(66, 197, 65, 0.35);
+  border-radius: 12px;
+  background: #0c110c;
+  color: #d8d8d8;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+body.layout-property_page .pp-availability-status strong { color: #f5f5f5; }

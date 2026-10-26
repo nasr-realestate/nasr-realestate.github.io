@@ -113,7 +113,9 @@ test('القوالب: لا اختيار عشوائي ولا قوائم من site
   // agent.html تُختبر سكربتاته خامًا (بلا Liquid) في _worker/tests — فالنطاق يُجلب من catalog.json وقت التشغيل.
   const agent = fs.readFileSync(path.join(ROOT, 'agent.html'), 'utf8');
   assert.match(agent, /assets\/data\/catalog\.json/);
-  assert.match(agent, /!scope \|\| scope\.has\(p\.slug\)/);
+  assert.doesNotMatch(agent, /!scope \|\| scope\.has\(p\.slug\)/);
+  assert.match(agent, /if \(!scope\) throw/);
+  assert.match(agent, /p\.in_nasr_city !== false && scope\.has\(p\.slug\)/);
 });
 
 test('صفحات الهبوط: ملف مولّد لكل شريحة، رابطه = path، بلا تصادم مع روابط العقارات، وفهرسة حسب الحد', () => {

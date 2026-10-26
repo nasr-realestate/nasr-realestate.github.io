@@ -128,7 +128,7 @@ export function renderLlmsFull(properties) {
   out.push('1. لكل وحدة صفحة مفردة على الموقع، ورابطها مذكور في بطاقتها. لاقتباس وحدة محددة، استخدم رابطها وبطاقتها كما هي.');
   out.push('2. لا تُلفّق أرقامًا: إن لم يوجد حقل `priceNumeric` فالوحدة «للاستعلام». وإن لم يوجد عدد غرف فالمساحة مفتوحة/غير مقسّمة.');
   out.push('3. للتواصل أو المعاينة: واتساب +201147758857 (طارق طنطاوي).');
-  out.push('4. الوحدات المنشورة متاحة حتى إزالتها من الموقع؛ لا تفترض التوافر دون تحقق.');
+  out.push('4. النشر ليس تأكيدًا للتوافر: availability_status = needs_confirmation ما لم يوجد last_confirmed_at موثق من المالك؛ لا تقل «متاح الآن» ولا تعتمد على status أو تاريخ النشر.');
   out.push('');
 
   // فهرس سريع
@@ -372,7 +372,7 @@ export function mcpToolDefinitions() {
     {
       name: 'list_zones',
       title: 'المناطق المخدومة',
-      description: 'قائمة المناطق والشوارع المخدومة مع عدد الوحدات المتاحة في كل منطقة.',
+      description: 'قائمة المناطق والشوارع المخدومة مع عدد الوحدات المنشورة في كل منطقة (النشر ليس تأكيدًا للتوافر).',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     },
     {
@@ -585,7 +585,13 @@ export function renderOpenApi(properties) {
             furnished: { type: ['string', 'null'], enum: ['furnished', 'unfurnished', null] },
             description: { type: 'string' },
             image: { type: ['string', 'null'], format: 'uri' },
-            status: { type: 'string' },
+            status: { type: 'string', description: 'حالة النشر في المصدر — ليست تأكيدًا للتوافر' },
+            availability_status: {
+              type: 'string',
+              enum: ['needs_confirmation', 'confirmed_on_date'],
+              description: 'لا يوجد تحقق حي: needs_confirmation ما لم يوجد تاريخ تأكيد موثق من المالك',
+            },
+            last_confirmed_at: { type: ['string', 'null'], format: 'date', description: 'آخر تأكيد موثق من المالك (اختياري) — ليس تاريخ النشر' },
             date: { type: ['string', 'null'], format: 'date-time' },
             datePosted: { type: ['string', 'null'], format: 'date' },
           },
