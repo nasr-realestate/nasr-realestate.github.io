@@ -134,6 +134,8 @@ export function buildFeed(properties, generatedAt) {
       image: p.image,
       date: p.date,
       meta_title: p.metaTitle,
+      availability_status: p.availability_status,
+      last_confirmed_at: p.last_confirmed_at,
     })),
   };
 }

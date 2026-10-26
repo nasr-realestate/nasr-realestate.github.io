@@ -319,7 +319,24 @@
             "format": "uri"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "حالة النشر في المصدر — ليست تأكيدًا للتوافر"
+          },
+          "availability_status": {
+            "type": "string",
+            "enum": [
+              "needs_confirmation",
+              "confirmed_on_date"
+            ],
+            "description": "لا يوجد تحقق حي: needs_confirmation ما لم يوجد تاريخ تأكيد موثق من المالك"
+          },
+          "last_confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "آخر تأكيد موثق من المالك (اختياري) — ليس تاريخ النشر"
           },
           "date": {
             "type": [

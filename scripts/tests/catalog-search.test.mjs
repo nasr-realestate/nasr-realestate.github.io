@@ -66,7 +66,7 @@ test('parseQuery: الاستعلامات الطبيعية المطلوبة', () 
   let p = S.parseQuery('شقه للبيع');
   assert.equal(p.deal, 'sale'); assert.deepEqual(plain(p.types), ['apartment']); assert.deepEqual(plain(p.text), []);
   p = S.parseQuery('3 غرف');
-  assert.deepEqual(plain(p.rooms), { min: 3, max: 3 });
+  assert.deepEqual(plain(p.rooms), { min: 3, max: null });
   p = S.parseQuery('شقة 150 متر');
   assert.equal(p.area.approx, 150); assert.ok(p.area.min < 150 && p.area.max > 150);
   p = S.parseQuery('أقل من 5 مليون');
@@ -81,7 +81,7 @@ test('parseQuery: الاستعلامات الطبيعية المطلوبة', () 
   p = S.parseQuery('حتى 150م');
   assert.deepEqual(plain(p.area), { min: null, max: 150 });
   p = S.parseQuery('غرفتين');
-  assert.deepEqual(plain(p.rooms), { min: 2, max: 2 });
+  assert.deepEqual(plain(p.rooms), { min: 2, max: null });
   p = S.parseQuery('3 غرف او اكثر 2 حمام');
   assert.deepEqual(plain(p.rooms), { min: 3, max: null }); assert.deepEqual(plain(p.baths), { min: 2 });
 });
@@ -115,7 +115,7 @@ test('البحث على البيانات الحقيقية: «شقه» = «شقة
 
 test('النتائج تحترم كل قيد فعلًا', () => {
   for (const it of run('شقه للبيع')) { assert.equal(it.d, 'sale'); assert.equal(it.y, 'apartment'); }
-  for (const it of run('3 غرف')) assert.equal(it.rn, 3);
+  for (const it of run('3 غرف')) assert.ok(it.rn >= 3);
   for (const it of run('اقل من 5 مليون')) { assert.ok(it.pn <= 5000000); assert.equal(it.d, 'sale', 'إيجار شهري لا يطابق سعر مليون'); }
   for (const it of run('ايجار تحت 20 الف')) { assert.equal(it.d, 'rent'); assert.ok(it.pn <= 20000); }
   for (const it of run('شقة 150 متر')) assert.ok(it.an >= 127 && it.an <= 173, String(it.an));

@@ -91,6 +91,8 @@ export function createPageContext({ search = "", fetchImpl } = {}) {
     setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; }, clearTimeout() {},
     setInterval: () => 1, clearInterval() {},
   });
+  vm.runInContext(fs.readFileSync(new URL("../../assets/js/valuation-evidence.js", import.meta.url), "utf8"), context);
+  window.NasrValuationEvidence = context.NasrValuationEvidence;
   vm.runInContext(inlineScript, context);
   return {
     context, elements, getElementById, window, document, toasts, timers, opened, clipboard, localStorage, sessionStorage, domReady,

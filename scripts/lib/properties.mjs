@@ -386,6 +386,10 @@ export function normalizeProperty(data, slug, opts = {}) {
     imageFile: imageFile || null,
     audioFile: text(data.audio_file).trim() || null,
     status: text(data.status).trim() || 'available',
+    // availability_confirmed_at is optional and must be set from a documented owner confirmation.
+    // The publication date is never treated as a verification date.
+    last_confirmed_at: isoDate(data.availability_confirmed_at)?.slice(0, 10) ?? null,
+    availability_status: isoDate(data.availability_confirmed_at) ? 'confirmed_on_date' : 'needs_confirmation',
     date: isoDate(data.date),
     datePosted: isoDate(data.date)?.slice(0, 10) ?? null,
     // حقول مشتقة مكتوبة صراحةً حتى يعرفها أي مستهلك

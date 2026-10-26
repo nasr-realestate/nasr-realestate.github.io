@@ -162,7 +162,7 @@ hide_navbar: true
       {% endif %}
       {% if page.date %}
       <span class="pp-chip date">
-        <i class="far fa-calendar"></i> {{ page.date | date: "%d/%m/%Y" }}
+        <i class="far fa-calendar"></i> نُشر {{ page.date | date: "%d/%m/%Y" }}
       </span>
       {% endif %}
     </div>
@@ -234,6 +234,11 @@ hide_navbar: true
   صفحة أي عقار آخر تُعرَض بلا أي سطر إضافي (صفر بايت فرق).
   التفاصيل الكاملة في _includes/property-audio.html
 {% endcomment %}{% include property-audio.html %}{% endif %}
+  {%- comment -%} 2026-10-26: لا «متاح الآن» من حقل ثابت. التاريخ الموثق اختياري (availability_confirmed_at). {%- endcomment %}
+  <p class="pp-availability-status" role="note">
+    <strong>حالة التوافر:</strong>
+    {% if page.availability_confirmed_at %}آخر تأكيد موثق من المالك {{ page.availability_confirmed_at | date: "%d/%m/%Y" }} — قد يتغير بعده، ويُعاد التأكد قبل المعاينة.{% else %}يحتاج إلى تأكيد من المالك. تاريخ النشر ليس تاريخ تحقق.{% endif %}
+  </p>
   <!-- ═══ Action Buttons ═══ -->
   <div class="pp-actions">
     <a href="https://wa.me/201147758857?text={{ wa_text | url_encode }}"

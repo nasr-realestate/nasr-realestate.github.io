@@ -440,6 +440,16 @@ extra_head: |
     }
     body.page-agent .home-note i { color: var(--gold); margin-top: 2px; font-size: 10px; }
 
+    /* ═══ وضع البحث المحلي / المحادثة السحابية ═══ */
+    body.page-agent #app > .request-mode {
+      flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      min-width: 0; padding: 0 14px; border-bottom: 1px solid var(--line-soft);
+      background: rgba(12, 17, 12, 0.94); color: #b0b0b0; font-size: 0.78rem; line-height: 1.5;
+    }
+    body.page-agent .request-mode-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; cursor: pointer; overflow-wrap: anywhere; }
+    body.page-agent .request-mode-toggle input { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: #42c541; }
+    body.page-agent .request-mode-link { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: #7ce386; }
+
     /* ═══ شريط الجلسة + ملخص الطلب ═══ */
     body.page-agent #app > .session-bar {
       flex: 0 0 auto;
@@ -1456,7 +1466,7 @@ extra_head: |
         <div class="home-trust">
           <span><i class="fas fa-medal"></i> خبرة منذ 2014</span>
           <span><i class="fas fa-star"></i> Google Local Guide 7</span>
-          <span><i class="fas fa-shield-halved"></i> بياناتك في الجلسة بس</span>
+          <span><i class="fas fa-shield-halved"></i> البحث المحلي لا يرسل محادثتك</span>
         </div>
       </div>
 
@@ -1488,6 +1498,15 @@ extra_head: |
       </p>
     </div>
   </section>
+
+  <!-- 2026-10-26: البحث والمسودة المحلية افتراضيًا (بلا Worker ولا Gemini)؛ المحادثة السحابية اختيار صريح. -->
+  <div class="request-mode" id="requestModeBar">
+    <label class="request-mode-toggle" for="localRequestMode">
+      <input type="checkbox" id="localRequestMode" checked>
+      <span>بحث ومسودة محلية — لا نرسل المحادثة للسحابة</span>
+    </label>
+    <a class="request-mode-link" href="{{ '/privacy-policy.html' | relative_url }}#local-agent">التفاصيل</a>
+  </div>
 
   <!-- ═══ الجلسة: حالة الطلب ═══ -->
   <div class="session-bar" id="sessionBar">
@@ -1594,9 +1613,9 @@ extra_head: |
       دي مساحة مخصصة لـ <strong>سمسار طلبك</strong>، نرتب فيها طلبك العقاري بسرعة قبل ما يوصلك طارق.
     </p>
     <ul class="privacy-rules">
-      <li><span class="rule-icon">✅</span><span>بيانات طلبك بتفضل داخل الجلسة، ومش بتتخزن على أجهزتنا بعد انتهائها.</span></li>
-      <li><span class="rule-icon">✅</span><span>كل سعر أو توافر مبدئي، والتأكيد النهائي مع طارق.</span></li>
-      <li><span class="rule-icon">✅</span><span>تقدر تكمل مع طارق على واتساب في أي وقت.</span></li>
+      <li><span class="rule-icon">✅</span><span>الوضع الافتراضي يبحث ويجهّز مسودتك داخل متصفحك: لا يرسل المحادثة للسحابة، ولا يحفظها بعد تحديث الصفحة، ولا يسجّل طلبًا.</span></li>
+      <li><span class="rule-icon">ℹ️</span><span>لو فعّلت المحادثة السحابية، رسائلك وسياقها تُرسل إلى Cloudflare وقد تُعالج بواسطة Gemini؛ مدد احتفاظ المزودين غير مضمونة من جهتنا.</span></li>
+      <li><span class="rule-icon">✅</span><span>كل سعر أو توافر مبدئي ويحتاج تأكيدًا مع طارق، وتقدر تكلمه على واتساب في أي وقت.</span></li>
     </ul>
     <div class="privacy-warn">
       <span class="privacy-warn-icon">⚠️</span>
@@ -1666,6 +1685,8 @@ extra_head: |
   </div>
 </div>
 
+<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}?v=20261026-reliable"></script>
+<script src="{{ '/assets/js/agent-request-core.js' | relative_url }}?v=20261026-reliable"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 // CONFIG — عقد الـWorker كما هو، بلا أي تغيير
@@ -1674,6 +1695,7 @@ const WORKER_URL   = "https://royal-snow-ea32.footcai-555.workers.dev/";
 const STORAGE_KEY  = "simsar_wa_v92";
 const RETURN_KEY   = "simsar_return_session";
 const PRIVACY_KEY  = "simsar_privacy_v1";
+const MODE_KEY     = "simsar_agent_mode"; // "cloud" only when the visitor explicitly chose the cloud chat
 const TAREK_WA     = "201147758857";
 // الملف الشخصي الموثق لطارق طنطاوي على Google Maps (Local Guide Level 7)
 const GOOGLE_URL   = "https://maps.app.goo.gl/8QWS1BCPBViggDfa7";
@@ -1717,6 +1739,8 @@ let state = {
   sessionStarted: false,
   lastFailed: null,
 };
+let localDraft = null;
+function isLocalMode() { return !!document.getElementById("localRequestMode")?.checked; }
 let isSending = false;
 let _quickSend = false;
 let _summaryOpen = false;
@@ -1738,6 +1762,7 @@ function stripGps(fs) {
 }
 
 function saveState() {
+  if (isLocalMode()) return; // local drafts live in page memory only
   try {
     const { lastFailed, pendingImages, ...rest } = state;
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -1904,12 +1929,12 @@ function renderReturnBanner(valuation) {
     if (valuation.samples > 0) lines += ` (${valuation.samples} عينة)`;
 
     banner.innerHTML = `
-      <span class="msg-content">${lines}<br><br>نكمّل من النقطة اللي وقفنا عندها؟</span>
+      <span class="msg-content">${lines}<br><br>${isLocalMode() ? "المسودة المحلية لا تُحفظ بين الصفحات؛ اكتب طلبك من جديد لنكمل." : "نكمّل من النقطة اللي وقفنا عندها؟"}</span>
       <div class="msg-time">${getTime()}</div>
     `;
   } else {
     banner.innerHTML = `
-      <span class="msg-content">تمام، رجعت 👋<br>نكمّل من النقطة اللي وقفنا عليها؟</span>
+      <span class="msg-content">تمام، رجعت 👋<br>${isLocalMode() ? "المسودة المحلية لا تُحفظ بين الصفحات؛ اكتب طلبك من جديد لنكمل." : "نكمّل من النقطة اللي وقفنا عليها؟"}</span>
       <div class="msg-time">${getTime()}</div>
     `;
   }
@@ -2041,7 +2066,8 @@ function escapeAttr(text) {
 }
 // A-4: مصدر الصورة المسموح: https: / blob: / data:image بس
 const SAFE_IMG_SRC = /^(?:https:\/\/|blob:|data:image\/(?:png|jpe?g|webp|gif|bmp|avif|heic|heif);base64,)/i;
-const SAFE_LINK = /^https:\/\/[^\s<>"']+$/i;
+// https links from the Worker, or a same-site property path from the local catalog (no other schemes).
+const SAFE_LINK = /^(?:https:\/\/[^\s<>"']+|\/properties\/[a-z0-9-]+\/)$/i;
 function formatMsg(text) {
   return escapeHtml(text)
     .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
@@ -2251,6 +2277,7 @@ function maskPhone(v) {
 }
 
 function summaryItems() {
+  if (localDraft && window.NasrAgent) return [["القيود الحالية", window.NasrAgent.summary(localDraft)], ["الحفظ", "مسودة محلية؛ لم تُرسل للمكتب"]];
   const fs = state.formState || {};
   const d = fs.data || {};
   const items = [];
@@ -2495,7 +2522,7 @@ function buildResultCard(card) {
       ${specs.length ? `<div class="result-specs">${specs.map(s => `<span class="result-spec">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
       <div class="result-actions">
         ${url ? `<a class="result-link" href="${url}" target="_blank" rel="noopener">التفاصيل <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>` : `<span class="result-link" hidden aria-hidden="true"></span>`}
-        ${canPick ? `<button type="button" class="result-pick" onclick="pickResult(${index})">اختار العقار ${index}</button>` : `<span class="result-note">الاختيار متاح وقت ما الوكيل يعرض الأرقام</span>`}
+        ${canPick ? `<button type="button" class="result-pick" onclick="pickResult(${index})">اختار العقار ${index}</button>` : isLocalMode() ? "" : `<span class="result-note">الاختيار متاح وقت ما الوكيل يعرض الأرقام</span>`}
       </div>
     </div>
   </article>`;
@@ -3005,6 +3032,7 @@ function renderImgStrip() {
 function removeImg(i) { state.pendingImages.splice(i, 1); renderImgStrip(); updateSendIcon(); }
 
 async function uploadPendingImages() {
+  if (isLocalMode()) return []; // never upload from the local draft mode
   if (!state.pendingImages.length) return [];
   const base64s = state.pendingImages.map(x => x.base64);
   try {
@@ -3110,7 +3138,8 @@ async function fetchGalleryFeed() {
     const [res, scope] = await Promise.all([fetch(AI_FEED_URL), galleryScope()]);
     if (!res.ok) throw new Error("feed error");
     const feed = await res.json();
-    _galleryProperties = (feed.properties || []).filter(p => p.image && (!scope || scope.has(p.slug)));
+    if (!scope) throw new Error("scope unavailable");
+    _galleryProperties = (feed.properties || []).filter(p => p.image && p.in_nasr_city !== false && scope.has(p.slug));
 
     if (!_galleryProperties.length) { grid.style.display = "none"; empty.style.display = "block"; return; }
 
@@ -3189,6 +3218,70 @@ function renderGalleryCards(properties) {
 function escHtml(str) { return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 
+// New journeys reuse the same parser, catalog, renderer and property API, without
+// sending conversation text to an LLM or invoking owner-submission endpoints.
+function offersAr(n) { return n === 1 ? "عرض واحد" : n === 2 ? "عرضان" : n <= 10 ? n + " عروض" : n + " عرضًا"; }
+async function sendLocalRequest(txt, hasImgs) {
+  if (!window.NasrAgent) { renderErrorCard("تعذر تحميل نواة البحث المحلية. أعد تحميل الصفحة؛ لم نرسل رسالتك للسحابة.", false); return; }
+  if (hasImgs) { renderMsg("المسودة المحلية لا ترفع الصور. أزل المرفقات واكتب المواصفات فقط؛ لم نرفع أي صورة.", "bot"); return; }
+  switchView("session", { scroll: false });
+  isSending = true; sendBtn.disabled = true;
+  msgInput.value = ""; updateSendIcon(); hideWA(); renderValuationCta(null); renderOptions([]);
+  renderMsg(txt, "user");
+  try {
+    // A property identifier is a lowercase token with at least two hyphens (token check, no backtracking).
+    const slug = txt.toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9-]/g, ""))
+      .find(t => /^[a-z0-9-]+$/.test(t) && t.split("-").length >= 3);
+    if (slug) {
+      const res = await fetch("/api/properties/" + encodeURIComponent(slug) + ".json");
+      if (res.status === 404) { renderMsg("لا يوجد عقار منشور بهذا المعرّف (404). لم ننشئ تفاصيل بديلة.", "bot"); return; }
+      if (!res.ok) throw new Error("property unavailable");
+      const record = await res.json();
+      const p = record && record.property;
+      const scope = await galleryScope();
+      if (!p || !scope || !scope.has(p.slug) || p.in_nasr_city === false) {
+        renderMsg("هذا السجل ليس ضمن كتالوج مدينة نصر المحلي، أو تعذر التحقق من نطاقه؛ لا نرشحه.", "bot");
+        return;
+      }
+      const confirmed = p.last_confirmed_at ? "آخر تأكيد موثق من المالك: " + p.last_confirmed_at + "، وقد يتغير بعده." : "لا يوجد تاريخ تأكيد موثق؛ التوافر يحتاج إلى تأكيد من المالك.";
+      renderMsg([p.title, (p.price || "السعر غير معلن") + (p.area ? " — " + p.area : ""), p.location || "",
+        "تاريخ النشر: " + (p.datePosted || "غير مسجل") + ". " + confirmed,
+        "الترخيص والعمولة والتأمين غير منشورة ولا تُفترض.",
+        new URL("/properties/" + p.slug + "/", location.origin).href].filter(Boolean).join("\n"), "bot");
+      return;
+    }
+    const turn = window.NasrAgent.reduce(localDraft, txt);
+    localDraft = turn.draft;
+    renderMsg(turn.response, "bot");
+    renderOptions(turn.options);
+    if (turn.ready && localDraft.role === "search" && !localDraft.conflicts.length) {
+      const response = await fetch(GALLERY_SCOPE_URL);
+      if (!response.ok) throw new Error("catalog unavailable");
+      const rows = await response.json();
+      const found = window.NasrAgent.results(rows, localDraft);
+      if (found.length) {
+        // Same card format the page already renders (parsePropertyCards); data comes from catalog.json only.
+        const detail = found.slice(0, 5).map((p, i) => [
+          (i + 1) + ". " + p.t,
+          "💰 السعر: " + (p.p || "غير معلن"),
+          p.an ? "📐 المساحة: " + p.an + " م²" : "",
+          p.l ? "📍 " + p.l : "",
+          "🔗 التفاصيل: " + p.u, // validated same-site path (/properties/<slug>/)
+        ].filter(Boolean).join("\n")).join("\n");
+        renderMsg("النتائج المطابقة لكل القيود في مدينة نصر: " + offersAr(found.length) + (found.length > 5 ? " (نعرض أول 5)" : "") + ". التوافر يحتاج إلى تأكيد.\n" + detail, "bot");
+      } else {
+        const alternatives = window.NasrAgent.suggestions(rows, localDraft);
+        renderMsg("لا توجد عروض منشورة في مدينة نصر تطابق كل القيود معًا، ولم نوسّع البحث تلقائيًا." +
+          (alternatives.length ? "\nبدائل محددة — كل منها يغيّر شرطًا واحدًا من طلبك:\n" + alternatives.map(a => "• " + a.label).join("\n") +
+            "\nاكتب مثلًا «بدون ميزانية» أو حدًا جديدًا لتطبيق أحدها." : "\nحتى بعد إزالة أي شرط واحد لا توجد نتائج؛ راجع النوع أو المعاملة."), "bot");
+      }
+    }
+    renderSessionMeta();
+  } catch {
+    renderMsg("تعذر تحميل البيانات. احتفظنا بالقيود في هذه الصفحة، ولم نفترض نتائج أو نرسل طلبًا؛ أعد المحاولة.", "bot");
+  } finally { isSending = false; sendBtn.disabled = false; updateDockHeight(); }
+}
+
 // ═══════════════════════════════════════════════════════════
 // إرسال الرسالة — نفس حمولة الـWorker ونفس منطق الأخطاء
 // ═══════════════════════════════════════════════════════════
@@ -3198,6 +3291,10 @@ async function sendMsg() {
   const txt = msgInput.value.trim();
   const hasImgs = state.pendingImages.length > 0;
   if (!txt && !hasImgs) return;
+  if (isLocalMode()) {
+    await sendLocalRequest(txt, hasImgs);
+    return;
+  }
   if (!isSessionView()) switchView("session", { scroll: false });
 
   state.lastFailed = null;
@@ -3466,6 +3563,7 @@ function clearConversationDom() {
 }
 
 function emptyState() {
+  localDraft = null;
   return {
     formState: { _version: FORM_VERSION },
     history: [], imageUrls: [], pendingImages: [],
@@ -3543,7 +3641,14 @@ function startConversation() {
   renderOptions(ROUTE_BTNS);
 }
 
+// The explicit cloud choice survives a reload/valuation round trip in the same tab; the default is local.
+try { if (sessionStorage.getItem(MODE_KEY) === "cloud") document.getElementById("localRequestMode").checked = false; } catch {}
 loadState();
+if (isLocalMode()) {
+  // A previous cloud transcript is neither revived nor kept once the page runs in local mode.
+  state = emptyState();
+  try { sessionStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(RETURN_KEY); } catch {}
+}
 
 const returnInfo = checkReturnFromValuation();
 const returningFromValuation = returnInfo && returnInfo.returning;
@@ -3581,6 +3686,15 @@ if (hadHistory) {
 renderSessionMeta();
 updateSendIcon();
 
+const modeControl = document.getElementById("localRequestMode");
+if (modeControl) modeControl.addEventListener("change", () => {
+  state = emptyState(); clearConversationDom();
+  try {
+    sessionStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(RETURN_KEY);
+    if (modeControl.checked) sessionStorage.removeItem(MODE_KEY); else sessionStorage.setItem(MODE_KEY, "cloud");
+  } catch {}
+  renderMsg(modeControl.checked ? "مسودة محلية جديدة؛ لا نرسل المحادثة للسحابة." : "محادثة سحابية: رسائلك وسياق المحادثة سيُرسلان إلى Cloudflare وقد يُعالجان بواسطة Gemini. لا ترسل بيانات حساسة.", "bot");
+});
 const startSession = returningFromValuation || state.sessionStarted || hasUserTurn();
 switchView(startSession ? "session" : "home", { scroll: false, persist: false });
 if (startSession) forceScrollToBottom();

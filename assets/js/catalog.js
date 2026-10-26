@@ -142,8 +142,10 @@
   var DROPPED_WORDS = /(^|\s)(?:بالضبط|بالظبط|تماما|exactly)(?=\s|$)/g;
 
   /** يحذف جزءًا فهمه المحلل من نص البحث (يعمل على النص بعد التطبيع). */
-  function removeFromQuery(src) {
-    var n = S.normalize(state.q).replace(DROPPED_WORDS, ' ').replace(/\s+/g, ' ').trim();
+  function removeFromQuery(src, dropExact) {
+    var n = S.normalize(state.q);
+    if (dropExact) n = n.replace(DROPPED_WORDS, ' ');
+    n = n.replace(/\s+/g, ' ').trim();
     var cands = [src, src.replace(/^1 /, '')];
     for (var i = 0; i < cands.length; i++) {
       var at = (' ' + n + ' ').indexOf(' ' + cands[i] + ' ');
@@ -159,7 +161,7 @@
   function constraints(parsed) {
     var list = [];
     parsed.understood.forEach(function (u) {
-      list.push({ label: u.label, drop: function () { state.q = removeFromQuery(u.src); } });
+      list.push({ label: u.label, drop: function () { state.q = removeFromQuery(u.src, /^بالضبط/.test(u.label)); } });
     });
     if (parsed.text.length) {
       list.push({ label: '«' + parsed.text.join(' ') + '»', drop: function () {
@@ -219,22 +221,34 @@
     loadData().then(function (rows) {
       var pc = criteriaFor(state);
       var results = S.search(rows, pc.criteria, state.sort);
+      var issues = (pc.criteria.conflicts || []).join(' ');
+      if (pc.criteria.outOfScope) issues += ' الترشيحات لمدينة نصر فقط؛ المناطق الأخرى أرشيف وليست بدائل محلية.';
       if (!serverCards) {
         serverCards = document.createDocumentFragment();
         Array.prototype.forEach.call(grid.children, function (n) { serverCards.appendChild(n.cloneNode(true)); });
       }
       // الشرائح: ما فهمه البحث من النص (قابل للحذف)
       understoodBox.innerHTML = '';
-      if (pc.parsed.understood.length) {
+      if (pc.parsed.understood.length || issues || state.deal || state.type) {
         var lab = document.createElement('span');
         lab.className = 'pl-ulabel';
-        lab.textContent = 'فهمنا:';
+        lab.textContent = 'فهمنا (مدينة نصر فقط):';
         understoodBox.appendChild(lab);
+        if (issues) {
+          var warn = document.createElement('span');
+          warn.className = 'pl-ulabel';
+          warn.setAttribute('role', 'alert');
+          warn.textContent = issues.trim();
+          understoodBox.appendChild(warn);
+        }
         pc.parsed.understood.forEach(function (u) {
           understoodBox.appendChild(chipButton(u.label, function () {
-            state.q = removeFromQuery(u.src); syncControls(); render(); input.focus();
+            state.q = removeFromQuery(u.src, /^بالضبط/.test(u.label));
+            syncControls(); render(); input.focus();
           }));
         });
+        if (state.deal) understoodBox.appendChild(chipButton(state.deal === 'rent' ? 'فلتر: إيجار شهري' : 'فلتر: بيع', function () { state.deal = ''; syncControls(); render(); }));
+        if (state.type) understoodBox.appendChild(chipButton(TYPE_NAMES[state.type], function () { state.type = ''; syncControls(); render(); }));
         understoodBox.hidden = false;
       } else understoodBox.hidden = true;
 
@@ -251,7 +265,7 @@
         offers(results.length) + ' في مدينة نصر | سمسار طلبك';
 
       empty.hidden = results.length !== 0;
-      if (results.length === 0) renderEmpty(rows, pc.parsed);
+      if (results.length === 0) { renderEmpty(rows, pc.parsed); if (issues) $('plEmptyText').textContent = issues + ' لم نغيّر شروطك أو نوسّع البحث.'; }
       done();
     }).catch(function () {
       status.textContent = 'تعذّر تحميل بيانات البحث. تحقّق من الاتصال ثم أعد المحاولة — الصفحات أدناه ما زالت تعمل.';
@@ -287,7 +301,7 @@
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'pl-suggest-btn';
-      b.textContent = (o.only ? o.c.label + ' فقط' : 'بدون ' + o.c.label) + ' ← ' + offers(o.n);
+      b.textContent = (o.only ? 'تغيير شروط: الإبقاء على ' + o.c.label + ' فقط' : 'تغيير شرط: حذف ' + o.c.label) + ' ← ' + offers(o.n);
       b.addEventListener('click', function () { state = o.st; syncControls(); render(); });
       box.appendChild(b);
     });

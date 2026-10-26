@@ -169,6 +169,7 @@
     .meta-value { min-width: 0; color: #fff; font-size: 1rem; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
     .meta-value.numeric { direction: ltr; unicode-bidi: isolate; text-align: right; font-size: clamp(0.88rem, 3.7vw, 1rem); }
 
+    .valuation-nature { margin: 0 0 12px; padding: 10px 12px; border-right: 3px solid var(--gold); background: rgba(66,197,65,0.06); border-radius: 8px; color: var(--muted); font-size: 0.86rem; line-height: 1.7; }
     .confidence { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; }
     .confidence.high { background: rgba(37,211,102,0.15); color: var(--green); }
     .confidence.medium { background: rgba(255,193,7,0.15); color: var(--amber); }
@@ -401,12 +402,6 @@
         <div class="v-sub" id="verdictSub"></div>
       </div>
 
-      <div class="estimate-box">
-        <div class="estimate-label" id="estimateLabel">السعر المتوقع</div>
-        <div class="estimate-value" id="estimate">—</div>
-        <div class="estimate-unit" id="estimateUnit">جنيه مصري</div>
-      </div>
-
       <div class="low-confidence-warning" id="confidenceWarning" role="status" aria-live="polite" aria-hidden="true">
         <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
         <span id="confidenceWarningText">العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.</span>
@@ -415,6 +410,13 @@
       <div class="fallback-notice" id="fallbackNotice" role="status" aria-live="polite" aria-hidden="true">
         <i class="fas fa-circle-info" aria-hidden="true"></i>
         <span id="fallbackNoticeText"></span>
+      </div>
+
+      <p class="valuation-nature" id="valuationNature">مؤشر استرشادي من أسعار الإعلانات والبيانات المجمّعة المتاحة — ليس تقييمًا مهنيًا ولا دليلًا على سعر صفقة منجزة. راجع النطاق الفعلي وعدد العينات وتاريخها أدناه.</p>
+      <div class="estimate-box">
+        <div class="estimate-label" id="estimateLabel">مؤشر سعر الطلب الاسترشادي</div>
+        <div class="estimate-value" id="estimate">—</div>
+        <div class="estimate-unit" id="estimateUnit">جنيه مصري</div>
       </div>
 
       <div class="meta-grid">
@@ -519,6 +521,7 @@
 
 </div>
 
+<script src="/assets/js/valuation-evidence.js?v=20261026"></script>
 <script>
 /* ═══ أداة التقييم — سمسار طلبك v7.4 ═══
    ═══ التحديثات عن v7.3:
@@ -1010,7 +1013,7 @@ async function runValuation() {
       throw e;
     }
   } catch (err) {
-    console.warn('Valuation Worker unavailable:', err);
+    console.warn('Valuation Worker unavailable');
     if (!httpStatus) err.noResponse = true; /* الطلب نفسه فشل (الـWorker واقف أو مفيش إنترنت) */
     setStep(1);
     $('inputSection').style.display = 'block';
@@ -1046,6 +1049,13 @@ function showError(msg) {
 }
 
 function showResult(data, inputs, asking) {
+  const evidence = window.NasrValuationEvidence.assess(data, inputs);
+  data.confidence = evidence.confidence;
+  data.fallback_used = evidence.fallback;
+  data.area_found = evidence.actual;
+  data.notes = evidence.note;
+  data.snapshot_notes = evidence.note;
+
   const isRent = inputs.areaType === 'rent';
   $('estimate').textContent = fmt(data.estimate);
   $('estimateLabel').textContent = isRent ? 'الإيجار الاسترشادي' : 'السعر الاسترشادي';
@@ -1098,7 +1108,7 @@ function showResult(data, inputs, asking) {
   /* التدقيق (V02): تقدير مبني على fallback لبيانات المدينة العامة لا يجوز أن يحمل
      ثقة «عالية» موضعية — الثقة هنا للمنطقة العامة لا للعنوان المطلوب. */
   const storedConfidence = ['high', 'medium', 'low'].includes(data.confidence) ? data.confidence : 'unknown';
-  const knownConfidence = usedFallback && storedConfidence === 'high' ? 'medium' : storedConfidence;
+  const knownConfidence = evidence.confidence;
   const confidence = $('confidence');
   confidence.className = 'confidence ' + (usedFallback ? 'low' : knownConfidence);
   confidence.textContent = usedFallback
@@ -1107,12 +1117,12 @@ function showResult(data, inputs, asking) {
       : knownConfidence === 'medium' ? '● متوسطة'
         : knownConfidence === 'low' ? '● منخفضة' : '● غير محددة';
   const cw = $('confidenceWarning');
-  const showCw = usedFallback || knownConfidence === 'low' || knownConfidence === 'unknown';
+  const showCw = evidence.limited || knownConfidence === 'low' || knownConfidence === 'unknown';
   const cwText = $('confidenceWarningText');
   if (cwText) {
     cwText.textContent = showCw && usedFallback
       ? `الثقة محدودة: الأرقام مبنية على بيانات «${areaShown}» العامة لا على «${requestedArea || areaShown}» — لا تمثل سعر إتمام مؤكدًا.`
-      : 'العينة محدودة أو الثقة غير محددة وفق البيانات المتاحة؛ لا يمثل المؤشر سعر إتمام مؤكدًا.';
+      : (evidence.reasons.join('؛ ') || 'الثقة غير محددة وفق البيانات المتاحة') + '؛ ليس تقييمًا مهنيًا ولا سعر صفقة منجزة.';
   }
   cw.classList.toggle('show', showCw);
   cw.setAttribute('aria-hidden', String(!showCw));
@@ -1158,7 +1168,7 @@ function showResult(data, inputs, asking) {
         : data.rent_condition === 'all' ? 'كل الحالات' : '';
     if (rcLabel) srcNote += ` | التأثيث في اللقطة: ${rcLabel}`;
   }
-  const workerNotes = String(data.notes || data.snapshot_notes || '').trim();
+  const workerNotes = evidence.note;
   if (workerNotes) srcNote += ` | ملاحظة: ${workerNotes}`;
   $('srcNote').textContent = srcNote;
 
