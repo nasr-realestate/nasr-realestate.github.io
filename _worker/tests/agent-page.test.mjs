@@ -1,6 +1,8 @@
 // agent.html — the page's inline script under node:vm with a tiny DOM (see _dom-agent.mjs).
-//   T1.1 داكن دايمًا · T1.1b هوية أسود + أخضر الشعار · T1.2 مصادر الصور + noopener · T1.3 سقف history · T1.4 تسمية الأساس · T1.5 هوية الوكيل
-//   + الرجوع من التقييم، زر 💎، الخصوصية (GPS)، والتمرير الذكي.
+//   T1.1 داكن دايمًا · T1.1b هوية أسود + أخضر الشعار · T1.2 مصادر الصور + noopener · T1.3 سقف history (آخر 10 لـGemini) · T1.4 تسمية الأساس · T1.5 هوية المساعد
+//   + الرجوع من التقييم، زر 💎، الخصوصية (ذاكرة الصفحة فقط)، والتمرير الذكي.
+//   2026-10-27: الصفحة بقت «Gemini أولًا» (POST /chat) — الاختبارات اللي كانت بتفترض مسار formState القديم
+//   (أزرار الخدمات الأربعة، شريط التقدم، حفظ المحادثة في sessionStorage) اتعادت كتابتها للعقد الجديد.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
@@ -15,6 +17,11 @@ const fetchOk = (json, calls = [], status = 200) => async (url, init) => {
   return { ok: status === 200, status, json: async () => json };
 };
 async function send(a, text) { a.el("msgInput").value = text; await a.run("sendMsg()"); }
+const CONSENT = { simsar_gemini_consent_v1: "gemini-v1" };
+// رد /chat صالح (نفس شكل الـWorker v10)
+const chatReply = (reply, over = {}) => ({ ok: true, v: 1, reply, intent: "unclear", state: { v: 1, role: null }, changes: [], changeNote: null, summary: [],
+  ask: null, askOptional: false, clarify: null, quickReplies: [], results: null, comparables: null, focus: null, contact: false, notices: [],
+  grounding: { removed: 0, replaced: false }, dataAt: "2026-10-26", provider: { name: "gemini", model: "test-model" }, now: { date: "2026-10-27", time: "12:00", timeZone: "Africa/Cairo" }, ...over });
 const params = href => Object.fromEntries(new URL(href, BASE).searchParams);
 
 // ───────── T1.1: داكن دايمًا ─────────
@@ -120,16 +127,18 @@ test("T1.1b: the agent screen shares the logo's black/green identity without Wha
   assert.doesNotMatch(identity, /wa-glass-card|\.wa-icon/, "the actual WhatsApp CTA retains its official service colours");
 });
 
-test("agent start screen separates property search from owner listings while keeping the four Worker route labels", () => {
-  const source = agentHtml;
-  assert.match(source, /title: "بدور على عقار"/);
-  assert.match(source, /title: "عندي عقار"/);
-  assert.match(source, /send: "🔍 أشتري"/);
-  assert.match(source, /send: "🏠 أستأجر"/);
-  assert.match(source, /send: "💰 أبيع"/);
-  assert.match(source, /send: "🔑 أأجر"/);
-  assert.match(source, /SERVICE_LANES\.forEach/);
-  assert.match(source, /service-lane-cards/);
+test("the conversation is the start screen: one welcome, free typing right away, three optional chips — no service grid, progress bar or uploads", () => {
+  const a = bootAgent();
+  const first = a.messages();
+  assert.equal(first.length, 1, "a single welcome message");
+  assert.match(first[0].innerHTML, /أهلًا! بتدور على عقار، عندك عقار للبيع أو الإيجار، ولا عندك سؤال؟ اكتب براحتك\./);
+  assert.deepEqual(a.el("actionRail").querySelectorAll(".chip").map(b => b.textContent), ["أبحث عن عقار", "أعرض عقاري", "عندي سؤال"]);
+  assert.equal(a.el("msgInput").disabled, false, "free typing is available immediately");
+  assert.match(agentHtml, /<div id="app" class="is-session">/);
+  for (const gone of [/id="homeView"/, /id="serviceGrid"/, /id="progressTrack"/, /id="fileInput"/, /upload-images/, /SERVICE_LANES/, /formState/]) {
+    assert.doesNotMatch(agentHtml, gone, `legacy element removed: ${gone}`);
+  }
+  assert.equal(a.el("privacyOverlay").classList.contains("show"), false, "no modal before the visitor writes anything");
 });
 
 test("agent layout always keeps the header and input dock fixed around the scrollable chat", () => {
@@ -177,31 +186,32 @@ test("messages are HTML-escaped; links stop at the first quote and open with noo
 });
 
 // ───────── T1.3: سقف history ─────────
-test("T1.3: stored history messages are capped at 1000 characters, so one huge paste can't break every later request", async () => {
+test("T1.3: messages are capped at 1000 characters and only the last 10 history entries travel to Gemini — nothing is written to storage", async () => {
   const calls = [];
-  const a = bootAgent({ fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v92" } }, calls) });
+  const a = bootAgent({ local: CONSENT, fetchImpl: fetchOk(chatReply("تمام"), calls) });
   await send(a, "ك".repeat(5000));
-  const mine = a.run("state.history").filter(m => m.role === "user");
-  assert.equal(mine.length, 1);
-  assert.equal(mine[0].message.length, 1000);
-  assert.ok(calls[0].body.history.every(m => m.message.length <= 1000), "the request carries the capped history");
-  assert.ok(JSON.parse(a.sessionStorage.getItem("simsar_wa_v92")).history.every(m => m.message.length <= 1000), "so does the saved session");
+  assert.equal(calls[0].body.message.length, 1000);
+  assert.equal(calls[0].url, "https://royal-snow-ea32.footcai-555.workers.dev/chat");
   for (let i = 0; i < 25; i += 1) await send(a, `رسالة ${i}`);
-  assert.ok(calls.at(-1).body.history.length <= 20, "only the last 20 messages are sent");
+  assert.ok(calls.at(-1).body.history.length <= 10, "only the last 10 messages are sent");
   assert.equal(calls.at(-1).body.message, "رسالة 24");
+  assert.ok(calls.at(-1).body.history.every(m => typeof m.text === "string" && m.text.length <= 1000));
+  assert.equal(a.sessionStorage._map.size, 0, "the conversation is never written to sessionStorage");
+  assert.deepEqual([...a.localStorage._map.keys()], ["simsar_gemini_consent_v1"], "localStorage holds only the consent flag");
 });
 
 // ───────── T1.4: الرجوع من التقييم ─────────
 test("T1.4: coming back from the valuation tool shows the Worker's numbers with the basis label, then cleans the URL", () => {
   const a = bootAgent({ search: RETURN_QS });
   const banner = a.messages().at(-1).innerHTML;
-  assert.match(banner, /💎 رجعت من التقييم/);
+  assert.match(banner, /💎 رجعت من أداة التقييم/);
   assert.match(banner, /📍 المنطقة السادسة • 180 م²/);
   assert.match(banner, /<strong>9,360,000 ج\.م<\/strong>/);
   assert.match(banner, /📊 النطاق \(P25–P75\): 46,000 – 58,000 ج\.م\/م²/);
   assert.match(banner, /📏 سعر المتر \(الوسيط\): 52,000 ج\.م\/م²/);
   assert.match(banner, /🎯 الثقة: عالية \(41 عينة\)/);
-  assert.match(banner, /نكمّل من النقطة اللي وقفنا عندها؟/);
+  assert.match(banner, /اكتب طلبك أو سؤالك وهنكمل\./);
+  assert.match(banner, /مؤشر استرشادي من أداة الموقع — مش تقييم مهني\./);
   assert.equal(a.location.search, "", "the hand-off parameters are removed from the address bar");
   const v = a.run("state.valuationResult");
   assert.deepEqual({ ...v, savedAt: 0 }, { estimate: 9360000, confidence: "high", samples: 41, perMeter: 52000, p25: 46000, p75: 58000, priceBasis: "median_price_m2", area: "المنطقة السادسة", size: 180, areaType: "sale", savedAt: 0 });
@@ -241,66 +251,58 @@ test("T1.4: hostile or broken hand-off parameters are neutralised", () => {
 
 test("the returned valuation is sent to the Worker exactly once, with the next message", async () => {
   const calls = [];
-  const a = bootAgent({ search: RETURN_QS, fetchImpl: fetchOk({ response: "تمام", formState: { _version: "v92" } }, calls) });
+  const a = bootAgent({ search: RETURN_QS, local: CONSENT, fetchImpl: fetchOk(chatReply("تمام"), calls) });
   await send(a, "رجعت");
-  assert.equal(calls[0].body.valuationResult.estimate, 9360000);
-  assert.equal(calls[0].body.valuationResult.priceBasis, "median_price_m2");
+  assert.equal(calls[0].body.valuation.estimate, 9360000);
+  assert.equal(calls[0].body.valuation.priceBasis, "median_price_m2");
   await send(a, "تاني");
-  assert.equal(calls[1].body.valuationResult, null);
+  assert.equal(calls[1].body.valuation, undefined);
 });
 
-test("the chat is restored after the valuation round trip; the GPS pin is never written to storage", () => {
-  const a1 = bootAgent();
-  a1.run(`state.formState = { _version: "v92", active: true, flowType: "owner", type: "sale", stepIndex: 27,
-    data: { location: "شارع س", area: 180, gps: { lat: 30.1, lng: 31.2, address: "secret street" } } };
-    state.history.push({ role: "user", message: "💰 أبيع" });
-    state.valuationCta = { intent: "seller", area: "المنطقة السادسة", size: 180, propertyType: "شقة", areaType: "sale" };
-    renderValuationCta(state.valuationCta); saveState();`);
-  assert.ok(!a1.sessionStorage.getItem("simsar_wa_v92").includes("secret street"), "saveState strips the GPS");
-  // 2026-10-19: زر 💎 اتنقل من مجرى المحادثة للوحة الإجابة الثابتة (متناول الإبهام) — نفس العنصر والنقر
-  a1.el("valuationSlot").querySelector(".valuation-link").dispatch("click");
+test("the valuation round trip keeps only the structured summary (no chat text) and consumes it on return", async () => {
+  const ownerState = { v: 1, role: "owner", operation: "sell", propertyType: "apartment", location: "المنطقة السادسة", area: { value: 180, mode: "exact" }, price: { value: 9500000, mode: "exact", kind: "total" } };
+  const summary = [{ field: "operation", name: "العملية", label: "بيع", removable: false }, { field: "location", name: "المنطقة", label: "المنطقة السادسة", removable: true }];
+  const a1 = bootAgent({ local: CONSENT, fetchImpl: fetchOk(chatReply("تمام، الملخص جاهز.", { state: ownerState, summary })) });
+  await send(a1, "عندي شقة للبيع في المنطقة السادسة 180 متر وطالب 9.5 مليون — رقمي سري جدا");
+  const link = a1.el("valuationSlot").querySelector(".valuation-link");
+  assert.ok(link, "the 💎 link appears once the owner's core details are known");
+  link.dispatch("click");
   const saved = a1.sessionStorage.getItem("simsar_return_session");
-  assert.ok(saved && !saved.includes("secret street") && !saved.includes('"gps"'), "saveReturnContext strips the GPS");
+  assert.ok(saved);
+  assert.doesNotMatch(saved, /رقمي سري|عندي شقة/, "no chat text is stored for the round trip");
+  assert.equal(JSON.parse(saved).chat.price.value, 9500000);
 
   const a2 = bootAgent({ search: RETURN_QS, session: { simsar_return_session: saved } });
-  assert.equal(a2.run("state.formState.flowType"), "owner");
-  assert.equal(a2.run("state.formState.stepIndex"), 27);
-  assert.ok(a2.run("state.history.length") >= 2);
-  assert.ok(a2.el("valuationSlot").querySelector(".valuation-link"), "the 💎 button is back");
+  assert.equal(a2.run("state.chat.role"), "owner");
+  assert.equal(a2.run("state.history.length"), 0, "the transcript is not revived");
+  assert.equal(a2.el("summaryBar").hidden, false, "the editable summary is back");
+  assert.match(a2.el("summaryLine").textContent, /بيع · المنطقة السادسة/);
   assert.equal(a2.sessionStorage.getItem("simsar_return_session"), null, "the saved context is consumed");
   assert.equal(a2.run("state.valuationResult.estimate"), 9360000);
-  assert.equal(a2.run("state.formState._version"), "v92");
 });
 
-test("stored sessions: a stale valuation (24h) and an old form version are dropped", () => {
-  const stored = (over, savedAt) => JSON.stringify({ formState: { _version: "v92" }, history: [{ role: "assistant", message: "أهلاً" }], valuationResult: { estimate: 9360000, savedAt }, ...over });
-  const stale = bootAgent({ session: { simsar_wa_v92: stored({}, Date.now() - 25 * 3600 * 1000) } });
-  assert.equal(stale.run("state.valuationResult"), null);
-  const fresh = bootAgent({ session: { simsar_wa_v92: stored({}, Date.now() - 3600 * 1000) } });
-  assert.equal(fresh.run("state.valuationResult.estimate"), 9360000);
-  const old = bootAgent({ session: { simsar_wa_v92: stored({ formState: { _version: "v80" } }, Date.now()) } });
-  assert.equal(old.run("state.valuationResult"), null);
-  assert.match(old.messages()[0].innerHTML, /أنا وكيل طارق طنطاوي الذكي/, "an old form version starts a clean conversation");
+test("legacy stored transcripts (simsar_wa_v92) are deleted on load and never revived", () => {
+  const stored = JSON.stringify({ formState: { _version: "v92" }, history: [{ role: "user", message: "رسالة قديمة سرية" }] });
+  const a = bootAgent({ session: { simsar_wa_v92: stored, simsar_agent_mode: "cloud" } });
+  assert.equal(a.sessionStorage.getItem("simsar_wa_v92"), null);
+  assert.equal(a.sessionStorage.getItem("simsar_agent_mode"), null);
+  assert.ok(a.messages().every(m => !/رسالة قديمة سرية/.test(m.innerHTML)));
+  assert.match(a.messages()[0].innerHTML, /أهلًا! بتدور على عقار/);
 });
 
 // ───────── T1.5: الهوية ─────────
-test("T1.5: the page says it is the agent, not Tarek — greeting, header status and the typing reset", () => {
-  assert.match(agentHtml, /<span id="statusText">وكيل ذكي • متصل الآن<\/span>/);
+test("T1.5: the page says it is an assistant powered by Gemini, not Tarek — header status, welcome and the typing reset", () => {
+  assert.match(agentHtml, /<span id="statusText">مساعد ذكي بـGemini • جاهز<\/span>/);
   assert.doesNotMatch(agentHtml, /أنا طارق|معاك طارق/, "no remaining line where the bot claims to be the person");
+  assert.match(agentHtml, /المساعد الذكي في الصفحة دي مش طارق نفسه/);
   const a = bootAgent();
-  const greeting = a.messages()[0].innerHTML;
-  assert.match(greeting, /أنا وكيل طارق طنطاوي الذكي — سمسار مدينة نصر\./);
-  assert.match(greeting, /متخصص منذ 2014/);
-  assert.doesNotMatch(greeting, /15 سنة/, "the welcome does not overstate the experience period");
-  assert.doesNotMatch(greeting, /أنا طارق طنطاوي/);
+  assert.doesNotMatch(a.messages()[0].innerHTML, /أنا طارق/);
   assert.match(agentHtml, /<span class="ag-stat-num">17M\+<\/span>/, "Google Maps profile modal shows the updated 17M+ views claim");
-  assert.equal(a.run("STATUS_ONLINE"), "وكيل ذكي • متصل الآن");
+  assert.equal(a.run("STATUS_ONLINE"), "مساعد ذكي بـGemini • جاهز");
   a.run("setTyping(true)");
-  assert.equal(a.el("statusText").textContent, "يكتب...");
+  assert.equal(a.el("statusText").textContent, "Gemini بيكتب…");
   a.run("setTyping(false)");
-  assert.equal(a.el("statusText").textContent, "وكيل ذكي • متصل الآن", "after typing the header goes back to the disclosure text");
-  // 2026-10-19: خيارات الوكيل بقت في شريط الإجابة فوق الكيبورد (مش جوه مجرى المحادثة)
-  assert.deepEqual(a.el("actionRail").querySelectorAll(".chip").map(b => b.textContent), ["🔍 أشتري", "🏠 أستأجر", "💰 أبيع", "🔑 أأجر"]);
+  assert.equal(a.el("statusText").textContent, "مساعد ذكي بـGemini • جاهز", "after typing the header goes back to the disclosure text");
   assert.equal(a.chatArea.querySelectorAll(".chip").length, 0, "quick replies never live inside the scroll area");
 });
 
@@ -337,74 +339,71 @@ test("the 💎 link carries the owner's data to the tool: slugs when known, free
   assert.equal("deal" in params(href({ ...SELLER_CTA, areaType: "bogus" })), false);
 });
 
-test("the 💎 button is one link, replaced on every reply and removed when the Worker sends no CTA", async () => {
-  const calls = [];
-  let reply = { response: "قيّم عقارك", formState: { _version: "v92" }, valuationCta: SELLER_CTA, options: ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"] };
-  const a = bootAgent({ fetchImpl: async (u, i) => fetchOk(reply, calls)(u, i) });
+test("the 💎 button is one link, shown only once an owner's core details are known, and removed otherwise", async () => {
+  const owner = { v: 1, role: "owner", operation: "sell", propertyType: "apartment", location: "المنطقة السادسة", area: { value: 180, mode: "exact" }, price: { value: 9500000, mode: "exact", kind: "total" }, floor: "ثالث" };
+  let reply = chatReply("تمام.", { state: owner, summary: [{ field: "operation", name: "العملية", label: "بيع" }] });
+  const a = bootAgent({ local: CONSENT, fetchImpl: async () => ({ ok: true, status: 200, json: async () => reply }) });
   await send(a, "كمّل");
   let links = a.el("valuationSlot").querySelectorAll(".valuation-link");
   assert.equal(links.length, 1);
   assert.equal(links[0].textContent, "💎 قيّم عقارك");
-  assert.equal(links[0].href, a.run(`buildValuationHref(${JSON.stringify(SELLER_CTA)})`));
-  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-cta-rack").length, 1);
-  assert.deepEqual(a.el("actionRail").querySelectorAll(".chip").map(b => b.textContent), ["تخطي السؤال ⏭", "⬅️ رجوع", "إلغاء التسجيل ✕"]);
-  assert.equal(a.run("state.valuationCta.intent"), "seller");
-
-  await send(a, "تاني"); // نفس الرد: مفيش تكرار
-  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 1);
-
-  reply = { response: "اسم حضرتك إيه؟", formState: { _version: "v92" } };
-  await send(a, "تخطي السؤال ⏭");
-  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 0, "the button disappears once the gift step is over");
-  assert.equal(a.run("state.valuationCta"), null);
+  assert.deepEqual(params(links[0].href), { from: "agent", journey: "seller", area: "6th-district", size: "180", type: "apartment", deal: "sale", floor: "3", price: "9500000" });
+  await send(a, "تاني");
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 1, "no duplicates");
+  reply = chatReply("تمام.", { state: { v: 1, role: "seeker", operation: "buy" } });
+  await send(a, "لا أنا بدور");
+  assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 0, "seekers get no 💎 link");
   a.run("renderValuationCta('x'); renderValuationCta(null)");
   assert.equal(a.el("valuationSlot").querySelectorAll(".valuation-link").length, 0);
 });
 
-test("a failed or unreachable Worker shows a clear message, preserves the draft, and unlocks the input", async () => {
-  const bad = bootAgent({ fetchImpl: fetchOk({}, [], 500) });
+test("a failed or unreachable Worker shows a clear message, preserves the draft, and unlocks the input — never a fabricated reply", async () => {
+  const bad = bootAgent({ local: CONSENT, fetchImpl: fetchOk({}, [], 500) });
   await send(bad, "مرحبا");
-  assert.match(bad.messages().at(-1).innerHTML, /حصل خطأ مؤقت\. جرّب تاني\./);
+  assert.match(bad.messages().at(-1).innerHTML, /حصل خطأ مؤقت \(HTTP 500\)/);
   assert.equal(bad.el("msgInput").value, "مرحبا");
-  assert.equal(bad.run("state.history.filter(m => m.role === 'user').length"), 0, "failed sends don't pollute history");
+  assert.equal(bad.run("state.history.length"), 0, "failed sends don't pollute history");
   assert.equal(bad.run("isSending"), false);
   assert.equal(bad.el("sendBtn").disabled, false);
+  assert.equal(bad.el("typingBubble").classList.contains("active"), false, "the typing indicator never sticks");
 
   let offlineAttempts = 0;
-  const offline = bootAgent({ onLine: false, fetchImpl: async () => { offlineAttempts += 1; throw new TypeError("offline"); } });
+  const offline = bootAgent({ local: CONSENT, onLine: false, fetchImpl: async () => { offlineAttempts += 1; throw new TypeError("offline"); } });
   await send(offline, "مرحبا");
   assert.equal(offlineAttempts, 1, "don't retry when the browser reports offline");
   assert.match(offline.messages().at(-1).innerHTML, /الإنترنت عندك مفصول/);
   assert.equal(offline.el("msgInput").value, "مرحبا");
 
-  const limited = bootAgent({ fetchImpl: fetchOk({}, [], 429) });
+  const limited = bootAgent({ local: CONSENT, fetchImpl: fetchOk({}, [], 429) });
   await send(limited, "مرحبا");
-  assert.match(limited.messages().at(-1).innerHTML, /وصلت رسائل كتير بسرعة/);
+  assert.match(limited.messages().at(-1).innerHTML, /بتبعت رسايل كتير ورا بعض/);
   assert.equal(limited.el("msgInput").value, "مرحبا");
 
-  const down = bootAgent({ runTimers: true, fetchImpl: async () => { throw new TypeError("offline"); } });
+  const down = bootAgent({ local: CONSENT, runTimers: true, fetchImpl: async () => { throw new TypeError("offline"); } });
   await send(down, "مرحبا");
-  assert.match(down.messages().at(-1).innerHTML, /تعذّر الاتصال بالخادم/);
+  assert.match(down.messages().at(-1).innerHTML, /تعذّر الاتصال بخادم المساعد/);
   assert.equal(down.run("isSending"), false);
+  assert.equal(down.run("isLocalMode()"), false, "no silent switch to the local search");
 });
 
 test("a transient Worker network failure is retried once with the same payload", async () => {
   let attempts = 0;
   const bodies = [];
   const recovered = bootAgent({
+    local: CONSENT,
     runTimers: true,
     fetchImpl: async (_url, init) => {
       attempts += 1;
       bodies.push(JSON.parse(init.body));
       if (attempts === 1) throw new TypeError("temporary network failure");
-      return { ok: true, status: 200, json: async () => ({ response: "تمام", formState: { _version: "v92" } }) };
+      return { ok: true, status: 200, json: async () => chatReply("تمام") };
     },
   });
   await send(recovered, "عايز أشتري");
   assert.equal(attempts, 2);
   assert.deepEqual(bodies[0], bodies[1], "the retry must reuse the original message and conversation state");
   assert.equal(recovered.run("state.history.filter(m => m.role === 'user').length"), 1);
-  assert.match(recovered.messages().at(-1).innerHTML, /تمام/);
+  assert.ok(recovered.messages().some(m => /تمام/.test(m.innerHTML) && m._classes.has("msg-ai")));
   assert.equal(recovered.el("msgInput").value, "");
 });
 
@@ -425,6 +424,7 @@ test("a Worker request that hangs is aborted and the typed message remains avail
   }
   let attempts = 0;
   const slow = bootAgent({
+    local: CONSENT,
     runTimers: true,
     AbortControllerImpl: TestAbortController,
     fetchImpl: (_url, init) => {
@@ -441,6 +441,7 @@ test("a Worker request that hangs is aborted and the typed message remains avail
   assert.match(slow.messages().at(-1).innerHTML, /الرد اتأخر عن المعتاد/);
   assert.equal(slow.el("msgInput").value, "عايز أشتري");
   assert.equal(slow.run("isSending"), false);
+  assert.equal(slow.el("typingBubble").classList.contains("active"), false);
 });
 
 // ───────── التمرير الذكي ─────────

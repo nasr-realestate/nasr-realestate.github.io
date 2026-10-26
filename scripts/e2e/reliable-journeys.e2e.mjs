@@ -9,7 +9,8 @@
  * Optional: CHROME_ARGS_JSON='["--no-sandbox", ...]', SCREENSHOT_DIR=/tmp/shots.
  *
  * Safety: every request that is not to BASE is aborted, except the valuation Worker, which is
- * answered by a local mock (no network). Any POST from the agent page fails the test. Input is
+ * answered by a local mock (no network). The agent part declines the Gemini consent and uses the explicit
+ * local search, so any POST from the agent page fails the test (Gemini UI: scripts/e2e/gemini-agent.e2e.mjs). Input is
  * synthetic; nothing is submitted, stored on a server, or sent to WhatsApp.
  */
 import { createRequire } from 'node:module';
@@ -95,21 +96,30 @@ async function say(page, text, expect) {
 for (const [width, height] of VIEWPORTS) {
   const tag = `${width}px`;
 
-  // ── 1) Agent: local mode by default, owner draft, search results, scope, no POST ──
+  // ── 1) Agent: Gemini-first page; the local search is an explicit choice (decline consent), owner draft, results, scope, no POST ──
   {
     const { page, log } = await openPage(width, height);
     await page.goto(`${BASE}/agent.html`, { waitUntil: 'networkidle0' });
     const boot = await page.evaluate(() => ({
       local: document.getElementById('localRequestMode').checked,
       dir: getComputedStyle(document.body).direction,
-      bar: (() => { const r = document.getElementById('requestModeBar').getBoundingClientRect(); return r.width > 0 && r.height >= 44; })(),
+      barHidden: getComputedStyle(document.getElementById('requestModeBar')).display === 'none',
     }));
-    check(`${tag} agent: local mode is the default, RTL, toggle has a 44px target`, boot.local && boot.dir === 'rtl' && boot.bar, JSON.stringify(boot));
-    const owner = await say(page, 'عندي شقة للبيع في عباس العقاد 180 متر بسعر 8 ملايين', /مسودة محلية فقط/);
+    check(`${tag} agent: Gemini-first — local search is not silently on, RTL`, !boot.local && boot.barHidden && boot.dir === 'rtl', JSON.stringify(boot));
+    await page.click('#msgInput');
+    await page.type('#msgInput', 'عندي شقة للبيع في عباس العقاد 180 متر بسعر 8 ملايين');
+    await page.click('#sendBtn');
+    await page.waitForFunction(() => document.getElementById('privacyOverlay').classList.contains('show'), { timeout: 5000 });
+    check(`${tag} agent: consent is asked before any message leaves the page`, log.posts.length === 0);
+    await page.click('#consentLocal');
+    await page.waitForFunction(() => /مسودة محلية فقط/.test(document.getElementById('chatArea').textContent), { timeout: 15000 });
+    const owner = await page.$$eval('#chatArea .msg-bot', (n) => n.map((b) => b.textContent).join('\n'));
+    const bar = await page.evaluate(() => { const r = document.getElementById('requestModeBar').getBoundingClientRect(); return { on: document.getElementById('localRequestMode').checked, h: r.height }; });
+    check(`${tag} agent: declining consent opens the local search explicitly; its toggle has a 44px target`, bar.on && bar.h >= 44, JSON.stringify(bar));
     check(`${tag} agent: owner price/area captured, no price re-question`, /السعر المطلوب: بالضبط 8 مليون/.test(owner) && !/ما السعر المطلوب؟/.test(owner));
     const review = await say(page, 'راجع المسودة', /لم يُرسل ولم يُحفظ/);
     check(`${tag} agent: review summary before any future submission`, /add-your-property/.test(review));
-    await page.click('#localRequestMode'); await page.click('#localRequestMode'); // a fresh local draft
+    await page.evaluate(() => resetChat()); // a fresh local draft (local mode stays on)
     const search = await say(page, 'بدور على شقة للإيجار في مدينة نصر أقل من 20 ألف جنيه شهرياً', /المطابقة لكل القيود|لا توجد عروض منشورة/);
     check(`${tag} agent: understood summary shown before results`, /فهمنا: باحث عن عقار — شقة — إيجار شهري — الميزانية: أقل من 20 ألف شهريًا/.test(search));
     const links = await page.$$eval('#chatArea .msg-bot a', (as) => as.map((a) => new URL(a.href).pathname));

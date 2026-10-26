@@ -71,8 +71,9 @@ jobs:
       KV_TITLE: nasr-push-subs
       KV_BINDING: PUSH_SUBS
       # بصمة كود الـWorker المتوقع — تُحدَّث عمدًا عند أي تغيير على _worker/worker.js
-      # تحديث عمدي 2026-10-14: v9.3-W (فصل كيانَي جوجل + إصلاحات v9.3) — راجع _diag/last-publish-sync-audit-2026-10-14.md
-      EXPECTED_WORKER_SHA256: f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
+      # تحديث عمدي 2026-10-27: v10.0-chat (مسار POST /chat — Gemini أولًا بموافقة، والمسار القديم كما هو)
+      #   راجع _diag/gemini-first-agent-2026-10-27.md · السابق: v9.3-W f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
+      EXPECTED_WORKER_SHA256: 65f59cb57d40268088a4131e4f37b59fd77e51fd6b8ceec02696f2842734118c
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -280,7 +281,7 @@ jobs:
               keep_bindings: $keep,
               bindings: ([ $snap.result.bindings[]? | select((.type | test("^secret")) | not) | select((.type == "kv_namespace" and .name == $kvc) | not) ]
                          + [{ type: "kv_namespace", name: $kvc, namespace_id: $kvid }]),
-              annotations: { "workers/message": "agent v9.3-W — entity split + Arabic word boundaries/perf (2026-10-14)", "workers/tag": "agent-v9.3" }
+              annotations: { "workers/message": "agent v10.0-chat — Gemini-first POST /chat (stateless, consent-gated); legacy POST / unchanged", "workers/tag": "agent-v10.0" }
             }' > meta.json || stop "STOP — تعذّر بناء بيانات الرفع."
           jq -c '{main_module, compatibility_date, compatibility_flags, keep_bindings, bindings: [.bindings[] | {type, name}]}' meta.json
           HTTP=$(curl -sS -m 120 -o up.json -w '%{http_code}' -X PUT "$API/accounts/$ACC/workers/scripts/$SCRIPT" \
@@ -333,6 +334,11 @@ jobs:
             echo "config publicKey matches generated key: $MATCH"
           fi
 
+          # v10.0: المسار الجديد موجود؟ — OPTIONS + POST بلا موافقة ⇒ 412 قبل أي استدعاء لـGemini (بلا نص محادثة)
+          CHAT_OPT=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/chat" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") || CHAT_OPT="000"
+          CHAT_GATE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary '{"message":"probe"}') || CHAT_GATE="000"
+          echo "OPTIONS /chat → $CHAT_OPT (204) | POST /chat without consent → $CHAT_GATE (412 = consent gate live, Gemini not called)"
+
           say "6b) synthetic single-subscription smoke (no real user involved)"
           SMOKE_EP="https://push-service-smoke.invalid/fake-endpoint-$RID"
           SUB_PAYLOAD=$(node -e '
@@ -357,10 +363,10 @@ jobs:
           FAILS=$(echo "$SEND_RES" | jq -r '.failed // 0' 2>/dev/null) || FAILS="0"
           RM=$(echo "$SEND_RES" | jq -r '.removed // 0' 2>/dev/null) || RM="0"
           KV_BOUND=$(echo "$AFTER_B" | grep -c 'kv_namespace/PUSH_SUBS' || true)
-          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ]; then
-            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
+          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ] && [ "$CHAT_GATE" = "412" ]; then
+            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat بوابة الموافقة تعمل (412) · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
           else
-            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND). لا rollback تلقائي."
+            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND, chat_gate=$CHAT_GATE). لا rollback تلقائي."
           fi
           echo "VERDICT: $VERDICT"
           echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"

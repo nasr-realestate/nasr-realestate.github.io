@@ -1,13 +1,14 @@
-// هدية التقييم 💎 من أول خطوة لحد رسالة الواتساب — الـWorkers الاتنين حقيقيين (D1 وهمي) وصفحتي agent.html و tools/valuation.html
+// هدية التقييم 💎 — الـWorkers الاتنين حقيقيين (D1 وهمي) وصفحتي agent.html و tools/valuation.html
 // بيشتغلوا بنفس الـscripts بتاعتهم تحت node:vm:
-//   Worker الوكيل → زر 💎 (agent.html) → صفحة التقييم → Worker التقييم → رابط الرجوع → agent.html → Worker الوكيل
+//   • خطوة الهدية في المسار القديم POST / (formState) — باقي في الـWorker للتوافق.
+//   • الرحلة الكاملة للصفحة الجديدة: /chat (Gemini وهمي) → زر 💎 → صفحة التقييم → Worker التقييم → رابط الرجوع → /chat
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import agentWorker from "../worker.js";
 import valuationWorker from "../valuation-worker.js";
 import { makeDb } from "./_fixtures.mjs";
 import {
-  ADDRESS, GPS, ORIGIN, agentPost, driveOwnerToGift, finishOwnerFlow, gemini, installFetchMock, nextIp, resetGemini, restoreFetch,
+  ADDRESS, GPS, ORIGIN, agentPost, driveOwnerToGift, finishOwnerFlow, gemini, installFetchMock, nextIp, resetGemini, restoreFetch, setGeminiReply,
 } from "./_agent-harness.mjs";
 import { bootAgent } from "./_dom-agent.mjs";
 import { createPageContext, waitFor } from "./_dom-page.mjs";
@@ -121,44 +122,63 @@ test("skipping the gift leaves the lead exactly as before: no 💎 section, no G
   assert.match(done.json.waMessage, /9,500,000/);
 });
 
-// ───────── الرحلة كاملة ─────────
-
-test("end to end: Worker → 💎 button → valuation page → valuation Worker → back link → agent → announcement → WhatsApp lead", async () => {
-  // ١) الوكيل بيوصّل المالك لخطوة الهدية (ومعاه دبوس الخريطة)
-  const gift = await driveOwnerToGift({ withGps: true });
-  const cta = gift.json.valuationCta;
-
-  // ٢) agent.html بيستقبل نفس الرد (من غير ما نألّف ردود): بيرسم الزر ويحفظ الجلسة من غير الـGPS
-  const agentBefore = bootAgent({ runTimers: true, fetchImpl: async () => new Response(JSON.stringify(gift.json), { status: 200 }) });
-  await send(agentBefore, "لا");
-  const button = agentBefore.el("valuationSlot").querySelector(".valuation-link");
-  assert.ok(button, "the 💎 button is on screen");
-  assert.equal(button.href, agentBefore.run(`buildValuationHref(${JSON.stringify(cta)})`));
-  button.dispatch("click");
-  const savedSession = agentBefore.sessionStorage.getItem("simsar_return_session");
-  assert.ok(savedSession, "the chat is saved so the user can come back to it");
-  for (const secret of [GPS.address, "30.06263", "31.32195"]) {
-    assert.equal(savedSession.includes(secret), false, `${secret} is never stored`);
-    assert.equal(agentBefore.sessionStorage.getItem("simsar_wa_v92").includes(secret), false);
-  }
-
-  // ٣) صفحة التقييم: بتفتح من الزر، بتعرف المنطقة من العنوان المكتوب، وبتنادي Worker التقييم الحقيقي مرة واحدة
-  const posts = [];
-  const valuationEnv = { DB: makeDb() };
-  const valuationPage = createPageContext({
+// ───────── الرحلة كاملة (2026-10-27: الصفحة بقت Gemini أولًا عبر POST /chat) ─────────
+// خطوة الهدية فوق بتختبر المسار القديم POST / (باقي في الـWorker للتوافق). الرحلة دي بتختبر الصفحة الجديدة:
+//   agent.html ⇄ Worker الحقيقي (/chat، Gemini وهمي) → زر 💎 → صفحة التقييم → Worker التقييم → رابط الرجوع → agent.html → /chat
+const CONSENT = { simsar_gemini_consent_v1: "gemini-v1" };
+const chatEnv = { GEMINI_API_KEY: "test-key" };
+const geminiJson = (reply, patch = {}) => setGeminiReply(JSON.stringify({ intent: "offer_sell", needs_clarification: false, patch, reply }));
+function chatFetch(calls) {
+  return async (url, init) => {
+    assert.equal(String(url), "https://royal-snow-ea32.footcai-555.workers.dev/chat", "the page talks to /chat only");
+    calls.push(JSON.parse(init.body));
+    return agentWorker.fetch(new Request("https://agent.test/chat", {
+      method: "POST", headers: { "Content-Type": "application/json", Origin: ORIGIN, "CF-Connecting-IP": nextIp() }, body: init.body,
+    }), chatEnv);
+  };
+}
+function valuationPageFor(href, posts) {
+  const page = createPageContext({
     fetchImpl: async (url, init = {}) => {
       const u = String(url);
       if (init.method === "POST") posts.push(JSON.parse(init.body));
       if (u.startsWith("https://noisy-bush-fd84.footcai-555.workers.dev/")) {
-        return valuationWorker.fetch(new Request(u, { method: init.method || "GET", headers: init.headers, body: init.body }), valuationEnv);
+        return valuationWorker.fetch(new Request(u, { method: init.method || "GET", headers: init.headers, body: init.body }), { DB: makeDb() });
       }
       return new Response(JSON.stringify({ properties: [] }), { status: 200 });
     },
   });
-  valuationPage.window.location.search = new URL(button.href, BASE).search;
+  page.window.location.search = new URL(href, BASE).search;
+  return page;
+}
+
+test("end to end: /chat → 💎 button → valuation page → valuation Worker → back link → agent → the next Gemini turn carries the numbers once", async () => {
+  // ١) المالك بيكتب بحرية؛ الـWorker الحقيقي بيبني الحالة، وزر 💎 بيظهر لما التفاصيل الأساسية تكتمل
+  const calls = [];
+  const agentBefore = bootAgent({ runTimers: true, local: CONSENT, fetchImpl: chatFetch(calls) });
+  geminiJson("تمام، شقة 180 متر في المنطقة السادسة وطالب فيها 9.5 مليون. فيها كام أوضة؟",
+    { role: "owner", operation: "sell", property_type: "apartment", location: "المنطقة السادسة", area_value: 180, price_value: 9500000, floor: "الدور التالت" });
+  await send(agentBefore, "عندي شقة للبيع في المنطقة السادسة مساحتها 180 متر في الدور التالت وطالب 9.5 مليون");
+  assert.equal(calls.length, 1);
+  assert.equal(agentBefore.run("state.chat.price.value"), 9500000);
+  const button = agentBefore.el("valuationSlot").querySelector(".valuation-link");
+  assert.ok(button, "the 💎 button is on screen");
+  assert.deepEqual(Object.fromEntries(new URL(button.href, BASE).searchParams), {
+    from: "agent", journey: "seller", area: "6th-district", size: "180", type: "apartment", deal: "sale", floor: "3", price: "9500000",
+  });
+  assert.ok(agentBefore.el("waWrapper").classList.contains("show"), "an explicit WhatsApp action is offered");
+  assert.match(decodeURIComponent(agentBefore.el("waBtn").href), /عندي عقار: بيع · شقة · المنطقة السادسة · مطلوب 9\.5 مليون · 180م/);
+  button.dispatch("click");
+  const savedSession = agentBefore.sessionStorage.getItem("simsar_return_session");
+  assert.ok(savedSession, "the structured summary is kept for the round trip");
+  assert.doesNotMatch(savedSession, /عندي شقة للبيع|فيها كام أوضة/, "no chat text is stored");
+
+  // ٢) صفحة التقييم: بتفتح من الزر، وبتنادي Worker التقييم الحقيقي مرة واحدة
+  const posts = [];
+  const valuationPage = valuationPageFor(button.href, posts);
   await valuationPage.boot();
   await waitFor(() => valuationPage.el("result").classList.contains("show"), { label: "valuation result" });
-  assert.equal(valuationPage.el("area").value, "المنطقة السادسة", "the district is read out of the typed address");
+  assert.equal(valuationPage.el("area").value, "المنطقة السادسة");
   assert.equal(valuationPage.el("size").value, "180");
   assert.equal(valuationPage.el("propertyType").value, "شقة");
   assert.equal(valuationPage.el("floor").value, "ثالث");
@@ -166,81 +186,45 @@ test("end to end: Worker → 💎 button → valuation page → valuation Worker
   assert.equal(posts.length, 1);
   assert.deepEqual(posts[0], { area: "المنطقة السادسة", areaType: "sale", propertyType: "شقة", size: 180, finishing: "سوبر لوكس", floor: "ثالث", age: "medium" });
   assert.equal(valuationPage.el("estimate").textContent, "9,360,000");
-  assert.equal(valuationPage.el("fallbackNotice").classList.contains("show"), false);
   const backHref = valuationPage.el("backToAgentBtn").href;
-  assert.equal(valuationPage.el("backToAgentBtn").style.display, "flex");
 
-  // ٤) رجوع للوكيل: البانر بنفس أرقام الـWorker، والمحادثة متكمّلة من نفس الخطوة
-  const calls = [];
-  const agentAfter = bootAgent({
-    runTimers: true,
-    search: new URL(backHref, BASE).search,
-    session: { simsar_return_session: savedSession },
-    fetchImpl: async (url, init) => {
-      calls.push(JSON.parse(init.body));
-      return agentWorker.fetch(new Request("https://agent.test/", {
-        method: "POST", headers: { "Content-Type": "application/json", Origin: ORIGIN, "CF-Connecting-IP": nextIp() }, body: init.body,
-      }), { GEMINI_API_KEY: "test-key" });
-    },
-  });
+  // ٣) رجوع: البانر بأرقام الـWorker، والملخص المنظم راجع (من غير نص المحادثة)
+  const agentAfter = bootAgent({ runTimers: true, local: CONSENT, search: new URL(backHref, BASE).search, session: { simsar_return_session: savedSession }, fetchImpl: chatFetch(calls) });
   const banner = agentAfter.messages().at(-1).innerHTML;
   assert.match(banner, /<strong>9,360,000 ج\.م<\/strong>/);
   assert.match(banner, /📍 المنطقة السادسة • 180 م²/);
   assert.match(banner, /📊 النطاق \(P25–P75\): 46,000 – 58,000 ج\.م\/م²/);
   assert.match(banner, /📏 سعر المتر \(الوسيط\): 52,000/);
   assert.match(banner, /🎯 الثقة: عالية \(41 عينة\)/);
-  assert.equal(agentAfter.run("state.formState.stepIndex"), gift.json.formState.stepIndex);
+  assert.equal(agentAfter.run("state.chat.role"), "owner");
+  assert.equal(agentAfter.sessionStorage.getItem("simsar_return_session"), null, "the round-trip context is consumed");
 
-  // ٥) أول رسالة بعد الرجوع: الـWorker بيعلن التقييم مرة واحدة وبعدين بيكمّل بالسؤال التالي
+  // ٤) أول رسالة بعد الرجوع: التقييم بيتبعت مرة واحدة كأرقام، وGemini بيشوفه، والرد بيعدّي فحص الأرقام
   resetGemini();
-  await send(agentAfter, SKIP);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].valuationResult.estimate, 9360000);
-  const announcement = lastBotText(agentAfter);
-  assert.match(announcement, /تمام، شفت نتيجة التقييم 👌/);
-  assert.match(announcement, /💰 السعر التقديري: 9,360,000 ج\.م/);
-  assert.match(announcement, /📊 النطاق الأساسي: 8,280,000 – 10,440,000 ج\.م/);
-  assert.match(announcement, /🟢 عينة قوية — مؤشر موثوق نسبيًا/);
-  assert.match(announcement, /اسم حضرتك إيه؟/);
-  assert.equal(agentAfter.el("valuationSlot").querySelectorAll(".valuation-link").length, 0, "the button is gone once the step is done");
-  assert.equal(agentAfter.sessionStorage.getItem("simsar_return_session"), null);
-
-  // ٦) باقي التسجيل: الاسم والرقم والصور — واللي يتبعت لطارق فيه القسم الموسوم بنفس الأرقام
-  await send(agentAfter, "أحمد");
-  await send(agentAfter, "01512345678");
-  assert.equal(calls.at(-1).valuationResult, null, "the valuation is not re-sent after the first message");
-  await send(agentAfter, "⏭ تخطي (بدون صور)");
-  const wa = agentAfter.run("state.waMessage");
-  assert.match(wa, SECTION);
-  assert.match(wa, /💰 السعر التقديري: 9,360,000 ج\.م/);
-  assert.match(wa, /📏 سعر المتر: 52,000 ج\.م/);
-  assert.match(wa, /📊 نطاق المتر \(P25–P75\): 46,000 – 58,000 ج\.م/);
-  assert.match(wa, /🧪 العينات: 41/);
-  assert.match(wa, /9,500,000/, "the owner's own asking price stays in the property details");
-  for (const secret of ["30.06263", "31.32195", "Ibrahim Nawara"]) assert.equal(wa.includes(secret), false, "no GPS text in the lead");
-  assert.equal(gemini.length, 0, "the model is never involved in showing the valuation");
-  assert.ok(agentAfter.run("state.whatsappUrl").startsWith("https://wa.me/"));
+  geminiJson("المؤشر الاسترشادي 9.36 مليون، وسعرك المطلوب 9.5 مليون قريب منه. تحب نكمل بعدد الأوض؟");
+  await send(agentAfter, "تمام، إيه رأيك في السعر؟");
+  assert.equal(calls.at(-1).valuation.estimate, 9360000);
+  assert.match(gemini.at(-1).system, /"estimate":9360000/);
+  assert.ok(agentAfter.messages().some(m => m._classes.has("msg-ai") && /9\.36 مليون/.test(m.innerHTML)));
+  await send(agentAfter, "3 غرف");
+  assert.equal(calls.at(-1).valuation, undefined, "the valuation is not re-sent after the first message");
+  assert.equal(gemini.length, 2, "one Gemini call per message");
 });
 
 test("end to end (rent): a furnished-rent owner gets the furnished snapshot, labelled as rent per month", async () => {
-  const gift = await driveOwnerToGift({ rent: true, furnished: true, withGps: false, locationMessage: "المنطقة السادسة شارع عباس العقاد" });
-  const agentBefore = bootAgent({ runTimers: true, fetchImpl: async () => new Response(JSON.stringify(gift.json), { status: 200 }) });
-  await send(agentBefore, "لا");
+  const calls = [];
+  const agentBefore = bootAgent({ runTimers: true, local: CONSENT, fetchImpl: chatFetch(calls) });
+  setGeminiReply(JSON.stringify({ intent: "offer_lease", needs_clarification: false, reply: "تمام، شقة مفروشة 180 متر للإيجار بـ 9000 في الشهر. فيها كام أوضة؟",
+    patch: { role: "owner", operation: "lease", property_type: "apartment", location: "المنطقة السادسة", area_value: 180, price_value: 9000, furnished: "furnished", floor: "الدور التالت" } }));
+  await send(agentBefore, "عندي شقة مفروشة للإيجار في المنطقة السادسة 180 متر في الدور التالت وطالب 9000 جنيه في الشهر");
   const button = agentBefore.el("valuationSlot").querySelector(".valuation-link");
   assert.deepEqual(Object.fromEntries(new URL(button.href, BASE).searchParams), {
     from: "agent", journey: "seller", area: "6th-district", size: "180", type: "apartment", deal: "rent", furnished: "yes", floor: "3", price: "9000",
   });
+  button.dispatch("click");
+  const saved = agentBefore.sessionStorage.getItem("simsar_return_session");
   const posts = [];
-  const page = createPageContext({
-    fetchImpl: async (url, init = {}) => {
-      if (init.method === "POST") posts.push(JSON.parse(init.body));
-      if (String(url).startsWith("https://noisy-bush-fd84.footcai-555.workers.dev/")) {
-        return valuationWorker.fetch(new Request(String(url), { method: init.method || "GET", headers: init.headers, body: init.body }), { DB: makeDb() });
-      }
-      return new Response(JSON.stringify({ properties: [] }), { status: 200 });
-    },
-  });
-  page.window.location.search = new URL(button.href, BASE).search;
+  const page = valuationPageFor(button.href, posts);
   await page.boot();
   await waitFor(() => page.el("result").classList.contains("show"), { label: "rent result" });
   assert.equal(posts[0].areaType, "rent");
@@ -249,17 +233,10 @@ test("end to end (rent): a furnished-rent owner gets the furnished snapshot, lab
   const link = new URL(page.el("backToAgentBtn").href, BASE);
   assert.equal(link.searchParams.get("areaType"), "rent");
 
-  const agentAfter = bootAgent({
-    runTimers: true,
-    search: link.search,
-    session: { simsar_return_session: (agentBefore.el("valuationSlot").querySelector(".valuation-link").dispatch("click"), agentBefore.sessionStorage.getItem("simsar_return_session")) },
-    fetchImpl: async (url, init) => agentWorker.fetch(new Request("https://agent.test/", {
-      method: "POST", headers: { "Content-Type": "application/json", Origin: ORIGIN, "CF-Connecting-IP": nextIp() }, body: init.body,
-    }), { GEMINI_API_KEY: "test-key" }),
-  });
+  const agentAfter = bootAgent({ runTimers: true, local: CONSENT, search: link.search, session: { simsar_return_session: saved }, fetchImpl: chatFetch(calls) });
   assert.match(agentAfter.messages().at(-1).innerHTML, /<strong>93,600 ج\.م \/ شهريًا<\/strong>/);
-  await send(agentAfter, SKIP);
-  const text = lastBotText(agentAfter);
-  assert.match(text, /💎 \*تقييم عقارك للإيجار:\*/);
-  assert.match(text, /💰 الإيجار التقديري: 93,600 ج\.م \/ شهريًا/);
+  setGeminiReply(JSON.stringify({ intent: "offer_lease", needs_clarification: false, reply: "المؤشر الاسترشادي للإيجار 93,600 شهريًا حسب أداة الموقع." }));
+  await send(agentAfter, "طب والإيجار؟");
+  assert.equal(calls.at(-1).valuation.areaType, "rent");
+  assert.match(gemini.at(-1).system, /"deal":"rent"/);
 });

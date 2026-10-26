@@ -1,8 +1,14 @@
 // ============================================================
-// سمسار طلبك — Cloudflare Worker v9.3
+// سمسار طلبك — Cloudflare Worker v10.0
 // طارق طنطاوي | مدينة نصر | 2014–2026
 // Google Local Guide Level 7 | أكثر من 17 مليون مشاهدة (تحقق 2026-10-12)
-// release: v9.3-W  |  deployed: 2026-10-14
+// release: v10.0-chat  |  previous deployed release: v9.3-W (2026-10-14)
+// ------------------------------------------------------------
+// v10.0 — مسار جديد POST /chat (محادثة Gemini أولًا، عديم الحالة، بموافقة صريحة):
+//  • كل رسالة ⇒ Gemini واحد بـJSON منظم؛ الحالة + آخر 10 رسائل من المتصفح (ذاكرة الصفحة).
+//  • بيانات العقارات والمقارنات من ai-feed.json فقط، وفحص رد Gemini قبل ما يوصل للمستخدم.
+//  • لا KV ولا D1 ولا ImgBB ولا تسجيل نصوص؛ أخطاء Gemini تتحول لأكواد صريحة (502/503/504).
+//  • المسار القديم POST / (formState) ومسارات /push/* و/upload-images بدون أي تغيير.
 // ------------------------------------------------------------
 // v9.3 — فوق v9.2-FINAL (الحفاظ الكامل على السلوك):
 //  • إصلاح: حدود كلمات عربية في OFF_TOPIC / "بوت" (أرض الجولف، بوتاجاز، سيارات…)
@@ -2806,6 +2812,1176 @@ async function handlePush(request, env, url, ip){
   return respond({ ok: false, error: "not_found" }, 404);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// v10 — محادثة Gemini أولًا (POST /chat) · 2026-10-27
+// ──────────────────────────────────────────────────────────────────────
+// • كل رسالة مستخدم صالحة ⇒ استدعاء Gemini واحد يرجّع JSON منظم: النية + تعديل الحالة + الرد.
+//   مفيش ردود محلية بديلة: لو Gemini فشل أو اتأخر بنرجّع خطأ صريح (502/503/504) والمتصفح
+//   يعرض «المساعد متوقف مؤقتًا» مع إعادة المحاولة وخيار البحث المحلي الصريح.
+// • الـWorker عديم الحالة: الحالة المنظمة القصيرة وآخر 10 رسائل بييجوا من المتصفح ويرجعوا له
+//   (ذاكرة الصفحة). لا KV ولا D1 ولا سجلات فيها نصوص المحادثة (السجل الوحيد: كود حالة Gemini).
+// • Gemini بيكتب الكلام ويقترح تعديل الحالة؛ القرار النهائي هنا: أي قيمة لازم يكون لها دليل في
+//   كلام المستخدم، والتعارض (بيع وإيجار معًا) أو الغموض (باحث ولا مالك) يتحول لسؤال توضيحي.
+// • العقارات والمقارنات تُحسب هنا من ai-feed.json (مدينة نصر فقط) وتُعرض كبيانات منفصلة عن نص
+//   Gemini — وبعد الرد فحص: أرقام موثقة فقط، بلا ادعاءات توافر/تسجيل/إرسال، وسؤال واحد بس.
+// • المسار القديم POST / (formState) باقي كما هو للتوافق — الصفحة الجديدة لا تستخدمه.
+// ══════════════════════════════════════════════════════════════════════
+const CHAT_CONSENT = "gemini-v1";
+const CHAT_TIMEOUT_MS = 12000;
+const CHAT_HISTORY_MAX = 10;
+const CHAT_HISTORY_MSG_MAX = 600;
+const CHAT_REPLY_MAX = 700;
+const CHAT_CARDS_MAX = 5;
+const CHAT_COMPARABLE_MIN = 3;
+const CHAT_STATE_VERSION = 1;
+
+const CHAT_OPS = ["buy", "rent", "sell", "lease"];
+const CHAT_TYPES = ["apartment", "villa", "shop", "office", "warehouse"];
+const CHAT_MODES = ["max", "lt", "min", "gt", "exact", "approx"];
+const CHAT_TEXT_FIELDS = ["floor", "finishing", "buildingAge", "occupancy"];
+const CHAT_CLEARABLE = ["location", "area", "price", "rooms", "baths", "floor", "finishing", "buildingAge", "occupancy", "furnished"];
+const CHAT_ASKABLE = ["role", "operation", "propertyType", "location", "area", "price", "rooms", "baths", "floor", "finishing", "buildingAge", "occupancy"];
+const CHAT_TYPE_AR = { apartment: "شقة", villa: "فيلا/دوبلكس", shop: "محل", office: "مكتب/عيادة", warehouse: "مخزن" };
+const CHAT_TYPE_WORD = { apartment: "شقة", villa: "فيلا", shop: "محل", office: "مكتب", warehouse: "مخزن" };
+const CHAT_OP_AR = { buy: "شراء", rent: "إيجار", sell: "بيع", lease: "تأجير" };
+const CHAT_FIELD_AR = {
+  role: "المسار", operation: "العملية", propertyType: "نوع العقار", location: "المنطقة", area: "المساحة", price: "السعر",
+  rooms: "الغرف", baths: "الحمامات", floor: "الدور", finishing: "التشطيب", buildingAge: "عمر المبنى", occupancy: "الإشغال", furnished: "الفرش",
+};
+const CHAT_RESIDENTIAL = new Set(["apartment", "villa"]);
+function chatPriceFieldLabel(st){
+  if(st?.role === "owner") return st.operation === "lease" ? "الإيجار المطلوب" : "السعر المطلوب";
+  if(st?.operation === "rent") return "الإيجار الشهري";
+  return st?.role === "seeker" ? "الميزانية" : "السعر";
+}
+const chatFieldLabel = (st, f) => (f === "price" ? chatPriceFieldLabel(st) : CHAT_FIELD_AR[f]);
+
+// ═══ التطبيع والأرقام (عامية + فصحى + أرقام عربية/لاتينية + أرقام بالحروف) ═══
+const CHAT_NUM_WORDS = {
+  "واحد": 1, "واحده": 1, "اتنين": 2, "اثنين": 2, "اثنان": 2, "تلات": 3, "تلاته": 3, "ثلاث": 3, "ثلاثه": 3,
+  "اربع": 4, "اربعه": 4, "خمس": 5, "خمسه": 5, "ست": 6, "سته": 6, "سبع": 7, "سبعه": 7, "تمن": 8, "تمانيه": 8, "تماني": 8,
+  "ثماني": 8, "ثمانيه": 8, "تسع": 9, "تسعه": 9, "عشر": 10, "عشره": 10, "حداشر": 11, "اتناشر": 12, "تلتاشر": 13,
+  "اربعتاشر": 14, "خمستاشر": 15, "ستاشر": 16, "سبعتاشر": 17, "تمنتاشر": 18, "تسعتاشر": 19, "عشرين": 20,
+  "تلاتين": 30, "ثلاثين": 30, "اربعين": 40, "خمسين": 50, "ستين": 60, "سبعين": 70, "تمانين": 80, "ثمانين": 80,
+  "تسعين": 90, "ميه": 100, "مايه": 100, "ميتين": 200, "مايتين": 200, "تلتميه": 300,
+  "ثلاثميه": 300, "ثلاثمايه": 300, "ربعميه": 400, "اربعميه": 400, "اربعمايه": 400, "خمسميه": 500, "خمسمايه": 500,
+};
+const CHAT_UNIT_WORDS = new Set(["الف", "الاف", "مليون", "ملايين", "متر", "م2", "م", "غرف", "غرفه", "اوض", "اوضه", "حمام", "حمامات"]);
+function chatWordNumber(w, allowWaw){
+  if(Object.hasOwn(CHAT_NUM_WORDS, w)) return CHAT_NUM_WORDS[w];
+  const head = w.charAt(0);
+  // «وعشرين» بعد رقم، و«بسبعة» (بـ + رقم) في أول المبلغ
+  if(((allowWaw && head === "\u0648") || (!allowWaw && head === "\u0628")) && Object.hasOwn(CHAT_NUM_WORDS, w.slice(1))) return CHAT_NUM_WORDS[w.slice(1)];
+  return null;
+}
+// «تلات غرف» ⇒ «3 غرف» · «خمسه وعشرين الف» ⇒ «25 الف» — على مستوى الكلمات (بلا regex متراجع)
+function chatWordsToDigits(t){
+  const words = t.split(" ");
+  const out = [];
+  for(let i = 0; i < words.length; i++){
+    let j = i; let sum = 0; let ok = false;
+    while(j < words.length && j - i < 3){
+      const v = chatWordNumber(words[j], j > i);
+      if(v == null) break;
+      sum += v; j += 1; ok = true;
+    }
+    if(ok && j < words.length && CHAT_UNIT_WORDS.has(words[j])){ out.push(String(sum)); i = j - 1; continue; }
+    out.push(words[i]);
+  }
+  return out.join(" ");
+}
+// يشيل النقط والشرط من طرفي الكلمة («ملايين.» ⇒ «ملايين») بلا regex متراجع
+function chatTrimPunct(w){
+  let a = 0; let b = w.length;
+  while(a < b && (w[a] === "." || w[a] === "-")) a += 1;
+  while(b > a && (w[b - 1] === "." || w[b - 1] === "-")) b -= 1;
+  return w.slice(a, b);
+}
+function chatNorm(s){
+  let t = asciiDigits(String(s ?? "")).toLowerCase()
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "")
+    .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")
+    .replace(/\u0649/g, "\u064A").replace(/\u0629/g, "\u0647")
+    .replace(/\u0624/g, "\u0648").replace(/\u0626/g, "\u064A")
+    .replace(/\u066B/g, ".").replace(/\u066C/g, ",").replace(/\u060C/g, " ").replace(/\u00B2/g, "2");
+  t = t.replace(/(\d),(?=\d{3}(?!\d))/g, "$1").replace(/(\d),(\d)/g, "$1.$2");
+  t = t.replace(/[^\u0621-\u064A0-9a-z.%\s-]+/g, " ").split(/\s+/).map(chatTrimPunct).filter(Boolean).join(" ");
+  t = chatWordsToDigits(t);
+  // «مليون ونص» / «مليونين» بلا رقم قبلها
+  return t.replace(/(^|\s)مليونين(?=\s|$)/g, "$1 2 مليون").replace(/(^|\s)(?<!\d\s)مليون(?=\s|$)/g, "$1 1 مليون").replace(/\s+/g, " ").trim();
+}
+
+const CHAT_MONEY_UNIT = "(مليون|ملايين|مليار|الف|الاف|k|million|millions|thousand)";
+const CHAT_AREA_UNIT = "(?:م2|متر\\s?مربع|مترا|متر|امتار|م|m2|sqm|sq\\sm|meters|m)(?![\\u0621-\\u064Aa-z0-9])";
+const CHAT_CMP = {
+  lt: "(?:اقل\\s+من|تحت|دون|less\\s+than|under|below)",
+  max: "(?:مش\\s+اكتر\\s+من|مش\\s+اكثر\\s+من|ما\\s?يزيدش\\s+عن|لا\\s+يزيد\\s+عن|لا\\s+يتجاوز|لا\\s+تتجاوز|بحد\\s+اقصي|كحد\\s+اقصي|اقصاه|اقصي|بميزانيه|بميزانيتي|ميزانيتي|ميزانيه|معايا|حتي|لحد|بالكتير|max|maximum|up\\s+to)",
+  gt: "(?:اكثر\\s+من|اكتر\\s+من|اكبر\\s+من|اعلي\\s+من|فوق|more\\s+than|over|above)",
+  min: "(?:لا\\s+يقل\\s+عن|ما\\s?يقلش\\s+عن|علي\\s+الاقل|من\\s+اول|كحد\\s+ادني|min|minimum|at\\s+least)",
+  approx: "(?:في\\s+حدود|حدود|حوالي|بحوالي|تقريبا|about|around|approximately|approx)",
+  exact: "(?:بالضبط|بالظبط|تماما|exactly)",
+};
+const CHAT_CMP_ANY = `(?:${Object.values(CHAT_CMP).join("|")})`;
+const CHAT_POST = "(?:تقريبا|بالضبط|بالظبط|او\\s+اقل|او\\s+اكتر|او\\s+اكثر)";
+const CHAT_POST_MODE = { "تقريبا": "approx", "بالضبط": "exact", "بالظبط": "exact" };
+const CHAT_MODE_ORDER = ["lt", "max", "gt", "min", "approx", "exact"];
+const CHAT_MODE_RES = Object.fromEntries(CHAT_MODE_ORDER.map(mode => [mode, new RegExp(`^${CHAT_CMP[mode]}$`)]));
+
+function chatMoney(num, unit, frac){
+  const v = Number.parseFloat(num);
+  if(!Number.isFinite(v)) return null;
+  let mul = 1;
+  if(/^(?:مليون|ملايين|million|millions)$/.test(unit || "")) mul = 1e6;
+  else if(unit === "مليار") mul = 1e9;
+  else if(/^(?:الف|الاف|k|thousand)$/.test(unit || "")) mul = 1e3;
+  let f = 0;
+  if(frac === "ربع") f = 0.25;
+  else if(frac) f = 0.5;
+  return Math.round((v + f) * mul);
+}
+function chatModeOf(cmp, post){
+  const c = String(cmp || "").trim();
+  if(c){ for(const mode of CHAT_MODE_ORDER){ if(CHAT_MODE_RES[mode].test(c)) return mode; } }
+  const p = String(post || "").trim();
+  if(!p) return null;
+  if(CHAT_POST_MODE[p]) return CHAT_POST_MODE[p];
+  return /اقل/.test(p) ? "max" : "min";
+}
+
+// ═══ الأماكن والنطاق (مدينة نصر فقط) ═══
+const CHAT_PLACES = [...new Set([...MASTER_LANDMARKS.filter(x => x !== "شيراتون"), "حلمي عبد العاطي", "موسى الكاظم", "كابول", "حي السفارات", "مدينة نصر"])];
+const CHAT_PLACES_SORTED = [...CHAT_PLACES].sort((a, b) => b.length - a.length);
+const CHAT_OUT_RE = /الرحاب|التجمع|القاهره الجديده|مدينتي|مصر الجديده|هليوبوليس|شيراتون|الشروق|المعادي|المقطم|اكتوبر|الشيخ زايد|العاصمه الاداريه|new cairo|rehab|heliopolis|maadi/;
+const CHAT_IN_RE = /مدينه نصر|نصر سيتي|nasr city/;
+const CHAT_ZONE_ORD = ["", "الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة", "التاسعة", "العاشرة"];
+const CHAT_DISTRICT_ORD = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
+
+function chatFindPlace(n){
+  const zone = n.match(/(?:^|\s)(?:ال)?منطقه\s(\d{1,2})(?=\s|$)/);
+  if(zone && CHAT_ZONE_ORD[Number(zone[1])]) return "المنطقة " + CHAT_ZONE_ORD[Number(zone[1])];
+  const district = n.match(/(?:^|\s)(?:ال)?حي\s(\d{1,2})(?=\s|$)/);
+  if(district && CHAT_DISTRICT_ORD[Number(district[1])]) return "الحي " + CHAT_DISTRICT_ORD[Number(district[1])];
+  const padded = ` ${n} `;
+  for(const place of CHAT_PLACES_SORTED){ if(padded.includes(` ${chatNorm(place)} `)) return place; }
+  return null;
+}
+// عبارة البحث: المنطقة المطبّعة من غير «مدينة نصر» ومن غير كلمات بادئة عامة
+function chatLocPhrase(loc){
+  let t = chatNorm(loc || "").replace(/(^|\s)(?:مدينه\sنصر|نصر\sسيتي|nasr\scity)(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
+  t = t.replace(/^(?:في|ب|شارع|ش|منطقه|ناحيه|جنب|قريب من)\s/, "").trim();
+  return t.length >= 3 ? t : "";
+}
+function chatHayHas(hay, phrase){
+  if(!phrase) return true;
+  const words = hay.split(" ");
+  const want = phrase.split(" ");
+  for(let i = 0; i + want.length <= words.length; i++){
+    let ok = true;
+    for(let k = 0; k < want.length && ok; k++){
+      const w = words[i + k];
+      const target = want[k];
+      ok = w === target || (k === 0 && (w === `ب${target}` || w === `و${target}` || w === `ل${target}` || w === `ال${target}` || w === `بال${target}` || w === `وال${target}`));
+    }
+    if(ok) return true;
+  }
+  return false;
+}
+const chatHayOf = p => chatNorm([p.title, p.location, p.zone].join(" "));
+
+// ═══ البيانات الحساسة: تُحذف قبل Gemini ولا تدخل الحالة أبدًا ═══
+const CHAT_CARD_RE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/g;
+const CHAT_IBAN_RE = /\beg\s?\d{2}(?:\s?\d{4}){6}\s?\d{1,3}\b/gi;
+const CHAT_EMAIL_RE = /[^\s@]{1,64}@[^\s@]{1,253}\.[a-z]{2,24}/gi;
+const CHAT_SECRET_RE = /(?:كلمه\s?السر|كلمة\s?السر|كلمة\s?المرور|كلمه\s?المرور|الباسورد|باسورد|password|pin|الرقم\s?السري)\s?[:=]?\s?\S+/gi;
+function chatRedact(text){
+  const kinds = new Set();
+  let t = asciiDigits(String(text ?? ""));
+  const sub = (re, label, kind) => { t = t.replace(re, () => { kinds.add(kind); return label; }); };
+  sub(CHAT_SECRET_RE, "[محذوف: كلمة سر]", "secret");
+  sub(CHAT_EMAIL_RE, "[محذوف: بريد]", "email");
+  sub(CHAT_IBAN_RE, "[محذوف: حساب بنكي]", "bank");
+  sub(EG_NATIONAL_ID_RE, "[محذوف: رقم قومي]", "national_id");
+  sub(EG_MOBILE_RE, "[محذوف: رقم هاتف]", "phone");
+  sub(CHAT_CARD_RE, "[محذوف: رقم بطاقة]", "card");
+  return { text: t, kinds };
+}
+// تفاصيل العنوان الدقيقة (رقم العمارة/الشقة/البيت) مش لازمة لـGemini — المنطقة والشارع كفاية
+const CHAT_ADDR_NUM_RE = /(^|\s)(?:عماره|عمارة|برج|بلوك|مبني|مبنى|بيت|منزل|عقار)\s(?:رقم\s)?\d{1,4}(?=[\s،,.]|$)|(^|\s)(?:شقه|شقة|فيلا|وحده|وحدة)\s(?:رقم)\s\d{1,4}(?=[\s،,.]|$)|(^|\s)\d{1,4}\s(?=شارع\s)/g;
+function chatMaskAddress(text){
+  let masked = false;
+  const t = String(text ?? "").replace(CHAT_ADDR_NUM_RE, (m, a, b, c) => { masked = true; return `${a ?? b ?? c ?? ""}[تفاصيل عنوان] `; });
+  return { text: t, masked };
+}
+function chatPromptSafe(text, max){
+  return String(text ?? "")
+    .replace(/[`\u0000-\u001F\u007F]/g, " ")
+    .replace(/\b(ignore|disregard|system\s?prompt|forget)\b/gi, "")
+    .replace(/تجاهل\s(?:كل\s)?(?:التعليمات|اللي\sفات)/g, "")
+    .replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+// ═══ المحلل الحتمي: أدلة من كلام المستخدم نفسه ═══
+const CHAT_OWNER_RE = /عندي\s(?:شقه|محل|فيلا|مكتب|عقار|ارض|دوبلكس|مخزن|عياده|روف|وحده)|(?:^|\s)(?:ابيع|هبيع|نبيع|اعرض|هعرض|نعرض|اوجر|هوجر|نوجر)(?:ها|ه|هم)?(?=\s|$)|(?:^|\s)(?:شقتي|فيلتي)(?=\s|$)|انا\s(?:المالك|مالك|الموجر|موجر)|(?:^|\s)(?:شقتي|فيلتي|محلي|مكتبي|عقاري)\s(?:للبيع|للايجار)|(?:^|\s)و?(?:اطلب|طالب)\s(?:فيها|فيه|\d)|i\sown|my\s(?:apartment|flat|shop|villa|office)/;
+const CHAT_SEEKER_RE = /(?:^|\s)(?:بدور|ادور|بدوّر|ابحث|بابحث|بحث\sعن|محتاج\s(?:شقه|محل|فيلا|مكتب|عقار|اشتري|استاجر))|(?:^|\s)(?:فيه|عندكم|يوجد|هل\sيوجد|هل\sفيه|هل\sفي|ارغب\sفي|اود)\s(?:شقه|شقق|محل|محلات|فيلا|فلل|مكتب|مكاتب|عياده|شراء|استيجار)|(?:^|\s)(?:اشتري|هشتري|نشتري|اشتريها|استاجر|هستاجر|نستاجر|استاجرها)(?=\s|$)|(?:^|\s)(?:ميزانيتي|بميزانيه)(?=\s|$)|(?:^|\s)معايا\s\d|looking\sfor|i\swant\sto\s(?:buy|rent)|(?:^|\s)(?:عايز|عاوز|عايزه|عاوزه|اريد)\s(?:اشتري|استاجر|شقه|محل|فيلا|مكتب|عياده|مخزن)/;
+// «أأجر» في العامية تحتمل الاتجاهين (أستأجر / أؤجّر) ⇒ سؤال توضيحي بدل التخمين
+const CHAT_RENT_AMBIG_RE = /(?:^|\s)(?:ااجر|هااجر|نااجر)(?:ها|ه)?(?=\s|$)/;
+const CHAT_SALE_RE = /(?:^|\s)(?:و)?(?:لل|ال|ل|بال)?(?:بيع|تمليك|شراء)(?=\s|$)|(?:^|\s)(?:اشتري|هشتري|نشتري|ابيع|هبيع|نبيع)(?:ها|ه|هم)?(?=\s|$)|(?:^|\s)(?:buy|sale|purchase|sell|selling|buying)(?=\s|$)/;
+const CHAT_RENT_RE = /(?:^|\s)(?:و)?(?:لل|ال|ل|بال)?(?:ايجار|ايجارا|اجار|تاجير)(?=\s|$)|(?:^|\s)(?:استاجر|هستاجر|نستاجر|اوجر|هوجر|نوجر|ااجر|هااجر)(?:ها|ه|هم)?(?=\s|$)|(?:^|\s)(?:الاستيجار|استيجار|rent|lease|rental|renting)(?=\s|$)/;
+const CHAT_MONTHLY_RE = /(?:^|\s)(?:شهريا|شهري|بالشهر|في\sالشهر|كل\sشهر|monthly|per\smonth)(?=\s|$)/;
+const CHAT_NEG_PREFIX = "(?:مش|مو|بدل|بدلا\\sمن|وليس|وليست|not|no)\\s(?:(?:عايز|عاوز|عايزه|عاوزه|محتاج|اريد)\\s)?";
+const CHAT_NEG_SALE_RE = new RegExp(`(^|\\s)(?:${CHAT_NEG_PREFIX}|لا\\s)(?:ال|لل|بال)?(?:شراء|بيع|تمليك|اشتري|sale|buy)(?=\\s|$)`, "g");
+const CHAT_NEG_RENT_RE = new RegExp(`(^|\\s)(?:${CHAT_NEG_PREFIX}|لا\\s)(?:ال|لل|بال)?(?:ايجار|ايجارا|تاجير|rent)(?=\\s|$)`, "g");
+const CHAT_NEG_NUM_RE = /(^|\s)(?:مش|مو|بدل|بدلا\sمن|مكان|وليس|not|instead\sof)\s\d+(?:\.\d+)?(?:\s?(?:مليون|ملايين|الف|الاف|متر|م2|م|جنيه|k))?(?=\s|$)/g;
+const CHAT_TYPE_WORDS = [
+  [/(?:^|\s)(?:ال)?(?:شقه|شقق|شقتي|شقتين|روف|استوديو|apartment|apartments|flat|flats|studio)(?=\s|$)/, "apartment"],
+  [/(?:^|\s)(?:ال)?(?:فيلا|فيلات|فيلتي|فلل|دوبلكس|دوبليكس|تاون|villa|villas|duplex)(?=\s|$)/, "villa"],
+  // «محلي» لوحدها ممكن تكون «محلّي/local» ⇒ نوع «محل» بس لو بعدها للبيع/للإيجار
+  [/(?:^|\s)(?:ال)?(?:محل|محلات|shop|shops|store)(?=\s|$)|(?:^|\s)محلي\s(?:للبيع|للايجار|للتاجير)(?=\s|$)/, "shop"],
+  [/(?:^|\s)(?:ال)?(?:مكتب|مكاتب|مكتبي|اداري|اداريه|عياده|عيادات|office|offices|clinic)(?=\s|$)/, "office"],
+  [/(?:^|\s)(?:ال)?(?:مخزن|مخازن|مستودع|warehouse)(?=\s|$)/, "warehouse"],
+];
+const CHAT_REMOVE_RE = /(?:^|\s)(?:شيل|احذف|امسح|الغي|الغاء|بدون|مش\sمهم|مش\sفارق|مش\sفارقه|مش\sشرط|انسي|سيبك\sمن)\s(?:شرط\s)?(?:ال)?(ميزانيه|سعر|مساحه|غرف|اوض|منطقه|مكان|دور|تشطيب|فرش|حمامات|عمر|اشغال)(?=\s|$)/g;
+const CHAT_REMOVE_FIELD = {
+  "ميزانيه": "price", "سعر": "price", "مساحه": "area", "غرف": "rooms", "اوض": "rooms", "منطقه": "location", "مكان": "location",
+  "دور": "floor", "تشطيب": "finishing", "فرش": "furnished", "حمامات": "baths", "عمر": "buildingAge", "اشغال": "occupancy",
+};
+const CHAT_CMP_CUE_RE = /اقل|اكتر|اكثر|اكبر|اعلي|اقصي|ادني|فوق|تحت|حوالي|حدود|تقريبا|بالضبط|بالظبط|يزيد|يقل|لحد|حتي|less|more|under|over|about|exactly/;
+const CHAT_REMOVE_CUE_RE = /(?:^|\s)(?:شيل|احذف|امسح|الغي|الغاء|بدون|انسي|مش\sمهم|مش\sشرط|سيبك\sمن)(?=\s|$)/;
+const CHAT_STOP_OPTIONAL_RE = /كفايه|خلاص\sكده|مش\sعايز\sاضيف|مفيش\sتفاصيل\sتانيه|بلاش\sباقي|سيبك\sمن\sالباقي/;
+const CHAT_TOPIC_RE = {
+  availability: /متاح|متاحه|متوفر|متوفره|لسه\sموجود|موجود\sلسه|توفر|توافر|اتباع|اتاجر|available/,
+  commission: /عموله|العموله|سمسره|رسوم|commission/,
+  legal: /تسجيل|مسجل|شهر\sعقاري|ترخيص|رخصه|اوراق|توكيل|قانوني|registration|license/,
+  deposit: /تامين|مقدم\sالايجار|deposit/,
+  contact: /(?:اكلم|اتكلم\sمع|اتواصل\sمع|كلموني|كلمني|رقم)\s(?:طارق|المكتب|حد)|عايز\sطارق|تواصل\sمع\sطارق|call\starek|talk\sto\starek/,
+};
+
+function chatParse(raw, asked){
+  const n = chatNorm(raw);
+  const out = {
+    n, sale: false, rent: false, dealConflict: false, monthly: false, exact: false, role: null, roleAmbiguous: false,
+    types: [], location: null, outOfScope: false, area: null, rooms: null, baths: null, inferred: null,
+    furnished: null, money: [], areas: [], numbers: new Set(), remove: new Set(), stopOptional: false, topics: new Set(),
+  };
+  if(!n) return out;
+  const negFree = ` ${n} `.replace(CHAT_NEG_SALE_RE, "$1").replace(CHAT_NEG_RENT_RE, "$1");
+  out.sale = CHAT_SALE_RE.test(negFree);
+  out.rent = CHAT_RENT_RE.test(negFree);
+  out.monthly = CHAT_MONTHLY_RE.test(n);
+  out.dealConflict = out.sale && out.rent;
+  out.exact = new RegExp(`(?:^|\\s)${CHAT_CMP.exact}(?=\\s|$)`).test(n);
+  if(CHAT_OWNER_RE.test(n)) out.role = "owner";
+  else if(CHAT_SEEKER_RE.test(n)) out.role = "seeker";
+  else if(CHAT_RENT_AMBIG_RE.test(n)) out.roleAmbiguous = true;
+  for(const [re, type] of CHAT_TYPE_WORDS) if(re.test(n) && !out.types.includes(type)) out.types.push(type);
+  out.outOfScope = CHAT_OUT_RE.test(n) && !CHAT_IN_RE.test(n);
+  if(/(?:^|\s)(?:اي|كل)\s(?:منطقه|مكان|حته)(?=\s|$)/.test(n)) out.location = "مدينة نصر";
+  else out.location = chatFindPlace(n);
+  if(/غير\sمفروش|مش\sمفروش|بدون\s(?:فرش|عفش)|من\sغير\s(?:فرش|عفش)|unfurnished/.test(n)) out.furnished = "unfurnished";
+  else if(/مفروش|بالعفش|furnished/.test(n)) out.furnished = "furnished";
+  for(const m of n.matchAll(CHAT_REMOVE_RE)) out.remove.add(CHAT_REMOVE_FIELD[m[1]]);
+  if(/(?:^|\s)(?:اي|اى)\sمساحه(?=\s|$)/.test(n)) out.remove.add("area");
+  if(/(?:^|\s)(?:اي\sسعر|اي\sميزانيه)(?=\s|$)/.test(n)) out.remove.add("price");
+  out.stopOptional = CHAT_STOP_OPTIONAL_RE.test(n);
+  for(const [k, re] of Object.entries(CHAT_TOPIC_RE)) if(re.test(n)) out.topics.add(k);
+
+  for(const m of n.matchAll(/\d+(?:\.\d+)?/g)) out.numbers.add(Number(m[0]));
+  // التصحيح «150 مش 180» / «بدل 8 مليون»: الرقم المنفي مش قيمة جديدة
+  const s = ` ${n} `.replace(CHAT_NEG_NUM_RE, "$1 ");
+  const moneyRe = new RegExp(`\\s(?:و?(${CHAT_CMP_ANY})\\s)?(\\d+(?:\\.\\d+)?)\\s?(?:${CHAT_MONEY_UNIT}(?:\\s(?:و\\s?)?(نص|نصف|ربع))?|(جنيه|جم|egp))(?:\\s(${CHAT_POST}))?(?=\\s)`, "g");
+  for(const m of s.matchAll(moneyRe)){
+    const value = m[3] ? chatMoney(m[2], m[3], m[4]) : chatMoney(m[2], null, null);
+    if(value > 0){ out.money.push({ value, mode: chatModeOf(m[1], m[6]) }); out.numbers.add(value); }
+  }
+  // رقم كبير بلا وحدة (≥ 20,000، أو ≥ 1,000 مع «شهريًا»)
+  const bareRe = new RegExp(`\\s(?:و?(${CHAT_CMP_ANY})\\s)?(\\d{4,})(?![\\d.])(?!\\s?(?:${CHAT_MONEY_UNIT}|جنيه|جم|egp|${CHAT_AREA_UNIT}))(?:\\s(${CHAT_POST}))?`, "g");
+  for(const m of s.matchAll(bareRe)){
+    const value = Number(m[2]);
+    if(value >= 20000 || (out.monthly && value >= 1000)) out.money.push({ value, mode: chatModeOf(m[1], m[3]) });
+  }
+  const pushArea = (value, mode) => { if(value >= 15 && value <= 100000 && !out.areas.some(a => a.value === value)) out.areas.push({ value, mode }); };
+  const areaRe = new RegExp(`\\s(?:و?(${CHAT_CMP_ANY})\\s)?(?:(?:ال)?مساح(?:ه|ته|تها)\\s)?(\\d+(?:\\.\\d+)?)\\s?${CHAT_AREA_UNIT}(?:\\s(${CHAT_POST}))?(?=\\s)`, "g");
+  for(const m of s.matchAll(areaRe)) pushArea(Number(m[2]), chatModeOf(m[1], m[3]));
+  const areaKwRe = new RegExp(`\\s(?:ال)?مساح(?:ه|ته|تها)\\s(?:(${CHAT_CMP_ANY})\\s)?(\\d+(?:\\.\\d+)?)(?![\\d.])(?!\\s?(?:${CHAT_MONEY_UNIT}|جنيه))`, "g");
+  for(const m of s.matchAll(areaKwRe)) pushArea(Number(m[2]), chatModeOf(m[1], null));
+  const rooms = s.match(/\s(\d{1,2})\s?(?:غرف|غرفه|اوض|اوضه|حجرات|حجره|rooms|bedrooms)(?=\s)/) || (/\s(?:غرفتين|اوضتين|حجرتين)(?=\s)/.test(s) ? [null, "2"] : null);
+  if(rooms){ const v = Number(rooms[1]); if(v >= 1 && v <= 30) out.rooms = v; }
+  const baths = s.match(/\s(\d{1,2})\s?(?:حمام|حمامات|bathrooms|baths)(?=\s)/) || (/\sحمامين(?=\s)/.test(s) ? [null, "2"] : null);
+  if(baths){ const v = Number(baths[1]); if(v >= 1 && v <= 20) out.baths = v; }
+  if(out.exact){
+    if(out.areas.length === 1 && !out.areas[0].mode) out.areas[0].mode = "exact";
+    else if(!out.areas.length && out.money.length === 1 && !out.money[0].mode) out.money[0].mode = "exact";
+  }
+
+  // إجابة برقم مجرد على السؤال الأخير («180» بعد «المساحة كام؟»، «8» بعد «طالب كام؟»)
+  const bare = n.match(/^(\d+(?:\.\d+)?)(?:\s(مليون|ملايين|الف|الاف|متر|م2|م|جنيه))?$/);
+  if(bare && asked){
+    const unit = bare[2] || "";
+    const num = Number(bare[1]);
+    const value = /مليون|ملايين|الف|الاف/.test(unit) ? chatMoney(bare[1], unit, null) : num;
+    if(asked === "area") pushArea(value, null);
+    if(asked === "price" && !out.money.length){
+      if(value >= 1000) out.money.push({ value, mode: null });
+      else if(!unit && num > 0) out.inferred = { num };            // «8» ⇒ يتحدد بعد معرفة نوع العملية
+    }
+    if(asked === "rooms" && value >= 1 && value <= 30 && out.rooms == null) out.rooms = value;
+    if(asked === "baths" && value >= 1 && value <= 20 && out.baths == null) out.baths = value;
+  }
+  out.area = out.areas.length === 1 ? out.areas[0] : null;
+  return out;
+}
+
+// ═══ الحالة المنظمة ═══
+function chatEmptyState(){
+  return {
+    v: CHAT_STATE_VERSION, role: null, operation: null, propertyType: null, location: null, area: null, price: null,
+    rooms: null, baths: null, floor: null, finishing: null, buildingAge: null, occupancy: null, furnished: null,
+    asked: null, skipOptional: false,
+  };
+}
+function chatCleanText(v, max = 40){
+  const t = String(v ?? "").replace(/[<>`{}[\]\\]/g, " ").replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim();
+  return t ? t.slice(0, max) : null;
+}
+function chatCleanRange(r, min, max){
+  if(!r || typeof r !== "object") return null;
+  const value = Number(r.value);
+  if(!Number.isFinite(value) || value < min || value > max) return null;
+  const out = { value: Math.round(value * 100) / 100, mode: CHAT_MODES.includes(r.mode) ? r.mode : "exact" };
+  if(r.kind === "monthly" || r.kind === "total") out.kind = r.kind;
+  return out;
+}
+const chatFamily = op => {
+  if(op === "buy" || op === "sell") return "total";
+  if(op === "rent" || op === "lease") return "monthly";
+  return null;
+};
+const chatDealOf = op => {
+  if(op === "buy" || op === "sell") return "sale";
+  if(op === "rent" || op === "lease") return "rent";
+  return null;
+};
+function chatOpFor(role, deal){
+  if(!role || !deal) return null;
+  if(role === "seeker") return deal === "sale" ? "buy" : "rent";
+  return deal === "sale" ? "sell" : "lease";
+}
+function chatSanitizeState(s){
+  const st = chatEmptyState();
+  if(!s || typeof s !== "object" || Array.isArray(s)) return st;
+  if(s.role === "seeker" || s.role === "owner") st.role = s.role;
+  if(CHAT_OPS.includes(s.operation)) st.operation = s.operation;
+  if(CHAT_TYPES.includes(s.propertyType)) st.propertyType = s.propertyType;
+  const loc = chatCleanText(s.location, 60);
+  if(loc && !(CHAT_OUT_RE.test(chatNorm(loc)) && !CHAT_IN_RE.test(chatNorm(loc)))) st.location = loc;
+  st.area = chatCleanRange(s.area, 10, 100000);
+  st.price = chatCleanRange(s.price, 100, 1e10);
+  for(const k of ["rooms", "baths"]){ const v = Number(s[k]); if(s[k] != null && Number.isInteger(v) && v >= 0 && v <= 30) st[k] = v; }
+  for(const k of CHAT_TEXT_FIELDS) st[k] = chatCleanText(s[k]);
+  if(s.furnished === "furnished" || s.furnished === "unfurnished") st.furnished = s.furnished;
+  if(CHAT_ASKABLE.includes(s.asked)) st.asked = s.asked;
+  st.skipOptional = s.skipOptional === true;
+  if(s.pendingDeal === "sale" || s.pendingDeal === "rent") st.pendingDeal = s.pendingDeal;
+  if(st.operation === "buy" || st.operation === "rent") st.role = "seeker";
+  if(st.operation === "sell" || st.operation === "lease") st.role = "owner";
+  if(st.operation) delete st.pendingDeal;
+  if(st.price) st.price.kind = chatFamily(st.operation) || st.price.kind || null;
+  return st;
+}
+
+// ═══ دمج تعديل Gemini مع الأدلة ═══
+function chatTokensOverlap(value, n){
+  const words = chatNorm(value).split(" ").filter(w => w.length >= 2);
+  const hay = ` ${n} `;
+  return words.some(w => hay.includes(` ${w} `) || (w.length >= 3 && hay.includes(w)));
+}
+function chatPickNumber(value, candidates){
+  const v = Number(value);
+  if(!Number.isFinite(v) || v <= 0) return null;
+  for(const c of candidates){
+    if(c.value === v) return c;
+    if(v < 1000 && c.value >= 1e5 && (c.value === v * 1e6 || c.value === v * 1e3)) return c;   // «6» بدل 6,000,000
+  }
+  return null;
+}
+function chatTypeWord(types){ return CHAT_TYPE_WORD[types?.[0]] || "عقار"; }
+function chatRoleOptions(deal, types){
+  const t = chatTypeWord(types);
+  if(deal === "sale") return [`بدوّر على ${t} للشراء`, `عندي ${t} للبيع`];
+  if(deal === "rent") return [`بدوّر على ${t} للإيجار`, `عندي ${t} للإيجار`];
+  return [`بدوّر على ${t}`, `عندي ${t} أعرضه`];
+}
+function chatDealOptions(role, types){
+  if(role === "owner") return ["بيع", "تأجير"];
+  if(role === "seeker") return ["شراء", "إيجار"];
+  const t = chatTypeWord(types);
+  return [`بدوّر على ${t} للشراء`, `بدوّر على ${t} للإيجار`, `عندي ${t} للبيع`, `عندي ${t} للإيجار`];
+}
+function chatPriceImplausible(kind, value){
+  return (kind === "monthly" && (value > 2000000 || value < 300)) || (kind === "total" && value < 50000);
+}
+
+function chatApply(prev, g, p){
+  const st = JSON.parse(JSON.stringify(prev));
+  const patch = g && g.patch && typeof g.patch === "object" ? g.patch : {};
+  const notes = [];
+  let clarify = null;
+  const dropped = [];
+  const hasRealEstateWords = p.sale || p.rent || p.types.length > 0 || p.money.length > 0 || p.areas.length > 0;
+
+  // 1) المسار (باحث/مالك): من كلام المستخدم، أو اقتراح Gemini لو الرسالة عقارية وغير ملتبسة
+  let role = p.role;
+  if(!role && !p.roleAmbiguous && (patch.role === "seeker" || patch.role === "owner") && hasRealEstateWords && !prev.role) role = patch.role;
+  const newRole = role || prev.role || null;
+
+  // 2) العملية: من كلام المستخدم فقط (Gemini ما يقدرش يقلب بيع ⇄ إيجار من غير كلمة صريحة)
+  let deal = null;
+  if(p.dealConflict) clarify = { field: "operation", options: chatDealOptions(newRole, p.types) };
+  else if(p.sale) deal = "sale";
+  else if(p.rent || p.monthly) deal = "rent";
+  if(!clarify && p.roleAmbiguous && !p.role && !prev.role) clarify = { field: "role", options: chatRoleOptions("rent", p.types) };
+
+  if(newRole && newRole !== prev.role) st.role = newRole;
+  if(deal){
+    if(newRole) st.operation = chatOpFor(newRole, deal);
+    else { st.operation = null; st.pendingDeal = deal; clarify = clarify || { field: "role", options: chatRoleOptions(deal, p.types) }; }
+  } else if(prev.pendingDeal && newRole){
+    st.operation = chatOpFor(newRole, prev.pendingDeal);
+  }
+  if(st.operation) delete st.pendingDeal;
+  if(newRole && st.operation && chatOpFor(newRole, chatDealOf(st.operation)) !== st.operation) st.operation = chatOpFor(newRole, chatDealOf(st.operation));
+  if(!newRole && !clarify && !prev.role && hasRealEstateWords) clarify = { field: "role", options: chatRoleOptions(deal, p.types) };
+
+  const familyChanged = Boolean(chatFamily(prev.operation) && chatFamily(st.operation) && chatFamily(prev.operation) !== chatFamily(st.operation));
+  const roleChanged = Boolean(prev.role && st.role && prev.role !== st.role);
+
+  // 3) نوع العقار: من كلمات الرسالة فقط
+  if(p.types.length === 1) st.propertyType = p.types[0];
+  else if(p.types.length > 1 && p.types.includes(patch.property_type)) st.propertyType = patch.property_type;
+  else if(p.types.length > 1 && !prev.propertyType) clarify = clarify || { field: "propertyType", options: p.types.map(t => CHAT_TYPE_AR[t]) };
+  else if(CHAT_TYPES.includes(patch.property_type) && patch.property_type !== prev.propertyType && !p.types.length) dropped.push("propertyType");
+  const residentialSwitch = prev.propertyType && st.propertyType && CHAT_RESIDENTIAL.has(prev.propertyType) !== CHAT_RESIDENTIAL.has(st.propertyType);
+  if(residentialSwitch && !CHAT_RESIDENTIAL.has(st.propertyType) && (st.rooms != null || st.baths != null) && p.rooms == null){
+    st.rooms = null; st.baths = null;
+    notes.push({ kind: "change", text: "شلت عدد الغرف والحمامات لأنها مش شرط مناسب للنوع الجديد." });
+  }
+
+  // 4) المكان: مكان معروف في الرسالة، أو نص من الرسالة نفسها، وداخل مدينة نصر فقط
+  if(p.outOfScope) notes.push({ kind: "scope", text: "نطاقنا مدينة نصر بس، فمسجلتش منطقة برّه مدينة نصر." });
+  else if(p.location) st.location = p.location;
+  else if(typeof patch.location === "string" && patch.location.trim()){
+    const loc = chatCleanText(patch.location, 60);
+    const ln = chatNorm(loc || "");
+    if(loc && ln.length >= 3 && ` ${p.n} `.includes(` ${ln} `) && !CHAT_OUT_RE.test(ln)) st.location = loc;
+    else if(loc && loc !== prev.location) dropped.push("location");
+  }
+
+  // 5) المساحة
+  const area = chatPickNumber(patch.area_value, p.areas) || (p.areas.length === 1 ? p.areas[0] : null);
+  if(area){
+    let mode = area.mode;
+    if(st.role === "owner") mode = "exact";
+    if(!mode && prev.area && !roleChanged) mode = prev.area.mode;
+    if(!mode && CHAT_MODES.includes(patch.area_mode) && CHAT_CMP_CUE_RE.test(p.n)) mode = patch.area_mode;
+    st.area = { value: area.value, mode: mode || "approx" };
+  } else if(patch.area_value != null && Number(patch.area_value) !== prev.area?.value) dropped.push("area");
+
+  // 6) السعر: رقم من الرسالة + اتساق مع نوع العملية (إجمالي أو شهري)
+  const fam = chatFamily(st.operation);
+  let price = chatPickNumber(patch.price_value, p.money);
+  if(!price && p.money.length === 1) price = p.money[0];
+  if(!price && p.money.length > 1){
+    const fits = p.money.filter(c => (fam === "total" ? c.value >= 100000 : fam === "monthly" && c.value < 1000000));
+    if(fits.length === 1) price = fits[0];
+    else if(!fits.length || fits.length > 1) clarify = clarify || { field: "price", options: [] };
+  }
+  let inferred = null;
+  if(!price && p.inferred && fam){
+    const value = fam === "total" ? Math.round(p.inferred.num * 1e6) : Math.round(p.inferred.num * 1e3);
+    price = { value, mode: null };
+    inferred = { num: p.inferred.num, value };
+  }
+  if(price){
+    const kind = fam || (p.monthly ? "monthly" : null);
+    if(chatPriceImplausible(kind, price.value)){
+      clarify = clarify || { field: "price", options: [] };
+      notes.push({ kind: "price", text: "الرقم مش متسق مع نوع العملية (إجمالي ولا شهري؟)، فمحفظتهوش لحد ما توضّحه." });
+    } else {
+      let mode = price.mode;
+      if(st.role === "owner") mode = "exact";
+      if(!mode && prev.price && !familyChanged && !roleChanged) mode = prev.price.mode;
+      if(!mode && CHAT_MODES.includes(patch.price_mode) && CHAT_CMP_CUE_RE.test(p.n)) mode = patch.price_mode;
+      st.price = { value: price.value, mode: mode || "max", kind };
+    }
+  } else if(patch.price_value != null && Number(patch.price_value) !== prev.price?.value) dropped.push("price");
+  if((familyChanged || roleChanged) && !price && prev.price){
+    st.price = null;
+    notes.push({ kind: "change", text: familyChanged
+      ? `شلت ${chatPriceFieldLabel(prev)} القديم${prev.role === "seeker" && prev.operation === "buy" ? "ة" : ""} لأنه كان ${chatFamily(prev.operation) === "monthly" ? "إيجار شهري" : "سعر إجمالي"}، ومحتاجين رقم يناسب ${CHAT_OP_AR[st.operation]}.`
+      : "شلت قيمة السعر القديمة لأن معناها اتغيّر بين الميزانية والسعر المطلوب." });
+  }
+  if(st.price){
+    const kind = chatFamily(st.operation);
+    if(kind && chatPriceImplausible(kind, st.price.value)){
+      st.price = null;
+      clarify = clarify || { field: "price", options: [] };
+      notes.push({ kind: "price", text: `الرقم اللي اتقال قبل كده مش مناسب لـ${CHAT_OP_AR[st.operation]}، فمحتاجين رقم جديد.` });
+    } else st.price.kind = kind || st.price.kind || null;
+  }
+
+  // 7) الغرف والحمامات
+  for(const key of ["rooms", "baths"]){
+    const gv = Number(patch[key]);
+    if(p[key] != null) st[key] = p[key];
+    else if(Number.isInteger(gv) && gv > 0 && p.numbers.has(gv) && !p.money.some(m => m.value === gv) && !p.areas.some(a => a.value === gv)) st[key] = gv;
+    else if(patch[key] != null && gv !== prev[key]) dropped.push(key);
+  }
+
+  // 8) نصوص المالك (الدور/التشطيب/العمر/الإشغال): لازم كلمة منها في الرسالة
+  const textMap = { floor: "floor", finishing: "finishing", buildingAge: "building_age", occupancy: "occupancy" };
+  for(const [key, pkey] of Object.entries(textMap)){
+    const v = chatCleanText(patch[pkey]);
+    if(!v) continue;
+    if(chatTokensOverlap(v, p.n)) st[key] = v;
+    else if(v !== prev[key]) dropped.push(key);
+  }
+  if(p.furnished) st.furnished = p.furnished;
+  else if((patch.furnished === "furnished" || patch.furnished === "unfurnished") && /فرش|مفروش|عفش|furnish/.test(p.n)) st.furnished = patch.furnished;
+
+  // 9) الإزالة الصريحة فقط
+  const wanted = new Set([...p.remove, ...(Array.isArray(g?.clear) ? g.clear : [])].map(x => {
+    if(x === "building_age") return "buildingAge";
+    return x;
+  }));
+  for(const key of wanted){
+    if(!CHAT_CLEARABLE.includes(key)) continue;
+    if(!p.remove.has(key) && !CHAT_REMOVE_CUE_RE.test(p.n)) continue;
+    st[key] = null;
+  }
+  if(p.stopOptional) st.skipOptional = true;
+  return { state: st, notes, clarify, dropped, familyChanged, roleChanged, inferred };
+}
+
+// ═══ الناقص بالأولوية (سؤال واحد كل مرة) ═══
+function chatMissing(st){
+  const list = [];
+  if(!st.role) list.push({ field: "role" });
+  if(!st.operation) list.push({ field: "operation" });
+  if(!st.propertyType) list.push({ field: "propertyType" });
+  if(!st.location) list.push({ field: "location" });
+  if(st.role === "owner"){
+    if(!st.area) list.push({ field: "area" });
+    if(!st.price) list.push({ field: "price" });
+    if(!st.skipOptional){
+      if(CHAT_RESIDENTIAL.has(st.propertyType) && st.rooms == null) list.push({ field: "rooms", optional: true });
+      if(CHAT_RESIDENTIAL.has(st.propertyType) && st.baths == null) list.push({ field: "baths", optional: true });
+      for(const k of CHAT_TEXT_FIELDS) if(!st[k]) list.push({ field: k, optional: true });
+    }
+  } else if(st.role === "seeker"){
+    if(!st.price) list.push({ field: "price" });
+    if(!st.skipOptional && CHAT_RESIDENTIAL.has(st.propertyType) && !st.area && st.rooms == null) list.push({ field: "area", optional: true });
+  }
+  return list;
+}
+const CHAT_ASK_AR = {
+  role: () => "بتدوّر على عقار، ولا عندك عقار عايز تعرضه؟",
+  operation: st => (st.role === "owner" ? "عايز تبيع ولا تأجّر؟" : "شراء ولا إيجار؟"),
+  propertyType: () => "نوع العقار إيه؟ شقة، فيلا، محل، ولا مكتب؟",
+  location: st => (st.role === "owner" ? "العقار في أنهي منطقة أو شارع في مدينة نصر؟" : "تحب يكون في أنهي حتة في مدينة نصر؟"),
+  area: st => (st.role === "owner" ? "مساحته كام متر؟" : "في مساحة تقريبية في دماغك؟ (اختياري)"),
+  price: st => {
+    if(st.operation === "sell") return "طالب فيه كام؟";
+    if(st.operation === "lease") return "طالب إيجار كام في الشهر؟";
+    if(st.operation === "rent") return "الإيجار الشهري لحد كام؟";
+    return "ميزانيتك لحد كام؟";
+  },
+  rooms: () => "فيه كام أوضة؟ (اختياري)",
+  baths: () => "وكام حمام؟ (اختياري)",
+  floor: () => "في الدور الكام؟ (اختياري)",
+  finishing: () => "التشطيب عامل إزاي؟ (اختياري)",
+  buildingAge: () => "المبنى عمره قد إيه تقريبًا؟ (اختياري)",
+  occupancy: () => "العقار فاضي ولا مسكون أو مؤجر دلوقتي؟ (اختياري)",
+};
+
+// ═══ عرض القيم بالعربي ═══
+function chatMoneyAr(v){
+  const n = Number(v);
+  if(!(n > 0)) return "";
+  const fmt = (x, one, many) => { const r = Math.round(x * 100) / 100; return `${r} ${Number.isInteger(r) && r >= 3 && r <= 10 ? many : one}`; };
+  if(n >= 1e6) return fmt(n / 1e6, "مليون", "ملايين");
+  if(n >= 1e3) return fmt(n / 1e3, "ألف", "آلاف");
+  return String(n);
+}
+const CHAT_MODE_AR = { max: "حتى", lt: "أقل من", min: "من", gt: "أكثر من", approx: "حوالي", exact: "بالضبط" };
+function chatPriceLabel(st){
+  const p = st.price;
+  if(!p) return "";
+  const monthly = p.kind === "monthly" ? " شهريًا" : "";
+  if(st.role === "owner") return `مطلوب ${chatMoneyAr(p.value)}${monthly}`;
+  return `${CHAT_MODE_AR[p.mode] || "حتى"} ${chatMoneyAr(p.value)}${monthly}`;
+}
+function chatAreaLabel(st){
+  const a = st.area;
+  if(!a) return "";
+  if(st.role === "owner" || a.mode === "approx") return `${a.value}م`;
+  return `${CHAT_MODE_AR[a.mode] || ""} ${a.value}م`.trim();
+}
+function chatFieldValueLabel(st, field){
+  switch(field){
+    case "role": return { owner: "صاحب عقار", seeker: "باحث عن عقار" }[st.role] || "";
+    case "operation": return st.operation ? CHAT_OP_AR[st.operation] : "";
+    case "propertyType": return st.propertyType ? CHAT_TYPE_AR[st.propertyType] : "";
+    case "price": return chatPriceLabel(st);
+    case "area": return chatAreaLabel(st);
+    case "rooms": {
+      if(st.rooms == null) return "";
+      return st.role === "seeker" ? `${st.rooms} غرف أو أكثر` : `${st.rooms} غرف`;
+    }
+    case "baths": return st.baths != null ? `${st.baths} حمام` : "";
+    case "furnished": return { furnished: "مفروش", unfurnished: "غير مفروش" }[st.furnished] || "";
+    default: return st[field] ? String(st[field]) : "";
+  }
+}
+function chatSummary(st){
+  const items = [];
+  for(const f of ["operation", "propertyType", "location", "price", "area", "rooms", "baths", ...CHAT_TEXT_FIELDS, "furnished"]){
+    const value = chatFieldValueLabel(st, f);
+    if(!value) continue;
+    // «الدور: الدور التالت» ⇒ «الدور التالت» — اسم الحقل بيتكتب بس لو القيمة مش فيها معناه
+    const key = chatNorm(CHAT_FIELD_AR[f]).split(" ")[0].replace(/^ال/, "");
+    const label = CHAT_TEXT_FIELDS.includes(f) && !chatNorm(value).includes(key) ? `${CHAT_FIELD_AR[f]}: ${value}` : value;
+    items.push({ field: f, name: chatFieldLabel(st, f), label, removable: CHAT_CLEARABLE.includes(f) });
+  }
+  return items;
+}
+function chatChanges(prev, st){
+  const fields = ["role", "operation", "propertyType", "location", "area", "price", "rooms", "baths", ...CHAT_TEXT_FIELDS, "furnished"];
+  const out = [];
+  for(const f of fields){
+    const before = chatFieldValueLabel(prev, f);
+    const after = chatFieldValueLabel(st, f);
+    if(before === after) continue;
+    let kind = "changed";
+    if(!before) kind = "set";
+    else if(!after) kind = "cleared";
+    out.push({ field: f, label: chatFieldLabel(st.role ? st : prev, f), before: before || null, after: after || null, kind });
+  }
+  return out;
+}
+function chatChangeNote(changes){
+  const edited = changes.filter(c => c.kind !== "set" && c.field !== "role");
+  if(!edited.length) return null;
+  const parts = edited.map(c => (c.kind === "cleared" ? `اتشال شرط ${c.label}` : `${c.label}: ${c.after}`));
+  return `✏️ اتعدّل: ${parts.join(" · ")} — وباقي المواصفات زي ما هي.`;
+}
+
+// ═══ البحث والمقارنة من ai-feed.json (مدينة نصر فقط) ═══
+const chatNum = v => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+function chatInRange(v, r){
+  if(!r) return true;
+  if(!(v > 0)) return false;
+  const x = r.value;
+  switch(r.mode){
+    case "lt": return v < x;
+    case "max": return v <= x;
+    case "gt": return v > x;
+    case "min": return v >= x;
+    case "approx": return Math.abs(v - x) <= x * 0.15;
+    default: return v === x;
+  }
+}
+function chatRows(feed){
+  return (Array.isArray(feed?.properties) ? feed.properties : [])
+    .filter(p => p && typeof p === "object" && p.in_nasr_city !== false && /^[a-z0-9-]+$/.test(String(p.slug || "")));
+}
+function chatMatches(p, st, without){
+  const deal = chatDealOf(st.operation);
+  if(deal && p.transaction !== deal) return false;
+  if(st.propertyType && without !== "propertyType" && p.propertyType !== st.propertyType) return false;
+  if(st.price && without !== "price" && !chatInRange(chatNum(p.priceNumeric), st.price)) return false;
+  if(st.area && without !== "area" && !chatInRange(chatNum(p.areaNumeric), st.area)) return false;
+  if(st.rooms != null && without !== "rooms" && !(chatNum(p.roomsNumeric) >= st.rooms)) return false;
+  if(st.furnished === "furnished" && without !== "furnished" && p.furnished !== "furnished") return false;
+  if(st.furnished === "unfurnished" && without !== "furnished" && p.furnished === "furnished") return false;
+  if(without !== "location" && !chatHayHas(chatHayOf(p), chatLocPhrase(st.location))) return false;
+  return true;
+}
+function chatCard(p){
+  const slug = String(p.slug);
+  const confirmed = p.availability_status === "confirmed_on_date" && /^\d{4}-\d{2}-\d{2}$/.test(String(p.last_confirmed_at || ""));
+  return {
+    slug, url: `/properties/${slug}/`, title: chatCleanText(p.title, 140) || slug,
+    price: chatCleanText(p.price, 60), priceNumeric: chatNum(p.priceNumeric) || null,
+    area: chatCleanText(p.area, 60), areaNumeric: chatNum(p.areaNumeric) || null,
+    rooms: chatNum(p.roomsNumeric) || null, location: chatCleanText(p.location, 120),
+    transaction: p.transaction === "rent" ? "rent" : "sale", propertyType: CHAT_TYPES.includes(p.propertyType) ? p.propertyType : null,
+    image: typeof p.image === "string" && /^https:\/\/nasr-realestate\.github\.io\/assets\/img\/[\w./-]+$/.test(p.image) ? p.image.replace("https://nasr-realestate.github.io", "") : null,
+    datePosted: typeof p.date === "string" ? p.date.slice(0, 10) : null,
+    availability: confirmed ? { status: "confirmed_on_date", lastConfirmedAt: p.last_confirmed_at } : { status: "needs_confirmation", lastConfirmedAt: null },
+  };
+}
+function chatSearch(feed, st){
+  if(st.role !== "seeker" || !st.operation || !st.propertyType) return null;
+  if(!(chatLocPhrase(st.location) || st.price || st.area || st.rooms != null || st.furnished)) return null;
+  const rows = chatRows(feed);
+  const byDate = (a, b) => String(b.date || "").localeCompare(String(a.date || ""));
+  const found = rows.filter(p => chatMatches(p, st)).sort(byDate);
+  const out = { count: found.length, cards: found.slice(0, CHAT_CARDS_MAX).map(chatCard), alternatives: [] };
+  if(!found.length){
+    for(const field of ["price", "area", "rooms", "location", "furnished"]){
+      if(field === "location" ? !chatLocPhrase(st.location) : st[field] == null) continue;
+      const count = rows.filter(p => chatMatches(p, st, field)).length;
+      const name = chatFieldLabel(st, field);
+      if(count > 0) out.alternatives.push({ field, count, label: `من غير شرط ${name} (${count})`, send: `شيل شرط ${field === "price" ? "الميزانية" : name}` });
+    }
+    out.alternatives.sort((a, b) => b.count - a.count);
+    out.alternatives = out.alternatives.slice(0, 3);
+  }
+  return out;
+}
+function chatComparables(feed, st){
+  if(st.role !== "owner" || !st.operation || !st.propertyType || !st.location || !st.area?.value || !st.price?.value) return null;
+  const deal = chatDealOf(st.operation);
+  const rows = chatRows(feed).filter(p => p.transaction === deal && p.propertyType === st.propertyType && chatNum(p.priceNumeric) > 0 && chatNum(p.areaNumeric) > 0);
+  const phrase = chatLocPhrase(st.location);
+  let scope = "location";
+  let set = phrase ? rows.filter(p => chatHayHas(chatHayOf(p), phrase)) : [];
+  if(set.length < CHAT_COMPARABLE_MIN){ scope = "city"; set = rows; }
+  const dataAt = String(feed?.generated_at || feed?.last_updated || "").slice(0, 10) || null;
+  const base = {
+    deal, monthly: deal === "rent", propertyType: st.propertyType, scope, scopeLabel: scope === "location" ? st.location : "مدينة نصر كلها (نطاق أوسع)",
+    count: set.length, dataAt, note: "أسعار طلب منشورة على الموقع — مش أسعار صفقات مكتملة ولا تقييم مهني.",
+  };
+  if(set.length < CHAT_COMPARABLE_MIN) return { status: "insufficient", ...base };
+  const ppm = set.map(p => chatNum(p.priceNumeric) / chatNum(p.areaNumeric)).sort((a, b) => a - b);
+  const mid = Math.floor(ppm.length / 2);
+  const median = ppm.length % 2 ? ppm[mid] : (ppm[mid - 1] + ppm[mid]) / 2;
+  const own = st.price.value / st.area.value;
+  const diffPct = Math.round(((own - median) / median) * 100);
+  const dates = set.map(p => String(p.date || "").slice(0, 10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort((a, b) => a.localeCompare(b));
+  let verdict = "near";
+  if(diffPct > 10) verdict = "above";
+  else if(diffPct < -10) verdict = "below";
+  return {
+    status: "ok", ...base, medianPerM2: Math.round(median), ownPerM2: Math.round(own), diffPct, verdict,
+    listingsFrom: dates[0] || null, listingsTo: dates.at(-1) || null,
+  };
+}
+
+// ═══ الوقت (Africa/Cairo) ═══
+function chatClock(d = new Date()){
+  const date = x => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(x);
+  const time = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  const weekday = new Intl.DateTimeFormat("ar-EG", { timeZone: "Africa/Cairo", weekday: "long" }).format(d);
+  const { hour, isFriday } = cairoNow(d);
+  return { date: date(d), tomorrow: date(new Date(d.getTime() + 86400000)), time, weekday, officeOpen: !isFriday && hour >= 12 && hour < 21 };
+}
+
+// ═══ المعلومات الموثقة المنشورة على الموقع ═══
+const CHAT_SITE_FACTS = [
+  "سمسار طلبك — طارق طنطاوي: وساطة واستشارات عقارية في مدينة نصر فقط، منذ 2014.",
+  `المكتب: ${OFFICE_ADDRESS}. المواعيد: السبت–الخميس من 12 الظهر لـ 9 بالليل، والجمعة إجازة.`,
+  "التواصل: واتساب أو تليفون المكتب 01147758857 (زرار واتساب موجود في الصفحة)، والبريد samsar.talabak@mailo.com.",
+  "العمولة المنشورة على الموقع: 2.5% من قيمة البيع، تُدفع فقط بعد إتمام الصفقة، ولا توجد رسوم مبدئية. لا يوجد نص منشور عن عمولة الإيجار.",
+  "الأسعار المعروضة أسعار طلب وليست أسعار إتمام. التوافر لازم يتأكد من المالك أو المكتب، وتاريخ النشر مش تاريخ تأكيد.",
+  `تقييم نشاط «سمسار طلبك» على جوجل: ${GOOGLE_BUSINESS.rating} من ${GOOGLE_BUSINESS.reviewsCount} مراجعة. طارق ${GOOGLE_PROFILE.badge}.`,
+  "أداة التقييم على الموقع (/tools/valuation.html) تعطي مؤشرًا استرشاديًا من بيانات السوق، مش تقييمًا مهنيًا.",
+  "صفحة «اعرض عقارك» (/add-your-property.html) هي الطريق الرسمي لإرسال بيانات عقار للمكتب. الصور اختيارية ويمكن إرسالها لطارق لاحقًا.",
+];
+const CHAT_FACT_NUMBERS = [2014, 12, 9, 21, 100, 1147758857, 2.5, GOOGLE_BUSINESS.rating, GOOGLE_BUSINESS.reviewsCount, GOOGLE_PROFILE.level, 16, 6];
+
+const CHAT_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    intent: { type: "STRING", enum: ["search_buy", "search_rent", "offer_sell", "offer_lease", "update_details", "general_real_estate", "site_question", "off_topic", "contact_tarek", "greeting", "unclear"] },
+    needs_clarification: { type: "BOOLEAN" },
+    patch: {
+      type: "OBJECT",
+      properties: {
+        role: { type: "STRING", enum: ["seeker", "owner"] },
+        operation: { type: "STRING", enum: CHAT_OPS },
+        property_type: { type: "STRING", enum: CHAT_TYPES },
+        location: { type: "STRING" },
+        area_value: { type: "NUMBER" },
+        area_mode: { type: "STRING", enum: CHAT_MODES },
+        price_value: { type: "NUMBER" },
+        price_mode: { type: "STRING", enum: CHAT_MODES },
+        rooms: { type: "INTEGER" },
+        baths: { type: "INTEGER" },
+        floor: { type: "STRING" },
+        finishing: { type: "STRING" },
+        building_age: { type: "STRING" },
+        occupancy: { type: "STRING" },
+        furnished: { type: "STRING", enum: ["furnished", "unfurnished"] },
+      },
+    },
+    clear: { type: "ARRAY", items: { type: "STRING", enum: ["location", "area", "price", "rooms", "baths", "floor", "finishing", "building_age", "occupancy", "furnished"] } },
+    reply: { type: "STRING" },
+  },
+  required: ["intent", "needs_clarification", "reply"],
+};
+
+const CHAT_BASE_RULES = `أنت «مساعد طارق»: مساعد ذكي بيشتغل بـGemini على موقع «سمسار طلبك» (طارق طنطاوي — عقارات مدينة نصر). لست طارقًا نفسه.
+أسلوبك: مصري طبيعي، دافي وقصير (جملتين أو تلاتة)، وسؤال واحد بالكتير في كل رد، وما تسألش عن حاجة المستخدم قالها قبل كده.
+خفة ظل خفيفة مسموحة لما تناسب بس — مفيش هزار مع ضغط مالي أو خسارة أو قلق، والهزار عمره ما يكون بديل عن الإجابة.
+لو كتب بالفصحى أو بالإنجليزي رد بنفس اللغة بأسلوب بسيط.
+قواعد صارمة:
+1) ممنوع تخترع عقار أو سعر أو مساحة أو عنوان أو ميزة. الواجهة بتعرض العقارات والمقارنات تحت ردك من بيانات الموقع؛ ما تكتبش تفاصيل عقار ولا أسعار عقارات ولا روابط من عندك.
+2) ما تستخدمش أي رقم غير الموجود في كلام المستخدم أو في البيانات المرفقة هنا، وما تعملش قوائم مرقمة ولا تنسيق Markdown (نجوم/عناوين/جداول).
+3) التوافر: ما تأكدش أبدًا إن عقار متاح. needs_confirmation معناها يحتاج تأكيد من المالك، وتاريخ النشر مش تاريخ تأكيد.
+4) التسجيل والترخيص والأوراق والتأمين وعمولة الإيجار: مفيش معلومة موثقة؛ قول كده بوضوح واقترح سؤال طارق. عمولة البيع: استخدم المعلومة الموثقة بالنص.
+5) ما تطلبش رقم قومي ولا بيانات بنكية ولا كلمة سر ولا رقم تليفون. لو لقيت [محذوف: …] في كلام المستخدم يبقى كتب بيانات حساسة اتشالت قبل ما توصلك: قوله بلطف إننا مش محتاجينها.
+6) ما تقولش إن طلب اتبعت أو اتسجل أو وصل لطارق — مفيش حاجة بتتبعت تلقائيًا، والمستخدم بيبعت بنفسه لو حب.
+7) النطاق مدينة نصر بس؛ أي منطقة برّه قول إننا مش بنغطيها.
+8) أسئلة عامة برّه العقارات: رد بلطف وباختصار لو عندك معرفة عامة ثابتة وآمنة؛ ما تخترعش أخبار أو أرقام حديثة ولا تدّي إجابة قانونية أو مالية أو طبية مؤكدة. لو مش متأكد قول «مش عارف» من غير ما تضغط عليه يرجع للعقارات.
+9) ميّز بين ميزانية شراء إجمالية وإيجار شهري، وبين اللي بيدوّر على عقار واللي عايز يعرض عقاره. لو الرسالة تحتمل أكتر من معنى اسأله بدل التخمين (needs_clarification = true).
+10) لو المستخدم عدّل معلومة، عدّلها هي بس وأكّد التعديل في جملة قصيرة وقول إن الباقي زي ما هو. ولو غيّر من شراء لإيجار أو العكس، السعر القديم مش صالح للعملية الجديدة.
+11) التفاصيل الإضافية اختيارية، والمستخدم يقدر يكلّم طارق في أي وقت (زرار واتساب في الصفحة). نصايح التفاوض العامة مسموحة من غير وعود.`;
+
+const CHAT_ROLE_LAYER = {
+  seeker: `المستخدم بيدوّر على عقار (شراء أو إيجار). اللي يلزم للبحث بالترتيب: العملية، نوع العقار، المنطقة داخل مدينة نصر، حد السعر المناسب (ميزانية شراء إجمالية أو إيجار شهري)، والمساحة أو الغرف لو حب.
+ما توسّعش شروطه من عندك. لو مفيش نتائج، الواجهة بتقترح بدائل كل واحد بيغيّر شرط واحد؛ سيبه يختار.
+نصايح التفاوض العامة مسموحة لو طلبها، من غير وعد بتخفيض ومن غير ما تدّعي إنك اتفاوضت عنه.`,
+  owner: `المستخدم صاحب عقار وعايز يعرضه (بيع أو تأجير). اجمع بالتدريج وبالترتيب: نوع العقار، المنطقة والشارع، المساحة، السعر المطلوب، وبعدها (اختياري) الغرف والحمامات، الدور، التشطيب، عمر المبنى، وحالة الإشغال. قول إن التفاصيل بعد السعر اختيارية، والصور اختيارية ممكن يبعتها لطارق بعدين.
+ما تبعتش ولا تسجّل أي حاجة. لو سأل عن سعره: استخدم «ملخص المقارنة» المرفق بأرقامه بس؛ لو البيانات مش كفاية قول كده صراحة، وما تحكمش إن السعر عالي أو واطي من غير مقارنة.`,
+  unknown: "لسه مش واضح هو بيدوّر على عقار ولا عنده عقار يعرضه. لو كلامه عقاري اسأله سؤال واحد لطيف يحدد ده — من غير تخمين.",
+};
+
+function chatSystemPrompt({ state, provisional, missing, clock, results, comparables, redactedKinds, focus, valuation, addressMasked }){
+  const roleLayer = CHAT_ROLE_LAYER[provisional.role || state.role || "unknown"];
+  const missingText = missing.length ? missing.map(m => `${CHAT_FIELD_AR[m.field]}${m.optional ? " (اختياري)" : ""}`).join("، ") : "مفيش حاجة أساسية ناقصة";
+  const lines = [
+    CHAT_BASE_RULES,
+    "",
+    `الوقت الآن بتوقيت القاهرة (Africa/Cairo): ${clock.weekday} ${clock.date} الساعة ${clock.time}. «النهارده» = ${clock.date} و«بكرة» = ${clock.tomorrow}. المكتب ${clock.officeOpen ? "مفتوح دلوقتي" : "مقفول دلوقتي"}. لو الميعاد اللي يقصده ملتبس، اسأله.`,
+    "",
+    "معلومات الموقع الموثقة (استخدمها حرفيًا لأسئلة الموقع والخدمة):",
+    ...CHAT_SITE_FACTS.map(f => `- ${f}`),
+    "",
+    roleLayer,
+    "",
+    `الحالة المحفوظة قبل الرسالة دي: ${JSON.stringify(state)}`,
+    `ما فهمه المحلل الآلي من الرسالة (ممكن يكون ناقص): ${JSON.stringify(provisional)}`,
+    `الناقص بالأولوية بعد الرسالة دي: ${missingText}. اسأل عن أول عنصر بس لو رسالة المستخدم ماجاوبتهوش.`,
+    results ? `نتائج البحث اللي هتتعرض تحت ردك: ${results.count} عقار مطابق. ما تذكرش تفاصيلها.` : "",
+    comparables ? `ملخص المقارنة (أسعار طلب منشورة، مش صفقات): ${JSON.stringify(comparables)}` : "",
+    focus ? `عقار بيسأل عنه المستخدم (من بيانات الموقع): ${JSON.stringify(focus)}` : "",
+    valuation ? `نتيجة أداة التقييم الاسترشادية اللي رجع بيها المستخدم (أرقام فقط): ${JSON.stringify(valuation)}` : "",
+    redactedKinds.length ? `اتحذفت بيانات حساسة من رسالة المستخدم قبل ما توصلك (${redactedKinds.join("، ")}). نبّهه بلطف إنها مش مطلوبة.` : "",
+    addressMasked ? "اتشالت تفاصيل عنوان دقيقة (رقم عمارة/شقة) من رسالته — المنطقة والشارع كفاية." : "",
+    "",
+    "رجّع JSON فقط بالشكل المطلوب: intent، needs_clarification، patch (الحقول اللي الرسالة دي ذكرتها أو غيّرتها بس)، clear (حقول طلب المستخدم صراحة يشيلها)، reply (ردك للمستخدم).",
+    "patch.price_value رقم كامل بالجنيه (6 ملايين = 6000000). price_mode: max = «حتى/بحد أقصى»، lt = «أقل من»، min/gt للحد الأدنى، approx = «حوالي»، exact = رقم محدد. نفس الأوضاع للمساحة.",
+  ];
+  return lines.filter(x => x !== "").join("\n");
+}
+
+function chatBuildContents(history, message){
+  const out = [];
+  const list = (Array.isArray(history) ? history : []).slice(-CHAT_HISTORY_MAX);
+  for(const m of list){
+    if(!m || typeof m !== "object" || typeof m.text !== "string") continue;
+    let role = null;
+    if(m.role === "assistant") role = "model";
+    else if(m.role === "user") role = "user";
+    if(!role) continue;
+    const text = chatPromptSafe(chatMaskAddress(chatRedact(m.text).text).text, CHAT_HISTORY_MSG_MAX);
+    if(!text) continue;
+    if(!out.length && role === "model") continue;
+    const last = out.at(-1);
+    if(last && last.role === role) last.parts[0].text += `\n${text}`;
+    else out.push({ role, parts: [{ text }] });
+  }
+  const last = out.at(-1);
+  if(last && last.role === "user") last.parts[0].text += `\n${message}`;
+  else out.push({ role: "user", parts: [{ text: message }] });
+  return out;
+}
+
+function chatParseJson(text){
+  let t = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+  const a = t.indexOf("{"); const b = t.lastIndexOf("}");
+  if(a === -1 || b <= a) return null;
+  t = t.slice(a, b + 1);
+  try {
+    const j = JSON.parse(t);
+    if(!j || typeof j !== "object" || typeof j.reply !== "string") return null;
+    return j;
+  } catch { return null; }
+}
+
+async function callGeminiChat(env, system, contents){
+  if(!env?.GEMINI_API_KEY) return { ok: false, error: "gemini_unconfigured" };
+  const preferred = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.-]/g, "") || GEMINI_MODEL;
+  const models = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
+  const started = Date.now();
+  let index = 0; let withSchema = true;
+  for(let attempt = 0; attempt < 4 && index < models.length; attempt++){
+    const model = models[index];
+    const remaining = CHAT_TIMEOUT_MS - (Date.now() - started);
+    if(remaining < 1000) return { ok: false, error: "gemini_timeout" };
+    // 2048: هامش لو GEMINI_MODEL المضبوط موديل «بيفكّر» (التفكير بيستهلك من نفس الحد) — الرد نفسه مقصوص لـ700 حرف
+    const generationConfig = { temperature: 0.55, maxOutputTokens: 2048, responseMimeType: "application/json" };
+    if(withSchema) generationConfig.responseSchema = CHAT_RESPONSE_SCHEMA;
+    let r;
+    try {
+      r = await fetchWithTimeout(`${GEMINI_BASE}/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents, generationConfig }),
+      }, remaining);
+    } catch(err){
+      return { ok: false, error: err?.name === "AbortError" ? "gemini_timeout" : "gemini_unavailable" };
+    }
+    if(!r.ok){
+      console.warn("[chat] gemini status:", r.status);
+      if(r.status === 400 && withSchema){ withSchema = false; continue; }          // نفس الموديل بدون responseSchema
+      if((r.status === 400 || r.status === 404) && index < models.length - 1){ index += 1; withSchema = true; continue; }
+      return { ok: false, error: r.status === 429 ? "gemini_busy" : "gemini_unavailable" };
+    }
+    let j;
+    try { j = await r.json(); } catch { return { ok: false, error: "gemini_invalid", model }; }
+    const text = (j?.candidates?.[0]?.content?.parts || []).map(x => (typeof x?.text === "string" ? x.text : "")).join("");
+    const parsed = chatParseJson(text);
+    return parsed ? { ok: true, json: parsed, model } : { ok: false, error: "gemini_invalid", model };
+  }
+  return { ok: false, error: "gemini_unavailable" };
+}
+
+// ═══ فحص رد Gemini: أرقام موثقة فقط، بلا ادعاءات ممنوعة، بلا روابط غريبة، وسؤال واحد ═══
+function chatAllowedNumbers(...sources){
+  const set = new Set(CHAT_FACT_NUMBERS.map(Number));
+  const add = v => {
+    const n = Number(v);
+    if(!Number.isFinite(n)) return;
+    set.add(n);
+    if(n >= 1e6) set.add(Math.round((n / 1e6) * 100) / 100);
+    if(n >= 1e3) set.add(Math.round((n / 1e3) * 100) / 100);
+  };
+  const walk = x => {
+    if(x == null) return;
+    if(typeof x === "number") add(x);
+    else if(typeof x === "string") for(const m of asciiDigits(x).replace(/(\d),(?=\d{3})/g, "$1").matchAll(/\d+(?:\.\d+)?/g)) add(m[0]);
+    else if(x instanceof Set) x.forEach(walk);
+    else if(Array.isArray(x)) x.forEach(walk);
+    else if(typeof x === "object") Object.values(x).forEach(walk);
+  };
+  sources.forEach(walk);
+  return set;
+}
+const CHAT_UNSURE_RE = /تاكد|اتاكد|تتاكد|نتاكد|تحقق|راجع|محامي|مش\sعارف|معرفش|مفيش\sمعلومه|مش\sمنشور|غير\sمنشور|مش\sموثق|غير\sموثق|اسال|محتاج|يحتاج|مش\sمتاكد|مش\sمضمون|غير\sمؤكد|مش\sاكيد/;
+const CHAT_CLAIM_RULES = [
+  { kind: "availability", test: n => /(?:متاح|متاحه|متوفر|متوفره|موجود|موجوده)\s(?:حاليا|دلوقتي|النهارده|الان|اليوم|فعلا|اكيد)|لسه\s(?:متاح|متاحه|موجود|موجوده|متوفر)|(?:^|\s)(?:اه|ايوه|نعم)\s(?:متاح|متاحه|موجود)/.test(n) && !CHAT_UNSURE_RE.test(n),
+    notice: "التوافر يحتاج تأكيد من المالك — مفيش تأكيد لحظي من الموقع." },
+  { kind: "sent", test: n => /(?:^|\s)(?:تم|خلاص)\s(?:ارسال|تسجيل|حجز)|(?:^|\s)(?:بعتت|بعت|ارسلت|سجلت|حجزت)\s(?:طلبك|بياناتك|عقارك|رسالتك|معاينه|ميعاد)|(?:طلبك|بياناتك|عقارك)\s(?:اتبعت|اتسجل|وصل)|(?:^|\s)وصلت?\s(?:لطارق|للمكتب)/.test(n) && !/(?:^|\s)(?:مش|مفيش|لم|ما|محدش|ولا|لما|لو)(?=\s)/.test(n),
+    notice: "مفيش حاجة اتبعتت أو اتسجلت — الملخص في الصفحة بس، وإنت اللي تقرر تبعته." },
+  { kind: "legal", test: n => /(?:مسجل|مسجله|متسجل|متسجله|مرخص|مرخصه|عقد\sمسجل|شهر\sعقاري|اوراق(?:ه|ها)?\s(?:سليمه|كامله|مضبوطه|قانونيه)|قانوني\s100|100\s?%?\sقانوني)/.test(n) && !CHAT_UNSURE_RE.test(n),
+    notice: "التسجيل والترخيص والأوراق محتاجين تحقق متخصص — مفيش معلومة موثقة عنها على الموقع." },
+  { kind: "commission", test: (n, nums) => /عموله|سمسره/.test(n) && (nums.some(v => v !== 2.5) || (/ايجار|تاجير/.test(n) && /(?:^|\s)(?:شهر|شهرين|نص|نصف|ربع)(?=\s|$)|%/.test(n))),
+    notice: "المنشور على الموقع: عمولة البيع 2.5% بعد إتمام الصفقة؛ عمولة الإيجار مش منشورة — اسأل طارق." },
+  { kind: "deposit", test: n => /تامين|مقدم\sالايجار/.test(n) && /(?:^|\s)(?:شهر|شهرين|نص)(?=\s|$)|\d/.test(n),
+    notice: "قيمة التأمين مش منشورة على الموقع — بتتحدد مع المالك." },
+  { kind: "promise", test: n => /(?:اضمنلك|هضمنلك|نضمنلك|مضمون\s(?:انه|ان)|اكيد\s(?:هينزل|هيوافق|هيقبل)|هنخفضلك|هخفضلك)/.test(n),
+    notice: "مفيش ضمانات على التفاوض أو السعر." },
+  { kind: "identity", test: n => /(?:^|\s)انا\sطارق(?:\sطنطاوي)?(?=\s|$)/.test(n) && !/مساعد/.test(n), notice: null },
+  { kind: "sensitive", test: n => /(?:ابعت|ابعتلي|اكتب|سيب|ادينا|ممكن|محتاج)\s(?:لي\s|لنا\s)?(?:رقمك|رقم\s(?:تليفونك|موبايلك|الموبايل|التليفون|الهاتف))|الرقم\sالقومي|رقم\sالبطاقه|بيانات\s(?:البنك|الكارت|البطاقه)|رقم\sالحساب|كلمه\sالسر|الباسورد/.test(n) && !/(?:^|\s)(?:مش|ما|لا|متبعتش|ماتبعتش|بلاش|مش\sمحتاجين)(?=\s)/.test(n),
+    notice: null },
+];
+// حكم على السعر («عالي/رخيص/مناسب») مسموح بس لما تكون في مقارنة كفاية من البيانات المنشورة
+const CHAT_VERDICT_SUBJECT_RE = /(?:^|\s)(?:سعرك|السعر|سعرها|سعره|المبلغ|الرقم\sده)(?=\s|$)/;
+const CHAT_VERDICT_RE = /(?:^|\s)(?:عالي|غالي|مرتفع|واطي|رخيص|مناسب|معقول|لقطه|مبالغ)(?=\s|$)|(?:اقل|اعلي|فوق|تحت)\s(?:من\s)?السوق/;
+const CHAT_REASK = {
+  price: /بكام|كام\sالسعر|السعر\sكام|طالب\s(?:فيه\s|فيها\s)?كام|ميزانيتك\s(?:كام|قد\sايه|لحد\sكام)|الميزانيه\s(?:كام|قد\sايه)|السعر\sالمطلوب|الايجار\s(?:كام|الشهري\sكام)/,
+  area: /المساحه\s(?:كام|قد\sايه)|مساحت(?:ه|ها)\s(?:كام|قد\sايه)|كام\sمتر/,
+  location: /انهي\s(?:منطقه|حته|شارع)|المنطقه\s(?:ايه|فين)|فين\sبالظبط|في\sانهي\s(?:منطقه|حته)/,
+  operation: /(?:بيع|شراء|للبيع)\sولا\s(?:ايجار|تاجير|للايجار)/,
+  propertyType: /نوع\sالعقار|شقه\sولا\s(?:فيلا|محل)/,
+  rooms: /كام\s(?:اوضه|غرفه|اوض|غرف)/,
+};
+// تقسيم لجمل: النقطة نهاية جملة بس لو بعدها مسافة أو آخر النص (مش «2.5%» ولا نقط الروابط)
+function chatSplitSentences(text){
+  const out = [];
+  let cur = "";
+  const chars = [...text];
+  for(let i = 0; i < chars.length; i++){
+    const ch = chars[i];
+    cur += ch;
+    const next = chars[i + 1];
+    const end = ch === "!" || ch === "؟" || ch === "?" || ch === "\n" || (ch === "." && (next === undefined || /\s/.test(next)));
+    if(end){ out.push(cur); cur = ""; }
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+function chatGroundReply(reply, allowed, ctx){
+  const { topics, state, next } = ctx;
+  const notices = [];
+  const seen = new Set();
+  const addNotice = (kind, text) => { if(text && !seen.has(kind)){ seen.add(kind); notices.push({ kind, text }); } };
+  let removed = 0; let questions = 0; let reasked = false;
+  const kept = [];
+  const clean = String(reply || "").replace(/\r/g, "").replace(/\*\*/g, "*").replace(/^#{1,6}[ \t]+/gm, "").replace(/^[ \t]*[-*•][ \t]+/gm, "").slice(0, 2000);
+  for(const sentence of chatSplitSentences(clean)){
+    const n = chatNorm(sentence);
+    if(!n){ kept.push(sentence); continue; }
+    const urls = sentence.match(/https?:\/\/\S+|www\.\S+/gi) || [];
+    const badUrl = urls.some(u => !/^https:\/\/(?:nasr-realestate\.github\.io\/|wa\.me\/201147758857|maps\.app\.goo\.gl\/)/i.test(u));
+    const numText = asciiDigits(sentence).replace(/https?:\/\/\S+/gi, " ").replace(/^\s*\d{1,2}[.)-]\s/, " ").replace(/(\d),(?=\d{3})/g, "$1");
+    const nums = [...numText.matchAll(/\d+(?:\.\d+)?/g)].map(m => Number(m[0]));
+    const badNumber = nums.some(v => !allowed.has(v));
+    let claim = CHAT_CLAIM_RULES.find(rule => rule.test(n, nums));
+    if(!claim && !ctx.comparablesOk && CHAT_VERDICT_SUBJECT_RE.test(n) && CHAT_VERDICT_RE.test(n) && !CHAT_UNSURE_RE.test(n)){
+      claim = { kind: "verdict", notice: "مفيش بيانات منشورة كفاية للحكم على السعر — ده محتاج مقارنة كافية أو تقييم." };
+    }
+    const isQuestion = /[؟?]\s*$/.test(sentence.trim());
+    const reask = isQuestion && Object.entries(CHAT_REASK).some(([field, re]) => state[field] != null && field !== ctx.clarifyField && re.test(n));
+    if(badUrl || badNumber || claim){
+      removed += 1;
+      if(claim) addNotice(claim.kind, claim.notice);
+      else if(badNumber) addNotice("number", "اتشال من الرد رقم مش موجود في بيانات الموقع أو في كلامك.");
+      else addNotice("link", "اتشال من الرد رابط مش من الموقع.");
+      continue;
+    }
+    if(reask){ reasked = true; removed += 1; continue; }
+    if(isQuestion){
+      questions += 1;
+      if(questions > 1){ removed += 1; continue; }        // سؤال واحد بس في كل رد
+    }
+    kept.push(sentence);
+  }
+  let text = kept.join("").replace(/\n{3,}/g, "\n\n").trim();
+  if(reasked && questions === 0 && next && CHAT_ASK_AR[next.field]) text = `${text}${text ? "\n" : ""}${CHAT_ASK_AR[next.field](state)}`.trim();
+  if(text.length > CHAT_REPLY_MAX){
+    const cut = text.slice(0, CHAT_REPLY_MAX);
+    const at = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("؟"), cut.lastIndexOf("!"), cut.lastIndexOf("\n"));
+    text = (at > 200 ? cut.slice(0, at + 1) : cut).trim();
+  }
+  if(topics.has("availability")) addNotice("availability", "التوافر يحتاج تأكيد من المالك — تاريخ النشر مش تاريخ تأكيد.");
+  return { text, removed, notices };
+}
+
+function chatFocusProperty(feed, slug, n){
+  const rows = chatRows(feed);
+  const want = /^[a-z0-9-]{3,120}$/.test(String(slug || "")) ? String(slug) : null;
+  if(want){ const hit = rows.find(p => p.slug === want); if(hit) return hit; }
+  const tokens = new Set(String(n || "").split(" "));
+  return rows.find(p => tokens.has(String(p.slug))) || null;
+}
+function chatValuationForPrompt(v){
+  if(!v) return null;
+  return { estimate: v.estimate, perMeter: v.perMeter, p25: v.p25, p75: v.p75, samples: v.samples, confidence: v.confidence, size: v.size, deal: v.areaType || null };
+}
+
+const CHAT_ERROR_MESSAGES = {
+  gemini_timeout: "Gemini اتأخر في الرد فوقفنا الطلب.",
+  gemini_busy: "Gemini عليه ضغط دلوقتي.",
+  gemini_invalid: "رد Gemini وصل بشكل غير صالح.",
+  gemini_unavailable: "مساعد Gemini متوقف مؤقتًا.",
+};
+const CHAT_KIND_AR = { phone: "رقم هاتف", national_id: "رقم قومي", card: "رقم بطاقة", bank: "حساب بنكي", email: "بريد إلكتروني", secret: "كلمة سر" };
+
+async function handleChat(request, env, cors, ip){
+  const respond = (obj, s = 200) => jsonResWith(cors, obj, s);
+  if(request.method !== "POST") return respond({ ok: false, error: "method_not_allowed" }, 405);
+  if(rateLimited(ip)) return respond({ ok: false, error: "rate_limited", message: "بتبعت رسايل كتير ورا بعض — استنى ثواني وجرّب تاني." }, 429);
+  if(!/^application\/json\b/i.test(request.headers.get("Content-Type") || "")) return respond({ ok: false, error: "unsupported_content_type" }, 415);
+  const { json: body, tooLarge } = await readJsonBody(request, MAX_CHAT_BODY_BYTES);
+  if(tooLarge) return respond({ ok: false, error: "payload_too_large", message: "الرسالة كبيرة أوي — قصّرها وجرّب تاني." }, 413);
+  if(!body || typeof body !== "object" || Array.isArray(body)) return respond({ ok: false, error: "bad_request" }, 400);
+  if(body.consent !== CHAT_CONSENT) return respond({ ok: false, error: "consent_required", message: "لازم توافق الأول على إرسال المحادثة لـGemini." }, 412);
+  const rawMessage = String(body.message || "").slice(0, MAX_MSG_LEN).trim();
+  if(!rawMessage) return respond({ ok: false, error: "empty_message" }, 400);
+  if(!env?.GEMINI_API_KEY) return respond({ ok: false, error: "gemini_unconfigured", message: "مساعد Gemini مش متاح دلوقتي." }, 503);
+
+  const prev = chatSanitizeState(body.state);
+  const { text: redacted, kinds } = chatRedact(rawMessage);
+  const masked = chatMaskAddress(redacted);
+  const message = chatPromptSafe(masked.text, MAX_MSG_LEN);
+  const parse = chatParse(redacted, prev.asked);
+  const provisional = chatApply(prev, null, parse);
+  let feed = null;
+  try { feed = await fetchFeed(); } catch { feed = null; }
+  const provisionalResults = feed ? chatSearch(feed, provisional.state) : null;
+  const provisionalComparables = feed ? chatComparables(feed, provisional.state) : null;
+  const focus = feed ? chatFocusProperty(feed, body.focus, parse.n) : null;
+  const focusFacts = focus ? {
+    slug: focus.slug, title: chatCleanText(focus.title, 140), price: chatCleanText(focus.price, 60), area: chatCleanText(focus.area, 60),
+    location: chatCleanText(focus.location, 120), datePosted: String(focus.date || "").slice(0, 10),
+    availability_status: focus.availability_status === "confirmed_on_date" && focus.last_confirmed_at ? "confirmed_on_date" : "needs_confirmation",
+    last_confirmed_at: focus.availability_status === "confirmed_on_date" ? focus.last_confirmed_at || null : null,
+  } : null;
+  const valuation = provisional.state.role === "owner" ? chatValuationForPrompt(sanitizeValuation(body.valuation)) : null;
+  const clock = chatClock();
+  const system = chatSystemPrompt({
+    state: prev,
+    provisional: { role: provisional.state.role, operation: provisional.state.operation, propertyType: provisional.state.propertyType, location: provisional.state.location,
+      area: provisional.state.area, price: provisional.state.price, rooms: provisional.state.rooms, conflict: parse.dealConflict, roleAmbiguous: parse.roleAmbiguous, outOfScope: parse.outOfScope },
+    missing: chatMissing(provisional.state).slice(0, 4), clock, results: provisionalResults, comparables: provisionalComparables,
+    redactedKinds: [...kinds].map(k => CHAT_KIND_AR[k] || k), focus: focusFacts, valuation, addressMasked: masked.masked,
+  });
+  const contents = chatBuildContents(body.history, message);
+  const g = await callGeminiChat(env, system, contents);
+  if(!g.ok){
+    let status = 503;
+    if(g.error === "gemini_timeout") status = 504;
+    else if(g.error === "gemini_invalid") status = 502;
+    return respond({ ok: false, error: g.error, message: CHAT_ERROR_MESSAGES[g.error] || CHAT_ERROR_MESSAGES.gemini_unavailable }, status);
+  }
+
+  const applied = chatApply(prev, g.json, parse);
+  const st = applied.state;
+  const missing = chatMissing(st);
+  const next = applied.clarify ? null : missing[0] || null;
+  st.asked = applied.clarify ? applied.clarify.field : next?.field || null;
+  const results = feed ? chatSearch(feed, st) : null;
+  const comparables = feed ? chatComparables(feed, st) : null;
+  const changes = chatChanges(prev, st);
+  const historyUser = Array.isArray(body.history) ? body.history.filter(m => m?.role === "user").map(m => chatRedact(String(m.text || "")).text) : [];
+  const allowed = chatAllowedNumbers(redacted, historyUser, prev, st, provisionalResults && { count: provisionalResults.count }, results && { count: results.count },
+    provisionalComparables, comparables, focusFacts, valuation, [clock.date, clock.tomorrow, clock.time]);
+  const grounded = chatGroundReply(g.json.reply, allowed, { topics: parse.topics, state: st, next, clarifyField: applied.clarify?.field || null, comparablesOk: comparables?.status === "ok" });
+  let reply = grounded.text;
+  if(!reply) reply = "معنديش معلومة موثقة أقدر أأكدها في النقطة دي — تقدر تسأل طارق مباشرة على واتساب.";
+
+  const notices = [];
+  if(kinds.size) notices.push({ kind: "privacy", text: "شيلنا بيانات حساسة من رسالتك قبل ما توصل لـGemini — مش محتاجينها هنا ومش بنحفظها." });
+  if(masked.masked) notices.push({ kind: "address", text: "شيلنا رقم العمارة/الشقة قبل الإرسال لـGemini — المنطقة والشارع كفاية." });
+  if(applied.inferred) notices.push({ kind: "inferred", text: `فهمت «${applied.inferred.num}» على إنها ${chatMoneyAr(applied.inferred.value)}${chatFamily(st.operation) === "monthly" ? " شهريًا" : ""} — صحّحني لو غلط.` });
+  for(const n of applied.notes) notices.push(n);
+  for(const n of grounded.notices) if(!notices.some(x => x.kind === n.kind)) notices.push(n);
+  if(!feed) notices.push({ kind: "data", text: "تعذر تحميل بيانات العقارات دلوقتي، فمفيش نتائج أو مقارنات في الرد ده." });
+
+  const quickReplies = [];
+  if(applied.clarify?.options?.length) quickReplies.push(...applied.clarify.options);
+  if(results && !results.count) for(const a of results.alternatives) quickReplies.push(a.send);
+  if(next?.optional) quickReplies.push("كفاية تفاصيل كده");
+  const intent = typeof g.json.intent === "string" ? g.json.intent.slice(0, 40) : null;
+
+  return respond({
+    ok: true,
+    v: CHAT_STATE_VERSION,
+    reply,
+    intent,
+    state: st,
+    changes,
+    changeNote: chatChangeNote(changes),
+    summary: chatSummary(st),
+    ask: next?.field || null,
+    askOptional: Boolean(next?.optional),
+    clarify: applied.clarify,
+    quickReplies: [...new Set(quickReplies)].slice(0, 5),
+    results,
+    comparables,
+    focus: focus ? chatCard(focus) : null,
+    contact: intent === "contact_tarek" || parse.topics.has("contact"),
+    notices,
+    grounding: { removed: grounded.removed, replaced: !grounded.text },
+    dataAt: String(feed?.generated_at || feed?.last_updated || "").slice(0, 10) || null,
+    provider: { name: "gemini", model: g.model },
+    now: { date: clock.date, time: clock.time, timeZone: "Africa/Cairo" },
+  });
+}
+
 // ══════════════════════════════════════════════════
 // MAIN EXPORT
 // ══════════════════════════════════════════════════
@@ -2821,6 +3997,9 @@ export default {
     if(url.pathname.indexOf("/push/")===0) return handlePush(request, env, url, ip);
 
     if(request.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
+
+    // ═══ v10: محادثة Gemini أولًا — مسار مستقل؛ المسار القديم POST / باقي كما هو للتوافق ═══
+    if(url.pathname === "/chat") return handleChat(request, env, cors, ip);
 
     const isUpload = url.pathname === "/upload-images";
     const declaredLen = Number(request.headers.get("Content-Length")||0);

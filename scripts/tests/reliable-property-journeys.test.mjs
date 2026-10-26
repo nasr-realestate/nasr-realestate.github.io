@@ -142,12 +142,16 @@ test('acceptance 16: sale → rent switches clearly and keeps the still-valid co
   assert.equal(noBudget.draft.criteria.price, undefined, 'a total sale price is not reused as a monthly rent');
   assert.match(noBudget.response, /أزلت الميزانية السابقة/);
 });
-test('acceptance 17: licence, commission and deposit questions get no invented answer', () => {
-  for (const q of ['ما رقم ترخيص العقار؟', 'كم العمولة؟', 'كم التأمين؟']) {
+test('acceptance 17: licence, rent commission and deposit get no invented answer; the published sale commission is quoted exactly', () => {
+  for (const q of ['ما رقم ترخيص العقار؟', 'كم العمولة؟', 'كم التأمين؟', 'عمولة الإيجار كام؟']) {
     const r = A.reduce(searchDraft(), q);
     assert.match(r.response, /غير منشورة/);
     assert.match(r.response, /تحتاج تأكيدًا/);
+    // 2026-10-27: عمولة البيع منشورة فعلًا (index.html FAQ + llms.txt) — كان الرد يقول إنها غير منشورة
+    assert.match(r.response, /2\.5% من قيمة البيع، تُدفع فقط بعد إتمام الصفقة/);
+    assert.doesNotMatch(r.response, /نص شهر|شهر واحد|1%|3%/, 'no invented rent commission');
   }
+  assert.match(read('index.html'), /العمولة 2\.5% من قيمة البيع/, 'the quoted figure is the published one');
 });
 test('acceptance 18: fallback valuation is disclosed before the number with limited confidence', () => {
   const e = V.assess({ area_found: 'مدينة نصر', fallback_used: true, confidence: 'high', sample_count: 49, calculated_at: '2026-10-20', notes: 'اختبار إدخال snapshot واحد' }, { area: 'عباس العقاد' }, Date.parse('2026-10-26'));
@@ -388,9 +392,17 @@ test('privacy text lists exactly what the valuation request sends and what local
   for (const label of ['المنطقة', 'المعاملة', 'نوع العقار', 'المساحة', 'التشطيب', 'الدور', 'عمر المبنى', 'حالة التأثيث']) assert.ok(policy.includes(label), label);
   assert.match(policy, /لا ترسل سعر المقارنة أو اسمًا أو هاتفًا/);
   assert.match(policy, /لا يرسل نص المحادثة إلى Cloudflare Worker أو Gemini/);
-  assert.match(policy, /آخر 20 رسالة/);
-  assert.match(read('agent.html'), /history: state\.history\.slice\(-20\)/, 'the policy matches the actual cloud payload');
-  assert.match(read('agent.html'), /id="localRequestMode" checked/, 'local mode is the default');
+  // 2026-10-27: Gemini أولًا بموافقة صريحة — السياسة لازم تطابق الحمولة الفعلية للـ/chat
+  assert.match(policy, /آخر 10 رسائل/);
+  assert.match(policy, /id="gemini-agent"/);
+  assert.match(policy, /موافقة صريح لمرة واحدة/);
+  assert.match(policy, /لا نَعِد بأن Google لا تحتفظ بالطلبات/);
+  assert.match(policy, /ولا نتحول إليه تلقائيًا/);
+  const agent = read('agent.html');
+  assert.match(agent, /const HISTORY_MAX = 10;/);
+  assert.match(agent, /history: state\.history\.slice\(-HISTORY_MAX\)/, 'the policy matches the actual payload');
+  assert.match(agent, /<input type="checkbox" id="localRequestMode">/, 'local search is an explicit choice, not the default');
+  assert.doesNotMatch(agent, /id="localRequestMode" checked/);
 });
 test('property page states availability needs confirmation and labels the publication date', async () => {
   const server = app.listen(0, '127.0.0.1');
