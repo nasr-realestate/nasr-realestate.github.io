@@ -401,18 +401,19 @@ test("Gemini failures are explicit errors (timeout 504, invalid 502, busy/unavai
   }
 });
 
-test("a rejected setting retries with a simpler one (minimal thinking ⇒ schema only ⇒ JSON only), and a rejected env model falls back to the built-in one", async () => {
-  onGemini((call, n) => (n <= 2 ? geminiStatus(400) : reply("تمام.")));
+test("a rejected setting retries with a simpler one (minimal ⇒ low thinking ⇒ schema only ⇒ JSON only), and a rejected env model falls back to the built-in one", async () => {
+  onGemini((call, n) => (n <= 3 ? geminiStatus(400) : reply("تمام.")));
   const r = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(r.status, 200);
-  assert.equal(calls.gemini.length, 3);
-  assert.deepEqual(plain(calls.gemini[0].generationConfig.thinkingConfig), { thinkingLevel: "low" }, "Gemini 3.x: low thinking first");
+  assert.equal(calls.gemini.length, 4);
+  assert.deepEqual(plain(calls.gemini[0].generationConfig.thinkingConfig), { thinkingLevel: "minimal" }, "Gemini 3.x: minimal thinking first");
   assert.ok(calls.gemini[0].generationConfig.responseSchema);
-  assert.equal(calls.gemini[1].generationConfig.thinkingConfig, undefined);
-  assert.ok(calls.gemini[1].generationConfig.responseSchema);
-  assert.equal(calls.gemini[2].generationConfig.responseSchema, undefined);
-  assert.equal(calls.gemini[2].generationConfig.responseMimeType, "application/json");
-  assert.equal(r.json.provider.attempts, 3);
+  assert.deepEqual(plain(calls.gemini[1].generationConfig.thinkingConfig), { thinkingLevel: "low" });
+  assert.equal(calls.gemini[2].generationConfig.thinkingConfig, undefined);
+  assert.ok(calls.gemini[2].generationConfig.responseSchema);
+  assert.equal(calls.gemini[3].generationConfig.responseSchema, undefined);
+  assert.equal(calls.gemini[3].generationConfig.responseMimeType, "application/json");
+  assert.equal(r.json.provider.attempts, 4);
 
   resetCalls();
   onGemini(call => (call.model === "my-renamed-model" ? geminiStatus(404) : reply("تمام.")));
@@ -423,7 +424,7 @@ test("a rejected setting retries with a simpler one (minimal thinking ⇒ schema
 });
 
 test("thinking is minimised per model family, and errors carry content-free diagnostics (model, setting, time, outcome)", async () => {
-  const families = [["gemini-2.5-flash", { thinkingBudget: 0 }], ["gemini-2.5-flash-lite", { thinkingBudget: 0 }], ["gemini-2.5-pro", { thinkingBudget: 128 }], ["gemini-3-flash-preview", { thinkingLevel: "low" }], ["gemini-2.0-flash", undefined]];
+  const families = [["gemini-2.5-flash", { thinkingBudget: 0 }], ["gemini-2.5-flash-lite", { thinkingBudget: 0 }], ["gemini-2.5-pro", { thinkingBudget: 128 }], ["gemini-3-flash-preview", { thinkingLevel: "minimal" }], ["gemini-2.0-flash", undefined]];
   for (const [model, want] of families) {
     resetCalls();
     onGemini(() => reply("تمام."));
@@ -440,6 +441,41 @@ test("thinking is minimised per model family, and errors carry content-free diag
   assert.equal(t.json.diag.attempts[0].outcome, "timeout");
   assert.equal(typeof t.json.diag.attempts[0].ms, "number");
   assert.doesNotMatch(JSON.stringify(t.json), /01012345678|عايز شقة/, "diagnostics never echo the message");
+});
+
+test("a slow Gemini answer is hedged: after CHAT_HEDGE_MS a second request (no schema) runs in parallel and the first valid answer wins", async () => {
+  onGemini(async (call, n) => {
+    if (n === 1) { await new Promise(resolve => setTimeout(resolve, 400)); return reply("الرد البطيء."); }
+    return reply("الرد السريع.");
+  });
+  const r = await chatRequest({ consent: "gemini-v1", message: "أهلا" }, { env: { GEMINI_API_KEY: "k", CHAT_HEDGE_MS: "50" } });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.reply, "الرد السريع.");
+  assert.equal(calls.gemini.length, 2, "exactly one extra request, only because the first was slow");
+  assert.ok(calls.gemini[0].generationConfig.responseSchema);
+  assert.equal(calls.gemini[1].generationConfig.responseSchema, undefined, "the hedge is the lighter JSON-only request");
+  assert.equal(r.json.provider.attempts, 1, "only completed attempts are counted at answer time");
+  await new Promise(resolve => setTimeout(resolve, 450)); // let the slow request settle — its late answer is ignored
+  // a fast answer never triggers the hedge
+  resetCalls();
+  onGemini(() => reply("تمام."));
+  const fast = await chatRequest({ consent: "gemini-v1", message: "أهلا" }, { env: { GEMINI_API_KEY: "k", CHAT_HEDGE_MS: "50" } });
+  assert.equal(fast.status, 200);
+  assert.equal(calls.gemini.length, 1);
+});
+
+test("a transient Gemini 5xx is retried once inside the budget; a second failure is an explicit 503", async () => {
+  onGemini((call, n) => (n === 1 ? geminiStatus(503) : reply("تمام.")));
+  const ok = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
+  assert.equal(ok.status, 200);
+  assert.equal(calls.gemini.length, 2);
+  resetCalls();
+  onGemini(() => geminiStatus(503));
+  const bad = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
+  assert.equal(bad.status, 503);
+  assert.equal(bad.json.error, "gemini_unavailable");
+  assert.equal(calls.gemini.length, 2, "one retry only");
+  assert.deepEqual(bad.json.diag.attempts.map(a => a.outcome), [503, 503]);
 });
 
 test("rate limiting applies per IP before Gemini is called", async () => {
