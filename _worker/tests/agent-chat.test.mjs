@@ -456,6 +456,11 @@ test("a slow Gemini answer is hedged: after CHAT_HEDGE_MS a second request (no s
   assert.equal(calls.gemini[1].generationConfig.responseSchema, undefined, "the hedge is the lighter JSON-only request");
   assert.equal(r.json.provider.attempts, 1, "only completed attempts are counted at answer time");
   await new Promise(resolve => setTimeout(resolve, 450)); // let the slow request settle — its late answer is ignored
+  // labels outside the documented list (possible on the schema-less hedge) are normalised
+  resetCalls();
+  onGemini(() => ({ intent: "chat", needs_clarification: false, reply: "تمام." }));
+  const odd = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
+  assert.equal(odd.json.intent, "unclear");
   // a fast answer never triggers the hedge
   resetCalls();
   onGemini(() => reply("تمام."));

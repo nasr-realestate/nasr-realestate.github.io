@@ -2828,7 +2828,7 @@ async function handlePush(request, env, url, ip){
 // ══════════════════════════════════════════════════════════════════════
 const CHAT_CONSENT = "gemini-v1";
 const CHAT_TIMEOUT_MS = 22000;
-const CHAT_HEDGE_MS = 6000;
+const CHAT_HEDGE_MS = 3000;   // تشخيص 2026-10-26: البديل (gemini-3.5-flash) بيرد في ~2.5–3 ث والأساسي ساعات أبطأ بكتير
 // موديلات بديلة للطلب الاحتياطي ولما الموديل الأساسي يقع (503/ضغط): الموديل اللي مش موجود بيرجع 404 فورًا ويتخطى.
 // السبب (2026-10-26): gemini-3.5-flash-lite وحده كان بيرد في 6–8 ث ساعات، وساعات 503/مهلة بعد 16–22 ث.
 // تحديث 2026-10-26 من تشخيص النشر: gemini-2.5-flash-lite ⇒ 404 (اتسحب)، وعائلة Flash-Lite كلها كانت مضغوطة ⇒ Flash العادي الأول.
@@ -4056,7 +4056,9 @@ async function handleChat(request, env, cors, ip){
   if(applied.clarify?.options?.length) quickReplies.push(...applied.clarify.options);
   if(results && !results.count) for(const a of results.alternatives) quickReplies.push(a.send);
   if(next?.optional) quickReplies.push("كفاية تفاصيل كده");
-  const intent = typeof g.json.intent === "string" ? g.json.intent.slice(0, 40) : null;
+  // الطلب الاحتياطي من غير schema ممكن يرجّع تصنيفات برّه القائمة ⇒ «unclear» (التصنيف معلوماتي بس)
+  const intentList = CHAT_RESPONSE_SCHEMA.properties.intent.enum;
+  const intent = intentList.includes(g.json.intent) ? g.json.intent : "unclear";
 
   return respond({
     ok: true,

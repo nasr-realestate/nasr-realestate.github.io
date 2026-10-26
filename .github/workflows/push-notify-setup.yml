@@ -78,9 +78,10 @@ jobs:
       #   + طلب احتياطي متوازي بعد 6 ث + تفكير minimal + إعادة واحدة لـ5xx (زمن Gemini الحي متذبذب: 5.9 ث ⇢ أكتر من 20 ث — runs 40374623851/40374625069)
       #   + موديلات بديلة للطلب الاحتياطي وعند 503 — الأساسي كان مضغوط (run 40375550839: 0/3)؛ ومن تشخيص run 40376178444:
       #     2.5-flash-lite ⇒ 404 وعائلة Flash-Lite بطيئة ⇒ البدائل بقت flash-latest / 3.5-flash / flash-lite-latest / 2.5-flash بسقف 7 ث لكل محاولة
+      #   + run 40376876444: 3/3 من gemini-3.5-flash في 8.4–9.1 ث ⇒ الطلب الاحتياطي بقى بعد 3 ث بدل 6 ث
       #   السابق المنشور: 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
       #   راجع _diag/gemini-first-agent-2026-10-27.md · السابق: v9.3-W f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
-      EXPECTED_WORKER_SHA256: 364b5e3c3a535bb59a81fc7f2b6021d9d586923a416495f6d1926821eb8cdaca
+      EXPECTED_WORKER_SHA256: def25294ca4999020f9c7907cc662af0f2e8953675dabab65a35ff9ad89c3bcb
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
