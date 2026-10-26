@@ -401,14 +401,18 @@ test("Gemini failures are explicit errors (timeout 504, invalid 502, busy/unavai
   }
 });
 
-test("schema rejection retries once without responseSchema, and a rejected env model falls back to the built-in one", async () => {
-  onGemini((call, n) => (n === 1 ? geminiStatus(400) : reply("تمام.")));
+test("a rejected setting retries with a simpler one (minimal thinking ⇒ schema only ⇒ JSON only), and a rejected env model falls back to the built-in one", async () => {
+  onGemini((call, n) => (n <= 2 ? geminiStatus(400) : reply("تمام.")));
   const r = await chatRequest({ consent: "gemini-v1", message: "أهلا" });
   assert.equal(r.status, 200);
-  assert.equal(calls.gemini.length, 2);
+  assert.equal(calls.gemini.length, 3);
+  assert.deepEqual(plain(calls.gemini[0].generationConfig.thinkingConfig), { thinkingLevel: "low" }, "Gemini 3.x: low thinking first");
   assert.ok(calls.gemini[0].generationConfig.responseSchema);
-  assert.equal(calls.gemini[1].generationConfig.responseSchema, undefined);
-  assert.equal(calls.gemini[1].generationConfig.responseMimeType, "application/json");
+  assert.equal(calls.gemini[1].generationConfig.thinkingConfig, undefined);
+  assert.ok(calls.gemini[1].generationConfig.responseSchema);
+  assert.equal(calls.gemini[2].generationConfig.responseSchema, undefined);
+  assert.equal(calls.gemini[2].generationConfig.responseMimeType, "application/json");
+  assert.equal(r.json.provider.attempts, 3);
 
   resetCalls();
   onGemini(call => (call.model === "my-renamed-model" ? geminiStatus(404) : reply("تمام.")));
@@ -416,6 +420,26 @@ test("schema rejection retries once without responseSchema, and a rejected env m
   assert.equal(r2.status, 200);
   assert.deepEqual(calls.gemini.map(g => g.model), ["my-renamed-model", "gemini-3.5-flash-lite"]);
   assert.equal(r2.json.provider.model, "gemini-3.5-flash-lite");
+});
+
+test("thinking is minimised per model family, and errors carry content-free diagnostics (model, setting, time, outcome)", async () => {
+  const families = [["gemini-2.5-flash", { thinkingBudget: 0 }], ["gemini-2.5-flash-lite", { thinkingBudget: 0 }], ["gemini-2.5-pro", { thinkingBudget: 128 }], ["gemini-3-flash-preview", { thinkingLevel: "low" }], ["gemini-2.0-flash", undefined]];
+  for (const [model, want] of families) {
+    resetCalls();
+    onGemini(() => reply("تمام."));
+    const r = await chatRequest({ consent: "gemini-v1", message: "أهلا" }, { env: { GEMINI_API_KEY: "k", GEMINI_MODEL: model } });
+    assert.equal(r.status, 200, model);
+    assert.deepEqual(plain(calls.gemini[0].generationConfig.thinkingConfig ?? null), want ?? null, model);
+  }
+  resetCalls();
+  onGemini(() => abortError());
+  const t = await chatRequest({ consent: "gemini-v1", message: "رقمي 01012345678 وعايز شقة" });
+  assert.equal(t.status, 504);
+  assert.equal(t.json.diag.model, "gemini-3.5-flash-lite");
+  assert.equal(t.json.diag.attempts.length, 1);
+  assert.equal(t.json.diag.attempts[0].outcome, "timeout");
+  assert.equal(typeof t.json.diag.attempts[0].ms, "number");
+  assert.doesNotMatch(JSON.stringify(t.json), /01012345678|عايز شقة/, "diagnostics never echo the message");
 });
 
 test("rate limiting applies per IP before Gemini is called", async () => {

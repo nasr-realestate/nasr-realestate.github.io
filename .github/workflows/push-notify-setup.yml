@@ -73,8 +73,9 @@ jobs:
       KV_BINDING: PUSH_SUBS
       # بصمة كود الـWorker المتوقع — تُحدَّث عمدًا عند أي تغيير على _worker/worker.js
       # تحديث عمدي 2026-10-27: v10.0-chat (مسار POST /chat — Gemini أولًا بموافقة، والمسار القديم كما هو)
+      #   + تفكير أقل لكل عائلة موديلات وميزانية 20 ث وتشخيص بلا محتوى بعد مهلة Gemini الحي (run 40371527664)
       #   راجع _diag/gemini-first-agent-2026-10-27.md · السابق: v9.3-W f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
-      EXPECTED_WORKER_SHA256: 65f59cb57d40268088a4131e4f37b59fd77e51fd6b8ceec02696f2842734118c
+      EXPECTED_WORKER_SHA256: 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -346,7 +347,7 @@ jobs:
           CHAT_LIVE_CODE=$(printf '%s\n' "$CHAT_LIVE" | tail -n1)
           CHAT_LIVE_JSON=$(printf '%s\n' "$CHAT_LIVE" | sed '$d')
           CHAT_LIVE_OK=$(printf '%s' "$CHAT_LIVE_JSON" | jq -r '(.ok == true) and (.provider.name == "gemini") and (((.reply // "") | length) > 0)' 2>/dev/null) || CHAT_LIVE_OK="false"
-          echo "POST /chat synthetic «أهلا» with consent → HTTP $CHAT_LIVE_CODE $(printf '%s' "$CHAT_LIVE_JSON" | jq -c '{ok, error, model: .provider.model, intent, reply_chars: ((.reply // "") | length), grounding}' 2>/dev/null || echo unreadable)"
+          echo "POST /chat synthetic «أهلا» with consent → HTTP $CHAT_LIVE_CODE $(printf '%s' "$CHAT_LIVE_JSON" | jq -c '{ok, error, model: (.provider.model // .diag.model), ms: (.provider.ms // .diag.ms), intent, reply_chars: ((.reply // "") | length), grounding, attempts: .diag.attempts}' 2>/dev/null || echo unreadable)"
 
           say "6b) synthetic single-subscription smoke (no real user involved)"
           SMOKE_EP="https://push-service-smoke.invalid/fake-endpoint-$RID"
