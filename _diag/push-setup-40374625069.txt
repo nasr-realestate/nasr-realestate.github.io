@@ -1,0 +1,70 @@
+
+── 0) mode + artifact identity ──
+mode: configure | ref: arena/6b8b86ba-nasr-realestate-github-io | run: 40374625069
+worker.js sha256 = 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
+expected         = 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
+
+── 1) credential (names only — values never printed) ──
+MISSING:ARENA_CLOUDFLARE
+PRESENT:ARENA_CLOUDFLARE_TOKEN
+MISSING:CLOUDFLARE_API_TOKEN
+MISSING:CF_API_TOKEN
+
+── 2) live read-only snapshot ──
+settings success: true
+bindings (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+compatibility_date = 2026-09-04 | flags = []
+bindings match expected baseline: yes
+live module sha256 = 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
+live == repo worker.js: yes
+
+── 2b) live transport probes (GET/OPTIONS only — no chat POST) ──
+GET / → 405 (405 = chat POST-only preserved) | OPTIONS /push/subscribe → 204 (204) | GET /push/config → 200 (200)
+resource ids: kv[PUSH_SUBS=6987204b82e146c897127283daa7bea5] d1[DB=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf]
+
+── 3) KV namespace (nasr-push-subs) ──
+kv namespace found (id 6987204b…)
+
+── 4) Worker secrets (values generated in-runner, never printed) ──
+VAPID keys already set — keeping them (no rotation)
+PUSH_SEND_SECRET: from GitHub secret (explicit)
+secret PUSH_SEND_SECRET → HTTP 200 (true)
+
+── 5) upload worker.js (existing bindings replicated verbatim + KV binding) ──
+{"main_module":"worker.js","compatibility_date":"2026-09-04","compatibility_flags":[],"keep_bindings":["secret_text"],"bindings":[{"type":"d1","name":"DB"},{"type":"plain_text","name":"GEMINI_MODEL"},{"type":"kv_namespace","name":"PUSH_SUBS"}]}
+upload http=200 success=true
+
+── 6) post-deploy verification ──
+bindings after (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+bindings before: d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+bindings after:  d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+live module sha after = 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
+live == repo build: yes
+GET /push/config → {"ok":true,"enabled":true,"publicKey":"BOa3Nvkf…(87)"}
+OPTIONS /chat → 204 (204) | POST /chat without consent → 412 (412 = consent gate live, Gemini not called)
+POST /chat synthetic «أهلا» with consent → HTTP 504 {"ok":false,"error":"gemini_timeout","model":"gemini-3.5-flash-lite","ms":20001,"intent":null,"reply_chars":0,"grounding":null,"attempts":[{"model":"gemini-3.5-flash-lite","schema":true,"thinking":"low","ms":20001,"outcome":"timeout"}]}
+
+── 6b) synthetic single-subscription smoke (no real user involved) ──
+subscribe smoke → {"ok":true,"id":"0196bc1a0ca66394","error":null}
+send smoke (test:true, single target) → {"ok":true,"attempted":1,"success":0,"failed":1,"removed":0,"note":null,"error":null}
+unsubscribe smoke → {"ok":true}
+
+── summary ──
+VERDICT: REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=true, live_match=yes, kv_bound=1, chat_gate=412, chat_live=504/false). لا rollback تلقائي.
+::notice title=PUSH_SETUP::REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=true, live_match=yes, kv_bound=1, chat_gate=412, chat_live=504/false). لا rollback تلقائي.
