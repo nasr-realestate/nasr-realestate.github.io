@@ -338,6 +338,14 @@ jobs:
           CHAT_OPT=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/chat" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") || CHAT_OPT="000"
           CHAT_GATE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary '{"message":"probe"}') || CHAT_GATE="000"
           echo "OPTIONS /chat → $CHAT_OPT (204) | POST /chat without consent → $CHAT_GATE (412 = consent gate live, Gemini not called)"
+          # رسالة اصطناعية واحدة بموافقة («أهلا» — بلا أي بيانات عملاء): الدليل الوحيد إن Gemini الحي بيرد عبر /chat.
+          # بيتسجّل الكود والموديل وطول الرد بس — مش نص الرد.
+          CHAT_LIVE=$(curl -sS -m 40 -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" \
+            --data-binary '{"consent":"gemini-v1","message":"أهلا"}' -w '\n%{http_code}') || CHAT_LIVE=$'{}\n000'
+          CHAT_LIVE_CODE=$(printf '%s\n' "$CHAT_LIVE" | tail -n1)
+          CHAT_LIVE_JSON=$(printf '%s\n' "$CHAT_LIVE" | sed '$d')
+          CHAT_LIVE_OK=$(printf '%s' "$CHAT_LIVE_JSON" | jq -r '(.ok == true) and (.provider.name == "gemini") and (((.reply // "") | length) > 0)' 2>/dev/null) || CHAT_LIVE_OK="false"
+          echo "POST /chat synthetic «أهلا» with consent → HTTP $CHAT_LIVE_CODE $(printf '%s' "$CHAT_LIVE_JSON" | jq -c '{ok, error, model: .provider.model, intent, reply_chars: ((.reply // "") | length), grounding}' 2>/dev/null || echo unreadable)"
 
           say "6b) synthetic single-subscription smoke (no real user involved)"
           SMOKE_EP="https://push-service-smoke.invalid/fake-endpoint-$RID"
@@ -363,10 +371,10 @@ jobs:
           FAILS=$(echo "$SEND_RES" | jq -r '.failed // 0' 2>/dev/null) || FAILS="0"
           RM=$(echo "$SEND_RES" | jq -r '.removed // 0' 2>/dev/null) || RM="0"
           KV_BOUND=$(echo "$AFTER_B" | grep -c 'kv_namespace/PUSH_SUBS' || true)
-          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ] && [ "$CHAT_GATE" = "412" ]; then
-            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat بوابة الموافقة تعمل (412) · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
+          if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ] && [ "$CHAT_GATE" = "412" ] && [ "$CHAT_LIVE_OK" = "true" ]; then
+            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat: بوابة الموافقة (412) + Gemini الحي رد على رسالة اصطناعية (HTTP $CHAT_LIVE_CODE) · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
           else
-            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND, chat_gate=$CHAT_GATE). لا rollback تلقائي."
+            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND, chat_gate=$CHAT_GATE, chat_live=$CHAT_LIVE_CODE/$CHAT_LIVE_OK). لا rollback تلقائي."
           fi
           echo "VERDICT: $VERDICT"
           echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"
