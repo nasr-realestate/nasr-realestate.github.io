@@ -1,0 +1,73 @@
+
+── 0) mode + artifact identity ──
+mode: configure | ref: arena/6b8b86ba-nasr-realestate-github-io | run: 40376876444
+worker.js sha256 = 364b5e3c3a535bb59a81fc7f2b6021d9d586923a416495f6d1926821eb8cdaca
+expected         = 364b5e3c3a535bb59a81fc7f2b6021d9d586923a416495f6d1926821eb8cdaca
+
+── 1) credential (names only — values never printed) ──
+MISSING:ARENA_CLOUDFLARE
+PRESENT:ARENA_CLOUDFLARE_TOKEN
+MISSING:CLOUDFLARE_API_TOKEN
+MISSING:CF_API_TOKEN
+
+── 2) live read-only snapshot ──
+settings success: true
+bindings (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+compatibility_date = 2026-09-04 | flags = []
+bindings match expected baseline: yes
+live module sha256 = c1198862e08a6f045a3a39546ccdb7709ee21eb9711a9d6072f3fdc7ab62c249
+live == repo worker.js: no
+
+── 2b) live transport probes (GET/OPTIONS only — no chat POST) ──
+GET / → 405 (405 = chat POST-only preserved) | OPTIONS /push/subscribe → 204 (204) | GET /push/config → 200 (200)
+resource ids: kv[PUSH_SUBS=6987204b82e146c897127283daa7bea5] d1[DB=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf]
+
+── 3) KV namespace (nasr-push-subs) ──
+kv namespace found (id 6987204b…)
+
+── 4) Worker secrets (values generated in-runner, never printed) ──
+VAPID keys already set — keeping them (no rotation)
+PUSH_SEND_SECRET: from GitHub secret (explicit)
+secret PUSH_SEND_SECRET → HTTP 200 (true)
+
+── 5) upload worker.js (existing bindings replicated verbatim + KV binding) ──
+{"main_module":"worker.js","compatibility_date":"2026-09-04","compatibility_flags":[],"keep_bindings":["secret_text"],"bindings":[{"type":"d1","name":"DB"},{"type":"plain_text","name":"GEMINI_MODEL"},{"type":"kv_namespace","name":"PUSH_SUBS"}]}
+upload http=200 success=true
+
+── 6) post-deploy verification ──
+bindings after (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+bindings before: d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+bindings after:  d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+live module sha after = 364b5e3c3a535bb59a81fc7f2b6021d9d586923a416495f6d1926821eb8cdaca
+live == repo build: yes
+GET /push/config → {"ok":true,"enabled":true,"publicKey":"BOa3Nvkf…(87)"}
+OPTIONS /chat → 204 (204) | POST /chat without consent → 412 (412 = consent gate live, Gemini not called)
+POST /chat synthetic «أهلا» → HTTP 200 {"ok":true,"error":null,"model":"gemini-3.5-flash","ms":9132,"intent":"greeting","reply_chars":129,"grounding":{"removed":0,"replaced":false},"attempts":null}
+POST /chat synthetic «مساء الخير، عندي سؤال» → HTTP 200 {"ok":true,"error":null,"model":"gemini-3.5-flash","ms":8387,"intent":"chat","reply_chars":101,"grounding":{"removed":0,"replaced":false},"attempts":null}
+POST /chat synthetic «شكرا» → HTTP 200 {"ok":true,"error":null,"model":"gemini-3.5-flash","ms":8498,"intent":"general","reply_chars":82,"grounding":{"removed":0,"replaced":false},"attempts":null}
+live Gemini via /chat: 3/3 ok (codes: 200 200 200)
+
+── 6b) synthetic single-subscription smoke (no real user involved) ──
+subscribe smoke → {"ok":true,"id":"c68a0d0965ac5fb1","error":null}
+send smoke (test:true, single target) → {"ok":true,"attempted":1,"success":0,"failed":1,"removed":0,"note":null,"error":null}
+unsubscribe smoke → {"ok":true}
+
+── summary ──
+VERDICT: SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat: بوابة الموافقة (412) + Gemini الحي رد على 3/3 رسائل اصطناعية (أكواد: 200 200 200) · اختبار اصطناعي: attempted=1 failed=1 removed=0
+::notice title=PUSH_SETUP::SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat: بوابة الموافقة (412) + Gemini الحي رد على 3/3 رسائل اصطناعية (أكواد: 200 200 200) · اختبار اصطناعي: attempted=1 failed=1 removed=0

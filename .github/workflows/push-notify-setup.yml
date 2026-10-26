@@ -55,8 +55,8 @@ concurrency:
 
 env:
   # وضع الدفع التلقائي — لا يُغيَّر إلا عمدًا (configure يتطلب نيّة واضحة)
-  # أُعيد إلى verify بعد نشر v10.0-chat بنجاح (run 40372147185: live == repo build ✅ · /chat 412 ✅ · Gemini الحي 200 في 5.9 ث ✅) — 2026-10-27
-  #   (السابق: v9.3-W، run 38631030666 — 2026-10-14)
+  # أُعيد إلى verify بعد إعادة نشر v10.0-chat بمرونة Gemini (run 40377933227: live == repo ✅ · /chat 412 ✅ ·
+  #   Gemini الحي 3/3 في 1.1–2.8 ث ✅) — 2026-10-26. السابق: run 40372147185 (v10.0-chat الأول) · v9.3-W run 38631030666
   AUTO_MODE: "verify"
 
 jobs:
@@ -74,8 +74,14 @@ jobs:
       # بصمة كود الـWorker المتوقع — تُحدَّث عمدًا عند أي تغيير على _worker/worker.js
       # تحديث عمدي 2026-10-27: v10.0-chat (مسار POST /chat — Gemini أولًا بموافقة، والمسار القديم كما هو)
       #   + تفكير أقل لكل عائلة موديلات وميزانية 20 ث وتشخيص بلا محتوى بعد مهلة Gemini الحي (run 40371527664)
+      #   + طلب احتياطي متوازي بعد 6 ث + تفكير minimal + إعادة واحدة لـ5xx (زمن Gemini الحي متذبذب: 5.9 ث ⇢ أكتر من 20 ث — runs 40374623851/40374625069)
+      #   + موديلات بديلة للطلب الاحتياطي وعند 503 — الأساسي كان مضغوط (run 40375550839: 0/3)؛ ومن تشخيص run 40376178444:
+      #     2.5-flash-lite ⇒ 404 وعائلة Flash-Lite بطيئة ⇒ البدائل بقت flash-latest / 3.5-flash / flash-lite-latest / 2.5-flash بسقف 7 ث لكل محاولة
+      #   + run 40376876444: 3/3 من gemini-3.5-flash في 8.4–9.1 ث ⇒ الطلب الاحتياطي بقى بعد 3 ث بدل 6 ث
+      #   + run 40377323597: 2/3 (أسطول Flash عليه 503) ⇒ 3.5-flash أول البدائل + إعادة واحدة لنفس الموديل بعد 0.7 ث عند 503/429
+      #   السابق المنشور: 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
       #   راجع _diag/gemini-first-agent-2026-10-27.md · السابق: v9.3-W f861131dc35a41710ef9e51fac368deea054a495e8b6e9ae99fe8cfc5d74fe45
-      EXPECTED_WORKER_SHA256: 65e41c7dcd376ed2d8d3853553cf66b7938d20c6734572ffb1afeaa1440119c7
+      EXPECTED_WORKER_SHA256: 95c15c2c3e69eb87e27faa55bc1854b2f69a28f00980a324885b13f43d822d40
       S_ARENA_CLOUDFLARE: ${{ secrets.ARENA_CLOUDFLARE }}
       S_ARENA_CLOUDFLARE_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -340,14 +346,24 @@ jobs:
           CHAT_OPT=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X OPTIONS "$AGENT/chat" -H "Origin: $SITE" -H "Access-Control-Request-Method: POST") || CHAT_OPT="000"
           CHAT_GATE=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" --data-binary '{"message":"probe"}') || CHAT_GATE="000"
           echo "OPTIONS /chat → $CHAT_OPT (204) | POST /chat without consent → $CHAT_GATE (412 = consent gate live, Gemini not called)"
-          # رسالة اصطناعية واحدة بموافقة («أهلا» — بلا أي بيانات عملاء): الدليل الوحيد إن Gemini الحي بيرد عبر /chat.
-          # بيتسجّل الكود والموديل وطول الرد بس — مش نص الرد.
-          CHAT_LIVE=$(curl -sS -m 40 -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" \
-            --data-binary '{"consent":"gemini-v1","message":"أهلا"}' -w '\n%{http_code}') || CHAT_LIVE=$'{}\n000'
-          CHAT_LIVE_CODE=$(printf '%s\n' "$CHAT_LIVE" | tail -n1)
-          CHAT_LIVE_JSON=$(printf '%s\n' "$CHAT_LIVE" | sed '$d')
-          CHAT_LIVE_OK=$(printf '%s' "$CHAT_LIVE_JSON" | jq -r '(.ok == true) and (.provider.name == "gemini") and (((.reply // "") | length) > 0)' 2>/dev/null) || CHAT_LIVE_OK="false"
-          echo "POST /chat synthetic «أهلا» with consent → HTTP $CHAT_LIVE_CODE $(printf '%s' "$CHAT_LIVE_JSON" | jq -c '{ok, error, model: (.provider.model // .diag.model), ms: (.provider.ms // .diag.ms), intent, reply_chars: ((.reply // "") | length), grounding, attempts: .diag.attempts}' 2>/dev/null || echo unreadable)"
+          # 3 رسائل اصطناعية بموافقة (بلا أي بيانات عملاء): الدليل إن Gemini الحي بيرد عبر /chat، ومعاه الزمن.
+          # بيتسجّل الكود والموديل والزمن وطول الرد بس — مش نص الرد. النجاح = رسالتين على الأقل من 3.
+          CHAT_LIVE_OK_N=0; CHAT_LIVE_CODES=""
+          for MSG in "أهلا" "مساء الخير، عندي سؤال" "شكرا"; do
+            BODY=$(jq -cn --arg m "$MSG" '{consent:"gemini-v1", message:$m}')
+            OUT=$(curl -sS -m 40 -X POST "$AGENT/chat" -H "Origin: $SITE" -H "Content-Type: application/json" \
+              --data-binary "$BODY" -w '\n%{http_code}') || OUT=$'{}\n000'
+            CODE=$(printf '%s\n' "$OUT" | tail -n1)
+            JSON=$(printf '%s\n' "$OUT" | sed '$d')
+            OKV=$(printf '%s' "$JSON" | jq -r '(.ok == true) and (.provider.name == "gemini") and (((.reply // "") | length) > 0)' 2>/dev/null) || OKV="false"
+            [ "$OKV" = "true" ] && CHAT_LIVE_OK_N=$((CHAT_LIVE_OK_N + 1))
+            CHAT_LIVE_CODES="$CHAT_LIVE_CODES$CODE "
+            echo "POST /chat synthetic «$MSG» → HTTP $CODE $(printf '%s' "$JSON" | jq -c '{ok, error, model: (.provider.model // .diag.model), ms: (.provider.ms // .diag.ms), intent, reply_chars: ((.reply // "") | length), grounding, attempts: .diag.attempts}' 2>/dev/null || echo unreadable)"
+            sleep 2
+          done
+          CHAT_LIVE_CODE="${CHAT_LIVE_CODES% }"
+          if [ "$CHAT_LIVE_OK_N" -ge 2 ]; then CHAT_LIVE_OK="true"; else CHAT_LIVE_OK="false"; fi
+          echo "live Gemini via /chat: $CHAT_LIVE_OK_N/3 ok (codes: $CHAT_LIVE_CODE)"
 
           say "6b) synthetic single-subscription smoke (no real user involved)"
           SMOKE_EP="https://push-service-smoke.invalid/fake-endpoint-$RID"
@@ -374,9 +390,9 @@ jobs:
           RM=$(echo "$SEND_RES" | jq -r '.removed // 0' 2>/dev/null) || RM="0"
           KV_BOUND=$(echo "$AFTER_B" | grep -c 'kv_namespace/PUSH_SUBS' || true)
           if [ "$CFG_ENABLED" = "true" ] && [ "$NEW_SHA" = "$W_SHA" ] && [ "$KV_BOUND" -ge 1 ] && [ "$CHAT_GATE" = "412" ] && [ "$CHAT_LIVE_OK" = "true" ]; then
-            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat: بوابة الموافقة (412) + Gemini الحي رد على رسالة اصطناعية (HTTP $CHAT_LIVE_CODE) · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
+            VERDICT="SUCCESS — KV مربوط + الأسرار مضبوطة + الكود منشور ومطابق · /push/config يعمل · /chat: بوابة الموافقة (412) + Gemini الحي رد على $CHAT_LIVE_OK_N/3 رسائل اصطناعية (أكواد: $CHAT_LIVE_CODE) · اختبار اصطناعي: attempted=$ATT failed=$FAILS removed=$RM"
           else
-            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND, chat_gate=$CHAT_GATE, chat_live=$CHAT_LIVE_CODE/$CHAT_LIVE_OK). لا rollback تلقائي."
+            VERDICT="REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=$CFG_ENABLED, live_match=$([ "$NEW_SHA" = "$W_SHA" ] && echo yes || echo no), kv_bound=$KV_BOUND, chat_gate=$CHAT_GATE, chat_live=$CHAT_LIVE_OK_N/3 [$CHAT_LIVE_CODE]). لا rollback تلقائي."
           fi
           echo "VERDICT: $VERDICT"
           echo "VERDICT=$VERDICT" >> "$GITHUB_ENV"

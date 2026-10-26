@@ -1,0 +1,73 @@
+
+── 0) mode + artifact identity ──
+mode: configure | ref: arena/6b8b86ba-nasr-realestate-github-io | run: 40376178444
+worker.js sha256 = c1198862e08a6f045a3a39546ccdb7709ee21eb9711a9d6072f3fdc7ab62c249
+expected         = c1198862e08a6f045a3a39546ccdb7709ee21eb9711a9d6072f3fdc7ab62c249
+
+── 1) credential (names only — values never printed) ──
+MISSING:ARENA_CLOUDFLARE
+PRESENT:ARENA_CLOUDFLARE_TOKEN
+MISSING:CLOUDFLARE_API_TOKEN
+MISSING:CF_API_TOKEN
+
+── 2) live read-only snapshot ──
+settings success: true
+bindings (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+compatibility_date = 2026-09-04 | flags = []
+bindings match expected baseline: yes
+live module sha256 = f15a7aa5180fc9644d366f1f5b49ccb3ec5d486759dc224312591975586b5481
+live == repo worker.js: no
+
+── 2b) live transport probes (GET/OPTIONS only — no chat POST) ──
+GET / → 405 (405 = chat POST-only preserved) | OPTIONS /push/subscribe → 204 (204) | GET /push/config → 200 (200)
+resource ids: kv[PUSH_SUBS=6987204b82e146c897127283daa7bea5] d1[DB=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf]
+
+── 3) KV namespace (nasr-push-subs) ──
+kv namespace found (id 6987204b…)
+
+── 4) Worker secrets (values generated in-runner, never printed) ──
+VAPID keys already set — keeping them (no rotation)
+PUSH_SEND_SECRET: from GitHub secret (explicit)
+secret PUSH_SEND_SECRET → HTTP 200 (true)
+
+── 5) upload worker.js (existing bindings replicated verbatim + KV binding) ──
+{"main_module":"worker.js","compatibility_date":"2026-09-04","compatibility_flags":[],"keep_bindings":["secret_text"],"bindings":[{"type":"d1","name":"DB"},{"type":"plain_text","name":"GEMINI_MODEL"},{"type":"kv_namespace","name":"PUSH_SUBS"}]}
+upload http=200 success=true
+
+── 6) post-deploy verification ──
+bindings after (name/type only):
+  d1	DB
+  kv_namespace	PUSH_SUBS
+  plain_text	GEMINI_MODEL
+  secret_text	GEMINI_API_KEY
+  secret_text	IMGBB_API_KEY
+  secret_text	PUSH_SEND_SECRET
+  secret_text	VAPID_PRIVATE_KEY
+  secret_text	VAPID_PUBLIC_KEY
+bindings before: d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+bindings after:  d1/DB,kv_namespace/PUSH_SUBS,plain_text/GEMINI_MODEL,secret_text/GEMINI_API_KEY,secret_text/IMGBB_API_KEY,secret_text/PUSH_SEND_SECRET,secret_text/VAPID_PRIVATE_KEY,secret_text/VAPID_PUBLIC_KEY
+live module sha after = c1198862e08a6f045a3a39546ccdb7709ee21eb9711a9d6072f3fdc7ab62c249
+live == repo build: yes
+GET /push/config → {"ok":true,"enabled":true,"publicKey":"BOa3Nvkf…(87)"}
+OPTIONS /chat → 204 (204) | POST /chat without consent → 412 (412 = consent gate live, Gemini not called)
+POST /chat synthetic «أهلا» → HTTP 504 {"ok":false,"error":"gemini_timeout","model":"gemini-3.5-flash-lite","ms":22000,"intent":null,"reply_chars":0,"grounding":null,"attempts":[{"lane":"hedge","model":"gemini-2.5-flash-lite","schema":false,"thinking":0,"ms":147,"outcome":404},{"lane":"main","model":"gemini-3.5-flash-lite","schema":true,"thinking":"minimal","ms":22000,"outcome":"timeout"},{"lane":"hedge","model":"gemini-flash-lite-latest","schema":false,"thinking":null,"ms":15853,"outcome":"timeout"}]}
+POST /chat synthetic «مساء الخير، عندي سؤال» → HTTP 504 {"ok":false,"error":"gemini_timeout","model":"gemini-3.5-flash-lite","ms":22000,"intent":null,"reply_chars":0,"grounding":null,"attempts":[{"lane":"hedge","model":"gemini-2.5-flash-lite","schema":false,"thinking":0,"ms":174,"outcome":404},{"lane":"main","model":"gemini-3.5-flash-lite","schema":true,"thinking":"minimal","ms":22000,"outcome":"timeout"},{"lane":"hedge","model":"gemini-flash-lite-latest","schema":false,"thinking":null,"ms":15826,"outcome":"timeout"}]}
+POST /chat synthetic «شكرا» → HTTP 200 {"ok":true,"error":null,"model":"gemini-3.5-flash-lite","ms":11828,"intent":"general_real_estate","reply_chars":79,"grounding":{"removed":0,"replaced":false},"attempts":null}
+live Gemini via /chat: 1/3 ok (codes: 504 504 200)
+
+── 6b) synthetic single-subscription smoke (no real user involved) ──
+subscribe smoke → {"ok":true,"id":"6cf968616f1640a7","error":null}
+send smoke (test:true, single target) → {"ok":true,"attempted":1,"success":0,"failed":1,"removed":0,"note":null,"error":null}
+unsubscribe smoke → {"ok":true}
+
+── summary ──
+VERDICT: REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=true, live_match=yes, kv_bound=1, chat_gate=412, chat_live=1/3 [504 504 200]). لا rollback تلقائي.
+::notice title=PUSH_SETUP::REVIEW — اكتملت الخطوات لكن فحصًا فشل (config_enabled=true, live_match=yes, kv_bound=1, chat_gate=412, chat_live=1/3 [504 504 200]). لا rollback تلقائي.

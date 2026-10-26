@@ -2827,7 +2827,15 @@ async function handlePush(request, env, url, ip){
 // • المسار القديم POST / (formState) باقي كما هو للتوافق — الصفحة الجديدة لا تستخدمه.
 // ══════════════════════════════════════════════════════════════════════
 const CHAT_CONSENT = "gemini-v1";
-const CHAT_TIMEOUT_MS = 20000;
+const CHAT_TIMEOUT_MS = 22000;
+const CHAT_HEDGE_MS = 3000;   // تشخيص 2026-10-26: البديل (gemini-3.5-flash) بيرد في ~2.5–3 ث والأساسي ساعات أبطأ بكتير
+// موديلات بديلة للطلب الاحتياطي ولما الموديل الأساسي يقع (503/ضغط): الموديل اللي مش موجود بيرجع 404 فورًا ويتخطى.
+// السبب (2026-10-26): gemini-3.5-flash-lite وحده كان بيرد في 6–8 ث ساعات، وساعات 503/مهلة بعد 16–22 ث.
+// تحديث 2026-10-26 من تشخيص النشر: gemini-2.5-flash-lite ⇒ 404 (اتسحب)، وعائلة Flash-Lite كلها كانت مضغوطة ⇒ Flash العادي الأول.
+//   وفي run 40377323597 كل ردود البدائل الناجحة كانت من gemini-3.5-flash ⇒ الأول في القائمة.
+const CHAT_ALT_MODELS = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"];
+const CHAT_RETRY_BACKOFF_MS = 700;    // 503/429 «ضغط» غالبًا بيكون للطلب ده بس ⇒ إعادة واحدة لنفس الموديل بعد مهلة قصيرة
+const CHAT_HEDGE_ATTEMPT_MS = 7000;   // كل محاولة في المسار الاحتياطي ليها سقف — موديل بطيء ما يحجزش الباقي
 const CHAT_HISTORY_MAX = 10;
 const CHAT_HISTORY_MSG_MAX = 600;
 const CHAT_REPLY_MAX = 700;
@@ -3711,71 +3719,136 @@ function chatParseJson(text){
 }
 
 // أقل «تفكير» ممكن لكل عائلة موديلات (التفكير الافتراضي في موديلات 2.5/3 بيبطّأ الرد لثواني طويلة).
-// لو الموديل رفض الإعداد (400) بنعيد من غيره تلقائيًا — فاسم موديل جديد عمره ما يوقف المحادثة.
-function chatThinkingConfig(model){
+// قائمة مرتبة: لو الموديل رفض إعداد (400) بنجرب اللي بعده تلقائيًا — فاسم موديل جديد عمره ما يوقف المحادثة.
+function chatThinkingConfigs(model){
   const m = String(model || "").toLowerCase();
-  if(/^gemini-2\.5-pro/.test(m)) return { thinkingBudget: 128 };
-  if(/^gemini-2\.5/.test(m)) return { thinkingBudget: 0 };
-  if(/^gemini-[3-9]/.test(m)) return { thinkingLevel: "low" };
-  return null;
+  if(/^gemini-2\.5-pro/.test(m)) return [{ thinkingBudget: 128 }];
+  if(/^gemini-2\.5/.test(m)) return [{ thinkingBudget: 0 }];
+  if(/^gemini-(?:1\.|2\.0)/.test(m)) return [];
+  // Gemini 3+ والأسماء المستعارة (…-latest) والأسماء الجديدة: «minimal» ثم «low» — والرفض (400) بيعدّي للإعداد اللي بعده
+  return [{ thinkingLevel: "minimal" }, { thinkingLevel: "low" }];
 }
-async function callGeminiChat(env, system, contents){
-  if(!env?.GEMINI_API_KEY) return { ok: false, error: "gemini_unconfigured", attempts: [] };
-  const preferred = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.-]/g, "") || GEMINI_MODEL;
-  const models = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
-  // خطة المحاولات لكل موديل: (تفكير أقل + schema) ⇒ (schema بس) ⇒ (JSON بس). 400 ⇒ الخطوة اللي بعدها، 404 ⇒ الموديل اللي بعده.
-  const plans = [];
+function chatPlans(models, schemaAllowed){
+  const out = [];
+  const seen = new Set();
+  const add = plan => { const key = `${plan.model}|${plan.schema}|${JSON.stringify(plan.thinking)}`; if(!seen.has(key)){ seen.add(key); out.push(plan); } };
   for(const model of models){
-    const thinking = chatThinkingConfig(model);
-    if(thinking) plans.push({ model, schema: true, thinking });
-    plans.push({ model, schema: true, thinking: null });
-    plans.push({ model, schema: false, thinking: null });
+    for(const thinking of chatThinkingConfigs(model)) add({ model, schema: schemaAllowed, thinking });
+    add({ model, schema: schemaAllowed, thinking: null });
+    add({ model, schema: false, thinking: null });
   }
-  const started = Date.now();
-  const attempts = [];   // تشخيص بلا أي محتوى: الموديل، الإعداد، الزمن، والنتيجة
-  const fail = (error, model) => ({ ok: false, error, model, attempts, ms: Date.now() - started });
-  for(let i = 0; i < plans.length; i++){
-    const plan = plans[i];
-    const remaining = CHAT_TIMEOUT_MS - (Date.now() - started);
-    if(remaining < 1000) return fail("gemini_timeout", plan.model);
-    const generationConfig = { temperature: 0.55, maxOutputTokens: 2048, responseMimeType: "application/json" };
-    if(plan.schema) generationConfig.responseSchema = CHAT_RESPONSE_SCHEMA;
-    if(plan.thinking) generationConfig.thinkingConfig = plan.thinking;
-    const t0 = Date.now();
-    const note = outcome => attempts.push({ model: plan.model, schema: plan.schema, thinking: plan.thinking ? Object.values(plan.thinking)[0] : null, ms: Date.now() - t0, outcome });
-    let r;
-    try {
-      r = await fetchWithTimeout(`${GEMINI_BASE}/${plan.model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-        body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents, generationConfig }),
-      }, remaining);
-    } catch(err){
-      const timeout = err?.name === "AbortError";
-      note(timeout ? "timeout" : "network");
-      return fail(timeout ? "gemini_timeout" : "gemini_unavailable", plan.model);
-    }
-    if(!r.ok){
-      note(r.status);
-      console.warn("[chat] gemini status:", r.status);
-      if(r.status === 400) continue;                                  // نفس الموديل بإعداد أبسط (أو الموديل اللي بعده)
-      if(r.status === 404){                                           // الموديل نفسه مرفوض ⇒ أول خطة للموديل اللي بعده
-        const nextModel = plans.findIndex((x, k) => k > i && x.model !== plan.model);
-        if(nextModel === -1) break;
-        i = nextModel - 1;
-        continue;
-      }
-      return fail(r.status === 429 ? "gemini_busy" : "gemini_unavailable", plan.model);
-    }
+  return out;
+}
+const chatSleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
+// محاولة واحدة: مهلة على حسب الوقت الباقي، وتتلغي من برّه لو محاولة تانية سبقتها
+async function chatAttempt(env, plan, system, contents, timeoutMs, ctx){
+  const generationConfig = { temperature: 0.55, maxOutputTokens: 1200, responseMimeType: "application/json" };
+  if(plan.schema) generationConfig.responseSchema = CHAT_RESPONSE_SCHEMA;
+  if(plan.thinking) generationConfig.thinkingConfig = plan.thinking;
+  const ctrl = new AbortController();
+  ctx.controllers.add(ctrl);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, timeoutMs);
+  try {
+    const r = await fetch(`${GEMINI_BASE}/${plan.model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents, generationConfig }),
+      signal: ctrl.signal,
+    });
+    if(!r.ok) return { kind: "status", status: r.status };
     let j;
-    try { j = await r.json(); } catch { note("invalid_json"); return fail("gemini_invalid", plan.model); }
+    try { j = await r.json(); } catch { return ctx.done ? { kind: "cancelled" } : { kind: "invalid", reason: "invalid_json" }; }
     const cand = j?.candidates?.[0];
     const text = (cand?.content?.parts || []).filter(x => !x?.thought).map(x => (typeof x?.text === "string" ? x.text : "")).join("");
     const parsed = chatParseJson(text);
-    note(parsed ? "ok" : `invalid:${String(cand?.finishReason || "no_text").slice(0, 24)}`);
-    return parsed ? { ok: true, json: parsed, model: plan.model, attempts, ms: Date.now() - started } : fail("gemini_invalid", plan.model);
+    return parsed ? { kind: "ok", json: parsed } : { kind: "invalid", reason: String(cand?.finishReason || "no_text").slice(0, 24) };
+  } catch(err){
+    if(ctx.done && !timedOut) return { kind: "cancelled" };
+    return { kind: err?.name === "AbortError" ? "timeout" : "network" };
+  } finally {
+    clearTimeout(timer);
+    ctx.controllers.delete(ctrl);
   }
-  return fail("gemini_unavailable", plans.at(-1)?.model);
+}
+// مسار محاولات: 400 ⇒ إعداد أبسط، 404 ⇒ الموديل اللي بعده، 5xx ⇒ إعادة واحدة، والباقي نهائي
+async function chatLane(env, system, contents, plans, ctx, lane){
+  const retried = new Set();
+  for(let i = 0; i < plans.length; i++){
+    if(ctx.done) return { ok: false, error: "cancelled" };
+    const plan = plans[i];
+    const remaining = ctx.deadline - Date.now();
+    if(remaining < 800) return { ok: false, error: "gemini_timeout", model: plan.model };
+    const capped = Boolean(ctx.attemptCap) && lane === "hedge" && remaining > ctx.attemptCap + 800;
+    const t0 = Date.now();
+    const res = await chatAttempt(env, plan, system, contents, capped ? ctx.attemptCap : remaining, ctx);
+    if(res.kind === "cancelled") return { ok: false, error: "cancelled" };
+    ctx.attempts.push({ lane, model: plan.model, schema: plan.schema, thinking: plan.thinking ? Object.values(plan.thinking)[0] : null, ms: Date.now() - t0,
+      outcome: res.kind === "status" ? res.status : res.kind === "invalid" ? `invalid:${res.reason}` : res.kind });
+    if(res.kind === "ok") return { ok: true, json: res.json, model: plan.model };
+    if(res.kind === "timeout" && capped){                                // سقف المحاولة الاحتياطية ⇒ الموديل اللي بعده
+      const next = plans.findIndex((x, k) => k > i && x.model !== plan.model);
+      if(next !== -1){ i = next - 1; continue; }
+    }
+    if(res.kind === "timeout") return { ok: false, error: "gemini_timeout", model: plan.model };
+    if(res.kind === "network") return { ok: false, error: "gemini_unavailable", model: plan.model };
+    if(res.kind === "invalid") return { ok: false, error: "gemini_invalid", model: plan.model };
+    console.warn("[chat] gemini status:", res.status);
+    if(res.status === 400) continue;                                   // إعداد مرفوض ⇒ الإعداد الأبسط
+    const nextModel = plans.findIndex((x, k) => k > i && x.model !== plan.model);
+    if(res.status === 404){ if(nextModel === -1) break; i = nextModel - 1; continue; }      // موديل مش موجود ⇒ اللي بعده
+    if(res.status >= 500 || res.status === 429){                        // ضغط/عطل ⇒ إعادة واحدة لنفس الموديل، وبعدها موديل تاني
+      if(!retried.has(plan.model) && ctx.deadline - Date.now() > ctx.backoff + 1500){ retried.add(plan.model); i -= 1; await chatSleep(ctx.backoff); continue; }
+      if(nextModel !== -1){ i = nextModel - 1; continue; }
+    }
+    return { ok: false, error: res.status === 429 ? "gemini_busy" : "gemini_unavailable", model: plan.model };
+  }
+  return { ok: false, error: "gemini_unavailable", model: plans.at(-1)?.model };
+}
+const CHAT_ERROR_RANK = ["gemini_timeout", "gemini_busy", "gemini_unavailable", "gemini_invalid"];
+// Gemini واحد لكل رسالة — ولو اتأخر أكتر من CHAT_HEDGE_MS بنبعت طلب احتياطي بالتوازي (بدون schema) وناخد أول رد سليم.
+// زمن Gemini الحي متذبذب جدًا (6 ث ⇢ أكتر من 20 ث لنفس الرسالة)، والطلب الاحتياطي بيقصّ الذيل الطويل ده.
+async function callGeminiChat(env, system, contents){
+  if(!env?.GEMINI_API_KEY) return { ok: false, error: "gemini_unconfigured", attempts: [] };
+  const preferred = String(env.GEMINI_MODEL || GEMINI_MODEL).replace(/[^\w.-]/g, "") || GEMINI_MODEL;
+  const primary = preferred === GEMINI_MODEL ? [preferred] : [preferred, GEMINI_MODEL];
+  const alternates = CHAT_ALT_MODELS.filter(m => !primary.includes(m));
+  const hedgeEnv = Number(env.CHAT_HEDGE_MS);
+  const hedgeMs = Number.isFinite(hedgeEnv) && hedgeEnv >= 10 && hedgeEnv <= 15000 ? hedgeEnv : CHAT_HEDGE_MS;
+  const capEnv = Number(env.CHAT_HEDGE_ATTEMPT_MS);
+  const attemptCap = Number.isFinite(capEnv) && capEnv >= 10 && capEnv <= 15000 ? capEnv : CHAT_HEDGE_ATTEMPT_MS;
+  const started = Date.now();
+  const backoffEnv = Number(env.CHAT_RETRY_BACKOFF_MS);
+  const backoff = Number.isFinite(backoffEnv) && backoffEnv >= 0 && backoffEnv <= 3000 ? backoffEnv : CHAT_RETRY_BACKOFF_MS;
+  const ctx = { deadline: started + CHAT_TIMEOUT_MS, attemptCap, backoff, attempts: [], controllers: new Set(), done: false };
+  const finish = r => {
+    ctx.done = true;
+    for(const c of ctx.controllers) c.abort();       // الطلب اللي اتأخر يتلغي — مفيش رد متأخر يتحسب
+    return { ...r, attempts: [...ctx.attempts], ms: Date.now() - started };
+  };
+  const safe = p => p.catch(() => ({ ok: false, error: "gemini_unavailable" }));
+  // المسار الأساسي: الموديل المضبوط (ثم المدمج، ثم البدائل لو وقع)؛ الاحتياطي: البدائل الأول (JSON بس)، ثم الأساسي
+  const laneA = safe(chatLane(env, system, contents, chatPlans([...primary, ...alternates], true), ctx, "main"));
+  let hedgeTimer;
+  const hedgeAt = new Promise(resolve => { hedgeTimer = setTimeout(() => resolve({ hedge: true }), hedgeMs); });
+  const first = await Promise.race([laneA, hedgeAt]);
+  if(!first.hedge){ clearTimeout(hedgeTimer); return finish(first); }
+  const laneB = safe(chatLane(env, system, contents, chatPlans([...alternates, ...primary], false), ctx, "hedge"));
+  const result = await new Promise(resolve => {
+    const errors = [];
+    const settle = r => {
+      if(r.ok){ resolve(r); return; }
+      errors.push(r);
+      if(errors.length === 2){
+        const real = errors.filter(e => e.error !== "cancelled");
+        real.sort((a, b) => CHAT_ERROR_RANK.indexOf(a.error) - CHAT_ERROR_RANK.indexOf(b.error));
+        resolve(real[0] || { ok: false, error: "gemini_timeout" });
+      }
+    };
+    laneA.then(settle);
+    laneB.then(settle);
+  });
+  return finish(result);
 }
 
 // ═══ فحص رد Gemini: أرقام موثقة فقط، بلا ادعاءات ممنوعة، بلا روابط غريبة، وسؤال واحد ═══
@@ -3987,7 +4060,9 @@ async function handleChat(request, env, cors, ip){
   if(applied.clarify?.options?.length) quickReplies.push(...applied.clarify.options);
   if(results && !results.count) for(const a of results.alternatives) quickReplies.push(a.send);
   if(next?.optional) quickReplies.push("كفاية تفاصيل كده");
-  const intent = typeof g.json.intent === "string" ? g.json.intent.slice(0, 40) : null;
+  // الطلب الاحتياطي من غير schema ممكن يرجّع تصنيفات برّه القائمة ⇒ «unclear» (التصنيف معلوماتي بس)
+  const intentList = CHAT_RESPONSE_SCHEMA.properties.intent.enum;
+  const intent = intentList.includes(g.json.intent) ? g.json.intent : "unclear";
 
   return respond({
     ok: true,
