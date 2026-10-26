@@ -1685,8 +1685,9 @@ extra_head: |
   </div>
 </div>
 
-<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}?v=20261026-reliable"></script>
-<script src="{{ '/assets/js/agent-request-core.js' | relative_url }}?v=20261026-reliable"></script>
+<!-- Local search/draft core: needed only when a message is sent, so it never blocks first paint. -->
+<script src="{{ '/assets/js/catalog-search-core.js' | relative_url }}?v=20261026-reliable" defer></script>
+<script src="{{ '/assets/js/agent-request-core.js' | relative_url }}?v=20261026-reliable" defer></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 // CONFIG — عقد الـWorker كما هو، بلا أي تغيير
