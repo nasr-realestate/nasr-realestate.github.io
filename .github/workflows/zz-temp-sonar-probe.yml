@@ -1,0 +1,22 @@
+# TEMPORARY diagnostic — removed in the next commit. Prints only token presence and validity.
+name: TEMP sonar token probe
+on:
+  pull_request:
+    paths: [".github/workflows/zz-temp-sonar-probe.yml"]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe SonarCloud token (presence and validity only)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error title=sonar-probe::SONAR_TOKEN is empty for this pull_request run"
+            exit 0
+          fi
+          body=$(curl -s -m 20 -u "$SONAR_TOKEN:" https://sonarcloud.io/api/authentication/validate || echo curl-failed)
+          echo "::warning title=sonar-probe::SONAR_TOKEN present; validate=$body"
