@@ -21,7 +21,7 @@ test('schema output is encrypted before an expiring artifact upload and no token
   assert.match(workflow, /contents: write/);
   assert.match(workflow, /test \"\$GITHUB_REF_NAME\" = \"arena\/7414ed79-nasr-realestate-github-io\"/);
   assert.match(workflow, /schema-\$\{GITHUB_RUN_ID\}\.enc\.json/);
-  assert.match(workflow, /fs\.rmSync\('\/tmp\/d1-schema\.json'/);
+  assert.match(workflow, /fs\.rmSync\(p,\{force:true\}\)/);
   assert.doesNotMatch(workflow, /echo .*\$\{?CLOUDFLARE_API_TOKEN/);
   assert.doesNotMatch(workflow, /echo .*\$AUTH/);
 });

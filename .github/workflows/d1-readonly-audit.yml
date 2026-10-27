@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: Checkout public encryption key
         uses: actions/checkout@v4
-      - name: Query schema and encrypt report before upload
+      - name: Query metadata and encrypt report before upload
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +39,30 @@ jobs:
             echo "ARENA_CLOUDFLARE_TOKEN is not configured as a repository Actions secret." >&2
             exit 1
           fi
-          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query"
+          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          get_json() {
+            local route="$1" out="$2" code
+            code=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$out" -w '%{http_code}' "$API$route")
+            if [ "$code" != 200 ] || [ "$(jq -r '.success // false' "$out" 2>/dev/null || echo false)" != true ]; then
+              echo "Cloudflare metadata GET failed: HTTP $code for a read-only endpoint." >&2
+              jq -r '.errors[]?.message // empty' "$out" 2>/dev/null | head -5 >&2 || true
+              return 1
+            fi
+          }
+          get_json "/d1/database?page=1&per_page=100" /tmp/d1-list.json
+          get_json "/workers/scripts" /tmp/worker-list.json
+          for script in royal-snow-ea32 nasr-properties-sync noisy-bush-fd84 nasr-ai-gateway; do
+            if ! get_json "/workers/scripts/$script/settings" "/tmp/$script-settings.json"; then
+              printf '{"success":false,"http_status":404}' > "/tmp/$script-settings.json"
+            fi
+          done
+          if ! get_json "/workers/scripts/nasr-properties-sync/schedules" /tmp/nasr-properties-sync-schedules.json; then
+            printf '{"success":false,"http_status":404}' > /tmp/nasr-properties-sync-schedules.json
+          fi
           SQL="SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE type IN ('table','index','view','trigger') ORDER BY type, name"
           CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -H 'content-type: application/json' \
-            -X POST --data "$(jq -n --arg sql "$SQL" '{sql:$sql}')" -o /tmp/d1-schema.json -w '%{http_code}' "$API")
+            -X POST --data "$(jq -n --arg sql "$SQL" '{sql:$sql}')" -o /tmp/d1-schema.json -w '%{http_code}' "$API/d1/database/${D1_DATABASE_ID}/query")
           if [ "$CODE" != 200 ] || [ "$(jq -r '.success // false' /tmp/d1-schema.json 2>/dev/null || echo false)" != true ]; then
             echo "D1 schema query failed: HTTP $CODE. Check the secret and its D1 query permission." >&2
             jq -r '.errors[]?.message // empty' /tmp/d1-schema.json 2>/dev/null | head -5 >&2 || true
@@ -52,22 +71,32 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const crypto = require('node:crypto');
-          const schema = fs.readFileSync('/tmp/d1-schema.json');
-          const parsed = JSON.parse(schema);
-          const key = crypto.randomBytes(32);
-          const iv = crypto.randomBytes(12);
-          const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-          const ciphertext = Buffer.concat([cipher.update(schema), cipher.final()]);
-          const publicKey = fs.readFileSync('.github/workflows/d1-audit-public.pem');
-          const wrappedKey = crypto.publicEncrypt({key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256'}, key);
-          const report = {v:1, wrappedKey:wrappedKey.toString('base64'), iv:iv.toString('base64'), tag:cipher.getAuthTag().toString('base64'), ciphertext:ciphertext.toString('base64')};
-          fs.writeFileSync('/tmp/d1-schema-encrypted.json', JSON.stringify(report));
-          fs.rmSync('/tmp/d1-schema.json', {force:true});
-          const count = parsed.result?.[0]?.results?.length ?? 0;
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## D1 schema audit\nDatabase: ${process.env.D1_DATABASE_NAME}\nSchema objects found: ${count}\nReport uploaded encrypted to the agent's public-key envelope; no customer rows queried.\n`);
-          console.log(`Schema-only query succeeded; ${count} schema objects. Plaintext removed before artifact upload.`);
+          const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+          const bindings = p => {
+            const d=read(p), r=d.result||{};
+            return {http_ok:d.success===true, compatibility_date:r.compatibility_date||null,
+              bindings:(r.bindings||[]).map(b=>({type:b.type,name:b.name,id:b.id||b.database_id||b.namespace_id||null,database_name:b.database_name||null,class_name:b.class_name||null}))};
+          };
+          const dbs=read('/tmp/d1-list.json'), scripts=read('/tmp/worker-list.json'), schema=read('/tmp/d1-schema.json');
+          const data={
+            database_inventory:(dbs.result||[]).map(d=>({name:d.name,uuid:d.uuid,created_on:d.created_on||null})),
+            worker_inventory:(scripts.result||[]).map(w=>({name:w.id||w.script_name||null})),
+            worker_settings:{'royal-snow-ea32':bindings('/tmp/royal-snow-ea32-settings.json'),'nasr-properties-sync':bindings('/tmp/nasr-properties-sync-settings.json'),'noisy-bush-fd84':bindings('/tmp/noisy-bush-fd84-settings.json'),'nasr-ai-gateway':bindings('/tmp/nasr-ai-gateway-settings.json')},
+            properties_sync_schedules:read('/tmp/nasr-properties-sync-schedules.json'),
+            schema_database_id:process.env.D1_DATABASE_ID,
+            schema_objects:schema.result?.[0]?.results||[]
+          };
+          const plaintext=Buffer.from(JSON.stringify(data)), key=crypto.randomBytes(32), iv=crypto.randomBytes(12);
+          const cipher=crypto.createCipheriv('aes-256-gcm',key,iv), ciphertext=Buffer.concat([cipher.update(plaintext),cipher.final()]);
+          const pub=fs.readFileSync('.github/workflows/d1-audit-public.pem');
+          const wrapped=crypto.publicEncrypt({key:pub,padding:crypto.constants.RSA_PKCS1_OAEP_PADDING,oaepHash:'sha256'},key);
+          fs.writeFileSync('/tmp/d1-schema-encrypted.json',JSON.stringify({v:1,wrappedKey:wrapped.toString('base64'),iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),ciphertext:ciphertext.toString('base64')}));
+          for(const p of ['/tmp/d1-list.json','/tmp/worker-list.json','/tmp/d1-schema.json','/tmp/royal-snow-ea32-settings.json','/tmp/nasr-properties-sync-settings.json','/tmp/noisy-bush-fd84-settings.json','/tmp/nasr-ai-gateway-settings.json','/tmp/nasr-properties-sync-schedules.json']) fs.rmSync(p,{force:true});
+          const count=data.schema_objects.length;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`## Cloudflare inventory audit\nD1 databases listed: ${data.database_inventory.length}\nWorkers listed: ${data.worker_inventory.length}\nSchema objects read: ${count}\nMetadata encrypted before upload; no customer rows queried.\n`);
+          console.log(`Read-only metadata audit succeeded: ${data.database_inventory.length} D1 databases, ${data.worker_inventory.length} Workers, ${count} schema objects; report encrypted.`);
           NODE
-      - name: Upload encrypted schema envelope
+      - name: Upload encrypted report
         uses: actions/upload-artifact@v4
         with:
           name: d1-schema-${{ github.run_id }}
