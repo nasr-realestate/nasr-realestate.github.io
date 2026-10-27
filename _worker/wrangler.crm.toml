@@ -1,10 +1,11 @@
 # Isolated CRM test Worker configuration only; binds only synthetic-data D1.
-# Keep workers_dev=false until Worker-level Cloudflare Access is configured and
-# verified for all traffic. A custom domain/zone is not required for workers.dev.
+# Keep workers_dev=false and preview_urls=false until Worker-level Access is
+# configured and verified for all traffic. No custom domain/zone is required.
 name = "nasr-crm-api-test"
 main = "crm-worker.js"
 compatibility_date = "2026-09-04"
 workers_dev = false
+preview_urls = false
 
 [[d1_databases]]
 binding = "DB"
