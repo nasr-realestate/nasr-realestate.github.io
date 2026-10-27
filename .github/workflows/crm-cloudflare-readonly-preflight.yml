@@ -55,8 +55,11 @@ jobs:
           token_status=$(jq -r '.result.status // "unknown"' "$TMP/verify.json" 2>/dev/null || echo unknown)
           verify_error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/verify.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
           if [ "$verify_code" != 200 ] || [ "$token_status" != active ]; then
+            # A second read-only probe separates a missing/invalid bearer credential
+            # from a token that is accepted but lacks the user-token verification scope.
+            account_probe_code=$(get_json "$API/accounts?per_page=1" "$TMP/account-probe.json")
             outcome='token-verification-failed'
-            details="verify_http=$verify_code;error_code=${verify_error_code:-unknown};status_active=no"
+            details="verify_http=$verify_code;error_code=${verify_error_code:-unknown};account_probe_http=$account_probe_code"
             printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
             exit 0
           fi
