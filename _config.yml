@@ -131,6 +131,11 @@ defaults:
       path: "crm.html"
     values:
       sitemap: false
+  # صفحة متابعة الفرص محلية فقط، بلا بيانات منشورة، وخارج sitemap.
+  - scope:
+      path: "opportunities.html"
+    values:
+      sitemap: false
   # 2026-10-24 — ملف تحقّق Google Search Console: محتواه سطر واحد ثابت
   # («google-site-verification: google1201055475d84276.html») ولا يمكن إضافة
   # front matter له (يتغيّر محتواه فيفشل التحقق). لكن Jekyll يبنيه كصفحة
