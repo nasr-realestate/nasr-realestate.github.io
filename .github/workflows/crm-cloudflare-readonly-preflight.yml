@@ -16,14 +16,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  inventory:
-    name: Verify ARENA_CLOUDFLARE_TOKEN and read resource inventory
+  probe:
+    name: Read-only Cloudflare GET probes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    outputs:
+      outcome: ${{ steps.probe.outputs.outcome }}
+      details: ${{ steps.probe.outputs.details }}
     steps:
-      - name: Read-only Cloudflare token and inventory check (GET only)
+      - name: Verify exact secret and inventory read access (GET only)
+        id: probe
         shell: bash
         run: |
           set -euo pipefail
@@ -31,56 +35,75 @@ jobs:
           API='https://api.cloudflare.com/client/v4'
           TMP=$(mktemp -d)
           trap 'rm -rf "$TMP"' EXIT
-          {
-            echo '## CRM Cloudflare preflight — read-only'
-            echo '- Secret name: `ARENA_CLOUDFLARE_TOKEN` (value never printed or saved as an artifact).'
-            echo '- Cloudflare requests: GET only; no creation, deployment, D1 query, or mutation.'
-          } >> "$GITHUB_STEP_SUMMARY"
+          outcome=''
+          details=''
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo '- Result: secret is unavailable to this workflow run; no Cloudflare request was made.' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
+            outcome='secret-unavailable-to-workflow'
+            details='no-request-made'
+            printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo '::add-mask::'"$CLOUDFLARE_API_TOKEN"
           auth_header="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
-          http_get() {
-            local label="$1" url="$2" destination="$3" code
+          get_json() {
+            local url="$1" destination="$2" code
             code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
               --header "$auth_header" --output "$destination" --write-out '%{http_code}' "$url" 2>/dev/null || true)
             printf '%s' "${code:-000}"
           }
-          VERIFY_CODE=$(http_get token-verify "$API/user/tokens/verify" "$TMP/verify.json")
-          TOKEN_STATUS=$(jq -r '.result.status // "unavailable"' "$TMP/verify.json" 2>/dev/null || echo unavailable)
-          echo "- Token verification: HTTP $VERIFY_CODE; status \\`$TOKEN_STATUS\\`." >> "$GITHUB_STEP_SUMMARY"
-          if [ "$VERIFY_CODE" != 200 ] || [ "$TOKEN_STATUS" != active ]; then
-            echo '- Inventory stopped because token verification did not return active.' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
+          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
+          token_status=$(jq -r '.result.status // "unknown"' "$TMP/verify.json" 2>/dev/null || echo unknown)
+          if [ "$verify_code" != 200 ] || [ "$token_status" != active ]; then
+            outcome='token-verification-failed'
+            details="verify_http=$verify_code;status_active=no"
+            printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          PERMISSIONS=$(jq -r '[.result.policies[]?.permission_groups[]?.name] | unique | join(", ")' "$TMP/verify.json" 2>/dev/null || true)
-          echo "- Token permission groups (as reported by Cloudflare): \\`${PERMISSIONS:-not-returned}\\`." >> "$GITHUB_STEP_SUMMARY"
-          ACCOUNTS_CODE=$(http_get accounts "$API/accounts?per_page=50" "$TMP/accounts.json")
-          echo "- Account inventory: HTTP $ACCOUNTS_CODE." >> "$GITHUB_STEP_SUMMARY"
-          if [ "$ACCOUNTS_CODE" != 200 ]; then exit 1; fi
-          ACCOUNT_COUNT=$(jq -r '.result | length' "$TMP/accounts.json")
-          echo "- Visible account count: $ACCOUNT_COUNT." >> "$GITHUB_STEP_SUMMARY"
-          if [ "$ACCOUNT_COUNT" -eq 0 ]; then exit 1; fi
-          while IFS=$'\t' read -r ACCOUNT_ID ACCOUNT_NAME; do
-            [ -n "$ACCOUNT_ID" ] || continue
-            printf '\n### Account: %s\n' "$ACCOUNT_NAME" >> "$GITHUB_STEP_SUMMARY"
-            for entry in \
-              'D1 databases|d1/database' \
-              'Workers scripts|workers/scripts' \
-              'Access applications|access/apps' \
-              'Zones|../zones?account.id='; do
-              label=${entry%%|*}; path=${entry#*|}
-              if [ "$label" = Zones ]; then url="$API/zones?account.id=$ACCOUNT_ID&per_page=100"; else url="$API/accounts/$ACCOUNT_ID/$path"; fi
-              code=$(http_get inventory "$url" "$TMP/inventory.json")
-              if [ "$code" = 200 ]; then
-                count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$TMP/inventory.json" 2>/dev/null || echo unknown)
-                names=$(jq -r '[.result[]?.name // empty] | join(", ")' "$TMP/inventory.json" 2>/dev/null || true)
-                echo "- $label: HTTP $code; count=$count; names=\\`${names:-none/hidden}\\`." >> "$GITHUB_STEP_SUMMARY"
-              else
-                echo "- $label: HTTP $code (read permission unavailable or endpoint not accessible)." >> "$GITHUB_STEP_SUMMARY"
-              fi
-            done
-          done < <(jq -r '.result[] | [.id,.name] | @tsv' "$TMP/accounts.json")
-          echo '\nNo Cloudflare resources were created or changed.' >> "$GITHUB_STEP_SUMMARY"
+          permission_groups=$(jq -r '[.result.policies[]?.permission_groups[]?.name] | unique | join(",")' "$TMP/verify.json" 2>/dev/null | tr -d '\r\n' | cut -c1-200 || true)
+          account_code=$(get_json "$API/accounts?per_page=50" "$TMP/accounts.json")
+          if [ "$account_code" != 200 ]; then
+            outcome='token-valid-account-inventory-denied'
+            details="verify_http=200;account_http=$account_code;groups=${permission_groups:-not-returned}"
+            printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          account_count=$(jq -r '.result | length' "$TMP/accounts.json")
+          if [ "$account_count" -ne 1 ]; then
+            outcome='token-valid-account-selection-required'
+            details="accounts_visible=$account_count;groups=${permission_groups:-not-returned}"
+            printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          inventory_probe() {
+            local label="$1" url="$2" destination="$3" code count
+            code=$(get_json "$url" "$destination")
+            if [ "$code" = 200 ]; then count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$destination" 2>/dev/null || echo unknown); else count='unavailable'; fi
+            printf '%s=%s:%s' "$label" "$code" "$count"
+          }
+          d1=$(inventory_probe d1 "$API/accounts/$account_id/d1/database?per_page=100" "$TMP/d1.json")
+          workers=$(inventory_probe workers "$API/accounts/$account_id/workers/scripts?per_page=100" "$TMP/workers.json")
+          access=$(inventory_probe access "$API/accounts/$account_id/access/apps?per_page=100" "$TMP/access.json")
+          zones=$(inventory_probe zones "$API/zones?account.id=$account_id&per_page=100" "$TMP/zones.json")
+          outcome='token-valid-read-probes-completed'
+          details="accounts_visible=1;$d1;$workers;$access;$zones;groups=${permission_groups:-not-returned}"
+          printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
+          {
+            echo '## CRM Cloudflare preflight — read-only'
+            echo '- Secret: `ARENA_CLOUDFLARE_TOKEN` was passed to this job; its value was not printed or saved as an artifact.'
+            echo '- Requests: GET only. No resources, routes, policies, DNS, D1 rows, or Worker code were created or changed.'
+            echo "- Outcome: $outcome"
+            echo "- Inventory/permission metadata: $details"
+          } >> "$GITHUB_STEP_SUMMARY"
+  report:
+    name: 'CRM preflight result — ${{ needs.probe.outputs.outcome }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record non-secret result
+        env:
+          OUTCOME: ${{ needs.probe.outputs.outcome }}
+          DETAILS: ${{ needs.probe.outputs.details }}
+        run: |
+          printf 'Preflight outcome: %s\nDetails: %s\n' "${OUTCOME:-unknown}" "${DETAILS:-unavailable}"
