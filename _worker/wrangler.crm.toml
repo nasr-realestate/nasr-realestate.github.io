@@ -1,0 +1,15 @@
+# Private CRM API. Configuration only; do not deploy until Cloudflare Access
+# is configured and independently verified. No public route is configured here.
+name = "nasr-crm-api"
+main = "crm-worker.js"
+compatibility_date = "2026-09-04"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nasr-market-db"
+database_id = "ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
