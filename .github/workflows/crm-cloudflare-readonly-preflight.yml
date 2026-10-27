@@ -96,7 +96,7 @@ jobs:
             echo "- Inventory/permission metadata: $details"
           } >> "$GITHUB_STEP_SUMMARY"
   report:
-    name: 'CRM preflight result — ${{ needs.probe.outputs.outcome }}'
+    name: 'CRM preflight — ${{ needs.probe.outputs.outcome }} — ${{ needs.probe.outputs.details }}'
     needs: probe
     if: always()
     runs-on: ubuntu-latest
