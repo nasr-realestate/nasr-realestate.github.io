@@ -652,6 +652,11 @@ app.get('/:page', async (req, res, next) => {
     const filePath = path.resolve(pageName);
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      // 2026-10-27 — Jekyll ينسخ ملف HTML بلا front matter كما هو (ملف ساكن: crm.html،
+      // og-generator.html). كان المُصيِّر هنا يلفّه في default.html (تحليلات GTM وmeta
+      // مكررة)، فتختلف المعاينة عن الإنتاج وتسقط CSP الصفحة. نخدمه حرفيًا مثل Pages.
+      const raw = fs.readFileSync(filePath, 'utf8');
+      if (!/^\uFEFF?---\s*\r?\n/.test(raw)) return res.type('html').send(raw);
       const html = await renderFile(pageName, { url: `/${pageParam}` });
       return res.send(html);
     }
