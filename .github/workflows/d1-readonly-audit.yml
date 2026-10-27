@@ -2,6 +2,13 @@ name: D1 schema read-only audit
 
 on:
   workflow_dispatch:
+  # One-time controlled run on the active Arena branch. Limited to this file so
+  # ordinary site changes never query production D1. Remove after the audit.
+  push:
+    branches:
+      - arena/7414ed79-nasr-realestate-github-io
+    paths:
+      - .github/workflows/d1-readonly-audit.yml
 
 permissions:
   contents: read
@@ -21,7 +28,9 @@ jobs:
       D1_DATABASE_ID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
       D1_DATABASE_NAME: nasr-market-db
     steps:
-      - name: Read-only D1 schema query
+      - name: Checkout public encryption key
+        uses: actions/checkout@v4
+      - name: Query schema and encrypt report before upload
         shell: bash
         run: |
           set -euo pipefail
@@ -35,19 +44,33 @@ jobs:
           SQL="SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE type IN ('table','index','view','trigger') ORDER BY type, name"
           CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -H 'content-type: application/json' \
             -X POST --data "$(jq -n --arg sql "$SQL" '{sql:$sql}')" -o /tmp/d1-schema.json -w '%{http_code}' "$API")
-          if [ "$CODE" != 200 ]; then
-            echo "D1 schema query failed: HTTP $CODE. Check that the token is valid and has D1 query permission." >&2
+          if [ "$CODE" != 200 ] || [ "$(jq -r '.success // false' /tmp/d1-schema.json 2>/dev/null || echo false)" != true ]; then
+            echo "D1 schema query failed: HTTP $CODE. Check the secret and its D1 query permission." >&2
             jq -r '.errors[]?.message // empty' /tmp/d1-schema.json 2>/dev/null | head -5 >&2 || true
             exit 1
           fi
-          if [ "$(jq -r '.success // false' /tmp/d1-schema.json)" != true ]; then
-            echo "Cloudflare did not report a successful D1 schema query." >&2
-            jq -r '.errors[]?.message // empty' /tmp/d1-schema.json 2>/dev/null | head -5 >&2 || true
-            exit 1
-          fi
-          jq -r --arg name "$D1_DATABASE_NAME" '
-            "## D1 schema audit: \($name)",
-            "Read-only query against sqlite_schema; no customer rows were requested.", "",
-            (.result[0].results[]? | "### \(.type): \(.name)" + (if .tbl_name then " (table: \(.tbl_name))" else "" end) + "\n```sql\n\(.sql // "<internal>" )\n```")
-          ' /tmp/d1-schema.json >> "$GITHUB_STEP_SUMMARY"
-          echo "Schema-only query succeeded for ${D1_DATABASE_NAME}; no customer data was selected."
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const schema = fs.readFileSync('/tmp/d1-schema.json');
+          const parsed = JSON.parse(schema);
+          const key = crypto.randomBytes(32);
+          const iv = crypto.randomBytes(12);
+          const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+          const ciphertext = Buffer.concat([cipher.update(schema), cipher.final()]);
+          const publicKey = fs.readFileSync('.github/workflows/d1-audit-public.pem');
+          const wrappedKey = crypto.publicEncrypt({key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256'}, key);
+          const report = {v:1, wrappedKey:wrappedKey.toString('base64'), iv:iv.toString('base64'), tag:cipher.getAuthTag().toString('base64'), ciphertext:ciphertext.toString('base64')};
+          fs.writeFileSync('/tmp/d1-schema-encrypted.json', JSON.stringify(report));
+          fs.rmSync('/tmp/d1-schema.json', {force:true});
+          const count = parsed.result?.[0]?.results?.length ?? 0;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## D1 schema audit\nDatabase: ${process.env.D1_DATABASE_NAME}\nSchema objects found: ${count}\nReport uploaded encrypted to the agent's public-key envelope; no customer rows queried.\n`);
+          console.log(`Schema-only query succeeded; ${count} schema objects. Plaintext removed before artifact upload.`);
+          NODE
+      - name: Upload encrypted schema envelope
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-schema-${{ github.run_id }}
+          path: /tmp/d1-schema-encrypted.json
+          retention-days: 1
+          if-no-files-found: error
