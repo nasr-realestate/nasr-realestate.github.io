@@ -53,9 +53,10 @@ jobs:
           }
           verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
           token_status=$(jq -r '.result.status // "unknown"' "$TMP/verify.json" 2>/dev/null || echo unknown)
+          verify_error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/verify.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
           if [ "$verify_code" != 200 ] || [ "$token_status" != active ]; then
             outcome='token-verification-failed'
-            details="verify_http=$verify_code;status_active=no"
+            details="verify_http=$verify_code;error_code=${verify_error_code:-unknown};status_active=no"
             printf 'outcome=%s\ndetails=%s\n' "$outcome" "$details" >> "$GITHUB_OUTPUT"
             exit 0
           fi
