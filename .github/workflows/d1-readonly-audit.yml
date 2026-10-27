@@ -1,0 +1,53 @@
+name: D1 schema read-only audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d1-readonly-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Inspect nasr-market-db schema only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 717c46b0d78a6f06589b8367a1a3cc5b
+      D1_DATABASE_ID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+      D1_DATABASE_NAME: nasr-market-db
+    steps:
+      - name: Read-only D1 schema query
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "ARENA_CLOUDFLARE_TOKEN is not configured as a repository Actions secret." >&2
+            exit 1
+          fi
+          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          SQL="SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE type IN ('table','index','view','trigger') ORDER BY type, name"
+          CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -H 'content-type: application/json' \
+            -X POST --data "$(jq -n --arg sql "$SQL" '{sql:$sql}')" -o /tmp/d1-schema.json -w '%{http_code}' "$API")
+          if [ "$CODE" != 200 ]; then
+            echo "D1 schema query failed: HTTP $CODE. Check that the token is valid and has D1 query permission." >&2
+            jq -r '.errors[]?.message // empty' /tmp/d1-schema.json 2>/dev/null | head -5 >&2 || true
+            exit 1
+          fi
+          if [ "$(jq -r '.success // false' /tmp/d1-schema.json)" != true ]; then
+            echo "Cloudflare did not report a successful D1 schema query." >&2
+            jq -r '.errors[]?.message // empty' /tmp/d1-schema.json 2>/dev/null | head -5 >&2 || true
+            exit 1
+          fi
+          jq -r --arg name "$D1_DATABASE_NAME" '
+            "## D1 schema audit: \($name)",
+            "Read-only query against sqlite_schema; no customer rows were requested.", "",
+            (.result[0].results[]? | "### \(.type): \(.name)" + (if .tbl_name then " (table: \(.tbl_name))" else "" end) + "\n```sql\n\(.sql // "<internal>" )\n```")
+          ' /tmp/d1-schema.json >> "$GITHUB_STEP_SUMMARY"
+          echo "Schema-only query succeeded for ${D1_DATABASE_NAME}; no customer data was selected."
