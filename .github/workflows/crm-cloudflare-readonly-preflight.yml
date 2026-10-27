@@ -1,6 +1,11 @@
 name: CRM Cloudflare read-only preflight
 
 on:
+  push:
+    branches:
+      - arena/a9241018-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-cloudflare-readonly-preflight.yml
   workflow_dispatch:
 
 permissions:
