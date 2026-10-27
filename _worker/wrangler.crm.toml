@@ -1,6 +1,6 @@
-# Isolated CRM test Worker configuration only. This intentionally cannot reach
-# production: the D1 id is an invalid placeholder until a dedicated test D1 is
-# created and its real id is deliberately entered after owner approval.
+# Isolated CRM test Worker configuration only. It binds only the dedicated
+# synthetic-data D1. No route or Access host is configured; do not deploy until
+# the owner-only Access application and verified test hostname are ready.
 name = "nasr-crm-api-test"
 main = "crm-worker.js"
 compatibility_date = "2026-09-04"
@@ -9,7 +9,7 @@ workers_dev = false
 [[d1_databases]]
 binding = "DB"
 database_name = "nasr-crm-test-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "65bfcb14-4b48-423b-916f-00eefdb9ae1e"
 migrations_dir = "migrations"
 
 # The private Arabic UI is served by this same Worker origin, behind the same

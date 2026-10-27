@@ -1,12 +1,12 @@
-# CRM isolated Cloudflare test plan — proposal only
+# CRM isolated Cloudflare test plan and execution status
 
-**Status:** planning document only. No resource, route, DNS record, Access app, permission, secret, or production data was created or changed in this phase. Do not execute the Cloudflare steps without explicit owner authorization.
+**Status:** A real Cloudflare read-only inventory and isolated D1 test were executed. `nasr-crm-test-db` exists (UUID `65bfcb14-4b48-423b-916f-00eefdb9ae1e`); synthetic base tables/fixtures were created, the CRM migration was applied, and a remote query verified six CRM tables plus two synthetic listings. `nasr-market-db` was not modified. No CRM Worker, Access app, route, DNS record, or production data was created or changed. Worker/browser tests remain blocked because inventory found zero zones and zero Access applications, and no owner-approved test hostname or identity is supplied.
 
 ## Proposed names and hostname
 
 | Resource | Proposed name | Must be isolated from |
 |---|---|---|
-| D1 | `nasr-crm-test-db` | `nasr-market-db` and every production Worker binding |
+| D1 | `nasr-crm-test-db` (created; UUID `65bfcb14-4b48-423b-916f-00eefdb9ae1e`) | `nasr-market-db` and every production Worker binding |
 | Worker | `nasr-crm-api-test` | all production scripts/routes/bindings |
 | Access app | `nasr-crm-test-access` | production audiences and policies |
 | UI (future) | `nasr-crm-test-ui` or UI served by the test Worker | production pages and localStorage |
@@ -19,8 +19,7 @@ Prefer one same-origin private hostname for the UI and API to avoid third-party 
 ## Resource-by-resource requirements
 
 ### 1. D1: `nasr-crm-test-db`
-- Create a new D1 in the approved account. Do not clone production rows or bind the CRM Worker to `nasr-market-db`.
-- Before creation, use the Cloudflare D1 inventory read-only and record the production database UUID (`ace5c9a2-c6b1-47b3-adf1-77e84ac50abf`) and all existing bindings. After creation, record the new test UUID and require it to be different from the production UUID. Confirm `nasr-crm-test-db` is not bound to any existing Worker; configure only `nasr-crm-api-test` to use it. Stop on any mismatch.
+- **Completed:** the read-only inventory found one existing D1, `nasr-market-db`, and no `nasr-crm-test-db`. A new D1 named `nasr-crm-test-db` was created with UUID `65bfcb14-4b48-423b-916f-00eefdb9ae1e`. It was not bound to any existing Worker; no production D1 was used.
 - Synthetic baseline only (never copy live rows): create `areas`, `sources`, and the lookup columns of `listings`, then seed reserved test IDs. For example:
 
 ```sql
@@ -35,19 +34,18 @@ CREATE TABLE listings(
   FOREIGN KEY(area_id) REFERENCES areas(id)
 );
 INSERT INTO areas(id,name_ar) VALUES
-  (90001,'مدينة نصر - اختبار'), (99999,'منطقة خارج النطاق - اختبار');
-INSERT INTO sources(id,name) VALUES(9009,'مصدر CRM اصطناعي');
+  (90001,'TEST ONLY Nasr City'), (99999,'TEST ONLY out of scope');
+INSERT INTO sources(id,name) VALUES(9009,'TEST ONLY synthetic CRM source');
 INSERT INTO listings(id,source_id,external_id,url,title,property_type,transaction_type,area_id,area_m2,price,observed_at)
 VALUES
-  (900001,9009,'crm-test-inside','/test/inside','عقار اختبار داخل النطاق','apartment','sale',90001,100,1000000,'2026-10-28'),
-  (900002,9009,'crm-test-outside','/test/outside','عقار اختبار خارج النطاق','apartment','sale',99999,100,1000000,'2026-10-28');
+  (900001,9009,'crm-test-only-inside','/test-only/inside','TEST ONLY — synthetic listing','test','sale',90001,NULL,NULL,'2026-10-28'),
+  (900002,9009,'crm-test-only-outside','/test-only/outside','TEST ONLY — out-of-scope listing','test','sale',99999,NULL,NULL,'2026-10-28');
 ```
 
   Configure `CRM_SITE_SOURCE_ID=9009` and `CRM_NASR_AREA_IDS=90001` for this fixture. These are test-only IDs and must not be confused with the prior production audit values.
-- Apply `_worker/migrations/0001_crm_opportunities.sql` only after the test base schema exists. Compare baseline DDL before/after; expect six `crm_*` tables plus CRM indexes, with unchanged baseline tables.
-- Record the new D1 ID in the test-only Wrangler config after it has been created; the checked-in all-zero ID is deliberately unusable and is not a credential. Before every remote operation, verify both `database_name = "nasr-crm-test-db"` and that the configured UUID equals the recorded test UUID and differs from production.
-- Future operator sequence (not run now): read-only D1 inventory; create the test D1; capture its returned UUID; update only the placeholder in the test config; re-run the read-only inventory and binding check; then run `wrangler d1 info nasr-crm-test-db --remote --config _worker/wrangler.crm.toml` and inspect the reported UUID before any DDL. Apply using `wrangler d1 migrations apply nasr-crm-test-db --remote --config _worker/wrangler.crm.toml` only after the prechecks pass. If any command resolves to the production name/UUID, stop without applying.
-- **Permission:** a separate credential with D1 Read and D1 Edit, scoped to the approved account and preferably the test database resource. Account-level D1 Edit may be needed only to create the new database; after creation, narrow access to the test D1 where possible. D1 Edit is needed to apply the test migration; Read is for schema and verification. Do not give this credential write access to `nasr-market-db`.
+- **Completed on real Cloudflare D1:** created only the baseline `areas`, `sources`, and `listings` schema, inserted two clearly labeled synthetic rows with no fabricated price/area values, applied `_worker/migrations/0001_crm_opportunities.sql`, then ran a remote verification query. It returned the expected six `crm_*` tables and two synthetic listings. No live CRM customer/listing rows were copied.
+- `_worker/wrangler.crm.toml` now records the exact test D1 UUID. It binds only `nasr-crm-test-db`; `workers_dev=false`, and no route is configured. The test database has not yet been bound to any Worker.
+- **Permission evidence:** the supplied token successfully created this D1 and applied its migration (D1 write capability demonstrated operationally). Cloudflare's account token verification response returned no permission-group list, so no broader permission set is inferred. No Worker Scripts, Access Apps/Policies, DNS, or route write permission has been tested or used. Never grant write access to `nasr-market-db`.
 
 ### 2. Worker: `nasr-crm-api-test`
 - Bind `DB` only to `nasr-crm-test-db`. Keep `workers_dev = false`; do not create a `workers.dev` public route or any production route.
@@ -80,13 +78,13 @@ VALUES
 
 ## Test execution sequence (all test resources only)
 
-1. Owner confirms account, controlled test zone/hostname, exact owner email, UI hosting choice, and approves the isolated resources/permission scopes. If any item is unknown, pause.
-2. Create `nasr-crm-test-db`; seed synthetic dependency schema/rows and record its ID. Confirm it is not bound to any other Worker.
-3. Create `nasr-crm-test-access`, configure owner-only allow/deny policy for the approved hostname, and record issuer hostname and AUD. Confirm access for the owner and denial for a second/non-owner identity.
-4. Set up the isolated Worker with `workers_dev=false`, test D1 binding, and no production routes. Attach the test hostname only after Access is in place. Set the six explicit config values above, sourced from verified test setup (not from guesses or old production defaults).
-5. Apply the migration to the test D1 only. Verify additive schema, foreign keys, unique primary-phone rule, customer/phone separation, and no changes to seeded non-CRM tables.
+1. **Completed:** read-only inventory found one account, one existing D1 (`nasr-market-db`), four existing Workers, zero Access applications, and zero zones. The token's user verification route returned 401/code 1000; account-level verification was active with no permission groups returned.
+2. **Completed:** created only `nasr-crm-test-db`; seeded the synthetic dependency schema and two labeled fixtures, applied the CRM migration remotely, and verified six `crm_*` tables plus the two synthetic listings. Its UUID is recorded in the Wrangler test config. No existing Worker is bound to this newly created D1.
+3. **Blocked pending owner prerequisite:** identify a controlled test domain/hostname and exact owner email. The current inventory revealed no zone or Access app. Do not infer a domain or identity.
+4. **Not run:** after the prerequisites and permissions are established, create the owner-only Access app and configure the isolated Worker with `workers_dev=false`, the test D1 binding, and no production routes. Attach a hostname only after Access is in place. Set the six explicit config values above from verified test setup, never guesses or production defaults.
+5. **Migration applied:** additional remote checks are still needed for foreign keys, unique primary-phone behavior, customer/phone separation, and baseline schema preservation.
 6. Exercise Worker reads/writes using synthetic data: contact without phone; multiple phones per contact; multiple opportunities per contact; name/phone conflict review; idempotency; activities/follow-ups; synthetic Nasr City property links; outside-scope listing rejected.
-7. Trigger a database error during opportunity insertion and verify that customer, phone, opportunity, receipt, and activity counts are all unchanged (the existing local SQLite test covers transaction behavior; the remote test validates Cloudflare D1 behavior).
+7. **Not run on remote D1:** after a protected, isolated Worker is available, trigger a database error during opportunity insertion and verify customer, phone, opportunity, receipt, and activity counts are unchanged. Local SQLite tests cover application transaction logic only; they do not validate Cloudflare D1 behavior.
 8. Verify Access with missing config, missing JWT, wrong issuer, wrong AUD, wrong email, expired token, and invalid signature. Confirm no authenticated data is returned to non-owner identities.
 9. Test browser login on the approved hostname: Access challenge, JWT injection, cookie behavior, normal API request, successful CORS preflight from the exact configured UI origin, and rejection of an untrusted origin. A mocked/local JWT test does not replace this step.
 10. Save test-only verification results and a rollback plan. Rollback may disable/delete only the test route, test Access app, test Worker, and test D1 as separately approved. Production D1/Worker/site/DNS remain untouched.
@@ -104,14 +102,14 @@ VALUES
 
 **Safe rollback:** stop/disable only the test hostname route first, then disable the test Worker and test Access app as required. Keep the isolated test D1 for diagnosis until the owner approves disposal; if it must be reset, export only synthetic test state and recreate/drop only `nasr-crm-test-db`. Never use a down-migration or cleanup command against `nasr-market-db`. No production rollback action is part of this plan.
 
-## Least-privilege permission summary (future only; none requested or used now)
+## Least-privilege permission summary
 
-Do not add permissions to the current token. Use a separate short-lived credential or owner-performed dashboard operations. Cloudflare dashboard permission labels to select, subject to confirming the exact label/scope offered by that account at setup time:
+The existing secret was used without exposing its value. D1 creation and migration succeeded, proving the required D1 write operations are currently available. The account token verifier returned no permission-group list, so other write scopes remain unknown. Do not broaden this credential. If a specific later operation is denied, request only that operation's narrowly scoped permission after the hostname/Access prerequisites are resolved. Confirm exact labels and resource scope in the account UI before any such change.
 
 | Cloudflare permission label | Scope | Why it may be needed |
 |---|---|---|
-| `Account / D1 / Edit` | Only `nasr-crm-test-db`; account scope temporarily only if required to create that database | Create the isolated D1 and apply its migration. |
-| `Account / D1 / Read` | Only `nasr-crm-test-db` | Inspect database identity/schema and verify migration. |
+| `Account / D1 / Edit` | Used for isolated `nasr-crm-test-db` create/migration operations; exact token scope metadata was not returned | D1 creation and migration succeeded; do not use against production D1. |
+| `Account / D1 / Read` | Used to inventory and verify the isolated test D1; exact token scope metadata was not returned | Read-only inventory and remote schema/fixture checks succeeded. |
 | `Account / Workers Scripts / Edit` | Only `nasr-crm-api-test` | Upload/update only the isolated Worker. |
 | `Account / Workers Scripts / Read` | Only `nasr-crm-api-test` | Inspect deployed test Worker and verify configuration. |
 | `Account / Workers Routes / Edit` | Only if a route must be added; approved test zone/hostname only | Attach the isolated test hostname. Omit if no route change is needed. |

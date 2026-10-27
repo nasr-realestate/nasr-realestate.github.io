@@ -1,7 +1,12 @@
-# Private CRM API — local draft / isolated-test plan
+# Private CRM API — implementation and isolated-test status
 
-## Safety boundary
-The merged draft has not been deployed and its migration has not been applied. The audited account had one D1, `nasr-market-db`, shared by the property, sync, and valuation Workers. Do not bind this CRM Worker to that production D1 or modify its tables. `_worker/wrangler.crm.toml` is now deliberately test-only: it names `nasr-crm-api-test` and `nasr-crm-test-db`, disables the default `workers.dev` route, and contains an all-zero placeholder D1 ID that must be replaced only after a dedicated test database exists. It is not a deployable production configuration.
+## Current verified Cloudflare state
+- The GitHub Actions workflow read the nonempty secret `ARENA_CLOUDFLARE_TOKEN` by its exact name and passed it as a Bearer token; the value was not printed, logged, or committed. `GET /accounts` and account resource inventories succeeded. `GET /user/tokens/verify` returned HTTP 401/code 1000, while account-scoped verification reported active but returned no permission groups. The credential is accepted for account reads and was sufficient to create/migrate the isolated test D1; the 401 is specific to the user-token verification endpoint, not evidence that the secret was missing.
+- D1 `nasr-crm-test-db` was created and migrated only with synthetic fixtures. UUID: `65bfcb14-4b48-423b-916f-00eefdb9ae1e`. Remote verification found six `crm_*` tables and two test-only listings.
+- The only pre-existing D1 found was `nasr-market-db`; it was not written to or migrated. The inventory showed four pre-existing Workers, zero Access applications, and zero zones. No CRM Worker, Access app, route, DNS record, or production change has been made.
+- `_worker/wrangler.crm.toml` is configured for the test D1 only with `workers_dev = false`, and no public route. It is not ready to deploy: Access, owner identity, and a controlled test hostname are still missing.
+
+Do not bind the CRM Worker to `nasr-market-db` or change its tables.
 
 ## Data model
 - `crm_contacts` represents a person/customer, not a phone number. A customer can exist without a phone and can have multiple phone methods.
@@ -12,7 +17,7 @@ The merged draft has not been deployed and its migration has not been applied. T
 - All CRM tables are additive. The migration does not alter property, valuation, listing, or sync tables.
 
 ## Atomic writes and API
-`POST /api/opportunities` writes a new customer (when needed), phone method (when needed), opportunity, idempotency receipt, and initial activity in one D1 batch. D1 batch failure rolls back the entire write. Existing customer/phone resolution occurs before the batch; uniqueness races are returned as review/retry conflicts, not automatic merges.
+`POST /api/opportunities` writes a new customer (when needed), phone method (when needed), opportunity, idempotency receipt, and initial activity in one D1 batch. The application is designed to use D1 batch atomicity, but remote fault-injection/rollback behavior has not yet been verified against Cloudflare D1. Existing customer/phone resolution occurs before the batch; uniqueness races are returned as review/retry conflicts, not automatic merges.
 
 - `GET /health` — static status only; it returns no customer data.
 - `GET /api/contacts?q=...` — authenticated contact search and phone summary.
@@ -38,12 +43,11 @@ The Worker validates JWT RS256 signature via the configured team JWKS, issuer, a
 
 The detailed resource, hostname, permission, setup sequence, verification, and rollback proposal is in `_worker/CRM-TEST-PLAN.md`.
 
-## Proposed isolated test resources (not created)
-- D1: `nasr-crm-test-db`, in the same Cloudflare account only if that account is approved, with synthetic rows only. It must not be shared with any existing Worker. Seed the minimum compatible `areas`, `sources`, and `listings` fixture schema/data needed to test CRM listing links; do not copy production customer/listing rows.
-- Worker: `nasr-crm-api-test`, bound only to `nasr-crm-test-db`, with no `workers.dev` route and no production route/binding.
-- Access application: `nasr-crm-test-access`, self-hosted application restricted to the owner email only, with its own AUD and a verified test hostname.
-- Hostname: use only a domain/subdomain the owner confirms they control and that is available for Cloudflare Access. If no such domain is already configured in Cloudflare DNS, stop and have the owner choose/provision a suitable domain or another supported private route; do not infer one from the GitHub Pages URL. The GitHub Pages hostname is not presumed to be under this Cloudflare account's DNS control.
-- UI origin: the owner must choose its final HTTPS origin; set that exact value in `CRM_ALLOWED_ORIGIN`, then verify allowlisted preflight and denied untrusted origin from a browser.
+## Remaining isolated test resources
+- D1 `nasr-crm-test-db` exists with only the synthetic dependency schema, two labeled test listing fixtures, and the CRM migration. It is not bound to any deployed CRM Worker.
+- Worker `nasr-crm-api-test` has not been created/deployed. If later deployed, bind it only to the test D1, keep `workers_dev = false`, and add no route until Access is ready.
+- Access application `nasr-crm-test-access` has not been created. The live read-only inventory found zero Access applications and zero Cloudflare zones, so there is no discovered hostname/zone to use.
+- The owner must identify a controlled test domain/hostname and the single authorized email before an Access app/policy and browser test can be configured. Do not infer these from the GitHub Pages domain or any account label. `CRM_ALLOWED_ORIGIN` must be the exact chosen HTTPS UI origin.
 
 ## Required isolated verification before any production consideration
 1. Confirm no test resource shares a production D1 binding or route; record resource IDs and owner-approved hostname.
@@ -53,9 +57,11 @@ The detailed resource, hostname, permission, setup sequence, verification, and r
 5. Test browser Access login, JWT assertion, credentials, successful preflight from the selected UI origin, and 403 from an untrusted origin. Local unit mocks are not a substitute for these checks.
 6. Capture rollback steps for the test Worker and test D1. None of these steps authorizes a production migration/deployment.
 
-## Permissions needed later — not requested or used now
-No Cloudflare write permissions were used or changed. Later, if separately approved, use a distinct short-lived credential (or owner-operated dashboard actions) with only these Cloudflare permission labels and narrowest supported scopes:
-- `Account / D1 / Edit` and `Account / D1 / Read` on `nasr-crm-test-db` only (account scope only if unavoidable for database creation; pause for owner approval if broader scope is required).
+## Permissions and resource scope
+The existing secret was used only by the read-only inventory and the isolated `nasr-crm-test-db` creation/migration workflow. Those D1 operations succeeded, demonstrating the D1 write capability needed for that test database. Cloudflare returned no permission-group list, so no other capability is assumed. Worker, Access, route, and DNS write permissions have not been tested or used.
+
+If later setup requires them, use the narrowest supported scopes and do not alter production resources:
+- `Account / D1 / Edit` and `Account / D1 / Read` were exercised on the isolated test D1; do not use them against `nasr-market-db`.
 - `Account / Workers Scripts / Edit` and `/ Read` on `nasr-crm-api-test` only.
 - `Account / Workers Routes / Edit` and `/ Read` only if required for the approved test hostname route.
 - `Account / Access: Apps and Policies / Edit` and `/ Read` only as narrowly as the account allows to configure/verify `nasr-crm-test-access`.
