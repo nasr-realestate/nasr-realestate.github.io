@@ -1,6 +1,6 @@
-# Isolated CRM test Worker configuration only. It binds only the dedicated
-# synthetic-data D1. No route or Access host is configured; do not deploy until
-# the owner-only Access application and verified test hostname are ready.
+# Isolated CRM test Worker configuration only; binds only synthetic-data D1.
+# Keep workers_dev=false until Worker-level Cloudflare Access is configured and
+# verified for all traffic. A custom domain/zone is not required for workers.dev.
 name = "nasr-crm-api-test"
 main = "crm-worker.js"
 compatibility_date = "2026-09-04"

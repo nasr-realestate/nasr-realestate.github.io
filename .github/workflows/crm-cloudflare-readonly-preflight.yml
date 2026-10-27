@@ -139,7 +139,12 @@ jobs:
             has_auth_domain=$(jq -r 'if ((.result.auth_domain // "")|length)>0 then "yes" else "no" end' "$TMP/organization.json")
             zero_trust="http=200;configured=yes;auth-domain=$has_auth_domain"
           else
-            zero_trust="http=$org_code;configured=no-or-unavailable"
+            org_error_code=$(jq -r '[.errors[]?.code|tostring] | unique | join(",")' "$TMP/organization.json" 2>/dev/null | tr -cd '0-9,' | cut -c1-32 || true)
+            if [ "$org_code" = 403 ]; then
+              zero_trust="http=403;error=${org_error_code:-unknown};configured=unknown"
+            else
+              zero_trust="http=$org_code;error=${org_error_code:-unknown};configured=no-or-unavailable"
+            fi
           fi
           idp_code=$(get_json "$API/accounts/$account_id/access/identity_providers?per_page=100" "$TMP/idps.json")
           if [ "$idp_code" = 200 ]; then

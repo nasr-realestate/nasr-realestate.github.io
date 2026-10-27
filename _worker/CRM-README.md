@@ -3,8 +3,9 @@
 ## Current verified Cloudflare state
 - The GitHub Actions workflow read the nonempty secret `ARENA_CLOUDFLARE_TOKEN` by its exact name and passed it as a Bearer token; the value was not printed, logged, or committed. `GET /accounts` and account resource inventories succeeded. `GET /user/tokens/verify` returned HTTP 401/code 1000, while account-scoped verification reported active but returned no permission groups. The credential is accepted for account reads and was sufficient to create/migrate the isolated test D1; the 401 is specific to the user-token verification endpoint, not evidence that the secret was missing.
 - D1 `nasr-crm-test-db` was created and migrated only with synthetic fixtures. UUID: `65bfcb14-4b48-423b-916f-00eefdb9ae1e`. Remote verification found six `crm_*` tables and two test-only listings.
-- The only pre-existing D1 found was `nasr-market-db`; it was not written to or migrated. The inventory showed four pre-existing Workers, zero Access applications, and zero zones. No CRM Worker, Access app, route, DNS record, or production change has been made.
-- `_worker/wrangler.crm.toml` is configured for the test D1 only with `workers_dev = false`, and no public route. It is not ready to deploy: Access, owner identity, and a controlled test hostname are still missing.
+- The latest GET-only Cloudflare preflight found: two D1s (`nasr-market-db` and the test D1), four existing Workers, zero Access applications, zero identity providers, and zero zones. `GET /accounts/{id}/workers/subdomain` returned 200, so the account has a configured `workers.dev` subdomain. The Access organization GET returned 403; because the token's permission groups were not returned, this does not distinguish an unconfigured Zero Trust organization from missing read permission. No CRM Worker, Access app, route, DNS record, or production change has been made.
+- **No custom domain is required in principle:** Cloudflare documents Worker-level Access that protects the Worker across all its hostnames, including `workers.dev`. No Access policy is currently confirmed active for CRM; the inventory does not prove that any CRM endpoint is protected. See the official [Workers Access guide](https://developers.cloudflare.com/workers/configuration/cloudflare-access/) and [workers.dev guide](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/).
+- `_worker/wrangler.crm.toml` remains test-only and binds only the test D1. Keep `workers_dev = false` until Access is configured and verified for the isolated Worker; do not expose a route first.
 
 Do not bind the CRM Worker to `nasr-market-db` or change its tables.
 
@@ -39,18 +40,18 @@ The Worker fails closed unless all are explicitly configured:
 - `CRM_ALLOWED_ORIGIN`: exact HTTPS origin of the actual CRM UI, with no path or trailing slash; no GitHub Pages or custom domain is assumed. Preflight is allowed only for this origin, with credentials, GET/POST, and the required headers.
 - `CRM_SITE_SOURCE_ID` and `CRM_NASR_AREA_IDS`: positive integer source ID and comma-separated verified area IDs for the selected site inventory. Both are required and strictly parsed; the prior audit observed source ID 9 and area IDs 1–31, but those values must be reconfirmed for the isolated fixture/account and must not be treated as permanent production config.
 
-The Worker validates JWT RS256 signature via the configured team JWKS, issuer, audience, expiry/not-before, and exact email. The Access app itself must require the owner identity and deny everyone else; application-level JWT checks are defense in depth. No password/API key is placed in browser code. The origin and API hostname relationship, cookie behavior, JWT injection, and CORS must be tested in a real browser on the eventual test hostname. Do not attach the test app to a production or unowned hostname.
+The Worker validates JWT RS256 signature via the configured team JWKS, issuer, audience, expiry/not-before, and exact email. The Worker-level Access policy must require the owner identity and deny everyone else; application-level JWT checks are defense in depth. No password/API key is placed in browser code. The origin and API relationship, cookie behavior, JWT injection, and CORS must be tested in a real browser on the protected test `workers.dev` URL. Do not attach Access to a production Worker or bypass the Access policy.
 
-The detailed resource, hostname, permission, setup sequence, verification, and rollback proposal is in `_worker/CRM-TEST-PLAN.md`.
+The detailed Worker-level Access sequence, resource scopes, verification, and rollback plan is in `_worker/CRM-TEST-PLAN.md`.
 
 ## Remaining isolated test resources
 - D1 `nasr-crm-test-db` exists with only the synthetic dependency schema, two labeled test listing fixtures, and the CRM migration. It is not bound to any deployed CRM Worker.
-- Worker `nasr-crm-api-test` has not been created/deployed. If later deployed, bind it only to the test D1, keep `workers_dev = false`, and add no route until Access is ready.
-- Access application `nasr-crm-test-access` has not been created. The live read-only inventory found zero Access applications and zero Cloudflare zones, so there is no discovered hostname/zone to use.
-- The owner must identify a controlled test domain/hostname and the single authorized email before an Access app/policy and browser test can be configured. Do not infer these from the GitHub Pages domain or any account label. `CRM_ALLOWED_ORIGIN` must be the exact chosen HTTPS UI origin.
+- Worker `nasr-crm-api-test` has not been created/deployed. It can use the account's existing `workers.dev` subdomain; a custom domain or zone is not required by Cloudflare's Worker-level Access flow. Keep `workers_dev = false` until Access is applied and verified, then expose only the test Worker under Access.
+- Access application `nasr-crm-test-access` has not been created. The live read-only inventory found zero Access apps and zero identity providers; Access organization status is unresolved because its GET returned 403.
+- No custom hostname or DNS input is needed if the test Worker itself is protected. A single authorized owner identity is still required for the allow policy and real login test. Do not infer that identity from the Cloudflare API token or account name. `CRM_ALLOWED_ORIGIN` should be set to the exact `workers.dev` origin of the protected test Worker/UI.
 
 ## Required isolated verification before any production consideration
-1. Confirm no test resource shares a production D1 binding or route; record resource IDs and owner-approved hostname.
+1. Confirm no test resource shares a production D1 binding or route; record resource IDs and the exact `workers.dev` origin after the Access-first route is enabled.
 2. Apply the migration only to the new D1 after loading synthetic baseline listing schema. Inspect tables/indexes and verify pre-existing test listing fixture definitions are unchanged.
 3. Run Worker integration tests against the test binding: contact creation, multiple phones/opportunities, atomic rollback on injected opportunity failure, follow-up/activity/property links, idempotency, and synthetic listing scope.
 4. Verify no Access identity gets data without owner authorization; test wrong email/AUD/issuer/expired JWT and missing configuration fail closed.
@@ -63,9 +64,8 @@ The existing secret was used only by the read-only inventory and the isolated `n
 If later setup requires them, use the narrowest supported scopes and do not alter production resources:
 - `Account / D1 / Edit` and `Account / D1 / Read` were exercised on the isolated test D1; do not use them against `nasr-market-db`.
 - `Account / Workers Scripts / Edit` and `/ Read` on `nasr-crm-api-test` only.
-- `Account / Workers Routes / Edit` and `/ Read` only if required for the approved test hostname route.
 - `Account / Access: Apps and Policies / Edit` and `/ Read` only as narrowly as the account allows to configure/verify `nasr-crm-test-access`.
-- `Zone / DNS / Edit` and `/ Read` only on the owner-approved test zone and only if needed to provision/verify the hostname.
+- Workers Routes and Zone DNS permissions are not needed for this `workers.dev` plan; keep the default route disabled until Worker-level Access is confirmed.
 - Pages permissions are not required because UI assets are served by the Worker; ask only if the owner later chooses a separate Pages project.
 
 Verify labels and available resource scoping in the Cloudflare account UI before granting; do not add them to the current token or allow production write access. This list is planning, not an authorization or request for credentials. Never paste secret values in chat.
