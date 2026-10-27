@@ -69,7 +69,7 @@ jobs:
             exit 1
           fi
           AREA_SQL="SELECT id,name_ar,level,level_ar,area_type FROM areas ORDER BY id"
-          AREA_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -H 'content-type: application/json' \\
+          AREA_CODE=$(curl -sS --connect-timeout 10 --max-time 30 -H "$AUTH" -H 'content-type: application/json' \
             -X POST --data "$(jq -n --arg sql "$AREA_SQL" '{sql:$sql}')" -o /tmp/d1-areas.json -w '%{http_code}' "$API/d1/database/${D1_DATABASE_ID}/query")
           if [ "$AREA_CODE" != 200 ] || [ "$(jq -r '.success // false' /tmp/d1-areas.json 2>/dev/null || echo false)" != true ]; then
             echo "D1 area metadata query failed: HTTP $AREA_CODE." >&2
