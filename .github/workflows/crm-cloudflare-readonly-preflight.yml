@@ -25,6 +25,7 @@ jobs:
     outputs:
       outcome: ${{ steps.probe.outputs.outcome }}
       verify: ${{ steps.probe.outputs.verify }}
+      groups: ${{ steps.probe.outputs.groups }}
       accounts: ${{ steps.probe.outputs.accounts }}
       d1: ${{ steps.probe.outputs.d1 }}
       workers: ${{ steps.probe.outputs.workers }}
@@ -42,6 +43,7 @@ jobs:
           trap 'rm -rf "$TMP"' EXIT
           outcome='not-run'
           verify='not-run'
+          groups='not-returned'
           accounts='not-run'
           d1='not-run'
           workers='not-run'
@@ -51,6 +53,7 @@ jobs:
             {
               echo "outcome=$outcome"
               echo "verify=$verify"
+              echo "groups=$groups"
               echo "accounts=$accounts"
               echo "d1=$d1"
               echo "workers=$workers"
@@ -99,12 +102,20 @@ jobs:
             exit 0
           fi
           account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          account_verify_code=$(get_json "$API/accounts/$account_id/tokens/verify" "$TMP/account-verify.json")
+          account_verify_status=$(jq -r '.result.status // "unknown"' "$TMP/account-verify.json" 2>/dev/null || echo unknown)
+          if [ "$account_verify_code" = 200 ] && [ "$account_verify_status" = active ]; then
+            groups=$(jq -r '[.result.policies[]?.permission_groups[]?.name] | unique | join(",")' "$TMP/account-verify.json" 2>/dev/null | tr -d '\r\n' | cut -c1-180 || true)
+            [ -n "$groups" ] || groups='active-no-groups-returned'
+          else
+            groups="account_verify_http=$account_verify_code;status=$account_verify_status"
+          fi
           inventory_probe() {
             local url="$1" destination="$2" code count names
             code=$(get_json "$url" "$destination")
             if [ "$code" = 200 ]; then
               count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$destination" 2>/dev/null || echo unknown)
-              names=$(jq -r '[.result[]?.name // empty] | map(gsub("[\\r\\n]";" ")) | join(",")' "$destination" 2>/dev/null | tr -cd '[:alnum:] _.,-/' | cut -c1-100 || true)
+              names=$(jq -r '[.result[]? | (.name // .id // .script_name // empty)] | map(gsub("[\\r\\n]";" ")) | join(",")' "$destination" 2>/dev/null | tr -cd '[:alnum:] _.,-/' | cut -c1-100 || true)
               printf 'http=%s;count=%s;names=%s' "$code" "$count" "${names:-none-or-hidden}"
             else
               printf 'http=%s;read-denied-or-unavailable' "$code"
@@ -120,6 +131,7 @@ jobs:
             echo '- Secret: `ARENA_CLOUDFLARE_TOKEN` was passed to this job; its value was not printed or saved as an artifact.'
             echo '- Requests: GET only. No resources, routes, policies, DNS, D1 rows, or Worker code were created or changed.'
             echo "- Authentication: $outcome; verification $verify"
+            echo "- Token permission metadata: $groups"
             echo "- Accounts: $accounts"
             echo "- D1: $d1"
             echo "- Workers: $workers"
@@ -133,6 +145,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-secret auth result is encoded in this check name.'
+  report-permissions:
+    name: 'CRM token permissions — ${{ needs.probe.outputs.groups }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret permission metadata is encoded in this check name.'
   report-accounts:
     name: 'CRM accounts — ${{ needs.probe.outputs.accounts }}'
     needs: probe
