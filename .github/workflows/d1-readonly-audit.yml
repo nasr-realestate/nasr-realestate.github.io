@@ -11,7 +11,7 @@ on:
       - .github/workflows/d1-readonly-audit.yml
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: d1-readonly-audit
@@ -74,3 +74,17 @@ jobs:
           path: /tmp/d1-schema-encrypted.json
           retention-days: 1
           if-no-files-found: error
+      - name: Store encrypted envelope on this temporary branch for the agent
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "arena/7414ed79-nasr-realestate-github-io"
+          mkdir -p .arena-d1-audit
+          cp /tmp/d1-schema-encrypted.json ".arena-d1-audit/schema-${GITHUB_RUN_ID}.enc.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .arena-d1-audit
+          git commit -m "chore: encrypted temporary D1 schema audit envelope"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
