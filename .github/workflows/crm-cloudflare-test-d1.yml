@@ -1,0 +1,113 @@
+name: CRM isolated test D1 provisioning
+
+on:
+  push:
+    branches:
+      - arena/a9241018-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-cloudflare-test-d1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-isolated-test-d1
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision isolated test D1 only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    outputs:
+      result: ${{ steps.provision.outputs.result }}
+      uuid: ${{ steps.provision.outputs.uuid }}
+      phase: ${{ steps.provision.outputs.phase }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Create test D1, apply CRM migration, and verify synthetic fixture (never production)
+        id: provision
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TMP=$(mktemp -d)
+          CONFIG="$GITHUB_WORKSPACE/.crm-test-only.wrangler.toml"
+          trap 'rm -rf "$TMP"; rm -f "$CONFIG"' EXIT
+          result='not-run'; uuid='none'; phase='preflight'
+          finish() { printf 'result=%s\nuuid=%s\nphase=%s\n' "$result" "$uuid" "$phase" >> "$GITHUB_OUTPUT"; }
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then result='secret-unavailable'; phase='no-request'; finish; exit 0; fi
+          echo '::add-mask::'"$CLOUDFLARE_API_TOKEN"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then result="account-read-http-$status"; phase='preflight'; finish; exit 0; fi
+          count=$(jq -r '.result | length' "$TMP/accounts.json")
+          if [ "$count" -ne 1 ]; then result="account-selection-required-count-$count"; phase='preflight'; finish; exit 0; fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then result="d1-inventory-http-$status"; phase='preflight'; finish; exit 0; fi
+          if jq -e '[.result[]?.name] | index("nasr-crm-test-db") != null' "$TMP/d1.json" >/dev/null; then result='test-d1-name-already-exists-needs-review'; phase='preflight'; finish; exit 0; fi
+          if ! jq -e '[.result[]?.name] | index("nasr-market-db") != null' "$TMP/d1.json" >/dev/null; then result='production-d1-not-confirmed-stop'; phase='preflight'; finish; exit 0; fi
+          phase='create-test-d1'
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+            --data '{"name":"nasr-crm-test-db"}' -o "$TMP/create.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/create.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
+            result="d1-create-http-$status-error-${error_code:-unknown}"
+            phase='create-test-d1-denied-or-failed'
+            finish
+            exit 0
+          fi
+          uuid=$(jq -r '.result.uuid // empty' "$TMP/create.json")
+          if [ -z "$uuid" ] || [ "$uuid" = '00000000-0000-0000-0000-000000000000' ]; then result='d1-create-response-missing-uuid'; phase='create-test-d1-failed'; uuid='unavailable'; finish; exit 0; fi
+          cat > "$CONFIG" <<EOF
+          name = "nasr-crm-test-migrator"
+          compatibility_date = "2026-09-04"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "nasr-crm-test-db"
+          database_id = "$uuid"
+          migrations_dir = "./_worker/migrations"
+          EOF
+          export CLOUDFLARE_ACCOUNT_ID="$account_id"
+          BASE_SCHEMA=$(cat <<'SQL'
+          CREATE TABLE areas(id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL);
+          CREATE TABLE sources(id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+          CREATE TABLE listings(
+            id INTEGER PRIMARY KEY, source_id INTEGER NOT NULL, external_id TEXT NOT NULL, url TEXT NOT NULL,
+            title TEXT NOT NULL, property_type TEXT NOT NULL, transaction_type TEXT NOT NULL, area_id INTEGER NOT NULL,
+            area_m2 REAL, price REAL, bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT NOT NULL,
+            FOREIGN KEY(source_id) REFERENCES sources(id), FOREIGN KEY(area_id) REFERENCES areas(id)
+          );
+          INSERT INTO areas(id,name_ar) VALUES(90001,'TEST ONLY Nasr City'),(99999,'TEST ONLY out of scope');
+          INSERT INTO sources(id,name) VALUES(9009,'TEST ONLY synthetic CRM source');
+          INSERT INTO listings(id,source_id,external_id,url,title,property_type,transaction_type,area_id,area_m2,price,observed_at)
+            VALUES(900001,9009,'crm-test-only-inside','/test-only/inside','TEST ONLY — synthetic listing','test','sale',90001,NULL,NULL,'2026-10-28'),
+                  (900002,9009,'crm-test-only-outside','/test-only/outside','TEST ONLY — out-of-scope listing','test','sale',99999,NULL,NULL,'2026-10-28');
+          SQL
+          )
+          phase='seed-synthetic-dependencies'
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$CONFIG" --command "$BASE_SCHEMA" > "$TMP/seed.log" 2>&1; then result='synthetic-fixture-seed-failed-after-test-d1-created'; phase='seed-synthetic-dependencies-failed'; finish; exit 0; fi
+          phase='apply-crm-migrations'
+          if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db --remote --config "$CONFIG" > "$TMP/migrations.log" 2>&1; then result='migration-failed-after-test-d1-created'; phase='apply-crm-migrations-failed'; finish; exit 0; fi
+          phase='verify-test-d1-schema'
+          VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$CONFIG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then result='remote-schema-verification-query-failed'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
+          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 6 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then result='remote-schema-or-synthetic-fixture-count-mismatch'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
+          phase='completed'
+          result='test-d1-created-synthetic-fixture-seeded-migration-applied-and-verified'
+          finish
+  report:
+    name: 'CRM D1 result — ${{ needs.provision.outputs.result }} — ${{ needs.provision.outputs.uuid }}'
+    needs: provision
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'The result and test D1 UUID are non-secret job metadata; no customer rows are used.'
