@@ -124,6 +124,13 @@ defaults:
       path: "assets/tools"
     values:
       sitemap: false
+  # 2026-10-27 — «دفتر العملاء» (/crm.html): أداة خاصة لصاحب الموقع، وبيانات جهات
+  # الاتصال تُحفظ في متصفحه فقط (localStorage) ولا تُرفع لأي مكان. صفحة ساكنة بلا
+  # front matter، noindex، وخارج sitemap.xml.
+  - scope:
+      path: "crm.html"
+    values:
+      sitemap: false
   # 2026-10-24 — ملف تحقّق Google Search Console: محتواه سطر واحد ثابت
   # («google-site-verification: google1201055475d84276.html») ولا يمكن إضافة
   # front matter له (يتغيّر محتواه فيفشل التحقق). لكن Jekyll يبنيه كصفحة
