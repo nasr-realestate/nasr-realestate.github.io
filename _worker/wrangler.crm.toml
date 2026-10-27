@@ -1,15 +1,26 @@
-# Private CRM API. Configuration only; do not deploy until Cloudflare Access
-# is configured and independently verified. No public route is configured here.
-name = "nasr-crm-api"
+# Isolated CRM test Worker configuration only. This intentionally cannot reach
+# production: the D1 id is an invalid placeholder until a dedicated test D1 is
+# created and its real id is deliberately entered after owner approval.
+name = "nasr-crm-api-test"
 main = "crm-worker.js"
 compatibility_date = "2026-09-04"
-workers_dev = true
+workers_dev = false
 
 [[d1_databases]]
 binding = "DB"
-database_name = "nasr-market-db"
-database_id = "ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"
+database_name = "nasr-crm-test-db"
+database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
+
+# The private Arabic UI is served by this same Worker origin, behind the same
+# Access application. Static files stay under _worker/ and are not published by Jekyll.
+[assets]
+directory = "crm-ui"
+binding = "ASSETS"
+
+# Do not set ACCESS_TEAM_DOMAIN, ACCESS_AUD, ADMIN_EMAIL, CRM_ALLOWED_ORIGIN,
+# CRM_SITE_SOURCE_ID, or CRM_NASR_AREA_IDS until the test Access application,
+# hostname, UI origin, and synthetic listing scope are created and verified.
 
 [observability]
 enabled = true

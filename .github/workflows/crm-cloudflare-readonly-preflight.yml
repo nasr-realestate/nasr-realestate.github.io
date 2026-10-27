@@ -1,0 +1,81 @@
+name: CRM Cloudflare read-only preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-cloudflare-readonly-preflight
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    name: Verify ARENA_CLOUDFLARE_TOKEN and read resource inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    steps:
+      - name: Read-only Cloudflare token and inventory check (GET only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          {
+            echo '## CRM Cloudflare preflight — read-only'
+            echo '- Secret name: `ARENA_CLOUDFLARE_TOKEN` (value never printed or saved as an artifact).'
+            echo '- Cloudflare requests: GET only; no creation, deployment, D1 query, or mutation.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo '- Result: secret is unavailable to this workflow run; no Cloudflare request was made.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo '::add-mask::'"$CLOUDFLARE_API_TOKEN"
+          auth_header="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          http_get() {
+            local label="$1" url="$2" destination="$3" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --header "$auth_header" --output "$destination" --write-out '%{http_code}' "$url" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+          VERIFY_CODE=$(http_get token-verify "$API/user/tokens/verify" "$TMP/verify.json")
+          TOKEN_STATUS=$(jq -r '.result.status // "unavailable"' "$TMP/verify.json" 2>/dev/null || echo unavailable)
+          echo "- Token verification: HTTP $VERIFY_CODE; status \\`$TOKEN_STATUS\\`." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$VERIFY_CODE" != 200 ] || [ "$TOKEN_STATUS" != active ]; then
+            echo '- Inventory stopped because token verification did not return active.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          PERMISSIONS=$(jq -r '[.result.policies[]?.permission_groups[]?.name] | unique | join(", ")' "$TMP/verify.json" 2>/dev/null || true)
+          echo "- Token permission groups (as reported by Cloudflare): \\`${PERMISSIONS:-not-returned}\\`." >> "$GITHUB_STEP_SUMMARY"
+          ACCOUNTS_CODE=$(http_get accounts "$API/accounts?per_page=50" "$TMP/accounts.json")
+          echo "- Account inventory: HTTP $ACCOUNTS_CODE." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ACCOUNTS_CODE" != 200 ]; then exit 1; fi
+          ACCOUNT_COUNT=$(jq -r '.result | length' "$TMP/accounts.json")
+          echo "- Visible account count: $ACCOUNT_COUNT." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ACCOUNT_COUNT" -eq 0 ]; then exit 1; fi
+          while IFS=$'\t' read -r ACCOUNT_ID ACCOUNT_NAME; do
+            [ -n "$ACCOUNT_ID" ] || continue
+            printf '\n### Account: %s\n' "$ACCOUNT_NAME" >> "$GITHUB_STEP_SUMMARY"
+            for entry in \
+              'D1 databases|d1/database' \
+              'Workers scripts|workers/scripts' \
+              'Access applications|access/apps' \
+              'Zones|../zones?account.id='; do
+              label=${entry%%|*}; path=${entry#*|}
+              if [ "$label" = Zones ]; then url="$API/zones?account.id=$ACCOUNT_ID&per_page=100"; else url="$API/accounts/$ACCOUNT_ID/$path"; fi
+              code=$(http_get inventory "$url" "$TMP/inventory.json")
+              if [ "$code" = 200 ]; then
+                count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$TMP/inventory.json" 2>/dev/null || echo unknown)
+                names=$(jq -r '[.result[]?.name // empty] | join(", ")' "$TMP/inventory.json" 2>/dev/null || true)
+                echo "- $label: HTTP $code; count=$count; names=\\`${names:-none/hidden}\\`." >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "- $label: HTTP $code (read permission unavailable or endpoint not accessible)." >> "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          done < <(jq -r '.result[] | [.id,.name] | @tsv' "$TMP/accounts.json")
+          echo '\nNo Cloudflare resources were created or changed.' >> "$GITHUB_STEP_SUMMARY"

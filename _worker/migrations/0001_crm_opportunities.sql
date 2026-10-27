@@ -1,15 +1,31 @@
--- Additive CRM schema for the existing nasr-market-db.
--- This file creates crm_* tables only; it does not alter listings, valuation,
--- ingestion, areas, or synchronization tables. Do not apply to production until
--- the authentication gate and isolated D1 integration tests are approved.
+-- Additive CRM schema intended for a separate, synthetic-data test D1.
+-- Creates crm_* tables only. It does not alter listings, valuation, ingestion,
+-- areas, or synchronization tables. Never apply to production; complete isolated
+-- D1 and Access tests first.
 
+-- A customer is the person/business record. Phone numbers are separate contact
+-- methods so one customer can have several numbers and one number cannot silently
+-- belong to two customers.
 CREATE TABLE IF NOT EXISTS crm_contacts (
   id TEXT PRIMARY KEY,
-  phone_key TEXT NOT NULL UNIQUE CHECK (length(phone_key) BETWEEN 7 AND 15 AND phone_key NOT GLOB '*[^0-9]*'),
   name TEXT NOT NULL DEFAULT '',
+  communication_consent TEXT NOT NULL DEFAULT 'request_only'
+    CHECK (communication_consent IN ('request_only','marketing_yes','do_not_contact')),
+  consent_captured_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS crm_contact_phones (
+  id TEXT PRIMARY KEY,
+  contact_id TEXT NOT NULL REFERENCES crm_contacts(id) ON DELETE RESTRICT,
+  phone_key TEXT NOT NULL UNIQUE CHECK (length(phone_key) BETWEEN 7 AND 15 AND phone_key NOT GLOB '*[^0-9]*'),
+  label TEXT NOT NULL DEFAULT '',
+  is_primary INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_contact_primary_phone
+  ON crm_contact_phones(contact_id) WHERE is_primary=1;
 
 CREATE TABLE IF NOT EXISTS crm_opportunities (
   id TEXT PRIMARY KEY,
@@ -70,9 +86,10 @@ CREATE TABLE IF NOT EXISTS crm_opportunity_properties (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS crm_submission_receipts (
+CREATE TABLE IF NOT EXISTS crm_idempotency_receipts (
   submission_key TEXT PRIMARY KEY,
-  opportunity_id TEXT NOT NULL REFERENCES crm_opportunities(id) ON DELETE RESTRICT,
+  resource_type TEXT NOT NULL CHECK (resource_type IN ('contact','opportunity')),
+  resource_id TEXT NOT NULL,
   received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -80,3 +97,4 @@ CREATE INDEX IF NOT EXISTS idx_crm_opportunities_followup ON crm_opportunities(s
 CREATE INDEX IF NOT EXISTS idx_crm_opportunities_contact ON crm_opportunities(contact_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_activities_opportunity ON crm_activities(opportunity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_opportunity_properties_listing ON crm_opportunity_properties(listing_id);
+CREATE INDEX IF NOT EXISTS idx_crm_phones_contact ON crm_contact_phones(contact_id, is_primary DESC, created_at);

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-crm-api="/api">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="theme-color" content="#07110b">
+  <title>إدارة العملاء والفرص — CRM</title>
+  <link rel="stylesheet" href="/crm-assets/app.css">
+  <script type="module" src="/crm-assets/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">انتقل إلى المحتوى</a>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">ن</span><div><strong>إدارة العملاء</strong><small>سمسار طلبك · مدينة نصر</small></div></div>
+    <div class="top-actions"><span class="security" id="security-status">جلسة خاصة · يتطلب تسجيل دخول</span><button class="button quiet" id="refresh-all" type="button">تحديث</button></div>
+  </header>
+  <main id="main">
+    <div id="app-status" class="notice info" role="status" aria-live="polite">جارٍ التحقق من جلسة الوصول…</div>
+    <div id="load-error" class="notice error" role="alert" hidden></div>
+
+    <nav class="tabs" aria-label="أقسام CRM">
+      <button class="tab active" type="button" data-panel="dashboard-panel" aria-selected="true">نظرة عامة</button>
+      <button class="tab" type="button" data-panel="contacts-panel" aria-selected="false">العملاء</button>
+      <button class="tab" type="button" data-panel="opportunities-panel" aria-selected="false">الفرص</button>
+      <button class="tab" type="button" data-panel="new-contact-panel" aria-selected="false">إضافة عميل</button>
+      <button class="tab" type="button" data-panel="new-opportunity-panel" aria-selected="false">إضافة فرصة</button>
+    </nav>
+
+    <section class="panel" id="dashboard-panel" aria-labelledby="dashboard-title">
+      <div class="section-heading"><div><p class="eyebrow">متابعتك اليوم</p><h1 id="dashboard-title">نظرة عامة</h1></div><label class="compact-label">التاريخ <input id="dashboard-day" type="date"></label></div>
+      <div class="metrics" id="dashboard-metrics" aria-live="polite"></div>
+      <div class="columns">
+        <section class="card"><div class="card-heading"><h2>مستحق اليوم</h2><span class="count" id="due-count">0</span></div><div id="due-list" class="stack muted">جارٍ التحميل…</div></section>
+        <section class="card"><div class="card-heading"><h2>متأخر</h2><span class="count danger-count" id="overdue-count">0</span></div><div id="overdue-list" class="stack muted">جارٍ التحميل…</div></section>
+      </div>
+    </section>
+
+    <section class="panel" id="contacts-panel" hidden>
+      <div class="section-heading"><div><p class="eyebrow">سجلات العملاء</p><h1>العملاء</h1></div><button class="button primary" type="button" data-open-panel="new-contact-panel">＋ عميل جديد</button></div>
+      <form id="contact-search-form" class="search-row"><label class="sr-only" for="contact-search">ابحث بالاسم أو رقم الهاتف</label><input id="contact-search" type="search" placeholder="ابحث بالاسم أو الرقم" autocomplete="off"><button class="button" type="submit">بحث</button></form>
+      <p id="contact-search-state" class="muted" aria-live="polite"></p>
+      <div class="columns contacts-layout"><div id="contact-results" class="stack"></div><section id="contact-detail" class="card detail-card"><p class="muted">اختر عميلًا لعرض ملفه وأرقامه وفرصه.</p></section></div>
+    </section>
+
+    <section class="panel" id="opportunities-panel" hidden>
+      <div class="section-heading"><div><p class="eyebrow">الطلبات والمتابعات</p><h1>الفرص</h1></div><button class="button primary" type="button" data-open-panel="new-opportunity-panel">＋ فرصة جديدة</button></div>
+      <form id="opportunity-search-form" class="search-row"><label class="sr-only" for="opportunity-search">بحث في الفرص</label><input id="opportunity-search" type="search" placeholder="ابحث باسم العميل أو الرقم أو الملاحظات"><select id="opportunity-status" aria-label="تصفية بالحالة"><option value="">كل الحالات</option><option value="active">نشطة</option><option value="visit_scheduled">معاينة مجدولة</option><option value="viewing_done">تمت المعاينة</option><option value="offer">عرض سعر</option><option value="negotiating">تفاوض</option><option value="near_close">قرب الإغلاق</option><option value="won">تمت الصفقة</option><option value="lost">لم تتم</option><option value="paused">مؤجلة</option><option value="unqualified">غير مؤهلة</option></select><button class="button" type="submit">بحث</button></form>
+      <div class="columns"><div id="opportunity-results" class="stack"></div><section id="opportunity-detail" class="card detail-card"><p class="muted">اختر فرصة لعرض نشاطها والعقارات المرتبطة بها.</p></section></div>
+    </section>
+
+    <section class="panel" id="new-contact-panel" hidden>
+      <div class="section-heading"><div><p class="eyebrow">سجل مستقل عن أرقام الهاتف</p><h1>إضافة عميل</h1></div></div>
+      <p class="notice info">لا تُقرأ جهات اتصال الهاتف ولا تُنقل بيانات الدفتر المحلي تلقائيًا. أدخل بيانات هذا العميل يدويًا بموافقتك.</p>
+      <form id="new-contact-form" class="card form-grid">
+        <label class="full">اسم العميل <input name="name" maxlength="100" autocomplete="name" required></label>
+        <div class="full row-between"><h2>أرقام الهاتف (اختياري)</h2><button class="button quiet" type="button" id="add-contact-phone-row">＋ رقم</button></div>
+        <div id="new-contact-phones" class="full stack"></div>
+        <label class="full">تفضيل التواصل
+          <select name="communication_consent"><option value="request_only">متابعة الطلب فقط (الافتراضي)</option><option value="marketing_yes">وافق على العروض</option><option value="do_not_contact">عدم التواصل</option></select>
+        </label>
+        <p class="muted full">اختيار «وافق على العروض» يتطلب تسجيل وقت الموافقة. لا يرسل النظام رسائل تلقائيًا.</p>
+        <div class="full form-actions"><button class="button primary" type="submit">حفظ العميل</button><span id="new-contact-feedback" class="muted" aria-live="polite"></span></div>
+      </form>
+    </section>
+
+    <section class="panel" id="new-opportunity-panel" hidden>
+      <div class="section-heading"><div><p class="eyebrow">طلب جديد لعميل موجود</p><h1>إضافة فرصة</h1></div></div>
+      <form id="new-opportunity-form" class="card form-grid">
+        <label class="full">العميل <select name="contact_id" id="opportunity-contact" required><option value="">اختر عميلًا…</option></select></label>
+        <label>نوع الطلب <select name="intent" required><option value="buy">شراء</option><option value="rent">إيجار</option><option value="sell">بيع</option><option value="lease">تأجير</option><option value="other">أخرى</option></select></label>
+        <label>مصدر الطلب <select name="source" required><option value="call">مكالمة</option><option value="missed_call">مكالمة فائتة</option><option value="referral">ترشيح</option><option value="website">الموقع</option><option value="whatsapp">واتساب (ملاحظة يدوية)</option><option value="other">أخرى</option></select></label>
+        <label>المنطقة في مدينة نصر <input name="area_label" maxlength="100" placeholder="مثال: الحي العاشر"></label>
+        <label>نوع العقار <input name="property_type" maxlength="80" placeholder="شقة، محل، مكتب…"></label>
+        <label>أقل ميزانية <input name="budget_min" type="number" min="0" step="any"></label>
+        <label>أعلى ميزانية <input name="budget_max" type="number" min="0" step="any"></label>
+        <label>أقل مساحة (م²) <input name="size_min_m2" type="number" min="0" step="any"></label>
+        <label>أعلى مساحة (م²) <input name="size_max_m2" type="number" min="0" step="any"></label>
+        <label>الحالة <select name="status"><option value="active">نشطة</option><option value="visit_scheduled">معاينة مجدولة</option><option value="offer">عرض سعر</option><option value="negotiating">تفاوض</option><option value="paused">مؤجلة</option></select></label>
+        <label>الإجراء القادم <input name="next_action" maxlength="180" placeholder="اتصال، إرسال خيارات…"></label>
+        <label>موعد المتابعة <input name="next_followup_at" type="datetime-local"></label>
+        <label>سبب عدم تحديد متابعة <input name="no_followup_reason" maxlength="240" placeholder="اختياري"></label>
+        <label class="full">ملاحظات <textarea name="notes" maxlength="1200" rows="3"></textarea></label>
+        <div class="full form-actions"><button class="button primary" type="submit">حفظ الفرصة</button><span id="new-opportunity-feedback" class="muted" aria-live="polite"></span></div>
+      </form>
+    </section>
+
+    <footer class="footer-note">CRM خاص. الوصول والبيانات محميان عبر إعداد Cloudflare Access على المضيف نفسه. لا توجد مزامنة تلقائية للهاتف أو واتساب.</footer>
+  </main>
+  <template id="phone-row-template"><div class="phone-row"><label>رقم الهاتف <input data-phone type="tel" inputmode="tel" maxlength="32" autocomplete="tel"></label><label>التسمية <input data-label type="text" maxlength="40" placeholder="أساسي، عمل…"></label><label class="primary-check"><input data-primary type="radio" name="primary-contact-phone"> أساسي</label><button class="button danger small" data-remove type="button" aria-label="إزالة رقم الهاتف">إزالة</button></div></template>
+</body>
+</html>
