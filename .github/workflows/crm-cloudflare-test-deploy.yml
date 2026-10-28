@@ -238,6 +238,10 @@ jobs:
           fi
           sleep 4
 
+          # Ensure clean state for synthetic E2E phone/contact from any interrupted prior test run
+          PRE_CLEAN_SQL="DELETE FROM crm_contact_phones WHERE phone_key='201099990001'; DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'live-e2e-%'; DELETE FROM crm_contacts WHERE name='TEST ONLY — عميل اختبار حي معزول'; DELETE FROM crm_auth_attempts;"
+          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$PRE_CLEAN_SQL" > "$TMP/preclean.log" 2>&1 || true
+
           phase='live-http-e2e'
           if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-e2e-runner.mjs > "$TMP/e2e_out.json"; then
             failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/e2e_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
@@ -257,7 +261,7 @@ jobs:
             finish
             exit 1
           fi
-          CLEANUP_SQL="DELETE FROM crm_contacts WHERE id='${created_contact_id}'; DELETE FROM crm_idempotency_receipts WHERE resource_id='${created_contact_id}'; DELETE FROM crm_sessions; DELETE FROM crm_auth_attempts;"
+          CLEANUP_SQL="DELETE FROM crm_contact_phones WHERE contact_id='${created_contact_id}'; DELETE FROM crm_idempotency_receipts WHERE resource_id='${created_contact_id}'; DELETE FROM crm_contacts WHERE id='${created_contact_id}'; DELETE FROM crm_sessions; DELETE FROM crm_auth_attempts;"
           if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$CLEANUP_SQL" > "$TMP/cleanup.log" 2>&1; then
             result='synthetic-row-cleanup-failed'
             finish
