@@ -12,8 +12,6 @@ export class CRMApiError extends Error {
 
 function normalizeBase(base) {
   const value = String(base || '/api').trim();
-  // The CRM UI and API are deliberately same-origin. This avoids an unverified
-  // cross-origin Access-cookie flow and prevents a configurable URL exfiltration path.
   if (!value.startsWith('/') || value.startsWith('//') || value.includes('?') || value.includes('#')) {
     throw new CRMApiError('configuration', 'عنوان API غير صالح؛ يلزم مسار محلي على نفس النطاق.');
   }
@@ -30,16 +28,33 @@ function safeId(value) {
   return encodeURIComponent(id);
 }
 
+function authErrorMessage(status, code) {
+  if (code === 'invalid_credentials') return 'رمز الدخول غير صحيح.';
+  if (status === 403) return 'رُفض الطلب لحماية الجلسة (CSRF/Origin). حدّث الصفحة أو سجّل الدخول مجددًا.';
+  return 'الدخول غير مصرح به أو انتهت الجلسة. سجّل الدخول مجددًا.';
+}
+
 function apiErrorForResponse(response, payload) {
   const { status } = response;
   const code = payload?.error || '';
-  if (status === 401 || status === 403) return new CRMApiError('authentication', 'الدخول غير مصرح به أو انتهت الجلسة. سجّل الدخول مجددًا.', status, code || 'authentication_required');
-  if (status === 503) return new CRMApiError('configuration', 'خدمة CRM غير مهيأة بعد. لم تُرسل أي بيانات.', status, code || 'service_not_configured');
+  if (status === 429) {
+    return new CRMApiError('rate_limit', 'محاولات دخول متكررة. انتظر قليلًا ثم أعد المحاولة.', 429, code || 'too_many_attempts');
+  }
+  if (status === 401 || status === 403) {
+    return new CRMApiError('authentication', authErrorMessage(status, code), status, code || 'authentication_required');
+  }
+  if (status === 503) {
+    return new CRMApiError('configuration', 'خدمة CRM غير مهيأة بعد (يلزم ضبط أسرار المصادقة). لم تُرسل أي بيانات.', status, code || 'service_not_configured');
+  }
   if (status === 409) {
-    const message = code === 'duplicate_phone_review' ? 'هذا الرقم مرتبط بسجل آخر؛ راجع بيانات العميل قبل المتابعة.' : 'تعارض في الطلب؛ راجع السجل ولم يتم الدمج تلقائيًا.';
+    const message = code === 'duplicate_phone_review'
+      ? 'هذا الرقم مرتبط بسجل آخر؛ راجع بيانات العميل قبل المتابعة.'
+      : 'تعارض في الطلب؛ راجع السجل ولم يتم الدمج تلقائيًا.';
     return new CRMApiError('conflict', message, status, code || 'conflict');
   }
-  if (status >= 500) return new CRMApiError('server', 'حدث خطأ بالخدمة. لم يتم تأكيد حفظ الطلب.', status, code || 'server_error');
+  if (status >= 500) {
+    return new CRMApiError('server', 'حدث خطأ بالخدمة. لم يتم تأكيد حفظ الطلب.', status, code || 'server_error');
+  }
   return new CRMApiError('validation', code || 'تعذّر قبول البيانات؛ راجع الحقول المطلوبة.', status, code || 'invalid_request');
 }
 
@@ -48,13 +63,25 @@ function querySuffix(name, value) {
 }
 
 export class CRMClient {
+  #csrfToken = '';
+
   constructor({ apiBase = '/api', fetchImpl = globalThis.fetch } = {}) {
-    if (typeof fetchImpl !== 'function') throw new CRMApiError('configuration', 'ميزة الاتصال غير متاحة في هذا المتصفح.');
+    if (typeof fetchImpl !== 'function') {
+      throw new CRMApiError('configuration', 'ميزة الاتصال غير متاحة في هذا المتصفح.');
+    }
     this.apiBase = normalizeBase(apiBase);
     this.fetchImpl = fetchImpl;
   }
 
-  async request(path, { method = 'GET', body, idempotencyKey, signal } = {}) {
+  hasCsrfToken() {
+    return Boolean(this.#csrfToken);
+  }
+
+  clearSession() {
+    this.#csrfToken = '';
+  }
+
+  async request(path, { method = 'GET', body, idempotencyKey, signal, includeCsrf = true } = {}) {
     const headers = { accept: 'application/json' };
     const init = { method, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'follow', signal };
     if (body !== undefined) {
@@ -62,6 +89,9 @@ export class CRMClient {
       init.body = JSON.stringify(body);
     }
     if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
+    if (includeCsrf && method !== 'GET' && method !== 'HEAD' && this.#csrfToken) {
+      headers['x-crm-csrf'] = this.#csrfToken;
+    }
 
     let response;
     try {
@@ -73,14 +103,45 @@ export class CRMClient {
 
     const contentType = response.headers?.get?.('content-type') || '';
     if (response.redirected || !contentType.toLowerCase().includes('application/json')) {
-      throw new CRMApiError('authentication', 'تعذّر التحقق من جلسة الدخول. أعد تحميل الصفحة وسجّل الدخول عبر بوابة الوصول.');
+      this.#csrfToken = '';
+      throw new CRMApiError('authentication', 'تعذّر التحقق من جلسة الدخول. أعد تحميل الصفحة وسجّل الدخول مجددًا.');
     }
     let payload;
-    try { payload = await response.json(); }
-    catch { throw new CRMApiError('protocol', 'استجابة الخادم غير قابلة للقراءة.', response.status); }
+    try {
+      payload = await response.json();
+    } catch {
+      throw new CRMApiError('protocol', 'استجابة الخادم غير قابلة للقراءة.', response.status);
+    }
 
-    if (!response.ok) throw apiErrorForResponse(response, payload);
+    if (!response.ok) {
+      if (response.status === 401 && path !== '/auth/login') this.#csrfToken = '';
+      throw apiErrorForResponse(response, payload);
+    }
     return payload;
+  }
+
+  async getSession() {
+    const session = await this.request('/auth/session');
+    this.#csrfToken = typeof session.csrf_token === 'string' ? session.csrf_token : '';
+    return session;
+  }
+
+  async login(accessCode) {
+    const session = await this.request('/auth/login', {
+      method: 'POST',
+      body: { access_code: accessCode },
+      includeCsrf: false,
+    });
+    this.#csrfToken = typeof session.csrf_token === 'string' ? session.csrf_token : '';
+    return session;
+  }
+
+  async logout() {
+    try {
+      return await this.request('/auth/logout', { method: 'POST', body: {} });
+    } finally {
+      this.#csrfToken = '';
+    }
   }
 
   getDashboard(day) {
@@ -92,7 +153,9 @@ export class CRMClient {
     return this.request(`/contacts${querySuffix('q', query)}`);
   }
 
-  getContact(contactId) { return this.request(`/contacts/${safeId(contactId)}`); }
+  getContact(contactId) {
+    return this.request(`/contacts/${safeId(contactId)}`);
+  }
 
   createContact(contact, idempotencyKey = crypto.randomUUID()) {
     return this.request('/contacts', { method: 'POST', body: contact, idempotencyKey });
@@ -110,7 +173,9 @@ export class CRMClient {
     return this.request(`/opportunities${suffix}`);
   }
 
-  getOpportunity(opportunityId) { return this.request(`/opportunities/${safeId(opportunityId)}`); }
+  getOpportunity(opportunityId) {
+    return this.request(`/opportunities/${safeId(opportunityId)}`);
+  }
 
   createOpportunity(opportunity, idempotencyKey = crypto.randomUUID()) {
     return this.request('/opportunities', { method: 'POST', body: opportunity, idempotencyKey });

@@ -1,230 +1,456 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateKeyPairSync, sign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { normalizePhone } from '../crm-worker.js';
+import worker, { createAccessCodeVerifier } from '../crm-worker.js';
 
-const migration = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
-const ORIGIN = 'https://crm-test.example.invalid';
-const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
-function accessToken(email = 'owner@example.com', aud = 'synthetic-audience') {
-  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-  const team = `synthetic-${Math.random().toString(36).slice(2)}.cloudflareaccess.com`;
-  const jwk = publicKey.export({ format: 'jwk' }); jwk.kid = 'synthetic-key';
-  const makeToken = (overrides = {}) => {
-    const header = encode({ alg: overrides.alg || 'RS256', typ: 'JWT', kid: jwk.kid });
-    const now=Math.floor(Date.now()/1000);
-    const payload = encode({ iss: overrides.iss || `https://${team}`, aud: overrides.aud ?? [aud], email: overrides.email ?? email, exp: overrides.exp ?? now+600, nbf: overrides.nbf ?? now-10 });
-    const message = `${header}.${payload}`;
-    return `${message}.${sign('RSA-SHA256', Buffer.from(message), privateKey).toString('base64url')}`;
+const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
+const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
+const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.footcai-555.workers.dev';
+
+function randomToken(bytes = 24) {
+  const raw = crypto.getRandomValues(new Uint8Array(bytes));
+  return Buffer.from(raw).toString('base64url');
+}
+
+function wrapD1(sqlite) {
+  const makeStmt = (sql, values = []) => ({
+    bind: (...next) => makeStmt(sql, next),
+    first: async () => sqlite.prepare(sql).get(...values) ?? null,
+    all: async () => ({ results: sqlite.prepare(sql).all(...values) }),
+    run: async () => sqlite.prepare(sql).run(...values),
+    _exec: () => sqlite.prepare(sql).run(...values),
+  });
+  return {
+    prepare: sql => makeStmt(sql),
+    batch: async statements => {
+      sqlite.exec('SAVEPOINT d1_batch');
+      try {
+        const out = statements.map(statement => statement._exec());
+        sqlite.exec('RELEASE d1_batch');
+        return out;
+      } catch (error) {
+        sqlite.exec('ROLLBACK TO d1_batch');
+        sqlite.exec('RELEASE d1_batch');
+        throw error;
+      }
+    },
   };
-  return { token:makeToken(), makeToken, jwk, team };
 }
-function sqliteFixture() {
+
+function mockAssets() {
+  return {
+    async fetch(request) {
+      const { pathname } = new URL(request.url);
+      if (pathname === '/crm.html') {
+        return new Response('<!doctype html><html lang="ar"><title>CRM</title></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        });
+      }
+      if (pathname === '/crm-client.js' || pathname === '/crm-assets/app.js') {
+        return new Response('export default true;', {
+          status: 200,
+          headers: { 'content-type': 'application/javascript; charset=utf-8' },
+        });
+      }
+      if (pathname === '/crm-assets/app.css') {
+        return new Response('body{margin:0}', {
+          status: 200,
+          headers: { 'content-type': 'text/css; charset=utf-8' },
+        });
+      }
+      return new Response('Not found', { status: 404 });
+    },
+  };
+}
+
+async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec('PRAGMA foreign_keys=ON; CREATE TABLE areas(id INTEGER PRIMARY KEY,name_ar TEXT NOT NULL); CREATE TABLE sources(id INTEGER PRIMARY KEY,name TEXT NOT NULL); CREATE TABLE listings(id INTEGER PRIMARY KEY,source_id INTEGER,external_id TEXT,url TEXT,title TEXT,property_type TEXT,transaction_type TEXT,area_id INTEGER,area_m2 REAL,price REAL,bedrooms INTEGER,bathrooms INTEGER,finishing TEXT,observed_at TEXT);');
-  sqlite.exec(migration);
-  return sqlite;
-}
-// This adapter intentionally models D1.batch with a local SQLite transaction;
-// it is a unit/integration test double, not a Cloudflare D1 emulator or live test.
-class SQLiteD1 {
-  constructor(sqlite) { this.sqlite=sqlite; }
-  prepare(sql) {
-    let params=[];
-    const sqliteStatement=this.sqlite.prepare(sql);
-    const wrapped={
-      bind(...values) { params=values; return wrapped; },
-      async first() { return sqliteStatement.get(...params)||null; },
-      async all() { return {results:sqliteStatement.all(...params)}; },
-      async run() { return sqliteStatement.run(...params); },
-      runSync() { return sqliteStatement.run(...params); },
-    };
-    return wrapped;
+  sqlite.exec('PRAGMA foreign_keys = ON');
+  sqlite.exec(`CREATE TABLE areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE);
+    CREATE TABLE sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+    CREATE TABLE listings (id INTEGER PRIMARY KEY, source_id INTEGER, external_id TEXT, url TEXT, title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL, bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT);
+    INSERT INTO sources(id,name) VALUES (1,'aqarmap'),(9009,'crm-synthetic-test');
+    INSERT INTO areas(id,name_ar) VALUES (1,'الحي العاشر'),(99,'القاهرة الجديدة'),(90001,'مدينة نصر اختبار');
+    INSERT INTO listings(id,source_id,external_id,url,title,property_type,transaction_type,area_id,area_m2,price,bedrooms,bathrooms,finishing,observed_at)
+      VALUES (10,1,'nasr-1','https://example.test/1','شقة مدينة نصر','apartment','sale',1,140,3500000,3,2,'تشطيب كامل','2026-10-27T10:00:00Z'),
+             (11,1,'outside-1','https://example.test/2','شقة خارج النطاق','apartment','sale',99,140,3500000,3,2,'تشطيب كامل','2026-10-27T10:00:00Z'),
+             (12,9009,'synthetic-nasr-1','https://example.test/synthetic-1','شقة اختبار معزولة','apartment','sale',90001,155,4100000,3,2,'سوبر لوكس','2026-10-28T09:00:00Z');`);
+  sqlite.exec(migration0001);
+  sqlite.exec(migration0002);
+
+  const accessCode = randomToken(24);
+  const sessionSecret = randomToken(32);
+  const baseEnv = {
+    DB: wrapD1(sqlite),
+    ASSETS: mockAssets(),
+    CRM_ALLOWED_ORIGIN: ALLOWED_ORIGIN,
+    CRM_SITE_SOURCE_ID: '1',
+    CRM_NASR_AREA_IDS: '1',
+    CRM_SESSION_SECRET: sessionSecret,
+  };
+  if (useVerifier) {
+    baseEnv.CRM_ACCESS_CODE_VERIFIER = await createAccessCodeVerifier(accessCode);
+  } else {
+    baseEnv.CRM_ACCESS_CODE = accessCode;
   }
-  async batch(statements) {
-    this.sqlite.exec('BEGIN IMMEDIATE');
-    try { const result=statements.map(statement=>statement.runSync()); this.sqlite.exec('COMMIT'); return result; }
-    catch(error) { this.sqlite.exec('ROLLBACK'); throw error; }
+  return { sqlite, accessCode, env: { ...baseEnv, ...extraEnv } };
+}
+
+function extractCookiePair(setCookieHeader) {
+  assert.ok(setCookieHeader, 'Expected Set-Cookie header');
+  return setCookieHeader.split(';')[0];
+}
+
+async function loginSession(env, accessCode, clientIp = '198.51.100.10') {
+  const res = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      origin: ALLOWED_ORIGIN,
+      'sec-fetch-site': 'same-origin',
+      'cf-connecting-ip': clientIp,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ access_code: accessCode }),
+  }), env);
+  assert.equal(res.status, 200);
+  const setCookie = res.headers.get('set-cookie') || '';
+  assert.match(setCookie, /^__Host-crm_session=[A-Za-z0-9_-]{32,128};/);
+  assert.match(setCookie, /HttpOnly/);
+  assert.match(setCookie, /Secure/);
+  assert.match(setCookie, /SameSite=Strict/);
+  assert.match(setCookie, /Path=\//);
+  assert.match(setCookie, /Max-Age=28800/);
+  const body = await res.json();
+  assert.equal(body.authenticated, true);
+  assert.match(body.csrf_token, /^[A-Za-z0-9_-]{32,128}$/);
+  return {
+    cookie: extractCookiePair(setCookie),
+    rawToken: extractCookiePair(setCookie).slice('__Host-crm_session='.length),
+    csrfToken: body.csrf_token,
+  };
+}
+
+function makeAuthedApiCall(env, session) {
+  return async (path, { method = 'GET', body, key, csrf = session.csrfToken, origin = ALLOWED_ORIGIN } = {}) => {
+    const headers = { cookie: session.cookie };
+    if (origin) headers.origin = origin;
+    headers['sec-fetch-site'] = 'same-origin';
+    if (method !== 'GET' && method !== 'HEAD') {
+      if (csrf !== null) headers['x-crm-csrf'] = csrf;
+    }
+    if (key) headers['idempotency-key'] = key;
+    if (body !== undefined) headers['content-type'] = 'application/json';
+    return worker.fetch(new Request(`${ALLOWED_ORIGIN}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }), env);
+  };
+}
+
+test('fails closed with 503 auth_not_configured when internal auth secrets are missing or weak', async () => {
+  const { sqlite, env } = await createEnv();
+  const missingAll = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/dashboard`), { DB: env.DB });
+  assert.equal(missingAll.status, 503);
+  assert.deepEqual(await missingAll.json(), { error: 'auth_not_configured' });
+
+  const weakSession = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/dashboard`), {
+    ...env,
+    CRM_SESSION_SECRET: 'too-short',
+  });
+  assert.equal(weakSession.status, 503);
+
+  const weakAccessCode = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/dashboard`), {
+    DB: env.DB,
+    CRM_ALLOWED_ORIGIN: ALLOWED_ORIGIN,
+    CRM_SESSION_SECRET: env.CRM_SESSION_SECRET,
+    CRM_ACCESS_CODE: 'short-code',
+  });
+  assert.equal(weakAccessCode.status, 503);
+  sqlite.close();
+});
+
+test('serves static login shell without exposing data and blocks every unauthenticated API route', async () => {
+  const { sqlite, env } = await createEnv();
+
+  const rootRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/`), env);
+  assert.equal(rootRes.status, 200);
+  assert.equal(rootRes.headers.get('cache-control'), 'private, no-store');
+  assert.equal(rootRes.headers.get('x-frame-options'), 'DENY');
+  assert.match(rootRes.headers.get('content-security-policy') || '', /default-src 'self'/);
+
+  const unauthRoutes = [
+    ['GET', '/api/auth/session'],
+    ['GET', '/api/dashboard'],
+    ['GET', '/api/contacts'],
+    ['POST', '/api/contacts'],
+    ['GET', '/api/contacts/contact_12345678'],
+    ['POST', '/api/contacts/contact_12345678/phones'],
+    ['GET', '/api/opportunities'],
+    ['POST', '/api/opportunities'],
+    ['GET', '/api/opportunities/opportunity_1234'],
+    ['POST', '/api/opportunities/opportunity_1234/activities'],
+    ['GET', '/api/listings'],
+    ['POST', '/api/opportunities/opportunity_1234/properties'],
+    ['POST', '/api/auth/logout'],
+    ['GET', '/nonexistent-private-path'],
+  ];
+
+  for (const [method, path] of unauthRoutes) {
+    const headers = method === 'POST' ? { origin: ALLOWED_ORIGIN, 'sec-fetch-site': 'same-origin' } : {};
+    const res = await worker.fetch(new Request(`${ALLOWED_ORIGIN}${path}`, { method, headers }), env);
+    assert.equal(res.status, 401, `Expected 401 for unauthenticated ${method} ${path}`);
   }
-}
-function authenticatedEnv(auth, db = new SQLiteD1(sqliteFixture())) {
-  const original = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify({ keys:[auth.jwk] }), { headers:{'content-type':'application/json'} });
-  return { env:{ DB:db, ACCESS_TEAM_DOMAIN:auth.team, ACCESS_AUD:'synthetic-audience', ADMIN_EMAIL:'owner@example.com', CRM_ALLOWED_ORIGIN:ORIGIN, CRM_SITE_SOURCE_ID:'9009', CRM_NASR_AREA_IDS:'90001,90002' }, db, restore:()=>{globalThis.fetch=original;} };
-}
-function request(auth, path, method='GET', body, key='synthetic-request-identifier-0001', origin=ORIGIN, token=auth.token) {
-  const headers={origin,'cf-access-jwt-assertion':token};
-  if(body!==undefined) { headers['content-type']='application/json'; headers['idempotency-key']=key; }
-  return new Request(`https://api.test${path}`,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
-}
-function newOpportunity(phone='01012345678', overrides={}) {
-  return {phone,name:'عميل تجريبي',intent:'buy',source:'call',status:'active',next_action:'اتصال متابعة',next_followup_at:'2026-11-01T10:00:00Z',...overrides};
-}
-
-test('Egyptian phone canonicalization accepts Arabic digits and matches international/local variants', () => {
-  assert.equal(normalizePhone('0101 234 5678'),'201012345678');
-  assert.equal(normalizePhone('٠١٠١٢٣٤٥٦٧٨'),'201012345678');
-  assert.equal(normalizePhone('+20 1012345678'),'201012345678');
-  assert.equal(normalizePhone('123'),null);
+  sqlite.close();
 });
 
-test('Access/CORS fail closed and the configured origin is not hard-coded', async () => {
-  const auth=accessToken(), {env,restore}=authenticatedEnv(auth);
-  try {
-    const preflight=await worker.fetch(new Request('https://api.test/api/contacts',{method:'OPTIONS',headers:{origin:ORIGIN,'access-control-request-method':'POST','access-control-request-headers':'content-type,idempotency-key'}}),env);
-    assert.equal(preflight.status,204); assert.equal(preflight.headers.get('access-control-allow-origin'),ORIGIN);
-    const evil=await worker.fetch(request(auth,'/api/contacts','GET',undefined,'', 'https://evil.invalid'),env);
-    assert.equal(evil.status,403);
-    const unauth=await worker.fetch(new Request('https://api.test/api/contacts',{headers:{origin:ORIGIN}}),env);
-    assert.equal(unauth.status,401);
-    const missingOriginConfig={...env,CRM_ALLOWED_ORIGIN:''};
-    const closed=await worker.fetch(new Request('https://api.test/api/contacts'),missingOriginConfig);
-    assert.equal(closed.status,503);
-    const badScope={...env,CRM_NASR_AREA_IDS:'1,2); DROP TABLE listings;--'};
-    const scopeClosed=await worker.fetch(new Request('https://api.test/api/contacts'),badScope);
-    assert.equal(scopeClosed.status,503);
-  } finally { restore(); }
+test('enforces Origin, Sec-Fetch-Site, CORS allowlist, CSRF header, rate limiting, hashed D1 session storage, and logout revocation', async () => {
+  const { sqlite, accessCode, env } = await createEnv();
+
+  const badCors = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/contacts`, {
+    method: 'OPTIONS',
+    headers: { origin: 'https://evil.example' },
+  }), env);
+  assert.equal(badCors.status, 403);
+  assert.equal(badCors.headers.get('access-control-allow-origin'), null);
+
+  const goodCors = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/contacts`, {
+    method: 'OPTIONS',
+    headers: { origin: ALLOWED_ORIGIN },
+  }), env);
+  assert.equal(goodCors.status, 204);
+  assert.equal(goodCors.headers.get('access-control-allow-origin'), ALLOWED_ORIGIN);
+  assert.equal(goodCors.headers.get('access-control-allow-credentials'), 'true');
+
+  const wrongOriginLogin = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/login`, {
+    method: 'POST',
+    headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
+    body: JSON.stringify({ access_code: accessCode }),
+  }), env);
+  assert.equal(wrongOriginLogin.status, 403);
+  assert.deepEqual(await wrongOriginLogin.json(), { error: 'origin_not_allowed' });
+
+  const crossSiteFetch = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/login`, {
+    method: 'POST',
+    headers: { origin: ALLOWED_ORIGIN, 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' },
+    body: JSON.stringify({ access_code: accessCode }),
+  }), env);
+  assert.equal(crossSiteFetch.status, 403);
+  assert.deepEqual(await crossSiteFetch.json(), { error: 'cross_site_forbidden' });
+
+  for (let i = 0; i < 5; i += 1) {
+    const wrong = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        origin: ALLOWED_ORIGIN,
+        'cf-connecting-ip': '203.0.113.77',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ access_code: 'wrong-code-attempt-' + i }),
+    }), env);
+    assert.equal(wrong.status, 401);
+  }
+  const locked = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      origin: ALLOWED_ORIGIN,
+      'cf-connecting-ip': '203.0.113.77',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ access_code: accessCode }),
+  }), env);
+  assert.equal(locked.status, 429);
+  assert.ok(Number(locked.headers.get('retry-after')) > 0);
+
+  const session = await loginSession(env, accessCode, '198.51.100.25');
+  const storedSession = sqlite.prepare('SELECT token_hash, csrf_hash, revoked_at FROM crm_sessions LIMIT 1').get();
+  assert.equal(storedSession.token_hash.length, 64);
+  assert.equal(storedSession.csrf_hash.length, 64);
+  assert.notEqual(storedSession.token_hash, session.rawToken);
+  assert.notEqual(storedSession.csrf_hash, session.csrfToken);
+  assert.equal(storedSession.revoked_at, null);
+
+  const api = makeAuthedApiCall(env, session);
+
+  const missingCsrf = await api('/api/contacts', {
+    method: 'POST',
+    key: 'no-csrf-contact-1',
+    csrf: null,
+    body: { name: 'بدون CSRF', phones: [{ phone: '01012345678', is_primary: true }] },
+  });
+  assert.equal(missingCsrf.status, 403);
+  assert.deepEqual(await missingCsrf.json(), { error: 'csrf_invalid' });
+
+  const wrongCsrf = await api('/api/contacts', {
+    method: 'POST',
+    key: 'bad-csrf-contact-1',
+    csrf: randomToken(32),
+    body: { name: 'CSRF خاطئ', phones: [{ phone: '01012345678', is_primary: true }] },
+  });
+  assert.equal(wrongCsrf.status, 403);
+
+  const sessionCheck = await api('/api/auth/session');
+  assert.equal(sessionCheck.status, 200);
+  const refreshed = await sessionCheck.json();
+  assert.equal(refreshed.authenticated, true);
+  assert.equal(refreshed.csrf_token, session.csrfToken);
+
+  const logoutRes = await api('/api/auth/logout', { method: 'POST', body: {} });
+  assert.equal(logoutRes.status, 200);
+  assert.match(logoutRes.headers.get('set-cookie') || '', /Max-Age=0/);
+
+  const replayAfterLogout = await api('/api/contacts');
+  assert.equal(replayAfterLogout.status, 401);
+  assert.match(replayAfterLogout.headers.get('set-cookie') || '', /Max-Age=0/);
+  sqlite.close();
 });
 
-test('Access JWT signature, issuer, audience, email, and expiry are enforced independently', async () => {
-  const good=accessToken(), {env,restore}=authenticatedEnv(good);
-  try {
-    const ok=await worker.fetch(request(good,'/api/contacts'),env); assert.equal(ok.status,200);
-    for(const claims of [
-      {email:'attacker@example.com'},
-      {aud:['wrong-application-audience']},
-      {iss:'https://untrusted.example'},
-      {exp:Math.floor(Date.now()/1000)-5},
-    ]) {
-      const bad=await worker.fetch(request(good,'/api/contacts','GET',undefined,'',ORIGIN,good.makeToken(claims)),env);
-      assert.equal(bad.status,401,JSON.stringify(claims));
-    }
-    const malformed=good.token.slice(0,-8)+'invalid!';
-    const signatureFailure=await worker.fetch(request(good,'/api/contacts','GET',undefined,'',ORIGIN,malformed),env);
-    assert.equal(signatureFailure.status,401);
-  } finally { restore(); }
+test('supports direct CRM_ACCESS_CODE secret mode and rejects idle-expired sessions', async () => {
+  const { sqlite, accessCode, env } = await createEnv({ useVerifier: false });
+  const session = await loginSession(env, accessCode);
+  const api = makeAuthedApiCall(env, session);
+
+  assert.equal((await api('/api/dashboard?day=2026-10-28')).status, 200);
+
+  sqlite.prepare('UPDATE crm_sessions SET last_seen_at=?').run(1000);
+  const staleRes = await api('/api/dashboard?day=2026-10-28');
+  assert.equal(staleRes.status, 401);
+  assert.deepEqual(await staleRes.json(), { error: 'authentication_required' });
+  sqlite.close();
 });
 
-test('contact creation accepts multiple labeled phones atomically and rejects repeated phone values', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  try {
-    const response=await worker.fetch(request(auth,'/api/contacts','POST',{name:'عميل اختبار',phones:[
-      {phone:'01012345678',label:'أساسي',is_primary:true},
-      {phone:'+20 100 555 6677',label:'عمل'},
-    ]},'multi-phone-contact-request-01'),env);
-    const body=await response.json(); assert.equal(response.status,201); assert.equal(body.phone_count,2);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,1);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_phones').get().n,2);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_phones WHERE is_primary=1').get().n,1);
-    const duplicate=await worker.fetch(request(auth,'/api/contacts','POST',{name:'مكرر',phones:[{phone:'01022223333'},{phone:'+20 10 2222 3333'}]},'multi-phone-contact-request-02'),env);
-    assert.equal(duplicate.status,400);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,1);
-  } finally { restore(); }
+test('creates opportunities, enforces idempotency and duplicate review, logs follow-ups, and scopes property links to Nasr City', async () => {
+  const { sqlite, accessCode, env } = await createEnv();
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
+
+  const key = 'submission-key-0001';
+  const payload = {
+    name: 'أحمد حسن',
+    phone: '01012345678',
+    intent: 'buy',
+    source: 'call',
+    area_label: 'الحي العاشر',
+    budget_min: 3000000,
+    budget_max: 4000000,
+    next_action: 'إرسال ٣ شقق مناسبة',
+    next_followup_at: '2026-10-28T10:00:00Z',
+    notes: 'عميل جاد يفضل الاستلام الفوري',
+  };
+  const created = await call('/api/opportunities', { method: 'POST', key, body: payload });
+  assert.equal(created.status, 201);
+  const { opportunity_id: oppId } = await created.json();
+  const replayed = await call('/api/opportunities', { method: 'POST', key, body: payload });
+  assert.equal(replayed.status, 200);
+  assert.equal((await replayed.json()).opportunity_id, oppId);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_opportunities').get().n, 1);
+
+  const conflict = await call('/api/opportunities', {
+    method: 'POST',
+    key: 'submission-key-0002',
+    body: { ...payload, name: 'عميل مختلف بنفس الرقم' },
+  });
+  assert.equal(conflict.status, 409);
+
+  const missingAction = await call('/api/opportunities', {
+    method: 'POST',
+    key: 'submission-key-0003',
+    body: { name: 'سارة', phone: '01099887766', intent: 'rent', source: 'website' },
+  });
+  assert.equal(missingAction.status, 400);
+
+  const badLink = await call(`/api/opportunities/${oppId}/properties`, {
+    method: 'POST',
+    body: { external_id: 'outside-1' },
+  });
+  assert.equal(badLink.status, 404);
+  const okLink = await call(`/api/opportunities/${oppId}/properties`, {
+    method: 'POST',
+    body: { external_id: 'nasr-1', presentation_status: 'viewing_scheduled', viewing_at: '2026-10-28T15:00:00Z' },
+  });
+  assert.equal(okLink.status, 200);
+
+  const act = await call(`/api/opportunities/${oppId}/activities`, {
+    method: 'POST',
+    body: { activity_type: 'status_change', status: 'lost', loss_reason: 'price', summary: 'الميزانية أقل من المطلوب' },
+  });
+  assert.equal(act.status, 200);
+
+  const dash = await (await call('/api/dashboard?day=2026-10-28')).json();
+  assert.equal(dash.scheduled_visits.length, 1);
+  assert.equal(dash.outcomes.find(row => row.status === 'lost').count, 1);
+  sqlite.close();
 });
 
-test('customer creation and phone methods are separate; one customer can have several phone numbers', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  try {
-    const created=await worker.fetch(request(auth,'/api/contacts','POST',{name:'عميل بلا رقم'},'contact-request-identifier-0001'),env);
-    const {contact_id}=await created.json(); assert.equal(created.status,201);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,1);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_phones').get().n,0);
-    const added=await worker.fetch(request(auth,`/api/contacts/${contact_id}/phones`,'POST',{phone:'01012345678',label:'هاتف أساسي'}),env);
-    assert.equal(added.status,200);
-    const second=await worker.fetch(request(auth,`/api/contacts/${contact_id}/phones`,'POST',{phone:'+20 100 555 6677',label:'هاتف بديل'}),env);
-    assert.equal(second.status,200);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_phones WHERE contact_id=?').get(contact_id).n,2);
-    const listed=await worker.fetch(request(auth,'/api/contacts?q=عميل'),env);
-    const result=await listed.json(); assert.equal(result.contacts[0].phone_numbers.split(',').length,2);
-    const detail=await worker.fetch(request(auth,`/api/contacts/${contact_id}`),env);
-    const profile=await detail.json(); assert.equal(profile.phones.length,2); assert.equal(profile.opportunities.length,0);
-  } finally { restore(); }
+test('supports isolated synthetic listing scope via CRM_SITE_SOURCE_ID and CRM_NASR_AREA_IDS', async () => {
+  const { sqlite, accessCode, env } = await createEnv({
+    extraEnv: { CRM_SITE_SOURCE_ID: '9009', CRM_NASR_AREA_IDS: '90001' },
+  });
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
+
+  const listingsRes = await call('/api/listings');
+  assert.equal(listingsRes.status, 200);
+  const { listings } = await listingsRes.json();
+  assert.equal(listings.length, 1);
+  assert.equal(listings[0].external_id, 'synthetic-nasr-1');
+  sqlite.close();
 });
 
-test('CRM static assets are served only after the same Access JWT gate as API routes', async () => {
-  const auth=accessToken(), {env,restore}=authenticatedEnv(auth);
-  env.ASSETS={fetch:async request=>new Response(`private asset ${new URL(request.url).pathname}`,{headers:{'content-type':'text/html'}})};
-  try {
-    const denied=await worker.fetch(new Request('https://api.test/crm.html'),env);
-    assert.equal(denied.status,401);
-    const allowed=await worker.fetch(request(auth,'/crm.html'),env);
-    assert.equal(allowed.status,200); assert.match(await allowed.text(),/private asset \/crm.html/);
-    assert.equal(allowed.headers.get('cache-control'),'private, no-store');
-    assert.equal(allowed.headers.get('x-content-type-options'),'nosniff');
-  } finally { restore(); }
-});
+test('supports standalone customers with multiple phones, marketing consent gate, and multiple opportunities', async () => {
+  const { sqlite, accessCode, env } = await createEnv();
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
 
-test('local SQLite-backed D1 test double: opportunity submission batches customer, phone, opportunity, receipt, and activity', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  try {
-    const response=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity('٠١٠١٢٣٤٥٦٧٨',{source_url:'https://nasr-realestate.github.io/opportunities.html'}),'opportunity-request-identifier-01'),env);
-    const body=await response.json(); assert.equal(response.status,201);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,1);
-    assert.equal(db.sqlite.prepare('SELECT phone_key FROM crm_contact_phones').get().phone_key,'201012345678');
-    assert.equal(db.sqlite.prepare('SELECT contact_id FROM crm_opportunities').get().contact_id,body.contact_id);
-    assert.equal(db.sqlite.prepare('SELECT source_url FROM crm_opportunities').get().source_url,'','unknown site hostnames are not accepted');
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_idempotency_receipts').get().n,1);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_activities').get().n,1);
-  } finally { restore(); }
-});
+  const unconfirmedConsent = await call('/api/contacts', {
+    method: 'POST',
+    key: 'contact-consent-missing',
+    body: { name: 'ندى محمود', phones: [{ phone: '01022334455', is_primary: true }], communication_consent: 'marketing_yes' },
+  });
+  assert.equal(unconfirmedConsent.status, 400);
 
-test('local SQLite-backed D1 test double: injected opportunity failure rolls back customer, phone, receipt, and activity', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  db.sqlite.exec(`CREATE TRIGGER fail_test_opportunity BEFORE INSERT ON crm_opportunities WHEN NEW.notes='force-test-failure' BEGIN SELECT RAISE(ABORT,'synthetic opportunity insert failure'); END;`);
-  try {
-    const response=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity('01022223333',{notes:'force-test-failure'}),'atomic-failure-request-identifier'),env);
-    assert.equal(response.status,500);
-    for(const table of ['crm_contacts','crm_contact_phones','crm_opportunities','crm_idempotency_receipts','crm_activities']) {
-      assert.equal(db.sqlite.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n,0,`${table} must roll back`);
-    }
-  } finally { restore(); }
-});
+  const contactRes = await call('/api/contacts', {
+    method: 'POST',
+    key: 'contact-key-0001',
+    body: {
+      name: 'ندى محمود',
+      phones: [
+        { phone: '01022334455', label: 'شخصي', is_primary: true },
+        { phone: '01155667788', label: 'عمل', is_primary: false },
+      ],
+    },
+  });
+  assert.equal(contactRes.status, 201);
+  const { contact_id: contactId } = await contactRes.json();
 
-test('multiple opportunities can belong to one customer; conflicting phone names require review', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  try {
-    const first=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity(),'opportunity-request-identifier-02'),env);
-    const firstBody=await first.json();
-    const second=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity('01012345678',{intent:'rent'}),'opportunity-request-identifier-03'),env);
-    const secondBody=await second.json(); assert.equal(second.status,201); assert.equal(secondBody.contact_id,firstBody.contact_id);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,1);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_opportunities').get().n,2);
-    const conflict=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity('01012345678',{name:'اسم مختلف'}),'opportunity-request-identifier-04'),env);
-    assert.equal(conflict.status,409); assert.equal((await conflict.json()).review_required,true);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_opportunities').get().n,2);
-  } finally { restore(); }
-});
+  const addedPhone = await call(`/api/contacts/${contactId}/phones`, {
+    method: 'POST',
+    body: { phone: '01233445566', label: 'منزل' },
+  });
+  assert.equal(addedPhone.status, 200);
 
-test('property links and activity history use synthetic Nasr City listings only', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  db.sqlite.exec(`INSERT INTO areas(id,name_ar) VALUES(90001,'مدينة نصر - اختبار'),(99999,'خارج النطاق - اختبار');
-    INSERT INTO sources(id,name) VALUES(9009,'مصدر اختباري');
-    INSERT INTO listings(id,source_id,external_id,url,title,property_type,transaction_type,area_id,area_m2,price,observed_at)
-      VALUES(77,9009,'synthetic-listing','/properties/synthetic','شقة اختبار','apartment','sale',90001,120,2500000,'2026-10-27'),
-            (78,9009,'outside-listing','/properties/outside','خارج النطاق','apartment','sale',99999,120,2500000,'2026-10-27');`);
-  try {
-    const created=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity(),'listing-opportunity-request-01'),env);
-    const {opportunity_id}=await created.json();
-    const linked=await worker.fetch(request(auth,`/api/opportunities/${opportunity_id}/properties`,'POST',{external_id:'synthetic-listing',presentation_status:'viewing_scheduled',viewing_at:'2026-11-03T12:00:00Z',presented_price:2500000}),env);
-    assert.equal(linked.status,200);
-    assert.equal(db.sqlite.prepare('SELECT listing_id FROM crm_opportunity_properties').get().listing_id,77);
-    const outside=await worker.fetch(request(auth,`/api/opportunities/${opportunity_id}/properties`,'POST',{external_id:'outside-listing'}),env);
-    assert.equal(outside.status,404);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_opportunity_properties').get().n,1);
-    const activity=await worker.fetch(request(auth,`/api/opportunities/${opportunity_id}/activities`,'POST',{activity_type:'note',summary:'تمت مراجعة العقار',status:'paused'}),env);
-    assert.equal(activity.status,200);
-    assert.equal(db.sqlite.prepare('SELECT status FROM crm_opportunities WHERE id=?').get(opportunity_id).status,'paused');
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_activities WHERE opportunity_id=?').get(opportunity_id).n,3);
-  } finally { restore(); }
-});
+  const oppA = await call('/api/opportunities', {
+    method: 'POST',
+    key: 'contact-opp-0001',
+    body: { contact_id: contactId, intent: 'buy', source: 'call', next_action: 'إرسال خيارات شراء', next_followup_at: '2026-10-29T10:00:00Z' },
+  });
+  const oppB = await call('/api/opportunities', {
+    method: 'POST',
+    key: 'contact-opp-0002',
+    body: { contact_id: contactId, intent: 'rent', source: 'website', next_action: 'إرسال خيارات إيجار', next_followup_at: '2026-10-30T10:00:00Z' },
+  });
+  assert.equal(oppA.status, 201);
+  assert.equal(oppB.status, 201);
 
-test('active opportunities require a dated next action or an explicit exception before writes', async () => {
-  const auth=accessToken(), {env,db,restore}=authenticatedEnv(auth);
-  try {
-    const response=await worker.fetch(request(auth,'/api/opportunities','POST',newOpportunity('01012345678',{next_action:'',next_followup_at:''}),'opportunity-request-identifier-05'),env);
-    assert.equal(response.status,400);
-    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n,0);
-  } finally { restore(); }
+  const detail = await (await call(`/api/contacts/${contactId}`)).json();
+  assert.equal(detail.contact.communication_consent, 'request_only');
+  assert.equal(detail.phones.length, 3);
+  assert.equal(detail.opportunities.length, 2);
+
+  const search = await (await call('/api/contacts?q=01155667788')).json();
+  assert.equal(search.contacts.length, 1);
+  assert.equal(search.contacts[0].id, contactId);
+  sqlite.close();
 });

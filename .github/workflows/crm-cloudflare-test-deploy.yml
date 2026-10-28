@@ -1,0 +1,294 @@
+name: CRM isolated Worker deploy and live auth E2E
+
+on:
+  push:
+    branches:
+      - arena/fc5d95ec-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-cloudflare-test-deploy.yml
+      - _worker/crm-worker.js
+      - _worker/wrangler.crm.toml
+      - _worker/migrations/0002_crm_internal_auth.sql
+      - _worker/crm-ui/**
+      - _worker/tests/live-e2e-runner.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-isolated-test-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-verify:
+    name: Deploy nasr-crm-api-test and run live auth E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      OWNER_CRM_ACCESS_CODE: ${{ secrets.CRM_ACCESS_CODE }}
+      OWNER_CRM_SESSION_SECRET: ${{ secrets.CRM_SESSION_SECRET }}
+    outputs:
+      result: ${{ steps.e2e.outputs.result }}
+      phase: ${{ steps.e2e.outputs.phase }}
+      deployed: ${{ steps.e2e.outputs.deployed }}
+      login_and_crud: ${{ steps.e2e.outputs.login_and_crud }}
+      unauth_rejected: ${{ steps.e2e.outputs.unauth_rejected }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Apply 0002 migration to nasr-crm-test-db, deploy nasr-crm-api-test, and run live E2E
+        id: e2e
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
+          WORKER_NAME='nasr-crm-api-test'
+          WRANGLER_CFG='_worker/wrangler.crm.toml'
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+
+          result='not-run'
+          phase='preflight'
+          deployed='no'
+          login_and_crud='no'
+          unauth_rejected='no'
+
+          finish() {
+            {
+              printf 'result=%s\n' "$result"
+              printf 'phase=%s\n' "$phase"
+              printf 'deployed=%s\n' "$deployed"
+              printf 'login_and_crud=%s\n' "$login_and_crud"
+              printf 'unauth_rejected=%s\n' "$unauth_rejected"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            result='cloudflare-token-secret-unavailable'
+            phase='no-request'
+            finish
+            exit 1
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then echo "::add-mask::${OWNER_CRM_ACCESS_CODE}"; fi
+          if [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; then echo "::add-mask::${OWNER_CRM_SESSION_SECRET}"; fi
+
+          # Hard local config isolation guard: never touch nasr-market-db or any non-test Worker
+          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq 'nasr-market-db' "$WRANGLER_CFG"; then
+            result='forbidden-production-db-in-wrangler-config'
+            phase='isolation-guard'
+            finish
+            exit 1
+          fi
+          if ! grep -Fq "name = \"$WORKER_NAME\"" "$WRANGLER_CFG" || ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
+            result='wrangler-config-test-target-mismatch'
+            phase='isolation-guard'
+            finish
+            exit 1
+          fi
+
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            result="account-read-http-$status"
+            phase='preflight-account'
+            finish
+            exit 1
+          fi
+          account_count=$(jq -r '.result | length' "$TMP/accounts.json")
+          if [ "$account_count" -ne 1 ]; then
+            result="account-count-$account_count"
+            phase='preflight-account'
+            finish
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          export CLOUDFLARE_ACCOUNT_ID="$account_id"
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/sub.json" -w '%{http_code}' "$API/accounts/$account_id/workers/subdomain" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            result="workers-subdomain-http-$status"
+            phase='preflight-subdomain'
+            finish
+            exit 1
+          fi
+          subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
+          if [ -z "$subdomain" ]; then
+            result='workers-subdomain-empty'
+            phase='preflight-subdomain'
+            finish
+            exit 1
+          fi
+          BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
+          if ! grep -Fq "CRM_ALLOWED_ORIGIN = \"$BASE_URL\"" "$WRANGLER_CFG"; then
+            result='allowed-origin-mismatch'
+            phase='preflight-origin'
+            finish
+            exit 1
+          fi
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            result="d1-list-http-$status"
+            phase='preflight-d1'
+            finish
+            exit 1
+          fi
+          if ! jq -e --arg id "$TEST_DB_UUID" '.result[] | select(.name == "nasr-crm-test-db" and .uuid == $id)' "$TMP/d1.json" >/dev/null; then
+            result='test-d1-uuid-not-verified'
+            phase='preflight-d1'
+            finish
+            exit 1
+          fi
+
+          phase='apply-0002-migration'
+          if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db --remote --config "$WRANGLER_CFG" > "$TMP/migrate.log" 2>&1; then
+            result='d1-migration-0002-failed'
+            finish
+            exit 1
+          fi
+
+          VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then
+            result='d1-schema-verify-failed'
+            finish
+            exit 1
+          fi
+          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 8 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then
+            result='d1-schema-table-count-mismatch'
+            finish
+            exit 1
+          fi
+
+          phase='deploy-test-worker'
+          if ! npx --yes wrangler@4 deploy --config "$WRANGLER_CFG" > "$TMP/deploy.log" 2>&1; then
+            result='worker-deploy-failed'
+            finish
+            exit 1
+          fi
+          # Ensure workers.dev route is enabled on nasr-crm-api-test
+          curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+            --data '{"enabled":true}' -o "$TMP/enable_sub.json" "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/subdomain" >/dev/null 2>&1 || true
+          deployed='yes'
+
+          phase='configure-worker-secrets'
+          # Check existing secret names (values are never returned by Cloudflare)
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/secrets.json" -w '%{http_code}' "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/secrets" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            result="worker-secrets-read-http-$status"
+            finish
+            exit 1
+          fi
+
+          has_session_secret=$(jq -r '[.result[]?.name] | index("CRM_SESSION_SECRET") != null' "$TMP/secrets.json")
+          has_code_secret=$(jq -r '[.result[]?.name] | (index("CRM_ACCESS_CODE") != null or index("CRM_ACCESS_CODE_VERIFIER") != null)' "$TMP/secrets.json")
+
+          # If secrets have never been set yet, verify fail-closed 503 on live edge before uploading secrets
+          fail_closed_503='already-configured'
+          if [ "$has_session_secret" != 'true' ] && [ "$has_code_secret" != 'true' ]; then
+            for _ in 1 2 3 4 5 6; do
+              pre_code=$(curl --silent --connect-timeout 10 --max-time 15 -o "$TMP/pre503.json" -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
+              if [ "$pre_code" = '503' ]; then fail_closed_503='verified-503'; break; fi
+              sleep 2
+            done
+          fi
+
+          # Generate or apply CRM_SESSION_SECRET without printing or logging it
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            const ownerSession = (process.env.OWNER_CRM_SESSION_SECRET || "").trim();
+            const sessionSecret = ownerSession.length >= 32
+              ? ownerSession
+              : Buffer.from(crypto.getRandomValues(new Uint8Array(48))).toString("base64url");
+            writeFileSync(process.argv[1], sessionSecret, { mode: 0o600 });
+          ' "$TMP/session_secret"
+
+          if [ "$has_session_secret" != 'true' ] || [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; then
+            if ! npx --yes wrangler@4 secret put CRM_SESSION_SECRET --config "$WRANGLER_CFG" < "$TMP/session_secret" > "$TMP/put_sess.log" 2>&1; then
+              result='put-session-secret-failed'
+              finish
+              exit 1
+            fi
+          fi
+
+          # Generate salted PBKDF2-SHA256 verifier (from OWNER_CRM_ACCESS_CODE if provided, else cryptographically random 256-bit code)
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            import { createAccessCodeVerifier } from "./_worker/crm-worker.js";
+            const ownerCode = (process.env.OWNER_CRM_ACCESS_CODE || "").trim();
+            const code = ownerCode.length >= 24
+              ? ownerCode
+              : Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+            const verifier = await createAccessCodeVerifier(code);
+            writeFileSync(process.argv[1], code, { mode: 0o600 });
+            writeFileSync(process.argv[2], verifier, { mode: 0o600 });
+          ' "$TMP/access_code" "$TMP/access_verifier"
+
+          if ! npx --yes wrangler@4 secret put CRM_ACCESS_CODE_VERIFIER --config "$WRANGLER_CFG" < "$TMP/access_verifier" > "$TMP/put_ver.log" 2>&1; then
+            result='put-access-verifier-failed'
+            finish
+            exit 1
+          fi
+
+          phase='live-http-e2e'
+          if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-e2e-runner.mjs > "$TMP/e2e_out.json"; then
+            result='live-e2e-assertions-failed'
+            finish
+            exit 1
+          fi
+
+          created_contact_id=$(jq -r '.contact_id' "$TMP/e2e_out.json")
+          login_and_crud='yes'
+          unauth_rejected='yes'
+
+          phase='cleanup-synthetic-e2e-rows'
+          if [[ ! "$created_contact_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]]; then
+            result='invalid-contact-id-for-cleanup'
+            finish
+            exit 1
+          fi
+          CLEANUP_SQL="DELETE FROM crm_contacts WHERE id='${created_contact_id}'; DELETE FROM crm_idempotency_receipts WHERE resource_id='${created_contact_id}'; DELETE FROM crm_sessions; DELETE FROM crm_auth_attempts;"
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$CLEANUP_SQL" > "$TMP/cleanup.log" 2>&1; then
+            result='synthetic-row-cleanup-failed'
+            finish
+            exit 1
+          fi
+
+          # Final live check after cleanup: Worker remains up and rejects unauthenticated /api/contacts with 401
+          post_cleanup_status=$(curl --silent --connect-timeout 10 --max-time 15 -o "$TMP/final401.json" -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
+          if [ "$post_cleanup_status" != '401' ]; then
+            result="post-cleanup-unauth-status-$post_cleanup_status"
+            finish
+            exit 1
+          fi
+
+          phase='completed'
+          result='deployed-and-live-auth-e2e-passed'
+          finish
+
+          {
+            echo '## CRM isolated live deployment & authentication E2E'
+            echo "- Worker deployed: \`$WORKER_NAME\` ($deployed)"
+            echo "- Isolated D1 only: \`nasr-crm-test-db\` (\`$TEST_DB_UUID\`) — 8 \`crm_*\` tables verified; \`nasr-market-db\` untouched"
+            echo "- Pre-secret fail-closed check: \`$fail_closed_503\`"
+            echo "- Unauthenticated access rejected (\`GET /api/contacts\`, \`GET /api/dashboard\`, \`POST /api/contacts\`, post-logout cookie replay): **401** ($unauth_rejected)"
+            echo "- Disallowed Origin & missing \`X-CRM-CSRF\` rejected: **403**"
+            echo "- Wrong passcode rejected: **401**"
+            echo "- Valid login (\`__Host-crm_session\` \`HttpOnly; Secure; SameSite=Strict\`), synthetic customer save (**201**), retrieval (**200**), and logout (**200**): **$login_and_crud**"
+            echo "- Post-test synthetic row cleanup in \`nasr-crm-test-db\`: completed; final unauthenticated check returned **401**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (deployed=${{ needs.deploy-and-verify.outputs.deployed }}, login_crud=${{ needs.deploy-and-verify.outputs.login_and_crud }}, unauth_401=${{ needs.deploy-and-verify.outputs.unauth_rejected }})'
+    needs: deploy-and-verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret live E2E summary is encoded in this check name.'
