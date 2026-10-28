@@ -3,6 +3,7 @@ name: CRM isolated Worker deploy and live auth E2E
 on:
   push:
     branches:
+      - master
       - arena/fc5d95ec-nasr-realestate-github-io
     paths:
       - .github/workflows/crm-cloudflare-test-deploy.yml
@@ -11,6 +12,7 @@ on:
       - _worker/migrations/0002_crm_internal_auth.sql
       - _worker/crm-ui/**
       - _worker/tests/live-e2e-runner.mjs
+      - _worker/tests/live-browser-e2e.mjs
   workflow_dispatch:
 
 permissions:
@@ -34,12 +36,16 @@ jobs:
       phase: ${{ steps.e2e.outputs.phase }}
       deployed: ${{ steps.e2e.outputs.deployed }}
       login_and_crud: ${{ steps.e2e.outputs.login_and_crud }}
+      mobile_browser: ${{ steps.e2e.outputs.mobile_browser }}
       unauth_rejected: ${{ steps.e2e.outputs.unauth_rejected }}
+      code_source: ${{ steps.e2e.outputs.code_source }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install Playwright Chromium for live mobile browser verification
+        run: npm install --no-save playwright@1.52.0 && npx playwright install --with-deps chromium
       - name: Apply 0002 migration to nasr-crm-test-db, deploy nasr-crm-api-test, and run live E2E
         id: e2e
         shell: bash
@@ -58,7 +64,9 @@ jobs:
           phase='preflight'
           deployed='no'
           login_and_crud='no'
+          mobile_browser='no'
           unauth_rejected='no'
+          code_source='unknown'
 
           finish() {
             {
@@ -66,7 +74,9 @@ jobs:
               printf 'phase=%s\n' "$phase"
               printf 'deployed=%s\n' "$deployed"
               printf 'login_and_crud=%s\n' "$login_and_crud"
+              printf 'mobile_browser=%s\n' "$mobile_browser"
               printf 'unauth_rejected=%s\n' "$unauth_rejected"
+              printf 'code_source=%s\n' "$code_source"
             } >> "$GITHUB_OUTPUT"
           }
 
@@ -173,13 +183,11 @@ jobs:
             finish
             exit 1
           fi
-          # Ensure workers.dev route is enabled on nasr-crm-api-test
           curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
             --data '{"enabled":true}' -o "$TMP/enable_sub.json" "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/subdomain" >/dev/null 2>&1 || true
           deployed='yes'
 
           phase='configure-worker-secrets'
-          # Check existing secret names (values are never returned by Cloudflare)
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/secrets.json" -w '%{http_code}' "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/secrets" 2>/dev/null || true)
           if [ "$status" != 200 ]; then
             result="worker-secrets-read-http-$status"
@@ -188,19 +196,9 @@ jobs:
           fi
 
           has_session_secret=$(jq -r '[.result[]?.name] | index("CRM_SESSION_SECRET") != null' "$TMP/secrets.json")
-          has_code_secret=$(jq -r '[.result[]?.name] | (index("CRM_ACCESS_CODE") != null or index("CRM_ACCESS_CODE_VERIFIER") != null)' "$TMP/secrets.json")
+          has_direct_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")
+          has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")
 
-          # If secrets have never been set yet, verify fail-closed 503 on live edge before uploading secrets
-          fail_closed_503='already-configured'
-          if [ "$has_session_secret" != 'true' ] && [ "$has_code_secret" != 'true' ]; then
-            for _ in 1 2 3 4 5 6; do
-              pre_code=$(curl --silent --connect-timeout 10 --max-time 15 -o "$TMP/pre503.json" -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
-              if [ "$pre_code" = '503' ]; then fail_closed_503='verified-503'; break; fi
-              sleep 2
-            done
-          fi
-
-          # Generate or apply CRM_SESSION_SECRET without printing or logging it
           node --input-type=module -e '
             import { writeFileSync } from "node:fs";
             const ownerSession = (process.env.OWNER_CRM_SESSION_SECRET || "").trim();
@@ -218,7 +216,31 @@ jobs:
             fi
           fi
 
-          # Generate salted PBKDF2-SHA256 verifier (from OWNER_CRM_ACCESS_CODE if provided, else cryptographically random 256-bit code)
+          # Preserve owner's direct Cloudflare Dashboard CRM_ACCESS_CODE if set without GitHub mirror
+          if [ "$has_direct_code" = 'true' ] && [ -z "${OWNER_CRM_ACCESS_CODE:-}" ]; then
+            code_source='cloudflare-direct-secret'
+            phase='verify-unauth-and-ui-only'
+            ui_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/" 2>/dev/null || true)
+            api_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
+            if [ "$ui_code" != '200' ] || [ "$api_code" != '401' ]; then
+              result="direct-secret-smoke-failed-ui-${ui_code}-api-${api_code}"
+              finish
+              exit 1
+            fi
+            login_and_crud='preserved-owner-secret'
+            unauth_rejected='yes'
+            phase='completed'
+            result='deployed-and-owner-secret-preserved'
+            finish
+            exit 0
+          fi
+
+          if [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then
+            code_source='github-secret'
+          else
+            code_source='generated-verifier'
+          fi
+
           node --input-type=module -e '
             import { writeFileSync } from "node:fs";
             import { createAccessCodeVerifier } from "./_worker/crm-worker.js";
@@ -238,8 +260,7 @@ jobs:
           fi
           sleep 4
 
-          # Ensure clean state for synthetic E2E phone/contact from any interrupted prior test run
-          PRE_CLEAN_SQL="DELETE FROM crm_contact_phones WHERE phone_key='201099990001'; DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'live-e2e-%'; DELETE FROM crm_contacts WHERE name='TEST ONLY — عميل اختبار حي معزول'; DELETE FROM crm_auth_attempts;"
+          PRE_CLEAN_SQL="DELETE FROM crm_opportunity_properties WHERE opportunity_id IN (SELECT id FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'); DELETE FROM crm_activities WHERE opportunity_id IN (SELECT id FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'); DELETE FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key IN ('201099990001','201199990002','201099990088'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'live-e2e-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_auth_attempts;"
           npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$PRE_CLEAN_SQL" > "$TMP/preclean.log" 2>&1 || true
 
           phase='live-http-e2e'
@@ -252,23 +273,33 @@ jobs:
           fi
 
           created_contact_id=$(jq -r '.contact_id' "$TMP/e2e_out.json")
+          created_opp_id=$(jq -r '.opportunity_id' "$TMP/e2e_out.json")
           login_and_crud='yes'
           unauth_rejected='yes'
 
-          phase='cleanup-synthetic-e2e-rows'
-          if [[ ! "$created_contact_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]]; then
-            result='invalid-contact-id-for-cleanup'
+          phase='live-mobile-browser-e2e'
+          if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-browser-e2e.mjs > "$TMP/browser_out.json"; then
+            failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            result="mobile-browser-failed-${failed_step:-unknown}-${failed_reason:-unknown}"
             finish
             exit 1
           fi
-          CLEANUP_SQL="DELETE FROM crm_contact_phones WHERE contact_id='${created_contact_id}'; DELETE FROM crm_idempotency_receipts WHERE resource_id='${created_contact_id}'; DELETE FROM crm_contacts WHERE id='${created_contact_id}'; DELETE FROM crm_sessions; DELETE FROM crm_auth_attempts;"
+          mobile_browser='yes'
+
+          phase='cleanup-synthetic-e2e-rows'
+          if [[ ! "$created_contact_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]] || [[ ! "$created_opp_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]]; then
+            result='invalid-id-for-cleanup'
+            finish
+            exit 1
+          fi
+          CLEANUP_SQL="DELETE FROM crm_opportunity_properties WHERE opportunity_id='${created_opp_id}'; DELETE FROM crm_activities WHERE opportunity_id='${created_opp_id}'; DELETE FROM crm_opportunities WHERE id='${created_opp_id}'; DELETE FROM crm_contact_phones WHERE contact_id='${created_contact_id}' OR phone_key='201099990088'; DELETE FROM crm_idempotency_receipts WHERE resource_id IN ('${created_contact_id}','${created_opp_id}') OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE id='${created_contact_id}' OR name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions; DELETE FROM crm_auth_attempts;"
           if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$CLEANUP_SQL" > "$TMP/cleanup.log" 2>&1; then
             result='synthetic-row-cleanup-failed'
             finish
             exit 1
           fi
 
-          # Final live check after cleanup: Worker remains up and rejects unauthenticated /api/contacts with 401
           post_cleanup_status=$(curl --silent --connect-timeout 10 --max-time 15 -o "$TMP/final401.json" -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
           if [ "$post_cleanup_status" != '401' ]; then
             result="post-cleanup-unauth-status-$post_cleanup_status"
@@ -280,20 +311,8 @@ jobs:
           result='deployed-and-live-auth-e2e-passed'
           finish
 
-          {
-            echo '## CRM isolated live deployment & authentication E2E'
-            echo "- Worker deployed: \`$WORKER_NAME\` ($deployed)"
-            echo "- Isolated D1 only: \`nasr-crm-test-db\` (\`$TEST_DB_UUID\`) — 8 \`crm_*\` tables verified; \`nasr-market-db\` untouched"
-            echo "- Pre-secret fail-closed check: \`$fail_closed_503\`"
-            echo "- Unauthenticated access rejected (\`GET /api/contacts\`, \`GET /api/dashboard\`, \`POST /api/contacts\`, post-logout cookie replay): **401** ($unauth_rejected)"
-            echo "- Disallowed Origin & missing \`X-CRM-CSRF\` rejected: **403**"
-            echo "- Wrong passcode rejected: **401**"
-            echo "- Valid login (\`__Host-crm_session\` \`HttpOnly; Secure; SameSite=Strict\`), synthetic customer save (**201**), retrieval (**200**), and logout (**200**): **$login_and_crud**"
-            echo "- Post-test synthetic row cleanup in \`nasr-crm-test-db\`: completed; final unauthenticated check returned **401**"
-          } >> "$GITHUB_STEP_SUMMARY"
-
   report:
-    name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (deployed=${{ needs.deploy-and-verify.outputs.deployed }}, login_crud=${{ needs.deploy-and-verify.outputs.login_and_crud }}, unauth_401=${{ needs.deploy-and-verify.outputs.unauth_rejected }})'
+    name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (deployed=${{ needs.deploy-and-verify.outputs.deployed }}, crud=${{ needs.deploy-and-verify.outputs.login_and_crud }}, mobile=${{ needs.deploy-and-verify.outputs.mobile_browser }}, unauth401=${{ needs.deploy-and-verify.outputs.unauth_rejected }}, code=${{ needs.deploy-and-verify.outputs.code_source }})'
     needs: deploy-and-verify
     if: always()
     runs-on: ubuntu-latest

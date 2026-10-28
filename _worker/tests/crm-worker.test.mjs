@@ -175,11 +175,18 @@ test('fails closed with 503 auth_not_configured when internal auth secrets are m
 test('serves static login shell without exposing data and blocks every unauthenticated API route', async () => {
   const { sqlite, env } = await createEnv();
 
-  const rootRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/`), env);
+  const rootRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/`, {
+    headers: { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' },
+  }), env);
   assert.equal(rootRes.status, 200);
   assert.equal(rootRes.headers.get('cache-control'), 'private, no-store');
   assert.equal(rootRes.headers.get('x-frame-options'), 'DENY');
   assert.match(rootRes.headers.get('content-security-policy') || '', /default-src 'self'/);
+
+  const crossSiteApiGet = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/contacts`, {
+    headers: { 'sec-fetch-site': 'cross-site' },
+  }), env);
+  assert.equal(crossSiteApiGet.status, 403);
 
   const unauthRoutes = [
     ['GET', '/api/auth/session'],

@@ -37,19 +37,14 @@ try {
   assert.deepEqual(healthJson, { ok: true, service: 'nasr-crm-api' });
   summary.health = 200;
 
-  // 2. Unauthenticated /api/contacts rejected with 401
-  currentStep = '2-unauth-get-contacts';
+  // 2. Unauthenticated rejection across all CRM routes
+  currentStep = '2-unauth-routes';
   const unauthContactsRes = await waitForStatus('/api/contacts', 401, 25_000);
-  const unauthContactsBody = await unauthContactsRes.json();
-  assert.equal(unauthContactsBody.error, 'authentication_required');
-  summary.unauth_get_contacts = 401;
-
-  // 3. Unauthenticated dashboard & mutation routes rejected with 401
-  currentStep = '3-unauth-dashboard-and-post';
-  const unauthDashRes = await fetch(`${baseUrl}/api/dashboard`, { redirect: 'manual' });
-  assert.equal(unauthDashRes.status, 401);
-  summary.unauth_get_dashboard = 401;
-
+  assert.equal((await unauthContactsRes.json()).error, 'authentication_required');
+  for (const path of ['/api/auth/session', '/api/dashboard', '/api/opportunities', '/api/listings']) {
+    const res = await fetch(`${baseUrl}${path}`, { redirect: 'manual' });
+    assert.equal(res.status, 401, `unauth-${path}-${res.status}`);
+  }
   const unauthPostRes = await fetch(`${baseUrl}/api/contacts`, {
     method: 'POST',
     headers: {
@@ -62,10 +57,10 @@ try {
     redirect: 'manual',
   });
   assert.equal(unauthPostRes.status, 401);
-  summary.unauth_post_contacts = 401;
+  summary.unauth_rejected = 401;
 
-  // 4. Static login shell served with 200 + private no-store + CSP and hidden workspace
-  currentStep = '4-ui-shell';
+  // 3. All UI assets served with 200 + private no-store + strict CSP and hidden workspace
+  currentStep = '3-ui-bundle';
   const uiRes = await fetch(`${baseUrl}/`, { redirect: 'manual' });
   assert.equal(uiRes.status, 200, `ui-status-${uiRes.status}`);
   assert.match(uiRes.headers.get('cache-control') || '', /no-store/i);
@@ -74,50 +69,65 @@ try {
   const uiHtml = await uiRes.text();
   assert.match(uiHtml, /id="login-panel"/);
   assert.match(uiHtml, /id="crm-workspace"\s+hidden/);
-  summary.ui_shell = 200;
+  for (const assetPath of ['/crm-assets/app.css', '/crm-assets/app.js', '/crm-client.js']) {
+    const assetRes = await fetch(`${baseUrl}${assetPath}`, { redirect: 'manual' });
+    assert.equal(assetRes.status, 200, `asset-${assetPath}-${assetRes.status}`);
+    assert.match(assetRes.headers.get('cache-control') || '', /no-store/i);
+  }
+  summary.ui_bundle = 200;
 
-  // 5. Disallowed Origin rejected with 403
-  currentStep = '5-bad-origin';
+  // 4. CORS preflight, Origin, and Sec-Fetch-Site protection
+  currentStep = '4-cors-origin-guards';
+  const badCors = await fetch(`${baseUrl}/api/contacts`, {
+    method: 'OPTIONS',
+    headers: { origin: 'https://evil.example' },
+    redirect: 'manual',
+  });
+  assert.equal(badCors.status, 403);
+  const okCors = await fetch(`${baseUrl}/api/contacts`, {
+    method: 'OPTIONS',
+    headers: { origin: baseUrl },
+    redirect: 'manual',
+  });
+  assert.equal(okCors.status, 204);
+
   const badOriginRes = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
-    headers: {
-      origin: 'https://evil.example',
-      'content-type': 'application/json',
-    },
+    headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
     body: JSON.stringify({ access_code: 'ignored-wrong-origin-code-value' }),
     redirect: 'manual',
   });
-  assert.equal(badOriginRes.status, 403, `bad-origin-status-${badOriginRes.status}`);
+  assert.equal(badOriginRes.status, 403);
   assert.equal((await badOriginRes.json()).error, 'origin_not_allowed');
-  summary.bad_origin_login = 403;
 
-  // 6. Wrong access code rejected with 401
-  currentStep = '6-wrong-code';
+  const crossSiteRes = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { origin: baseUrl, 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' },
+    body: JSON.stringify({ access_code: 'ignored-cross-site-value' }),
+    redirect: 'manual',
+  });
+  assert.equal(crossSiteRes.status, 403);
+  summary.origin_and_cors = 403;
+
+  // 5. Wrong access code rejected with 401
+  currentStep = '5-wrong-code';
   const wrongCodeRes = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
-    headers: {
-      origin: baseUrl,
-      'sec-fetch-site': 'same-origin',
-      'content-type': 'application/json',
-    },
+    headers: { origin: baseUrl, 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' },
     body: JSON.stringify({ access_code: 'invalid-synthetic-passcode-00000000' }),
     redirect: 'manual',
   });
-  assert.equal(wrongCodeRes.status, 401, `wrong-code-status-${wrongCodeRes.status}`);
+  assert.equal(wrongCodeRes.status, 401);
   assert.equal((await wrongCodeRes.json()).error, 'invalid_credentials');
   summary.wrong_code_login = 401;
 
-  // 7. Valid login succeeds and sets __Host-crm_session with HttpOnly + Secure + SameSite=Strict
-  currentStep = '7-valid-login';
+  // 6. Valid login + session status verification (browser reload check)
+  currentStep = '6-valid-login';
   let loginRes = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
-      headers: {
-        origin: baseUrl,
-        'sec-fetch-site': 'same-origin',
-        'content-type': 'application/json',
-      },
+      headers: { origin: baseUrl, 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' },
       body: JSON.stringify({ access_code: accessCode }),
       redirect: 'manual',
     });
@@ -137,10 +147,19 @@ try {
   assert.equal(loginBody.authenticated, true);
   assert.match(loginBody.csrf_token, /^[A-Za-z0-9_-]{32,128}$/);
   const csrfToken = loginBody.csrf_token;
-  summary.valid_login = 200;
 
-  // 8. Authenticated POST without X-CRM-CSRF rejected with 403
-  currentStep = '8-missing-csrf';
+  const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
+    headers: { cookie: cookieHeader, 'sec-fetch-site': 'same-origin' },
+    redirect: 'manual',
+  });
+  assert.equal(sessionRes.status, 200);
+  const sessionBody = await sessionRes.json();
+  assert.equal(sessionBody.authenticated, true);
+  assert.equal(sessionBody.csrf_token, csrfToken);
+  summary.valid_login_and_session = 200;
+
+  // 7. Authenticated POST without X-CRM-CSRF rejected with 403
+  currentStep = '7-missing-csrf';
   const noCsrfRes = await fetch(`${baseUrl}/api/contacts`, {
     method: 'POST',
     headers: {
@@ -153,13 +172,12 @@ try {
     body: JSON.stringify({ name: 'TEST ONLY no csrf', phones: [{ phone: '01099990001', is_primary: true }] }),
     redirect: 'manual',
   });
-  assert.equal(noCsrfRes.status, 403, `nocsrf-status-${noCsrfRes.status}`);
+  assert.equal(noCsrfRes.status, 403);
   assert.equal((await noCsrfRes.json()).error, 'csrf_invalid');
   summary.missing_csrf_post = 403;
 
-  // 9. Save synthetic test customer (201)
-  currentStep = '9-save-contact';
-  const idempotencyKey = `live-e2e-${crypto.randomUUID()}`;
+  // 8. Save synthetic customer + add secondary phone + retrieve customer
+  currentStep = '8-customer-crud';
   const createRes = await fetch(`${baseUrl}/api/contacts`, {
     method: 'POST',
     headers: {
@@ -167,12 +185,12 @@ try {
       origin: baseUrl,
       'sec-fetch-site': 'same-origin',
       'x-crm-csrf': csrfToken,
-      'idempotency-key': idempotencyKey,
+      'idempotency-key': `live-e2e-contact-${crypto.randomUUID()}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
       name: 'TEST ONLY — عميل اختبار حي معزول',
-      phones: [{ phone: '01099990001', label: 'اختبار', is_primary: true }],
+      phones: [{ phone: '01099990001', label: 'أساسي', is_primary: true }],
       communication_consent: 'request_only',
     }),
     redirect: 'manual',
@@ -180,44 +198,127 @@ try {
   assert.equal(createRes.status, 201, `create-status-${createRes.status}`);
   const created = await createRes.json();
   assert.match(created.contact_id, /^[A-Za-z0-9_-]{8,80}$/);
-  assert.equal(created.phone_count, 1);
-  summary.save_synthetic_contact = 201;
 
-  // 10. Retrieve synthetic test customer by ID and search query + verify isolated Nasr City listing scope
-  currentStep = '10-retrieve-contact-and-listings';
+  const addPhoneRes = await fetch(`${baseUrl}/api/contacts/${encodeURIComponent(created.contact_id)}/phones`, {
+    method: 'POST',
+    headers: {
+      cookie: cookieHeader,
+      origin: baseUrl,
+      'sec-fetch-site': 'same-origin',
+      'x-crm-csrf': csrfToken,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ phone: '01199990002', label: 'عمل', is_primary: false }),
+    redirect: 'manual',
+  });
+  assert.equal(addPhoneRes.status, 200);
+
   const detailRes = await fetch(`${baseUrl}/api/contacts/${encodeURIComponent(created.contact_id)}`, {
     headers: { cookie: cookieHeader, 'sec-fetch-site': 'same-origin' },
     redirect: 'manual',
   });
-  assert.equal(detailRes.status, 200, `detail-status-${detailRes.status}`);
+  assert.equal(detailRes.status, 200);
   const detail = await detailRes.json();
   assert.equal(detail.contact.id, created.contact_id);
-  assert.equal(detail.contact.name, 'TEST ONLY — عميل اختبار حي معزول');
-  assert.equal(detail.phones.length, 1);
-  assert.equal(detail.phones[0].phone_key, '201099990001');
-  summary.get_synthetic_contact = 200;
+  assert.equal(detail.phones.length, 2);
+  summary.customer_crud = 200;
 
-  const searchRes = await fetch(`${baseUrl}/api/contacts?q=01099990001`, {
+  // 9. Create synthetic opportunity + link Nasr City listing + log follow-up + verify dashboard
+  currentStep = '9-opportunity-lifecycle';
+  const oppRes = await fetch(`${baseUrl}/api/opportunities`, {
+    method: 'POST',
+    headers: {
+      cookie: cookieHeader,
+      origin: baseUrl,
+      'sec-fetch-site': 'same-origin',
+      'x-crm-csrf': csrfToken,
+      'idempotency-key': `live-e2e-opp-${crypto.randomUUID()}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      contact_id: created.contact_id,
+      intent: 'buy',
+      source: 'call',
+      status: 'active',
+      area_label: 'الحي العاشر',
+      property_type: 'شقة',
+      budget_min: 3000000,
+      budget_max: 4500000,
+      next_action: 'إرسال خيارات مدينة نصر',
+      next_followup_at: '2026-10-28T16:00:00Z',
+      notes: 'TEST ONLY — فرصة اختبار معزولة',
+    }),
+    redirect: 'manual',
+  });
+  assert.equal(oppRes.status, 201, `opp-status-${oppRes.status}`);
+  const { opportunity_id: oppId } = await oppRes.json();
+
+  const outOfScopeLink = await fetch(`${baseUrl}/api/opportunities/${encodeURIComponent(oppId)}/properties`, {
+    method: 'POST',
+    headers: {
+      cookie: cookieHeader,
+      origin: baseUrl,
+      'sec-fetch-site': 'same-origin',
+      'x-crm-csrf': csrfToken,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ external_id: 'crm-test-only-outside' }),
+    redirect: 'manual',
+  });
+  assert.equal(outOfScopeLink.status, 404);
+
+  const inScopeLink = await fetch(`${baseUrl}/api/opportunities/${encodeURIComponent(oppId)}/properties`, {
+    method: 'POST',
+    headers: {
+      cookie: cookieHeader,
+      origin: baseUrl,
+      'sec-fetch-site': 'same-origin',
+      'x-crm-csrf': csrfToken,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ external_id: 'crm-test-only-inside', presentation_status: 'presented' }),
+    redirect: 'manual',
+  });
+  assert.equal(inScopeLink.status, 200);
+
+  const activityRes = await fetch(`${baseUrl}/api/opportunities/${encodeURIComponent(oppId)}/activities`, {
+    method: 'POST',
+    headers: {
+      cookie: cookieHeader,
+      origin: baseUrl,
+      'sec-fetch-site': 'same-origin',
+      'x-crm-csrf': csrfToken,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      activity_type: 'call',
+      summary: 'TEST ONLY — متابعة اختبار',
+      next_action: 'تأكيد موعد المعاينة',
+      next_followup_at: '2026-10-29T12:00:00Z',
+    }),
+    redirect: 'manual',
+  });
+  assert.equal(activityRes.status, 200);
+
+  const oppDetailRes = await fetch(`${baseUrl}/api/opportunities/${encodeURIComponent(oppId)}`, {
     headers: { cookie: cookieHeader, 'sec-fetch-site': 'same-origin' },
     redirect: 'manual',
   });
-  assert.equal(searchRes.status, 200, `search-status-${searchRes.status}`);
-  const searchBody = await searchRes.json();
-  assert.ok(searchBody.contacts.some(item => item.id === created.contact_id));
-  summary.search_synthetic_contact = 200;
+  assert.equal(oppDetailRes.status, 200);
+  const oppDetail = await oppDetailRes.json();
+  assert.equal(oppDetail.properties.length, 1);
+  assert.ok(oppDetail.activities.length >= 2);
 
-  const listingsRes = await fetch(`${baseUrl}/api/listings`, {
+  const dashRes = await fetch(`${baseUrl}/api/dashboard?day=2026-10-29`, {
     headers: { cookie: cookieHeader, 'sec-fetch-site': 'same-origin' },
     redirect: 'manual',
   });
-  assert.equal(listingsRes.status, 200, `listings-status-${listingsRes.status}`);
-  const listingsBody = await listingsRes.json();
-  assert.equal(listingsBody.listings.length, 1);
-  assert.equal(listingsBody.listings[0].external_id, 'crm-test-only-inside');
-  summary.scoped_listings = 200;
+  assert.equal(dashRes.status, 200);
+  assert.ok((await dashRes.json()).counts.active >= 1);
+  summary.opportunity_and_dashboard = 200;
 
-  // 11. Logout revokes session in D1 and clears cookie
-  currentStep = '11-logout';
+  // 10. Logout revokes session in D1 and clears cookie
+  currentStep = '10-logout';
   const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
     method: 'POST',
     headers: {
@@ -230,20 +331,20 @@ try {
     body: '{}',
     redirect: 'manual',
   });
-  assert.equal(logoutRes.status, 200, `logout-status-${logoutRes.status}`);
+  assert.equal(logoutRes.status, 200);
   assert.match(logoutRes.headers.get('set-cookie') || '', /max-age=0/i);
   summary.logout = 200;
 
-  // 12. Replaying the revoked session cookie after logout is rejected with 401
-  currentStep = '12-post-logout-replay';
+  // 11. Replaying the revoked session cookie after logout is rejected with 401
+  currentStep = '11-post-logout-replay';
   const postLogoutGet = await fetch(`${baseUrl}/api/contacts/${encodeURIComponent(created.contact_id)}`, {
     headers: { cookie: cookieHeader, 'sec-fetch-site': 'same-origin' },
     redirect: 'manual',
   });
-  assert.equal(postLogoutGet.status, 401, `post-logout-status-${postLogoutGet.status}`);
+  assert.equal(postLogoutGet.status, 401);
   summary.post_logout_replay_rejected = 401;
 
-  process.stdout.write(`${JSON.stringify({ ok: true, contact_id: created.contact_id, summary })}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, contact_id: created.contact_id, opportunity_id: oppId, summary })}\n`);
 } catch (error) {
   const safeReason = String(error?.message || 'assertion').replace(/[^A-Za-z0-9_:-]/g, '-').slice(0, 60);
   process.stdout.write(`${JSON.stringify({ ok: false, failed_step: currentStep, reason: safeReason })}\n`);

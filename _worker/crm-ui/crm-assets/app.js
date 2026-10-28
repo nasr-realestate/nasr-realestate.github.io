@@ -591,7 +591,7 @@ function addConsentValidation(form) {
       check.type = 'checkbox';
       check.name = 'consent-confirm';
       check.required = true;
-      check.style.width = 'auto';
+      check.className = 'inline-check';
       label.append(check, document.createTextNode(' أؤكد أن موافقة العميل على استقبال العروض سُجلت صراحةً.'));
       form.querySelector('.form-actions').before(label);
     } else if (consent.value !== 'marketing_yes' && existing) {

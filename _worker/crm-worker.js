@@ -18,7 +18,7 @@ const AUTH_WINDOW_SECONDS = 900; // 15 minutes
 const MAX_IP_FAILURES = 5;
 const MAX_GLOBAL_FAILURES = 20;
 const UI_ASSET_PATHS = new Set(['/', '/crm.html', '/crm-client.js', '/crm-assets/app.css', '/crm-assets/app.js']);
-const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -1075,13 +1075,16 @@ function errorResponse(error, corsHeaders) {
 }
 
 async function handleConfiguredRequest(request, url, env, config, corsHeaders) {
-  const authResponse = await dispatchAuthRoute(request, url.pathname, env, config);
-  if (authResponse) return attachHeaders(authResponse, corsHeaders);
-
   if (!url.pathname.startsWith('/api/')) {
     const uiAsset = await serveUiAsset(request, url, env);
     if (uiAsset) return attachHeaders(uiAsset, corsHeaders);
   }
+
+  const originCheck = verifyRequestOrigin(request, config);
+  if (!originCheck.ok) return json({ error: originCheck.code }, originCheck.status, corsHeaders);
+
+  const authResponse = await dispatchAuthRoute(request, url.pathname, env, config);
+  if (authResponse) return attachHeaders(authResponse, corsHeaders);
 
   const auth = await verifySession(request, env, config);
   if (!auth.ok) {
@@ -1107,9 +1110,6 @@ export default {
 
     const config = authConfig(env);
     if (!config) return json({ error: 'auth_not_configured' }, 503, corsHeaders);
-
-    const originCheck = verifyRequestOrigin(request, config);
-    if (!originCheck.ok) return json({ error: originCheck.code }, originCheck.status, corsHeaders);
 
     try {
       return await handleConfiguredRequest(request, url, env, config, corsHeaders);
