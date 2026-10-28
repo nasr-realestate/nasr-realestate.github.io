@@ -70,7 +70,7 @@ export class CRMClient {
       throw new CRMApiError('configuration', 'ميزة الاتصال غير متاحة في هذا المتصفح.');
     }
     this.apiBase = normalizeBase(apiBase);
-    this.fetchImpl = fetchImpl;
+    this.fetchImpl = (...args) => fetchImpl(...args);
   }
 
   hasCsrfToken() {

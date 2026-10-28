@@ -17,7 +17,10 @@ test('CRMClient manages internal auth login, session, CSRF token header, and log
   const calls = [];
   const client = new CRMClient({
     apiBase: '/api/',
-    fetchImpl: async (url, init) => {
+    fetchImpl: async function browserWebIdlFetch(url, init) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+      }
       calls.push({ url, init });
       if (url === '/api/auth/login') {
         return jsonResponse({ authenticated: true, csrf_token: 'csrf_token_for_runtime_only_1234567890' });
