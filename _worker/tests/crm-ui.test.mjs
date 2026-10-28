@@ -119,6 +119,9 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
   assert.match(html, /id="access-code-input"[^>]*type="password"/);
   assert.match(html, /id="logout-button"[^>]*hidden/);
   assert.match(html, /id="crm-workspace"\s+hidden/);
+  assert.match(html, /id="quick-entry-panel"\s+hidden/);
+  assert.match(html, /id="quick-entry-form"/);
+  assert.match(clientJs, /updateContact\s*\(/);
   assert.match(html, /لا تُقرأ جهات اتصال الهاتف ولا تُنقل البيانات المحلية تلقائيًا/);
   assert.match(appJs, /textContent/);
   assert.doesNotMatch(uiBundle, /innerHTML|outerHTML|insertAdjacentHTML/);

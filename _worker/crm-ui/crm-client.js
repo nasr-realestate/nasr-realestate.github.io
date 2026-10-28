@@ -165,6 +165,10 @@ export class CRMClient {
     return this.request(`/contacts/${safeId(contactId)}/phones`, { method: 'POST', body: phone });
   }
 
+  updateContact(contactId, payload) {
+    return this.request(`/contacts/${safeId(contactId)}`, { method: 'POST', body: payload });
+  }
+
   searchOpportunities(query = '', status = '') {
     const params = new URLSearchParams();
     if (query) params.set('q', query);

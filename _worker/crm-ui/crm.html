@@ -44,6 +44,7 @@
     <div id="crm-workspace" hidden>
       <nav class="tabs" aria-label="أقسام CRM">
         <button class="tab active" type="button" data-panel="dashboard-panel" aria-selected="true">نظرة عامة</button>
+        <button class="tab" type="button" data-panel="quick-entry-panel" aria-selected="false">⚡ تسجيل سريع</button>
         <button class="tab" type="button" data-panel="contacts-panel" aria-selected="false">العملاء</button>
         <button class="tab" type="button" data-panel="opportunities-panel" aria-selected="false">الفرص</button>
         <button class="tab" type="button" data-panel="new-contact-panel" aria-selected="false">إضافة عميل</button>
@@ -51,12 +52,61 @@
       </nav>
 
       <section class="panel" id="dashboard-panel" aria-labelledby="dashboard-title">
-        <div class="section-heading"><div><p class="eyebrow">متابعتك اليوم</p><h1 id="dashboard-title">نظرة عامة</h1></div><label class="compact-label">التاريخ <input id="dashboard-day" type="date"></label></div>
+        <div class="section-heading"><div><p class="eyebrow">متابعتك اليوم</p><h1 id="dashboard-title">نظرة عامة</h1></div><div class="top-actions"><button class="button primary" type="button" data-open-panel="quick-entry-panel">⚡ عميل + فرصة بـ3 نقرات</button><label class="compact-label">التاريخ <input id="dashboard-day" type="date"></label></div></div>
         <div class="metrics" id="dashboard-metrics" aria-live="polite"></div>
         <div class="columns">
           <section class="card"><div class="card-heading"><h2>مستحق اليوم</h2><span class="count" id="due-count">0</span></div><div id="due-list" class="stack muted">جارٍ التحميل…</div></section>
           <section class="card"><div class="card-heading"><h2>متأخر</h2><span class="count danger-count" id="overdue-count">0</span></div><div id="overdue-list" class="stack muted">جارٍ التحميل…</div></section>
         </div>
+      </section>
+
+      <section class="panel" id="quick-entry-panel" hidden aria-labelledby="quick-entry-title">
+        <div class="section-heading"><div><p class="eyebrow">عميل + رقم + فرصة في خطوة واحدة</p><h1 id="quick-entry-title">⚡ تسجيل سريع من المحادثة</h1></div></div>
+        <div class="card stack quick-paste-box">
+          <label for="quick-paste-input">الصق نص رسالة المالك أو العميل لاستخراج الرقم والتفاصيل محليًا (اختياري)
+            <textarea id="quick-paste-input" rows="3" maxlength="1200" placeholder="مثال: أستاذ أحمد 010... شقة 200م للبيع في مكرم عبيد مطلوب 6 مليون"></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="button" type="button" id="quick-parse-btn">تحليل النص المنسوخ</button>
+            <span id="quick-parse-feedback" class="muted" aria-live="polite"></span>
+          </div>
+        </div>
+        <form id="quick-entry-form" class="card form-grid">
+          <div class="full">
+            <span class="chip-label">1) نوع العميل والفرصة</span>
+            <div class="chip-row" role="group" aria-label="نوع الفرصة">
+              <button class="chip active" type="button" data-quick-intent="sell">مالك بيع</button>
+              <button class="chip" type="button" data-quick-intent="lease">مالك إيجار</button>
+              <button class="chip" type="button" data-quick-intent="buy">مشتري</button>
+              <button class="chip" type="button" data-quick-intent="rent">مستأجر</button>
+            </div>
+            <input type="hidden" name="intent" id="quick-intent-value" value="sell">
+          </div>
+          <label>رقم الهاتف (إلزامي للتسجيل الجديد) <input name="phone" id="quick-phone" type="tel" inputmode="tel" maxlength="32" required placeholder="010... أو +20..."></label>
+          <label>اسم المالك أو العميل <input name="name" id="quick-name" maxlength="100" placeholder="اسم العميل"></label>
+          <label>المنطقة بمدينة نصر <input name="area_label" id="quick-area" maxlength="100" placeholder="مثال: مكرم عبيد، الحديقة الدولية"></label>
+          <label>نوع العقار <input name="property_type" id="quick-property-type" maxlength="80" value="شقة"></label>
+          <label>السعر أو الميزانية (ج.م) <input name="budget_max" id="quick-budget" type="number" min="0" step="any" placeholder="مثال: 6500000"></label>
+          <label>المساحة (م²) <input name="size_max_m2" id="quick-size" type="number" min="0" step="any" placeholder="مثال: 225"></label>
+          <label class="full">ربط بوحدة منشورة بمدينة نصر (اختياري)
+            <select name="external_id" id="quick-listing-select"><option value="">بدون ربط مباشر الآن…</option></select>
+          </label>
+          <div class="full">
+            <span class="chip-label">2) خطة المتابعة بلمسة واحدة</span>
+            <div class="chip-row" role="group" aria-label="موعد المتابعة">
+              <button class="chip active" type="button" data-quick-followup="none">معروض بالموقع (بدون تذكير الآن)</button>
+              <button class="chip" type="button" data-quick-followup="tomorrow">غدًا 1 ظهرًا</button>
+              <button class="chip" type="button" data-quick-followup="3days">بعد 3 أيام</button>
+              <button class="chip" type="button" data-quick-followup="7days">بعد أسبوع</button>
+            </div>
+            <input type="hidden" name="followup_preset" id="quick-followup-preset" value="none">
+          </div>
+          <label class="full">ملاحظات المحادثة أو المفتاح/البواب <textarea name="notes" id="quick-notes" maxlength="1200" rows="2" placeholder="تفاصيل إضافية، مواعيد المعاينة، البواب…"></textarea></label>
+          <div class="full form-actions">
+            <button class="button primary" type="submit" id="quick-entry-submit">3) حفظ العميل والفرصة فورًا</button>
+            <span id="quick-entry-feedback" class="muted" aria-live="polite"></span>
+          </div>
+        </form>
       </section>
 
       <section class="panel" id="contacts-panel" hidden>

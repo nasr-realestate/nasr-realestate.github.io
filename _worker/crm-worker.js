@@ -587,7 +587,7 @@ async function listListings(db, url, scope) {
   const rows = await db.prepare(`SELECT l.id,l.external_id,l.url,l.title,l.property_type,l.transaction_type,l.area_id,a.name_ar AS area_name,l.area_m2,l.price,l.bedrooms,l.bathrooms,l.finishing
     FROM listings l JOIN areas a ON a.id=l.area_id
     WHERE l.source_id=? AND l.area_id IN (${scope.areaSql}) AND (?='' OR l.title LIKE ? OR l.external_id LIKE ? OR a.name_ar LIKE ?)
-    ORDER BY l.observed_at DESC LIMIT 100`).bind(scope.sourceId, q, pattern, pattern, pattern).all();
+    ORDER BY l.observed_at DESC LIMIT 200`).bind(scope.sourceId, q, pattern, pattern, pattern).all();
   return json({ listings: rows.results });
 }
 
@@ -819,6 +819,239 @@ async function addContactPhone(request, env, contactId) {
   }
 }
 
+async function resolveContactPhoneUpdate(db, contactId, body) {
+  if (!body.phone) return { statements: [], duplicate: false };
+  const phone = normalizePhone(body.phone);
+  if (!phone) return { error: json({ error: 'invalid_phone' }, 400) };
+  const found = await findPhone(db, phone);
+  if (found && found.contact_id !== contactId) return { error: duplicatePhone() };
+  if (found) return { statements: [], duplicate: true };
+  const existingPrimary = await db.prepare('SELECT id FROM crm_contact_phones WHERE contact_id=? AND is_primary=1').bind(contactId).first();
+  const primary = body.is_primary === true || !existingPrimary;
+  const statements = [];
+  if (primary) statements.push(db.prepare('UPDATE crm_contact_phones SET is_primary=0 WHERE contact_id=?').bind(contactId));
+  statements.push(
+    db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
+      .bind(id(), contactId, phone, boundedText(body.label, 40), primary ? 1 : 0),
+  );
+  return { statements, duplicate: false };
+}
+
+async function updateContact(request, env, contactId) {
+  const body = await readJson(request);
+  const existing = await env.DB.prepare('SELECT id,name FROM crm_contacts WHERE id=?').bind(contactId).first();
+  if (!existing) return json({ error: 'contact_not_found' }, 404);
+  const newName = body.name === undefined ? null : boundedText(body.name, 100);
+  if (newName === '' && !body.phone) return json({ error: 'invalid_contact' }, 400);
+  if (newName === null && !body.phone) return json({ error: 'invalid_contact' }, 400);
+  const phoneUpdate = await resolveContactPhoneUpdate(env.DB, contactId, body);
+  if (phoneUpdate.error) return phoneUpdate.error;
+  const statements = [...phoneUpdate.statements];
+  const targetName = newName !== null && newName !== '' ? newName : existing.name;
+  statements.push(
+    env.DB.prepare('UPDATE crm_contacts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(targetName, contactId),
+  );
+  try {
+    await env.DB.batch(statements);
+    return json({ ok: true, contact_id: contactId, duplicate_phone: phoneUpdate.duplicate });
+  } catch (error) {
+    if (/UNIQUE constraint failed: crm_contact_phones\.phone_key/.test(String(error?.message))) {
+      return duplicatePhone();
+    }
+    return sqlError(error);
+  }
+}
+
+const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,80000})$/;
+
+export async function generateIngestKeyPair() {
+  const pair = await crypto.subtle.generateKey(
+    { name: 'RSA-OAEP', modulusLength: 4096, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+  const [pkcs8, spki] = await Promise.all([
+    crypto.subtle.exportKey('pkcs8', pair.privateKey),
+    crypto.subtle.exportKey('spki', pair.publicKey),
+  ]);
+  return {
+    privateKeyPkcs8B64u: toBase64Url(new Uint8Array(pkcs8)),
+    publicKeySpkiB64u: toBase64Url(new Uint8Array(spki)),
+  };
+}
+
+export async function sealIngestPayload(payload, publicKeySpkiB64u) {
+  const spkiBytes = fromBase64Url(publicKeySpkiB64u);
+  if (!spkiBytes) throw new Error('invalid_ingest_public_key');
+  const rsaPub = await crypto.subtle.importKey(
+    'spki',
+    spkiBytes,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    false,
+    ['encrypt'],
+  );
+  const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+  const rawAes = new Uint8Array(await crypto.subtle.exportKey('raw', aesKey));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapped = new Uint8Array(await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaPub, rawAes));
+  const plaintext = encoder.encode(JSON.stringify(payload));
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, plaintext));
+  return `enc_v1.${toBase64Url(wrapped)}.${toBase64Url(iv)}.${toBase64Url(cipher)}`;
+}
+
+async function unsealIngestPayload(envelope, privateKeyPkcs8B64u) {
+  const match = typeof envelope === 'string' ? SEALED_ENVELOPE_RE.exec(envelope.trim()) : null;
+  const pkcs8Bytes = fromBase64Url(String(privateKeyPkcs8B64u || '').trim());
+  if (!match || !pkcs8Bytes) return null;
+  const wrapped = fromBase64Url(match[1]);
+  const iv = fromBase64Url(match[2]);
+  const cipher = fromBase64Url(match[3]);
+  if (!wrapped || !iv || iv.byteLength !== 12 || !cipher) return null;
+  try {
+    const rsaPriv = await crypto.subtle.importKey(
+      'pkcs8',
+      pkcs8Bytes,
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
+      false,
+      ['decrypt'],
+    );
+    const rawAes = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPriv, wrapped);
+    const aesKey = await crypto.subtle.importKey('raw', rawAes, { name: 'AES-GCM' }, false, ['decrypt']);
+    const plainBytes = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, cipher);
+    const parsed = JSON.parse(decoder.decode(plainBytes));
+    return parsed && Array.isArray(parsed.entries) ? parsed.entries : null;
+  } catch {
+    return null;
+  }
+}
+
+async function findPlaceholderBySourceUrl(db, sourceUrl) {
+  if (!sourceUrl) return null;
+  return db.prepare(`SELECT o.id AS opportunity_id, o.notes, c.id AS contact_id, c.name
+    FROM crm_opportunities o JOIN crm_contacts c ON c.id = o.contact_id
+    WHERE o.source_url = ? AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = c.id)
+    ORDER BY o.created_at DESC LIMIT 1`).bind(sourceUrl).first();
+}
+
+async function upgradePlaceholderEntry(db, placeholder, entry, subKey, phone) {
+  const nextName = boundedText(entry.name, 100) || placeholder.name;
+  const nextNotes = boundedText(entry.notes, 1200) || placeholder.notes || '';
+  const statements = [
+    db.prepare('UPDATE crm_contacts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(nextName, placeholder.contact_id),
+    db.prepare('UPDATE crm_opportunities SET notes=?,source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+      .bind(nextNotes, ['call', 'missed_call', 'referral', 'website', 'whatsapp', 'other'].includes(entry.source) ? entry.source : 'whatsapp', placeholder.opportunity_id),
+    db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+      .bind(subKey, 'opportunity', placeholder.opportunity_id),
+  ];
+  if (phone) {
+    statements.push(
+      db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,1)')
+        .bind(id(), placeholder.contact_id, phone, boundedText(entry.phone_label, 40) || 'واتساب'),
+    );
+  }
+  await db.batch(statements);
+  return { createdContact: 0, updatedContact: 1, createdOpportunity: 0, linkedProperty: 0 };
+}
+
+async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
+  const parsed = parseOpportunityInput({ ...entry, phone: undefined });
+  if (parsed.error) return null;
+  const existingPhone = phone ? await findPhone(db, phone) : null;
+  const contactId = existingPhone ? existingPhone.contact_id : id();
+  const oppId = id();
+  const statements = [];
+  if (!existingPhone) {
+    statements.push(db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').bind(contactId, boundedText(entry.name, 100)));
+    if (phone) {
+      statements.push(
+        db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,1)')
+          .bind(id(), contactId, phone, boundedText(entry.phone_label, 40) || 'واتساب'),
+      );
+    }
+  }
+  const sourceUrl = safeSitePath(entry.source_url);
+  statements.push(
+    db.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(oppId, contactId, parsed.intent, parsed.source, sourceUrl, parsed.status, boundedText(entry.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(entry.property_type, 80), boundedText(entry.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason),
+    db.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
+      .bind(id(), oppId, initialActivityType(parsed.source), boundedText(entry.activity_summary || entry.notes, 1200) || 'تسجيل مشفر آمن', '', parsed.nextAction, parsed.nextAt),
+    db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+      .bind(subKey, 'opportunity', oppId),
+  );
+  let linkedProperty = 0;
+  const extId = boundedText(entry.external_id, 160);
+  if (extId && scope) {
+    const listing = await db.prepare(`SELECT id FROM listings WHERE source_id=? AND external_id=? AND area_id IN (${scope.areaSql}) LIMIT 1`).bind(scope.sourceId, extId).first();
+    if (listing) {
+      statements.push(
+        db.prepare('INSERT INTO crm_opportunity_properties(id,opportunity_id,listing_id,presentation_status,presented_price,notes) VALUES(?,?,?,?,?,?)')
+          .bind(id(), oppId, listing.id, 'selected', parsed.budgetMax.value ?? parsed.budgetMin.value, boundedText(entry.property_notes, 700)),
+      );
+      linkedProperty = 1;
+    }
+  }
+  await db.batch(statements);
+  return { createdContact: existingPhone ? 0 : 1, updatedContact: 0, createdOpportunity: 1, linkedProperty };
+}
+
+async function applySingleIngestEntry(db, scope, entry) {
+  if (!entry || typeof entry !== 'object') return { skipped: 1 };
+  const subKey = boundedText(entry.submission_key, 120);
+  if (!/^[A-Za-z0-9._:-]{12,120}$/.test(subKey)) return { skipped: 1 };
+  if (await receipt(db, subKey)) return { skipped: 1 };
+  const phone = entry.phone ? normalizePhone(entry.phone) : null;
+  if (entry.phone && !phone) return { skipped: 1 };
+  const sourceUrl = safeSitePath(entry.source_url);
+  const placeholder = sourceUrl ? await findPlaceholderBySourceUrl(db, sourceUrl) : null;
+  if (placeholder && (!phone || !(await findPhone(db, phone)))) {
+    const res = await upgradePlaceholderEntry(db, placeholder, entry, subKey, phone);
+    return { skipped: 0, ...res };
+  }
+  const inserted = await insertSealedOpportunityEntry(db, scope, entry, subKey, phone);
+  if (!inserted) return { skipped: 1 };
+  return { skipped: 0, ...inserted };
+}
+
+async function handleSealedIngest(request, env, config) {
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const privKey = typeof env.CRM_INGEST_PRIVATE_KEY === 'string' ? env.CRM_INGEST_PRIVATE_KEY.trim() : '';
+  if (!privKey) return json({ error: 'ingest_not_configured' }, 503);
+  const body = await readJson(request, 90_000);
+  const envelope = typeof body.sealed_payload === 'string' ? body.sealed_payload.trim() : '';
+  if (!SEALED_ENVELOPE_RE.test(envelope)) return json({ error: 'invalid_sealed_envelope' }, 400);
+
+  const ticketKey = `sealed-ticket:${await sha256Hex(envelope)}`;
+  const ticket = await env.DB.prepare('SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key=?').bind(ticketKey).first();
+  if (!ticket || ticket.resource_id !== 'authorized_pending') {
+    return json({ error: 'unauthorized_sealed_ingest' }, 403);
+  }
+
+  const entries = await unsealIngestPayload(envelope, privKey);
+  if (!entries || entries.length === 0 || entries.length > 25) {
+    return json({ error: 'invalid_sealed_payload' }, 400);
+  }
+
+  await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending'")
+    .bind(ticketKey)
+    .run();
+
+  const totals = { processed: 0, created_contacts: 0, updated_contacts: 0, created_opportunities: 0, linked_properties: 0, skipped: 0 };
+  for (const entry of entries) {
+    const res = await applySingleIngestEntry(env.DB, config.scope, entry);
+    if (res.skipped) {
+      totals.skipped += 1;
+    } else {
+      totals.processed += 1;
+      totals.created_contacts += res.createdContact;
+      totals.updated_contacts += res.updatedContact;
+      totals.created_opportunities += res.createdOpportunity;
+      totals.linked_properties += res.linkedProperty;
+    }
+  }
+  return json({ ok: true, ...totals });
+}
+
 const ALLOWED_STATUSES = ['active', 'visit_scheduled', 'viewing_done', 'offer', 'negotiating', 'near_close', 'won', 'lost', 'paused', 'unqualified'];
 const ACTIVE_STATUS_SET = new Set(['active', 'visit_scheduled', 'viewing_done', 'offer', 'negotiating', 'near_close']);
 const ALLOWED_LOSS_REASONS = ['price', 'location', 'size', 'financing', 'timing', 'no_response', 'competition', 'unsuitable', 'other'];
@@ -1042,6 +1275,7 @@ async function dispatchParameterizedApi(request, pathname, env, config) {
   if (method === 'POST' && phoneRoute) return addContactPhone(request, env, phoneRoute[1]);
   const contactDetail = pathname.match(/^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/);
   if (method === 'GET' && contactDetail) return getContact(env.DB, contactDetail[1]);
+  if (method === 'POST' && contactDetail) return updateContact(request, env, contactDetail[1]);
   const detail = pathname.match(/^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/);
   if (method === 'GET' && detail) return getOpportunity(env.DB, detail[1]);
   const activity = pathname.match(/^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/);
@@ -1078,6 +1312,10 @@ async function handleConfiguredRequest(request, url, env, config, corsHeaders) {
   if (!url.pathname.startsWith('/api/')) {
     const uiAsset = await serveUiAsset(request, url, env);
     if (uiAsset) return attachHeaders(uiAsset, corsHeaders);
+  }
+
+  if (url.pathname === '/api/ingest/sealed') {
+    return attachHeaders(await handleSealedIngest(request, env, config), corsHeaders);
   }
 
   const originCheck = verifyRequestOrigin(request, config);
