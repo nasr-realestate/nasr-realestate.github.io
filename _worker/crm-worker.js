@@ -38,6 +38,7 @@ const UI_ASSET_PATHS = new Set([
   '/crm-assets/app.js',
   '/crm-assets/icon-192.png',
   '/crm-assets/icon-512.png',
+  '/crm-assets/icon-maskable-512.png',
 ]);
 const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
@@ -1330,6 +1331,27 @@ function attachHeaders(response, extraHeaders) {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers: merged });
 }
 
+function applyPwaAssetHeaders(pathname, assetHeaders) {
+  const isPwaPublicMeta = pathname === '/crm-manifest.webmanifest' || pathname.endsWith('.png');
+  if (pathname === '/crm-manifest.webmanifest') {
+    assetHeaders.set('content-type', 'application/manifest+json; charset=utf-8');
+  } else if (pathname.endsWith('.png')) {
+    assetHeaders.set('content-type', 'image/png');
+  } else if (pathname.endsWith('.js')) {
+    assetHeaders.set('content-type', 'application/javascript; charset=utf-8');
+  }
+  if (isPwaPublicMeta) {
+    assetHeaders.set('cache-control', 'public, max-age=3600');
+    assetHeaders.delete('pragma');
+  } else {
+    assetHeaders.set('cache-control', 'private, no-store');
+    assetHeaders.set('pragma', 'no-cache');
+    assetHeaders.set('x-frame-options', 'DENY');
+    assetHeaders.set('content-security-policy', UI_CSP);
+  }
+  if (pathname === '/crm-sw.js') assetHeaders.set('service-worker-allowed', '/');
+}
+
 async function serveUiAsset(request, url, env) {
   if ((request.method !== 'GET' && request.method !== 'HEAD') || !env.ASSETS) return null;
   if (!UI_ASSET_PATHS.has(url.pathname)) return null;
@@ -1338,13 +1360,9 @@ async function serveUiAsset(request, url, env) {
   const assetRequest = new Request(assetUrl.toString(), { method: request.method, headers: request.headers });
   const asset = await env.ASSETS.fetch(assetRequest);
   const assetHeaders = new Headers(asset.headers);
-  assetHeaders.set('cache-control', 'private, no-store');
-  assetHeaders.set('pragma', 'no-cache');
   assetHeaders.set('x-content-type-options', 'nosniff');
-  assetHeaders.set('x-frame-options', 'DENY');
   assetHeaders.set('referrer-policy', 'same-origin');
-  assetHeaders.set('content-security-policy', UI_CSP);
-  if (url.pathname === '/crm-sw.js') assetHeaders.set('service-worker-allowed', '/');
+  applyPwaAssetHeaders(url.pathname, assetHeaders);
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: assetHeaders });
 }
 

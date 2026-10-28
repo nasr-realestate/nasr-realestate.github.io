@@ -65,7 +65,13 @@ function mockAssets() {
       if (pathname === '/crm-manifest.webmanifest') {
         return new Response('{"name":"CRM"}', {
           status: 200,
-          headers: { 'content-type': 'application/manifest+json; charset=utf-8' },
+          headers: { 'content-type': 'application/octet-stream' },
+        });
+      }
+      if (pathname.endsWith('.png')) {
+        return new Response(new Uint8Array([137, 80, 78, 71]), {
+          status: 200,
+          headers: { 'content-type': 'application/octet-stream' },
         });
       }
       if (pathname === '/crm-assets/app.css') {
@@ -633,10 +639,21 @@ test('delivers encrypted Web Push notifications, runs scheduled due/digest alert
     },
   });
 
-  // Service worker asset includes Service-Worker-Allowed: / and unauthenticated push API returns 401
+  // Service worker + WebAPK manifest/icon headers and unauthenticated push API 401
   const swAssetRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/crm-sw.js`), env);
   assert.equal(swAssetRes.status, 200);
   assert.equal(swAssetRes.headers.get('service-worker-allowed'), '/');
+  assert.match(swAssetRes.headers.get('content-type') || '', /application\/javascript/);
+
+  const mfRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/crm-manifest.webmanifest`), env);
+  assert.equal(mfRes.status, 200);
+  assert.equal(mfRes.headers.get('content-type'), 'application/manifest+json; charset=utf-8');
+  assert.equal(mfRes.headers.get('cache-control'), 'public, max-age=3600');
+
+  const iconRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/crm-assets/icon-maskable-512.png`), env);
+  assert.equal(iconRes.status, 200);
+  assert.equal(iconRes.headers.get('content-type'), 'image/png');
+  assert.equal(iconRes.headers.get('cache-control'), 'public, max-age=3600');
 
   const unauthPushRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/push/config`), env);
   assert.equal(unauthPushRes.status, 401);

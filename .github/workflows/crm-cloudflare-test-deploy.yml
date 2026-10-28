@@ -289,6 +289,39 @@ jobs:
               finish
               exit 1
             fi
+            # Live Chromium CDP PWA Installability & Service Worker verification
+            if ! BASE_URL="$BASE_URL" node --input-type=module -e '
+              import assert from "node:assert/strict";
+              import { chromium } from "playwright";
+              const browser = await chromium.launch({ headless: true });
+              try {
+                const context = await browser.newContext();
+                const page = await context.newPage();
+                const cdp = await context.newCDPSession(page);
+                await page.goto(process.env.BASE_URL + "/", { waitUntil: "networkidle" });
+                await page.locator("html[data-crm-ready=\"true\"]").waitFor({ state: "attached", timeout: 15000 });
+                const swReady = await page.evaluate(async () => {
+                  const reg = await navigator.serviceWorker.ready;
+                  return Boolean(reg && reg.active && reg.scope.endsWith("/"));
+                });
+                assert.equal(swReady, true, "Service worker must be active on initial load");
+                await page.reload({ waitUntil: "networkidle" });
+                const swControlled = await page.evaluate(() => Boolean(navigator.serviceWorker.controller));
+                assert.equal(swControlled, true, "Page must be controlled by /crm-sw.js");
+                const mf = await cdp.send("Page.getAppManifest");
+                assert.deepEqual(mf.errors || [], [], "Manifest errors: " + JSON.stringify(mf.errors));
+                const inst = await cdp.send("Page.getInstallabilityErrors");
+                assert.deepEqual(inst.installabilityErrors || [], [], "Installability errors: " + JSON.stringify(inst.installabilityErrors));
+              } finally {
+                await browser.close();
+              }
+            ' > "$TMP/pwa_verify.log" 2>&1; then
+              pwa_diag=$(tr -cd 'A-Za-z0-9_:-' < "$TMP/pwa_verify.log" | tail -c 110 || true)
+              result="pwa-installability-failed-${pwa_diag}"
+              finish
+              exit 1
+            fi
+            mobile_browser='pwa-verified'
             login_and_crud='preserved-owner-secret'
             unauth_rejected='yes'
             phase='completed'

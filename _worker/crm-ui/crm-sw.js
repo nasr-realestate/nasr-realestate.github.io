@@ -1,4 +1,4 @@
-/* Private CRM Web Push Service Worker — zero offline storage, same-origin only */
+/* Private CRM Web Push & PWA Service Worker — zero offline storage, same-origin only */
 
 self.addEventListener('install', event => {
   event.waitUntil(self.skipWaiting());
@@ -6,6 +6,14 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
+});
+
+// Network-only navigation handler required by Chrome Android WebAPK installability (zero cache storage)
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET' || event.request.mode !== 'navigate') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+  event.respondWith(fetch(event.request));
 });
 
 function resolveSafeTargetUrl(rawUrl) {
