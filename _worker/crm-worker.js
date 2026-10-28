@@ -862,7 +862,7 @@ async function updateContact(request, env, contactId) {
   }
 }
 
-const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,80000})$/;
+const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,240000})$/;
 
 export async function generateIngestKeyPair() {
   const pair = await crypto.subtle.generateKey(
@@ -919,10 +919,62 @@ async function unsealIngestPayload(envelope, privateKeyPkcs8B64u) {
     const aesKey = await crypto.subtle.importKey('raw', rawAes, { name: 'AES-GCM' }, false, ['decrypt']);
     const plainBytes = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, cipher);
     const parsed = JSON.parse(decoder.decode(plainBytes));
-    return parsed && Array.isArray(parsed.entries) ? parsed.entries : null;
+    if (!parsed || !Array.isArray(parsed.entries)) return null;
+    return {
+      entries: parsed.entries,
+      wipeExistingCustomers: parsed.wipe_existing_customers === true,
+    };
   } catch {
     return null;
   }
+}
+
+async function wipeExistingCustomerData(db) {
+  await db.batch([
+    db.prepare('DELETE FROM crm_opportunity_properties'),
+    db.prepare('DELETE FROM crm_activities'),
+    db.prepare('DELETE FROM crm_opportunities'),
+    db.prepare('DELETE FROM crm_contact_phones'),
+    db.prepare("DELETE FROM crm_idempotency_receipts WHERE submission_key != 'system:ingest-public-key-v1' AND submission_key NOT LIKE 'sealed-ticket:%'"),
+    db.prepare('DELETE FROM crm_contacts'),
+  ]);
+}
+
+async function appendExtraPhonesStatements(db, statements, contactId, extraPhones, primaryPhone) {
+  if (!Array.isArray(extraPhones)) return;
+  const seen = new Set(primaryPhone ? [primaryPhone] : []);
+  for (const item of extraPhones.slice(0, 6)) {
+    const extraKey = normalizePhone(item?.phone);
+    if (!extraKey || seen.has(extraKey)) continue;
+    seen.add(extraKey);
+    if (await findPhone(db, extraKey)) continue;
+    statements.push(
+      db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,0)')
+        .bind(id(), contactId, extraKey, boundedText(item?.label, 40) || 'إضافي'),
+    );
+  }
+}
+
+async function insertSealedContactOnlyEntry(db, entry, subKey, phone) {
+  const name = boundedText(entry.name, 100);
+  if (!name && !phone) return null;
+  const existingPhone = phone ? await findPhone(db, phone) : null;
+  if (existingPhone) return { createdContact: 0, updatedContact: 0, createdOpportunity: 0, linkedProperty: 0 };
+  const contactId = id();
+  const statements = [
+    db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').bind(contactId, name),
+    db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+      .bind(subKey, 'contact', contactId),
+  ];
+  if (phone) {
+    statements.push(
+      db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,1)')
+        .bind(id(), contactId, phone, boundedText(entry.phone_label, 40) || 'واتساب'),
+    );
+  }
+  await appendExtraPhonesStatements(db, statements, contactId, entry.extra_phones, phone);
+  await db.batch(statements);
+  return { createdContact: 1, updatedContact: 0, createdOpportunity: 0, linkedProperty: 0 };
 }
 
 async function findPlaceholderBySourceUrl(db, sourceUrl) {
@@ -968,6 +1020,7 @@ async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
           .bind(id(), contactId, phone, boundedText(entry.phone_label, 40) || 'واتساب'),
       );
     }
+    await appendExtraPhonesStatements(db, statements, contactId, entry.extra_phones, phone);
   }
   const sourceUrl = safeSitePath(entry.source_url);
   statements.push(
@@ -1002,6 +1055,10 @@ async function applySingleIngestEntry(db, scope, entry) {
   if (await receipt(db, subKey)) return { skipped: 1 };
   const phone = entry.phone ? normalizePhone(entry.phone) : null;
   if (entry.phone && !phone) return { skipped: 1 };
+  if (entry.entry_type === 'contact_only') {
+    const contactOnly = await insertSealedContactOnlyEntry(db, entry, subKey, phone);
+    return contactOnly ? { skipped: 0, ...contactOnly } : { skipped: 1 };
+  }
   const sourceUrl = safeSitePath(entry.source_url);
   const placeholder = sourceUrl ? await findPlaceholderBySourceUrl(db, sourceUrl) : null;
   if (placeholder && (!phone || !(await findPhone(db, phone)))) {
@@ -1017,7 +1074,7 @@ async function handleSealedIngest(request, env, config) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const privKey = typeof env.CRM_INGEST_PRIVATE_KEY === 'string' ? env.CRM_INGEST_PRIVATE_KEY.trim() : '';
   if (!privKey) return json({ error: 'ingest_not_configured' }, 503);
-  const body = await readJson(request, 90_000);
+  const body = await readJson(request, 260_000);
   const envelope = typeof body.sealed_payload === 'string' ? body.sealed_payload.trim() : '';
   if (!SEALED_ENVELOPE_RE.test(envelope)) return json({ error: 'invalid_sealed_envelope' }, 400);
 
@@ -1027,8 +1084,8 @@ async function handleSealedIngest(request, env, config) {
     return json({ error: 'unauthorized_sealed_ingest' }, 403);
   }
 
-  const entries = await unsealIngestPayload(envelope, privKey);
-  if (!entries || entries.length === 0 || entries.length > 25) {
+  const unsealed = await unsealIngestPayload(envelope, privKey);
+  if (!unsealed || unsealed.entries.length === 0 || unsealed.entries.length > 100) {
     return json({ error: 'invalid_sealed_payload' }, 400);
   }
 
@@ -1036,8 +1093,20 @@ async function handleSealedIngest(request, env, config) {
     .bind(ticketKey)
     .run();
 
-  const totals = { processed: 0, created_contacts: 0, updated_contacts: 0, created_opportunities: 0, linked_properties: 0, skipped: 0 };
-  for (const entry of entries) {
+  if (unsealed.wipeExistingCustomers) {
+    await wipeExistingCustomerData(env.DB);
+  }
+
+  const totals = {
+    wiped_existing: unsealed.wipeExistingCustomers,
+    processed: 0,
+    created_contacts: 0,
+    updated_contacts: 0,
+    created_opportunities: 0,
+    linked_properties: 0,
+    skipped: 0,
+  };
+  for (const entry of unsealed.entries) {
     const res = await applySingleIngestEntry(env.DB, config.scope, entry);
     if (res.skipped) {
       totals.skipped += 1;

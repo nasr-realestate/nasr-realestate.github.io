@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - master
-      - arena/fc5d95ec-nasr-realestate-github-io
-      - arena/4233ddf4-nasr-realestate-github-io
+      - 'arena/**'
     paths:
       - .github/workflows/crm-cloudflare-test-deploy.yml
       - scripts/crm/build-crm-site-seed-sql.mjs
