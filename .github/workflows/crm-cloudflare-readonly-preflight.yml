@@ -3,7 +3,7 @@ name: CRM Cloudflare read-only preflight
 on:
   push:
     branches:
-      - arena/a9241018-nasr-realestate-github-io
+      - arena/fc5d95ec-nasr-realestate-github-io
     paths:
       - .github/workflows/crm-cloudflare-readonly-preflight.yml
   workflow_dispatch:
@@ -103,8 +103,7 @@ jobs:
           fi
           account_count=$(jq -r '.result | length' "$TMP/accounts.json")
           case "$account_count" in ''|*[!0-9]*) accounts='http=200;count=unparseable'; outcome="$outcome;account-response-invalid"; finish; exit 0;; esac
-          account_names=$(jq -r '[.result[]?.name // empty] | map(gsub("[\\r\\n]";" ")) | join(",")' "$TMP/accounts.json" 2>/dev/null | tr -cd '[:alnum:] _.,-/' | cut -c1-100 || true)
-          accounts="http=200;count=$account_count;names=${account_names:-not-returned}"
+          accounts="http=200;count=$account_count"
           if [ "$account_count" -ne 1 ]; then
             outcome="$outcome;account-selection-required"
             finish
@@ -120,14 +119,15 @@ jobs:
             groups="account_verify_http=$account_verify_code;status=$account_verify_status"
           fi
           inventory_probe() {
-            local url="$1" destination="$2" code count names
+            local url="$1" destination="$2" code count names err_code
             code=$(get_json "$url" "$destination")
             if [ "$code" = 200 ]; then
               count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$destination" 2>/dev/null || echo unknown)
               names=$(jq -r '[.result[]? | (.name // .id // .script_name // empty)] | map(gsub("[\\r\\n]";" ")) | join(",")' "$destination" 2>/dev/null | tr -cd '[:alnum:] _.,-/' | cut -c1-100 || true)
               printf 'http=%s;count=%s;names=%s' "$code" "$count" "${names:-none-or-hidden}"
             else
-              printf 'http=%s;read-denied-or-unavailable' "$code"
+              err_code=$(jq -r '[.errors[]?.code|tostring] | unique | join(",")' "$destination" 2>/dev/null | tr -cd '0-9,' | cut -c1-32 || true)
+              printf 'http=%s;error=%s;read-denied-or-unavailable' "$code" "${err_code:-unknown}"
             fi
           }
           d1=$(inventory_probe "$API/accounts/$account_id/d1/database?per_page=100" "$TMP/d1.json")
