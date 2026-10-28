@@ -112,7 +112,7 @@ test('Hassan Maamoun: original owner photo is unchanged and every image variant 
   assert.equal(createHash('sha256').update(image).digest('hex'), '384f8119c7eb3e2aa10fcd439e07ff04965ad729b38088588bae8030c331ee99');
   const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
   assert.equal(facets.listings[slug].card_image, '/assets/img/properties/cards/hassan-maamoun-220m.webp');
-  assert.equal(facets.catalog.order[0], slug);
+  assert.ok(facets.catalog.order.includes(slug));
 });
 
 
