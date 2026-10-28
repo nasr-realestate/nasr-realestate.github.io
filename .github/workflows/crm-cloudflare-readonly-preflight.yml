@@ -1,0 +1,248 @@
+name: CRM Cloudflare read-only preflight
+
+on:
+  push:
+    branches:
+      - arena/fc5d95ec-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-cloudflare-readonly-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-cloudflare-readonly-preflight
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Read-only Cloudflare GET probes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    outputs:
+      outcome: ${{ steps.probe.outputs.outcome }}
+      verify: ${{ steps.probe.outputs.verify }}
+      groups: ${{ steps.probe.outputs.groups }}
+      accounts: ${{ steps.probe.outputs.accounts }}
+      d1: ${{ steps.probe.outputs.d1 }}
+      workers: ${{ steps.probe.outputs.workers }}
+      access: ${{ steps.probe.outputs.access }}
+      zones: ${{ steps.probe.outputs.zones }}
+      zero_trust: ${{ steps.probe.outputs.zero_trust }}
+      identity_providers: ${{ steps.probe.outputs.identity_providers }}
+      workers_subdomain: ${{ steps.probe.outputs.workers_subdomain }}
+    steps:
+      - name: Verify exact secret and inventory read access (GET only)
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          outcome='not-run'
+          verify='not-run'
+          groups='not-returned'
+          accounts='not-run'
+          d1='not-run'
+          workers='not-run'
+          access='not-run'
+          zones='not-run'
+          zero_trust='not-run'
+          identity_providers='not-run'
+          workers_subdomain='not-run'
+          finish() {
+            {
+              echo "outcome=$outcome"
+              echo "verify=$verify"
+              echo "groups=$groups"
+              echo "accounts=$accounts"
+              echo "d1=$d1"
+              echo "workers=$workers"
+              echo "access=$access"
+              echo "zones=$zones"
+              echo "zero_trust=$zero_trust"
+              echo "identity_providers=$identity_providers"
+              echo "workers_subdomain=$workers_subdomain"
+            } >> "$GITHUB_OUTPUT"
+          }
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            outcome='secret-unavailable-to-workflow'
+            verify='not-requested'
+            accounts='not-requested'
+            finish
+            exit 0
+          fi
+          echo '::add-mask::'"$CLOUDFLARE_API_TOKEN"
+          auth_header="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          get_json() {
+            local url="$1" destination="$2" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --header "$auth_header" --output "$destination" --write-out '%{http_code}' "$url" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
+          token_status=$(jq -r '.result.status // "unknown"' "$TMP/verify.json" 2>/dev/null || echo unknown)
+          verify_error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/verify.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
+          verify="http=$verify_code;active=$([ "$token_status" = active ] && echo yes || echo no);error=${verify_error_code:-none}"
+          if [ "$verify_code" = 200 ] && [ "$token_status" = active ]; then
+            outcome='token-verify-endpoint-accepted'
+          else
+            outcome='token-verify-endpoint-rejected;testing-account-read'
+          fi
+          accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/accounts.json")
+          if [ "$accounts_code" != 200 ]; then
+            accounts="http=$accounts_code;inventory=denied-or-unavailable"
+            outcome="$outcome;account-read-failed"
+            finish
+            exit 0
+          fi
+          account_count=$(jq -r '.result | length' "$TMP/accounts.json")
+          case "$account_count" in ''|*[!0-9]*) accounts='http=200;count=unparseable'; outcome="$outcome;account-response-invalid"; finish; exit 0;; esac
+          accounts="http=200;count=$account_count"
+          if [ "$account_count" -ne 1 ]; then
+            outcome="$outcome;account-selection-required"
+            finish
+            exit 0
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          account_verify_code=$(get_json "$API/accounts/$account_id/tokens/verify" "$TMP/account-verify.json")
+          account_verify_status=$(jq -r '.result.status // "unknown"' "$TMP/account-verify.json" 2>/dev/null || echo unknown)
+          if [ "$account_verify_code" = 200 ] && [ "$account_verify_status" = active ]; then
+            groups=$(jq -r '[.result.policies[]?.permission_groups[]?.name] | unique | join(",")' "$TMP/account-verify.json" 2>/dev/null | tr -d '\r\n' | cut -c1-180 || true)
+            [ -n "$groups" ] || groups='active-no-groups-returned'
+          else
+            groups="account_verify_http=$account_verify_code;status=$account_verify_status"
+          fi
+          inventory_probe() {
+            local url="$1" destination="$2" code count names err_code
+            code=$(get_json "$url" "$destination")
+            if [ "$code" = 200 ]; then
+              count=$(jq -r 'if (.result|type)=="array" then (.result|length) else "unknown" end' "$destination" 2>/dev/null || echo unknown)
+              names=$(jq -r '[.result[]? | (.name // .id // .script_name // empty)] | map(gsub("[\\r\\n]";" ")) | join(",")' "$destination" 2>/dev/null | tr -cd '[:alnum:] _.,-/' | cut -c1-100 || true)
+              printf 'http=%s;count=%s;names=%s' "$code" "$count" "${names:-none-or-hidden}"
+            else
+              err_code=$(jq -r '[.errors[]?.code|tostring] | unique | join(",")' "$destination" 2>/dev/null | tr -cd '0-9,' | cut -c1-32 || true)
+              printf 'http=%s;error=%s;read-denied-or-unavailable' "$code" "${err_code:-unknown}"
+            fi
+          }
+          d1=$(inventory_probe "$API/accounts/$account_id/d1/database?per_page=100" "$TMP/d1.json")
+          workers=$(inventory_probe "$API/accounts/$account_id/workers/scripts?per_page=100" "$TMP/workers.json")
+          access=$(inventory_probe "$API/accounts/$account_id/access/apps?per_page=100" "$TMP/access.json")
+          zones=$(inventory_probe "$API/zones?account.id=$account_id&per_page=100" "$TMP/zones.json")
+          org_code=$(get_json "$API/accounts/$account_id/access/organizations" "$TMP/organization.json")
+          if [ "$org_code" = 200 ] && jq -e '.result | type == "object"' "$TMP/organization.json" >/dev/null 2>&1; then
+            has_auth_domain=$(jq -r 'if ((.result.auth_domain // "")|length)>0 then "yes" else "no" end' "$TMP/organization.json")
+            zero_trust="http=200;configured=yes;auth-domain=$has_auth_domain"
+          else
+            org_error_code=$(jq -r '[.errors[]?.code|tostring] | unique | join(",")' "$TMP/organization.json" 2>/dev/null | tr -cd '0-9,' | cut -c1-32 || true)
+            if [ "$org_code" = 403 ]; then
+              zero_trust="http=403;error=${org_error_code:-unknown};configured=unknown"
+            else
+              zero_trust="http=$org_code;error=${org_error_code:-unknown};configured=no-or-unavailable"
+            fi
+          fi
+          idp_code=$(get_json "$API/accounts/$account_id/access/identity_providers?per_page=100" "$TMP/idps.json")
+          if [ "$idp_code" = 200 ]; then
+            idp_count=$(jq -r 'if (.result|type)=="array" then (.result|length) else 0 end' "$TMP/idps.json" 2>/dev/null || echo unknown)
+            idp_types=$(jq -r '[.result[]?.type // empty] | unique | join(",")' "$TMP/idps.json" 2>/dev/null | tr -cd '[:alnum:]_,-' | cut -c1-120 || true)
+            identity_providers="http=200;count=$idp_count;types=${idp_types:-none}"
+          else
+            identity_providers="http=$idp_code;read-denied-or-unavailable"
+          fi
+          subdomain_code=$(get_json "$API/accounts/$account_id/workers/subdomain" "$TMP/subdomain.json")
+          if [ "$subdomain_code" = 200 ] && jq -e '(.result.subdomain // "")|length>0' "$TMP/subdomain.json" >/dev/null 2>&1; then
+            workers_subdomain='http=200;configured=yes'
+          else
+            workers_subdomain="http=$subdomain_code;configured=no-or-unavailable"
+          fi
+          finish
+          {
+            echo '## CRM Cloudflare preflight — read-only'
+            echo '- Secret: `ARENA_CLOUDFLARE_TOKEN` was passed to this job; its value was not printed or saved as an artifact.'
+            echo '- Requests: GET only. No resources, routes, policies, DNS, D1 rows, or Worker code were created or changed.'
+            echo "- Authentication: $outcome; verification $verify"
+            echo "- Token permission metadata: $groups"
+            echo "- Accounts: $accounts"
+            echo "- D1: $d1"
+            echo "- Workers: $workers"
+            echo "- Access applications: $access"
+            echo "- Zones: $zones"
+            echo "- Zero Trust organization: $zero_trust"
+            echo "- Access identity provider types: $identity_providers"
+            echo "- workers.dev subdomain: $workers_subdomain (value intentionally omitted)"
+          } >> "$GITHUB_STEP_SUMMARY"
+  report-auth:
+    name: 'CRM auth — ${{ needs.probe.outputs.outcome }} — ${{ needs.probe.outputs.verify }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret auth result is encoded in this check name.'
+  report-permissions:
+    name: 'CRM token permissions — ${{ needs.probe.outputs.groups }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret permission metadata is encoded in this check name.'
+  report-accounts:
+    name: 'CRM accounts — ${{ needs.probe.outputs.accounts }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret account inventory is encoded in this check name.'
+  report-d1:
+    name: 'CRM D1 inventory — ${{ needs.probe.outputs.d1 }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret D1 inventory is encoded in this check name.'
+  report-workers:
+    name: 'CRM Worker inventory — ${{ needs.probe.outputs.workers }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret Worker inventory is encoded in this check name.'
+  report-access:
+    name: 'CRM Access inventory — ${{ needs.probe.outputs.access }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret Access inventory is encoded in this check name.'
+  report-zones:
+    name: 'CRM Zone inventory — ${{ needs.probe.outputs.zones }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret Zone inventory is encoded in this check name.'
+  report-zero-trust:
+    name: 'CRM Zero Trust — ${{ needs.probe.outputs.zero_trust }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret Zero Trust organization status is encoded in this check name.'
+  report-access-idp:
+    name: 'CRM Access IdP — ${{ needs.probe.outputs.identity_providers }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret identity-provider types are encoded in this check name.'
+  report-workers-subdomain:
+    name: 'CRM workers.dev — ${{ needs.probe.outputs.workers_subdomain }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'The workers.dev subdomain value is intentionally omitted.'

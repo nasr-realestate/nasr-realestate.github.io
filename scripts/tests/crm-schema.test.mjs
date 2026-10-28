@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 
 const migration = await readFile(new URL('../../_worker/migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
+const authMigration = await readFile(new URL('../../_worker/migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
@@ -23,25 +24,30 @@ test('CRM migration is additive and leaves every pre-existing market/valuation t
   db.exec(migration);
   const after = db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'crm_%' ORDER BY name").all();
   assert.deepEqual(after, before);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name LIKE 'crm_%'").get().n, 5);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name LIKE 'crm_%'").get().n, 6);
   db.close();
 });
 
-test('one canonical Egyptian number is unique while one contact may have multiple opportunities', () => {
+test('phone methods are separate from customers, unique across customers, and customers support multiple opportunities', () => {
   const db = fixture(); db.exec(migration);
-  db.prepare('INSERT INTO crm_contacts(id, phone_key, name) VALUES(?,?,?)').run('c1','201012345678','Test Contact');
+  db.prepare('INSERT INTO crm_contacts(id, name) VALUES(?,?)').run('c1','Test Contact');
+  db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,is_primary) VALUES(?,?,?,1)').run('p1','c1','201012345678');
+  db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES(?,?,?)').run('p2','c1','201055566677');
   const opp = db.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,next_action,next_followup_at)
     VALUES(?,?,?,?,?,?)`);
   opp.run('o1','c1','buy','call','Send suitable listings','2026-11-01T10:00:00Z');
   opp.run('o2','c1','rent','whatsapp','Call about rent','2026-11-02T10:00:00Z');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM crm_opportunities WHERE contact_id=?').get('c1').n,2);
-  assert.ok(errorOf(()=>db.prepare('INSERT INTO crm_contacts(id,phone_key) VALUES(?,?)').run('c2','201012345678')));
+  db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').run('c2','Other Contact');
+  assert.ok(errorOf(()=>db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES(?,?,?)').run('p3','c2','201012345678')));
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM crm_contact_phones WHERE contact_id=?').get('c1').n,2);
+  assert.ok(errorOf(()=>db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,is_primary) VALUES(?,?,?,1)').run('p4','c1','201077788899')));
   db.close();
 });
 
 test('active pipeline items require a dated next action or an explicit no-follow-up reason', () => {
   const db = fixture(); db.exec(migration);
-  db.prepare('INSERT INTO crm_contacts(id,phone_key) VALUES(?,?)').run('c1','201012345678');
+  db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').run('c1','Test Contact');
   const base = db.prepare('INSERT INTO crm_opportunities(id,contact_id,intent,source,status) VALUES(?,?,?,?,?)');
   assert.ok(errorOf(()=>base.run('bad','c1','buy','call','active')));
   db.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,status,no_followup_reason) VALUES(?,?,?,?,?,?)`)
@@ -55,7 +61,7 @@ test('City scope, lost reason, follow-up due lists, and listing links are constr
   db.prepare('INSERT INTO sources(id,name) VALUES(1,?)').run('fixture');
   db.prepare('INSERT INTO areas(id,name_ar) VALUES(1,?)').run('مدينة نصر');
   db.prepare('INSERT INTO listings(id,source_id,area_id,price) VALUES(1,1,1,1000000)').run();
-  db.prepare('INSERT INTO crm_contacts(id,phone_key) VALUES(?,?)').run('c1','201012345678');
+  db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').run('c1','Test Contact');
   const add = db.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,status,next_action,next_followup_at,closed_at,loss_reason)
     VALUES(?,?,?,?,?,?,?,?,?)`);
   add.run('due','c1','buy','website','active','Call back','2026-10-27T10:00:00Z',null,null);
@@ -70,3 +76,27 @@ test('City scope, lost reason, follow-up due lists, and listing links are constr
   assert.equal(db.prepare('SELECT listing_id FROM crm_opportunity_properties WHERE opportunity_id=?').get('due').listing_id,1);
   db.close();
 });
+
+test('0002 internal auth migration adds hashed session and rate-limit tables with strict checks', () => {
+  const db = fixture();
+  const before = db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' ORDER BY name").all();
+  db.exec(migration);
+  db.exec(authMigration);
+  const after = db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'crm_%' ORDER BY name").all();
+  assert.deepEqual(after, before);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name LIKE 'crm_%'").get().n, 8);
+
+  const validHexA = 'a'.repeat(64);
+  const validHexB = 'b'.repeat(64);
+  db.prepare(`INSERT INTO crm_sessions(id,token_hash,csrf_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)`)
+    .run('sess_12345678', validHexA, validHexB, 1793188800, 1793217600, 1793188800);
+  assert.ok(errorOf(() => db.prepare(`INSERT INTO crm_sessions(id,token_hash,csrf_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)`)
+    .run('sess_bad_hex', 'plaintext-token', validHexB, 1793188800, 1793217600, 1793188800)));
+
+  db.prepare(`INSERT INTO crm_auth_attempts(bucket_key,failures,window_started_at,blocked_until) VALUES(?,?,?,?)`)
+    .run('ip:' + 'c'.repeat(32), 3, 1793188800, 0);
+  assert.ok(errorOf(() => db.prepare(`INSERT INTO crm_auth_attempts(bucket_key,failures,window_started_at,blocked_until) VALUES(?,?,?,?)`)
+    .run('ip:neg_attempts', -1, 1793188800, 0)));
+  db.close();
+});
+

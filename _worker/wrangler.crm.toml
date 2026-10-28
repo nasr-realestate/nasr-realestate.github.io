@@ -1,15 +1,28 @@
-# Private CRM API. Configuration only; do not deploy until Cloudflare Access
-# is configured and independently verified. No public route is configured here.
-name = "nasr-crm-api"
+name = "nasr-crm-api-test"
 main = "crm-worker.js"
-compatibility_date = "2026-09-04"
+compatibility_date = "2025-11-17"
 workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "crm-ui"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"
+not_found_handling = "none"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "nasr-market-db"
-database_id = "ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"
+database_name = "nasr-crm-test-db"
+database_id = "65bfcb14-4b48-423b-916f-00eefdb9ae1e"
 migrations_dir = "migrations"
 
-[observability]
-enabled = true
+[vars]
+CRM_ALLOWED_ORIGIN = "https://nasr-crm-api-test.footcai-555.workers.dev"
+CRM_SITE_SOURCE_ID = "9009"
+CRM_NASR_AREA_IDS = "90001"
+
+# Required secrets (store ONLY as Cloudflare Worker Secrets; NEVER commit to git, JS, or logs):
+# - CRM_SESSION_SECRET        (>= 32 random chars; HMAC-SHA256 pepper for session/CSRF/IP hashes)
+# - CRM_ACCESS_CODE_VERIFIER  (preferred: pbkdf2-sha256$<iterations>$<salt_b64url>$<hash_b64url>)
+#   OR CRM_ACCESS_CODE        (>= 24 non-whitespace random chars)
