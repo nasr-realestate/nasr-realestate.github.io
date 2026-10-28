@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - arena/4233ddf4-nasr-realestate-github-io
+      - 'arena/**'
     paths:
       - .github/workflows/crm-sealed-ingest.yml
       - _worker/ingest-queue/sealed.txt
@@ -33,6 +33,7 @@ jobs:
     outputs:
       result: ${{ steps.run_ingest.outputs.result }}
       processed: ${{ steps.run_ingest.outputs.processed }}
+      updated: ${{ steps.run_ingest.outputs.updated }}
       contacts: ${{ steps.run_ingest.outputs.contacts }}
       phones: ${{ steps.run_ingest.outputs.phones }}
       opps: ${{ steps.run_ingest.outputs.opps }}
@@ -64,6 +65,7 @@ jobs:
 
           result='not-run'
           processed='0'
+          updated='0'
           contacts='0'
           phones='0'
           opps='0'
@@ -79,6 +81,7 @@ jobs:
             {
               printf 'result=%s\n' "$result"
               printf 'processed=%s\n' "$processed"
+              printf 'updated=%s\n' "$updated"
               printf 'contacts=%s\n' "$contacts"
               printf 'phones=%s\n' "$phones"
               printf 'opps=%s\n' "$opps"
@@ -205,6 +208,7 @@ jobs:
           fi
 
           processed=$(jq -r '(.processed // 0) | tostring' "$TMP/resp.json")
+          updated=$(jq -r '(.updated_contacts // 0) | tostring' "$TMP/resp.json")
 
           COUNTS_SQL="SELECT
             (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
@@ -254,7 +258,7 @@ jobs:
     steps: [{ run: echo ok }]
 
   report:
-    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
+    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, updated=${{ needs.ingest.outputs.updated }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
     needs: ingest
     if: always()
     runs-on: ubuntu-latest
