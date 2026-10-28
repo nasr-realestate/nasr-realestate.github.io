@@ -236,10 +236,13 @@ jobs:
             finish
             exit 1
           fi
+          sleep 4
 
           phase='live-http-e2e'
           if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-e2e-runner.mjs > "$TMP/e2e_out.json"; then
-            result='live-e2e-assertions-failed'
+            failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/e2e_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/e2e_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            result="e2e-failed-${failed_step:-unknown}-${failed_reason:-unknown}"
             finish
             exit 1
           fi
