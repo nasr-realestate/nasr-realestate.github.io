@@ -175,7 +175,7 @@ jobs:
             exit 0
           fi
 
-          if [ "${#envelope}" -gt 80000 ] || [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
+          if [ "${#envelope}" -gt 240000 ] || [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
             result='invalid-envelope-format'
             finish
             exit 1

@@ -489,14 +489,16 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   assert.equal(updatedDetail.phones.length, 1);
   assert.equal(updatedDetail.phones[0].phone_key, '201099887766');
 
-  // 2. Sealed-box encrypted ingest rejects un-ticketed ciphertexts, accepts ticketed ciphertext once, and blocks replay
+  // 2. Sealed-box encrypted ingest wipes prior customers when requested, supports extra_phones + contact_only, and blocks replay
   const sealedEnvelope = await sealIngestPayload({
+    wipe_existing_customers: true,
     entries: [
       {
         submission_key: 'sealed-owner-test-0001',
         name: 'عميل مشفر تجريبي',
-        phone: '+20 15 50001122',
-        phone_label: 'واتساب',
+        phone: '+33 6 22413234',
+        phone_label: 'واتساب دولي',
+        extra_phones: [{ phone: '01299001122', label: 'موبايل مصري' }],
         intent: 'sell',
         source: 'whatsapp',
         source_url: '/properties/test-unit/',
@@ -510,6 +512,13 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
         external_id: 'nasr-1',
         no_followup_reason: 'معروض بالموقع',
         notes: 'بيانات مشفرة للاختبار المعزول فقط',
+      },
+      {
+        submission_key: 'sealed-contact-only-test-0002',
+        entry_type: 'contact_only',
+        name: 'عميل خارج النطاق تجريبي',
+        phone: '01099002233',
+        phone_label: 'هاتف',
       },
     ],
   }, keyPair.publicKeySpkiB64u);
@@ -533,8 +542,9 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   }), env);
   assert.equal(accepted.status, 200);
   const acceptedJson = await accepted.json();
-  assert.equal(acceptedJson.processed, 1);
-  assert.equal(acceptedJson.created_contacts, 1);
+  assert.equal(acceptedJson.wiped_existing, true);
+  assert.equal(acceptedJson.processed, 2);
+  assert.equal(acceptedJson.created_contacts, 2);
   assert.equal(acceptedJson.created_opportunities, 1);
   assert.equal(acceptedJson.linked_properties, 1);
 
@@ -545,10 +555,14 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   }), env);
   assert.equal(replay.status, 403);
 
+  const allContacts = await (await call('/api/contacts')).json();
+  assert.equal(allContacts.contacts.length, 2, 'Old placeholder customer wiped; only new batch exists');
   const opps = await (await call('/api/opportunities?status=active')).json();
   const sealedOpp = opps.opportunities.find(o => o.contact_name === 'عميل مشفر تجريبي');
   assert.ok(sealedOpp, 'Expected decrypted opportunity in D1');
-  assert.equal(sealedOpp.phone_key, '201550001122');
+  assert.equal(sealedOpp.phone_key, '33622413234');
+  const sealedContactDetail = await (await call(`/api/contacts/${sealedOpp.contact_id}`)).json();
+  assert.equal(sealedContactDetail.phones.length, 2);
 
   sqlite.close();
 });
