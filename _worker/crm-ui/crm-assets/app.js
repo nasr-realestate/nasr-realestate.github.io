@@ -10,7 +10,21 @@ const state = {
   listings: [],
   pushPublicKey: '',
   pushEndpoint: '',
+  deferredInstallPrompt: null,
 };
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  state.deferredInstallPrompt = event;
+  const installBtn = $('#pwa-install-btn');
+  if (installBtn && !isStandalonePwa()) installBtn.hidden = false;
+});
+
+window.addEventListener('appinstalled', () => {
+  state.deferredInstallPrompt = null;
+  const installBtn = $('#pwa-install-btn');
+  if (installBtn) installBtn.hidden = true;
+});
 
 const STATUS_LABELS = {
   active: 'نشطة',
@@ -858,6 +872,34 @@ function renderPushCardView({ pill, active = false, text, canEnable = false, sub
   $('#push-disable-btn').hidden = !subscribed;
 }
 
+async function ensureCrmServiceWorker() {
+  if (!('serviceWorker' in navigator) || typeof navigator.serviceWorker.register !== 'function') return null;
+  try {
+    return await navigator.serviceWorker.register('/crm-sw.js', { scope: '/' });
+  } catch {
+    return null;
+  }
+}
+
+async function handlePwaInstallClick() {
+  const promptEvent = state.deferredInstallPrompt;
+  if (!promptEvent) return;
+  const btn = $('#pwa-install-btn');
+  setBusy(btn, true, 'جارٍ التثبيت…');
+  try {
+    await promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    if (choice?.outcome === 'accepted') {
+      state.deferredInstallPrompt = null;
+      btn.hidden = true;
+    }
+  } catch {
+    // User dismissed or browser aborted prompt.
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
 async function readBrowserPushSubscription() {
   if (!supportsBrowserPush() || typeof navigator.serviceWorker.getRegistration !== 'function') return null;
   const reg = await navigator.serviceWorker.getRegistration('/');
@@ -1181,6 +1223,7 @@ $('#push-enable-btn')?.addEventListener('click', handleEnablePushClick);
 $('#push-test-btn')?.addEventListener('click', handleTestPushClick);
 $('#push-check-btn')?.addEventListener('click', handleCheckDuePushClick);
 $('#push-disable-btn')?.addEventListener('click', handleDisablePushClick);
+$('#pwa-install-btn')?.addEventListener('click', handlePwaInstallClick);
 for (const chip of document.querySelectorAll('[data-quick-intent]')) {
   chip.addEventListener('click', () => setQuickIntentChip(chip.dataset.quickIntent));
 }
@@ -1192,6 +1235,7 @@ async function bootstrap() {
   try {
     const configuredBase = document.documentElement.dataset.crmApi || '/api';
     state.api = new CRMClient({ apiBase: configuredBase });
+    void ensureCrmServiceWorker();
     $('#dashboard-day').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     addConsentValidation($('#new-contact-form'));
     buildPhoneRow({ primary: true });

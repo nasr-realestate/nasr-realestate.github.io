@@ -114,12 +114,20 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
   const uiBundle = `${html}\n${appJs}\n${clientJs}\n${crmSwJs}\n${css}`;
   const manifest = JSON.parse(crmManifestRaw);
 
+  assert.equal(manifest.id, '/');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.dir, 'rtl');
-  assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
+  assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+  assert.equal(manifest.icons.some(icon => icon.purpose === 'any' && icon.sizes === '192x192'), true);
+  assert.equal(manifest.icons.some(icon => icon.purpose === 'any' && icon.sizes === '512x512'), true);
+  assert.equal(manifest.icons.some(icon => icon.purpose === 'maskable' && icon.sizes === '512x512'), true);
+  assert.equal(manifest.icons.some(icon => String(icon.purpose).includes(' ')), false, 'Do not combine any maskable');
   assert.match(html, /rel="manifest"\s+href="\/crm-manifest\.webmanifest"/);
   assert.match(html, /id="push-card"/);
+  assert.match(html, /id="pwa-install-btn"/);
+  assert.match(appJs, /void ensureCrmServiceWorker\(\)/);
   assert.match(clientJs, /subscribePush\s*\(/);
+  assert.match(crmSwJs, /addEventListener\('fetch'/);
   assert.match(crmSwJs, /showNotification\s*\(/);
 
   assert.match(html, /lang="ar"\s+dir="rtl"/);
