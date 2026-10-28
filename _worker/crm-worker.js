@@ -3,6 +3,17 @@
 // __Host- HttpOnly/Secure/SameSite=Strict cookies, strict Origin + CSRF checks,
 // and D1 brute-force rate limiting) with zero dependency on Cloudflare Zero Trust.
 
+import {
+  generateVapidKeyPair,
+  getPushStatusResponse,
+  runScheduledCrmNotifications,
+  sendTestPushAlert,
+  subscribePushDevice,
+  unsubscribePushDevice,
+} from './crm-push.js';
+
+export { generateVapidKeyPair };
+
 const ACTIVE = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 const SESSION_COOKIE = '__Host-crm_session';
 const DEFAULT_SESSION_TTL_SECONDS = 28_800; // 8 hours
@@ -17,8 +28,18 @@ const MIN_SESSION_SECRET_LENGTH = 32;
 const AUTH_WINDOW_SECONDS = 900; // 15 minutes
 const MAX_IP_FAILURES = 5;
 const MAX_GLOBAL_FAILURES = 20;
-const UI_ASSET_PATHS = new Set(['/', '/crm.html', '/crm-client.js', '/crm-assets/app.css', '/crm-assets/app.js']);
-const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+const UI_ASSET_PATHS = new Set([
+  '/',
+  '/crm.html',
+  '/crm-client.js',
+  '/crm-manifest.webmanifest',
+  '/crm-sw.js',
+  '/crm-assets/app.css',
+  '/crm-assets/app.js',
+  '/crm-assets/icon-192.png',
+  '/crm-assets/icon-512.png',
+]);
+const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -1323,6 +1344,7 @@ async function serveUiAsset(request, url, env) {
   assetHeaders.set('x-frame-options', 'DENY');
   assetHeaders.set('referrer-policy', 'same-origin');
   assetHeaders.set('content-security-policy', UI_CSP);
+  if (url.pathname === '/crm-sw.js') assetHeaders.set('service-worker-allowed', '/');
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: assetHeaders });
 }
 
@@ -1331,11 +1353,16 @@ const EXACT_GET_ROUTES = {
   '/api/dashboard': (db, url) => dashboard(db, url),
   '/api/opportunities': (db, url) => listOpportunities(db, url),
   '/api/listings': (db, url, config) => listListings(db, url, config.scope),
+  '/api/push/config': (_db, _url, _config, env) => getPushStatusResponse(env, json),
 };
 
 const EXACT_POST_ROUTES = {
   '/api/contacts': (request, env) => createContact(request, env),
   '/api/opportunities': (request, env) => createOpportunity(request, env),
+  '/api/push/subscribe': (request, env) => subscribePushDevice(request, env, { readJson, boundedText, jsonHelper: json }),
+  '/api/push/unsubscribe': (request, env) => unsubscribePushDevice(request, env, { readJson, jsonHelper: json }),
+  '/api/push/test': (request, env) => sendTestPushAlert(request, env, { readJson, jsonHelper: json }),
+  '/api/push/check-now': async (_request, env) => json(await runScheduledCrmNotifications(env, { forceCheck: true })),
 };
 
 async function dispatchParameterizedApi(request, pathname, env, config) {
@@ -1356,7 +1383,7 @@ async function dispatchParameterizedApi(request, pathname, env, config) {
 
 async function dispatchProtectedApi(request, url, env, config) {
   if (request.method === 'GET' && EXACT_GET_ROUTES[url.pathname]) {
-    return EXACT_GET_ROUTES[url.pathname](env.DB, url, config);
+    return EXACT_GET_ROUTES[url.pathname](env.DB, url, config, env);
   }
   if (request.method === 'POST' && EXACT_POST_ROUTES[url.pathname]) {
     return EXACT_POST_ROUTES[url.pathname](request, env);
@@ -1423,5 +1450,13 @@ export default {
     } catch (error) {
       return errorResponse(error, corsHeaders);
     }
+  },
+  async scheduled(_controller, env, ctx) {
+    const task = runScheduledCrmNotifications(env);
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(task);
+      return undefined;
+    }
+    return task;
   },
 };

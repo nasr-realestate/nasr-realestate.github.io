@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const migration = await readFile(new URL('../../_worker/migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const authMigration = await readFile(new URL('../../_worker/migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
+const pushMigration = await readFile(new URL('../../_worker/migrations/0003_crm_push_notifications.sql', import.meta.url), 'utf8');
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
@@ -97,6 +98,29 @@ test('0002 internal auth migration adds hashed session and rate-limit tables wit
     .run('ip:' + 'c'.repeat(32), 3, 1793188800, 0);
   assert.ok(errorOf(() => db.prepare(`INSERT INTO crm_auth_attempts(bucket_key,failures,window_started_at,blocked_until) VALUES(?,?,?,?)`)
     .run('ip:neg_attempts', -1, 1793188800, 0)));
+  db.close();
+});
+
+test('0003 push notifications migration adds subscription and idempotent delivery log tables with strict checks', () => {
+  const db = fixture();
+  const before = db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' ORDER BY name").all();
+  db.exec(migration);
+  db.exec(authMigration);
+  db.exec(pushMigration);
+  const after = db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'crm_%' ORDER BY name").all();
+  assert.deepEqual(after, before);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name LIKE 'crm_%'").get().n, 10);
+
+  db.prepare(
+    'INSERT INTO crm_push_subscriptions(id,endpoint_hash,endpoint,p256dh,auth,device_label,morning_digest) VALUES(?,?,?,?,?,?,?)',
+  ).run('a'.repeat(16), 'a'.repeat(64), 'https://push.example.test/sub/1', 'B'.repeat(87), 'C'.repeat(22), 'iPhone PWA', 1);
+
+  assert.ok(errorOf(() => db.prepare(
+    'INSERT INTO crm_push_subscriptions(id,endpoint_hash,endpoint,p256dh,auth,device_label,morning_digest) VALUES(?,?,?,?,?,?,?)',
+  ).run('b'.repeat(16), 'b'.repeat(64), 'http://insecure.example.test/sub', 'B'.repeat(87), 'C'.repeat(22), 'bad', 1)));
+
+  db.prepare('INSERT INTO crm_push_notifications_log(dedupe_key,kind) VALUES(?,?)').run('digest:2026-10-29', 'morning_digest');
+  assert.ok(errorOf(() => db.prepare('INSERT INTO crm_push_notifications_log(dedupe_key,kind) VALUES(?,?)').run('bad:1', 'unknown_kind')));
   db.close();
 });
 

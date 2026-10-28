@@ -1,7 +1,16 @@
 import { CRMApiError, CRMClient } from '../crm-client.js';
 
 const $ = selector => document.querySelector(selector);
-const state = { api: null, contactId: null, opportunityId: null, contacts: [], opportunities: [], listings: [] };
+const state = {
+  api: null,
+  contactId: null,
+  opportunityId: null,
+  contacts: [],
+  opportunities: [],
+  listings: [],
+  pushPublicKey: '',
+  pushEndpoint: '',
+};
 
 const STATUS_LABELS = {
   active: 'نشطة',
@@ -49,6 +58,8 @@ function clearWorkspaceDom() {
   state.contacts = [];
   state.opportunities = [];
   state.listings = [];
+  state.pushPublicKey = '';
+  state.pushEndpoint = '';
   $('#dashboard-metrics').replaceChildren();
   $('#due-list').replaceChildren();
   $('#overdue-list').replaceChildren();
@@ -809,12 +820,196 @@ async function handleQuickEntrySubmit(event) {
   }
 }
 
+function isIosDevice() {
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalonePwa() {
+  return window.navigator.standalone === true || Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches);
+}
+
+function supportsBrowserPush() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function detectDeviceLabel() {
+  if (isIosDevice()) return 'iPhone / iPad PWA';
+  if (/Android/i.test(navigator.userAgent || '')) return 'هاتف Android';
+  return 'متصفح المكتب';
+}
+
+function urlBase64ToUint8Array(base64Url) {
+  const padding = '='.repeat((4 - (base64Url.length % 4)) % 4);
+  const base64 = (base64Url + padding).replaceAll('-', '+').replaceAll('_', '/');
+  const raw = atob(base64);
+  return Uint8Array.from(raw, ch => ch.codePointAt(0));
+}
+
+function renderPushCardView({ pill, active = false, text, canEnable = false, subscribed = false }) {
+  const pillEl = $('#push-status-pill');
+  if (!pillEl) return;
+  pillEl.textContent = pill;
+  pillEl.className = active ? 'pill active-pill' : 'pill';
+  $('#push-status-text').textContent = text;
+  $('#push-enable-btn').hidden = !canEnable;
+  $('#push-test-btn').hidden = !subscribed;
+  $('#push-check-btn').hidden = !subscribed;
+  $('#push-disable-btn').hidden = !subscribed;
+}
+
+async function readBrowserPushSubscription() {
+  if (!supportsBrowserPush() || typeof navigator.serviceWorker.getRegistration !== 'function') return null;
+  const reg = await navigator.serviceWorker.getRegistration('/');
+  if (!reg?.pushManager) return null;
+  return reg.pushManager.getSubscription();
+}
+
+async function loadPushCardState() {
+  if (!$('#push-card')) return;
+  $('#push-feedback').textContent = '';
+  try {
+    const cfg = await requireApi().getPushConfig();
+    state.pushPublicKey = cfg.public_key || '';
+    if (!cfg.enabled || !state.pushPublicKey) {
+      renderPushCardView({ pill: 'غير مهيأة بعد', text: 'مفاتيح إشعارات الخادم قيد التهيئة التلقائية.' });
+      return;
+    }
+    if (isIosDevice() && !isStandalonePwa()) {
+      renderPushCardView({
+        pill: 'يلزم التثبيت على الشاشة الرئيسية',
+        text: 'على iPhone/iPad: اضغط زر المشاركة (⬆︎) في Safari ← اختر «إضافة إلى الشاشة الرئيسية» (Add to Home Screen)، ثم افتح التطبيق من الشاشة الرئيسية لتفعيل رنين الإشعارات.',
+      });
+      return;
+    }
+    if (!supportsBrowserPush()) {
+      renderPushCardView({ pill: 'غير مدعوم هنا', text: 'هذا المتصفح لا يدعم Web Push؛ افتح الرابط من Chrome على Android أو أضفه للشاشة الرئيسية على iPhone.' });
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      renderPushCardView({ pill: 'محظورة من المتصفح', text: 'الإشعارات محظورة لهذا الموقع في إعدادات المتصفح؛ اسمح بها من أيقونة القفل بجانب العنوان ثم حدّث الصفحة.' });
+      return;
+    }
+    const existingSub = await readBrowserPushSubscription();
+    if (existingSub?.endpoint) {
+      state.pushEndpoint = existingSub.endpoint;
+      await requireApi().subscribePush({
+        subscription: existingSub.toJSON(),
+        device_label: detectDeviceLabel(),
+        morning_digest: true,
+      });
+      renderPushCardView({
+        pill: 'مفعّلة على هذا الجهاز ✓',
+        active: true,
+        subscribed: true,
+        text: 'الإشعارات نشطة تلقائيًا لمواعيد المتابعة والمعاينات وملخص الصباح (9:30 ص بتوقيت القاهرة) دون كشف أرقام العملاء على شاشة القفل.',
+      });
+      return;
+    }
+    state.pushEndpoint = '';
+    const countNote = cfg.subscriptions_count > 0 ? ` (مفعّلة حاليًا على ${cfg.subscriptions_count} جهاز آخر)` : '';
+    renderPushCardView({
+      pill: 'جاهزة للتفعيل',
+      canEnable: true,
+      text: `فعّل الإشعارات ليصلك تنبيه تلقائي بمواعيد المتابعة والمعاينات وملخص الصباح على هذا الجهاز${countNote}.`,
+    });
+  } catch {
+    renderPushCardView({ pill: 'غير متاح مؤقتًا', text: 'تعذّر التحقق من حالة الإشعارات حاليًا.' });
+  }
+}
+
+async function handleEnablePushClick() {
+  const btn = $('#push-enable-btn');
+  const feedback = $('#push-feedback');
+  if (!state.pushPublicKey || !supportsBrowserPush()) return;
+  setBusy(btn, true, 'جارٍ التفعيل…');
+  feedback.textContent = 'اطلب السماح بالإشعارات من نافذة المتصفح…';
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      feedback.textContent = 'لم يُمنح إذن الإشعارات.';
+      await loadPushCardState();
+      return;
+    }
+    await navigator.serviceWorker.register('/crm-sw.js', { scope: '/' });
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(state.pushPublicKey),
+    });
+    state.pushEndpoint = sub.endpoint;
+    await requireApi().subscribePush({
+      subscription: sub.toJSON(),
+      device_label: detectDeviceLabel(),
+      morning_digest: true,
+    });
+    await loadPushCardState();
+    $('#push-feedback').textContent = 'تم تفعيل الإشعارات بنجاح ✓ يمكنك تجربة زر الإشعار التجريبي الآن.';
+  } catch (error) {
+    feedback.textContent = errorText(error);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function handleTestPushClick() {
+  const btn = $('#push-test-btn');
+  const feedback = $('#push-feedback');
+  setBusy(btn, true, 'جارٍ الإرسال…');
+  feedback.textContent = 'جارٍ إرسال إشعار تجريبي إلى جهازك…';
+  try {
+    const res = await requireApi().sendTestPush(state.pushEndpoint);
+    feedback.textContent = res.delivered > 0 ? 'وصلك الإشعار التجريبي الآن ✓' : 'تعذّر التسليم؛ أعد تفعيل الإشعارات.';
+  } catch (error) {
+    feedback.textContent = errorText(error);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function handleCheckDuePushClick() {
+  const btn = $('#push-check-btn');
+  const feedback = $('#push-feedback');
+  setBusy(btn, true, 'جارٍ الفحص…');
+  feedback.textContent = 'جارٍ فحص المواعيد المستحقة…';
+  try {
+    const res = await requireApi().checkDuePushNow();
+    const sent = Number(res.followup_alerts || 0) + Number(res.viewing_alerts || 0);
+    feedback.textContent = sent > 0
+      ? `تم إرسال ${sent} تنبيه مستحق إلى أجهزتك المفعّلة ✓`
+      : 'لا توجد مواعيد مستحقة جديدة لم يُرسل تنبيهها بعد.';
+  } catch (error) {
+    feedback.textContent = errorText(error);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function handleDisablePushClick() {
+  const btn = $('#push-disable-btn');
+  const feedback = $('#push-feedback');
+  setBusy(btn, true, 'جارٍ الإيقاف…');
+  try {
+    const sub = await readBrowserPushSubscription();
+    const endpoint = sub?.endpoint || state.pushEndpoint;
+    if (sub) await sub.unsubscribe();
+    if (endpoint) await requireApi().unsubscribePush(endpoint);
+    state.pushEndpoint = '';
+    await loadPushCardState();
+    $('#push-feedback').textContent = 'تم إيقاف الإشعارات على هذا الجهاز.';
+  } catch (error) {
+    feedback.textContent = errorText(error);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
 async function refreshAll() {
   clearError();
   setNotice($('#app-status'), 'جارٍ تحميل بيانات CRM…', 'info');
   $('#security-status').textContent = 'جارٍ التحميل…';
   try {
-    await Promise.all([loadDashboard(), loadContacts(), loadOpportunities('', ''), loadQuickListings()]);
+    await Promise.all([loadDashboard(), loadContacts(), loadOpportunities('', ''), loadQuickListings(), loadPushCardState()]);
     $('#security-status').textContent = 'جلسة موثقة ومحمية';
     setNotice($('#app-status'), 'الجلسة نشطة. البيانات لا تُحفظ في هذا المتصفح.', 'info');
   } catch (error) {
@@ -982,6 +1177,10 @@ $('#new-opportunity-form').addEventListener('submit', handleNewOpportunitySubmit
 $('#quick-parse-btn')?.addEventListener('click', handleQuickParseClick);
 $('#quick-listing-select')?.addEventListener('change', handleQuickListingSelection);
 $('#quick-entry-form')?.addEventListener('submit', handleQuickEntrySubmit);
+$('#push-enable-btn')?.addEventListener('click', handleEnablePushClick);
+$('#push-test-btn')?.addEventListener('click', handleTestPushClick);
+$('#push-check-btn')?.addEventListener('click', handleCheckDuePushClick);
+$('#push-disable-btn')?.addEventListener('click', handleDisablePushClick);
 for (const chip of document.querySelectorAll('[data-quick-intent]')) {
   chip.addEventListener('click', () => setQuickIntentChip(chip.dataset.quickIntent));
 }

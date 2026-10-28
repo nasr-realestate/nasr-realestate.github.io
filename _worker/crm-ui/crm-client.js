@@ -196,4 +196,24 @@ export class CRMClient {
   linkProperty(opportunityId, propertyEvent) {
     return this.request(`/opportunities/${safeId(opportunityId)}/properties`, { method: 'POST', body: propertyEvent });
   }
+
+  getPushConfig() {
+    return this.request('/push/config');
+  }
+
+  subscribePush(payload) {
+    return this.request('/push/subscribe', { method: 'POST', body: payload });
+  }
+
+  unsubscribePush(endpoint) {
+    return this.request('/push/unsubscribe', { method: 'POST', body: { endpoint } });
+  }
+
+  sendTestPush(endpoint = '') {
+    return this.request('/push/test', { method: 'POST', body: { endpoint } });
+  }
+
+  checkDuePushNow() {
+    return this.request('/push/check-now', { method: 'POST', body: {} });
+  }
 }

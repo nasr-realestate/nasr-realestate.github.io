@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import nodeCrypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { createAccessCodeVerifier, generateIngestKeyPair, sealIngestPayload } from '../crm-worker.js';
+import worker, {
+  createAccessCodeVerifier,
+  generateIngestKeyPair,
+  generateVapidKeyPair,
+  sealIngestPayload,
+} from '../crm-worker.js';
+import { runScheduledCrmNotifications } from '../crm-push.js';
 
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
+const migration0003 = await readFile(new URL('../migrations/0003_crm_push_notifications.sql', import.meta.url), 'utf8');
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.footcai-555.workers.dev';
 
 function randomToken(bytes = 24) {
@@ -48,10 +56,16 @@ function mockAssets() {
           headers: { 'content-type': 'text/html; charset=utf-8' },
         });
       }
-      if (pathname === '/crm-client.js' || pathname === '/crm-assets/app.js') {
+      if (pathname === '/crm-client.js' || pathname === '/crm-assets/app.js' || pathname === '/crm-sw.js') {
         return new Response('export default true;', {
           status: 200,
           headers: { 'content-type': 'application/javascript; charset=utf-8' },
+        });
+      }
+      if (pathname === '/crm-manifest.webmanifest') {
+        return new Response('{"name":"CRM"}', {
+          status: 200,
+          headers: { 'content-type': 'application/manifest+json; charset=utf-8' },
         });
       }
       if (pathname === '/crm-assets/app.css') {
@@ -79,6 +93,7 @@ async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
              (12,9009,'synthetic-nasr-1','https://example.test/synthetic-1','شقة اختبار معزولة','apartment','sale',90001,155,4100000,3,2,'سوبر لوكس','2026-10-28T09:00:00Z');`);
   sqlite.exec(migration0001);
   sqlite.exec(migration0002);
+  sqlite.exec(migration0003);
 
   const accessCode = randomToken(24);
   const sessionSecret = randomToken(32);
@@ -563,6 +578,174 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   assert.equal(sealedOpp.phone_key, '33622413234');
   const sealedContactDetail = await (await call(`/api/contacts/${sealedOpp.contact_id}`)).json();
   assert.equal(sealedContactDetail.phones.length, 2);
+
+  sqlite.close();
+});
+
+function createPushTestDevice() {
+  const { publicKey, privateKey } = nodeCrypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const jwk = publicKey.export({ format: 'jwk' });
+  const d = privateKey.export({ format: 'jwk' }).d;
+  const pub65 = Buffer.concat([
+    Buffer.from([4]),
+    Buffer.from(jwk.x, 'base64url'),
+    Buffer.from(jwk.y, 'base64url'),
+  ]);
+  const authBuf = nodeCrypto.randomBytes(16);
+  return {
+    p256dh: pub65.toString('base64url'),
+    auth: authBuf.toString('base64url'),
+    priv32: Buffer.from(d, 'base64url'),
+    pub65,
+    authBuf,
+  };
+}
+
+function decryptRfc8291PushBody(bodyBytes, device) {
+  const buf = Buffer.from(bodyBytes);
+  const salt = buf.subarray(0, 16);
+  assert.equal(buf.readUInt32BE(16), 4096);
+  assert.equal(buf[20], 65);
+  const asPublic = buf.subarray(21, 86);
+  const cipher = buf.subarray(86);
+
+  const ecdh = nodeCrypto.createECDH('prime256v1');
+  ecdh.setPrivateKey(device.priv32);
+  const shared = ecdh.computeSecret(asPublic);
+  const keyInfo = Buffer.concat([Buffer.from('WebPush: info\0'), device.pub65, asPublic]);
+  const ikm = Buffer.from(nodeCrypto.hkdfSync('sha256', shared, device.authBuf, keyInfo, 32));
+  const cek = Buffer.from(nodeCrypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16));
+  const nonce = Buffer.from(nodeCrypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
+
+  const decipher = nodeCrypto.createDecipheriv('aes-128-gcm', cek, nonce);
+  decipher.setAuthTag(cipher.subarray(cipher.length - 16));
+  const plain = Buffer.concat([decipher.update(cipher.subarray(0, cipher.length - 16)), decipher.final()]);
+  assert.equal(plain[plain.length - 1], 0x02);
+  return JSON.parse(plain.subarray(0, plain.length - 1).toString('utf8'));
+}
+
+test('delivers encrypted Web Push notifications, runs scheduled due/digest alerts without PII, deduplicates, and prunes 410 subscriptions', async () => {
+  const vapid = await generateVapidKeyPair();
+  const { sqlite, accessCode, env } = await createEnv({
+    extraEnv: {
+      CRM_VAPID_PUBLIC_KEY: vapid.publicKeyB64u,
+      CRM_VAPID_PRIVATE_KEY: vapid.privateKeyB64u,
+    },
+  });
+
+  // Service worker asset includes Service-Worker-Allowed: / and unauthenticated push API returns 401
+  const swAssetRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/crm-sw.js`), env);
+  assert.equal(swAssetRes.status, 200);
+  assert.equal(swAssetRes.headers.get('service-worker-allowed'), '/');
+
+  const unauthPushRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/push/config`), env);
+  assert.equal(unauthPushRes.status, 401);
+
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
+
+  const cfgRes = await call('/api/push/config');
+  assert.equal(cfgRes.status, 200);
+  const cfgJson = await cfgRes.json();
+  assert.equal(cfgJson.enabled, true);
+  assert.equal(cfgJson.public_key, vapid.publicKeyB64u);
+
+  const deviceActive = createPushTestDevice();
+  const deviceStale = createPushTestDevice();
+  const activeEndpoint = 'https://push.apple.example/v1/sub-active-owner';
+  const staleEndpoint = 'https://fcm.googleapis.example/v1/sub-stale-410';
+
+  // Reject insecure http:// or localhost SSRF endpoints
+  const badSub = await call('/api/push/subscribe', {
+    method: 'POST',
+    body: { subscription: { endpoint: 'http://localhost/push', keys: { p256dh: deviceActive.p256dh, auth: deviceActive.auth } } },
+  });
+  assert.equal(badSub.status, 400);
+
+  const subRes1 = await call('/api/push/subscribe', {
+    method: 'POST',
+    body: {
+      subscription: { endpoint: activeEndpoint, keys: { p256dh: deviceActive.p256dh, auth: deviceActive.auth } },
+      device_label: 'iPhone PWA',
+      morning_digest: true,
+    },
+  });
+  assert.equal(subRes1.status, 200);
+
+  const subRes2 = await call('/api/push/subscribe', {
+    method: 'POST',
+    body: {
+      subscription: { endpoint: staleEndpoint, keys: { p256dh: deviceStale.p256dh, auth: deviceStale.auth } },
+      device_label: 'Old Android',
+      morning_digest: true,
+    },
+  });
+  assert.equal(subRes2.status, 200);
+
+  // Create an active opportunity with a due follow-up AND a phone number inside next_action to prove zero-PII scrubbing
+  const oppRes = await call('/api/opportunities', {
+    method: 'POST',
+    key: 'push-due-opp-1',
+    body: {
+      name: 'مالك سري للاختبار',
+      phone: '01088776655',
+      intent: 'sell',
+      source: 'whatsapp',
+      area_label: 'مكرم عبيد',
+      property_type: 'شقة',
+      next_action: 'اتصال بالمالك على 01088776655 لتأكيد الموعد',
+      next_followup_at: '2026-10-29T07:30:00Z',
+      notes: 'ملاحظات داخلية سرية',
+    },
+  });
+  assert.equal(oppRes.status, 201);
+
+  const capturedDeliveries = [];
+  const mockPushFetch = async (url, init) => {
+    if (String(url) === staleEndpoint) return new Response('Gone', { status: 410 });
+    capturedDeliveries.push({ url: String(url), headers: init.headers, body: init.body });
+    return new Response('', { status: 201 });
+  };
+
+  // Run scheduled alerts at 09:45 Africa/Cairo (07:45 UTC on 2026-10-29 -> triggers both due alert + morning digest, and prunes stale 410!)
+  const cronStats1 = await runScheduledCrmNotifications(env, {
+    now: new Date('2026-10-29T07:45:00Z'),
+    fetchImpl: mockPushFetch,
+  });
+  assert.equal(cronStats1.followup_alerts, 1);
+  assert.equal(cronStats1.morning_digest, 1);
+  assert.equal(capturedDeliveries.length, 2);
+
+  // Verify stale 410 subscription was automatically pruned from D1
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_push_subscriptions').get().n, 1);
+
+  // Decrypt the actual RFC 8291 ciphertext and verify zero PII leaked (neither owner name nor phone number!)
+  const decryptedMessages = capturedDeliveries.map(d => decryptRfc8291PushBody(d.body, deviceActive));
+  const dueMsg = decryptedMessages.find(m => m.tag.startsWith('crm-due-'));
+  const digestMsg = decryptedMessages.find(m => m.tag.startsWith('crm-digest-'));
+  assert.ok(dueMsg, 'Expected decrypted due follow-up push alert');
+  assert.ok(digestMsg, 'Expected decrypted morning digest push alert');
+  assert.equal(dueMsg.body.includes('01088776655'), false, 'Phone number must be scrubbed from push payload');
+  assert.equal(dueMsg.body.includes('مالك سري'), false, 'Customer name must never appear in push payload');
+  assert.match(dueMsg.body, /مكرم عبيد/);
+  assert.match(digestMsg.body, /1 متابعة مستحقة/);
+
+  // Re-running scheduled job 15 minutes later must NOT duplicate already-sent notifications
+  const cronStats2 = await runScheduledCrmNotifications(env, {
+    now: new Date('2026-10-29T08:00:00Z'),
+    fetchImpl: mockPushFetch,
+  });
+  assert.equal(cronStats2.followup_alerts, 0);
+  assert.equal(cronStats2.morning_digest, 0);
+  assert.equal(capturedDeliveries.length, 2);
+
+  // Unsubscribe cleanly
+  const unsubRes = await call('/api/push/unsubscribe', {
+    method: 'POST',
+    body: { endpoint: activeEndpoint },
+  });
+  assert.equal(unsubRes.status, 200);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_push_subscriptions').get().n, 0);
 
   sqlite.close();
 });
