@@ -100,16 +100,27 @@ test('CRMClient clears CSRF token on 401 and classifies auth, rate-limit, offlin
 });
 
 test('private CRM UI keeps workspace hidden until login, removes Cloudflare Access requirement, and avoids public site, storage, contact import, and unsafe DOM APIs', async () => {
-  const [html, appJs, clientJs, css, indexHtml, swJs, workerJs] = await Promise.all([
+  const [html, appJs, clientJs, crmSwJs, crmManifestRaw, css, indexHtml, swJs, workerJs] = await Promise.all([
     readFile(new URL('../crm-ui/crm.html', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-client.js', import.meta.url), 'utf8'),
+    readFile(new URL('../crm-ui/crm-sw.js', import.meta.url), 'utf8'),
+    readFile(new URL('../crm-ui/crm-manifest.webmanifest', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/app.css', import.meta.url), 'utf8'),
     readFile(new URL('../../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../../sw.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-worker.js', import.meta.url), 'utf8'),
   ]);
-  const uiBundle = `${html}\n${appJs}\n${clientJs}\n${css}`;
+  const uiBundle = `${html}\n${appJs}\n${clientJs}\n${crmSwJs}\n${css}`;
+  const manifest = JSON.parse(crmManifestRaw);
+
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.dir, 'rtl');
+  assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
+  assert.match(html, /rel="manifest"\s+href="\/crm-manifest\.webmanifest"/);
+  assert.match(html, /id="push-card"/);
+  assert.match(clientJs, /subscribePush\s*\(/);
+  assert.match(crmSwJs, /showNotification\s*\(/);
 
   assert.match(html, /lang="ar"\s+dir="rtl"/);
   assert.match(html, /name="robots"\s+content="noindex,nofollow,noarchive,nosnippet"/);

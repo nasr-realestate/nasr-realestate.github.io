@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - master
+      - 'arena/**'
     paths:
       - .github/workflows/crm-cloudflare-test-deploy.yml
       - scripts/crm/build-crm-site-seed-sql.mjs
       - _worker/crm-worker.js
+      - _worker/crm-push.js
       - _worker/wrangler.crm.toml
       - _worker/migrations/0002_crm_internal_auth.sql
+      - _worker/migrations/0003_crm_push_notifications.sql
       - _worker/crm-ui/**
       - _worker/tests/live-e2e-runner.mjs
       - _worker/tests/live-browser-e2e.mjs
@@ -171,7 +174,7 @@ jobs:
             finish
             exit 1
           fi
-          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 8 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then
+          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 10 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then
             result='d1-schema-table-count-mismatch'
             finish
             exit 1
@@ -207,6 +210,29 @@ jobs:
           has_direct_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")
           has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")
           has_ingest_priv=$(jq -r '[.result[]?.name] | index("CRM_INGEST_PRIVATE_KEY") != null' "$TMP/secrets.json")
+          has_vapid_priv=$(jq -r '[.result[]?.name] | index("CRM_VAPID_PRIVATE_KEY") != null' "$TMP/secrets.json")
+          has_vapid_pub=$(jq -r '[.result[]?.name] | index("CRM_VAPID_PUBLIC_KEY") != null' "$TMP/secrets.json")
+
+          if [ "$has_vapid_priv" != 'true' ] || [ "$has_vapid_pub" != 'true' ]; then
+            node --input-type=module -e '
+              import { writeFileSync } from "node:fs";
+              import { generateVapidKeyPair } from "./_worker/crm-worker.js";
+              const pair = await generateVapidKeyPair();
+              writeFileSync(process.argv[1], pair.privateKeyB64u, { mode: 0o600 });
+              writeFileSync(process.argv[2], pair.publicKeyB64u, { mode: 0o600 });
+            ' "$TMP/vapid_priv" "$TMP/vapid_pub"
+            echo "::add-mask::$(cat "$TMP/vapid_priv")"
+            if ! npx --yes wrangler@4 secret put CRM_VAPID_PRIVATE_KEY --config "$WRANGLER_CFG" < "$TMP/vapid_priv" > "$TMP/put_vapid_priv.log" 2>&1; then
+              result='put-vapid-private-key-failed'
+              finish
+              exit 1
+            fi
+            if ! npx --yes wrangler@4 secret put CRM_VAPID_PUBLIC_KEY --config "$WRANGLER_CFG" < "$TMP/vapid_pub" > "$TMP/put_vapid_pub.log" 2>&1; then
+              result='put-vapid-public-key-failed'
+              finish
+              exit 1
+            fi
+          fi
 
           PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
           npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null || true
@@ -255,9 +281,12 @@ jobs:
             code_source='cloudflare-direct-secret'
             phase='verify-unauth-and-ui-only'
             ui_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/" 2>/dev/null || true)
+            sw_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-sw.js" 2>/dev/null || true)
+            manifest_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-manifest.webmanifest" 2>/dev/null || true)
             api_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
-            if [ "$ui_code" != '200' ] || [ "$api_code" != '401' ]; then
-              result="direct-secret-smoke-failed-ui-${ui_code}-api-${api_code}"
+            push_api_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/push/config" 2>/dev/null || true)
+            if [ "$ui_code" != '200' ] || [ "$sw_code" != '200' ] || [ "$manifest_code" != '200' ] || [ "$api_code" != '401' ] || [ "$push_api_code" != '401' ]; then
+              result="direct-secret-smoke-failed-ui-${ui_code}-sw-${sw_code}-mf-${manifest_code}-api-${api_code}-push-${push_api_code}"
               finish
               exit 1
             fi

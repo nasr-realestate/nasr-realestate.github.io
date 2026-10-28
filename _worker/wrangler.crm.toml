@@ -22,6 +22,9 @@ CRM_ALLOWED_ORIGIN = "https://nasr-crm-api-test.footcai-555.workers.dev"
 CRM_SITE_SOURCE_ID = "9009"
 CRM_NASR_AREA_IDS = "90001"
 
+[triggers]
+crons = ["*/15 * * * *"]
+
 # Required secrets (store ONLY as Cloudflare Worker Secrets; NEVER commit to git, JS, or logs):
 # - CRM_SESSION_SECRET        (>= 32 random chars; HMAC-SHA256 pepper for session/CSRF/IP hashes)
 # - CRM_ACCESS_CODE_VERIFIER  (preferred: pbkdf2-sha256$<iterations>$<salt_b64url>$<hash_b64url>)
