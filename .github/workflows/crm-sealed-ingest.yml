@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sealed_payload:
-        description: 'RSA-OAEP-4096 + AES-256-GCM sealed envelope (enc_v1....) — zero plaintext PII'
+        description: 'RSA-OAEP-4096 + AES-256-GCM sealed envelope (enc_v1....) or READ_PUBLIC_KEY'
         required: true
         type: string
 
@@ -31,6 +31,11 @@ jobs:
       opps: ${{ steps.run_ingest.outputs.opps }}
       linked: ${{ steps.run_ingest.outputs.linked }}
       listings: ${{ steps.run_ingest.outputs.listings }}
+      pk1: ${{ steps.run_ingest.outputs.pk1 }}
+      pk2: ${{ steps.run_ingest.outputs.pk2 }}
+      pk3: ${{ steps.run_ingest.outputs.pk3 }}
+      pk4: ${{ steps.run_ingest.outputs.pk4 }}
+      pk5: ${{ steps.run_ingest.outputs.pk5 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,6 +62,11 @@ jobs:
           opps='0'
           linked='0'
           listings='0'
+          pk1=''
+          pk2=''
+          pk3=''
+          pk4=''
+          pk5=''
 
           finish() {
             {
@@ -67,6 +77,11 @@ jobs:
               printf 'opps=%s\n' "$opps"
               printf 'linked=%s\n' "$linked"
               printf 'listings=%s\n' "$listings"
+              printf 'pk1=%s\n' "$pk1"
+              printf 'pk2=%s\n' "$pk2"
+              printf 'pk3=%s\n' "$pk3"
+              printf 'pk4=%s\n' "$pk4"
+              printf 'pk5=%s\n' "$pk5"
             } >> "$GITHUB_OUTPUT"
           }
 
@@ -88,13 +103,6 @@ jobs:
             exit 1
           fi
 
-          envelope=$(printf '%s' "${SEALED_PAYLOAD:-}" | tr -d '[:space:]')
-          if [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]{64,1200}\.[A-Za-z0-9_-]{16,32}\.[A-Za-z0-9_-]{24,80000}$ ]]; then
-            result='invalid-envelope-format'
-            finish
-            exit 1
-          fi
-
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
           if [ "$status" != '200' ]; then
@@ -104,6 +112,32 @@ jobs:
           fi
           account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
+
+          envelope=$(printf '%s' "${SEALED_PAYLOAD:-}" | tr -d '[:space:]')
+          if [ "$envelope" = 'READ_PUBLIC_KEY' ]; then
+            PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null
+            pub=$(jq -r '.. | objects | select(has("pub")) | .pub // empty' "$TMP/pub.json" | head -n1 | tr -cd 'A-Za-z0-9_-')
+            if [ -z "$pub" ]; then
+              result='public-key-not-found'
+              finish
+              exit 1
+            fi
+            pk1="${pub:0:160}"
+            pk2="${pub:160:160}"
+            pk3="${pub:320:160}"
+            pk4="${pub:480:160}"
+            pk5="${pub:640:160}"
+            result='public-key-read-ok'
+            finish
+            exit 0
+          fi
+
+          if [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]{64,1200}\.[A-Za-z0-9_-]{16,32}\.[A-Za-z0-9_-]{24,80000}$ ]]; then
+            result='invalid-envelope-format'
+            finish
+            exit 1
+          fi
 
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/sub.json" -w '%{http_code}' "$API/accounts/$account_id/workers/subdomain" 2>/dev/null || true)
           subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
@@ -148,6 +182,37 @@ jobs:
 
           result='sealed-ingest-verified'
           finish
+
+  pk1:
+    if: needs.ingest.outputs.pk1 != ''
+    needs: ingest
+    name: 'PK1:${{ needs.ingest.outputs.pk1 }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+  pk2:
+    if: needs.ingest.outputs.pk2 != ''
+    needs: ingest
+    name: 'PK2:${{ needs.ingest.outputs.pk2 }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+  pk3:
+    if: needs.ingest.outputs.pk3 != ''
+    needs: ingest
+    name: 'PK3:${{ needs.ingest.outputs.pk3 }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+  pk4:
+    if: needs.ingest.outputs.pk4 != ''
+    needs: ingest
+    name: 'PK4:${{ needs.ingest.outputs.pk4 }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+  pk5:
+    if: needs.ingest.outputs.pk5 != ''
+    needs: ingest
+    name: 'PK5:${{ needs.ingest.outputs.pk5 }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
 
   report:
     name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
