@@ -5,8 +5,10 @@ on:
     branches:
       - master
       - arena/fc5d95ec-nasr-realestate-github-io
+      - arena/4233ddf4-nasr-realestate-github-io
     paths:
       - .github/workflows/crm-cloudflare-test-deploy.yml
+      - scripts/crm/build-crm-site-seed-sql.mjs
       - _worker/crm-worker.js
       - _worker/wrangler.crm.toml
       - _worker/migrations/0002_crm_internal_auth.sql
@@ -177,6 +179,14 @@ jobs:
             exit 1
           fi
 
+          phase='sync-site-catalog-and-batch1-owners'
+          node scripts/crm/build-crm-site-seed-sql.mjs ai-feed.json "$TMP/site-seed.sql"
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --file "$TMP/site-seed.sql" > "$TMP/site-seed.log" 2>&1; then
+            result='d1-site-catalog-seed-failed'
+            finish
+            exit 1
+          fi
+
           phase='deploy-test-worker'
           if ! npx --yes wrangler@4 deploy --config "$WRANGLER_CFG" > "$TMP/deploy.log" 2>&1; then
             result='worker-deploy-failed'
@@ -198,6 +208,32 @@ jobs:
           has_session_secret=$(jq -r '[.result[]?.name] | index("CRM_SESSION_SECRET") != null' "$TMP/secrets.json")
           has_direct_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")
           has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")
+          has_ingest_priv=$(jq -r '[.result[]?.name] | index("CRM_INGEST_PRIVATE_KEY") != null' "$TMP/secrets.json")
+
+          PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
+          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null || true
+          existing_pub=$(jq -r '.. | objects | select(has("pub")) | .pub // empty' "$TMP/pub.json" 2>/dev/null | head -n1 || true)
+
+          if [ "$has_ingest_priv" != 'true' ] || [ -z "$existing_pub" ]; then
+            node --input-type=module -e '
+              import { writeFileSync } from "node:fs";
+              import { generateIngestKeyPair } from "./_worker/crm-worker.js";
+              const pair = await generateIngestKeyPair();
+              writeFileSync(process.argv[1], pair.privateKeyPkcs8B64u, { mode: 0o600 });
+              writeFileSync(process.argv[2], pair.publicKeySpkiB64u, { mode: 0o644 });
+            ' "$TMP/ingest_priv" "./ingest-public-key.txt"
+            echo "::add-mask::$(cat "$TMP/ingest_priv")"
+            if ! npx --yes wrangler@4 secret put CRM_INGEST_PRIVATE_KEY --config "$WRANGLER_CFG" < "$TMP/ingest_priv" > "$TMP/put_ingest.log" 2>&1; then
+              result='put-ingest-private-key-failed'
+              finish
+              exit 1
+            fi
+            new_pub=$(tr -cd 'A-Za-z0-9_-' < ./ingest-public-key.txt)
+            SAVE_PUB_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('system:ingest-public-key-v1','contact','${new_pub}') ON CONFLICT(submission_key) DO UPDATE SET resource_id=excluded.resource_id;"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SAVE_PUB_SQL" > "$TMP/save_pub.log" 2>&1
+          else
+            printf '%s' "$existing_pub" > ./ingest-public-key.txt
+          fi
 
           node --input-type=module -e '
             import { writeFileSync } from "node:fs";
@@ -310,6 +346,13 @@ jobs:
           phase='completed'
           result='deployed-and-live-auth-e2e-passed'
           finish
+      - name: Publish non-secret RSA-OAEP public key artifact for sealed CRM ingest
+        if: always() && hashFiles('ingest-public-key.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-ingest-public-key
+          path: ingest-public-key.txt
+          retention-days: 5
 
   report:
     name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (deployed=${{ needs.deploy-and-verify.outputs.deployed }}, crud=${{ needs.deploy-and-verify.outputs.login_and_crud }}, mobile=${{ needs.deploy-and-verify.outputs.mobile_browser }}, unauth401=${{ needs.deploy-and-verify.outputs.unauth_rejected }}, code=${{ needs.deploy-and-verify.outputs.code_source }})'

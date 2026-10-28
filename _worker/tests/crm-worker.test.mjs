@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { createAccessCodeVerifier } from '../crm-worker.js';
+import worker, { createAccessCodeVerifier, generateIngestKeyPair, sealIngestPayload } from '../crm-worker.js';
 
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
@@ -459,5 +459,96 @@ test('supports standalone customers with multiple phones, marketing consent gate
   const search = await (await call('/api/contacts?q=01155667788')).json();
   assert.equal(search.contacts.length, 1);
   assert.equal(search.contacts[0].id, contactId);
+  sqlite.close();
+});
+
+test('updates placeholder owner contact atomically and enforces sealed-box encrypted ingest with anti-replay ticket', async () => {
+  const keyPair = await generateIngestKeyPair();
+  const { sqlite, accessCode, env } = await createEnv({
+    extraEnv: { CRM_INGEST_PRIVATE_KEY: keyPair.privateKeyPkcs8B64u },
+  });
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
+
+  // 1. Create a phone-less apartment owner placeholder and complete name + phone via POST /api/contacts/:id
+  const placeholderRes = await call('/api/contacts', {
+    method: 'POST',
+    key: 'placeholder-owner-0001',
+    body: { name: 'مالك — شقة مدينة نصر (بانتظار الرقم)', phones: [] },
+  });
+  assert.equal(placeholderRes.status, 201);
+  const { contact_id: placeholderId } = await placeholderRes.json();
+
+  const updated = await call(`/api/contacts/${placeholderId}`, {
+    method: 'POST',
+    body: { name: 'مالك تجريبي محدث', phone: '01099887766', label: 'أساسي', is_primary: true },
+  });
+  assert.equal(updated.status, 200);
+  const updatedDetail = await (await call(`/api/contacts/${placeholderId}`)).json();
+  assert.equal(updatedDetail.contact.name, 'مالك تجريبي محدث');
+  assert.equal(updatedDetail.phones.length, 1);
+  assert.equal(updatedDetail.phones[0].phone_key, '201099887766');
+
+  // 2. Sealed-box encrypted ingest rejects un-ticketed ciphertexts, accepts ticketed ciphertext once, and blocks replay
+  const sealedEnvelope = await sealIngestPayload({
+    entries: [
+      {
+        submission_key: 'sealed-owner-test-0001',
+        name: 'عميل مشفر تجريبي',
+        phone: '+20 15 50001122',
+        phone_label: 'واتساب',
+        intent: 'sell',
+        source: 'whatsapp',
+        source_url: '/properties/test-unit/',
+        status: 'active',
+        area_label: 'مدينة نصر',
+        property_type: 'شقة',
+        budget_min: 3500000,
+        budget_max: 3500000,
+        size_min_m2: 140,
+        size_max_m2: 140,
+        external_id: 'nasr-1',
+        no_followup_reason: 'معروض بالموقع',
+        notes: 'بيانات مشفرة للاختبار المعزول فقط',
+      },
+    ],
+  }, keyPair.publicKeySpkiB64u);
+
+  const unticketed = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: sealedEnvelope }),
+  }), env);
+  assert.equal(unticketed.status, 403);
+
+  const digestBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sealedEnvelope));
+  const ticketHash = Buffer.from(digestBuf).toString('hex');
+  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
+    .run(`sealed-ticket:${ticketHash}`);
+
+  const accepted = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: sealedEnvelope }),
+  }), env);
+  assert.equal(accepted.status, 200);
+  const acceptedJson = await accepted.json();
+  assert.equal(acceptedJson.processed, 1);
+  assert.equal(acceptedJson.created_contacts, 1);
+  assert.equal(acceptedJson.created_opportunities, 1);
+  assert.equal(acceptedJson.linked_properties, 1);
+
+  const replay = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: sealedEnvelope }),
+  }), env);
+  assert.equal(replay.status, 403);
+
+  const opps = await (await call('/api/opportunities?status=active')).json();
+  const sealedOpp = opps.opportunities.find(o => o.contact_name === 'عميل مشفر تجريبي');
+  assert.ok(sealedOpp, 'Expected decrypted opportunity in D1');
+  assert.equal(sealedOpp.phone_key, '201550001122');
+
   sqlite.close();
 });

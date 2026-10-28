@@ -1,0 +1,158 @@
+name: CRM sealed encrypted ingest (nasr-crm-test-db only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sealed_payload:
+        description: 'RSA-OAEP-4096 + AES-256-GCM sealed envelope (enc_v1....) — zero plaintext PII'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-sealed-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: Authorize ticket and deliver sealed ciphertext to nasr-crm-api-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      SEALED_PAYLOAD: ${{ inputs.sealed_payload }}
+    outputs:
+      result: ${{ steps.run_ingest.outputs.result }}
+      processed: ${{ steps.run_ingest.outputs.processed }}
+      contacts: ${{ steps.run_ingest.outputs.contacts }}
+      phones: ${{ steps.run_ingest.outputs.phones }}
+      opps: ${{ steps.run_ingest.outputs.opps }}
+      linked: ${{ steps.run_ingest.outputs.linked }}
+      listings: ${{ steps.run_ingest.outputs.listings }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Authorize one-time D1 ticket and invoke /api/ingest/sealed
+        id: run_ingest
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
+          WORKER_NAME='nasr-crm-api-test'
+          WRANGLER_CFG='_worker/wrangler.crm.toml'
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+
+          result='not-run'
+          processed='0'
+          contacts='0'
+          phones='0'
+          opps='0'
+          linked='0'
+          listings='0'
+
+          finish() {
+            {
+              printf 'result=%s\n' "$result"
+              printf 'processed=%s\n' "$processed"
+              printf 'contacts=%s\n' "$contacts"
+              printf 'phones=%s\n' "$phones"
+              printf 'opps=%s\n' "$opps"
+              printf 'linked=%s\n' "$linked"
+              printf 'listings=%s\n' "$listings"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            result='missing-cloudflare-token'
+            finish
+            exit 1
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+
+          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq 'nasr-market-db' "$WRANGLER_CFG"; then
+            result='forbidden-production-db-in-config'
+            finish
+            exit 1
+          fi
+          if ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
+            result='test-db-uuid-mismatch'
+            finish
+            exit 1
+          fi
+
+          envelope=$(printf '%s' "${SEALED_PAYLOAD:-}" | tr -d '[:space:]')
+          if [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]{64,1200}\.[A-Za-z0-9_-]{16,32}\.[A-Za-z0-9_-]{24,80000}$ ]]; then
+            result='invalid-envelope-format'
+            finish
+            exit 1
+          fi
+
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != '200' ]; then
+            result="accounts-http-$status"
+            finish
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
+          export CLOUDFLARE_ACCOUNT_ID="$account_id"
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/sub.json" -w '%{http_code}' "$API/accounts/$account_id/workers/subdomain" 2>/dev/null || true)
+          subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
+          BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
+
+          ticket_hash=$(printf '%s' "$envelope" | sha256sum | awk '{print $1}')
+          TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('sealed-ticket:${ticket_hash}','opportunity','authorized_pending') ON CONFLICT(submission_key) DO NOTHING;"
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ticket.log" 2>&1; then
+            result='d1-ticket-insert-failed'
+            finish
+            exit 1
+          fi
+
+          jq -n --arg p "$envelope" '{sealed_payload: $p}' > "$TMP/req.json"
+          http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 45 \
+            -X POST -H 'Content-Type: application/json' \
+            --data-binary "@$TMP/req.json" \
+            -o "$TMP/resp.json" -w '%{http_code}' \
+            "$BASE_URL/api/ingest/sealed" 2>/dev/null || true)
+
+          if [ "$http_code" != '200' ]; then
+            err_code=$(jq -r '.error // "unknown"' "$TMP/resp.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            result="ingest-http-${http_code}-${err_code:-unknown}"
+            finish
+            exit 1
+          fi
+
+          processed=$(jq -r '(.processed // 0) | tostring' "$TMP/resp.json")
+
+          COUNTS_SQL="SELECT
+            (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
+            (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
+            (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
+            (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
+          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
+          listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
+          contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
+          phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
+          opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+          linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+
+          result='sealed-ingest-verified'
+          finish
+
+  report:
+    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
+    needs: ingest
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Aggregate non-PII verification counts only; zero customer PII in logs.'
