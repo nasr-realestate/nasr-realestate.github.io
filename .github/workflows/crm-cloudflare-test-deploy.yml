@@ -280,7 +280,7 @@ jobs:
           phase='live-mobile-browser-e2e'
           if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-browser-e2e.mjs > "$TMP/browser_out.json"; then
             failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
-            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-90 || true)
             result="mobile-browser-failed-${failed_step:-unknown}-${failed_reason:-unknown}"
             finish
             exit 1

@@ -61,13 +61,13 @@ function clearWorkspaceDom() {
   $('#contact-search-state').textContent = '';
 }
 
-function lockWorkspace(statusMessage = 'أدخل رمز الدخول للوصول إلى إدارة العملاء.') {
+function lockWorkspace(statusMessage = 'أدخل رمز الدخول للوصول إلى إدارة العملاء.', { clearInput = true } = {}) {
   clearWorkspaceDom();
   $('#crm-workspace').hidden = true;
   $('#refresh-all').hidden = true;
   $('#logout-button').hidden = true;
   $('#login-panel').hidden = false;
-  $('#access-code-input').value = '';
+  if (clearInput) $('#access-code-input').value = '';
   $('#security-status').textContent = 'جلسة خاصة · يتطلب رمز الدخول';
   setNotice($('#app-status'), statusMessage, 'info');
 }
@@ -752,15 +752,17 @@ async function bootstrap() {
       unlockWorkspace();
       await refreshAll();
     } else {
-      lockWorkspace();
+      lockWorkspace('أدخل رمز الدخول للوصول إلى إدارة العملاء.', { clearInput: false });
     }
   } catch (error) {
     if (error instanceof CRMApiError && error.status === 401) {
-      lockWorkspace('أدخل رمز الدخول للوصول إلى إدارة العملاء.');
+      lockWorkspace('أدخل رمز الدخول للوصول إلى إدارة العملاء.', { clearInput: false });
     } else {
-      lockWorkspace('يتعذر بدء الجلسة الآن.');
+      lockWorkspace('يتعذر بدء الجلسة الآن.', { clearInput: false });
       showError(error);
     }
+  } finally {
+    document.documentElement.dataset.crmReady = 'true';
   }
 }
 
