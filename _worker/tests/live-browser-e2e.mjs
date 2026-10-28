@@ -17,6 +17,7 @@ assert.ok(accessCode.length >= 24, 'Access code must be at least 24 chars');
 
 let currentStep = 'browser-launch';
 let browser;
+let activePage = null;
 
 try {
   browser = await chromium.launch({ headless: true });
@@ -41,6 +42,7 @@ try {
   // 1. Open CRM UI on mobile viewport — verify UI renders login screen and workspace is hidden
   currentStep = 'mobile-open-ui';
   const page1 = await context.newPage();
+  activePage = page1;
   attachErrorListeners(page1);
   const navRes = await page1.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
   assert.equal(navRes.status(), 200);
@@ -76,6 +78,7 @@ try {
   await page1.close();
 
   const page2 = await context.newPage();
+  activePage = page2;
   attachErrorListeners(page2);
   await page2.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
   await page2.locator('#crm-workspace').waitFor({ state: 'visible', timeout: 15_000 });
@@ -112,8 +115,14 @@ try {
   await browser.close();
   process.stdout.write(`${JSON.stringify({ ok: true, mobile_browser_verified: true })}\n`);
 } catch (error) {
+  let uiStatusHint = '';
+  if (activePage && !activePage.isClosed()) {
+    const fb = await activePage.locator('#login-feedback').textContent().catch(() => '');
+    const errTxt = await activePage.locator('#load-error').textContent().catch(() => '');
+    if (fb || errTxt) uiStatusHint = `-ui-${Boolean(fb)}-${Boolean(errTxt)}`;
+  }
   if (browser) await browser.close().catch(() => {});
-  const safeReason = String(error?.message || 'browser-assertion').replace(/[^A-Za-z0-9_:-]/g, '-').slice(0, 60);
+  const safeReason = `${String(error?.message || 'browser-assertion')}${uiStatusHint}`.replace(/[^A-Za-z0-9_:-]/g, '-').slice(0, 60);
   process.stdout.write(`${JSON.stringify({ ok: false, failed_step: currentStep, reason: safeReason })}\n`);
   process.exit(1);
 }

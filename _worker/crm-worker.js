@@ -31,7 +31,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
     'pragma': 'no-cache',
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
-    'referrer-policy': 'no-referrer',
+    'referrer-policy': 'same-origin',
     ...headers,
   },
 });
@@ -1019,7 +1019,7 @@ async function serveUiAsset(request, url, env) {
   assetHeaders.set('pragma', 'no-cache');
   assetHeaders.set('x-content-type-options', 'nosniff');
   assetHeaders.set('x-frame-options', 'DENY');
-  assetHeaders.set('referrer-policy', 'no-referrer');
+  assetHeaders.set('referrer-policy', 'same-origin');
   assetHeaders.set('content-security-policy', UI_CSP);
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: assetHeaders });
 }
