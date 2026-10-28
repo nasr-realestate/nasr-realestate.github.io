@@ -1,6 +1,13 @@
 name: CRM sealed encrypted ingest (nasr-crm-test-db only)
 
 on:
+  push:
+    branches:
+      - master
+      - arena/4233ddf4-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-sealed-ingest.yml
+      - _worker/ingest-queue/sealed.txt
   workflow_dispatch:
     inputs:
       sealed_payload:
@@ -114,7 +121,39 @@ jobs:
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
 
           envelope=$(printf '%s' "${SEALED_PAYLOAD:-}" | tr -d '[:space:]')
+          if [ -z "$envelope" ] && [ -f '_worker/ingest-queue/sealed.txt' ]; then
+            envelope=$(grep -v '^[[:space:]]*#' _worker/ingest-queue/sealed.txt | tr -d '[:space:]' || true)
+          fi
+          if [ -z "$envelope" ] || [ "$envelope" = 'IDLE' ]; then
+            COUNTS_SQL="SELECT
+              (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
+              (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
+              (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
+              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
+            listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
+            contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
+            phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
+            opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+            linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+            result='queue-idle-verified'
+            finish
+            exit 0
+          fi
           if [ "$envelope" = 'READ_PUBLIC_KEY' ]; then
+            COUNTS_SQL="SELECT
+              (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
+              (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
+              (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
+              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
+            listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
+            contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
+            phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
+            opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+            linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
             PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
             npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null
             pub=$(jq -r '.. | objects | select(has("pub")) | .pub // empty' "$TMP/pub.json" | head -n1 | tr -cd 'A-Za-z0-9_-')
