@@ -587,6 +587,45 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   const sealedContactDetail = await (await call(`/api/contacts/${sealedOpp.contact_id}`)).json();
   assert.equal(sealedContactDetail.phones.length, 2);
 
+  // Create a phoneless contact, then backfill its phone + secondary phone via sealed phone_backfill
+  const phonelessRes = await call('/api/contacts', {
+    method: 'POST',
+    key: 'idem-phoneless-0001',
+    body: { name: 'عميل بدون رقم مبدئي', phones: [] },
+  });
+  assert.equal(phonelessRes.status, 201);
+  const { contact_id: phonelessId } = await phonelessRes.json();
+
+  const backfillEnvelope = await sealIngestPayload({
+    entries: [
+      {
+        submission_key: 'sealed-phone-backfill-0001',
+        entry_type: 'phone_backfill',
+        name: 'عميل بدون رقم مبدئي',
+        match_names: ['عميل بدون رقم مبدئي'],
+        phone: '01144556677',
+        phone_label: 'واتساب',
+        extra_phones: [{ phone: '01544556677', label: 'إضافي' }],
+      },
+    ],
+  }, keyPair.publicKeySpkiB64u);
+  const bfDigest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(backfillEnvelope))).toString('hex');
+  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
+    .run(`sealed-ticket:${bfDigest}`);
+
+  const bfRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: backfillEnvelope }),
+  }), env);
+  assert.equal(bfRes.status, 200);
+  const bfJson = await bfRes.json();
+  assert.equal(bfJson.updated_contacts, 1);
+
+  const afterBf = await (await call(`/api/contacts/${phonelessId}`)).json();
+  assert.equal(afterBf.phones.length, 2);
+  assert.equal(afterBf.phones[0].phone_key, '201144556677');
+
   sqlite.close();
 });
 

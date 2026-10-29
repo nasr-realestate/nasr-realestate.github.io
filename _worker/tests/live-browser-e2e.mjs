@@ -107,6 +107,8 @@ try {
   const sheetBox = await page2.locator('#record-sheet-panel').boundingBox();
   assert.ok(sheetBox && sheetBox.y < 140 && sheetBox.height > 300, 'Customer command sheet must appear right inside mobile viewport');
   await page2.locator('#record-sheet a[href^="tel:+201099990088"]').waitFor({ state: 'visible', timeout: 10_000 });
+  await page2.locator('#record-sheet a[href^="https://wa.me/201099990088?text="]').first().waitFor({ state: 'visible', timeout: 10_000 });
+  await page2.locator('#record-sheet textarea.wa-msg-preview').waitFor({ state: 'visible', timeout: 10_000 });
   await page2.locator('#record-sheet-close').click();
   assert.equal(await page2.locator('#record-sheet').isHidden(), true);
   await page2.locator('#contact-detail h2').filter({ hasText: 'TEST ONLY — عميل متصفح هاتف' }).waitFor({

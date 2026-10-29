@@ -58,6 +58,7 @@ const UI_ASSET_PATHS = new Set([
   '/crm-sw.js',
   '/crm-assets/app.css',
   '/crm-assets/app.js',
+  '/crm-assets/whatsapp-templates.js',
   '/crm-assets/icon-192.png',
   '/crm-assets/icon-512.png',
   '/crm-assets/icon-maskable-512.png',
@@ -1167,6 +1168,65 @@ async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
   return { createdContact: isNew ? 1 : 0, updatedContact: 0, createdOpportunity: 1, linkedProperty };
 }
 
+async function findContactForPhoneBackfill(db, entry) {
+  const rawKey = boundedText(entry.contact_key, 80);
+  if (/^[A-Za-z0-9._:-]{6,80}$/.test(rawKey)) {
+    const grp = await receipt(db, `cgroup:${rawKey}`);
+    if (grp?.resource_id) {
+      const row = await db.prepare('SELECT id FROM crm_contacts WHERE id=? LIMIT 1').bind(grp.resource_id).first();
+      if (row?.id) return row.id;
+    }
+  }
+  const rawCandidates = [entry.name, ...(Array.isArray(entry.match_names) ? entry.match_names.slice(0, 6) : [])];
+  for (const cand of rawCandidates) {
+    const clean = boundedText(cand, 100);
+    if (!clean) continue;
+    const exact = await db.prepare(
+      `SELECT c.id FROM crm_contacts c WHERE c.name = ?
+       ORDER BY EXISTS(SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = c.id) ASC, c.created_at DESC LIMIT 1`,
+    ).bind(clean).first();
+    if (exact?.id) return exact.id;
+    if (clean.length >= 10) {
+      const noteHit = await db.prepare(
+        `SELECT c.id FROM crm_opportunities o JOIN crm_contacts c ON c.id = o.contact_id
+         WHERE INSTR(o.notes, ?) > 0 AND NOT EXISTS(SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = c.id)
+         ORDER BY o.created_at DESC LIMIT 1`,
+      ).bind(clean.slice(0, 70)).first();
+      if (noteHit?.id) return noteHit.id;
+    }
+  }
+  return null;
+}
+
+async function applySealedPhoneBackfillEntry(db, entry, subKey, phone) {
+  if (!phone) return null;
+  const existingPhone = await findPhone(db, phone);
+  if (existingPhone) {
+    const statements = [
+      db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+        .bind(subKey, 'contact', existingPhone.contact_id),
+    ];
+    await appendExtraPhonesStatements(db, statements, existingPhone.contact_id, entry.extra_phones, phone);
+    const addedExtras = statements.length > 1;
+    await db.batch(statements);
+    return { createdContact: 0, updatedContact: addedExtras ? 1 : 0, createdOpportunity: 0, linkedProperty: 0 };
+  }
+  const targetContactId = await findContactForPhoneBackfill(db, entry);
+  if (!targetContactId) return null;
+  const existingPrimary = await db.prepare('SELECT id FROM crm_contact_phones WHERE contact_id=? AND is_primary=1').bind(targetContactId).first();
+  const primaryFlag = existingPrimary ? 0 : 1;
+  const statements = [
+    db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
+      .bind(id(), targetContactId, phone, boundedText(entry.phone_label, 40) || 'واتساب', primaryFlag),
+    db.prepare('UPDATE crm_contacts SET updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(targetContactId),
+    db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+      .bind(subKey, 'contact', targetContactId),
+  ];
+  await appendExtraPhonesStatements(db, statements, targetContactId, entry.extra_phones, phone);
+  await db.batch(statements);
+  return { createdContact: 0, updatedContact: 1, createdOpportunity: 0, linkedProperty: 0 };
+}
+
 async function applySingleIngestEntry(db, scope, entry) {
   if (!entry || typeof entry !== 'object') return { skipped: 1 };
   const subKey = boundedText(entry.submission_key, 120);
@@ -1174,6 +1234,10 @@ async function applySingleIngestEntry(db, scope, entry) {
   if (await receipt(db, subKey)) return { skipped: 1 };
   const phone = entry.phone ? normalizePhone(entry.phone) : null;
   if (entry.phone && !phone) return { skipped: 1 };
+  if (entry.entry_type === 'phone_backfill') {
+    const synced = await applySealedPhoneBackfillEntry(db, entry, subKey, phone);
+    return synced ? { skipped: 0, ...synced } : { skipped: 1 };
+  }
   if (entry.entry_type === 'contact_only') {
     const contactOnly = await insertSealedContactOnlyEntry(db, entry, subKey, phone);
     return contactOnly ? { skipped: 0, ...contactOnly } : { skipped: 1 };
