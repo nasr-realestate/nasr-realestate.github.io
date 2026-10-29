@@ -7,6 +7,10 @@ property_type: "shop"
 slug: "request-shop-buy-koshary-abbas-elakkad-2026-10-29"
 image: "/assets/img/social-requests.png"
 description: "مطلوب شراء محل تجاري تمليك في شارع عباس العقاد أو محيطه الحيوي بمدينة نصر يصلح لتشغيل نشاط مطعم كشري."
+audio_ad: true
+audio_file: "/assets/audio/requests/request-shop-buy-koshary-abbas-elakkad-2026-10-29.mp3"
+audio_duration: "23 ثانية"
+audio_script: "عندك محل تجاري تمليك للبيع في عباس العقاد بمدينة نصر؟ عميل جاد عايز يشتري محل لتشغيل مطعم كشري ونشاط غذائي حيوي. المطلوب في شارع عباس العقاد نفسه أو تفرعاته التجارية اللي كثافتها عالية. لو محلك مناسب، ابعت صوره وتفاصيله على واتساب سمسار طلبك علشان نرتب معاينة."
 requirements:
   - "نوع التعاقد: شراء (تمليك)."
   - "النوع: محل تجاري."
