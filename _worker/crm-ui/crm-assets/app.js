@@ -5,6 +5,9 @@ const state = {
   api: null,
   contactId: null,
   opportunityId: null,
+  oppTrackFilter: 'live',
+  oppRoleFilter: '',
+  contactTrackFilter: '',
   contacts: [],
   opportunities: [],
   listings: [],
@@ -38,7 +41,29 @@ const STATUS_LABELS = {
   paused: 'مؤجلة',
   unqualified: 'غير مؤهلة',
 };
-const INTENT_LABELS = { buy: 'شراء', rent: 'إيجار', sell: 'بيع', lease: 'تأجير', other: 'أخرى' };
+const INTENT_LABELS = { buy: 'مشتري', rent: 'مستأجر', sell: 'مالك بيع', lease: 'مالك إيجار', other: 'أخرى' };
+const TRACK_ORDER = ['sale_apt', 'furnished_apt', 'new_rent_apt', 'admin_hq', 'transient'];
+const TRACK_META = {
+  sale_apt: { badge: '🟢', short: '🟢 بيع', label: '🟢 شقق للبيع', defaultProp: 'شقة', defaultIntent: 'sell' },
+  furnished_apt: { badge: '🔴', short: '🔴 مفروش', label: '🔴 شقق مفروشة', defaultProp: 'شقة مفروشة', defaultIntent: 'lease' },
+  new_rent_apt: { badge: '🔵', short: '🔵 إيجار جديد', label: '🔵 شقق إيجار جديد', defaultProp: 'شقة إيجار جديد', defaultIntent: 'lease' },
+  admin_hq: { badge: '🟡', short: '🟡 إداري/تجاري', label: '🟡 مقرات ومكاتب إدارية', defaultProp: 'مقر إداري', defaultIntent: 'lease' },
+  transient: { badge: '✈️', short: '✈️ طيارة', label: '✈️ طيارة (عميل عابر)', defaultProp: 'شقة', defaultIntent: 'buy' },
+};
+
+function trackBadge(code) {
+  return TRACK_META[code]?.badge || '🟢';
+}
+
+function trackShort(code) {
+  return TRACK_META[code]?.short || '🟢 بيع';
+}
+
+function formatContactTracks(tracksCsv) {
+  const codes = String(tracksCsv || '').split(',').filter(Boolean);
+  if (!codes.length) return '';
+  return codes.map(trackBadge).join(' ');
+}
 
 function node(tag, text = '', className = '') {
   const element = document.createElement(tag);
@@ -75,6 +100,7 @@ function clearWorkspaceDom() {
   state.pushPublicKey = '';
   state.pushEndpoint = '';
   $('#dashboard-metrics').replaceChildren();
+  $('#track-hub-grid')?.replaceChildren();
   $('#due-list').replaceChildren();
   $('#overdue-list').replaceChildren();
   $('#contact-results').replaceChildren();
@@ -183,7 +209,13 @@ function clickableRecord(title, subtitle, onClick, meta = []) {
   item.append(node('strong', title), node('small', subtitle));
   if (meta.length) {
     const tags = node('span', '', 'record-meta');
-    for (const text of meta) tags.append(node('span', text, 'pill'));
+    for (const entry of meta) {
+      if (entry && typeof entry === 'object') {
+        tags.append(node('span', entry.text, entry.cls || 'pill'));
+      } else if (entry) {
+        tags.append(node('span', entry, 'pill'));
+      }
+    }
     item.append(tags);
   }
   return item;
@@ -199,6 +231,26 @@ function buildPhoneRow({ phone = '', label = '', primary = false } = {}) {
   $('#new-contact-phones').append(fragment);
 }
 
+function renderTrackHub(tracksMap = {}) {
+  const grid = $('#track-hub-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+  for (const code of TRACK_ORDER) {
+    const meta = TRACK_META[code];
+    const stats = tracksMap[code] || { total: 0, supply: 0, demand: 0 };
+    const card = button('', () => selectOpportunityTrackFilter(code, { switchPanel: true }), `track-card track-card-${code}`);
+    const subText = code === 'transient'
+      ? 'محفوظ بالأرشيف خارج التنبيهات'
+      : `${stats.supply || 0} ملاك · ${stats.demand || 0} باحثون`;
+    card.append(
+      node('span', meta.label, 'track-card-title'),
+      node('b', String(stats.total ?? 0), 'track-card-count'),
+      node('small', subText, 'track-card-sub'),
+    );
+    grid.append(card);
+  }
+}
+
 async function loadDashboard() {
   const day = $('#dashboard-day').value || undefined;
   const result = await requireApi().getDashboard(day);
@@ -206,7 +258,7 @@ async function loadDashboard() {
   const metrics = $('#dashboard-metrics');
   metrics.replaceChildren();
   const cards = [
-    ['فرص نشطة', counts.active],
+    ['فرص نشطة (بدون ✈️)', counts.active],
     ['مستحق اليوم', counts.due_today],
     ['متأخر', counts.overdue],
     ['تحتاج خطوة تالية', counts.missing_next_step],
@@ -216,6 +268,7 @@ async function loadDashboard() {
     card.append(node('span', label), node('b', value ?? 0));
     metrics.append(card);
   }
+  renderTrackHub(result.tracks || {});
   renderDueList($('#due-list'), result.due_today || []);
   renderDueList($('#overdue-list'), result.overdue || []);
   $('#due-count').textContent = String(counts.due_today ?? 0);
@@ -230,7 +283,7 @@ function renderDueList(container, rows) {
   }
   for (const row of rows) {
     const item = clickableRecord(
-      row.name || row.contact_name || 'عميل',
+      `${trackBadge(row.track)} ${row.name || row.contact_name || 'عميل'}`,
       `${row.next_action || 'لا يوجد إجراء'} · ${dateLabel(row.next_followup_at)}`,
       () => openOpportunity(row.id),
       [intentLabel(row.intent), statusLabel(row.status)],
@@ -260,29 +313,33 @@ function syncOpportunityContactSelect(contacts) {
   if (contacts.some(contact => contact.id === oldValue)) select.value = oldValue;
 }
 
-async function loadContacts(query = '') {
+async function loadContacts(query = $('#contact-search')?.value?.trim() || '', track = state.contactTrackFilter) {
   $('#contact-search-state').textContent = 'جارٍ البحث…';
-  const result = await requireApi().searchContacts(query);
+  const result = await requireApi().searchContacts(query, track);
   state.contacts = result.contacts || [];
   const list = $('#contact-results');
   list.replaceChildren();
   if (!state.contacts.length) {
-    const emptyText = query ? 'لا توجد نتائج مطابقة.' : 'لا يوجد عملاء بعد. أضف أول عميل يدويًا.';
+    const emptyText = query || track ? 'لا توجد نتائج مطابقة.' : 'لا يوجد عملاء بعد. أضف أول عميل يدويًا.';
     list.append(node('p', emptyText, 'muted'));
   }
   for (const contact of state.contacts) {
     const numbers = (contact.phone_numbers || '').split(',').filter(Boolean);
-    const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'لا يوجد رقم هاتف';
-    const consentTag = contact.communication_consent === 'do_not_contact' ? 'عدم التواصل' : 'متابعة الطلب فقط';
+    const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'محادثة مسجلة بدون رقم هاتف بعد';
+    const badges = formatContactTracks(contact.tracks);
+    const titlePrefix = badges ? `${badges} ` : '';
+    const metaTags = [`${contact.opportunity_count || 0} فرصة`];
+    if (!numbers.length) metaTags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
+    if (contact.communication_consent === 'do_not_contact') metaTags.push('عدم التواصل');
     list.append(clickableRecord(
-      contact.name || 'عميل بلا اسم',
+      `${titlePrefix}${contact.name || 'عميل بلا اسم'}`,
       subtitle,
       () => openContact(contact.id),
-      [`${contact.opportunity_count || 0} فرصة`, consentTag],
+      metaTags,
     ));
   }
   $('#contact-search-state').textContent = `${state.contacts.length} سجل`;
-  syncOpportunityContactSelect(state.contacts);
+  if (!query && !track) syncOpportunityContactSelect(state.contacts);
 }
 
 function buildAddPhoneForm(contactId) {
@@ -407,11 +464,14 @@ function renderContactOpportunitiesSection(contactId, opportunities) {
   oppSection.append(oppHeading);
   const oppList = node('div', '', 'stack');
   for (const opportunity of opportunities) {
+    const specParts = [opportunity.area_label || 'مدينة نصر'];
+    if (opportunity.size_max_m2) specParts.push(`${opportunity.size_max_m2} م²`);
+    if (opportunity.budget_max) specParts.push(money(opportunity.budget_max));
     oppList.append(clickableRecord(
-      intentLabel(opportunity.intent),
-      `${opportunity.area_label || 'مدينة نصر'} · ${statusLabel(opportunity.status)}`,
+      `${trackShort(opportunity.track)} · ${intentLabel(opportunity.intent)}`,
+      specParts.join(' · '),
       () => openOpportunity(opportunity.id),
-      [opportunity.next_action || 'لا يوجد إجراء', dateLabel(opportunity.next_followup_at)],
+      [statusLabel(opportunity.status), opportunity.next_action || 'بدون موعد مجدول'],
     ));
   }
   if (!opportunities.length) oppList.append(node('p', 'لا توجد فرص مرتبطة بهذا العميل.', 'muted'));
@@ -440,19 +500,59 @@ async function openContact(contactId) {
   );
 }
 
+function selectOpportunityTrackFilter(trackCode, { switchPanel = false } = {}) {
+  state.oppTrackFilter = trackCode;
+  for (const chip of document.querySelectorAll('[data-opp-track]')) {
+    chip.classList.toggle('active', chip.dataset.oppTrack === trackCode);
+  }
+  if (switchPanel) openPanel('opportunities-panel');
+  void loadOpportunities().catch(showError);
+}
+
+function selectOpportunityRoleFilter(roleCode) {
+  state.oppRoleFilter = roleCode;
+  for (const chip of document.querySelectorAll('[data-opp-role]')) {
+    chip.classList.toggle('active', chip.dataset.oppRole === roleCode);
+  }
+  void loadOpportunities().catch(showError);
+}
+
+function selectContactTrackFilter(trackCode) {
+  state.contactTrackFilter = trackCode;
+  for (const chip of document.querySelectorAll('[data-contact-track]')) {
+    chip.classList.toggle('active', chip.dataset.contactTrack === trackCode);
+  }
+  void loadContacts($('#contact-search').value.trim(), trackCode).catch(showError);
+}
+
+function formatOpportunitySubtitle(opportunity) {
+  const parts = [intentLabel(opportunity.intent), opportunity.area_label || 'مدينة نصر'];
+  if (opportunity.size_max_m2) parts.push(`${opportunity.size_max_m2} م²`);
+  if (opportunity.budget_max) parts.push(money(opportunity.budget_max));
+  return parts.join(' · ');
+}
+
 async function loadOpportunities(query = $('#opportunity-search').value, status = $('#opportunity-status').value) {
   const container = $('#opportunity-results');
   container.replaceChildren(node('p', 'جارٍ البحث…', 'muted'));
-  const result = await requireApi().searchOpportunities(query, status);
+  const result = await requireApi().searchOpportunities(query, status, {
+    track: state.oppTrackFilter,
+    role: state.oppRoleFilter,
+  });
   state.opportunities = result.opportunities || [];
+  const badgeEl = $('#opportunity-count-badge');
+  if (badgeEl) badgeEl.textContent = `${state.opportunities.length} فرصة`;
   container.replaceChildren();
-  if (!state.opportunities.length) container.append(node('p', 'لا توجد فرص مطابقة.', 'muted'));
+  if (!state.opportunities.length) container.append(node('p', 'لا توجد فرص مطابقة في هذا المسار.', 'muted'));
   for (const opportunity of state.opportunities) {
+    const tags = [trackShort(opportunity.track), statusLabel(opportunity.status)];
+    if (!opportunity.phone_key) tags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
+    else if (opportunity.next_followup_at) tags.push(dateLabel(opportunity.next_followup_at));
     container.append(clickableRecord(
-      opportunity.contact_name || 'عميل',
-      `${intentLabel(opportunity.intent)} · ${opportunity.area_label || 'مدينة نصر'}`,
+      `${trackBadge(opportunity.track)} ${opportunity.contact_name || 'عميل'}`,
+      formatOpportunitySubtitle(opportunity),
       () => openOpportunity(opportunity.id),
-      [statusLabel(opportunity.status), dateLabel(opportunity.next_followup_at)],
+      tags,
     ));
   }
 }
@@ -490,6 +590,70 @@ function renderOpportunityProperties(opportunityId, properties) {
   return propertySection;
 }
 
+function buildTrackSwitcherBar(opportunity) {
+  const wrap = node('div', '', 'track-switcher');
+  const feedback = node('span', '', 'muted');
+  feedback.setAttribute('aria-live', 'polite');
+  for (const code of TRACK_ORDER) {
+    const isCurrent = (opportunity.track || 'sale_apt') === code;
+    const cls = `chip small-chip track-chip-${code}${isCurrent ? ' active' : ''}`;
+    const btn = button(TRACK_META[code].short, async () => {
+      if (isCurrent) return;
+      btn.disabled = true;
+      feedback.textContent = 'جارٍ تحديث الرمز اللوني…';
+      try {
+        await requireApi().switchOpportunityTrack(opportunity.id, code);
+        await Promise.all([loadDashboard(), loadOpportunities(), loadContacts()]);
+        await openOpportunity(opportunity.id);
+      } catch (error) {
+        feedback.textContent = errorText(error);
+        btn.disabled = false;
+      }
+    }, cls);
+    wrap.append(btn);
+  }
+  wrap.append(feedback);
+  return wrap;
+}
+
+function renderMatchesSection(opportunityId) {
+  const section = node('section', '', 'detail-section');
+  section.append(node('h3', '🎯 مطابقات ذكية من نفس المسار وأرشيف الطيارة ✈️'));
+  const body = node('div', '', 'stack');
+  body.append(node('p', 'جارٍ فحص الطرف المقابل والوحدات المناسبة…', 'muted'));
+  section.append(body);
+  void (async () => {
+    try {
+      const res = await requireApi().getOpportunityMatches(opportunityId);
+      body.replaceChildren();
+      const opps = res.opportunities || [];
+      const units = res.listings || [];
+      if (!opps.length && !units.length) {
+        body.append(node('p', 'لا توجد مطابقات مقابلة مسجلة حاليًا في هذا المسار.', 'muted'));
+        return;
+      }
+      for (const m of opps) {
+        const meta = [m.track === 'transient' ? '✈️ من أرشيف الطيارة' : trackShort(m.track)];
+        if (m.phone_key) meta.push(prettyPhone(m.phone_key));
+        body.append(clickableRecord(
+          `${trackBadge(m.track)} ${m.contact_name || 'عميل'}`,
+          formatOpportunitySubtitle(m),
+          () => openOpportunity(m.id),
+          meta,
+        ));
+      }
+      const feedback = node('span', '', 'muted');
+      for (const unit of units) {
+        body.append(buildListingOption(opportunityId, unit, feedback));
+      }
+      if (units.length) body.append(feedback);
+    } catch {
+      body.replaceChildren(node('p', 'تعذّر تحميل المطابقات حاليًا.', 'muted'));
+    }
+  })();
+  return section;
+}
+
 async function openOpportunity(opportunityId) {
   state.opportunityId = opportunityId;
   openPanel('opportunities-panel');
@@ -498,21 +662,28 @@ async function openOpportunity(opportunityId) {
   const result = await requireApi().getOpportunity(opportunityId);
   const { opportunity } = result;
   detail.replaceChildren();
-  detail.append(node('h2', `${intentLabel(opportunity.intent)} · ${opportunity.contact_name || 'عميل'}`));
+  detail.append(
+    node('h2', `${trackBadge(opportunity.track)} ${intentLabel(opportunity.intent)} · ${opportunity.contact_name || 'عميل'}`),
+    buildTrackSwitcherBar(opportunity),
+  );
   if (opportunity.contact_id) {
-    const openContactBtn = button('فتح ملف العميل / تعديل الرقم', () => openContact(opportunity.contact_id), 'button small');
+    const labelText = opportunity.phone_key ? 'فتح ملف العميل / تعديل الرقم' : '➕ إضافة رقم هاتف لهذا العميل';
+    const openContactBtn = button(labelText, () => openContact(opportunity.contact_id), opportunity.phone_key ? 'button small' : 'button primary small');
     detail.append(openContactBtn);
   }
-  if (opportunity.phone_key) pushText(detail, 'الرقم الأساسي', prettyPhone(opportunity.phone_key));
+  pushText(detail, 'الرقم الأساسي', opportunity.phone_key ? prettyPhone(opportunity.phone_key) : 'بدون رقم محفوظ بعد (اضغط الزر أعلاه لإضافته)');
+  pushText(detail, 'المسار اللوني', TRACK_META[opportunity.track]?.label || TRACK_META.sale_apt.label);
   pushText(detail, 'الحالة', statusLabel(opportunity.status));
+  pushText(detail, 'نوع العقار', opportunity.property_type || '—');
   pushText(detail, 'المنطقة', opportunity.area_label || 'مدينة نصر');
-  pushText(detail, 'الميزانية', `${money(opportunity.budget_min)} – ${money(opportunity.budget_max)}`);
+  pushText(detail, 'السعر / الميزانية', `${money(opportunity.budget_min)} – ${money(opportunity.budget_max)}`);
   pushText(detail, 'المساحة', `${opportunity.size_min_m2 ?? '—'} – ${opportunity.size_max_m2 ?? '—'} م²`);
   if (opportunity.source_url) pushText(detail, 'مسار الوحدة على الموقع', opportunity.source_url);
   pushText(detail, 'الإجراء القادم', opportunity.next_action || '—');
   pushText(detail, 'موعد المتابعة', dateLabel(opportunity.next_followup_at));
   if (opportunity.notes) pushText(detail, 'ملاحظات', opportunity.notes);
   detail.append(
+    renderMatchesSection(opportunityId),
     renderOpportunityActivities(opportunity, result.activities || []),
     renderOpportunityProperties(opportunityId, result.properties || []),
   );
@@ -713,6 +884,28 @@ function detectPropertyTypeFromChat(normalized) {
   return 'شقة';
 }
 
+function detectTrackFromChat(normalized) {
+  if (normalized.includes('✈️') || normalized.includes('طيارة')) return 'transient';
+  if (normalized.includes('🟡') || normalized.includes('🟠') || /مقر|إداري|اداري|مكتب|محل|تجاري|عيادة/.test(normalized)) return 'admin_hq';
+  if (normalized.includes('🔴') || /مفروش/.test(normalized)) return 'furnished_apt';
+  if (normalized.includes('🔵') || /إيجار جديد|ايجار جديد|قانون جديد/.test(normalized)) return 'new_rent_apt';
+  return 'sale_apt';
+}
+
+function setQuickTrackChip(track, { syncDefaults = false } = {}) {
+  const safeTrack = TRACK_META[track] ? track : 'sale_apt';
+  const hidden = $('#quick-track-value');
+  if (hidden) hidden.value = safeTrack;
+  for (const chip of document.querySelectorAll('[data-quick-track]')) {
+    chip.classList.toggle('active', chip.dataset.quickTrack === safeTrack);
+  }
+  if (syncDefaults) {
+    const meta = TRACK_META[safeTrack];
+    $('#quick-property-type').value = meta.defaultProp;
+    setQuickIntentChip(meta.defaultIntent);
+  }
+}
+
 function setQuickIntentChip(intent) {
   $('#quick-intent-value').value = intent;
   for (const chip of document.querySelectorAll('[data-quick-intent]')) {
@@ -746,9 +939,10 @@ function handleQuickParseClick() {
   const foundArea = KNOWN_NASR_AREAS.find(area => normalized.includes(area));
   if (foundArea) $('#quick-area').value = foundArea;
   $('#quick-property-type').value = detectPropertyTypeFromChat(normalized);
+  setQuickTrackChip(detectTrackFromChat(normalized));
   setQuickIntentChip(detectIntentFromChat(normalized));
   $('#quick-notes').value = raw.slice(0, 1200);
-  feedback.textContent = phone ? 'تم استخراج الرقم والبيانات — راجع واضغط حفظ.' : 'تم استخراج التفاصيل؛ أضف رقم الهاتف قبل الحفظ.';
+  feedback.textContent = phone ? 'تم استخراج الرقم والرمز والبيانات — راجع واضغط حفظ.' : 'تم استخراج التفاصيل والرمز؛ احفظ بالاسم أو أضف الرقم.';
 }
 
 function resolveQuickFollowupFields(preset) {
@@ -786,17 +980,25 @@ async function handleQuickEntrySubmit(event) {
   const submit = $('#quick-entry-submit');
   const feedback = $('#quick-entry-feedback');
   const v = Object.fromEntries(new FormData(form));
+  if (!v.phone?.trim() && !v.name?.trim()) {
+    feedback.textContent = 'أدخل رقم الهاتف أو اسم العميل على الأقل.';
+    return;
+  }
   const selectedListing = state.listings.find(item => item.external_id === v.external_id);
-  const followup = resolveQuickFollowupFields(v.followup_preset || 'none');
+  const track = v.track || 'sale_apt';
+  const followup = track === 'transient'
+    ? { next_action: null, next_followup_at: null, no_followup_reason: 'عميل عابر (طيارة ✈️) — محفوظ بالأرشيف' }
+    : resolveQuickFollowupFields(v.followup_preset || 'none');
   const budgetVal = v.budget_max ? Number(v.budget_max) : null;
   const sizeVal = v.size_max_m2 ? Number(v.size_max_m2) : null;
   const payload = {
-    phone: v.phone?.trim(),
+    track,
+    phone: v.phone?.trim() || undefined,
     name: v.name?.trim() || '',
     intent: v.intent || 'sell',
     source: 'whatsapp',
     source_url: selectedListing?.url || '',
-    status: 'active',
+    status: track === 'transient' ? 'paused' : 'active',
     area_label: v.area_label?.trim() || '',
     property_type: v.property_type?.trim() || 'شقة',
     budget_min: budgetVal,
@@ -821,6 +1023,7 @@ async function handleQuickEntrySubmit(event) {
     feedback.textContent = 'تم حفظ العميل والفرصة بنجاح.';
     form.reset();
     $('#quick-property-type').value = 'شقة';
+    setQuickTrackChip('sale_apt');
     setQuickIntentChip('sell');
     setQuickFollowupChip('none');
     $('#quick-paste-input').value = '';
@@ -1161,21 +1364,24 @@ async function handleNewOpportunitySubmit(event) {
   const v = Object.fromEntries(new FormData(form));
   const followup = isoFromLocal(v.next_followup_at);
   const activeStatuses = ['active', 'visit_scheduled', 'viewing_done', 'offer', 'negotiating', 'near_close'];
-  if (activeStatuses.includes(v.status) && (!v.next_action?.trim() || !followup) && !v.no_followup_reason?.trim()) {
+  const isTransient = v.track === 'transient';
+  const effectiveStatus = isTransient && v.status === 'active' ? 'paused' : v.status;
+  if (!isTransient && activeStatuses.includes(effectiveStatus) && (!v.next_action?.trim() || !followup) && !v.no_followup_reason?.trim()) {
     feedback.textContent = 'أدخل الإجراء وموعد المتابعة، أو سبب عدم تحديدها.';
     return;
   }
   const body = {
     contact_id: v.contact_id,
+    track: v.track || 'sale_apt',
     intent: v.intent,
     source: v.source,
-    status: v.status,
+    status: effectiveStatus,
     area_label: v.area_label,
     property_type: v.property_type,
     notes: v.notes,
     next_action: v.next_action,
     next_followup_at: followup,
-    no_followup_reason: v.no_followup_reason,
+    no_followup_reason: v.no_followup_reason || (isTransient ? 'عميل عابر (طيارة ✈️) — محفوظ بالأرشيف' : ''),
   };
   for (const key of ['budget_min', 'budget_max', 'size_min_m2', 'size_max_m2']) {
     body[key] = v[key] ? Number(v[key]) : null;
@@ -1224,11 +1430,23 @@ $('#push-test-btn')?.addEventListener('click', handleTestPushClick);
 $('#push-check-btn')?.addEventListener('click', handleCheckDuePushClick);
 $('#push-disable-btn')?.addEventListener('click', handleDisablePushClick);
 $('#pwa-install-btn')?.addEventListener('click', handlePwaInstallClick);
+for (const chip of document.querySelectorAll('[data-quick-track]')) {
+  chip.addEventListener('click', () => setQuickTrackChip(chip.dataset.quickTrack, { syncDefaults: true }));
+}
 for (const chip of document.querySelectorAll('[data-quick-intent]')) {
   chip.addEventListener('click', () => setQuickIntentChip(chip.dataset.quickIntent));
 }
 for (const chip of document.querySelectorAll('[data-quick-followup]')) {
   chip.addEventListener('click', () => setQuickFollowupChip(chip.dataset.quickFollowup));
+}
+for (const chip of document.querySelectorAll('[data-opp-track]')) {
+  chip.addEventListener('click', () => selectOpportunityTrackFilter(chip.dataset.oppTrack));
+}
+for (const chip of document.querySelectorAll('[data-opp-role]')) {
+  chip.addEventListener('click', () => selectOpportunityRoleFilter(chip.dataset.oppRole));
+}
+for (const chip of document.querySelectorAll('[data-contact-track]')) {
+  chip.addEventListener('click', () => selectContactTrackFilter(chip.dataset.contactTrack));
 }
 
 async function bootstrap() {

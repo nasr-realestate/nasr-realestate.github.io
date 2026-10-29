@@ -8,6 +8,7 @@ const DEFAULT_VAPID_SUBJECT = 'mailto:samsar.talabak@mailo.com';
 const ALLOWED_ENDPOINT_HOST_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
 const PHONE_DIGIT_RUN_RE = /(?:\+|00)\d{7,15}|\b01[0125]\d{8}\b|[0-9٠-٩]{7,}/g;
 const INTENT_AR = { buy: 'طلب شراء', rent: 'طلب إيجار', sell: 'عرض بيع', lease: 'عرض تأجير', other: 'فرصة عقارية' };
+const TRACK_BADGES = { sale_apt: '🟢', furnished_apt: '🔴', new_rent_apt: '🔵', admin_hq: '🟡', transient: '✈️' };
 
 const encoder = new TextEncoder();
 
@@ -320,13 +321,14 @@ function getCairoClock(nowDate) {
 }
 
 function buildDueFollowupPayload(opp) {
+  const badge = TRACK_BADGES[opp.track] || '🟢';
   const intent = INTENT_AR[opp.intent] || 'فرصة عقارية';
   const prop = sanitizePushText(opp.property_type || 'وحدة', 36);
   const area = sanitizePushText(opp.area_label || 'مدينة نصر', 48);
   const action = sanitizePushText(opp.next_action || 'متابعة مجدولة', 70);
   return {
     title: '⏰ موعد متابعة مستحق — مدينة نصر',
-    body: `${intent} · ${prop} (${area}) — الإجراء: ${action}`,
+    body: `${badge} ${intent} · ${prop} (${area}) — الإجراء: ${action}`,
     tag: `crm-due-${opp.id.slice(0, 20)}`,
     url: '/',
   };
@@ -334,9 +336,10 @@ function buildDueFollowupPayload(opp) {
 
 async function dispatchDueFollowupAlerts(db, subscriptions, vapid, nowIso, fetchImpl) {
   const dueRows = await db.prepare(
-    `SELECT o.id, o.intent, o.property_type, o.area_label, o.next_action, o.next_followup_at
+    `SELECT o.id, o.track, o.intent, o.property_type, o.area_label, o.next_action, o.next_followup_at
      FROM crm_opportunities o
      WHERE o.status IN (${ACTIVE_OPP_SQL})
+       AND COALESCE(o.track, 'sale_apt') != 'transient'
        AND o.next_followup_at IS NOT NULL
        AND datetime(o.next_followup_at) <= datetime(?, '+5 minutes')
        AND NOT EXISTS (
@@ -411,8 +414,8 @@ async function dispatchMorningDigestIfDue(db, subscriptions, vapid, nowDate, fet
 
   const counts = await db.prepare(
     `SELECT
-      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) = ? THEN 1 ELSE 0 END) AS due_today,
-      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) < ? THEN 1 ELSE 0 END) AS overdue
+      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) = ? THEN 1 ELSE 0 END) AS due_today,
+      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) < ? THEN 1 ELSE 0 END) AS overdue
      FROM crm_opportunities`,
   ).bind(dayKey, dayKey).first();
 

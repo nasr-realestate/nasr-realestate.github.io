@@ -14,6 +14,28 @@ import {
 
 export { generateVapidKeyPair };
 
+export const ALLOWED_TRACKS = ['sale_apt', 'furnished_apt', 'new_rent_apt', 'admin_hq', 'transient'];
+const TRACK_LABELS_AR = {
+  sale_apt: '🟢 شقق للبيع',
+  furnished_apt: '🔴 شقق مفروشة',
+  new_rent_apt: '🔵 شقق إيجار جديد',
+  admin_hq: '🟡 مقرات ومكاتب إدارية',
+  transient: '✈️ طيارة (عميل عابر)',
+};
+
+function inferStructuralTrack(propertyType = '', intent = '', notes = '') {
+  const hay = `${propertyType || ''} ${notes || ''}`;
+  if (/مقر|إداري|اداري|مكتب|محل|تجاري|عيادة|عياده|مخزن|مول/.test(hay)) return 'admin_hq';
+  if (/مفروش/.test(hay)) return 'furnished_apt';
+  if (intent === 'rent' || intent === 'lease') return 'new_rent_apt';
+  return 'sale_apt';
+}
+
+export function inferOpportunityTrack(body) {
+  if (ALLOWED_TRACKS.includes(body?.track)) return body.track;
+  return inferStructuralTrack(body?.property_type, body?.intent, body?.notes);
+}
+
 const ACTIVE = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 const SESSION_COOKIE = '__Host-crm_session';
 const DEFAULT_SESSION_TTL_SECONDS = 28_800; // 8 hours
@@ -539,6 +561,23 @@ function sqlError(error) {
   return json({ error: 'database_error' }, 500);
 }
 
+function buildTrackCountsMap(rows = []) {
+  const map = {};
+  for (const code of ALLOWED_TRACKS) {
+    map[code] = { total: 0, supply: 0, demand: 0 };
+  }
+  for (const row of rows) {
+    if (map[row.track]) {
+      map[row.track] = {
+        total: Number(row.total || 0),
+        supply: Number(row.supply_count || 0),
+        demand: Number(row.demand_count || 0),
+      };
+    }
+  }
+  return map;
+}
+
 async function dashboard(db, url) {
   const now = new Date();
   const day = url.searchParams.get('day') || now.toISOString().slice(0, 10);
@@ -546,22 +585,26 @@ async function dashboard(db, url) {
   const start = `${day}T00:00:00.000Z`;
   const end = `${day}T23:59:59.999Z`;
   const current = now.toISOString();
-  const active = await db.prepare(`SELECT COUNT(*) AS count FROM crm_opportunities WHERE status IN (${ACTIVE})`).first();
-  const today = await db.prepare(`SELECT o.id,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.next_action,o.next_followup_at
+  const active = await db.prepare(`SELECT COUNT(*) AS count FROM crm_opportunities WHERE status IN (${ACTIVE}) AND track != 'transient'`).first();
+  const trackRows = await db.prepare(`SELECT track, COUNT(*) AS total,
+      SUM(CASE WHEN intent IN ('sell','lease') THEN 1 ELSE 0 END) AS supply_count,
+      SUM(CASE WHEN intent IN ('buy','rent') THEN 1 ELSE 0 END) AS demand_count
+    FROM crm_opportunities GROUP BY track`).all();
+  const today = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND o.next_followup_at BETWEEN ? AND ? ORDER BY o.next_followup_at`).bind(start, end).all();
-  const overdue = await db.prepare(`SELECT o.id,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.next_action,o.next_followup_at
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at BETWEEN ? AND ? ORDER BY o.next_followup_at`).bind(start, end).all();
+  const overdue = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND o.next_followup_at < ? ORDER BY o.next_followup_at LIMIT 200`).bind(start).all();
-  const noAction = await db.prepare(`SELECT o.id,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.no_followup_reason,o.updated_at
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at < ? ORDER BY o.next_followup_at LIMIT 200`).bind(start).all();
+  const noAction = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.no_followup_reason,o.updated_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND o.next_followup_at IS NULL AND COALESCE(o.no_followup_reason,'')='' ORDER BY o.updated_at LIMIT 200`).all();
-  const stale = await db.prepare(`SELECT o.id,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.updated_at,
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NULL AND COALESCE(o.no_followup_reason,'')='' ORDER BY o.updated_at LIMIT 200`).all();
+  const stale = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.updated_at,
     (SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id) AS last_activity
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND COALESCE((SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id),o.updated_at) < ?
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND COALESCE((SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id),o.updated_at) < ?
     ORDER BY COALESCE(last_activity,o.updated_at) LIMIT 200`).bind(new Date(Date.now() - 7 * 86400000).toISOString()).all();
-  const visits = await db.prepare(`SELECT p.id,p.viewing_at,p.viewing_result,o.id AS opportunity_id,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,l.title,l.url
+  const visits = await db.prepare(`SELECT p.id,p.viewing_at,p.viewing_result,o.id AS opportunity_id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,l.title,l.url
     FROM crm_opportunity_properties p JOIN crm_opportunities o ON o.id=p.opportunity_id
     JOIN crm_contacts c ON c.id=o.contact_id JOIN listings l ON l.id=p.listing_id
     WHERE p.presentation_status='viewing_scheduled' AND p.viewing_at BETWEEN ? AND ? ORDER BY p.viewing_at`).bind(start, end).all();
@@ -575,6 +618,7 @@ async function dashboard(db, url) {
       overdue: overdue.results.length,
       missing_next_step: noAction.results.length,
     },
+    tracks: buildTrackCountsMap(trackRows.results),
     due_today: today.results,
     overdue: overdue.results,
     missing_next_step: noAction.results,
@@ -584,8 +628,24 @@ async function dashboard(db, url) {
   });
 }
 
+function appendOpportunityTrackFilter(track, where, params) {
+  if (track === 'live') {
+    where.push("o.track != 'transient'");
+  } else if (ALLOWED_TRACKS.includes(track)) {
+    where.push('o.track=?');
+    params.push(track);
+  }
+}
+
+function appendOpportunityRoleFilter(role, where) {
+  if (role === 'supply') where.push("o.intent IN ('sell','lease')");
+  else if (role === 'demand') where.push("o.intent IN ('buy','rent')");
+}
+
 async function listOpportunities(db, url) {
   const status = url.searchParams.get('status') || '';
+  const track = url.searchParams.get('track') || '';
+  const role = url.searchParams.get('role') || '';
   const q = boundedText(url.searchParams.get('q'), 80);
   const params = [];
   const where = [];
@@ -593,12 +653,15 @@ async function listOpportunities(db, url) {
     where.push('o.status=?');
     params.push(status);
   }
+  appendOpportunityTrackFilter(track, where, params);
+  appendOpportunityRoleFilter(role, where);
   if (q) {
-    where.push('(c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id=c.id AND p.phone_key LIKE ?) OR o.notes LIKE ?)');
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    const pat = `%${q}%`;
+    where.push('(c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id=c.id AND p.phone_key LIKE ?) OR o.area_label LIKE ? OR o.property_type LIKE ? OR o.notes LIKE ?)');
+    params.push(pat, pat, pat, pat, pat);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const sql = `SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id ${whereSql} ORDER BY CASE WHEN o.next_followup_at IS NULL THEN 1 ELSE 0 END,o.next_followup_at DESC,o.updated_at DESC LIMIT 300`;
+  const sql = `SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id ${whereSql} ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, CASE WHEN o.next_followup_at IS NULL THEN 1 ELSE 0 END, o.next_followup_at DESC, o.updated_at DESC LIMIT 300`;
   const rows = await db.prepare(sql).bind(...params).all();
   return json({ opportunities: rows.results });
 }
@@ -682,14 +745,18 @@ function duplicatePhone() {
 
 async function listContacts(db, url) {
   const q = boundedText(url.searchParams.get('q'), 80);
+  const track = url.searchParams.get('track') || '';
+  const hasTrack = ALLOWED_TRACKS.includes(track);
   const pattern = `%${q}%`;
   const rows = await db.prepare(`SELECT c.id,c.name,c.communication_consent,c.created_at,c.updated_at,
       GROUP_CONCAT(p.phone_key, ',') AS phone_numbers,
       MAX(CASE WHEN p.is_primary=1 THEN p.phone_key ELSE NULL END) AS primary_phone,
-      (SELECT COUNT(*) FROM crm_opportunities o WHERE o.contact_id=c.id) AS opportunity_count
+      (SELECT COUNT(*) FROM crm_opportunities o WHERE o.contact_id=c.id) AS opportunity_count,
+      (SELECT GROUP_CONCAT(DISTINCT o.track) FROM crm_opportunities o WHERE o.contact_id=c.id) AS tracks
     FROM crm_contacts c LEFT JOIN crm_contact_phones p ON p.contact_id=c.id
-    WHERE ?='' OR c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones q WHERE q.contact_id=c.id AND q.phone_key LIKE ?)
-    GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 200`).bind(q, pattern, pattern).all();
+    WHERE (?='' OR c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones q WHERE q.contact_id=c.id AND q.phone_key LIKE ?))
+      AND (?='' OR EXISTS (SELECT 1 FROM crm_opportunities ox WHERE ox.contact_id=c.id AND ox.track=?))
+    GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 200`).bind(q, pattern, pattern, hasTrack ? track : '', hasTrack ? track : '').all();
   return json({ contacts: rows.results });
 }
 
@@ -698,7 +765,7 @@ async function getContact(db, contactId) {
   if (!contact) return json({ error: 'contact_not_found' }, 404);
   const [phones, opportunities] = await Promise.all([
     db.prepare('SELECT id,phone_key,label,is_primary,created_at FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(contactId).all(),
-    db.prepare('SELECT id,intent,source,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,next_action,next_followup_at,no_followup_reason,created_at,updated_at FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 100').bind(contactId).all(),
+    db.prepare('SELECT id,track,intent,source,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,created_at,updated_at FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 100').bind(contactId).all(),
   ]);
   return json({ contact, phones: phones.results, opportunities: opportunities.results });
 }
@@ -884,7 +951,7 @@ async function updateContact(request, env, contactId) {
   }
 }
 
-const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,240000})$/;
+const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,520000})$/;
 
 export async function generateIngestKeyPair() {
   const pair = await crypto.subtle.generateKey(
@@ -1010,10 +1077,11 @@ async function findPlaceholderBySourceUrl(db, sourceUrl) {
 async function upgradePlaceholderEntry(db, placeholder, entry, subKey, phone) {
   const nextName = boundedText(entry.name, 100) || placeholder.name;
   const nextNotes = boundedText(entry.notes, 1200) || placeholder.notes || '';
+  const nextTrack = inferOpportunityTrack(entry);
   const statements = [
     db.prepare('UPDATE crm_contacts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(nextName, placeholder.contact_id),
-    db.prepare('UPDATE crm_opportunities SET notes=?,source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
-      .bind(nextNotes, ['call', 'missed_call', 'referral', 'website', 'whatsapp', 'other'].includes(entry.source) ? entry.source : 'whatsapp', placeholder.opportunity_id),
+    db.prepare('UPDATE crm_opportunities SET track=?,notes=?,source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+      .bind(nextTrack, nextNotes, ['call', 'missed_call', 'referral', 'website', 'whatsapp', 'other'].includes(entry.source) ? entry.source : 'whatsapp', placeholder.opportunity_id),
     db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
       .bind(subKey, 'opportunity', placeholder.opportunity_id),
   ];
@@ -1027,15 +1095,36 @@ async function upgradePlaceholderEntry(db, placeholder, entry, subKey, phone) {
   return { createdContact: 0, updatedContact: 1, createdOpportunity: 0, linkedProperty: 0 };
 }
 
+async function resolveSealedContactGroup(db, entry, phone) {
+  if (phone) {
+    const existingPhone = await findPhone(db, phone);
+    if (existingPhone) return { contactId: existingPhone.contact_id, isNew: false, groupReceiptKey: '' };
+  }
+  const rawKey = boundedText(entry.contact_key, 80);
+  const groupReceiptKey = /^[A-Za-z0-9._:-]{6,80}$/.test(rawKey) ? `cgroup:${rawKey}` : '';
+  if (groupReceiptKey) {
+    const existingGroup = await receipt(db, groupReceiptKey);
+    if (existingGroup?.resource_id) {
+      return { contactId: existingGroup.resource_id, isNew: false, groupReceiptKey: '' };
+    }
+  }
+  return { contactId: id(), isNew: true, groupReceiptKey };
+}
+
 async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
   const parsed = parseOpportunityInput({ ...entry, phone: undefined });
   if (parsed.error) return null;
-  const existingPhone = phone ? await findPhone(db, phone) : null;
-  const contactId = existingPhone ? existingPhone.contact_id : id();
+  const { contactId, isNew, groupReceiptKey } = await resolveSealedContactGroup(db, entry, phone);
   const oppId = id();
   const statements = [];
-  if (!existingPhone) {
+  if (isNew) {
     statements.push(db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').bind(contactId, boundedText(entry.name, 100)));
+    if (groupReceiptKey) {
+      statements.push(
+        db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
+          .bind(groupReceiptKey, 'contact', contactId),
+      );
+    }
     if (phone) {
       statements.push(
         db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,1)')
@@ -1046,9 +1135,9 @@ async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
   }
   const sourceUrl = safeSitePath(entry.source_url);
   statements.push(
-    db.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(oppId, contactId, parsed.intent, parsed.source, sourceUrl, parsed.status, boundedText(entry.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(entry.property_type, 80), boundedText(entry.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason),
+    db.prepare(`INSERT INTO crm_opportunities(id,contact_id,track,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(oppId, contactId, parsed.track, parsed.intent, parsed.source, sourceUrl, parsed.status, boundedText(entry.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(entry.property_type, 80), boundedText(entry.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason),
     db.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
       .bind(id(), oppId, initialActivityType(parsed.source), boundedText(entry.activity_summary || entry.notes, 1200) || 'تسجيل مشفر آمن', '', parsed.nextAction, parsed.nextAt),
     db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
@@ -1067,7 +1156,7 @@ async function insertSealedOpportunityEntry(db, scope, entry, subKey, phone) {
     }
   }
   await db.batch(statements);
-  return { createdContact: existingPhone ? 0 : 1, updatedContact: 0, createdOpportunity: 1, linkedProperty };
+  return { createdContact: isNew ? 1 : 0, updatedContact: 0, createdOpportunity: 1, linkedProperty };
 }
 
 async function applySingleIngestEntry(db, scope, entry) {
@@ -1096,7 +1185,7 @@ async function handleSealedIngest(request, env, config) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const privKey = typeof env.CRM_INGEST_PRIVATE_KEY === 'string' ? env.CRM_INGEST_PRIVATE_KEY.trim() : '';
   if (!privKey) return json({ error: 'ingest_not_configured' }, 503);
-  const body = await readJson(request, 260_000);
+  const body = await readJson(request, 560_000);
   const envelope = typeof body.sealed_payload === 'string' ? body.sealed_payload.trim() : '';
   if (!SEALED_ENVELOPE_RE.test(envelope)) return json({ error: 'invalid_sealed_envelope' }, 400);
 
@@ -1107,7 +1196,7 @@ async function handleSealedIngest(request, env, config) {
   }
 
   const unsealed = await unsealIngestPayload(envelope, privKey);
-  if (!unsealed || unsealed.entries.length === 0 || unsealed.entries.length > 100) {
+  if (!unsealed || unsealed.entries.length === 0 || unsealed.entries.length > 250) {
     return json({ error: 'invalid_sealed_payload' }, 400);
   }
 
@@ -1159,14 +1248,27 @@ function hasValidFollowupRule(status, nextAction, nextAt, reason) {
   return Boolean(reason);
 }
 
+function resolveInputStatusAndReason(body, track) {
+  const hasExplicitStatus = ALLOWED_STATUSES.includes(body.status);
+  const defaultStatus = track === 'transient' ? 'paused' : 'active';
+  const status = hasExplicitStatus ? body.status : defaultStatus;
+  const rawReason = boundedText(body.no_followup_reason, 240) || null;
+  if (rawReason) return { status, reason: rawReason };
+  if (track === 'transient') return { status, reason: 'عميل عابر (طيارة ✈️) — محفوظ بالأرشيف للرجوع عند الحاجة' };
+  return { status, reason: null };
+}
+
 function parseOpportunityInput(body) {
+  if (body.track !== undefined && body.track !== '' && !ALLOWED_TRACKS.includes(body.track)) {
+    return { error: json({ error: 'invalid_track' }, 400) };
+  }
+  const track = inferOpportunityTrack(body);
   const phone = body.phone ? normalizePhone(body.phone) : null;
   const intent = ['buy', 'rent', 'sell', 'lease', 'other'].includes(body.intent) ? body.intent : null;
   const source = ['call', 'missed_call', 'referral', 'website', 'whatsapp', 'other'].includes(body.source) ? body.source : null;
-  const status = ALLOWED_STATUSES.includes(body.status) ? body.status : 'active';
+  const { status, reason } = resolveInputStatusAndReason(body, track);
   const nextAction = boundedText(body.next_action, 180) || null;
   const nextAt = body.next_followup_at ? isoDate(body.next_followup_at) : null;
-  const reason = boundedText(body.no_followup_reason, 240) || null;
   const budgetMin = optionalNumber(body.budget_min);
   const budgetMax = optionalNumber(body.budget_max);
   const sizeMin = optionalNumber(body.size_min_m2);
@@ -1187,7 +1289,7 @@ function parseOpportunityInput(body) {
   if (status === 'lost' && !ALLOWED_LOSS_REASONS.includes(body.loss_reason)) {
     return { error: json({ error: 'loss_reason_required' }, 400) };
   }
-  return { phone, intent, source, status, nextAction, nextAt, reason, budgetMin, budgetMax, sizeMin, sizeMax };
+  return { track, phone, intent, source, status, nextAction, nextAt, reason, budgetMin, budgetMax, sizeMin, sizeMax };
 }
 
 function initialActivityType(source) {
@@ -1200,7 +1302,7 @@ function initialActivityType(source) {
 async function resolveOpportunityContact(db, requestedId, phone, name) {
   const existing = requestedId ? await db.prepare('SELECT id,name FROM crm_contacts WHERE id=?').bind(requestedId).first() : null;
   if (requestedId && !existing) return { error: json({ error: 'contact_not_found' }, 404) };
-  if (!requestedId && !phone) return { error: json({ error: 'contact_or_phone_required' }, 400) };
+  if (!requestedId && !phone && !normalizeName(name)) return { error: json({ error: 'contact_or_phone_required' }, 400) };
   const byPhone = phone ? await findPhone(db, phone) : null;
   if (byPhone && existing && byPhone.contact_id !== existing.id) return { error: duplicatePhone() };
   const contact = existing || (byPhone ? { id: byPhone.contact_id, name: byPhone.name } : null);
@@ -1259,9 +1361,9 @@ async function createOpportunity(request, env) {
   const statements = await buildContactSetupStatements(env.DB, resolved.contact, contactId, name, parsed.phone, resolved.phoneExists);
   const closedAt = parsed.status === 'won' || parsed.status === 'lost' ? new Date().toISOString() : null;
   statements.push(
-    env.DB.prepare(`INSERT INTO crm_opportunities(id,contact_id,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,closed_at,loss_reason,loss_notes)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(opportunityId, contactId, parsed.intent, parsed.source, safeSitePath(body.source_url), parsed.status, boundedText(body.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(body.property_type, 80), boundedText(body.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason, closedAt, body.loss_reason || null, boundedText(body.loss_notes, 500)),
+    env.DB.prepare(`INSERT INTO crm_opportunities(id,contact_id,track,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,closed_at,loss_reason,loss_notes)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(opportunityId, contactId, parsed.track, parsed.intent, parsed.source, safeSitePath(body.source_url), parsed.status, boundedText(body.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(body.property_type, 80), boundedText(body.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason, closedAt, body.loss_reason || null, boundedText(body.loss_notes, 500)),
   );
   statements.push(env.DB.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)').bind(key, 'opportunity', opportunityId));
   statements.push(
@@ -1290,20 +1392,102 @@ function resolveClosedAt(nextStatus, current) {
   return new Date().toISOString();
 }
 
+function resolveTrackTransition(current, targetTrack) {
+  if (targetTrack === 'transient') {
+    return {
+      status: ACTIVE_STATUS_SET.has(current.status) ? 'paused' : current.status,
+      nextAction: null,
+      nextAt: null,
+      reason: 'نُقل إلى أرشيف الطيارة ✈️ (عميل عابر خارج المتابعة اليومية)',
+    };
+  }
+  const status = current.status === 'paused' ? 'active' : current.status;
+  const needsFallbackReason = ACTIVE_STATUS_SET.has(status) && (!current.next_action || !current.next_followup_at);
+  return {
+    status,
+    nextAction: current.next_action || null,
+    nextAt: current.next_followup_at || null,
+    reason: needsFallbackReason ? (current.no_followup_reason || 'نشط بالمسار — بانتظار جدولة المتابعة') : (current.no_followup_reason || null),
+  };
+}
+
+async function switchOpportunityTrack(request, env, opportunityId) {
+  const body = await readJson(request);
+  const targetTrack = body.track;
+  if (!ALLOWED_TRACKS.includes(targetTrack)) return json({ error: 'invalid_track' }, 400);
+  const current = await env.DB.prepare('SELECT id,track,status,next_action,next_followup_at,no_followup_reason FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
+  if (!current) return json({ error: 'opportunity_not_found' }, 404);
+  const transition = resolveTrackTransition(current, targetTrack);
+  const label = TRACK_LABELS_AR[targetTrack] || targetTrack;
+  const summary = `تغيير المسار اللوني إلى ${label}`;
+  try {
+    await env.DB.batch([
+      env.DB.prepare('UPDATE crm_opportunities SET track=?,status=?,next_action=?,next_followup_at=?,no_followup_reason=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(targetTrack, transition.status, transition.nextAction, transition.nextAt, transition.reason, opportunityId),
+      env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
+        .bind(id(), opportunityId, 'status_change', summary, '', transition.nextAction, transition.nextAt),
+    ]);
+    return json({ ok: true, opportunity_id: opportunityId, track: targetTrack, status: transition.status });
+  } catch (error) {
+    return sqlError(error);
+  }
+}
+
+async function queryCatalogMatches(db, scope, opp, targetTrack) {
+  if (!scope || (opp.intent !== 'buy' && opp.intent !== 'rent')) return [];
+  const txType = opp.intent === 'buy' ? 'sale' : 'rent';
+  const rows = await db.prepare(`SELECT id,external_id,title,url,price,area_m2,bedrooms,bathrooms
+    FROM listings
+    WHERE source_id=? AND area_id IN (${scope.areaSql}) AND status='active' AND transaction_type=?
+    ORDER BY price_updated_at DESC, id DESC LIMIT 40`).bind(scope.sourceId, txType).all();
+  const filtered = rows.results.filter(item => {
+    const inferred = inferStructuralTrack(item.title, opp.intent, '');
+    return inferred === targetTrack || (targetTrack === 'sale_apt' && inferred !== 'admin_hq');
+  });
+  return filtered.slice(0, 5);
+}
+
+async function getOpportunityMatches(db, opportunityId, scope) {
+  const opp = await db.prepare('SELECT id,track,intent,property_type,area_label,budget_min,budget_max,size_min_m2,size_max_m2,notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
+  if (!opp) return json({ error: 'opportunity_not_found' }, 404);
+  const targetTrack = opp.track === 'transient'
+    ? inferStructuralTrack(opp.property_type, opp.intent, opp.notes)
+    : opp.track;
+  const isSupply = opp.intent === 'sell' || opp.intent === 'lease';
+  const oppositeSql = isSupply ? "'buy','rent'" : "'sell','lease'";
+  const candidates = await db.prepare(`SELECT o.id,o.track,o.intent,o.status,o.area_label,o.budget_min,o.budget_max,o.size_min_m2,o.size_max_m2,o.property_type,o.notes,
+      c.name AS contact_name,
+      (SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key
+    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
+    WHERE o.id != ? AND o.intent IN (${oppositeSql}) AND (o.track = ? OR o.track = 'transient')
+    ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, o.updated_at DESC LIMIT 20`).bind(opportunityId, targetTrack).all();
+  const matchingOpportunities = candidates.results
+    .filter(row => row.track === targetTrack || inferStructuralTrack(row.property_type, row.intent, row.notes) === targetTrack)
+    .slice(0, 8);
+  const matchingListings = await queryCatalogMatches(db, scope, opp, targetTrack);
+  return json({
+    target_track: targetTrack,
+    opportunities: matchingOpportunities,
+    listings: matchingListings,
+  });
+}
+
 async function addActivity(request, env, opportunityId) {
   const body = await readJson(request);
   const summary = boundedText(body.summary, 1200);
   const allowedTypes = ['call', 'missed_call', 'whatsapp_note', 'visit', 'offer', 'objection', 'note', 'status_change'];
   const activityType = allowedTypes.includes(body.activity_type) ? body.activity_type : null;
   const status = body.status;
+  const requestedTrack = body.track;
   const nextAction = boundedText(body.next_action, 180) || null;
   const nextAt = body.next_followup_at ? isoDate(body.next_followup_at) : null;
   const reason = boundedText(body.no_followup_reason, 240) || null;
-  const current = await env.DB.prepare('SELECT id,status,closed_at,loss_reason,loss_notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
+  const current = await env.DB.prepare('SELECT id,track,status,closed_at,loss_reason,loss_notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
   if (!current) return json({ error: 'opportunity_not_found' }, 404);
-  if (!summary || !activityType || (status && !ALLOWED_STATUSES.includes(status)) || (body.next_followup_at && !nextAt)) {
+  if (!summary || !activityType || (status && !ALLOWED_STATUSES.includes(status)) || (requestedTrack && !ALLOWED_TRACKS.includes(requestedTrack)) || (body.next_followup_at && !nextAt)) {
     return json({ error: 'invalid_activity' }, 400);
   }
+  const nextTrack = requestedTrack || current.track || 'sale_apt';
   const nextStatus = status || current.status;
   if (ACTIVE_STATUS_SET.has(nextStatus) && (!nextAction || !nextAt) && !reason) {
     return json({ error: 'next_action_required' }, 400);
@@ -1314,8 +1498,8 @@ async function addActivity(request, env, opportunityId) {
   if (nextStatus === 'lost' && !lossReason) return json({ error: 'loss_reason_required' }, 400);
   try {
     await env.DB.batch([
-      env.DB.prepare('UPDATE crm_opportunities SET status=?,next_action=?,next_followup_at=?,no_followup_reason=?,closed_at=?,loss_reason=?,loss_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
-        .bind(nextStatus, nextAction, nextAt, reason, closed, lossReason, lossNotes, opportunityId),
+      env.DB.prepare('UPDATE crm_opportunities SET track=?,status=?,next_action=?,next_followup_at=?,no_followup_reason=?,closed_at=?,loss_reason=?,loss_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(nextTrack, nextStatus, nextAction, nextAt, reason, closed, lossReason, lossNotes, opportunityId),
       env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
         .bind(id(), opportunityId, activityType, summary, boundedText(body.outcome, 200), nextAction, nextAt),
     ]);
@@ -1383,19 +1567,23 @@ const EXACT_POST_ROUTES = {
   '/api/push/check-now': async (_request, env) => json(await runScheduledCrmNotifications(env, { forceCheck: true })),
 };
 
+const PARAM_ROUTES = [
+  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones$/, run: (req, env, idVal) => addContactPhone(req, env, idVal) },
+  { method: 'GET', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getContact(env.DB, idVal) },
+  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, idVal) => updateContact(req, env, idVal) },
+  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getOpportunity(env.DB, idVal) },
+  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (_req, env, idVal, cfg) => getOpportunityMatches(env.DB, idVal, cfg.scope) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/track$/, run: (req, env, idVal) => switchOpportunityTrack(req, env, idVal) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/, run: (req, env, idVal) => addActivity(req, env, idVal) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/properties$/, run: (req, env, idVal, cfg) => linkProperty(req, env, idVal, cfg.scope) },
+];
+
 async function dispatchParameterizedApi(request, pathname, env, config) {
-  const { method } = request;
-  const phoneRoute = pathname.match(/^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones$/);
-  if (method === 'POST' && phoneRoute) return addContactPhone(request, env, phoneRoute[1]);
-  const contactDetail = pathname.match(/^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/);
-  if (method === 'GET' && contactDetail) return getContact(env.DB, contactDetail[1]);
-  if (method === 'POST' && contactDetail) return updateContact(request, env, contactDetail[1]);
-  const detail = pathname.match(/^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/);
-  if (method === 'GET' && detail) return getOpportunity(env.DB, detail[1]);
-  const activity = pathname.match(/^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/);
-  if (method === 'POST' && activity) return addActivity(request, env, activity[1]);
-  const property = pathname.match(/^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/properties$/);
-  if (method === 'POST' && property) return linkProperty(request, env, property[1], config.scope);
+  for (const route of PARAM_ROUTES) {
+    if (request.method !== route.method) continue;
+    const match = route.re.exec(pathname);
+    if (match) return route.run(request, env, match[1], config);
+  }
   return json({ error: 'not_found' }, 404);
 }
 

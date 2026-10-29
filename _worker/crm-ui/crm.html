@@ -75,6 +75,15 @@
           </div>
         </section>
         <div class="metrics" id="dashboard-metrics" aria-live="polite"></div>
+        <section class="card track-hub-card" id="track-hub" aria-labelledby="track-hub-title">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">النواة الخماسية · التصنيف التشغيلي</p>
+              <h2 id="track-hub-title">اضغط أي رمز لوني لفتح عملائه وعروضه وطلباته فورًا</h2>
+            </div>
+          </div>
+          <div class="track-hub-grid" id="track-hub-grid" aria-live="polite"></div>
+        </section>
         <div class="columns">
           <section class="card"><div class="card-heading"><h2>مستحق اليوم</h2><span class="count" id="due-count">0</span></div><div id="due-list" class="stack muted">جارٍ التحميل…</div></section>
           <section class="card"><div class="card-heading"><h2>متأخر</h2><span class="count danger-count" id="overdue-count">0</span></div><div id="overdue-list" class="stack muted">جارٍ التحميل…</div></section>
@@ -94,7 +103,18 @@
         </div>
         <form id="quick-entry-form" class="card form-grid">
           <div class="full">
-            <span class="chip-label">1) نوع العميل والفرصة</span>
+            <span class="chip-label">1) الرمز اللوني (النواة الخماسية)</span>
+            <div class="chip-row" role="group" aria-label="المسار اللوني">
+              <button class="chip track-chip-sale_apt active" type="button" data-quick-track="sale_apt">🟢 شقق للبيع</button>
+              <button class="chip track-chip-furnished_apt" type="button" data-quick-track="furnished_apt">🔴 شقق مفروشة</button>
+              <button class="chip track-chip-new_rent_apt" type="button" data-quick-track="new_rent_apt">🔵 إيجار جديد</button>
+              <button class="chip track-chip-admin_hq" type="button" data-quick-track="admin_hq">🟡 مقرات وإداري</button>
+              <button class="chip track-chip-transient" type="button" data-quick-track="transient">✈️ طيارة (عابر)</button>
+            </div>
+            <input type="hidden" name="track" id="quick-track-value" value="sale_apt">
+          </div>
+          <div class="full">
+            <span class="chip-label">2) دور العميل</span>
             <div class="chip-row" role="group" aria-label="نوع الفرصة">
               <button class="chip active" type="button" data-quick-intent="sell">مالك بيع</button>
               <button class="chip" type="button" data-quick-intent="lease">مالك إيجار</button>
@@ -103,7 +123,7 @@
             </div>
             <input type="hidden" name="intent" id="quick-intent-value" value="sell">
           </div>
-          <label>رقم الهاتف (إلزامي للتسجيل الجديد) <input name="phone" id="quick-phone" type="tel" inputmode="tel" maxlength="32" required placeholder="010... أو +20..."></label>
+          <label>رقم الهاتف (أو يُستكمل لاحقًا إذا سُجل الاسم) <input name="phone" id="quick-phone" type="tel" inputmode="tel" maxlength="32" placeholder="010... أو +20..."></label>
           <label>اسم المالك أو العميل <input name="name" id="quick-name" maxlength="100" placeholder="اسم العميل"></label>
           <label>المنطقة بمدينة نصر <input name="area_label" id="quick-area" maxlength="100" placeholder="مثال: مكرم عبيد، الحديقة الدولية"></label>
           <label>نوع العقار <input name="property_type" id="quick-property-type" maxlength="80" value="شقة"></label>
@@ -132,15 +152,38 @@
 
       <section class="panel" id="contacts-panel" hidden>
         <div class="section-heading"><div><p class="eyebrow">سجلات العملاء</p><h1>العملاء</h1></div><button class="button primary" type="button" data-open-panel="new-contact-panel">＋ عميل جديد</button></div>
+        <div class="chip-row filter-bar" role="group" aria-label="تصفية العملاء بالمسار اللوني">
+          <button class="chip active" type="button" data-contact-track="">كل العملاء</button>
+          <button class="chip track-chip-sale_apt" type="button" data-contact-track="sale_apt">🟢 بيع</button>
+          <button class="chip track-chip-furnished_apt" type="button" data-contact-track="furnished_apt">🔴 مفروش</button>
+          <button class="chip track-chip-new_rent_apt" type="button" data-contact-track="new_rent_apt">🔵 إيجار جديد</button>
+          <button class="chip track-chip-admin_hq" type="button" data-contact-track="admin_hq">🟡 مقرات وإداري</button>
+          <button class="chip track-chip-transient" type="button" data-contact-track="transient">✈️ طيارة</button>
+        </div>
         <form id="contact-search-form" class="search-row"><label class="sr-only" for="contact-search">ابحث بالاسم أو رقم الهاتف</label><input id="contact-search" type="search" placeholder="ابحث بالاسم أو الرقم" autocomplete="off"><button class="button" type="submit">بحث</button></form>
         <p id="contact-search-state" class="muted" aria-live="polite"></p>
         <div class="columns contacts-layout"><div id="contact-results" class="stack"></div><section id="contact-detail" class="card detail-card"><p class="muted">اختر عميلًا لعرض ملفه وأرقامه وفرصه.</p></section></div>
       </section>
 
       <section class="panel" id="opportunities-panel" hidden>
-        <div class="section-heading"><div><p class="eyebrow">الطلبات والمتابعات</p><h1>الفرص</h1></div><button class="button primary" type="button" data-open-panel="new-opportunity-panel">＋ فرصة جديدة</button></div>
-        <form id="opportunity-search-form" class="search-row"><label class="sr-only" for="opportunity-search">بحث في الفرص</label><input id="opportunity-search" type="search" placeholder="ابحث باسم العميل أو الرقم أو الملاحظات"><select id="opportunity-status" aria-label="تصفية بالحالة"><option value="">كل الحالات</option><option value="active">نشطة</option><option value="visit_scheduled">معاينة مجدولة</option><option value="viewing_done">تمت المعاينة</option><option value="offer">عرض سعر</option><option value="negotiating">تفاوض</option><option value="near_close">قرب الإغلاق</option><option value="won">تمت الصفقة</option><option value="lost">لم تتم</option><option value="paused">مؤجلة</option><option value="unqualified">غير مؤهلة</option></select><button class="button" type="submit">بحث</button></form>
-        <div class="columns"><div id="opportunity-results" class="stack"></div><section id="opportunity-detail" class="card detail-card"><p class="muted">اختر فرصة لعرض نشاطها والعقارات المرتبطة بها.</p></section></div>
+        <div class="section-heading"><div><p class="eyebrow">النواة الخماسية · عروض وطلبات ومتابعات</p><h1>الفرص</h1></div><button class="button primary" type="button" data-open-panel="new-opportunity-panel">＋ فرصة جديدة</button></div>
+        <div class="chip-row filter-bar" role="group" aria-label="تصفية الفرص بالرمز اللوني">
+          <button class="chip active" type="button" data-opp-track="live">النشط بدون ✈️</button>
+          <button class="chip track-chip-sale_apt" type="button" data-opp-track="sale_apt">🟢 شقق للبيع</button>
+          <button class="chip track-chip-furnished_apt" type="button" data-opp-track="furnished_apt">🔴 شقق مفروشة</button>
+          <button class="chip track-chip-new_rent_apt" type="button" data-opp-track="new_rent_apt">🔵 إيجار جديد</button>
+          <button class="chip track-chip-admin_hq" type="button" data-opp-track="admin_hq">🟡 مقرات وإداري</button>
+          <button class="chip track-chip-transient" type="button" data-opp-track="transient">✈️ طيارة (أرشيف)</button>
+          <button class="chip" type="button" data-opp-track="">كل السجلات</button>
+        </div>
+        <div class="chip-row filter-subbar" role="group" aria-label="تصفية العرض والطلب">
+          <button class="chip small-chip active" type="button" data-opp-role="">العرض + الطلب معًا</button>
+          <button class="chip small-chip" type="button" data-opp-role="supply">🏠 مُلّاك وعروض</button>
+          <button class="chip small-chip" type="button" data-opp-role="demand">🔍 مشترون ومستأجرون</button>
+          <span id="opportunity-count-badge" class="muted"></span>
+        </div>
+        <form id="opportunity-search-form" class="search-row"><label class="sr-only" for="opportunity-search">بحث في الفرص</label><input id="opportunity-search" type="search" placeholder="ابحث بالاسم أو الرقم أو المنطقة أو الملاحظات"><select id="opportunity-status" aria-label="تصفية بالحالة"><option value="">كل الحالات</option><option value="active">نشطة</option><option value="visit_scheduled">معاينة مجدولة</option><option value="viewing_done">تمت المعاينة</option><option value="offer">عرض سعر</option><option value="negotiating">تفاوض</option><option value="near_close">قرب الإغلاق</option><option value="won">تمت الصفقة</option><option value="lost">لم تتم</option><option value="paused">مؤجلة</option><option value="unqualified">غير مؤهلة</option></select><button class="button" type="submit">بحث</button></form>
+        <div class="columns"><div id="opportunity-results" class="stack"></div><section id="opportunity-detail" class="card detail-card"><p class="muted">اختر فرصة لعرض نشاطها وتغيير رمزها اللوني أو مطابقتها مع الطرف المقابل.</p></section></div>
       </section>
 
       <section class="panel" id="new-contact-panel" hidden>
@@ -162,6 +205,7 @@
         <div class="section-heading"><div><p class="eyebrow">طلب جديد لعميل موجود</p><h1>إضافة فرصة</h1></div></div>
         <form id="new-opportunity-form" class="card form-grid">
           <label class="full">العميل <select name="contact_id" id="opportunity-contact" required><option value="">اختر عميلًا…</option></select></label>
+          <label>المسار اللوني (النواة الخماسية) <select name="track" required><option value="sale_apt">🟢 شقق للبيع</option><option value="furnished_apt">🔴 شقق مفروشة</option><option value="new_rent_apt">🔵 شقق للإيجار الجديد</option><option value="admin_hq">🟡 مقرات ومكاتب إدارية/تجارية</option><option value="transient">✈️ طيارة (عميل عابر بالأرشيف)</option></select></label>
           <label>نوع الطلب <select name="intent" required><option value="buy">شراء</option><option value="rent">إيجار</option><option value="sell">بيع</option><option value="lease">تأجير</option><option value="other">أخرى</option></select></label>
           <label>مصدر الطلب <select name="source" required><option value="call">مكالمة</option><option value="missed_call">مكالمة فائتة</option><option value="referral">ترشيح</option><option value="website">الموقع</option><option value="whatsapp">واتساب (ملاحظة يدوية)</option><option value="other">أخرى</option></select></label>
           <label>المنطقة في مدينة نصر <input name="area_label" maxlength="100" placeholder="مثال: الحي العاشر"></label>
