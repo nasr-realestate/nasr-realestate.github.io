@@ -149,8 +149,12 @@ export class CRMClient {
     return this.request(`/dashboard${query}`);
   }
 
-  searchContacts(query = '') {
-    return this.request(`/contacts${querySuffix('q', query)}`);
+  searchContacts(query = '', track = '') {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (track) params.set('track', track);
+    const suffix = params.size ? `?${params.toString()}` : '';
+    return this.request(`/contacts${suffix}`);
   }
 
   getContact(contactId) {
@@ -169,16 +173,26 @@ export class CRMClient {
     return this.request(`/contacts/${safeId(contactId)}`, { method: 'POST', body: payload });
   }
 
-  searchOpportunities(query = '', status = '') {
+  searchOpportunities(query = '', status = '', { track = '', role = '' } = {}) {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
     if (status) params.set('status', status);
+    if (track) params.set('track', track);
+    if (role) params.set('role', role);
     const suffix = params.size ? `?${params.toString()}` : '';
     return this.request(`/opportunities${suffix}`);
   }
 
   getOpportunity(opportunityId) {
     return this.request(`/opportunities/${safeId(opportunityId)}`);
+  }
+
+  getOpportunityMatches(opportunityId) {
+    return this.request(`/opportunities/${safeId(opportunityId)}/matches`);
+  }
+
+  switchOpportunityTrack(opportunityId, track) {
+    return this.request(`/opportunities/${safeId(opportunityId)}/track`, { method: 'POST', body: { track } });
   }
 
   createOpportunity(opportunity, idempotencyKey = crypto.randomUUID()) {

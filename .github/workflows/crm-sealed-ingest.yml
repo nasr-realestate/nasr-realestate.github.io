@@ -39,6 +39,7 @@ jobs:
       opps: ${{ steps.run_ingest.outputs.opps }}
       linked: ${{ steps.run_ingest.outputs.linked }}
       listings: ${{ steps.run_ingest.outputs.listings }}
+      tracks: ${{ steps.run_ingest.outputs.tracks }}
       pk1: ${{ steps.run_ingest.outputs.pk1 }}
       pk2: ${{ steps.run_ingest.outputs.pk2 }}
       pk3: ${{ steps.run_ingest.outputs.pk3 }}
@@ -71,6 +72,7 @@ jobs:
           opps='0'
           linked='0'
           listings='0'
+          tracks='none'
           pk1=''
           pk2=''
           pk3=''
@@ -87,6 +89,7 @@ jobs:
               printf 'opps=%s\n' "$opps"
               printf 'linked=%s\n' "$linked"
               printf 'listings=%s\n' "$listings"
+              printf 'tracks=%s\n' "$tracks"
               printf 'pk1=%s\n' "$pk1"
               printf 'pk2=%s\n' "$pk2"
               printf 'pk3=%s\n' "$pk3"
@@ -175,7 +178,7 @@ jobs:
             exit 0
           fi
 
-          if [ "${#envelope}" -gt 240000 ] || [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
+          if [ "${#envelope}" -gt 520000 ] || [[ ! "$envelope" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
             result='invalid-envelope-format'
             finish
             exit 1
@@ -194,7 +197,7 @@ jobs:
           fi
 
           jq -n --arg p "$envelope" '{sealed_payload: $p}' > "$TMP/req.json"
-          http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 45 \
+          http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 90 \
             -X POST -H 'Content-Type: application/json' \
             --data-binary "@$TMP/req.json" \
             -o "$TMP/resp.json" -w '%{http_code}' \
@@ -215,13 +218,19 @@ jobs:
             (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
             (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
             (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
-            (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
+            (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS g_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS r_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE track='new_rent_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS b_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE track='admin_hq' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS y_cnt,
+            (SELECT COUNT(*) FROM crm_opportunities WHERE track='transient' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS t_cnt;"
           npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
           listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
           contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
           phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
           opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
           linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+          tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
 
           result='sealed-ingest-verified'
           finish
@@ -258,7 +267,7 @@ jobs:
     steps: [{ run: echo ok }]
 
   report:
-    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, updated=${{ needs.ingest.outputs.updated }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
+    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (processed=${{ needs.ingest.outputs.processed }}, contacts=${{ needs.ingest.outputs.contacts }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, tracks=${{ needs.ingest.outputs.tracks }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
     needs: ingest
     if: always()
     runs-on: ubuntu-latest

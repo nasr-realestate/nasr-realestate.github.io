@@ -14,6 +14,7 @@ import { runScheduledCrmNotifications } from '../crm-push.js';
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
 const migration0003 = await readFile(new URL('../migrations/0003_crm_push_notifications.sql', import.meta.url), 'utf8');
+const migration0004 = await readFile(new URL('../migrations/0004_crm_tracks_core.sql', import.meta.url), 'utf8');
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.footcai-555.workers.dev';
 
 function randomToken(bytes = 24) {
@@ -100,6 +101,7 @@ async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
   sqlite.exec(migration0001);
   sqlite.exec(migration0002);
   sqlite.exec(migration0003);
+  sqlite.exec(migration0004);
 
   const accessCode = randomToken(24);
   const sessionSecret = randomToken(32);
@@ -763,6 +765,178 @@ test('delivers encrypted Web Push notifications, runs scheduled due/digest alert
   });
   assert.equal(unsubRes.status, 200);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_push_subscriptions').get().n, 0);
+
+  sqlite.close();
+});
+
+test('5-track operational core separates live color tracks from transient archive, supports 1-tap switching, smart matching, and multi-unit contact_key dedup', async () => {
+  const keyPair = await generateIngestKeyPair();
+  const { sqlite, accessCode, env } = await createEnv({
+    extraEnv: { CRM_INGEST_PRIVATE_KEY: keyPair.privateKeyPkcs8B64u },
+  });
+  const session = await loginSession(env, accessCode);
+  const call = makeAuthedApiCall(env, session);
+
+  // 1) Create a 🟢 sale owner, a 🟢 sale buyer, a ✈️ transient apartment seeker, and a ✈️ transient commercial seeker
+  const saleOwner = await (await call('/api/opportunities', {
+    method: 'POST',
+    key: 'track-sale-owner-1',
+    body: {
+      track: 'sale_apt',
+      name: 'مالك شقة مكرم تجريبي',
+      phone: '01011223344',
+      intent: 'sell',
+      source: 'whatsapp',
+      area_label: 'مكرم عبيد',
+      property_type: 'شقة',
+      budget_min: 5500000,
+      budget_max: 5500000,
+      size_min_m2: 185,
+      size_max_m2: 185,
+      next_action: 'تأكيد مفتاح المعاينة',
+      next_followup_at: '2026-10-29T12:00:00Z',
+    },
+  })).json();
+  assert.ok(saleOwner.opportunity_id);
+
+  const saleBuyer = await (await call('/api/opportunities', {
+    method: 'POST',
+    key: 'track-sale-buyer-1',
+    body: {
+      track: 'sale_apt',
+      name: 'مشتري شقة جاد تجريبي',
+      phone: '01122334455',
+      intent: 'buy',
+      source: 'call',
+      area_label: 'مكرم عبيد',
+      property_type: 'شقة',
+      budget_min: 5000000,
+      budget_max: 6000000,
+      no_followup_reason: 'بانتظار ترشيح مناسب',
+    },
+  })).json();
+  assert.ok(saleBuyer.opportunity_id);
+
+  // Transient ✈️ lead needs NO follow-up date and defaults cleanly to paused
+  const transientApt = await (await call('/api/opportunities', {
+    method: 'POST',
+    key: 'track-transient-apt-1',
+    body: {
+      track: 'transient',
+      name: 'عميل طيارة شقة تجريبي',
+      intent: 'buy',
+      source: 'whatsapp',
+      area_label: 'عباس العقاد',
+      property_type: 'شقة',
+      notes: 'سأل مرة ومضى لحال سبيله',
+    },
+  })).json();
+  assert.ok(transientApt.opportunity_id);
+
+  const transientShop = await (await call('/api/opportunities', {
+    method: 'POST',
+    key: 'track-transient-shop-1',
+    body: {
+      track: 'transient',
+      name: 'عميل طيارة محل تجاري تجريبي',
+      intent: 'rent',
+      source: 'whatsapp',
+      area_label: 'مدينة نصر',
+      property_type: 'محل تجاري',
+      notes: 'كان يبحث عن محل مخبوزات',
+    },
+  })).json();
+  assert.ok(transientShop.opportunity_id);
+
+  // 2) Verify dashboard counts exclude ✈️ transient from active/due queues while reporting per-track supply/demand
+  const dash = await (await call('/api/dashboard?day=2026-10-29')).json();
+  assert.equal(dash.counts.active, 2, 'Only live non-transient opportunities count as active');
+  assert.equal(dash.counts.due_today, 1);
+  assert.equal(dash.tracks.sale_apt.total, 2);
+  assert.equal(dash.tracks.sale_apt.supply, 1);
+  assert.equal(dash.tracks.sale_apt.demand, 1);
+  assert.equal(dash.tracks.transient.total, 2);
+
+  // 3) Verify ?track=live, ?track=transient, and ?role=supply|demand filters
+  const liveList = await (await call('/api/opportunities?track=live')).json();
+  assert.equal(liveList.opportunities.length, 2);
+  const supplyList = await (await call('/api/opportunities?track=sale_apt&role=supply')).json();
+  assert.equal(supplyList.opportunities.length, 1);
+  assert.equal(supplyList.opportunities[0].id, saleOwner.opportunity_id);
+
+  // 4) Verify smart cross-matching for 🟢 sale owner includes 🟢 active buyer + ✈️ apartment seeker, NOT ✈️ shop seeker
+  const matchRes = await (await call(`/api/opportunities/${saleOwner.opportunity_id}/matches`)).json();
+  assert.equal(matchRes.target_track, 'sale_apt');
+  const matchedIds = matchRes.opportunities.map(o => o.id);
+  assert.equal(matchedIds.includes(saleBuyer.opportunity_id), true);
+  assert.equal(matchedIds.includes(transientApt.opportunity_id), true);
+  assert.equal(matchedIds.includes(transientShop.opportunity_id), false);
+
+  // 5) Verify 1-tap track switch: moving 🟢 owner -> ✈️ transient pauses it and clears due follow-up; moving to 🔴 furnished reactivates it
+  const toPlane = await (await call(`/api/opportunities/${saleOwner.opportunity_id}/track`, {
+    method: 'POST',
+    body: { track: 'transient' },
+  })).json();
+  assert.equal(toPlane.track, 'transient');
+  assert.equal(toPlane.status, 'paused');
+
+  const dashAfterPlane = await (await call('/api/dashboard?day=2026-10-29')).json();
+  assert.equal(dashAfterPlane.counts.due_today, 0, 'Moving to transient immediately clears daily follow-up clutter');
+
+  const toFurnished = await (await call(`/api/opportunities/${saleOwner.opportunity_id}/track`, {
+    method: 'POST',
+    body: { track: 'furnished_apt' },
+  })).json();
+  assert.equal(toFurnished.track, 'furnished_apt');
+  assert.equal(toFurnished.status, 'active');
+
+  // 6) Verify sealed ingest contact_key deduplicates multi-unit contacts even without phone numbers
+  const multiEnvelope = await sealIngestPayload({
+    wipe_existing_customers: true,
+    entries: [
+      {
+        submission_key: 'sealed-multi-no-phone-01',
+        contact_key: 'owner-multi-nophone-01',
+        track: 'new_rent_apt',
+        name: 'مالكة وحدتين بدون رقم تجريبي',
+        intent: 'lease',
+        source: 'whatsapp',
+        area_label: 'مكرم عبيد',
+        property_type: 'شقة إيجار جديد',
+        budget_min: 20000,
+        budget_max: 20000,
+        no_followup_reason: 'مسجل بالأرشيف الحي',
+      },
+      {
+        submission_key: 'sealed-multi-no-phone-02',
+        contact_key: 'owner-multi-nophone-01',
+        track: 'furnished_apt',
+        name: 'مالكة وحدتين بدون رقم تجريبي',
+        intent: 'lease',
+        source: 'whatsapp',
+        area_label: 'الحديقة الدولية',
+        property_type: 'شقة مفروشة',
+        budget_min: 27000,
+        budget_max: 27000,
+        no_followup_reason: 'مسجل بالأرشيف الحي',
+      },
+    ],
+  }, keyPair.publicKeySpkiB64u);
+  const digestBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(multiEnvelope));
+  const ticketHash = Buffer.from(digestBuf).toString('hex');
+  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
+    .run(`sealed-ticket:${ticketHash}`);
+  const ingestRes = await (await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: multiEnvelope }),
+  }), env)).json();
+  assert.equal(ingestRes.created_contacts, 1, 'Multi-unit phone-less owner must create 1 contact, zero duplicates');
+  assert.equal(ingestRes.created_opportunities, 2);
+
+  const contactsAfter = await (await call('/api/contacts')).json();
+  assert.equal(contactsAfter.contacts.length, 1);
+  assert.equal(contactsAfter.contacts[0].opportunity_count, 2);
 
   sqlite.close();
 });
