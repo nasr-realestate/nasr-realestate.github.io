@@ -187,6 +187,10 @@ export class CRMClient {
     return this.request(`/opportunities/${safeId(opportunityId)}`);
   }
 
+  updateOpportunity(opportunityId, payload) {
+    return this.request(`/opportunities/${safeId(opportunityId)}`, { method: 'POST', body: payload });
+  }
+
   getOpportunityMatches(opportunityId) {
     return this.request(`/opportunities/${safeId(opportunityId)}/matches`);
   }

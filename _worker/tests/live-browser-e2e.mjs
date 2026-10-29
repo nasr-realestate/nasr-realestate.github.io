@@ -99,6 +99,16 @@ try {
   const resultCard = page2.locator('#contact-results .record').filter({ hasText: 'TEST ONLY — عميل متصفح هاتف' });
   await resultCard.first().waitFor({ state: 'visible', timeout: 15_000 });
   await resultCard.first().click();
+  await page2.locator('#record-sheet').waitFor({ state: 'visible', timeout: 10_000 });
+  await page2.locator('#record-sheet-title').filter({ hasText: 'TEST ONLY — عميل متصفح هاتف' }).waitFor({
+    state: 'visible',
+    timeout: 10_000,
+  });
+  const sheetBox = await page2.locator('#record-sheet-panel').boundingBox();
+  assert.ok(sheetBox && sheetBox.y < 140 && sheetBox.height > 300, 'Customer command sheet must appear right inside mobile viewport');
+  await page2.locator('#record-sheet a[href^="tel:+201099990088"]').waitFor({ state: 'visible', timeout: 10_000 });
+  await page2.locator('#record-sheet-close').click();
+  assert.equal(await page2.locator('#record-sheet').isHidden(), true);
   await page2.locator('#contact-detail h2').filter({ hasText: 'TEST ONLY — عميل متصفح هاتف' }).waitFor({
     state: 'visible',
     timeout: 15_000,

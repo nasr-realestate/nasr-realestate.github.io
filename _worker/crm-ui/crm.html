@@ -222,6 +222,16 @@
           <div class="full form-actions"><button class="button primary" type="submit">حفظ الفرصة</button><span id="new-opportunity-feedback" class="muted" aria-live="polite"></span></div>
         </form>
       </section>
+
+      <div class="sheet-backdrop" id="record-sheet" hidden role="dialog" aria-labelledby="record-sheet-title">
+        <div class="sheet-panel" id="record-sheet-panel">
+          <div class="sheet-topbar">
+            <button class="button small sheet-back-btn" id="record-sheet-close" type="button">→ رجوع للقائمة</button>
+            <span class="pill" id="record-sheet-badge">ملف العميل</span>
+          </div>
+          <div class="sheet-body" id="record-sheet-body"></div>
+        </div>
+      </div>
     </div>
 
     <footer class="footer-note">CRM خاص. الجلسة محمية داخل العامل بملف تعريف ارتباط HttpOnly وSecure وSameSite=Strict وحماية CSRF. لا توجد مزامنة تلقائية للهاتف أو واتساب.</footer>

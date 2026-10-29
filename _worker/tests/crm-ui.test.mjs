@@ -126,10 +126,15 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
   assert.match(html, /id="push-card"/);
   assert.match(html, /id="pwa-install-btn"/);
   assert.match(html, /id="track-hub-grid"/);
+  assert.match(html, /id="record-sheet"\s+hidden/);
+  assert.match(html, /id="record-sheet-close"/);
   assert.match(html, /data-quick-track="transient"/);
   assert.match(appJs, /void ensureCrmServiceWorker\(\)/);
+  assert.match(appJs, /buildQuickActionPad\s*\(/);
+  assert.match(appJs, /tel:\+/);
   assert.match(clientJs, /subscribePush\s*\(/);
   assert.match(clientJs, /switchOpportunityTrack\s*\(/);
+  assert.match(clientJs, /updateOpportunity\s*\(/);
   assert.match(clientJs, /getOpportunityMatches\s*\(/);
   assert.match(crmSwJs, /addEventListener\('fetch'/);
   assert.match(crmSwJs, /showNotification\s*\(/);
