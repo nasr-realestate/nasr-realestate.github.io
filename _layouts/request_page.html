@@ -81,7 +81,7 @@ hide_navbar: true
     "name": {{ page.title | jsonify }},
     "address": {
       "@type": "PostalAddress",
-      "addressLocality": {{ page.location | jsonify }},
+      "addressLocality": {{ page.location | default: "مدينة نصر" | jsonify }},
       "addressRegion": "القاهرة",
       "addressCountry": "EG"
     },
@@ -98,8 +98,8 @@ hide_navbar: true
     "offers": {
       "@type": "Offer",
       "priceCurrency": "EGP",
-      "price": "{{ page.budget_num | default: 0 }}",
-      "availability": "{% if is_expired %}https://schema.org/OutOfStock{% else %}https://schema.org/InStock{% endif %}"
+      {% if page.budget_num %}"price": "{{ page.budget_num }}",
+      {% endif %}"availability": "{% if is_expired %}https://schema.org/OutOfStock{% else %}https://schema.org/InStock{% endif %}"
     }
   }
 }
@@ -138,7 +138,8 @@ hide_navbar: true
       <span class="rq-badge primary">
         <i class="fas fa-bullhorn"></i>
         {% if page.property_type == 'shop' or page.title contains "محل" %}طلب محل تجاري
-        {% elsif page.property_type == 'office' or page.title contains "مكتب" %}طلب مكتب إداري
+        {% elsif page.property_type == 'clinic' or page.title contains "عيادة" %}طلب عيادة طبية
+        {% elsif page.property_type == 'office' or page.title contains "مكتب" or page.title contains "مقر" %}طلب مكتب إداري
         {% elsif page.property_type == 'villa' or page.title contains "فيلا" %}طلب فيلا
         {% else %}طلب شقة{% endif %}
       </span>
@@ -296,11 +297,13 @@ hide_navbar: true
             طلب جديد
           </span>
           <h3 class="rq-related-title">{{ req.title | truncate: 60 }}</h3>
+          {% if req.location %}
           <div class="rq-related-meta">
             <i class="fas fa-map-marker-alt"></i>
             {{ req.location | truncate: 40 }}
           </div>
-          <div class="rq-related-budget">{{ req.budget }}</div>
+          {% endif %}
+          <div class="rq-related-budget">{{ req.budget | default: "حسب العرض المناسب" }}</div>
         </a>
       {% endfor %}
     </div>
