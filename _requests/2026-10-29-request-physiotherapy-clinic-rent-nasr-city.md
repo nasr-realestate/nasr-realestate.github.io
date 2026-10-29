@@ -7,6 +7,10 @@ property_type: "clinic"
 slug: "request-physiotherapy-clinic-rent-nasr-city-2026-10-29"
 image: "/assets/img/social-requests.png"
 description: "مطلوب للإيجار وحدة إدارية أو طبية تصلح لتشغيل عيادة علاج طبيعي في المناطق الحيوية بمدينة نصر (خارج نطاق شارع أحمد الزمر)."
+audio_ad: true
+audio_file: "/assets/audio/requests/request-physiotherapy-clinic-rent-nasr-city-2026-10-29.mp3"
+audio_duration: "23 ثانية"
+audio_script: "عندك وحدة إدارية أو طبية للإيجار في منطقة حيوية بمدينة نصر؟ مطلوبة لعيادة علاج طبيعي سهلة الوصول وبأسانسير لو دور علوي. الطلب في مناطق مدينة نصر الحيوية ما عدا شارع أحمد الزمر، والمعاينة فورية. لو وحدتك مناسبة، ابعت صورها وتفاصيلها على واتساب سمسار طلبك علشان نرتب معاينة."
 requirements:
   - "النشاط: عيادة / مركز علاج طبيعي."
   - "نوع التعاقد: إيجار إداري أو طبي."

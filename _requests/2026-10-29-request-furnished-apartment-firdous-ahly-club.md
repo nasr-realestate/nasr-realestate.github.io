@@ -7,6 +7,10 @@ property_type: "apartment"
 slug: "request-furnished-apartment-firdous-ahly-club-2026-10-29"
 image: "/assets/img/social-requests.png"
 description: "طلب إيجار مباشر لعميل يبحث عن شقة مفروشة داخل أبراج الفردوس بجوار النادي الأهلي بمدينة نصر جاهزة للتعاقد."
+audio_ad: true
+audio_file: "/assets/audio/requests/request-furnished-apartment-firdous-ahly-club-2026-10-29.mp3"
+audio_duration: "23 ثانية"
+audio_script: "عندك شقة مفروشة للإيجار في أبراج الفردوس جنب النادي الأهلي؟ عميل جاد بيدور على شقة مفروشة جاهزة للتعاقد داخل أبراج الفردوس في مدينة نصر. مفيش تقييد بدور أو مساحة معينة، والمفاضلة حسب جاهزية الشقة ومستوى الفرش. لو شقتك مناسبة، ابعت صورها وتفاصيلها على واتساب سمسار طلبك علشان نرتب معاينة."
 requirements:
   - "النوع المطلوب: شقة مفروشة للإيجار."
   - "الموقع المحدد بالاسم: أبراج الفردوس — النادي الأهلي، مدينة نصر."

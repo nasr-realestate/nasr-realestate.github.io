@@ -7,6 +7,10 @@ property_type: "apartment"
 slug: "request-apartment-buy-investment-near-university-2026-10-29"
 image: "/assets/img/social-requests.png"
 description: "طلب شراء شقة تمليك بغرض الاستثمار العقاري في مدينة نصر تكون قريبة من الجامعات وتصلح للتأجير للطلبة بعائد إيجاري جيد."
+audio_ad: true
+audio_file: "/assets/audio/requests/request-apartment-buy-investment-near-university-2026-10-29.mp3"
+audio_duration: "24 ثانية"
+audio_script: "عندك شقة تمليك للبيع قريبة من الجامعات في مدينة نصر؟ مستثمر جاد بيدور على شراء شقة جاهزة تصلح للتأجير وسكن الطلبة. المطلوب موقع قريب من الجامعة والمواصلات في مدينة نصر، والمفاضلة حسب الجاهزية والسعر. لو شقتك مناسبة، ابعت صورها وتفاصيلها على واتساب سمسار طلبك علشان نرتب معاينة."
 requirements:
   - "نوع التعاقد: شراء شقة تمليك."
   - "الغرض: استثمار عقاري وتأجير للطلبة."
