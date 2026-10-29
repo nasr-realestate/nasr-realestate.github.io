@@ -679,12 +679,20 @@ async function listListings(db, url, scope) {
 async function getOpportunity(db, opportunityId) {
   const opportunity = await db.prepare(`SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id WHERE o.id=?`).bind(opportunityId).first();
   if (!opportunity) return json({ error: 'opportunity_not_found' }, 404);
-  const [activities, properties] = await Promise.all([
+  const [activities, properties, phones, siblings] = await Promise.all([
     db.prepare('SELECT * FROM crm_activities WHERE opportunity_id=? ORDER BY created_at DESC LIMIT 100').bind(opportunityId).all(),
     db.prepare(`SELECT p.*,l.external_id,l.url,l.title,l.area_m2,l.price,l.area_id,a.name_ar AS area_name FROM crm_opportunity_properties p
       JOIN listings l ON l.id=p.listing_id JOIN areas a ON a.id=l.area_id WHERE p.opportunity_id=? ORDER BY p.created_at DESC`).bind(opportunityId).all(),
+    db.prepare('SELECT id,phone_key,label,is_primary,created_at FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(opportunity.contact_id).all(),
+    db.prepare('SELECT id,track,intent,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 20').bind(opportunity.contact_id).all(),
   ]);
-  return json({ opportunity, activities: activities.results, properties: properties.results });
+  return json({
+    opportunity,
+    activities: activities.results,
+    properties: properties.results,
+    phones: phones.results,
+    sibling_opportunities: siblings.results,
+  });
 }
 
 function activityTypeForPresentation(presentation) {
@@ -1411,6 +1419,42 @@ function resolveTrackTransition(current, targetTrack) {
   };
 }
 
+function parseOpportunityPatch(body, current) {
+  const allowedIntents = ['buy', 'rent', 'sell', 'lease', 'other'];
+  const intent = body.intent === undefined ? current.intent : body.intent;
+  if (!allowedIntents.includes(intent)) return { error: json({ error: 'invalid_contact_or_opportunity' }, 400) };
+  const budgetMin = body.budget_min === undefined ? { ok: true, value: current.budget_min } : optionalNumber(body.budget_min);
+  const budgetMax = body.budget_max === undefined ? { ok: true, value: current.budget_max } : optionalNumber(body.budget_max);
+  const sizeMin = body.size_min_m2 === undefined ? { ok: true, value: current.size_min_m2 } : optionalNumber(body.size_min_m2);
+  const sizeMax = body.size_max_m2 === undefined ? { ok: true, value: current.size_max_m2 } : optionalNumber(body.size_max_m2);
+  if (!orderedRangeValid(budgetMin, budgetMax) || !orderedRangeValid(sizeMin, sizeMax)) {
+    return { error: json({ error: 'invalid_contact_or_opportunity' }, 400) };
+  }
+  const areaLabel = body.area_label === undefined ? current.area_label : boundedText(body.area_label, 100);
+  const propertyType = body.property_type === undefined ? current.property_type : boundedText(body.property_type, 80);
+  const notes = body.notes === undefined ? current.notes : boundedText(body.notes, 1200);
+  return { intent, areaLabel, propertyType, notes, budgetMin: budgetMin.value, budgetMax: budgetMax.value, sizeMin: sizeMin.value, sizeMax: sizeMax.value };
+}
+
+async function updateOpportunity(request, env, opportunityId) {
+  const body = await readJson(request);
+  const current = await env.DB.prepare('SELECT * FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
+  if (!current) return json({ error: 'opportunity_not_found' }, 404);
+  const patch = parseOpportunityPatch(body, current);
+  if (patch.error) return patch.error;
+  try {
+    await env.DB.batch([
+      env.DB.prepare('UPDATE crm_opportunities SET intent=?,area_label=?,property_type=?,budget_min=?,budget_max=?,size_min_m2=?,size_max_m2=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(patch.intent, patch.areaLabel, patch.propertyType, patch.budgetMin, patch.budgetMax, patch.sizeMin, patch.sizeMax, patch.notes, opportunityId),
+      env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
+        .bind(id(), opportunityId, 'note', 'تحديث مواصفات أو ملاحظات الفرصة', '', current.next_action, current.next_followup_at),
+    ]);
+    return json({ ok: true, opportunity_id: opportunityId });
+  } catch (error) {
+    return sqlError(error);
+  }
+}
+
 async function switchOpportunityTrack(request, env, opportunityId) {
   const body = await readJson(request);
   const targetTrack = body.track;
@@ -1572,6 +1616,7 @@ const PARAM_ROUTES = [
   { method: 'GET', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getContact(env.DB, idVal) },
   { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, idVal) => updateContact(req, env, idVal) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getOpportunity(env.DB, idVal) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, idVal) => updateOpportunity(req, env, idVal) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (_req, env, idVal, cfg) => getOpportunityMatches(env.DB, idVal, cfg.scope) },
   { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/track$/, run: (req, env, idVal) => switchOpportunityTrack(req, env, idVal) },
   { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/, run: (req, env, idVal) => addActivity(req, env, idVal) },

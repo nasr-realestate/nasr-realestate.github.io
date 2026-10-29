@@ -938,5 +938,33 @@ test('5-track operational core separates live color tracks from transient archiv
   assert.equal(contactsAfter.contacts.length, 1);
   assert.equal(contactsAfter.contacts[0].opportunity_count, 2);
 
+  // 7) Verify GET /api/opportunities/:id returns sibling_opportunities + phones, and POST /api/opportunities/:id updates specs cleanly
+  const oppsList = await (await call('/api/opportunities')).json();
+  assert.equal(oppsList.opportunities.length, 2);
+  const firstOppId = oppsList.opportunities[0].id;
+  await call(`/api/contacts/${contactsAfter.contacts[0].id}/phones`, {
+    method: 'POST',
+    body: { phone: '01055667788', label: 'أساسي', is_primary: true },
+  });
+  const patchRes = await call(`/api/opportunities/${firstOppId}`, {
+    method: 'POST',
+    body: {
+      area_label: 'مكرم عبيد الرئيسي',
+      property_type: 'شقة إيجار جديد سوبر لوكس',
+      budget_min: 22000,
+      budget_max: 22000,
+      size_min_m2: 165,
+      size_max_m2: 165,
+      notes: 'تحديث السعر بعد مراجعة المالكة',
+    },
+  });
+  assert.equal(patchRes.status, 200);
+  const fullOpp = await (await call(`/api/opportunities/${firstOppId}`)).json();
+  assert.equal(fullOpp.opportunity.budget_max, 22000);
+  assert.equal(fullOpp.opportunity.size_max_m2, 165);
+  assert.equal(fullOpp.opportunity.area_label, 'مكرم عبيد الرئيسي');
+  assert.equal(fullOpp.phones.length, 1);
+  assert.equal(fullOpp.sibling_opportunities.length, 2);
+
   sqlite.close();
 });

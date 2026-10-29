@@ -1,5 +1,6 @@
 import { CRMApiError, CRMClient } from '../crm-client.js';
 
+const PUBLIC_SITE_ORIGIN = 'https://nasr-realestate.github.io';
 const $ = selector => document.querySelector(selector);
 const state = {
   api: null,
@@ -14,6 +15,8 @@ const state = {
   pushPublicKey: '',
   pushEndpoint: '',
   deferredInstallPrompt: null,
+  sheetHistoryPushed: false,
+  lastActionToast: '',
 };
 
 window.addEventListener('beforeinstallprompt', event => {
@@ -27,6 +30,18 @@ window.addEventListener('appinstalled', () => {
   state.deferredInstallPrompt = null;
   const installBtn = $('#pwa-install-btn');
   if (installBtn) installBtn.hidden = true;
+});
+
+window.addEventListener('popstate', () => {
+  const sheet = $('#record-sheet');
+  if (sheet && !sheet.hidden) {
+    state.sheetHistoryPushed = false;
+    closeRecordSheet({ fromPopState: true });
+  }
+});
+
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeRecordSheet();
 });
 
 const STATUS_LABELS = {
@@ -79,6 +94,39 @@ function button(text, onClick, className = 'button') {
   return element;
 }
 
+function telHref(phoneKey) {
+  const digits = String(phoneKey || '').replaceAll(/\D/g, '');
+  return digits ? `tel:+${digits}` : '';
+}
+
+function publicPropertyUrl(pathOrUrl) {
+  const raw = String(pathOrUrl || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('/properties/')) return `${PUBLIC_SITE_ORIGIN}${raw}`;
+  if (raw.startsWith(`${PUBLIC_SITE_ORIGIN}/properties/`)) return raw;
+  return '';
+}
+
+async function copyTextWithFeedback(btn, text, doneLabel = 'تم النسخ ✓') {
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard?.writeText?.(text);
+    btn.textContent = doneLabel;
+  } catch {
+    btn.textContent = text;
+  }
+  setTimeout(() => { btn.textContent = original; }, 1800);
+}
+
+function buildReadyFollowupMessage(name, intent, areaLabel) {
+  const cleanName = String(name || '').trim() || 'فندم';
+  const area = String(areaLabel || '').trim() || 'مدينة نصر';
+  if (intent === 'buy' || intent === 'rent') {
+    return `السلام عليكم أ/ ${cleanName}، معك طارق طنطاوي (سمسار طلبك - مدينة نصر). تتوفر لدينا خيارات مطابقة لطلبك في ${area}، متى يناسبك استعراض التفاصيل أو ترتيب معاينة؟`;
+  }
+  return `السلام عليكم أ/ ${cleanName}، معك طارق طنطاوي (سمسار طلبك - مدينة نصر) بخصوص الوحدة المعروضة في ${area} — هل ما زالت متاحة حاليًا لترتيب معاينة مع عميل جاد؟`;
+}
+
 function setNotice(element, text, kind = 'info') {
   element.textContent = text;
   element.className = `notice ${kind}`;
@@ -91,7 +139,40 @@ function errorText(error) {
   return 'حدث خطأ غير متوقع. لم يتم تأكيد حفظ البيانات.';
 }
 
+function showRecordSheet(badgeText = 'ملف العميل') {
+  const sheet = $('#record-sheet');
+  if (!sheet) return;
+  const badge = $('#record-sheet-badge');
+  if (badge) badge.textContent = badgeText;
+  const wasHidden = sheet.hidden;
+  sheet.hidden = false;
+  document.body.classList.add('sheet-open');
+  if (wasHidden && !state.sheetHistoryPushed && typeof window.history?.pushState === 'function') {
+    window.history.pushState({ crmSheet: true }, '');
+    state.sheetHistoryPushed = true;
+  }
+}
+
+function closeRecordSheet({ fromPopState = false } = {}) {
+  const sheet = $('#record-sheet');
+  if (!sheet || sheet.hidden) return;
+  sheet.hidden = true;
+  document.body.classList.remove('sheet-open');
+  state.lastActionToast = '';
+  if (!fromPopState && state.sheetHistoryPushed && typeof window.history?.back === 'function') {
+    state.sheetHistoryPushed = false;
+    window.history.back();
+  }
+}
+
+function markSelectedRecord(recordId) {
+  for (const el of document.querySelectorAll('.record[data-record-id]')) {
+    el.classList.toggle('selected', Boolean(recordId) && el.dataset.recordId === recordId);
+  }
+}
+
 function clearWorkspaceDom() {
+  closeRecordSheet({ fromPopState: true });
   state.contactId = null;
   state.opportunityId = null;
   state.contacts = [];
@@ -107,6 +188,7 @@ function clearWorkspaceDom() {
   $('#contact-detail').replaceChildren(node('p', 'اختر عميلًا لعرض ملفه وأرقامه وفرصه.', 'muted'));
   $('#opportunity-results').replaceChildren();
   $('#opportunity-detail').replaceChildren(node('p', 'اختر فرصة لعرض نشاطها والعقارات المرتبطة بها.', 'muted'));
+  $('#record-sheet-body')?.replaceChildren();
   $('#opportunity-contact').replaceChildren(new Option('اختر عميلًا…', ''));
   const quickSelect = $('#quick-listing-select');
   if (quickSelect) quickSelect.replaceChildren(new Option('بدون ربط مباشر الآن…', ''));
@@ -171,6 +253,18 @@ function money(value) {
   return `${new Intl.NumberFormat('ar-EG').format(Number(value))} ج.م`;
 }
 
+function formatBudgetRange(minVal, maxVal) {
+  if (minVal && maxVal && Number(minVal) !== Number(maxVal)) return `${money(minVal)} – ${money(maxVal)}`;
+  return money(maxVal ?? minVal);
+}
+
+function formatSizeRange(minVal, maxVal) {
+  const v = maxVal ?? minVal;
+  if (!v) return 'غير محدد';
+  if (minVal && maxVal && Number(minVal) !== Number(maxVal)) return `${minVal} – ${maxVal} م²`;
+  return `${v} م²`;
+}
+
 function isoFromLocal(value) {
   return value ? new Date(value).toISOString() : null;
 }
@@ -180,14 +274,19 @@ function requireApi() {
   return state.api;
 }
 
-function openPanel(panelId) {
+function openPanel(panelId, { preserveScroll = false, keepSheet = false } = {}) {
+  const target = document.getElementById(panelId);
+  const wasAlreadyOpen = target && !target.hidden;
+  if (!keepSheet) closeRecordSheet();
   document.querySelectorAll('.panel').forEach(panel => { panel.hidden = panel.id !== panelId; });
   document.querySelectorAll('.tab').forEach(tab => {
     const active = tab.dataset.panel === panelId;
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', String(active));
   });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!preserveScroll && !wasAlreadyOpen) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 function setBusy(buttonElement, busy, label = 'جارٍ الحفظ…') {
@@ -204,20 +303,38 @@ function pushText(parent, label, value) {
   parent.append(p);
 }
 
-function clickableRecord(title, subtitle, onClick, meta = []) {
-  const item = button('', onClick, 'record');
-  item.append(node('strong', title), node('small', subtitle));
-  if (meta.length) {
-    const tags = node('span', '', 'record-meta');
-    for (const entry of meta) {
-      if (entry && typeof entry === 'object') {
-        tags.append(node('span', entry.text, entry.cls || 'pill'));
-      } else if (entry) {
-        tags.append(node('span', entry, 'pill'));
-      }
+function appendRecordTags(item, meta) {
+  if (!meta.length) return;
+  const tags = node('span', '', 'record-meta');
+  for (const entry of meta) {
+    if (entry && typeof entry === 'object') {
+      tags.append(node('span', entry.text, entry.cls || 'pill'));
+    } else if (entry) {
+      tags.append(node('span', entry, 'pill'));
     }
-    item.append(tags);
   }
+  item.append(tags);
+}
+
+function clickableRecord(title, subtitle, onClick, meta = [], recordId = '') {
+  const item = button('', async () => {
+    item.classList.add('loading');
+    try {
+      await onClick();
+    } catch (error) {
+      showError(error);
+    } finally {
+      item.classList.remove('loading');
+    }
+  }, 'record');
+  if (recordId) {
+    item.dataset.recordId = recordId;
+    if (recordId === state.opportunityId || recordId === state.contactId) item.classList.add('selected');
+  }
+  const head = node('div', '', 'record-head');
+  head.append(node('strong', title), node('span', 'فتح وإجراء ←', 'record-open-hint'));
+  item.append(head, node('small', subtitle));
+  appendRecordTags(item, meta);
   return item;
 }
 
@@ -287,6 +404,7 @@ function renderDueList(container, rows) {
       `${row.next_action || 'لا يوجد إجراء'} · ${dateLabel(row.next_followup_at)}`,
       () => openOpportunity(row.id),
       [intentLabel(row.intent), statusLabel(row.status)],
+      row.id,
     );
     container.append(item);
   }
@@ -313,6 +431,23 @@ function syncOpportunityContactSelect(contacts) {
   if (contacts.some(contact => contact.id === oldValue)) select.value = oldValue;
 }
 
+function renderSingleContactRow(contact) {
+  const numbers = (contact.phone_numbers || '').split(',').filter(Boolean);
+  const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'محادثة مسجلة بدون رقم هاتف بعد — اضغط لإضافته';
+  const badges = formatContactTracks(contact.tracks);
+  const titlePrefix = badges ? `${badges} ` : '';
+  const metaTags = [`${contact.opportunity_count || 0} فرصة`];
+  if (!numbers.length) metaTags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
+  if (contact.communication_consent === 'do_not_contact') metaTags.push('عدم التواصل');
+  return clickableRecord(
+    `${titlePrefix}${contact.name || 'عميل بلا اسم'}`,
+    subtitle,
+    () => openContact(contact.id),
+    metaTags,
+    contact.id,
+  );
+}
+
 async function loadContacts(query = $('#contact-search')?.value?.trim() || '', track = state.contactTrackFilter) {
   $('#contact-search-state').textContent = 'جارٍ البحث…';
   const result = await requireApi().searchContacts(query, track);
@@ -323,28 +458,243 @@ async function loadContacts(query = $('#contact-search')?.value?.trim() || '', t
     const emptyText = query || track ? 'لا توجد نتائج مطابقة.' : 'لا يوجد عملاء بعد. أضف أول عميل يدويًا.';
     list.append(node('p', emptyText, 'muted'));
   }
-  for (const contact of state.contacts) {
-    const numbers = (contact.phone_numbers || '').split(',').filter(Boolean);
-    const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'محادثة مسجلة بدون رقم هاتف بعد';
-    const badges = formatContactTracks(contact.tracks);
-    const titlePrefix = badges ? `${badges} ` : '';
-    const metaTags = [`${contact.opportunity_count || 0} فرصة`];
-    if (!numbers.length) metaTags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
-    if (contact.communication_consent === 'do_not_contact') metaTags.push('عدم التواصل');
-    list.append(clickableRecord(
-      `${titlePrefix}${contact.name || 'عميل بلا اسم'}`,
-      subtitle,
-      () => openContact(contact.id),
-      metaTags,
-    ));
-  }
+  for (const contact of state.contacts) list.append(renderSingleContactRow(contact));
   $('#contact-search-state').textContent = `${state.contacts.length} سجل`;
   if (!query && !track) syncOpportunityContactSelect(state.contacts);
 }
 
-function buildAddPhoneForm(contactId) {
+async function syncBackgroundListsQuietly() {
+  try {
+    await Promise.all([
+      loadDashboard(),
+      loadOpportunities($('#opportunity-search').value, $('#opportunity-status').value),
+      loadContacts($('#contact-search').value.trim(), state.contactTrackFilter),
+    ]);
+  } catch {
+    // Keep sheet responsive even if background refresh fails momentarily.
+  }
+}
+
+function buildPhoneCommRow(phone, contextInfo) {
+  const row = node('div', '', 'comm-phone-row');
+  const info = node('div');
+  const labelSuffix = phone.is_primary ? ' · أساسي' : '';
+  info.append(
+    node('span', prettyPhone(phone.phone_key), 'phone-number'),
+    node('small', `${phone.label || 'واتساب'}${labelSuffix}`, 'muted'),
+  );
+  const btns = node('div', '', 'comm-phone-btns');
+  const callLink = node('a', '📞 اتصال الآن', 'button primary small');
+  callLink.href = telHref(phone.phone_key);
+  const copyNumBtn = button('📋 نسخ الرقم', () => {
+    void copyTextWithFeedback(copyNumBtn, `+${phone.phone_key}`);
+  }, 'button small');
+  const copyMsgBtn = button('💬 نسخ رسالة متابعة', () => {
+    const msg = buildReadyFollowupMessage(contextInfo.name, contextInfo.intent, contextInfo.areaLabel);
+    void copyTextWithFeedback(copyMsgBtn, msg, 'تم نسخ الرسالة ✓');
+  }, 'button small');
+  btns.append(callLink, copyNumBtn, copyMsgBtn);
+  row.append(info, btns);
+  return row;
+}
+
+function buildInlineMissingPhoneBox(contactId, onSaved) {
+  const box = node('div', '', 'missing-phone-box');
+  box.append(node('strong', '📱 هذا العميل بدون رقم هاتف محفوظ — أضف رقمه بلمسة واحدة:'));
+  const form = node('form', '', 'inline-phone-form');
+  const input = node('input');
+  input.type = 'tel';
+  input.inputMode = 'tel';
+  input.required = true;
+  input.maxLength = 32;
+  input.placeholder = '010... أو +20...';
+  const saveBtn = node('button', 'حفظ الرقم فورًا', 'button primary small');
+  saveBtn.type = 'submit';
+  const feedback = node('span', '', 'muted');
+  form.append(input, saveBtn);
+  box.append(form, feedback);
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    setBusy(saveBtn, true);
+    try {
+      await requireApi().addPhone(contactId, { phone: input.value.trim(), label: 'أساسي', is_primary: true });
+      state.lastActionToast = '✓ تم حفظ رقم الهاتف وتفعيل الاتصال المباشر';
+      void syncBackgroundListsQuietly();
+      await onSaved();
+    } catch (error) {
+      feedback.textContent = errorText(error);
+    } finally {
+      setBusy(saveBtn, false);
+    }
+  });
+  return box;
+}
+
+function buildSheetCommSection(contactId, phones, contextInfo, onSaved) {
+  if (!phones.length) return buildInlineMissingPhoneBox(contactId, onSaved);
+  const box = node('section', '', 'comm-box');
+  for (const phone of phones) box.append(buildPhoneCommRow(phone, contextInfo));
+  return box;
+}
+
+function nextSlotIso(daysOffset, hour24) {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  if (daysOffset === 0 && d.getHours() >= hour24) {
+    d.setDate(d.getDate() + 1);
+  } else {
+    d.setDate(d.getDate() + daysOffset);
+  }
+  d.setHours(hour24, 0, 0, 0);
+  return d.toISOString();
+}
+
+function buildQuickActionSpecs() {
+  return [
+    {
+      label: '📞 اتصلت — متابعة غدًا 1 ظ',
+      payload: () => ({
+        activity_type: 'call',
+        status: 'active',
+        summary: 'تم الاتصال بالعميل وتحديد متابعة غدًا',
+        next_action: 'متابعة هاتفية مع العميل',
+        next_followup_at: nextSlotIso(1, 13),
+      }),
+    },
+    {
+      label: '📵 لم يرد — محاولة غدًا 11 ص',
+      payload: () => ({
+        activity_type: 'missed_call',
+        status: 'active',
+        summary: 'محاولة اتصال — لم يرد العميل',
+        next_action: 'إعادة الاتصال بالعميل',
+        next_followup_at: nextSlotIso(1, 11),
+      }),
+    },
+    {
+      label: '📅 معاينة اليوم 6 مساءً',
+      payload: () => ({
+        activity_type: 'visit',
+        status: 'visit_scheduled',
+        summary: 'تم تحديد موعد معاينة الساعة 6 مساءً',
+        next_action: 'موعد معاينة ميدانية',
+        next_followup_at: nextSlotIso(0, 18),
+      }),
+    },
+    {
+      label: '📅 معاينة غدًا 2 ظهرًا',
+      payload: () => ({
+        activity_type: 'visit',
+        status: 'visit_scheduled',
+        summary: 'تم تحديد موعد معاينة غدًا الساعة 2 ظهرًا',
+        next_action: 'موعد معاينة ميدانية',
+        next_followup_at: nextSlotIso(1, 14),
+      }),
+    },
+    {
+      label: '📤 أرسلت عرضًا — بعد يومين',
+      payload: () => ({
+        activity_type: 'offer',
+        status: 'offer',
+        summary: 'تم إرسال تفاصيل/عرض عقار للعميل للمراجعة',
+        next_action: 'معرفة رأي العميل في العرض المرسل',
+        next_followup_at: nextSlotIso(2, 13),
+      }),
+    },
+    {
+      label: '🤝 دخلنا تفاوض جاد',
+      payload: () => ({
+        activity_type: 'offer',
+        status: 'negotiating',
+        summary: 'بدء التفاوض الفعلي على السعر والشروط',
+        next_action: 'متابعة التفاوض وتقريب وجهات النظر',
+        next_followup_at: nextSlotIso(1, 14),
+      }),
+    },
+    {
+      label: '⏳ تأجيل المتابعة أسبوعًا',
+      payload: () => ({
+        activity_type: 'note',
+        status: 'active',
+        summary: 'تأجيل المتابعة لمدة أسبوع بناءً على ظروف العميل',
+        next_action: 'متابعة دورية بعد أسبوع',
+        next_followup_at: nextSlotIso(7, 13),
+      }),
+    },
+    {
+      label: '✅ تمت الصفقة بنجاح',
+      cls: 'button action-btn win-btn',
+      payload: () => ({
+        activity_type: 'status_change',
+        status: 'won',
+        summary: 'تم إتمام وتنفيذ الصفقة بنجاح',
+        next_action: '',
+        next_followup_at: null,
+      }),
+    },
+  ];
+}
+
+function inferActiveTrackForOpportunity(opportunity) {
+  const hay = `${opportunity.property_type || ''} ${opportunity.notes || ''}`;
+  if (/مقر|إداري|اداري|مكتب|محل|تجاري|عيادة|عياده|مخزن/.test(hay)) return 'admin_hq';
+  if (/مفروش/.test(hay)) return 'furnished_apt';
+  if (opportunity.intent === 'rent' || opportunity.intent === 'lease') return 'new_rent_apt';
+  return 'sale_apt';
+}
+
+function buildQuickActionPad(opportunity) {
+  const pad = node('section', '', 'action-pad');
+  pad.append(node('strong', '⚡ اتخذ إجراءً فوريًا بلمسة واحدة (يحفظ ويفعّل تنبيه الموبايل):'));
+  const grid = node('div', '', 'action-pad-grid');
+  const feedback = node('span', '', 'muted');
+  feedback.setAttribute('aria-live', 'polite');
+  for (const spec of buildQuickActionSpecs()) {
+    const btn = button(spec.label, async () => {
+      setBusy(btn, true, 'جارٍ الحفظ…');
+      feedback.textContent = '';
+      try {
+        const body = spec.payload();
+        if (opportunity.track === 'transient' && body.next_followup_at) {
+          body.track = inferActiveTrackForOpportunity(opportunity);
+        }
+        await requireApi().addActivity(opportunity.id, body);
+        state.lastActionToast = `✓ تم التنفيذ: ${spec.label}`;
+        void syncBackgroundListsQuietly();
+        await openOpportunity(opportunity.id);
+      } catch (error) {
+        feedback.textContent = errorText(error);
+        setBusy(btn, false);
+      }
+    }, spec.cls || 'button action-btn');
+    grid.append(btn);
+  }
+  pad.append(grid, feedback);
+  return pad;
+}
+
+function buildUnitSiblingsBar(contactId, currentOppId, siblings) {
+  const bar = node('div', '', 'unit-tabs');
+  if (siblings.length > 1) {
+    siblings.forEach((sib, idx) => {
+      const active = sib.id === currentOppId;
+      const lbl = `وحدة ${idx + 1}: ${trackShort(sib.track)} (${sib.area_label || 'مدينة نصر'})`;
+      bar.append(button(lbl, () => {
+        if (!active) void openOpportunity(sib.id);
+      }, `chip small-chip${active ? ' active' : ''}`));
+    });
+  }
+  bar.append(button('＋ إضافة فرصة/وحدة أخرى للعميل', () => {
+    closeRecordSheet();
+    openPanel('new-opportunity-panel');
+    $('#opportunity-contact').value = contactId;
+  }, 'button quiet small'));
+  return bar;
+}
+
+function buildAddPhoneForm(contactId, onDone) {
   const addPhoneForm = node('form', '', 'activity-form');
-  addPhoneForm.append(node('h3', 'إضافة رقم هاتف'));
+  addPhoneForm.append(node('h3', 'إضافة رقم هاتف إضافي (حارس / ابن / معاينة)'));
   const phoneInput = node('input');
   phoneInput.type = 'tel';
   phoneInput.name = 'phone';
@@ -354,13 +704,13 @@ function buildAddPhoneForm(contactId) {
   const labelInput = node('input');
   labelInput.name = 'label';
   labelInput.maxLength = 40;
-  labelInput.placeholder = 'التسمية (مثال: عمل)';
+  labelInput.placeholder = 'التسمية (مثال: الحارس، المعاينة، عمل)';
   const primaryLabel = node('label', '', 'primary-check');
   const primaryInput = node('input');
   primaryInput.type = 'checkbox';
   primaryInput.name = 'is_primary';
   primaryLabel.append(primaryInput, document.createTextNode('جعله الرقم الأساسي'));
-  const submit = node('button', 'إضافة الرقم', 'button primary');
+  const submit = node('button', 'إضافة الرقم', 'button primary small');
   submit.type = 'submit';
   const feedback = node('span', '', 'muted');
   feedback.setAttribute('aria-live', 'polite');
@@ -374,7 +724,9 @@ function buildAddPhoneForm(contactId) {
         label: labelInput.value,
         is_primary: primaryInput.checked,
       });
-      await openContact(contactId);
+      state.lastActionToast = '✓ تمت إضافة الرقم الجديد بنجاح';
+      void syncBackgroundListsQuietly();
+      await onDone();
     } catch (error) {
       feedback.textContent = errorText(error);
     } finally {
@@ -384,9 +736,9 @@ function buildAddPhoneForm(contactId) {
   return addPhoneForm;
 }
 
-function buildQuickContactUpdateForm(contact) {
+function buildQuickContactUpdateForm(contact, onDone) {
   const form = node('form', '', 'activity-form');
-  form.append(node('h3', 'تحديث سريع للاسم ورقم المالك/العميل'));
+  form.append(node('h3', 'تحديث الاسم أو الرقم الأساسي'));
   const nameInput = node('input');
   nameInput.name = 'name';
   nameInput.maxLength = 100;
@@ -397,8 +749,8 @@ function buildQuickContactUpdateForm(contact) {
   phoneInput.type = 'tel';
   phoneInput.name = 'phone';
   phoneInput.maxLength = 32;
-  phoneInput.placeholder = 'رقم الهاتف الأساسي (اختياري: 010... أو +20...)';
-  const submit = node('button', 'حفظ الاسم والرقم', 'button primary');
+  phoneInput.placeholder = 'رقم أساسي جديد (اختياري: 010...)';
+  const submit = node('button', 'حفظ الاسم والرقم', 'button primary small');
   submit.type = 'submit';
   const feedback = node('span', '', 'muted');
   feedback.setAttribute('aria-live', 'polite');
@@ -413,8 +765,9 @@ function buildQuickContactUpdateForm(contact) {
         label: 'أساسي',
         is_primary: true,
       });
-      await loadContacts($('#contact-search').value.trim());
-      await openContact(contact.id);
+      state.lastActionToast = '✓ تم تحديث بيانات العميل';
+      void syncBackgroundListsQuietly();
+      await onDone();
     } catch (error) {
       feedback.textContent = errorText(error);
     } finally {
@@ -424,23 +777,121 @@ function buildQuickContactUpdateForm(contact) {
   return form;
 }
 
-function renderContactPhonesSection(contactId, phones) {
+function appendUnifiedEditInputs(form, opportunity) {
+  const nameInput = node('input');
+  nameInput.name = 'contact_name';
+  nameInput.maxLength = 100;
+  nameInput.required = true;
+  nameInput.value = opportunity.contact_name || '';
+  const phoneInput = node('input');
+  phoneInput.type = 'tel';
+  phoneInput.name = 'phone';
+  phoneInput.maxLength = 32;
+  phoneInput.placeholder = 'تحديث الرقم الأساسي (اختياري)';
+  const areaInput = node('input');
+  areaInput.name = 'area_label';
+  areaInput.maxLength = 100;
+  areaInput.value = opportunity.area_label || '';
+  const propInput = node('input');
+  propInput.name = 'property_type';
+  propInput.maxLength = 80;
+  propInput.value = opportunity.property_type || '';
+  const priceInput = node('input');
+  priceInput.type = 'number';
+  priceInput.name = 'price';
+  priceInput.step = 'any';
+  priceInput.min = '0';
+  priceInput.value = opportunity.budget_max ?? opportunity.budget_min ?? '';
+  const sizeInput = node('input');
+  sizeInput.type = 'number';
+  sizeInput.name = 'size';
+  sizeInput.step = 'any';
+  sizeInput.min = '0';
+  sizeInput.value = opportunity.size_max_m2 ?? opportunity.size_min_m2 ?? '';
+  const notesInput = node('textarea');
+  notesInput.name = 'notes';
+  notesInput.rows = 3;
+  notesInput.maxLength = 1200;
+  notesInput.value = opportunity.notes || '';
+
+  const wrapField = (lbl, el, full = false) => {
+    const l = node('label', lbl, full ? 'full' : '');
+    l.append(el);
+    return l;
+  };
+  form.append(
+    wrapField('اسم العميل / المالك', nameInput),
+    wrapField('رقم هاتف جديد (اختياري)', phoneInput),
+    wrapField('المنطقة / الشارع', areaInput),
+    wrapField('نوع العقار', propInput),
+    wrapField('السعر أو الميزانية (ج.م)', priceInput),
+    wrapField('المساحة (م²)', sizeInput),
+    wrapField('الملاحظات والتفاصيل', notesInput, true),
+  );
+  return { nameInput, phoneInput, areaInput, propInput, priceInput, sizeInput, notesInput };
+}
+
+function buildUnifiedQuickEditDetails(opportunity) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', '✏️ تعديل سريع للاسم أو الرقم أو السعر أو المساحة أو الملاحظات'));
+  const form = node('form', '', 'form-grid');
+  const fields = appendUnifiedEditInputs(form, opportunity);
+  const actions = node('div', '', 'full form-actions');
+  const submit = node('button', 'حفظ التعديلات فورًا', 'button primary small');
+  submit.type = 'submit';
+  const feedback = node('span', '', 'muted');
+  actions.append(submit, feedback);
+  form.append(actions);
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    setBusy(submit, true);
+    try {
+      const priceVal = fields.priceInput.value ? Number(fields.priceInput.value) : null;
+      const sizeVal = fields.sizeInput.value ? Number(fields.sizeInput.value) : null;
+      await requireApi().updateContact(opportunity.contact_id, {
+        name: fields.nameInput.value.trim(),
+        phone: fields.phoneInput.value.trim() || undefined,
+        label: 'أساسي',
+        is_primary: true,
+      });
+      await requireApi().updateOpportunity(opportunity.id, {
+        area_label: fields.areaInput.value.trim(),
+        property_type: fields.propInput.value.trim(),
+        budget_min: priceVal,
+        budget_max: priceVal,
+        size_min_m2: sizeVal,
+        size_max_m2: sizeVal,
+        notes: fields.notesInput.value.trim(),
+      });
+      state.lastActionToast = '✓ تم حفظ التعديلات بنجاح';
+      void syncBackgroundListsQuietly();
+      await openOpportunity(opportunity.id);
+    } catch (error) {
+      feedback.textContent = errorText(error);
+    } finally {
+      setBusy(submit, false);
+    }
+  });
+
+  details.append(form, buildAddPhoneForm(opportunity.contact_id, () => openOpportunity(opportunity.id)));
+  return details;
+}
+
+function renderContactPhonesSection(contactId, phones, onDone) {
   const phoneSection = node('section', '', 'detail-section');
   phoneSection.append(node('h3', 'أرقام الهاتف'));
   const phoneList = node('ul', '', 'detail-list');
   for (const phone of phones) {
     const li = node('li');
     const primarySuffix = phone.is_primary ? ' · أساسي' : '';
-    const copyBtn = button('نسخ الرقم', async () => {
-      try {
-        await navigator.clipboard?.writeText?.(`+${phone.phone_key}`);
-        copyBtn.textContent = 'تم النسخ ✓';
-      } catch {
-        copyBtn.textContent = prettyPhone(phone.phone_key);
-      }
+    const callLink = node('a', '📞 اتصال', 'button primary small');
+    callLink.href = telHref(phone.phone_key);
+    const copyBtn = button('نسخ الرقم', () => {
+      void copyTextWithFeedback(copyBtn, `+${phone.phone_key}`);
     }, 'button small');
     const actions = node('span', '', 'phone-actions');
-    actions.append(copyBtn);
+    actions.append(callLink, copyBtn);
     li.append(
       node('span', prettyPhone(phone.phone_key), 'phone-number'),
       document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}`),
@@ -449,17 +900,18 @@ function renderContactPhonesSection(contactId, phones) {
     phoneList.append(li);
   }
   if (!phones.length) phoneList.append(node('li', 'لا توجد أرقام مسجلة.', 'muted'));
-  phoneSection.append(phoneList, buildAddPhoneForm(contactId));
+  phoneSection.append(phoneList, buildAddPhoneForm(contactId, onDone));
   return phoneSection;
 }
 
 function renderContactOpportunitiesSection(contactId, opportunities) {
   const oppSection = node('section', '', 'detail-section');
   const oppHeading = node('div', '', 'card-heading');
-  const addOppBtn = button('＋ فرصة', () => {
+  const addOppBtn = button('＋ فرصة جديدة للعميل', () => {
+    closeRecordSheet();
     openPanel('new-opportunity-panel');
     $('#opportunity-contact').value = contactId;
-  }, 'button small');
+  }, 'button primary small');
   oppHeading.append(node('h3', 'الفرص المرتبطة'), addOppBtn);
   oppSection.append(oppHeading);
   const oppList = node('div', '', 'stack');
@@ -472,32 +924,78 @@ function renderContactOpportunitiesSection(contactId, opportunities) {
       specParts.join(' · '),
       () => openOpportunity(opportunity.id),
       [statusLabel(opportunity.status), opportunity.next_action || 'بدون موعد مجدول'],
+      opportunity.id,
     ));
   }
-  if (!opportunities.length) oppList.append(node('p', 'لا توجد فرص مرتبطة بهذا العميل.', 'muted'));
+  if (!opportunities.length) oppList.append(node('p', 'لا توجد فرص مسجلة بعد — اضغط «＋ فرصة جديدة للعميل» لإضافة طلبه أو وحدته.', 'muted'));
   oppSection.append(oppList);
   return oppSection;
 }
 
-async function openContact(contactId) {
-  state.contactId = contactId;
-  openPanel('contacts-panel');
+function populateContactDetailDom(contact, phones, opportunities) {
   const detail = $('#contact-detail');
-  detail.replaceChildren(node('p', 'جارٍ تحميل ملف العميل…', 'muted'));
-  const result = await requireApi().getContact(contactId);
-  const { contact } = result;
   detail.replaceChildren();
   const heading = node('div', '', 'card-heading');
   heading.append(
     node('h2', contact.name || 'عميل بلا اسم'),
     node('span', consentLabel(contact.communication_consent), 'pill'),
   );
+  const reloadContact = () => openContact(contact.id);
   detail.append(
     heading,
-    buildQuickContactUpdateForm(contact),
-    renderContactPhonesSection(contactId, result.phones || []),
-    renderContactOpportunitiesSection(contactId, result.opportunities || []),
+    buildQuickContactUpdateForm(contact, reloadContact),
+    renderContactPhonesSection(contact.id, phones, reloadContact),
+    renderContactOpportunitiesSection(contact.id, opportunities),
   );
+}
+
+function renderContactOnlySheet(contact, phones) {
+  const body = $('#record-sheet-body');
+  if (!body) return;
+  body.replaceChildren();
+  if (state.lastActionToast) body.append(node('div', state.lastActionToast, 'notice info'));
+  const hero = node('div', '', 'sheet-hero');
+  const titleEl = node('h2', contact.name || 'عميل بلا اسم');
+  titleEl.id = 'record-sheet-title';
+  hero.append(titleEl, node('small', consentLabel(contact.communication_consent), 'muted'));
+  const reloadContact = () => openContact(contact.id);
+  const createOppBar = node('div', '', 'action-pad');
+  createOppBar.append(
+    node('strong', 'هذا العميل مسجل بدون فرصة عقارية بعد:'),
+    button('⚡ إضافة فرصة / وحدة لهذا العميل الآن', () => {
+      closeRecordSheet();
+      openPanel('new-opportunity-panel');
+      $('#opportunity-contact').value = contact.id;
+    }, 'button primary'),
+  );
+  body.append(
+    hero,
+    buildSheetCommSection(contact.id, phones, { name: contact.name, intent: 'sell', areaLabel: 'مدينة نصر' }, reloadContact),
+    createOppBar,
+    buildQuickContactUpdateForm(contact, reloadContact),
+  );
+}
+
+async function openContact(contactId) {
+  state.contactId = contactId;
+  markSelectedRecord(contactId);
+  showRecordSheet('ملف العميل');
+  const sheetBody = $('#record-sheet-body');
+  if (sheetBody) sheetBody.replaceChildren(node('p', 'جارٍ فتح ملف العميل وإجراءاته…', 'muted'));
+  const detail = $('#contact-detail');
+  detail.replaceChildren(node('p', 'جارٍ تحميل ملف العميل…', 'muted'));
+
+  const result = await requireApi().getContact(contactId);
+  const { contact } = result;
+  const phones = result.phones || [];
+  const opportunities = result.opportunities || [];
+  populateContactDetailDom(contact, phones, opportunities);
+
+  if (opportunities.length > 0) {
+    await openOpportunity(opportunities[0].id, { keepContactHighlight: true });
+    return;
+  }
+  renderContactOnlySheet(contact, phones);
 }
 
 function selectOpportunityTrackFilter(trackCode, { switchPanel = false } = {}) {
@@ -547,47 +1045,15 @@ async function loadOpportunities(query = $('#opportunity-search').value, status 
   for (const opportunity of state.opportunities) {
     const tags = [trackShort(opportunity.track), statusLabel(opportunity.status)];
     if (!opportunity.phone_key) tags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
-    else if (opportunity.next_followup_at) tags.push(dateLabel(opportunity.next_followup_at));
+    else if (opportunity.next_followup_at) tags.push(`⏰ ${dateLabel(opportunity.next_followup_at)}`);
     container.append(clickableRecord(
       `${trackBadge(opportunity.track)} ${opportunity.contact_name || 'عميل'}`,
       formatOpportunitySubtitle(opportunity),
       () => openOpportunity(opportunity.id),
       tags,
+      opportunity.id,
     ));
   }
-}
-
-function renderOpportunityActivities(opportunity, activities) {
-  const activitySection = node('section', '', 'detail-section');
-  activitySection.append(node('h3', 'سجل المتابعة'));
-  const activityList = node('ul', '', 'detail-list');
-  for (const activity of activities) {
-    const li = node('li');
-    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${activity.summary}`));
-    if (activity.outcome) li.append(node('small', ` — ${activity.outcome}`));
-    activityList.append(li);
-  }
-  if (!activities.length) activityList.append(node('li', 'لا توجد أنشطة مسجلة.', 'muted'));
-  activitySection.append(activityList, activityForm(opportunity));
-  return activitySection;
-}
-
-function renderOpportunityProperties(opportunityId, properties) {
-  const propertySection = node('section', '', 'detail-section');
-  propertySection.append(node('h3', 'العقارات المرتبطة بمدينة نصر'));
-  const propertyList = node('div', '', 'stack');
-  for (const property of properties) {
-    const item = node('div', '', 'property-option');
-    item.append(
-      node('strong', property.title || property.external_id),
-      node('small', `${property.area_name || 'مدينة نصر'} · ${property.area_m2 ?? '—'} م² · ${money(property.price)}`),
-      node('small', `حالة العرض: ${property.presentation_status || '—'}`),
-    );
-    propertyList.append(item);
-  }
-  if (!properties.length) propertyList.append(node('p', 'لم يتم ربط عقار بهذه الفرصة.', 'muted'));
-  propertySection.append(propertyList, propertySearchForm(opportunityId));
-  return propertySection;
 }
 
 function buildTrackSwitcherBar(opportunity) {
@@ -600,10 +1066,11 @@ function buildTrackSwitcherBar(opportunity) {
     const btn = button(TRACK_META[code].short, async () => {
       if (isCurrent) return;
       btn.disabled = true;
-      feedback.textContent = 'جارٍ تحديث الرمز اللوني…';
+      feedback.textContent = 'جارٍ النقل…';
       try {
         await requireApi().switchOpportunityTrack(opportunity.id, code);
-        await Promise.all([loadDashboard(), loadOpportunities(), loadContacts()]);
+        state.lastActionToast = `✓ تم نقل العميل إلى مسار ${TRACK_META[code].label}`;
+        void syncBackgroundListsQuietly();
         await openOpportunity(opportunity.id);
       } catch (error) {
         feedback.textContent = errorText(error);
@@ -616,9 +1083,79 @@ function buildTrackSwitcherBar(opportunity) {
   return wrap;
 }
 
+function formatNextFollowupSummary(opportunity) {
+  if (!opportunity.next_followup_at) {
+    return opportunity.no_followup_reason || 'بدون تذكير مجدول';
+  }
+  const timePart = dateLabel(opportunity.next_followup_at);
+  if (opportunity.next_action) return `${timePart} · ${opportunity.next_action}`;
+  return timePart;
+}
+
+function buildSpecsGrid(opportunity) {
+  const grid = node('div', '', 'specs-grid');
+  const nextSummary = formatNextFollowupSummary(opportunity);
+  const tiles = [
+    ['المنطقة / الموقع', `${opportunity.area_label || 'مدينة نصر'} · ${opportunity.property_type || 'شقة'}`],
+    ['السعر / الميزانية', formatBudgetRange(opportunity.budget_min, opportunity.budget_max)],
+    ['المساحة', formatSizeRange(opportunity.size_min_m2, opportunity.size_max_m2)],
+    ['الموعد / الخطوة القادمة', nextSummary],
+  ];
+  for (const [lbl, val] of tiles) {
+    const tile = node('div', '', 'spec-tile');
+    tile.append(node('small', lbl), node('strong', val));
+    grid.append(tile);
+  }
+  return grid;
+}
+
+function buildLinkedSitePropertyCard(opportunity, properties) {
+  const linked = properties[0] || null;
+  const siteUrl = publicPropertyUrl(linked?.url || opportunity.source_url);
+  if (!linked && !siteUrl) return null;
+  const card = node('div', '', 'site-unit-card');
+  card.append(
+    node('strong', `🏢 عقار مربوط بموقعك: ${linked?.title || linked?.external_id || opportunity.source_url}`),
+  );
+  if (linked) {
+    card.append(node('small', `${linked.area_name || 'مدينة نصر'} · ${linked.area_m2 ?? '—'} م² · ${money(linked.price)}`, 'muted'));
+  }
+  if (siteUrl) {
+    const actions = node('div', '', 'form-actions');
+    const openLink = node('a', '🌐 فتح صفحة العقار على الموقع', 'button primary small');
+    openLink.href = siteUrl;
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    const copyLinkBtn = button('🔗 نسخ رابط العقار لإرساله لعميل', () => {
+      void copyTextWithFeedback(copyLinkBtn, siteUrl, 'تم نسخ الرابط ✓');
+    }, 'button small');
+    actions.append(openLink, copyLinkBtn);
+    card.append(actions);
+  }
+  return card;
+}
+
+function buildMatchCounterpartyCard(m) {
+  const card = node('div', '', 'match-card');
+  const badgeText = m.track === 'transient' ? '✈️ من أرشيف الطيارة' : trackShort(m.track);
+  card.append(
+    node('strong', `${trackBadge(m.track)} ${m.contact_name || 'عميل'} (${badgeText})`),
+    node('small', formatOpportunitySubtitle(m), 'muted'),
+  );
+  const actions = node('div', '', 'form-actions');
+  if (m.phone_key) {
+    const callLink = node('a', `📞 اتصال (${prettyPhone(m.phone_key)})`, 'button primary small');
+    callLink.href = telHref(m.phone_key);
+    actions.append(callLink);
+  }
+  actions.append(button('فتح ملفه ←', () => { void openOpportunity(m.id); }, 'button small'));
+  card.append(actions);
+  return card;
+}
+
 function renderMatchesSection(opportunityId) {
   const section = node('section', '', 'detail-section');
-  section.append(node('h3', '🎯 مطابقات ذكية من نفس المسار وأرشيف الطيارة ✈️'));
+  section.append(node('h3', '🎯 مطابقات ذكية جاهزة للتنفيذ (عملاء وعقارات متوافقة)'));
   const body = node('div', '', 'stack');
   body.append(node('p', 'جارٍ فحص الطرف المقابل والوحدات المناسبة…', 'muted'));
   section.append(body);
@@ -632,20 +1169,9 @@ function renderMatchesSection(opportunityId) {
         body.append(node('p', 'لا توجد مطابقات مقابلة مسجلة حاليًا في هذا المسار.', 'muted'));
         return;
       }
-      for (const m of opps) {
-        const meta = [m.track === 'transient' ? '✈️ من أرشيف الطيارة' : trackShort(m.track)];
-        if (m.phone_key) meta.push(prettyPhone(m.phone_key));
-        body.append(clickableRecord(
-          `${trackBadge(m.track)} ${m.contact_name || 'عميل'}`,
-          formatOpportunitySubtitle(m),
-          () => openOpportunity(m.id),
-          meta,
-        ));
-      }
+      for (const m of opps) body.append(buildMatchCounterpartyCard(m));
       const feedback = node('span', '', 'muted');
-      for (const unit of units) {
-        body.append(buildListingOption(opportunityId, unit, feedback));
-      }
+      for (const unit of units) body.append(buildListingOption(opportunityId, unit, feedback));
       if (units.length) body.append(feedback);
     } catch {
       body.replaceChildren(node('p', 'تعذّر تحميل المطابقات حاليًا.', 'muted'));
@@ -654,44 +1180,133 @@ function renderMatchesSection(opportunityId) {
   return section;
 }
 
-async function openOpportunity(opportunityId) {
-  state.opportunityId = opportunityId;
-  openPanel('opportunities-panel');
-  const detail = $('#opportunity-detail');
-  detail.replaceChildren(node('p', 'جارٍ تحميل الفرصة…', 'muted'));
-  const result = await requireApi().getOpportunity(opportunityId);
+function renderCustomActivityDetails(opportunity) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', '📅 تسجيل ملاحظة مخصصة أو تحديد تاريخ وساعة بعينها'));
+  details.append(activityForm(opportunity));
+  return details;
+}
+
+function renderPropertyLinkDetails(opportunityId, properties) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', `🏢 ربط عقار من كتالوج الموقع (${properties.length} مربوط حاليًا)`));
+  const list = node('div', '', 'stack');
+  for (const property of properties) {
+    const item = node('div', '', 'property-option');
+    item.append(
+      node('strong', property.title || property.external_id),
+      node('small', `${property.area_name || 'مدينة نصر'} · ${property.area_m2 ?? '—'} م² · ${money(property.price)}`),
+    );
+    list.append(item);
+  }
+  details.append(list, propertySearchForm(opportunityId));
+  return details;
+}
+
+function renderHistoryDetails(activities) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', `📜 سجل المتابعات والأنشطة السابقة (${activities.length})`));
+  const activityList = node('ul', '', 'detail-list');
+  for (const activity of activities) {
+    const li = node('li');
+    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${activity.summary}`));
+    if (activity.outcome) li.append(node('small', ` — ${activity.outcome}`));
+    activityList.append(li);
+  }
+  if (!activities.length) activityList.append(node('li', 'لا توجد أنشطة سابقة.', 'muted'));
+  details.append(activityList);
+  return details;
+}
+
+function buildOpportunityCommandNodes(result) {
   const { opportunity } = result;
+  const phones = result.phones || [];
+  const siblings = result.sibling_opportunities || [];
+  const activities = result.activities || [];
+  const properties = result.properties || [];
+  const nodes = [];
+
+  if (state.lastActionToast) {
+    nodes.push(node('div', state.lastActionToast, 'notice info'));
+    state.lastActionToast = '';
+  }
+
+  const hero = node('div', '', 'sheet-hero');
+  const titleEl = node('h2', `${trackBadge(opportunity.track)} ${opportunity.contact_name || 'عميل'}`);
+  titleEl.id = 'record-sheet-title';
+  const metaRow = node('div', '', 'record-meta');
+  metaRow.append(
+    node('span', intentLabel(opportunity.intent), 'pill active-pill'),
+    node('span', statusLabel(opportunity.status), 'pill'),
+    node('span', TRACK_META[opportunity.track]?.short || '🟢 بيع', 'pill'),
+  );
+  hero.append(titleEl, metaRow, buildUnitSiblingsBar(opportunity.contact_id, opportunity.id, siblings));
+  nodes.push(hero);
+
+  nodes.push(buildSheetCommSection(
+    opportunity.contact_id,
+    phones,
+    { name: opportunity.contact_name, intent: opportunity.intent, areaLabel: opportunity.area_label },
+    () => openOpportunity(opportunity.id),
+  ));
+
+  nodes.push(buildQuickActionPad(opportunity));
+  nodes.push(buildTrackSwitcherBar(opportunity));
+  nodes.push(buildSpecsGrid(opportunity));
+
+  if (opportunity.notes) {
+    const notesWrap = node('div', '', 'notes-box');
+    notesWrap.textContent = opportunity.notes;
+    nodes.push(notesWrap);
+  }
+
+  const siteCard = buildLinkedSitePropertyCard(opportunity, properties);
+  if (siteCard) nodes.push(siteCard);
+
+  nodes.push(
+    buildUnifiedQuickEditDetails(opportunity),
+    renderMatchesSection(opportunity.id),
+    renderCustomActivityDetails(opportunity),
+    renderPropertyLinkDetails(opportunity.id, properties),
+    renderHistoryDetails(activities),
+  );
+  return nodes;
+}
+
+function mirrorOpportunityDetailDom(opportunity) {
+  const detail = $('#opportunity-detail');
+  if (!detail) return;
   detail.replaceChildren();
   detail.append(
     node('h2', `${trackBadge(opportunity.track)} ${intentLabel(opportunity.intent)} · ${opportunity.contact_name || 'عميل'}`),
-    buildTrackSwitcherBar(opportunity),
+    node('p', formatOpportunitySubtitle(opportunity), 'muted'),
+    button('فتح غرفة عمليات العميل والإجراءات ←', () => { void openOpportunity(opportunity.id); }, 'button primary small'),
   );
-  if (opportunity.contact_id) {
-    const labelText = opportunity.phone_key ? 'فتح ملف العميل / تعديل الرقم' : '➕ إضافة رقم هاتف لهذا العميل';
-    const openContactBtn = button(labelText, () => openContact(opportunity.contact_id), opportunity.phone_key ? 'button small' : 'button primary small');
-    detail.append(openContactBtn);
+}
+
+async function openOpportunity(opportunityId, { keepContactHighlight = false } = {}) {
+  state.opportunityId = opportunityId;
+  if (!keepContactHighlight) markSelectedRecord(opportunityId);
+  showRecordSheet('غرفة عمليات العميل');
+  const sheetBody = $('#record-sheet-body');
+  if (sheetBody) {
+    sheetBody.replaceChildren(node('p', 'جارٍ تحميل بيانات العميل والإجراءات المتاحة…', 'muted'));
+    sheetBody.scrollTop = 0;
   }
-  pushText(detail, 'الرقم الأساسي', opportunity.phone_key ? prettyPhone(opportunity.phone_key) : 'بدون رقم محفوظ بعد (اضغط الزر أعلاه لإضافته)');
-  pushText(detail, 'المسار اللوني', TRACK_META[opportunity.track]?.label || TRACK_META.sale_apt.label);
-  pushText(detail, 'الحالة', statusLabel(opportunity.status));
-  pushText(detail, 'نوع العقار', opportunity.property_type || '—');
-  pushText(detail, 'المنطقة', opportunity.area_label || 'مدينة نصر');
-  pushText(detail, 'السعر / الميزانية', `${money(opportunity.budget_min)} – ${money(opportunity.budget_max)}`);
-  pushText(detail, 'المساحة', `${opportunity.size_min_m2 ?? '—'} – ${opportunity.size_max_m2 ?? '—'} م²`);
-  if (opportunity.source_url) pushText(detail, 'مسار الوحدة على الموقع', opportunity.source_url);
-  pushText(detail, 'الإجراء القادم', opportunity.next_action || '—');
-  pushText(detail, 'موعد المتابعة', dateLabel(opportunity.next_followup_at));
-  if (opportunity.notes) pushText(detail, 'ملاحظات', opportunity.notes);
-  detail.append(
-    renderMatchesSection(opportunityId),
-    renderOpportunityActivities(opportunity, result.activities || []),
-    renderOpportunityProperties(opportunityId, result.properties || []),
-  );
+  const result = await requireApi().getOpportunity(opportunityId);
+  const { opportunity } = result;
+  state.contactId = opportunity.contact_id;
+  const badge = $('#record-sheet-badge');
+  if (badge) badge.textContent = `${trackShort(opportunity.track)} · ${statusLabel(opportunity.status)}`;
+  mirrorOpportunityDetailDom(opportunity);
+  if (sheetBody) {
+    sheetBody.replaceChildren(...buildOpportunityCommandNodes(result));
+    sheetBody.scrollTop = 0;
+  }
 }
 
 function activityForm(opportunity) {
   const form = node('form', '', 'activity-form');
-  form.append(node('h3', 'تسجيل متابعة'));
   const type = node('select');
   type.name = 'activity_type';
   const types = [
@@ -740,7 +1355,7 @@ function activityForm(opportunity) {
   noFollow.value = opportunity.no_followup_reason || '';
   const feedback = node('span', '', 'muted');
   feedback.setAttribute('aria-live', 'polite');
-  const submit = node('button', 'حفظ المتابعة', 'button primary');
+  const submit = node('button', 'حفظ المتابعة المخصصة', 'button primary small');
   submit.type = 'submit';
   form.append(type, summary, outcome, status, action, followup, noFollow, submit, feedback);
   form.addEventListener('submit', async event => {
@@ -756,6 +1371,8 @@ function activityForm(opportunity) {
         next_followup_at: isoFromLocal(followup.value),
         no_followup_reason: noFollow.value,
       });
+      state.lastActionToast = '✓ تم حفظ المتابعة المخصصة';
+      void syncBackgroundListsQuietly();
       await openOpportunity(opportunity.id);
     } catch (error) {
       feedback.textContent = errorText(error);
@@ -772,9 +1389,8 @@ function buildListingOption(opportunityId, listing, feedback) {
     node('strong', listing.title || listing.external_id),
     node('small', `${listing.area_name || 'مدينة نصر'} · ${listing.area_m2 ?? '—'} م² · ${money(listing.price)}`),
   );
-  const link = node('button', 'ربط بهذه الفرصة', 'button small');
-  link.type = 'button';
-  link.addEventListener('click', async () => {
+  const actions = node('div', '', 'form-actions');
+  const link = button('🔗 ربط بهذا العميل', async () => {
     link.disabled = true;
     try {
       await requireApi().linkProperty(opportunityId, {
@@ -783,25 +1399,33 @@ function buildListingOption(opportunityId, listing, feedback) {
         presented_price: listing.price ?? null,
         activity_summary: `تم عرض عقار ${listing.external_id}`,
       });
+      state.lastActionToast = '✓ تم ربط العقار بالعميل بنجاح';
       await openOpportunity(opportunityId);
     } catch (error) {
       feedback.textContent = errorText(error);
       link.disabled = false;
     }
-  });
-  item.append(link);
+  }, 'button primary small');
+  actions.append(link);
+  const pubUrl = publicPropertyUrl(listing.url || `/properties/${listing.external_id}/`);
+  if (pubUrl) {
+    const copyUrlBtn = button('📋 نسخ رابط العقار', () => {
+      void copyTextWithFeedback(copyUrlBtn, pubUrl, 'تم نسخ الرابط ✓');
+    }, 'button small');
+    actions.append(copyUrlBtn);
+  }
+  item.append(actions);
   return item;
 }
 
 function propertySearchForm(opportunityId) {
   const form = node('form', '', 'property-form');
-  form.append(node('h3', 'البحث عن عقار لربطه'));
   const query = node('input');
   query.type = 'search';
   query.name = 'q';
-  query.placeholder = 'اسم العقار أو المنطقة';
+  query.placeholder = 'ابحث باسم العقار أو الشارع بمدينة نصر';
   query.maxLength = 80;
-  const submit = node('button', 'بحث في عقارات مدينة نصر', 'button');
+  const submit = node('button', 'بحث في عقارات الموقع', 'button small');
   submit.type = 'submit';
   const resultList = node('div', '', 'property-results');
   const feedback = node('span', '', 'muted');
@@ -848,13 +1472,13 @@ const KNOWN_NASR_AREAS = [
 
 function asciiDigits(value) {
   return String(value || '')
-    .replace(/[\u0660-\u0669]/g, ch => String(ch.codePointAt(0) - 0x0660))
-    .replace(/[\u06f0-\u06f9]/g, ch => String(ch.codePointAt(0) - 0x06f0));
+    .replaceAll(/[\u0660-\u0669]/g, ch => String(ch.codePointAt(0) - 0x0660))
+    .replaceAll(/[\u06f0-\u06f9]/g, ch => String(ch.codePointAt(0) - 0x06f0));
 }
 
 function extractPhoneFromChat(normalized) {
   const match = /(?:\+?20[\s.-]*)?0?1[0125](?:[\s.-]*\d){8}/.exec(normalized);
-  return match ? match[0].replace(/[^\d+]/g, '') : '';
+  return match ? match[0].replaceAll(/[^\d+]/g, '') : '';
 }
 
 function extractPriceFromChat(normalized) {
@@ -866,7 +1490,7 @@ function extractPriceFromChat(normalized) {
   }
   const thousand = /(\d{2,4})\s*(?:ألف|الف)/.exec(normalized);
   if (thousand) return String(Number(thousand[1]) * 1_000);
-  const plain = /\b(\d{6,8})\b/.exec(normalized.replace(/(?:\+?20)?0?1[0125]\d{8}/g, ' '));
+  const plain = /\b(\d{6,8})\b/.exec(normalized.replaceAll(/(?:\+?20)?0?1[0125]\d{8}/g, ' '));
   return plain ? plain[1] : '';
 }
 
@@ -955,12 +1579,9 @@ function resolveQuickFollowupFields(preset) {
   }
   const daysMap = { tomorrow: 1, '3days': 3, '7days': 7 };
   const days = daysMap[preset] || 1;
-  const target = new Date();
-  target.setDate(target.getDate() + days);
-  target.setHours(13, 0, 0, 0);
   return {
     next_action: 'متابعة العميل عبر الرسائل أو الهاتف',
-    next_followup_at: target.toISOString(),
+    next_followup_at: nextSlotIso(days, 13),
     no_followup_reason: null,
   };
 }
@@ -974,24 +1595,14 @@ function handleQuickListingSelection() {
   if (!$('#quick-area').value && listing.title) $('#quick-area').value = listing.title.slice(0, 80);
 }
 
-async function handleQuickEntrySubmit(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const submit = $('#quick-entry-submit');
-  const feedback = $('#quick-entry-feedback');
-  const v = Object.fromEntries(new FormData(form));
-  if (!v.phone?.trim() && !v.name?.trim()) {
-    feedback.textContent = 'أدخل رقم الهاتف أو اسم العميل على الأقل.';
-    return;
-  }
-  const selectedListing = state.listings.find(item => item.external_id === v.external_id);
+function buildQuickEntryPayload(v, selectedListing) {
   const track = v.track || 'sale_apt';
   const followup = track === 'transient'
     ? { next_action: null, next_followup_at: null, no_followup_reason: 'عميل عابر (طيارة ✈️) — محفوظ بالأرشيف' }
     : resolveQuickFollowupFields(v.followup_preset || 'none');
   const budgetVal = v.budget_max ? Number(v.budget_max) : null;
   const sizeVal = v.size_max_m2 ? Number(v.size_max_m2) : null;
-  const payload = {
+  return {
     track,
     phone: v.phone?.trim() || undefined,
     name: v.name?.trim() || '',
@@ -1008,6 +1619,20 @@ async function handleQuickEntrySubmit(event) {
     notes: v.notes?.trim() || 'تسجيل سريع من المحادثة',
     ...followup,
   };
+}
+
+async function handleQuickEntrySubmit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = $('#quick-entry-submit');
+  const feedback = $('#quick-entry-feedback');
+  const v = Object.fromEntries(new FormData(form));
+  if (!v.phone?.trim() && !v.name?.trim()) {
+    feedback.textContent = 'أدخل رقم الهاتف أو اسم العميل على الأقل.';
+    return;
+  }
+  const selectedListing = state.listings.find(item => item.external_id === v.external_id);
+  const payload = buildQuickEntryPayload(v, selectedListing);
   setBusy(submit, true);
   feedback.textContent = 'جارٍ حفظ العميل والفرصة…';
   try {
@@ -1016,7 +1641,7 @@ async function handleQuickEntrySubmit(event) {
       await requireApi().linkProperty(created.opportunity_id, {
         external_id: v.external_id,
         presentation_status: 'selected',
-        presented_price: budgetVal,
+        presented_price: payload.budget_max,
         activity_summary: `ربط بالوحدة المنشورة: ${v.external_id}`,
       });
     }
@@ -1028,7 +1653,10 @@ async function handleQuickEntrySubmit(event) {
     setQuickFollowupChip('none');
     $('#quick-paste-input').value = '';
     await refreshAll();
-    if (created.opportunity_id) await openOpportunity(created.opportunity_id);
+    if (created.opportunity_id) {
+      state.lastActionToast = '✓ تم حفظ العميل وفتح غرفة عملياته مباشرة';
+      await openOpportunity(created.opportunity_id);
+    }
   } catch (error) {
     feedback.textContent = errorText(error);
     showError(error);
@@ -1110,31 +1738,36 @@ async function readBrowserPushSubscription() {
   return reg.pushManager.getSubscription();
 }
 
+function checkPushEnvironmentGuard(cfg) {
+  if (!cfg.enabled || !state.pushPublicKey) {
+    renderPushCardView({ pill: 'غير مهيأة بعد', text: 'مفاتيح إشعارات الخادم قيد التهيئة التلقائية.' });
+    return true;
+  }
+  if (isIosDevice() && !isStandalonePwa()) {
+    renderPushCardView({
+      pill: 'يلزم التثبيت على الشاشة الرئيسية',
+      text: 'على iPhone/iPad: اضغط زر المشاركة (⬆︎) في Safari ← اختر «إضافة إلى الشاشة الرئيسية» (Add to Home Screen)، ثم افتح التطبيق من الشاشة الرئيسية لتفعيل رنين الإشعارات.',
+    });
+    return true;
+  }
+  if (!supportsBrowserPush()) {
+    renderPushCardView({ pill: 'غير مدعوم هنا', text: 'هذا المتصفح لا يدعم Web Push؛ افتح الرابط من Chrome على Android أو أضفه للشاشة الرئيسية على iPhone.' });
+    return true;
+  }
+  if (Notification.permission === 'denied') {
+    renderPushCardView({ pill: 'محظورة من المتصفح', text: 'الإشعارات محظورة لهذا الموقع في إعدادات المتصفح؛ اسمح بها من أيقونة القفل بجانب العنوان ثم حدّث الصفحة.' });
+    return true;
+  }
+  return false;
+}
+
 async function loadPushCardState() {
   if (!$('#push-card')) return;
   $('#push-feedback').textContent = '';
   try {
     const cfg = await requireApi().getPushConfig();
     state.pushPublicKey = cfg.public_key || '';
-    if (!cfg.enabled || !state.pushPublicKey) {
-      renderPushCardView({ pill: 'غير مهيأة بعد', text: 'مفاتيح إشعارات الخادم قيد التهيئة التلقائية.' });
-      return;
-    }
-    if (isIosDevice() && !isStandalonePwa()) {
-      renderPushCardView({
-        pill: 'يلزم التثبيت على الشاشة الرئيسية',
-        text: 'على iPhone/iPad: اضغط زر المشاركة (⬆︎) في Safari ← اختر «إضافة إلى الشاشة الرئيسية» (Add to Home Screen)، ثم افتح التطبيق من الشاشة الرئيسية لتفعيل رنين الإشعارات.',
-      });
-      return;
-    }
-    if (!supportsBrowserPush()) {
-      renderPushCardView({ pill: 'غير مدعوم هنا', text: 'هذا المتصفح لا يدعم Web Push؛ افتح الرابط من Chrome على Android أو أضفه للشاشة الرئيسية على iPhone.' });
-      return;
-    }
-    if (Notification.permission === 'denied') {
-      renderPushCardView({ pill: 'محظورة من المتصفح', text: 'الإشعارات محظورة لهذا الموقع في إعدادات المتصفح؛ اسمح بها من أيقونة القفل بجانب العنوان ثم حدّث الصفحة.' });
-      return;
-    }
+    if (checkPushEnvironmentGuard(cfg)) return;
     const existingSub = await readBrowserPushSubscription();
     if (existingSub?.endpoint) {
       state.pushEndpoint = existingSub.endpoint;
@@ -1347,13 +1980,21 @@ async function handleNewContactSubmit(event) {
     const created = await requireApi().createContact(body);
     feedback.textContent = created.duplicate_contact ? 'هذا الرقم مسجل بالفعل؛ افتح السجل الموجود.' : 'تم حفظ العميل.';
     await loadContacts($('#contact-search').value.trim());
-    if (created.contact_id) await openContact(created.contact_id);
+    if (created.contact_id) {
+      openPanel('contacts-panel', { keepSheet: true });
+      await openContact(created.contact_id);
+    }
   } catch (error) {
     feedback.textContent = errorText(error);
     showError(error);
   } finally {
     setBusy(submit, false);
   }
+}
+
+function validateNewOpportunityFollowup(isTransient, effectiveStatus, v, followup) {
+  const activeStatuses = ['active', 'visit_scheduled', 'viewing_done', 'offer', 'negotiating', 'near_close'];
+  return isTransient || !activeStatuses.includes(effectiveStatus) || Boolean(v.next_action?.trim() && followup) || Boolean(v.no_followup_reason?.trim());
 }
 
 async function handleNewOpportunitySubmit(event) {
@@ -1363,10 +2004,9 @@ async function handleNewOpportunitySubmit(event) {
   const feedback = $('#new-opportunity-feedback');
   const v = Object.fromEntries(new FormData(form));
   const followup = isoFromLocal(v.next_followup_at);
-  const activeStatuses = ['active', 'visit_scheduled', 'viewing_done', 'offer', 'negotiating', 'near_close'];
   const isTransient = v.track === 'transient';
   const effectiveStatus = isTransient && v.status === 'active' ? 'paused' : v.status;
-  if (!isTransient && activeStatuses.includes(effectiveStatus) && (!v.next_action?.trim() || !followup) && !v.no_followup_reason?.trim()) {
+  if (!validateNewOpportunityFollowup(isTransient, effectiveStatus, v, followup)) {
     feedback.textContent = 'أدخل الإجراء وموعد المتابعة، أو سبب عدم تحديدها.';
     return;
   }
@@ -1394,7 +2034,10 @@ async function handleNewOpportunitySubmit(event) {
     form.reset();
     await loadContacts();
     await loadOpportunities('', '');
-    if (created.opportunity_id) await openOpportunity(created.opportunity_id);
+    if (created.opportunity_id) {
+      openPanel('opportunities-panel', { keepSheet: true });
+      await openOpportunity(created.opportunity_id);
+    }
   } catch (error) {
     feedback.textContent = errorText(error);
     showError(error);
@@ -1405,6 +2048,10 @@ async function handleNewOpportunitySubmit(event) {
 
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => openPanel(tab.dataset.panel));
 for (const trigger of document.querySelectorAll('[data-open-panel]')) trigger.addEventListener('click', () => openPanel(trigger.dataset.openPanel));
+$('#record-sheet-close')?.addEventListener('click', () => closeRecordSheet());
+$('#record-sheet')?.addEventListener('click', event => {
+  if (event.target.id === 'record-sheet') closeRecordSheet();
+});
 $('#add-contact-phone-row').addEventListener('click', () => buildPhoneRow());
 $('#contact-search-form').addEventListener('submit', async event => {
   event.preventDefault();
