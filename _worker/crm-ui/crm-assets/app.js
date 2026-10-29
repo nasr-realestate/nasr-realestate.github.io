@@ -1,4 +1,10 @@
 import { CRMApiError, CRMClient } from '../crm-client.js';
+import {
+  buildReadyFollowupMessage,
+  buildWhatsappTemplates,
+  prettyPhoneFormat,
+  whatsappHref,
+} from './whatsapp-templates.js';
 
 const PUBLIC_SITE_ORIGIN = 'https://nasr-realestate.github.io';
 const $ = selector => document.querySelector(selector);
@@ -118,13 +124,20 @@ async function copyTextWithFeedback(btn, text, doneLabel = 'تم النسخ ✓'
   setTimeout(() => { btn.textContent = original; }, 1800);
 }
 
-function buildReadyFollowupMessage(name, intent, areaLabel) {
-  const cleanName = String(name || '').trim() || 'فندم';
-  const area = String(areaLabel || '').trim() || 'مدينة نصر';
-  if (intent === 'buy' || intent === 'rent') {
-    return `السلام عليكم أ/ ${cleanName}، معك طارق طنطاوي (سمسار طلبك - مدينة نصر). تتوفر لدينا خيارات مطابقة لطلبك في ${area}، متى يناسبك استعراض التفاصيل أو ترتيب معاينة؟`;
+function buildWhatsappLinkNode(label, phoneKey, messageText, cls = 'button wa-btn small', waLinks = null) {
+  const link = node('a', label, cls);
+  link.dataset.phoneKey = String(phoneKey || '');
+  link.href = whatsappHref(phoneKey, messageText);
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  if (Array.isArray(waLinks)) waLinks.push(link);
+  return link;
+}
+
+function syncWhatsappLinkList(waLinks, messageText) {
+  for (const link of waLinks) {
+    link.href = whatsappHref(link.dataset.phoneKey || '', messageText);
   }
-  return `السلام عليكم أ/ ${cleanName}، معك طارق طنطاوي (سمسار طلبك - مدينة نصر) بخصوص الوحدة المعروضة في ${area} — هل ما زالت متاحة حاليًا لترتيب معاينة مع عميل جاد؟`;
 }
 
 function setNotice(element, text, kind = 'info') {
@@ -411,7 +424,7 @@ function renderDueList(container, rows) {
 }
 
 function prettyPhone(value) {
-  return String(value || '').replace(/^20/, '+20 ');
+  return prettyPhoneFormat(value);
 }
 
 function consentLabel(value) {
@@ -475,7 +488,7 @@ async function syncBackgroundListsQuietly() {
   }
 }
 
-function buildPhoneCommRow(phone, contextInfo) {
+function buildPhoneCommRow(phone, initialMessage, waLinks) {
   const row = node('div', '', 'comm-phone-row');
   const info = node('div');
   const labelSuffix = phone.is_primary ? ' · أساسي' : '';
@@ -484,23 +497,58 @@ function buildPhoneCommRow(phone, contextInfo) {
     node('small', `${phone.label || 'واتساب'}${labelSuffix}`, 'muted'),
   );
   const btns = node('div', '', 'comm-phone-btns');
+  const waLink = buildWhatsappLinkNode('💬 واتساب برسالة جاهزة', phone.phone_key, initialMessage, 'button wa-btn small', waLinks);
   const callLink = node('a', '📞 اتصال الآن', 'button primary small');
   callLink.href = telHref(phone.phone_key);
   const copyNumBtn = button('📋 نسخ الرقم', () => {
     void copyTextWithFeedback(copyNumBtn, `+${phone.phone_key}`);
   }, 'button small');
-  const copyMsgBtn = button('💬 نسخ رسالة متابعة', () => {
-    const msg = buildReadyFollowupMessage(contextInfo.name, contextInfo.intent, contextInfo.areaLabel);
-    void copyTextWithFeedback(copyMsgBtn, msg, 'تم نسخ الرسالة ✓');
-  }, 'button small');
-  btns.append(callLink, copyNumBtn, copyMsgBtn);
+  btns.append(waLink, callLink, copyNumBtn);
   row.append(info, btns);
   return row;
 }
 
-function buildInlineMissingPhoneBox(contactId, onSaved) {
+function buildWhatsappStudioBox(templates, primaryPhoneKey, waLinks) {
+  const studio = node('div', '', 'wa-studio');
+  studio.append(node('strong', '💬 رسائل واتساب الجاهزة الاحترافية (موجّهة منك للعميل — اختر القالب أو عدّل النص):', 'wa-studio-title'));
+  const chipRow = node('div', '', 'chip-row wa-tpl-row');
+  const preview = node('textarea', '', 'wa-msg-preview');
+  preview.rows = 3;
+  preview.maxLength = 1200;
+  preview.value = templates[0]?.text || '';
+  preview.setAttribute('aria-label', 'نص رسالة واتساب الجاهزة');
+
+  const chips = templates.map((tpl, idx) => {
+    const chipBtn = button(tpl.label, () => {
+      for (const c of chips) c.classList.remove('active');
+      chipBtn.classList.add('active');
+      preview.value = tpl.text;
+      syncWhatsappLinkList(waLinks, preview.value);
+    }, `chip small-chip wa-tpl-chip${idx === 0 ? ' active' : ''}`);
+    chipRow.append(chipBtn);
+    return chipBtn;
+  });
+
+  preview.addEventListener('input', () => {
+    syncWhatsappLinkList(waLinks, preview.value);
+  });
+
+  const actionRow = node('div', '', 'form-actions wa-studio-actions');
+  const sendLabel = primaryPhoneKey
+    ? `💬 إرسال الآن عبر واتساب (${prettyPhone(primaryPhoneKey)}) ←`
+    : '💬 فتح واتساب بالرسالة الجاهزة ←';
+  const sendLink = buildWhatsappLinkNode(sendLabel, primaryPhoneKey, preview.value, 'button wa-btn small', waLinks);
+  const copyMsgBtn = button('📋 نسخ نص الرسالة', () => {
+    void copyTextWithFeedback(copyMsgBtn, preview.value, 'تم نسخ الرسالة ✓');
+  }, 'button small');
+  actionRow.append(sendLink, copyMsgBtn);
+  studio.append(chipRow, preview, actionRow);
+  return studio;
+}
+
+function buildInlineMissingPhoneBox(contactId, onSaved, chatTitle = '') {
   const box = node('div', '', 'missing-phone-box');
-  box.append(node('strong', '📱 هذا العميل بدون رقم هاتف محفوظ — أضف رقمه بلمسة واحدة:'));
+  box.append(node('strong', '📱 عميل محفوظ داخل محادثات واتساب بدون رقم ظاهر — أضف رقمه بلمسة واحدة أو أرسل له الرسالة أدناه:'));
   const form = node('form', '', 'inline-phone-form');
   const input = node('input');
   input.type = 'tel';
@@ -512,13 +560,19 @@ function buildInlineMissingPhoneBox(contactId, onSaved) {
   saveBtn.type = 'submit';
   const feedback = node('span', '', 'muted');
   form.append(input, saveBtn);
+  if (chatTitle) {
+    const copyNameBtn = button('📋 نسخ اسم الشات للبحث في واتساب', () => {
+      void copyTextWithFeedback(copyNameBtn, chatTitle, 'تم نسخ الاسم ✓');
+    }, 'button small');
+    form.append(copyNameBtn);
+  }
   box.append(form, feedback);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     setBusy(saveBtn, true);
     try {
       await requireApi().addPhone(contactId, { phone: input.value.trim(), label: 'أساسي', is_primary: true });
-      state.lastActionToast = '✓ تم حفظ رقم الهاتف وتفعيل الاتصال المباشر';
+      state.lastActionToast = '✓ تم حفظ رقم الهاتف وتفعيل رابط واتساب والاتصال المباشر';
       void syncBackgroundListsQuietly();
       await onSaved();
     } catch (error) {
@@ -531,9 +585,20 @@ function buildInlineMissingPhoneBox(contactId, onSaved) {
 }
 
 function buildSheetCommSection(contactId, phones, contextInfo, onSaved) {
-  if (!phones.length) return buildInlineMissingPhoneBox(contactId, onSaved);
   const box = node('section', '', 'comm-box');
-  for (const phone of phones) box.append(buildPhoneCommRow(phone, contextInfo));
+  const templates = buildWhatsappTemplates(contextInfo);
+  const initialMsg = templates[0]?.text || '';
+  const waLinks = [];
+  const primaryPhone = phones.find(p => p.is_primary)?.phone_key || phones[0]?.phone_key || '';
+
+  if (phones.length) {
+    for (const phone of phones) {
+      box.append(buildPhoneCommRow(phone, initialMsg, waLinks));
+    }
+  } else {
+    box.append(buildInlineMissingPhoneBox(contactId, onSaved, contextInfo?.name || ''));
+  }
+  box.append(buildWhatsappStudioBox(templates, primaryPhone, waLinks));
   return box;
 }
 
@@ -878,20 +943,22 @@ function buildUnifiedQuickEditDetails(opportunity) {
   return details;
 }
 
-function renderContactPhonesSection(contactId, phones, onDone) {
+function renderContactPhonesSection(contactId, phones, onDone, contactName = '') {
   const phoneSection = node('section', '', 'detail-section');
-  phoneSection.append(node('h3', 'أرقام الهاتف'));
+  phoneSection.append(node('h3', 'أرقام الهاتف والتواصل المباشر'));
   const phoneList = node('ul', '', 'detail-list');
+  const defaultMsg = buildReadyFollowupMessage(contactName, 'sell', 'مدينة نصر');
   for (const phone of phones) {
     const li = node('li');
     const primarySuffix = phone.is_primary ? ' · أساسي' : '';
+    const waLink = buildWhatsappLinkNode('💬 واتساب', phone.phone_key, defaultMsg, 'button wa-btn small');
     const callLink = node('a', '📞 اتصال', 'button primary small');
     callLink.href = telHref(phone.phone_key);
     const copyBtn = button('نسخ الرقم', () => {
       void copyTextWithFeedback(copyBtn, `+${phone.phone_key}`);
     }, 'button small');
     const actions = node('span', '', 'phone-actions');
-    actions.append(callLink, copyBtn);
+    actions.append(waLink, callLink, copyBtn);
     li.append(
       node('span', prettyPhone(phone.phone_key), 'phone-number'),
       document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}`),
@@ -944,7 +1011,7 @@ function populateContactDetailDom(contact, phones, opportunities) {
   detail.append(
     heading,
     buildQuickContactUpdateForm(contact, reloadContact),
-    renderContactPhonesSection(contact.id, phones, reloadContact),
+    renderContactPhonesSection(contact.id, phones, reloadContact, contact.name || ''),
     renderContactOpportunitiesSection(contact.id, opportunities),
   );
 }
@@ -1144,9 +1211,15 @@ function buildMatchCounterpartyCard(m) {
   );
   const actions = node('div', '', 'form-actions');
   if (m.phone_key) {
+    const matchMsg = buildReadyFollowupMessage(m.contact_name, m.intent, m.area_label, {
+      track: m.track,
+      propertyType: m.property_type,
+      sizeMax: m.size_max_m2,
+    });
+    const waLink = buildWhatsappLinkNode('💬 واتساب برسالة جاهزة', m.phone_key, matchMsg, 'button wa-btn small');
     const callLink = node('a', `📞 اتصال (${prettyPhone(m.phone_key)})`, 'button primary small');
     callLink.href = telHref(m.phone_key);
-    actions.append(callLink);
+    actions.append(waLink, callLink);
   }
   actions.append(button('فتح ملفه ←', () => { void openOpportunity(m.id); }, 'button small'));
   card.append(actions);
@@ -1243,10 +1316,23 @@ function buildOpportunityCommandNodes(result) {
   hero.append(titleEl, metaRow, buildUnitSiblingsBar(opportunity.contact_id, opportunity.id, siblings));
   nodes.push(hero);
 
+  const linkedProp = properties[0] || null;
+  const siteUrl = publicPropertyUrl(linkedProp?.url || opportunity.source_url);
+
   nodes.push(buildSheetCommSection(
     opportunity.contact_id,
     phones,
-    { name: opportunity.contact_name, intent: opportunity.intent, areaLabel: opportunity.area_label },
+    {
+      name: opportunity.contact_name,
+      track: opportunity.track,
+      intent: opportunity.intent,
+      areaLabel: opportunity.area_label,
+      propertyType: opportunity.property_type,
+      sizeMin: opportunity.size_min_m2,
+      sizeMax: opportunity.size_max_m2,
+      budgetMax: opportunity.budget_max,
+      siteUrl,
+    },
     () => openOpportunity(opportunity.id),
   ));
 

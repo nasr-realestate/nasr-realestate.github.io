@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CRMApiError, CRMClient } from '../crm-ui/crm-client.js';
+import {
+  buildReadyFollowupMessage,
+  buildWhatsappTemplates,
+  extractClientSalutation,
+  prettyPhoneFormat,
+  whatsappHref,
+} from '../crm-ui/crm-assets/whatsapp-templates.js';
 
 function jsonResponse(payload, status = 200, extra = {}) {
   return {
@@ -100,9 +107,10 @@ test('CRMClient clears CSRF token on 401 and classifies auth, rate-limit, offlin
 });
 
 test('private CRM UI keeps workspace hidden until login, removes Cloudflare Access requirement, and avoids public site, storage, contact import, and unsafe DOM APIs', async () => {
-  const [html, appJs, clientJs, crmSwJs, crmManifestRaw, css, indexHtml, swJs, workerJs] = await Promise.all([
+  const [html, appJs, waTemplatesJs, clientJs, crmSwJs, crmManifestRaw, css, indexHtml, swJs, workerJs] = await Promise.all([
     readFile(new URL('../crm-ui/crm.html', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../crm-ui/crm-assets/whatsapp-templates.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-client.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-sw.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-manifest.webmanifest', import.meta.url), 'utf8'),
@@ -111,7 +119,7 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
     readFile(new URL('../../sw.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-worker.js', import.meta.url), 'utf8'),
   ]);
-  const uiBundle = `${html}\n${appJs}\n${clientJs}\n${crmSwJs}\n${css}`;
+  const uiBundle = `${html}\n${appJs}\n${waTemplatesJs}\n${clientJs}\n${crmSwJs}\n${css}`;
   const manifest = JSON.parse(crmManifestRaw);
 
   assert.equal(manifest.id, '/');
@@ -155,9 +163,58 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
   assert.doesNotMatch(uiBundle, /innerHTML|outerHTML|insertAdjacentHTML/);
   assert.doesNotMatch(uiBundle, /localStorage|sessionStorage|indexedDB|caches\.open/);
   assert.doesNotMatch(uiBundle, /navigator\.contacts|ContactsManager|\.vcf|vcard|FileReader/i);
-  assert.doesNotMatch(uiBundle, /wa\.me|api\.whatsapp\.com/);
+  assert.match(uiBundle, /https:\/\/wa\.me\//);
+  assert.match(workerJs, /\/crm-assets\/whatsapp-templates\.js/);
   assert.doesNotMatch(uiBundle, /cloudflareaccess|cf-access-jwt-assertion|Zero\s*Trust/i);
   assert.doesNotMatch(workerJs, /cloudflareaccess|cf-access-jwt-assertion|ACCESS_TEAM_DOMAIN|ACCESS_AUD|ADMIN_EMAIL/);
   assert.doesNotMatch(indexHtml, /crm\.html|crm-assets|crm-client\.js/);
   assert.doesNotMatch(swJs, /crm\.html|crm-assets|crm-client\.js/);
+});
+
+test('WhatsApp link builder and professional message templates format salutations, E.164 phones, and role-aware pre-filled links cleanly', () => {
+  assert.equal(prettyPhoneFormat('201022334455'), '+20 1022334455');
+  assert.equal(prettyPhoneFormat('971501234567'), '+971 501234567');
+  assert.equal(prettyPhoneFormat('33622413234'), '+33622413234');
+
+  assert.equal(extractClientSalutation('🟢 هاديه عندها شقه في الحي السابع 2.5 مليون'), 'أ/ هاديه');
+  assert.equal(extractClientSalutation('🟢اللواء صلاح انا مالك شقه للبيع بمدينه نصر'), 'سيادة اللواء صلاح');
+  assert.equal(extractClientSalutation('🟠د محمد أمين مقر اداري ارضي كابول 55000'), 'د. محمد أمين');
+  assert.equal(extractClientSalutation('✈️ مطلوب ايجار محل محل 60 متر'), 'يا فندم');
+  assert.equal(extractClientSalutation('✈️ نعم كان بيدور على محل للايجار'), 'يا فندم');
+
+  const ownerTpls = buildWhatsappTemplates({
+    name: '🟢 هدى مصطفي بيع شقة ١٨٠ السنهورى',
+    track: 'sale_apt',
+    intent: 'sell',
+    areaLabel: 'عبد الرازق السنهوري',
+    propertyType: 'شقة',
+    sizeMax: 180,
+    siteUrl: 'https://nasr-realestate.github.io/properties/test-sale/',
+  });
+  assert.equal(ownerTpls.length, 4);
+  assert.match(ownerTpls[0].text, /السلام عليكم أ\/ هدى مصطفي، معك طارق طنطاوي — سمسار طلبك/);
+  assert.match(ownerTpls[0].text, /شقة \(180 م²\) في عبد الرازق السنهوري/);
+  assert.doesNotMatch(ownerTpls[0].text, /بيع شقة ١٨٠ السنهورى/);
+  assert.match(ownerTpls[3].text, /https:\/\/nasr-realestate\.github\.io\/properties\/test-sale\//);
+
+  const buyerTpls = buildWhatsappTemplates({
+    name: '✈️ هند تبحث عن شقه 4مليون',
+    track: 'transient',
+    intent: 'buy',
+    areaLabel: 'مدينة نصر',
+    propertyType: 'شقة تمليك',
+  });
+  assert.equal(buyerTpls.length, 4);
+  assert.match(buyerTpls[0].text, /السلام عليكم أ\/ هند، معك طارق طنطاوي — سمسار طلبك/);
+  assert.match(buyerTpls[0].text, /بخصوص طلب حضرتك/);
+
+  const hrefWithPhone = whatsappHref('201022334455', buyerTpls[0].text);
+  assert.match(hrefWithPhone, /^https:\/\/wa\.me\/201022334455\?text=/);
+  assert.equal(decodeURIComponent(hrefWithPhone.split('?text=')[1]), buyerTpls[0].text);
+
+  const hrefIntl = whatsappHref('971501234567', ownerTpls[0].text);
+  assert.match(hrefIntl, /^https:\/\/wa\.me\/971501234567\?text=/);
+
+  const hrefPhoneless = whatsappHref('', buildReadyFollowupMessage('🟢 غاده شقه خلف التوحيد د5', 'sell', 'مصطفى النحاس'));
+  assert.match(hrefPhoneless, /^https:\/\/wa\.me\/\?text=/);
 });
