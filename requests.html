@@ -80,24 +80,24 @@ hide_navbar: true
       {%- if age_in_seconds < expiry_seconds -%}
         {%- assign cat_class = "residential" -%}
         {%- assign badge_text = "🏠 طلب سكني" -%}
-        {%- if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" or req.title contains "إداري" -%}
+        {%- if req.title contains "محل" or req.title contains "مكتب" or req.title contains "مقر" or req.title contains "تجاري" or req.title contains "إداري" or req.title contains "عيادة" or req.property_type == "shop" or req.property_type == "office" or req.property_type == "clinic" -%}
           {%- assign cat_class = "commercial" -%}
           {%- assign badge_text = "💼 طلب تجاري/إداري" -%}
-        {%- elsif req.title contains "فيلا" or req.title contains "دوبلكس" -%}
+        {%- elsif req.title contains "فيلا" or req.title contains "دوبلكس" or req.property_type == "villa" -%}
           {%- assign badge_text = "🏡 طلب فيلا" -%}
         {%- endif -%}
         {%- assign budget_num = req.budget_num | default: 0 -%}
         {%- assign req_date_iso = req.date | date: "%s" -%}
-        <a href="{{ req.url | relative_url }}" class="rl-card" data-category="{{ cat_class }}" data-budget="{{ budget_num }}" data-date="{{ req_date_iso }}" data-title="{{ req.title | escape }}" data-location="{{ req.location | escape }}">
+        <a href="{{ req.url | relative_url }}" class="rl-card" data-category="{{ cat_class }}" data-budget="{{ budget_num }}" data-date="{{ req_date_iso }}" data-title="{{ req.title | escape }}" data-location="{{ req.location | default: 'مدينة نصر' | escape }}">
           <span class="rl-card-badge"><i class="fas fa-bullhorn"></i> {{ badge_text }}</span>
           <h3 class="rl-card-title">{{ req.title }}</h3>
           <div class="rl-card-meta">
             {% if req.location %}<div class="rl-card-meta-row"><i class="fas fa-map-marker-alt"></i><span>{{ req.location }}</span></div>{% endif %}
-            {% if req.area_min %}<div class="rl-card-meta-row"><i class="fas fa-ruler-combined"></i><span>المساحة: {{ req.area_min }}</span></div>{% endif %}
-            {% if req.rooms_min %}<div class="rl-card-meta-row"><i class="fas fa-bed"></i><span>الغرف: {{ req.rooms_min }}</span></div>{% endif %}
+            {% if req.area_min %}<div class="rl-card-meta-row"><i class="fas fa-ruler-combined"></i><span>المساحة من: {{ req.area_min }} م²</span></div>{% endif %}
+            {% if req.rooms_min %}<div class="rl-card-meta-row"><i class="fas fa-bed"></i><span>الغرف: {{ req.rooms_min }}+</span></div>{% endif %}
           </div>
           <div class="rl-card-footer">
-            <span class="rl-card-budget">{{ req.budget }}</span>
+            <span class="rl-card-budget">{{ req.budget | default: "حسب العرض المناسب" }}</span>
             <span class="rl-card-arrow"><i class="fas fa-arrow-left"></i></span>
           </div>
           {% if req.date %}<div class="rl-card-date"><i class="far fa-calendar"></i> {{ req.date | date: "%d/%m/%Y" }}</div>{% endif %}
