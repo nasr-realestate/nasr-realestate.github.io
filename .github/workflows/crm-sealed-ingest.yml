@@ -136,13 +136,19 @@ jobs:
               (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
               (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
               (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
-              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
+              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS g_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS r_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='new_rent_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS b_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='admin_hq' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS y_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='transient' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS t_cnt;"
             npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
             listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
             contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
             phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
             opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
             linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+            tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
             result='queue-idle-verified'
             finish
             exit 0
@@ -188,7 +194,8 @@ jobs:
           subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
           BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
 
-          ticket_hash=$(printf '%s' "$envelope" | sha256sum | awk '{print $1}')
+          printf '%s' "$envelope" > "$TMP/env.txt"
+          ticket_hash=$(sha256sum "$TMP/env.txt" | awk '{print $1}')
           TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('sealed-ticket:${ticket_hash}','opportunity','authorized_pending') ON CONFLICT(submission_key) DO NOTHING;"
           if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ticket.log" 2>&1; then
             result='d1-ticket-insert-failed'
@@ -196,7 +203,7 @@ jobs:
             exit 1
           fi
 
-          jq -n --arg p "$envelope" '{sealed_payload: $p}' > "$TMP/req.json"
+          jq -Rs '{sealed_payload: .}' "$TMP/env.txt" > "$TMP/req.json"
           http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 90 \
             -X POST -H 'Content-Type: application/json' \
             --data-binary "@$TMP/req.json" \
