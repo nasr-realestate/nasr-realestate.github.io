@@ -23,6 +23,7 @@
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">ن</span><div><strong>إدارة العملاء</strong><small>سمسار طلبك · مدينة نصر</small></div></div>
     <div class="top-actions">
+      <span class="pill" id="network-req-badge" title="لا يوجد وضع عمل دون اتصال (Offline)؛ البيانات تُحفظ وتُقرأ مباشرة من قاعدة البيانات السحابية فقط">🌐 يتطلب اتصال إنترنت · لا تخزين محلي</span>
       <span class="security" id="security-status">جلسة خاصة · يتطلب رمز الدخول</span>
       <button class="button primary small" id="pwa-install-btn" type="button" hidden>📲 تثبيت التطبيق</button>
       <button class="button quiet" id="refresh-all" type="button" hidden>تحديث</button>
@@ -51,6 +52,7 @@
     <div id="crm-workspace" hidden>
       <nav class="tabs" aria-label="أقسام CRM">
         <button class="tab active" type="button" data-panel="dashboard-panel" aria-selected="true">نظرة عامة</button>
+        <button class="tab" type="button" data-panel="followups-panel" aria-selected="false">🔔 المتابعة والمحادثات</button>
         <button class="tab" type="button" data-panel="quick-entry-panel" aria-selected="false">⚡ تسجيل سريع</button>
         <button class="tab" type="button" data-panel="contacts-panel" aria-selected="false">العملاء</button>
         <button class="tab" type="button" data-panel="opportunities-panel" aria-selected="false">الفرص</button>
@@ -90,11 +92,56 @@
         </div>
       </section>
 
+      <section class="panel" id="followups-panel" hidden aria-labelledby="followups-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">توقيت القاهرة Africa/Cairo · تحليل محلي داخلي بدون إرسال خارجي</p>
+            <h1 id="followups-title">🔔 المتابعة الذكية والمحادثات الكاملة</h1>
+          </div>
+        </div>
+        <div class="metrics" id="followups-metrics" aria-live="polite"></div>
+        <div class="chip-row filter-bar" role="group" aria-label="قوائم المتابعة الذكية والمحادثات">
+          <button class="chip active" type="button" data-followup-queue="today">📅 مستحق اليوم</button>
+          <button class="chip" type="button" data-followup-queue="overdue">🚨 متأخر الآن</button>
+          <button class="chip" type="button" data-followup-queue="upcoming">⏭️ قادم</button>
+          <button class="chip" type="button" data-followup-queue="waiting_reply">💬 بانتظار ردك</button>
+          <button class="chip" type="button" data-followup-queue="stalled_intervention">⚠️ يحتاج تدخل</button>
+          <button class="chip" type="button" data-followup-queue="new_chat_alerts">🧠 تنبيهات المحادثات</button>
+          <button class="chip" type="button" data-followup-queue="unmatched_review">🔍 مراجعة غير محسومة</button>
+          <button class="chip" type="button" data-followup-queue="all_conversations">📂 كل المحادثات</button>
+        </div>
+        <details class="drawer-details" id="conv-import-details">
+          <summary>＋ استيراد أو تحديث محادثة واتساب كاملة (بدون اقتطاع، يدعم Android و iOS والأرقام الدولية)</summary>
+          <form id="conv-import-form" class="card form-grid">
+            <label>عنوان المحادثة <input id="conv-import-title" name="chat_title" maxlength="140" placeholder="مثال: دردشة مع أ/ محمد — شقة مكرم عبيد"></label>
+            <label>ربط بعميل حالي (اختياري) <select id="conv-import-contact" name="contact_id"><option value="">تحديد تلقائي بالرقم أو إبقاء للمراجعة اليدوية…</option></select></label>
+            <label class="full">رقم الطرف المشارك إن كان مؤكدًا (اختياري) <input id="conv-import-phone" name="participant_phone" type="tel" maxlength="32" placeholder="010... أو +971..."></label>
+            <label class="full">النص الكامل الأصلي للمحادثة (يُحفظ بالكامل مع الطوابع الزمنية والروابط)
+              <textarea id="conv-import-text" name="raw_text" rows="5" required placeholder="الصق نص المحادثة المصدرة من واتساب كاملًا هنا…"></textarea>
+            </label>
+            <div class="full form-actions">
+              <button class="button primary" id="conv-import-submit" type="submit">حفظ وتحليل المحادثة تزايديًا</button>
+              <span id="conv-import-feedback" class="muted" aria-live="polite"></span>
+            </div>
+          </form>
+        </details>
+        <form id="conv-search-form" class="search-row">
+          <label class="sr-only" for="conv-search-input">بحث في المحادثات وقائمة المراجعة</label>
+          <input id="conv-search-input" type="search" placeholder="ابحث في المحادثات أو مراجعة غير محسومة (العنوان، المحتوى، المنطقة، @username)…" autocomplete="off">
+          <button class="button" type="submit">بحث</button>
+        </form>
+        <h2 id="followups-queue-heading">📅 مستحق اليوم (توقيت القاهرة)</h2>
+        <div class="columns contacts-layout">
+          <div id="followups-list" class="stack"><p class="muted">جارٍ تحميل قوائم المتابعة الذكية…</p></div>
+          <section id="conversation-viewer" class="card detail-card"><p class="muted">اختر «المحادثة الأصلية» من أي تنبيه أو محادثة لعرض النص الكامل غير المقتطع والروابط الخارجية بأمان.</p></section>
+        </div>
+      </section>
+
       <section class="panel" id="quick-entry-panel" hidden aria-labelledby="quick-entry-title">
         <div class="section-heading"><div><p class="eyebrow">عميل + رقم + فرصة في خطوة واحدة</p><h1 id="quick-entry-title">⚡ تسجيل سريع من المحادثة</h1></div></div>
         <div class="card stack quick-paste-box">
           <label for="quick-paste-input">الصق نص رسالة المالك أو العميل لاستخراج الرقم والتفاصيل محليًا (اختياري)
-            <textarea id="quick-paste-input" rows="3" maxlength="1200" placeholder="مثال: أستاذ أحمد 010... شقة 200م للبيع في مكرم عبيد مطلوب 6 مليون"></textarea>
+            <textarea id="quick-paste-input" rows="3" placeholder="مثال: أستاذ أحمد 010... أو +971... شقة 200م للبيع في مكرم عبيد مطلوب 6 مليون"></textarea>
           </label>
           <div class="form-actions">
             <button class="button" type="button" id="quick-parse-btn">تحليل النص المنسوخ</button>
@@ -159,6 +206,12 @@
           <button class="chip track-chip-new_rent_apt" type="button" data-contact-track="new_rent_apt">🔵 إيجار جديد</button>
           <button class="chip track-chip-admin_hq" type="button" data-contact-track="admin_hq">🟡 مقرات وإداري</button>
           <button class="chip track-chip-transient" type="button" data-contact-track="transient">✈️ طيارة</button>
+        </div>
+        <div class="chip-row filter-subbar" role="group" aria-label="تصفية العملاء حسب اكتمال السجل">
+          <button class="chip small-chip active" type="button" data-contact-completeness="">النشط (الكل)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="complete">✓ مكتملة (هاتف موثق)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="incomplete">⚠️ غير مكتملة (تحتاج مراجعة)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="archived">🗄️ مؤرشفة</button>
         </div>
         <form id="contact-search-form" class="search-row"><label class="sr-only" for="contact-search">ابحث بالاسم أو رقم الهاتف</label><input id="contact-search" type="search" placeholder="ابحث بالاسم أو الرقم" autocomplete="off"><button class="button" type="submit">بحث</button></form>
         <p id="contact-search-state" class="muted" aria-live="polite"></p>

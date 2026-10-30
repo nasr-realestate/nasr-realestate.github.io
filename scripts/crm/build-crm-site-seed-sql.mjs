@@ -43,9 +43,11 @@ export function generateCrmSiteSeedSql(feedInput) {
     const relUrl = `/properties/${item.slug}/`;
     const propType = item.propertyType || 'apartment';
     const txType = item.transaction === 'rent' ? 'rent' : 'sale';
+    const statusVal = item.status === 'sold' || item.status === 'rented' || item.status === 'paused' ? item.status : 'active';
     const observedAt = typeof item.date === 'string' && item.date ? item.date : '2026-10-28T00:00:00.000Z';
+    const priceUpdatedAt = typeof item.priceUpdatedAt === 'string' && item.priceUpdatedAt ? item.priceUpdatedAt : observedAt;
     lines.push(
-      `INSERT INTO listings(id, source_id, external_id, url, title, property_type, transaction_type, area_id, area_m2, price, bedrooms, bathrooms, finishing, observed_at) VALUES (${listingId}, 9009, ${sqlText(item.slug)}, ${sqlText(relUrl)}, ${sqlText(item.title || item.slug)}, ${sqlText(propType)}, ${sqlText(txType)}, 90001, ${sqlNumber(item.areaNumeric)}, ${sqlNumber(item.priceNumeric)}, ${sqlNumber(item.roomsNumeric)}, ${sqlNumber(item.bathsNumeric)}, ${sqlText(item.finishing || '')}, ${sqlText(observedAt)}) ON CONFLICT(id) DO UPDATE SET external_id=excluded.external_id, url=excluded.url, title=excluded.title, property_type=excluded.property_type, transaction_type=excluded.transaction_type, area_m2=excluded.area_m2, price=excluded.price, bedrooms=excluded.bedrooms, bathrooms=excluded.bathrooms, finishing=excluded.finishing, observed_at=excluded.observed_at;`,
+      `INSERT INTO listings(id, source_id, external_id, url, title, property_type, transaction_type, area_id, area_m2, price, bedrooms, bathrooms, finishing, observed_at, status, price_updated_at) VALUES (${listingId}, 9009, ${sqlText(item.slug)}, ${sqlText(relUrl)}, ${sqlText(item.title || item.slug)}, ${sqlText(propType)}, ${sqlText(txType)}, 90001, ${sqlNumber(item.areaNumeric)}, ${sqlNumber(item.priceNumeric)}, ${sqlNumber(item.roomsNumeric)}, ${sqlNumber(item.bathsNumeric)}, ${sqlText(item.finishing || '')}, ${sqlText(observedAt)}, ${sqlText(statusVal)}, ${sqlText(priceUpdatedAt)}) ON CONFLICT(id) DO UPDATE SET external_id=excluded.external_id, url=excluded.url, title=excluded.title, property_type=excluded.property_type, transaction_type=excluded.transaction_type, area_m2=excluded.area_m2, price=excluded.price, bedrooms=excluded.bedrooms, bathrooms=excluded.bathrooms, finishing=excluded.finishing, observed_at=excluded.observed_at, status=excluded.status, price_updated_at=excluded.price_updated_at;`,
     );
   }
 

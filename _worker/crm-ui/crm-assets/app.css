@@ -122,7 +122,7 @@ label{display:grid;gap:5px;color:var(--muted);font-size:13px}
 .loading{opacity:.65}
 
 /* Slide-up Interactive Broker Command Sheet */
-.sheet-backdrop{position:fixed;inset:62px 0 0 0;z-index:45;background:rgba(4,10,7,.82);backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:flex-end;padding:14px}
+.sheet-backdrop{position:fixed;inset:62px 0 0 0;z-index:75;background:rgba(4,10,7,.82);backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:flex-end;padding:14px}
 .sheet-panel{width:min(780px,100%);max-height:100%;height:100%;background:var(--panel);border:1px solid #355e43;border-radius:20px 20px 14px 14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,.6);animation:sheetUp .18s ease-out}
 .sheet-topbar{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 15px;background:#0b160ff5;border-bottom:1px solid var(--line)}
 .sheet-back-btn{font-weight:700;border-color:#3a6447;color:#fff;background:#182d1f}
@@ -173,7 +173,7 @@ label{display:grid;gap:5px;color:var(--muted);font-size:13px}
   .phone-row{grid-template-columns:1fr 1fr}
   .phone-row .primary-check{grid-column:1}
   .phone-row [data-remove]{grid-column:2;justify-self:end}
-  .security{display:none}
+  .security,#network-req-badge{display:none}
   .topbar{padding:9px 12px}
   .section-heading{align-items:flex-start}
   .compact-label{display:grid}
@@ -192,3 +192,19 @@ label{display:grid;gap:5px;color:var(--muted);font-size:13px}
   .top-actions{gap:5px}
 }
 @media(max-width:330px){.action-pad-grid,.specs-grid{grid-template-columns:1fr}}
+.followup-alert-card{display:grid;gap:8px;border-inline-start:3px solid #22c55e}
+.followup-reason{margin:0;font-weight:600}
+.chat-excerpt{margin:4px 0;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border-inline-start:2px solid #94a3b8;font-size:.92rem}
+.suggested-action{margin:0;color:#86efac;font-size:.93rem}
+.match-reason-line{display:block;color:#86efac;margin-top:3px}
+.danger-pill{background:rgba(239,68,68,.2);color:#fca5a5;border-color:rgba(239,68,68,.45)}
+.chat-stream{display:grid;gap:8px;max-height:460px;overflow-y:auto;padding:6px 2px}
+.chat-bubble{padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.chat-role-broker{background:rgba(34,197,94,.09);border-color:rgba(34,197,94,.28)}
+.chat-bubble-meta{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}
+.chat-bubble-body{margin:0;white-space:pre-wrap;word-break:break-word}
+.chat-links-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.safe-chat-link{color:#6ee7b7;text-decoration:underline;font-size:.9rem}
+.raw-chat-pre{max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word;padding:10px;border-radius:8px;background:rgba(0,0,0,.35);font-size:.86rem}
+.compact-details{margin-top:6px}
+

@@ -1,5 +1,10 @@
 import { CRMApiError, CRMClient } from '../crm-client.js';
 import {
+  createFollowupsController,
+  openConversationInViewer,
+  renderInlineConversationsAndAlerts,
+} from './followups-ui.js';
+import {
   buildReadyFollowupMessage,
   buildWhatsappTemplates,
   prettyPhoneFormat,
@@ -15,6 +20,7 @@ const state = {
   oppTrackFilter: 'live',
   oppRoleFilter: '',
   contactTrackFilter: '',
+  contactCompletenessFilter: '',
   contacts: [],
   opportunities: [],
   listings: [],
@@ -446,11 +452,17 @@ function syncOpportunityContactSelect(contacts) {
 
 function renderSingleContactRow(contact) {
   const numbers = (contact.phone_numbers || '').split(',').filter(Boolean);
-  const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'محادثة مسجلة بدون رقم هاتف بعد — اضغط لإضافته';
+  const subtitle = numbers.length ? numbers.map(prettyPhone).join(' · ') : 'سجل غير مكتمل بدون رقم هاتف موثق — يحتاج مراجعة';
   const badges = formatContactTracks(contact.tracks);
   const titlePrefix = badges ? `${badges} ` : '';
   const metaTags = [`${contact.opportunity_count || 0} فرصة`];
-  if (!numbers.length) metaTags.push({ text: 'بدون رقم محفوظ', cls: 'pill warn-pill' });
+  if (contact.completeness_status === 'archived' || contact.archived_at) {
+    metaTags.push({ text: '🗄️ مؤرشف', cls: 'pill' });
+  } else if (numbers.length) {
+    metaTags.push({ text: '✓ مكتمل', cls: 'pill active-pill' });
+  } else {
+    metaTags.push({ text: '⚠️ غير مكتمل — للمراجعة', cls: 'pill warn-pill' });
+  }
   if (contact.communication_consent === 'do_not_contact') metaTags.push('عدم التواصل');
   return clickableRecord(
     `${titlePrefix}${contact.name || 'عميل بلا اسم'}`,
@@ -461,19 +473,23 @@ function renderSingleContactRow(contact) {
   );
 }
 
-async function loadContacts(query = $('#contact-search')?.value?.trim() || '', track = state.contactTrackFilter) {
+async function loadContacts(
+  query = $('#contact-search')?.value?.trim() || '',
+  track = state.contactTrackFilter,
+  completeness = state.contactCompletenessFilter,
+) {
   $('#contact-search-state').textContent = 'جارٍ البحث…';
-  const result = await requireApi().searchContacts(query, track);
+  const result = await requireApi().searchContacts(query, track, completeness);
   state.contacts = result.contacts || [];
   const list = $('#contact-results');
   list.replaceChildren();
   if (!state.contacts.length) {
-    const emptyText = query || track ? 'لا توجد نتائج مطابقة.' : 'لا يوجد عملاء بعد. أضف أول عميل يدويًا.';
+    const emptyText = query || track || completeness ? 'لا توجد نتائج مطابقة.' : 'لا يوجد عملاء بعد. أضف أول عميل يدويًا.';
     list.append(node('p', emptyText, 'muted'));
   }
   for (const contact of state.contacts) list.append(renderSingleContactRow(contact));
   $('#contact-search-state').textContent = `${state.contacts.length} سجل`;
-  if (!query && !track) syncOpportunityContactSelect(state.contacts);
+  if (!query && !track && !completeness) syncOpportunityContactSelect(state.contacts);
 }
 
 async function syncBackgroundListsQuietly() {
@@ -481,7 +497,7 @@ async function syncBackgroundListsQuietly() {
     await Promise.all([
       loadDashboard(),
       loadOpportunities($('#opportunity-search').value, $('#opportunity-status').value),
-      loadContacts($('#contact-search').value.trim(), state.contactTrackFilter),
+      loadContacts($('#contact-search').value.trim(), state.contactTrackFilter, state.contactCompletenessFilter),
     ]);
   } catch {
     // Keep sheet responsive even if background refresh fails momentarily.
@@ -534,21 +550,25 @@ function buildWhatsappStudioBox(templates, primaryPhoneKey, waLinks) {
   });
 
   const actionRow = node('div', '', 'form-actions wa-studio-actions');
-  const sendLabel = primaryPhoneKey
-    ? `💬 إرسال الآن عبر واتساب (${prettyPhone(primaryPhoneKey)}) ←`
-    : '💬 فتح واتساب بالرسالة الجاهزة ←';
-  const sendLink = buildWhatsappLinkNode(sendLabel, primaryPhoneKey, preview.value, 'button wa-btn small', waLinks);
+  if (primaryPhoneKey) {
+    const sendLabel = `💬 إرسال الآن عبر واتساب (${prettyPhone(primaryPhoneKey)}) ←`;
+    const sendLink = buildWhatsappLinkNode(sendLabel, primaryPhoneKey, preview.value, 'button wa-btn small', waLinks);
+    actionRow.append(sendLink);
+  }
   const copyMsgBtn = button('📋 نسخ نص الرسالة', () => {
     void copyTextWithFeedback(copyMsgBtn, preview.value, 'تم نسخ الرسالة ✓');
   }, 'button small');
-  actionRow.append(sendLink, copyMsgBtn);
+  actionRow.append(copyMsgBtn);
   studio.append(chipRow, preview, actionRow);
   return studio;
 }
 
-function buildInlineMissingPhoneBox(contactId, onSaved, chatTitle = '') {
+function buildInlineMissingPhoneBox(contactId, onSaved, chatTitle = '', opportunityId = '', conversationId = '') {
   const box = node('div', '', 'missing-phone-box');
-  box.append(node('strong', '📱 عميل محفوظ داخل محادثات واتساب بدون رقم ظاهر — أضف رقمه بلمسة واحدة أو أرسل له الرسالة أدناه:'));
+  const headingMsg = contactId
+    ? '📱 جهة اتصال غير مكتملة بدون رقم موثق — أضف رقمه لتفعيل الاتصال وواتساب:'
+    : '📱 فرصة مستقلة بلا رقم هاتف — أضف رقمًا موثقًا لإنشاء وربط جهة اتصال مكتملة دون فقد أي بيانات:';
+  box.append(node('strong', headingMsg));
   const form = node('form', '', 'inline-phone-form');
   const input = node('input');
   input.type = 'tel';
@@ -556,7 +576,7 @@ function buildInlineMissingPhoneBox(contactId, onSaved, chatTitle = '') {
   input.required = true;
   input.maxLength = 32;
   input.placeholder = '010... أو +20...';
-  const saveBtn = node('button', 'حفظ الرقم فورًا', 'button primary small');
+  const saveBtn = node('button', 'حفظ الرقم الموثق فورًا', 'button primary small');
   saveBtn.type = 'submit';
   const feedback = node('span', '', 'muted');
   form.append(input, saveBtn);
@@ -566,13 +586,27 @@ function buildInlineMissingPhoneBox(contactId, onSaved, chatTitle = '') {
     }, 'button small');
     form.append(copyNameBtn);
   }
+  if (conversationId) {
+    form.append(button('📖 فتح المحادثة المرتبطة كاملة', () => {
+      closeRecordSheet();
+      void openConversationInViewer(conversationId, followupsController.controllerDeps);
+    }, 'button small'));
+  }
   box.append(form, feedback);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     setBusy(saveBtn, true);
     try {
-      await requireApi().addPhone(contactId, { phone: input.value.trim(), label: 'أساسي', is_primary: true });
-      state.lastActionToast = '✓ تم حفظ رقم الهاتف وتفعيل رابط واتساب والاتصال المباشر';
+      if (contactId) {
+        await requireApi().addPhone(contactId, { phone: input.value.trim(), label: 'أساسي', is_primary: true });
+      } else if (opportunityId) {
+        await requireApi().updateOpportunity(opportunityId, {
+          lead_label: chatTitle,
+          phone: input.value.trim(),
+          label: 'أساسي',
+        });
+      }
+      state.lastActionToast = '✓ تم حفظ الرقم الموثق وتفعيل الاتصال ورابط واتساب المباشر';
       void syncBackgroundListsQuietly();
       await onSaved();
     } catch (error) {
@@ -596,7 +630,13 @@ function buildSheetCommSection(contactId, phones, contextInfo, onSaved) {
       box.append(buildPhoneCommRow(phone, initialMsg, waLinks));
     }
   } else {
-    box.append(buildInlineMissingPhoneBox(contactId, onSaved, contextInfo?.name || ''));
+    box.append(buildInlineMissingPhoneBox(
+      contactId,
+      onSaved,
+      contextInfo?.name || '',
+      contextInfo?.opportunityId || '',
+      contextInfo?.conversationId || '',
+    ));
   }
   box.append(buildWhatsappStudioBox(templates, primaryPhone, waLinks));
   return box;
@@ -749,11 +789,15 @@ function buildUnitSiblingsBar(contactId, currentOppId, siblings) {
       }, `chip small-chip${active ? ' active' : ''}`));
     });
   }
-  bar.append(button('＋ إضافة فرصة/وحدة أخرى للعميل', () => {
-    closeRecordSheet();
-    openPanel('new-opportunity-panel');
-    $('#opportunity-contact').value = contactId;
-  }, 'button quiet small'));
+  if (contactId) {
+    bar.append(button('＋ إضافة فرصة/وحدة أخرى للعميل', () => {
+      closeRecordSheet();
+      openPanel('new-opportunity-panel');
+      $('#opportunity-contact').value = contactId;
+    }, 'button quiet small'));
+  } else {
+    bar.append(node('span', '🛡️ فرصة عقارية مستقلة (محفوظة بأمان حتى قبل توثيق رقم الهاتف)', 'pill warn-pill'));
+  }
   return bar;
 }
 
@@ -803,34 +847,41 @@ function buildAddPhoneForm(contactId, onDone) {
 
 function buildQuickContactUpdateForm(contact, onDone) {
   const form = node('form', '', 'activity-form');
-  form.append(node('h3', 'تحديث الاسم أو الرقم الأساسي'));
+  form.append(node('h3', 'تحديث الاسم أو تفضيل التواصل أو الرقم الأساسي'));
   const nameInput = node('input');
   nameInput.name = 'name';
   nameInput.maxLength = 100;
   nameInput.required = true;
   nameInput.placeholder = 'اسم العميل أو المالك';
   nameInput.value = contact.name || '';
+  const consentSelect = node('select');
+  consentSelect.name = 'communication_consent';
+  consentSelect.add(new Option('متابعة الطلب فقط (الافتراضي)', 'request_only'));
+  consentSelect.add(new Option('وافق على العروض العقارية', 'marketing_yes'));
+  consentSelect.add(new Option('عدم التواصل', 'do_not_contact'));
+  consentSelect.value = contact.communication_consent || 'request_only';
   const phoneInput = node('input');
   phoneInput.type = 'tel';
   phoneInput.name = 'phone';
   phoneInput.maxLength = 32;
-  phoneInput.placeholder = 'رقم أساسي جديد (اختياري: 010...)';
-  const submit = node('button', 'حفظ الاسم والرقم', 'button primary small');
+  phoneInput.placeholder = 'رقم إضافي/أساسي جديد (اختياري: 010... أو +971...)';
+  const submit = node('button', 'حفظ التحديثات', 'button primary small');
   submit.type = 'submit';
   const feedback = node('span', '', 'muted');
   feedback.setAttribute('aria-live', 'polite');
-  form.append(nameInput, phoneInput, submit, feedback);
+  form.append(nameInput, consentSelect, phoneInput, submit, feedback);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     setBusy(submit, true);
     try {
       await requireApi().updateContact(contact.id, {
         name: nameInput.value.trim(),
+        communication_consent: consentSelect.value,
         phone: phoneInput.value.trim() || undefined,
         label: 'أساسي',
-        is_primary: true,
+        is_primary: Boolean(phoneInput.value.trim()),
       });
-      state.lastActionToast = '✓ تم تحديث بيانات العميل';
+      state.lastActionToast = '✓ تم تحديث بيانات العميل وتفضيل التواصل وتوثيق السجل';
       void syncBackgroundListsQuietly();
       await onDone();
     } catch (error) {
@@ -914,13 +965,19 @@ function buildUnifiedQuickEditDetails(opportunity) {
     try {
       const priceVal = fields.priceInput.value ? Number(fields.priceInput.value) : null;
       const sizeVal = fields.sizeInput.value ? Number(fields.sizeInput.value) : null;
-      await requireApi().updateContact(opportunity.contact_id, {
-        name: fields.nameInput.value.trim(),
-        phone: fields.phoneInput.value.trim() || undefined,
-        label: 'أساسي',
-        is_primary: true,
-      });
+      const nameVal = fields.nameInput.value.trim();
+      const phoneVal = fields.phoneInput.value.trim();
+      if (opportunity.contact_id) {
+        await requireApi().updateContact(opportunity.contact_id, {
+          name: nameVal,
+          phone: phoneVal || undefined,
+          label: 'أساسي',
+          is_primary: true,
+        });
+      }
       await requireApi().updateOpportunity(opportunity.id, {
+        lead_label: opportunity.contact_id ? undefined : nameVal,
+        phone: opportunity.contact_id ? undefined : (phoneVal || undefined),
         area_label: fields.areaInput.value.trim(),
         property_type: fields.propInput.value.trim(),
         budget_min: priceVal,
@@ -939,18 +996,61 @@ function buildUnifiedQuickEditDetails(opportunity) {
     }
   });
 
-  details.append(form, buildAddPhoneForm(opportunity.contact_id, () => openOpportunity(opportunity.id)));
+  details.append(form);
+  if (opportunity.contact_id) {
+    details.append(buildAddPhoneForm(opportunity.contact_id, () => openOpportunity(opportunity.id)));
+  }
   return details;
 }
 
-function renderContactPhonesSection(contactId, phones, onDone, contactName = '') {
+function buildPhoneEditDetails(contactId, phone, onDone) {
+  const details = node('details', '', 'drawer-details compact-details');
+  details.append(node('summary', '✏️ تعديل الرقم أو التسمية'));
+  const form = node('form', '', 'activity-form');
+  const numInput = node('input');
+  numInput.type = 'tel';
+  numInput.required = true;
+  numInput.value = `+${phone.phone_key}`;
+  const lblInput = node('input');
+  lblInput.maxLength = 40;
+  lblInput.value = phone.label || '';
+  lblInput.placeholder = 'التسمية (مثال: عمل، واتساب، ثانوي)';
+  const row = node('div', '', 'form-actions');
+  const saveBtn = node('button', 'حفظ التعديل', 'button primary small');
+  saveBtn.type = 'submit';
+  const fb = node('span', '', 'muted');
+  row.append(saveBtn, fb);
+  form.append(numInput, lblInput, row);
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    setBusy(saveBtn, true);
+    try {
+      await requireApi().updatePhone(contactId, phone.id, {
+        phone: numInput.value.trim(),
+        label: lblInput.value.trim(),
+      });
+      void syncBackgroundListsQuietly();
+      await onDone();
+    } catch (err) {
+      fb.textContent = errorText(err);
+    } finally {
+      setBusy(saveBtn, false);
+    }
+  });
+  details.append(form);
+  return details;
+}
+
+function renderContactPhonesSection(contactId, phones, onDone, contactName = '', primaryIntent = '') {
   const phoneSection = node('section', '', 'detail-section');
   phoneSection.append(node('h3', 'أرقام الهاتف والتواصل المباشر'));
   const phoneList = node('ul', '', 'detail-list');
-  const defaultMsg = buildReadyFollowupMessage(contactName, 'sell', 'مدينة نصر');
+  const defaultMsg = buildReadyFollowupMessage(contactName, primaryIntent, 'مدينة نصر');
+  const sectionFeedback = node('p', '', 'muted');
   for (const phone of phones) {
     const li = node('li');
-    const primarySuffix = phone.is_primary ? ' · أساسي' : '';
+    const primarySuffix = phone.is_primary ? ' · أساسي' : ' · ثانوي';
+    const provText = phone.source_type && phone.source_type !== 'manual' ? ' · مصدر موثق' : '';
     const waLink = buildWhatsappLinkNode('💬 واتساب', phone.phone_key, defaultMsg, 'button wa-btn small');
     const callLink = node('a', '📞 اتصال', 'button primary small');
     callLink.href = telHref(phone.phone_key);
@@ -959,15 +1059,40 @@ function renderContactPhonesSection(contactId, phones, onDone, contactName = '')
     }, 'button small');
     const actions = node('span', '', 'phone-actions');
     actions.append(waLink, callLink, copyBtn);
+
+    if (!phone.is_primary && phone.id) {
+      actions.append(button('⭐ تعيين أساسي', async () => {
+        try {
+          await requireApi().updatePhone(contactId, phone.id, { is_primary: true });
+          void syncBackgroundListsQuietly();
+          await onDone();
+        } catch (err) {
+          sectionFeedback.textContent = errorText(err);
+        }
+      }, 'button quiet small'));
+      actions.append(button('🗑️ حذف الثانوي', async () => {
+        try {
+          await requireApi().deletePhone(contactId, phone.id);
+          void syncBackgroundListsQuietly();
+          await onDone();
+        } catch (err) {
+          sectionFeedback.textContent = errorText(err);
+        }
+      }, 'button danger small'));
+    }
+
     li.append(
       node('span', prettyPhone(phone.phone_key), 'phone-number'),
-      document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}`),
+      document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}${provText}`),
       actions,
     );
+    if (phone.id) {
+      li.append(buildPhoneEditDetails(contactId, phone, onDone));
+    }
     phoneList.append(li);
   }
   if (!phones.length) phoneList.append(node('li', 'لا توجد أرقام مسجلة.', 'muted'));
-  phoneSection.append(phoneList, buildAddPhoneForm(contactId, onDone));
+  phoneSection.append(phoneList, sectionFeedback, buildAddPhoneForm(contactId, onDone));
   return phoneSection;
 }
 
@@ -999,24 +1124,97 @@ function renderContactOpportunitiesSection(contactId, opportunities) {
   return oppSection;
 }
 
-function populateContactDetailDom(contact, phones, opportunities) {
+function renderContactAuditDetails(auditLog = []) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', `🛡️ سجل توثيق التعديلات والموافقات (${auditLog.length})`));
+  const ul = node('ul', '', 'detail-list');
+  for (const row of auditLog) {
+    const li = node('li');
+    li.textContent = `${dateLabel(row.created_at)} · ${row.action_type} (${row.field_name || 'سجل'}): ${row.new_value || row.old_value || '—'}`;
+    ul.append(li);
+  }
+  if (!auditLog.length) ul.append(node('li', 'لا توجد تعديلات موثقة بعد.', 'muted'));
+  details.append(ul);
+  return details;
+}
+
+function buildDecoupledContactSafetyDrawer(contact, reloadContact) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', '🗄️ أرشفة أو حذف سجل جهة الاتصال (منفصل تمامًا عن الفرص والمحادثات)'));
+  const box = node('div', '', 'stack');
+  box.append(node(
+    'p',
+    'تطبيقًا لسياسة فصل السجلات: أرشفة أو حذف جهة الاتصال لا يحذف أبدًا أي فرصة عقارية أو محادثة مرتبطة بها؛ تظل الفرص والمحادثات محفوظة بالكامل.',
+    'muted',
+  ));
+  const row = node('div', '', 'form-actions');
+  const fb = node('span', '', 'muted');
+  const isArchived = Boolean(contact.archived_at || contact.completeness_status === 'archived');
+  const archiveBtn = button(isArchived ? '♻️ استعادة من الأرشيف' : '🗄️ أرشفة جهة الاتصال', async () => {
+    archiveBtn.disabled = true;
+    try {
+      await requireApi().archiveContact(contact.id, { restore: isArchived });
+      state.lastActionToast = isArchived ? '✓ تمت استعادة جهة الاتصال' : '✓ تمت أرشفة جهة الاتصال مع بقاء الفرص والمحادثات';
+      void syncBackgroundListsQuietly();
+      await reloadContact();
+    } catch (err) {
+      fb.textContent = errorText(err);
+      archiveBtn.disabled = false;
+    }
+  }, 'button small');
+
+  const detachDeleteBtn = button('🗑️ حذف جهة الاتصال فقط (مع بقاء الفرص والمحادثات)', async () => {
+    detachDeleteBtn.disabled = true;
+    try {
+      await requireApi().deleteContact(contact.id);
+      closeRecordSheet();
+      $('#contact-detail')?.replaceChildren(node('p', 'تم حذف سجل جهة الاتصال فقط مع الاحتفاظ الكامل بالفرص والمحادثات.', 'muted'));
+      await syncBackgroundListsQuietly();
+    } catch (err) {
+      fb.textContent = errorText(err);
+      detachDeleteBtn.disabled = false;
+    }
+  }, 'button danger small');
+
+  row.append(archiveBtn, detachDeleteBtn, fb);
+  box.append(row);
+  details.append(box);
+  return details;
+}
+
+function contactCompletenessBadgeNode(contact, phones) {
+  if (contact.archived_at || contact.completeness_status === 'archived') {
+    return node('span', '🗄️ جهة اتصال مؤرشفة', 'pill');
+  }
+  if (phones.length > 0) {
+    return node('span', '✓ جهة اتصال مكتملة (هاتف موثق)', 'pill active-pill');
+  }
+  return node('span', '⚠️ جهة اتصال غير مكتملة (تحتاج مراجعة)', 'pill warn-pill');
+}
+
+function populateContactDetailDom(contact, phones, opportunities, conversations = [], smartAlerts = [], auditLog = []) {
   const detail = $('#contact-detail');
   detail.replaceChildren();
   const heading = node('div', '', 'card-heading');
   heading.append(
     node('h2', contact.name || 'عميل بلا اسم'),
+    contactCompletenessBadgeNode(contact, phones),
     node('span', consentLabel(contact.communication_consent), 'pill'),
   );
   const reloadContact = () => openContact(contact.id);
+  const primaryIntent = opportunities[0]?.intent || '';
   detail.append(
     heading,
     buildQuickContactUpdateForm(contact, reloadContact),
-    renderContactPhonesSection(contact.id, phones, reloadContact, contact.name || ''),
+    renderContactPhonesSection(contact.id, phones, reloadContact, contact.name || '', primaryIntent),
     renderContactOpportunitiesSection(contact.id, opportunities),
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
+    renderContactAuditDetails(auditLog),
+    buildDecoupledContactSafetyDrawer(contact, reloadContact),
   );
 }
 
-function renderContactOnlySheet(contact, phones) {
+function renderContactOnlySheet(contact, phones, conversations = [], smartAlerts = [], auditLog = []) {
   const body = $('#record-sheet-body');
   if (!body) return;
   body.replaceChildren();
@@ -1024,7 +1222,7 @@ function renderContactOnlySheet(contact, phones) {
   const hero = node('div', '', 'sheet-hero');
   const titleEl = node('h2', contact.name || 'عميل بلا اسم');
   titleEl.id = 'record-sheet-title';
-  hero.append(titleEl, node('small', consentLabel(contact.communication_consent), 'muted'));
+  hero.append(titleEl, contactCompletenessBadgeNode(contact, phones), node('small', consentLabel(contact.communication_consent), 'muted'));
   const reloadContact = () => openContact(contact.id);
   const createOppBar = node('div', '', 'action-pad');
   createOppBar.append(
@@ -1037,9 +1235,12 @@ function renderContactOnlySheet(contact, phones) {
   );
   body.append(
     hero,
-    buildSheetCommSection(contact.id, phones, { name: contact.name, intent: 'sell', areaLabel: 'مدينة نصر' }, reloadContact),
+    buildSheetCommSection(contact.id, phones, { name: contact.name, intent: '', areaLabel: 'مدينة نصر' }, reloadContact),
     createOppBar,
     buildQuickContactUpdateForm(contact, reloadContact),
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
+    renderContactAuditDetails(auditLog),
+    buildDecoupledContactSafetyDrawer(contact, reloadContact),
   );
 }
 
@@ -1056,13 +1257,16 @@ async function openContact(contactId) {
   const { contact } = result;
   const phones = result.phones || [];
   const opportunities = result.opportunities || [];
-  populateContactDetailDom(contact, phones, opportunities);
+  const conversations = result.conversations || [];
+  const smartAlerts = result.smart_alerts || [];
+  const auditLog = result.audit_log || [];
+  populateContactDetailDom(contact, phones, opportunities, conversations, smartAlerts, auditLog);
 
   if (opportunities.length > 0) {
     await openOpportunity(opportunities[0].id, { keepContactHighlight: true });
     return;
   }
-  renderContactOnlySheet(contact, phones);
+  renderContactOnlySheet(contact, phones, conversations, smartAlerts, auditLog);
 }
 
 function selectOpportunityTrackFilter(trackCode, { switchPanel = false } = {}) {
@@ -1087,7 +1291,15 @@ function selectContactTrackFilter(trackCode) {
   for (const chip of document.querySelectorAll('[data-contact-track]')) {
     chip.classList.toggle('active', chip.dataset.contactTrack === trackCode);
   }
-  void loadContacts($('#contact-search').value.trim(), trackCode).catch(showError);
+  void loadContacts($('#contact-search').value.trim(), trackCode, state.contactCompletenessFilter).catch(showError);
+}
+
+function selectContactCompletenessFilter(completenessCode) {
+  state.contactCompletenessFilter = completenessCode;
+  for (const chip of document.querySelectorAll('[data-contact-completeness]')) {
+    chip.classList.toggle('active', chip.dataset.contactCompleteness === completenessCode);
+  }
+  void loadContacts($('#contact-search').value.trim(), state.contactTrackFilter, completenessCode).catch(showError);
 }
 
 function formatOpportunitySubtitle(opportunity) {
@@ -1209,6 +1421,9 @@ function buildMatchCounterpartyCard(m) {
     node('strong', `${trackBadge(m.track)} ${m.contact_name || 'عميل'} (${badgeText})`),
     node('small', formatOpportunitySubtitle(m), 'muted'),
   );
+  if (m.match_reason) {
+    card.append(node('small', `✓ سبب الترشيح: ${m.match_reason}`, 'match-reason-line'));
+  }
   const actions = node('div', '', 'form-actions');
   if (m.phone_key) {
     const matchMsg = buildReadyFollowupMessage(m.contact_name, m.intent, m.area_label, {
@@ -1282,8 +1497,22 @@ function renderHistoryDetails(activities) {
   const activityList = node('ul', '', 'detail-list');
   for (const activity of activities) {
     const li = node('li');
-    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${activity.summary}`));
+    const bodyText = activity.full_text || activity.summary || '';
+    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${bodyText}`));
     if (activity.outcome) li.append(node('small', ` — ${activity.outcome}`));
+    if (activity.external_links_json) {
+      let links = [];
+      try { links = JSON.parse(activity.external_links_json); } catch { links = []; }
+      for (const linkUrl of links) {
+        if (/^https?:\/\//i.test(linkUrl) || String(linkUrl).startsWith('/')) {
+          const anchor = node('a', ' 🔗 فتح الرابط', 'safe-chat-link');
+          anchor.href = linkUrl;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          li.append(anchor);
+        }
+      }
+    }
     activityList.append(li);
   }
   if (!activities.length) activityList.append(node('li', 'لا توجد أنشطة سابقة.', 'muted'));
@@ -1297,6 +1526,8 @@ function buildOpportunityCommandNodes(result) {
   const siblings = result.sibling_opportunities || [];
   const activities = result.activities || [];
   const properties = result.properties || [];
+  const conversations = result.conversations || [];
+  const smartAlerts = result.smart_alerts || [];
   const nodes = [];
 
   if (state.lastActionToast) {
@@ -1332,6 +1563,8 @@ function buildOpportunityCommandNodes(result) {
       sizeMax: opportunity.size_max_m2,
       budgetMax: opportunity.budget_max,
       siteUrl,
+      opportunityId: opportunity.id,
+      conversationId: opportunity.conversation_id || conversations[0]?.id || '',
     },
     () => openOpportunity(opportunity.id),
   ));
@@ -1350,6 +1583,7 @@ function buildOpportunityCommandNodes(result) {
   if (siteCard) nodes.push(siteCard);
 
   nodes.push(
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
     buildUnifiedQuickEditDetails(opportunity),
     renderMatchesSection(opportunity.id),
     renderCustomActivityDetails(opportunity),
@@ -1409,8 +1643,7 @@ function activityForm(opportunity) {
   const summary = node('textarea');
   summary.name = 'summary';
   summary.required = true;
-  summary.maxLength = 1200;
-  summary.placeholder = 'ملخص ما تم';
+  summary.placeholder = 'ملخص أو نص المحادثة الكامل (يُحفظ بالكامل دون اقتطاع)';
   const outcome = node('input');
   outcome.name = 'outcome';
   outcome.maxLength = 200;
@@ -1450,7 +1683,8 @@ function activityForm(opportunity) {
     try {
       await requireApi().addActivity(opportunity.id, {
         activity_type: type.value,
-        summary: summary.value,
+        summary: summary.value.slice(0, 1200),
+        full_text: summary.value,
         outcome: outcome.value,
         status: status.value || undefined,
         next_action: action.value,
@@ -1475,6 +1709,9 @@ function buildListingOption(opportunityId, listing, feedback) {
     node('strong', listing.title || listing.external_id),
     node('small', `${listing.area_name || 'مدينة نصر'} · ${listing.area_m2 ?? '—'} م² · ${money(listing.price)}`),
   );
+  if (listing.match_reason) {
+    item.append(node('small', `✓ سبب الترشيح: ${listing.match_reason}`, 'match-reason-line'));
+  }
   const actions = node('div', '', 'form-actions');
   const link = button('🔗 ربط بهذا العميل', async () => {
     link.disabled = true;
@@ -1563,8 +1800,24 @@ function asciiDigits(value) {
 }
 
 function extractPhoneFromChat(normalized) {
-  const match = /(?:\+?20[\s.-]*)?0?1[0125](?:[\s.-]*\d){8}/.exec(normalized);
-  return match ? match[0].replaceAll(/[^\d+]/g, '') : '';
+  const intlMatch = /(?:\+|00)(?:971|966|965|974|973|968|962|961|249|218|33|44|49|64|20|1)[\s.-]*(?:\d[\s.-]*){7,11}/.exec(normalized);
+  if (intlMatch) return intlMatch[0].replaceAll(/[^\d+]/g, '');
+  const egMatch = /(?:\+?20[\s.-]*)?0?1[0125](?:[\s.-]*\d){8}/.exec(normalized);
+  return egMatch ? egMatch[0].replaceAll(/[^\d+]/g, '') : '';
+}
+
+function extractSenderFromChatHeader(normalized) {
+  // iOS format: [DD/MM/YYYY, HH:MM] Sender: Message
+  const iosHeader = /^\[[^\]]{3,45}\]\s*([^:\n]{2,60}):/m.exec(normalized);
+  if (iosHeader && !/سمسار\s*طلبك|طارق\s*طنطاوي/.test(iosHeader[1])) {
+    return iosHeader[1].trim();
+  }
+  // Android format: DD/MM/YYYY, HH:MM ص/م - Sender: Message
+  for (const m of normalized.matchAll(/^\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}[،,]\s*\d{1,2}:\d{2}[^-\n]{0,12}\s-\s([^:\n]{2,60}):/gm)) {
+    const candidate = m[1].trim();
+    if (!/سمسار\s*طلبك|طارق\s*طنطاوي/.test(candidate)) return candidate;
+  }
+  return '';
 }
 
 function extractPriceFromChat(normalized) {
@@ -1640,8 +1893,13 @@ function handleQuickParseClick() {
   const normalized = asciiDigits(raw);
   const phone = extractPhoneFromChat(normalized);
   if (phone) $('#quick-phone').value = phone;
-  const headerName = /^\[[^\]]{3,40}\]\s*([^:\n]{2,50}):/.exec(normalized);
-  if (headerName && !/\d{5}/.test(headerName[1])) $('#quick-name').value = headerName[1].trim();
+  const senderLabel = extractSenderFromChatHeader(normalized);
+  if (senderLabel && !/\d{6}/.test(senderLabel)) {
+    $('#quick-name').value = senderLabel;
+  } else if (senderLabel && !phone) {
+    const senderPhone = extractPhoneFromChat(senderLabel);
+    if (senderPhone) $('#quick-phone').value = senderPhone;
+  }
   const sizeMatch = /(\d{2,4})\s*(?:م2|م²|متر)/.exec(normalized);
   if (sizeMatch) $('#quick-size').value = sizeMatch[1];
   const price = extractPriceFromChat(normalized);
@@ -1652,7 +1910,9 @@ function handleQuickParseClick() {
   setQuickTrackChip(detectTrackFromChat(normalized));
   setQuickIntentChip(detectIntentFromChat(normalized));
   $('#quick-notes').value = raw.slice(0, 1200);
-  feedback.textContent = phone ? 'تم استخراج الرقم والرمز والبيانات — راجع واضغط حفظ.' : 'تم استخراج التفاصيل والرمز؛ احفظ بالاسم أو أضف الرقم.';
+  feedback.textContent = ($('#quick-phone').value)
+    ? 'تم استخراج الرقم والرمز والبيانات (Android/iOS/دولي) — راجع واضغط حفظ.'
+    : 'تم استخراج التفاصيل والرمز؛ احفظ بالاسم أو أضف الرقم.';
 }
 
 function resolveQuickFollowupFields(preset) {
@@ -1935,10 +2195,10 @@ async function handleCheckDuePushClick() {
   const btn = $('#push-check-btn');
   const feedback = $('#push-feedback');
   setBusy(btn, true, 'جارٍ الفحص…');
-  feedback.textContent = 'جارٍ فحص المواعيد المستحقة…';
+  feedback.textContent = 'جارٍ فحص المواعيد المستحقة والتنبيهات الذكية…';
   try {
     const res = await requireApi().checkDuePushNow();
-    const sent = Number(res.followup_alerts || 0) + Number(res.viewing_alerts || 0);
+    const sent = Number(res.followup_alerts || 0) + Number(res.viewing_alerts || 0) + Number(res.smart_alerts || 0);
     feedback.textContent = sent > 0
       ? `تم إرسال ${sent} تنبيه مستحق إلى أجهزتك المفعّلة ✓`
       : 'لا توجد مواعيد مستحقة جديدة لم يُرسل تنبيهها بعد.';
@@ -1968,14 +2228,31 @@ async function handleDisablePushClick() {
   }
 }
 
+const followupsController = createFollowupsController({
+  api: () => requireApi(),
+  getContacts: () => state.contacts,
+  openContact: idVal => openContact(idVal),
+  openOpportunity: idVal => openOpportunity(idVal),
+  openPanel: idVal => openPanel(idVal),
+  showError: err => showError(err),
+  errorText: err => errorText(err),
+});
+
 async function refreshAll() {
   clearError();
   setNotice($('#app-status'), 'جارٍ تحميل بيانات CRM…', 'info');
   $('#security-status').textContent = 'جارٍ التحميل…';
   try {
-    await Promise.all([loadDashboard(), loadContacts(), loadOpportunities('', ''), loadQuickListings(), loadPushCardState()]);
+    await Promise.all([
+      loadDashboard(),
+      loadContacts(),
+      loadOpportunities('', ''),
+      loadQuickListings(),
+      loadPushCardState(),
+    ]);
+    await followupsController.refreshFollowups();
     $('#security-status').textContent = 'جلسة موثقة ومحمية';
-    setNotice($('#app-status'), 'الجلسة نشطة. البيانات لا تُحفظ في هذا المتصفح.', 'info');
+    setNotice($('#app-status'), 'الجلسة نشطة (توقيت القاهرة Africa/Cairo). يتطلب اتصال إنترنت مباشر ولا تُحفظ البيانات محليًا.', 'info');
   } catch (error) {
     showError(error);
   }
@@ -2181,13 +2458,18 @@ for (const chip of document.querySelectorAll('[data-opp-role]')) {
 for (const chip of document.querySelectorAll('[data-contact-track]')) {
   chip.addEventListener('click', () => selectContactTrackFilter(chip.dataset.contactTrack));
 }
+for (const chip of document.querySelectorAll('[data-contact-completeness]')) {
+  chip.addEventListener('click', () => selectContactCompletenessFilter(chip.dataset.contactCompleteness));
+}
+
+followupsController.bindEvents();
 
 async function bootstrap() {
   try {
     const configuredBase = document.documentElement.dataset.crmApi || '/api';
     state.api = new CRMClient({ apiBase: configuredBase });
     void ensureCrmServiceWorker();
-    $('#dashboard-day').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    $('#dashboard-day').value = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
     addConsentValidation($('#new-contact-form'));
     buildPhoneRow({ primary: true });
     $('#new-contact-form').querySelector('[data-primary]').checked = false;

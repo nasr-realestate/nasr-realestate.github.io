@@ -100,7 +100,7 @@ jobs:
           phase='verify-test-d1-schema'
           VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
           if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$CONFIG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then result='remote-schema-verification-query-failed'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
-          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 6 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then result='remote-schema-or-synthetic-fixture-count-mismatch'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
+          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 15 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then result='remote-schema-or-synthetic-fixture-count-mismatch'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
           phase='completed'
           result='test-d1-created-synthetic-fixture-seeded-migration-applied-and-verified'
           finish

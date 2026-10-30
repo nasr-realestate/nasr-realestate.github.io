@@ -27,14 +27,30 @@ const SALUTATION_STOP_WORDS = new Set([
   'سودان', 'علاج', 'المحامي', 'السفير',
 ]);
 
-const INTL_PREFIXES = ['971', '966', '965', '974', '973', '968', '962', '961', '249', '218'];
+const INTL_PREFIXES = ['971', '966', '965', '974', '973', '968', '962', '961', '249', '218', '33', '44', '49', '64', '1'];
+
+export function normalizeWhatsappDigits(raw) {
+  const ascii = String(raw || '')
+    .replaceAll(/[\u0660-\u0669]/g, d => String(d.codePointAt(0) - 0x0660))
+    .replaceAll(/[\u06F0-\u06F9]/g, d => String(d.codePointAt(0) - 0x06F0))
+    .trim();
+  const hasIntlMarker = ascii.startsWith('+') || ascii.startsWith('00');
+  let digits = ascii.replaceAll(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (/^01[0125]\d{8}$/.test(digits)) return `20${digits.slice(1)}`;
+  if (/^1[0125]\d{8}$/.test(digits) && !hasIntlMarker) return `20${digits}`;
+  if (/^0201[0125]\d{8}$/.test(digits)) return digits.slice(1);
+  if (/^0[2-9]\d{7,9}$/.test(digits) && !hasIntlMarker) return `20${digits.slice(1)}`;
+  return digits;
+}
 
 export function prettyPhoneFormat(value) {
-  const digits = String(value || '').replaceAll(/\D/g, '');
+  const digits = normalizeWhatsappDigits(value);
   if (!digits) return '';
   if (digits.startsWith('20') && digits.length >= 11) return `+20 ${digits.slice(2)}`;
   for (const code of INTL_PREFIXES) {
-    if (digits.startsWith(code) && digits.length > code.length + 5) {
+    if (digits.startsWith(code) && digits.length >= code.length + 7) {
       return `+${code} ${digits.slice(code.length)}`;
     }
   }
@@ -42,7 +58,7 @@ export function prettyPhoneFormat(value) {
 }
 
 export function whatsappHref(phoneKey, messageText = '') {
-  const digits = String(phoneKey || '').replaceAll(/\D/g, '');
+  const digits = normalizeWhatsappDigits(phoneKey);
   const msg = String(messageText || '').trim();
   const base = digits ? `https://wa.me/${digits}` : 'https://wa.me/';
   return msg ? `${base}?text=${encodeURIComponent(msg)}` : base;
@@ -131,22 +147,24 @@ function buildOwnerTemplates(sal, unit, area, intent, siteUrl) {
   ];
 }
 
-function buildSeekerTemplates(sal, unit, area, siteUrl) {
+function buildSeekerTemplates(sal, unit, area, intent, siteUrl) {
+  const goalAr = intent === 'rent' ? 'للإيجار' : 'للشراء والتمليك';
+  const budgetTerm = intent === 'rent' ? 'القيمة الإيجارية المطلوبة' : 'الميزانية المحددة للشراء';
   const firstMsg = siteUrl
-    ? `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. بخصوص طلب حضرتك (${unit} في ${area})، تتوفر لدينا فرصة مميزة مطابقة لطلبك يمكنك استعراض تفاصيلها وصورها من هنا:\n${siteUrl}\nأبلغني لو مناسبة لترتيب معاينة على الطبيعة.`
-    : `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك (عقارات مدينة نصر ومصر الجديدة). بخصوص طلب حضرتك (${unit} في ${area})، تتوفر لدينا خيارات محدثة قريبة من مواصفاتك، هل ما زال البحث قائمًا لنرسل لك التفاصيل ونرتب معاينة؟`;
+    ? `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. بخصوص طلب حضرتك (${unit} ${goalAr} في ${area})، تتوفر لدينا فرصة مطابقة لطلبك يمكنك استعراض تفاصيلها وصورها من هنا:\n${siteUrl}\nأبلغني لو مناسبة لترتيب معاينة على الطبيعة.`
+    : `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك (عقارات مدينة نصر ومصر الجديدة). بخصوص طلب حضرتك (${unit} ${goalAr} في ${area})، تتوفر لدينا خيارات محدثة مطابقة لمواصفاتك، هل ما زال البحث قائمًا لنرسل لك التفاصيل ونرتب معاينة؟`;
 
   return [
-    { id: 'match_followup', label: '🎯 ترشيح عرض مطابق', text: firstMsg },
+    { id: 'match_followup', label: intent === 'rent' ? '🎯 ترشيح وحدة للإيجار' : '🎯 ترشيح وحدة للشراء', text: firstMsg },
     {
       id: 'viewing',
       label: '📅 تحديد موعد معاينة',
-      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. ننسق حاليًا مواعيد المعاينات الميدانية للعروض المناسبة لطلبك (${unit} في ${area})، ما التوقيت الأنسب لحضرتك اليوم أو غدًا؟`,
+      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. ننسق حاليًا مواعيد المعاينات الميدانية للعروض المناسبة لطلبك (${unit} ${goalAr} في ${area})، ما التوقيت الأنسب لحضرتك اليوم أو غدًا؟`,
     },
     {
       id: 'qualify',
       label: '📋 تحديث المواصفات والميزانية',
-      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. لحصر أدق العروض المتاحة حاليًا لطلبك في ${area} وتوفير وقتك، هل ما زالت نفس المساحة والميزانية محددة للتنفيذ الفوري أم طرأ عليها أي تعديل؟`,
+      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. لحصر أدق العروض المتاحة حاليًا لطلبك في ${area} وتوفير وقتك، هل ما زالت نفس المساحة و${budgetTerm} للتنفيذ أم طرأ عليها أي تعديل؟`,
     },
     {
       id: 'catalog',
@@ -156,17 +174,40 @@ function buildSeekerTemplates(sal, unit, area, siteUrl) {
   ];
 }
 
+function buildGeneralTemplates(sal, area) {
+  return [
+    {
+      id: 'general_followup',
+      label: '💬 متابعة استفسار العميل',
+      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك (عقارات مدينة نصر ومصر الجديدة). أتابع مع حضرتك تواصلك معنا؛ كيف يمكنني مساعدتك اليوم سواء بخصوص طلب شراء/إيجار أو تسويق عقار في ${area}؟`,
+    },
+    {
+      id: 'viewing',
+      label: '📅 تنسيق اتصال أو موعد',
+      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. متى التوقيت الأنسب لحضرتك اليوم للتواصل وتأكيد التفاصيل المطلوبة في ${area}؟`,
+    },
+    {
+      id: 'catalog',
+      label: '🌐 موقع سمسار طلبك',
+      text: `السلام عليكم ${sal}، معك طارق طنطاوي — سمسار طلبك. يسعدنا اطلاعك على أحدث العروض والطلبات الموثقة في مدينة نصر ومصر الجديدة عبر موقعنا الرسمي:\n${PUBLIC_SITE_ORIGIN}/`,
+    },
+  ];
+}
+
 export function buildWhatsappTemplates(contextInfo = {}) {
   const sal = extractClientSalutation(contextInfo.name);
   const area = String(contextInfo.areaLabel || '').trim() || 'مدينة نصر';
   const unit = formatUnitBriefForMessage(contextInfo);
-  const intent = String(contextInfo.intent || 'sell');
+  const intent = String(contextInfo.intent || '').trim();
   const siteUrl = String(contextInfo.siteUrl || '').trim();
 
   if (intent === 'buy' || intent === 'rent') {
-    return buildSeekerTemplates(sal, unit, area, siteUrl);
+    return buildSeekerTemplates(sal, unit, area, intent, siteUrl);
   }
-  return buildOwnerTemplates(sal, unit, area, intent, siteUrl);
+  if (intent === 'sell' || intent === 'lease') {
+    return buildOwnerTemplates(sal, unit, area, intent, siteUrl);
+  }
+  return buildGeneralTemplates(sal, area);
 }
 
 export function buildReadyFollowupMessage(name, intent, areaLabel, extra = {}) {
