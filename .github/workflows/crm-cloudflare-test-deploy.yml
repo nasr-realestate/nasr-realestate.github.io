@@ -201,6 +201,10 @@ jobs:
           fi
           sed -i '/sqlite_sequence/d; /_cf_KV/d' "$TMP/live-export.sql"
 
+          write_tmp_toml() {
+            printf 'name = "%s"\ncompatibility_date = "2026-09-04"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\nmigrations_dir = "./_worker/migrations"\n' "$1" "$2" "$3" > "$4"
+          }
+
           existing_backup_uuid=$(jq -r --arg bn "$BACKUP_DB_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1.json" | head -n1)
           if [ -z "$existing_backup_uuid" ]; then
             b_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
@@ -211,30 +215,14 @@ jobs:
               exit 1
             fi
             existing_backup_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_backup.json")
-            cat > "$TMP/backup.wrangler.toml" <<EOF
-name = "nasr-crm-backup-loader"
-compatibility_date = "2026-09-04"
-[[d1_databases]]
-binding = "DB"
-database_name = "$BACKUP_DB_NAME"
-database_id = "$existing_backup_uuid"
-migrations_dir = "./_worker/migrations"
-EOF
+            write_tmp_toml "nasr-crm-backup-loader" "$BACKUP_DB_NAME" "$existing_backup_uuid" "$TMP/backup.wrangler.toml"
             if ! npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --config "$TMP/backup.wrangler.toml" --file "$TMP/live-export.sql" > "$TMP/backup_import.log" 2>&1; then
               result='backup-d1-import-failed'
               finish
               exit 1
             fi
           else
-            cat > "$TMP/backup.wrangler.toml" <<EOF
-name = "nasr-crm-backup-loader"
-compatibility_date = "2026-09-04"
-[[d1_databases]]
-binding = "DB"
-database_name = "$BACKUP_DB_NAME"
-database_id = "$existing_backup_uuid"
-migrations_dir = "./_worker/migrations"
-EOF
+            write_tmp_toml "nasr-crm-backup-loader" "$BACKUP_DB_NAME" "$existing_backup_uuid" "$TMP/backup.wrangler.toml"
           fi
 
           npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup.wrangler.toml" \
@@ -261,15 +249,7 @@ EOF
             exit 1
           fi
           stage_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_stage.json")
-          cat > "$TMP/stage.wrangler.toml" <<EOF
-name = "nasr-crm-stage-migrator"
-compatibility_date = "2026-09-04"
-[[d1_databases]]
-binding = "DB"
-database_name = "$STAGE_DB_NAME"
-database_id = "$stage_uuid"
-migrations_dir = "./_worker/migrations"
-EOF
+          write_tmp_toml "nasr-crm-stage-migrator" "$STAGE_DB_NAME" "$stage_uuid" "$TMP/stage.wrangler.toml"
           if ! npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/live-export.sql" > "$TMP/stage_import.log" 2>&1; then
             result='stage-d1-import-failed'
             finish
