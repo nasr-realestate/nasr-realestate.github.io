@@ -107,8 +107,10 @@ async function verifyLiveCoreRecords(auth) {
   activeStep = 'check2-contacts-opps';
   const dash = await apiCall('/api/dashboard', { cookie: auth.cookiePair });
   assert.equal(dash.status, 200, 'dash-status');
-  const openAlertsBefore = Number(dash.data?.counts?.open_smart_alerts ?? 0);
+  const openAlertsBefore = Number(dash.data?.counts?.smart_alerts_open ?? 0);
   assert.ok(openAlertsBefore >= 66, `alerts-lt-66-${openAlertsBefore}`);
+  assert.equal(Number(dash.data?.counts?.unmatched_review_chats ?? 0), 21, 'dash-unm-21');
+  assert.equal(Number(dash.data?.counts?.contactless_opportunities ?? 0), 19, 'dash-cl-19');
 
   const contactsRes = await apiCall('/api/contacts', { cookie: auth.cookiePair });
   assert.equal(contactsRes.status, 200, 'contacts-status');
