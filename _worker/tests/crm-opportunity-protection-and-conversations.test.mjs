@@ -369,7 +369,7 @@ test('Mandatory Case 4: restoring opportunities by original ID preserves track/s
       },
       {
         id: 'orig-opp-backup-uuid-0002',
-        lead_label: '🟡 شركة مقر إداري مستعاد 2',
+        lead_label: 'شركة مقر إداري مستعاد 2',
         track: 'admin_hq',
         intent: 'rent',
         source: 'whatsapp',

@@ -2,6 +2,7 @@
 // Never logs customer names, phones, notes, or raw messages to stdout/stderr.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { canonLeadMatchKey, canonSyncKey } from '../../_worker/crm-sync-and-match.js';
 import { sealIngestPayload } from '../../_worker/crm-worker.js';
 
 function extractD1Rows(rawJson) {
@@ -38,25 +39,68 @@ function groupByOpportunityId(rows) {
   return map;
 }
 
+function findUniqueConversationForOpp(opp, liveConvs) {
+  const label = String(opp?.lead_label || '').trim();
+  if (!label) return null;
+  const exactCk = canonSyncKey(label);
+  if (exactCk) {
+    const exactMatches = liveConvs.filter(c => canonSyncKey(c?.chat_title || '') === exactCk);
+    if (exactMatches.length === 1) return exactMatches[0];
+  }
+  const strippedKey = canonLeadMatchKey(label);
+  if (!strippedKey) return null;
+  const strippedMatches = liveConvs.filter(c => canonLeadMatchKey(c?.chat_title || '') === strippedKey);
+  return strippedMatches.length === 1 ? strippedMatches[0] : null;
+}
+
 async function main() {
-  const [oppsPath, actsPath, propsPath, pubPath, dryFlagRaw, outPath] = process.argv.slice(2);
-  if (!oppsPath || !actsPath || !propsPath || !pubPath || !outPath) {
+  const [
+    oppsPath,
+    actsPath,
+    propsPath,
+    liveContactedOppsPath,
+    liveConvsPath,
+    pubPath,
+    dryFlagRaw,
+    outPath,
+  ] = process.argv.slice(2);
+  if (!oppsPath || !actsPath || !propsPath || !liveContactedOppsPath || !liveConvsPath || !pubPath || !outPath) {
     throw new Error('usage_missing_args');
   }
   const isDryRun = String(dryFlagRaw || '').trim() === 'true';
-  const opps = extractD1Rows(readFileSync(oppsPath, 'utf8'));
+  const allBackupActiveOpps = extractD1Rows(readFileSync(oppsPath, 'utf8'));
   const acts = extractD1Rows(readFileSync(actsPath, 'utf8'));
   const props = extractD1Rows(readFileSync(propsPath, 'utf8'));
+  const liveContactedOppIds = new Set(
+    extractD1Rows(readFileSync(liveContactedOppsPath, 'utf8'))
+      .map(r => String(r?.id || '').trim())
+      .filter(Boolean),
+  );
+  const liveConvs = extractD1Rows(readFileSync(liveConvsPath, 'utf8'));
   const pubKey = extractPublicKey(readFileSync(pubPath, 'utf8'));
 
+  const targetOpps = allBackupActiveOpps.filter(o => !liveContactedOppIds.has(String(o?.id || '').trim()));
   const actsByOpp = groupByOpportunityId(acts);
   const propsByOpp = groupByOpportunityId(props);
 
-  const enriched = opps.map(opp => ({
-    ...opp,
-    activities: actsByOpp.get(String(opp.id)) || [],
-    opportunity_properties: propsByOpp.get(String(opp.id)) || [],
-  }));
+  let matchedConvsCount = 0;
+  let totalActs = 0;
+  let totalProps = 0;
+  const enriched = targetOpps.map(opp => {
+    const conv = findUniqueConversationForOpp(opp, liveConvs);
+    if (conv?.id) matchedConvsCount += 1;
+    const oppActs = actsByOpp.get(String(opp.id)) || [];
+    const oppProps = propsByOpp.get(String(opp.id)) || [];
+    totalActs += oppActs.length;
+    totalProps += oppProps.length;
+    return {
+      ...opp,
+      conversation_id: conv?.id || null,
+      contact_id: conv?.contact_id || null,
+      activities: oppActs,
+      opportunity_properties: oppProps,
+    };
+  });
 
   const chunkSize = 10;
   const envelopes = [];
@@ -79,8 +123,9 @@ async function main() {
     ok: true,
     dry_run: isDryRun,
     opportunities: enriched.length,
-    activities: acts.length,
-    properties: props.length,
+    matched_conversations: matchedConvsCount,
+    activities: totalActs,
+    properties: totalProps,
     envelopes: envelopes.length,
   })}\n`);
 }

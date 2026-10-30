@@ -169,6 +169,7 @@ jobs:
               (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
               (SELECT COUNT(*) FROM crm_opportunities WHERE (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS opps_cnt,
               (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL) AS cless_opps_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND conversation_id IS NOT NULL) AS cless_conv_cnt,
               (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
               (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS g_cnt,
               (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS r_cnt,
@@ -181,7 +182,7 @@ jobs:
             cphones=$(jq -r '.. | objects | select(has("cphones_cnt")) | .cphones_cnt | tostring' "$TMP/counts.json" | head -n1)
             phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
             opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
-            cless_opps=$(jq -r '.. | objects | select(has("cless_opps_cnt")) | .cless_opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+            cless_opps=$(jq -r '.. | objects | select(has("cless_opps_cnt")) | "\(.cless_opps_cnt)L\(.cless_conv_cnt)"' "$TMP/counts.json" | head -n1)
             linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
             tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
             INTEL_SQL="SELECT
@@ -294,17 +295,21 @@ jobs:
               exit 1
             fi
             printf 'name = "nasr-crm-backup-ro"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\n' "$BACKUP_DB_NAME" "$b_uuid" > "$TMP/backup_ro.toml"
-            local BAK_OPPS_SQL="SELECT o.id, COALESCE(c.name, '') AS lead_label, o.track, o.intent, o.source, o.source_url, o.status, o.area_label, o.budget_min, o.budget_max, o.size_min_m2, o.size_max_m2, o.property_type, o.notes, o.next_action, o.next_followup_at, o.no_followup_reason, o.closed_at, o.loss_reason, o.loss_notes, o.created_at, o.updated_at FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id = o.contact_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND COALESCE(c.name, '') NOT LIKE 'TEST ONLY%' AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY o.created_at ASC, o.id ASC;"
-            local BAK_ACTS_SQL="SELECT a.* FROM crm_activities a JOIN crm_opportunities o ON o.id = a.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY a.created_at ASC, a.id ASC;"
-            local BAK_PROPS_SQL="SELECT op.* FROM crm_opportunity_properties op JOIN crm_opportunities o ON o.id = op.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY op.created_at ASC, op.id ASC;"
+            local BAK_OPPS_SQL="SELECT o.id, COALESCE(c.name, '') AS lead_label, o.track, o.intent, o.source, o.source_url, o.status, o.area_label, o.budget_min, o.budget_max, o.size_min_m2, o.size_max_m2, o.property_type, o.notes, o.next_action, o.next_followup_at, o.no_followup_reason, o.closed_at, o.loss_reason, o.loss_notes, o.created_at, o.updated_at FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id = o.contact_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND COALESCE(c.name, '') NOT LIKE 'TEST ONLY%' ORDER BY o.created_at ASC, o.id ASC;"
+            local BAK_ACTS_SQL="SELECT a.* FROM crm_activities a JOIN crm_opportunities o ON o.id = a.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') ORDER BY a.created_at ASC, a.id ASC;"
+            local BAK_PROPS_SQL="SELECT op.* FROM crm_opportunity_properties op JOIN crm_opportunities o ON o.id = op.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') ORDER BY op.created_at ASC, op.id ASC;"
             npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_OPPS_SQL" > "$TMP/bak_opps_${r_idx}.json" 2>/dev/null
             npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_ACTS_SQL" > "$TMP/bak_acts_${r_idx}.json" 2>/dev/null
             npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_PROPS_SQL" > "$TMP/bak_props_${r_idx}.json" 2>/dev/null
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT id FROM crm_opportunities WHERE contact_id IS NOT NULL;" > "$TMP/live_copps_${r_idx}.json" 2>/dev/null
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT id, contact_id, chat_title FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%';" > "$TMP/live_convs_${r_idx}.json" 2>/dev/null
             npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;" > "$TMP/pub_${r_idx}.json" 2>/dev/null
             node scripts/crm/build-backup-restore-envelopes.mjs \
               "$TMP/bak_opps_${r_idx}.json" \
               "$TMP/bak_acts_${r_idx}.json" \
               "$TMP/bak_props_${r_idx}.json" \
+              "$TMP/live_copps_${r_idx}.json" \
+              "$TMP/live_convs_${r_idx}.json" \
               "$TMP/pub_${r_idx}.json" \
               "$dry_flag" \
               "$TMP/rest_envs_${r_idx}.txt" > "$TMP/rest_build_${r_idx}.json"

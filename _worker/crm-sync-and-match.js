@@ -40,6 +40,15 @@ export function canonSyncKey(value) {
     .toLowerCase();
 }
 
+export function canonLeadMatchKey(value) {
+  return normalizeArabicText(cleanBidiControls(value))
+    .replace(/^دردشه(?:\s+في)?\s+واتساب\s+مع\s*/, '')
+    .replace(/\.zip$/i, '')
+    .replace(/\.txt$/i, '')
+    .replaceAll(/[🟢🔴🔵🟡✈\uFE0F]/gu, '')
+    .replaceAll(/[\s/_؟?:().,\-–—~@]+/g, '');
+}
+
 function classifyUnitKind(propType = '', title = '', track = '') {
   const hay = normalizeArabicText(`${propType} ${title}`);
   if (track === 'admin_hq' || /اداري|مقر|مكتب|محل|تجاري|عياده|مخزن|مول/.test(hay) || /office|commercial|retail|clinic/i.test(hay)) {
@@ -702,7 +711,13 @@ async function findConversationForRestoredOpp(db, item, ck) {
   }
   if (!ck) return null;
   const allConvs = await db.prepare('SELECT id, contact_id, chat_title FROM crm_conversations').all();
-  return (allConvs?.results || []).find(r => canonSyncKey(r.chat_title || '') === ck) || null;
+  const rows = allConvs?.results || [];
+  const exact = rows.find(r => canonSyncKey(r.chat_title || '') === ck);
+  if (exact) return exact;
+  const leadKey = canonLeadMatchKey(item?.lead_label || item?.customer_label || item?.contact_name || '');
+  if (!leadKey) return null;
+  const strippedMatches = rows.filter(r => canonLeadMatchKey(r.chat_title || '') === leadKey);
+  return strippedMatches.length === 1 ? strippedMatches[0] : null;
 }
 
 async function findVerifiedContactForRestoredOpp(db, item, ck, ctx) {
