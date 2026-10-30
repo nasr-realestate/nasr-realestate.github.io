@@ -11,6 +11,25 @@ import {
   subscribePushDevice,
   unsubscribePushDevice,
 } from './crm-push.js';
+import {
+  buildPhoneSearchVariants,
+  extractSafeLinks,
+  getCairoClock,
+  getCairoDayBoundsUtc,
+  normalizeInternationalPhone,
+  sanitizeExternalOrSiteUrl,
+} from './crm-chat-intel.js';
+import {
+  buildFollowupWorkspaceData,
+  computeOpportunityMatches,
+  getConversationDetailData,
+  importConversationPayload,
+  linkConversationToContactPayload,
+  listConversationsData,
+  refreshTimeBasedSmartAlerts,
+  resolveSmartAlertPayload,
+  runSourceSyncBundle,
+} from './crm-sync-and-match.js';
 
 export { generateVapidKeyPair };
 
@@ -58,6 +77,7 @@ const UI_ASSET_PATHS = new Set([
   '/crm-sw.js',
   '/crm-assets/app.css',
   '/crm-assets/app.js',
+  '/crm-assets/followups-ui.js',
   '/crm-assets/whatsapp-templates.js',
   '/crm-assets/icon-192.png',
   '/crm-assets/icon-512.png',
@@ -110,7 +130,7 @@ function cors(origin, env) {
   return {
     'access-control-allow-origin': allowed,
     'access-control-allow-credentials': 'true',
-    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
     'access-control-allow-headers': 'content-type,idempotency-key,x-crm-csrf',
     'vary': 'Origin',
   };
@@ -483,25 +503,58 @@ async function handleLogout(request, env, config) {
   return json({ ok: true, authenticated: false }, 200, { 'set-cookie': clearSessionCookieHeader() });
 }
 
-function digits(value) {
-  return String(value || '')
-    .replace(/[\u0660-\u0669]/g, d => String(d.codePointAt(0) - 0x0660))
-    .replace(/[\u06f0-\u06f9]/g, d => String(d.codePointAt(0) - 0x06f0));
+async function handleCiTicketLogin(request, env, config) {
+  const body = await readJson(request, 2048);
+  const nonce = typeof body.ticket_nonce === 'string' ? body.ticket_nonce.trim() : '';
+  if (!/^[A-Za-z0-9_-]{32,128}$/.test(nonce)) {
+    return json({ error: 'invalid_ci_ticket' }, 400);
+  }
+  const ticketKey = `ci-e2e-ticket:${await sha256Hex(nonce)}`;
+  const row = await env.DB.prepare(
+    'SELECT resource_id, created_at FROM crm_idempotency_receipts WHERE submission_key = ? LIMIT 1',
+  ).bind(ticketKey).first();
+  if (!row || row.resource_id !== 'authorized_pending') {
+    return json({ error: 'unauthorized_ci_ticket' }, 403);
+  }
+  const createdMs = Date.parse(String(row.created_at || '').includes('T') ? row.created_at : `${String(row.created_at).replace(' ', 'T')}Z`);
+  if (!Number.isFinite(createdMs) || Math.abs(Date.now() - createdMs) > 90_000) {
+    await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='expired' WHERE submission_key=?").bind(ticketKey).run();
+    return json({ error: 'expired_ci_ticket' }, 403);
+  }
+  const consumeRes = await env.DB.prepare(
+    "UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending'",
+  ).bind(ticketKey).run();
+  if ((consumeRes?.meta?.changes ?? consumeRes?.changes ?? 1) === 0) {
+    return json({ error: 'unauthorized_ci_ticket' }, 403);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = Math.min(config.ttlSeconds, 900);
+  const sessionId = id();
+  const sessionToken = randomToken(32);
+  const tokenHash = await hmacHex(config.sessionSecret, `session:${sessionToken}`);
+  const csrfToken = await deriveCsrfToken(config.sessionSecret, sessionId, sessionToken);
+  const csrfHash = await sha256Hex(csrfToken);
+  const expiresAt = now + ttl;
+  await env.DB.prepare(
+    'INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at) VALUES(?, ?, ?, ?, ?, ?)',
+  ).bind(sessionId, tokenHash, csrfHash, now, expiresAt, now).run();
+
+  return json(
+    {
+      ok: true,
+      authenticated: true,
+      session_id: sessionId,
+      csrf_token: csrfToken,
+      expires_at: new Date(expiresAt * 1000).toISOString(),
+    },
+    200,
+    { 'set-cookie': sessionCookieHeader(sessionToken, ttl) },
+  );
 }
 
 export function normalizePhone(raw) {
-  const value = digits(raw).trim();
-  const international = /^\s*\+/.test(value) || value.startsWith('00');
-  let number = value.replace(/\D/g, '');
-  if (number.startsWith('00')) number = number.slice(2);
-  if (/^01[0125]\d{8}$/.test(number)) number = `20${number.slice(1)}`;
-  else if (/^1[0125]\d{8}$/.test(number) && !international) number = `20${number}`;
-  else if (/^0201[0125]\d{8}$/.test(number)) number = number.slice(1);
-  else if (/^0[2-9]\d{7,9}$/.test(number)) number = `20${number.slice(1)}`;
-  if (number.length < 8 || number.length > 15 || !/^\d+$/.test(number)) return null;
-  if (number.startsWith('20') && !/^20(?:1[0125]\d{8}|[2-9]\d{7,9})$/.test(number)) return null;
-  if (!number.startsWith('20') && !international) return null;
-  return number;
+  return normalizeInternationalPhone(raw);
 }
 
 function boundedText(value, max = 1000) {
@@ -544,8 +597,12 @@ function optionalNumber(value) {
 }
 
 function safeSitePath(value) {
-  const raw = boundedText(value, 500);
-  return /^\/(?!\/)[A-Za-z0-9_./?=#%&+-]*$/.test(raw) ? raw : '';
+  return sanitizeExternalOrSiteUrl(value);
+}
+
+async function hasTable(db, tableName) {
+  const row = await db.prepare("SELECT 1 AS ok FROM sqlite_schema WHERE type='table' AND name=? LIMIT 1").bind(tableName).first();
+  return Boolean(row?.ok);
 }
 
 function id() {
@@ -580,12 +637,29 @@ function buildTrackCountsMap(rows = []) {
 }
 
 async function dashboard(db, url) {
-  const now = new Date();
-  const day = url.searchParams.get('day') || now.toISOString().slice(0, 10);
+  const nowParam = url.searchParams.get('now');
+  const now = nowParam && isoDate(nowParam) ? new Date(isoDate(nowParam)) : new Date();
+  const cairo = getCairoClock(now);
+  const day = url.searchParams.get('day') || cairo.dayKey;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return json({ error: 'invalid_day' }, 400);
-  const start = `${day}T00:00:00.000Z`;
-  const end = `${day}T23:59:59.999Z`;
+  const bounds = getCairoDayBoundsUtc(day);
+  if (!bounds) return json({ error: 'invalid_day' }, 400);
+  const start = bounds.startUtcIso;
+  const end = bounds.endUtcIso;
   const current = now.toISOString();
+
+  let smartAlertsOpen = 0;
+  let unmatchedChatsCount = 0;
+  if (await hasTable(db, 'crm_smart_alerts')) {
+    await refreshTimeBasedSmartAlerts(db, now);
+    const [saRow, umRow] = await Promise.all([
+      db.prepare("SELECT COUNT(*) AS cnt FROM crm_smart_alerts WHERE status = 'open'").first(),
+      db.prepare("SELECT COUNT(*) AS cnt FROM crm_conversations WHERE match_status = 'unmatched_review'").first(),
+    ]);
+    smartAlertsOpen = Number(saRow?.cnt || 0);
+    unmatchedChatsCount = Number(umRow?.cnt || 0);
+  }
+
   const active = await db.prepare(`SELECT COUNT(*) AS count FROM crm_opportunities WHERE status IN (${ACTIVE}) AND track != 'transient'`).first();
   const trackRows = await db.prepare(`SELECT track, COUNT(*) AS total,
       SUM(CASE WHEN intent IN ('sell','lease') THEN 1 ELSE 0 END) AS supply_count,
@@ -593,10 +667,10 @@ async function dashboard(db, url) {
     FROM crm_opportunities GROUP BY track`).all();
   const today = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at BETWEEN ? AND ? ORDER BY o.next_followup_at`).bind(start, end).all();
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NOT NULL AND datetime(o.next_followup_at) >= datetime(?) AND datetime(o.next_followup_at) <= datetime(?) ORDER BY o.next_followup_at`).bind(start, end).all();
   const overdue = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at < ? ORDER BY o.next_followup_at LIMIT 200`).bind(start).all();
+    WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NOT NULL AND datetime(o.next_followup_at) < datetime(?) ORDER BY o.next_followup_at LIMIT 200`).bind(current).all();
   const noAction = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.no_followup_reason,o.updated_at
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NULL AND COALESCE(o.no_followup_reason,'')='' ORDER BY o.updated_at LIMIT 200`).all();
@@ -604,20 +678,24 @@ async function dashboard(db, url) {
     (SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id) AS last_activity
     FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND COALESCE((SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id),o.updated_at) < ?
-    ORDER BY COALESCE(last_activity,o.updated_at) LIMIT 200`).bind(new Date(Date.now() - 7 * 86400000).toISOString()).all();
+    ORDER BY COALESCE(last_activity,o.updated_at) LIMIT 200`).bind(new Date(now.getTime() - 7 * 86400000).toISOString()).all();
   const visits = await db.prepare(`SELECT p.id,p.viewing_at,p.viewing_result,o.id AS opportunity_id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,l.title,l.url
     FROM crm_opportunity_properties p JOIN crm_opportunities o ON o.id=p.opportunity_id
     JOIN crm_contacts c ON c.id=o.contact_id JOIN listings l ON l.id=p.listing_id
-    WHERE p.presentation_status='viewing_scheduled' AND p.viewing_at BETWEEN ? AND ? ORDER BY p.viewing_at`).bind(start, end).all();
+    WHERE p.presentation_status='viewing_scheduled' AND p.viewing_at IS NOT NULL AND datetime(p.viewing_at) >= datetime(?) AND datetime(p.viewing_at) <= datetime(?) ORDER BY p.viewing_at`).bind(start, end).all();
   const outcomes = await db.prepare(`SELECT status, COUNT(*) AS count FROM crm_opportunities WHERE status IN ('won','lost','paused','unqualified') GROUP BY status`).all();
   return json({
     day,
+    timezone: 'Africa/Cairo',
+    cairo_bounds_utc: bounds,
     generated_at: current,
     counts: {
       active: active?.count || 0,
       due_today: today.results.length,
       overdue: overdue.results.length,
       missing_next_step: noAction.results.length,
+      smart_alerts_open: smartAlertsOpen,
+      unmatched_review_chats: unmatchedChatsCount,
     },
     tracks: buildTrackCountsMap(trackRows.results),
     due_today: today.results,
@@ -643,6 +721,18 @@ function appendOpportunityRoleFilter(role, where) {
   else if (role === 'demand') where.push("o.intent IN ('buy','rent')");
 }
 
+function buildPhoneSearchClause(q, tableAlias = 'p', contactCol = 'c.id') {
+  const variants = buildPhoneSearchVariants(q);
+  if (variants.length === 0) {
+    return { sql: `EXISTS (SELECT 1 FROM crm_contact_phones ${tableAlias} WHERE ${tableAlias}.contact_id=${contactCol} AND ${tableAlias}.phone_key LIKE ?)`, params: [`%${q}%`] };
+  }
+  const sub = variants.map(() => `${tableAlias}.phone_key LIKE ?`).join(' OR ');
+  return {
+    sql: `EXISTS (SELECT 1 FROM crm_contact_phones ${tableAlias} WHERE ${tableAlias}.contact_id=${contactCol} AND (${sub}))`,
+    params: variants.map(v => `%${v}%`),
+  };
+}
+
 async function listOpportunities(db, url) {
   const status = url.searchParams.get('status') || '';
   const track = url.searchParams.get('track') || '';
@@ -658,8 +748,9 @@ async function listOpportunities(db, url) {
   appendOpportunityRoleFilter(role, where);
   if (q) {
     const pat = `%${q}%`;
-    where.push('(c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id=c.id AND p.phone_key LIKE ?) OR o.area_label LIKE ? OR o.property_type LIKE ? OR o.notes LIKE ?)');
-    params.push(pat, pat, pat, pat, pat);
+    const phoneClause = buildPhoneSearchClause(q, 'p', 'c.id');
+    where.push(`(c.name LIKE ? OR ${phoneClause.sql} OR o.area_label LIKE ? OR o.property_type LIKE ? OR o.notes LIKE ?)`);
+    params.push(pat, ...phoneClause.params, pat, pat, pat);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const sql = `SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id ${whereSql} ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, CASE WHEN o.next_followup_at IS NULL THEN 1 ELSE 0 END, o.next_followup_at DESC, o.updated_at DESC LIMIT 300`;
@@ -684,15 +775,29 @@ async function getOpportunity(db, opportunityId) {
     db.prepare('SELECT * FROM crm_activities WHERE opportunity_id=? ORDER BY created_at DESC LIMIT 100').bind(opportunityId).all(),
     db.prepare(`SELECT p.*,l.external_id,l.url,l.title,l.area_m2,l.price,l.area_id,a.name_ar AS area_name FROM crm_opportunity_properties p
       JOIN listings l ON l.id=p.listing_id JOIN areas a ON a.id=l.area_id WHERE p.opportunity_id=? ORDER BY p.created_at DESC`).bind(opportunityId).all(),
-    db.prepare('SELECT id,phone_key,label,is_primary,created_at FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(opportunity.contact_id).all(),
+    db.prepare('SELECT * FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(opportunity.contact_id).all(),
     db.prepare('SELECT id,track,intent,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 20').bind(opportunity.contact_id).all(),
   ]);
+  let conversations = [];
+  let smartAlerts = [];
+  if (await hasTable(db, 'crm_conversations')) {
+    const [convRes, alertRes] = await Promise.all([
+      db.prepare('SELECT id, chat_title, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version FROM crm_conversations WHERE contact_id=? OR opportunity_id=? ORDER BY last_message_at DESC LIMIT 20')
+        .bind(opportunity.contact_id, opportunityId).all(),
+      db.prepare('SELECT * FROM crm_smart_alerts WHERE opportunity_id=? OR contact_id=? ORDER BY CASE WHEN status=\'open\' THEN 0 ELSE 1 END, created_at DESC LIMIT 30')
+        .bind(opportunityId, opportunity.contact_id).all(),
+    ]);
+    conversations = convRes?.results || [];
+    smartAlerts = alertRes?.results || [];
+  }
   return json({
     opportunity,
     activities: activities.results,
     properties: properties.results,
     phones: phones.results,
     sibling_opportunities: siblings.results,
+    conversations,
+    smart_alerts: smartAlerts,
   });
 }
 
@@ -748,24 +853,44 @@ async function findPhone(db, phone) {
     FROM crm_contact_phones p JOIN crm_contacts c ON c.id=p.contact_id WHERE p.phone_key=?`).bind(phone).first();
 }
 
-function duplicatePhone() {
-  return json({ error: 'duplicate_phone_review', review_required: true }, 409);
+function duplicatePhone(conflict = null) {
+  const payload = { error: 'duplicate_phone_review', review_required: true };
+  if (conflict?.contact_id) {
+    payload.conflict_contact_id = conflict.contact_id;
+    payload.conflict_contact_name = conflict.name || '';
+    payload.phone_key = conflict.phone_key || '';
+  }
+  return json(payload, 409);
 }
 
 async function listContacts(db, url) {
   const q = boundedText(url.searchParams.get('q'), 80);
   const track = url.searchParams.get('track') || '';
   const hasTrack = ALLOWED_TRACKS.includes(track);
-  const pattern = `%${q}%`;
-  const rows = await db.prepare(`SELECT c.id,c.name,c.communication_consent,c.created_at,c.updated_at,
+  const where = ['1=1'];
+  const params = [];
+  if (q) {
+    const pattern = `%${q}%`;
+    const phoneClause = buildPhoneSearchClause(q, 'q', 'c.id');
+    where.push(`(c.name LIKE ? OR ${phoneClause.sql})`);
+    params.push(pattern, ...phoneClause.params);
+  }
+  if (hasTrack) {
+    where.push('EXISTS (SELECT 1 FROM crm_opportunities ox WHERE ox.contact_id=c.id AND ox.track=?)');
+    params.push(track);
+  }
+  const hasConv = await hasTable(db, 'crm_conversations');
+  const convSelect = hasConv
+    ? ', (SELECT COUNT(*) FROM crm_conversations cv WHERE cv.contact_id=c.id) AS conversation_count, (SELECT COUNT(*) FROM crm_smart_alerts sa WHERE sa.contact_id=c.id AND sa.status=\'open\') AS open_alerts_count'
+    : '';
+  const rows = await db.prepare(`SELECT c.id,c.name,c.communication_consent,c.consent_captured_at,c.created_at,c.updated_at,
       GROUP_CONCAT(p.phone_key, ',') AS phone_numbers,
       MAX(CASE WHEN p.is_primary=1 THEN p.phone_key ELSE NULL END) AS primary_phone,
       (SELECT COUNT(*) FROM crm_opportunities o WHERE o.contact_id=c.id) AS opportunity_count,
-      (SELECT GROUP_CONCAT(DISTINCT o.track) FROM crm_opportunities o WHERE o.contact_id=c.id) AS tracks
+      (SELECT GROUP_CONCAT(DISTINCT o.track) FROM crm_opportunities o WHERE o.contact_id=c.id) AS tracks${convSelect}
     FROM crm_contacts c LEFT JOIN crm_contact_phones p ON p.contact_id=c.id
-    WHERE (?='' OR c.name LIKE ? OR EXISTS (SELECT 1 FROM crm_contact_phones q WHERE q.contact_id=c.id AND q.phone_key LIKE ?))
-      AND (?='' OR EXISTS (SELECT 1 FROM crm_opportunities ox WHERE ox.contact_id=c.id AND ox.track=?))
-    GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 200`).bind(q, pattern, pattern, hasTrack ? track : '', hasTrack ? track : '').all();
+    WHERE ${where.join(' AND ')}
+    GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 250`).bind(...params).all();
   return json({ contacts: rows.results });
 }
 
@@ -773,10 +898,30 @@ async function getContact(db, contactId) {
   const contact = await db.prepare('SELECT * FROM crm_contacts WHERE id=?').bind(contactId).first();
   if (!contact) return json({ error: 'contact_not_found' }, 404);
   const [phones, opportunities] = await Promise.all([
-    db.prepare('SELECT id,phone_key,label,is_primary,created_at FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(contactId).all(),
+    db.prepare('SELECT * FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(contactId).all(),
     db.prepare('SELECT id,track,intent,source,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,created_at,updated_at FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 100').bind(contactId).all(),
   ]);
-  return json({ contact, phones: phones.results, opportunities: opportunities.results });
+  let conversations = [];
+  let smartAlerts = [];
+  let auditLog = [];
+  if (await hasTable(db, 'crm_conversations')) {
+    const [convRes, alertRes, auditRes] = await Promise.all([
+      db.prepare('SELECT id, chat_title, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version FROM crm_conversations WHERE contact_id=? ORDER BY last_message_at DESC LIMIT 30').bind(contactId).all(),
+      db.prepare('SELECT * FROM crm_smart_alerts WHERE contact_id=? ORDER BY CASE WHEN status=\'open\' THEN 0 ELSE 1 END, created_at DESC LIMIT 40').bind(contactId).all(),
+      db.prepare('SELECT * FROM crm_contact_audit_log WHERE contact_id=? ORDER BY created_at DESC LIMIT 40').bind(contactId).all(),
+    ]);
+    conversations = convRes?.results || [];
+    smartAlerts = alertRes?.results || [];
+    auditLog = auditRes?.results || [];
+  }
+  return json({
+    contact,
+    phones: phones.results,
+    opportunities: opportunities.results,
+    conversations,
+    smart_alerts: smartAlerts,
+    audit_log: auditLog,
+  });
 }
 
 function parseSinglePhoneItem(item, seen) {
@@ -785,7 +930,7 @@ function parseSinglePhoneItem(item, seen) {
   const phone = normalizePhone(item.phone);
   if (!phone || seen.has(phone)) return null;
   seen.add(phone);
-  return { phone, label: boundedText(item.label, 40), is_primary: item.is_primary === true };
+  return { phone, raw: boundedText(item.phone, 50), label: boundedText(item.label, 40), is_primary: item.is_primary === true };
 }
 
 function extractPhoneInputList(body) {
@@ -836,20 +981,37 @@ async function findContactDuplicate(db, name, phones) {
   if (!matches.length) return null;
   const sameSingle = phones.length === 1 && matches.length === 1 && namesCompatible(matches[0].name, name);
   if (sameSingle) return json({ contact_id: matches[0].contact_id, duplicate_contact: true });
-  return duplicatePhone();
+  return duplicatePhone(matches[0]);
+}
+
+async function pushAuditStmtIfSupported(db, stmts, { contactId, actionType, fieldName, oldVal = null, newVal = null, sourceRef = 'crm_ui' }) {
+  if (!(await hasTable(db, 'crm_contact_audit_log'))) return;
+  stmts.push(
+    db.prepare(
+      'INSERT INTO crm_contact_audit_log(id,contact_id,action_type,field_name,old_value,new_value,source_ref,actor) VALUES(?,?,?,?,?,?,?,?)',
+    ).bind(id(), contactId, actionType, fieldName, oldVal, newVal, sourceRef, 'operator'),
+  );
 }
 
 async function saveContact(db, key, contact) {
   const contactId = id();
+  const hasProv = await hasTable(db, 'crm_contact_audit_log');
   const statements = [
     db.prepare('INSERT INTO crm_contacts(id,name,communication_consent,consent_captured_at) VALUES(?,?,?,?)')
       .bind(contactId, contact.name, contact.consent, contact.consentAt),
   ];
   for (const item of contact.phones) {
-    statements.push(
-      db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
-        .bind(id(), contactId, item.phone, item.label, item.is_primary ? 1 : 0),
-    );
+    if (hasProv) {
+      statements.push(
+        db.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary,raw_input,source_type) VALUES(?,?,?,?,?,?,'manual')")
+          .bind(id(), contactId, item.phone, item.label, item.is_primary ? 1 : 0, item.raw || item.phone),
+      );
+    } else {
+      statements.push(
+        db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
+          .bind(id(), contactId, item.phone, item.label, item.is_primary ? 1 : 0),
+      );
+    }
   }
   statements.push(
     db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
@@ -894,21 +1056,36 @@ async function addContactPhone(request, env, contactId) {
   if (!contact) return json({ error: 'contact_not_found' }, 404);
   const found = await findPhone(env.DB, phone);
   if (found) {
-    if (found.contact_id === contactId) return json({ ok: true, duplicate: true, phone_id: found.phone_id });
-    return duplicatePhone();
+    if (found.contact_id === contactId) return json({ ok: true, duplicate: true, phone_id: found.phone_id, phone_key: phone });
+    return duplicatePhone(found);
   }
   const existingPrimary = await env.DB.prepare('SELECT id FROM crm_contact_phones WHERE contact_id=? AND is_primary=1').bind(contactId).first();
   const primary = body.is_primary === true || !existingPrimary;
+  const newPhoneId = id();
+  const hasProv = await hasTable(env.DB, 'crm_contact_audit_log');
   const statements = [];
   if (primary) statements.push(env.DB.prepare('UPDATE crm_contact_phones SET is_primary=0 WHERE contact_id=?').bind(contactId));
-  statements.push(
-    env.DB.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
-      .bind(id(), contactId, phone, boundedText(body.label, 40), primary ? 1 : 0),
-  );
+  if (hasProv) {
+    statements.push(
+      env.DB.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary,raw_input,source_type,source_ref) VALUES(?,?,?,?,?,?,'manual',?)")
+        .bind(newPhoneId, contactId, phone, boundedText(body.label, 40), primary ? 1 : 0, boundedText(body.phone, 50), boundedText(body.source_ref, 120) || 'crm_ui'),
+    );
+  } else {
+    statements.push(
+      env.DB.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
+        .bind(newPhoneId, contactId, phone, boundedText(body.label, 40), primary ? 1 : 0),
+    );
+  }
+  await pushAuditStmtIfSupported(env.DB, statements, {
+    contactId,
+    actionType: 'phone_added',
+    fieldName: primary ? 'primary_phone' : 'secondary_phone',
+    newVal: phone,
+  });
   try {
     await env.DB.batch(statements);
     await env.DB.prepare('UPDATE crm_contacts SET updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(contactId).run();
-    return json({ ok: true, duplicate: false });
+    return json({ ok: true, duplicate: false, phone_id: newPhoneId, phone_key: phone, is_primary: primary });
   } catch (error) {
     if (/UNIQUE constraint failed: crm_contact_phones\.phone_key/.test(String(error?.message))) {
       return duplicatePhone();
@@ -917,12 +1094,90 @@ async function addContactPhone(request, env, contactId) {
   }
 }
 
+async function updateContactPhone(request, env, contactId, phoneId) {
+  const body = await readJson(request);
+  const current = await env.DB.prepare('SELECT * FROM crm_contact_phones WHERE id=? AND contact_id=?').bind(phoneId, contactId).first();
+  if (!current) return json({ error: 'phone_not_found' }, 404);
+
+  const nextPhone = body.phone !== undefined ? normalizePhone(body.phone) : current.phone_key;
+  if (!nextPhone) return json({ error: 'invalid_phone' }, 400);
+  if (nextPhone !== current.phone_key) {
+    const owner = await findPhone(env.DB, nextPhone);
+    if (owner && owner.contact_id !== contactId) return duplicatePhone(owner);
+    if (owner && owner.phone_id !== phoneId) return json({ error: 'duplicate_phone_same_contact', phone_id: owner.phone_id }, 409);
+  }
+
+  const nextLabel = body.label !== undefined ? boundedText(body.label, 40) : current.label;
+  if (body.is_primary === false && Number(current.is_primary) === 1) {
+    return json({ error: 'cannot_demote_primary_without_replacement' }, 400);
+  }
+  const makePrimary = body.is_primary === true && Number(current.is_primary) !== 1;
+
+  const statements = [];
+  if (makePrimary) {
+    statements.push(env.DB.prepare('UPDATE crm_contact_phones SET is_primary=0 WHERE contact_id=?').bind(contactId));
+  }
+  statements.push(
+    env.DB.prepare('UPDATE crm_contact_phones SET phone_key=?, label=?, is_primary=? WHERE id=? AND contact_id=?')
+      .bind(nextPhone, nextLabel, makePrimary ? 1 : current.is_primary, phoneId, contactId),
+    env.DB.prepare('UPDATE crm_contacts SET updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(contactId),
+  );
+  await pushAuditStmtIfSupported(env.DB, statements, {
+    contactId,
+    actionType: 'phone_updated',
+    fieldName: makePrimary ? 'primary_phone' : 'phone',
+    oldVal: `${current.phone_key}:${current.label || ''}`,
+    newVal: `${nextPhone}:${nextLabel || ''}`,
+  });
+
+  try {
+    await env.DB.batch(statements);
+    return json({ ok: true, phone_id: phoneId, phone_key: nextPhone, label: nextLabel, is_primary: Boolean(makePrimary || current.is_primary) });
+  } catch (error) {
+    if (/UNIQUE constraint failed: crm_contact_phones\.phone_key/.test(String(error?.message))) return duplicatePhone();
+    return sqlError(error);
+  }
+}
+
+async function deleteContactPhone(request, env, contactId, phoneId) {
+  const current = await env.DB.prepare('SELECT * FROM crm_contact_phones WHERE id=? AND contact_id=?').bind(phoneId, contactId).first();
+  if (!current) return json({ error: 'phone_not_found' }, 404);
+
+  const url = new URL(request.url);
+  const promoteId = boundedText(url.searchParams.get('promote_phone_id'), 80);
+  const statements = [];
+
+  if (Number(current.is_primary) === 1) {
+    if (!promoteId) {
+      return json({ error: 'cannot_delete_primary_phone' }, 400);
+    }
+    const replacement = await env.DB.prepare('SELECT id FROM crm_contact_phones WHERE id=? AND contact_id=? AND id != ?')
+      .bind(promoteId, contactId, phoneId).first();
+    if (!replacement) return json({ error: 'replacement_primary_not_found' }, 400);
+    statements.push(env.DB.prepare('UPDATE crm_contact_phones SET is_primary=1 WHERE id=? AND contact_id=?').bind(promoteId, contactId));
+  }
+
+  statements.push(
+    env.DB.prepare('DELETE FROM crm_contact_phones WHERE id=? AND contact_id=?').bind(phoneId, contactId),
+    env.DB.prepare('UPDATE crm_contacts SET updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(contactId),
+  );
+  await pushAuditStmtIfSupported(env.DB, statements, {
+    contactId,
+    actionType: 'phone_deleted',
+    fieldName: Number(current.is_primary) === 1 ? 'primary_phone_replaced' : 'secondary_phone',
+    oldVal: current.phone_key,
+  });
+
+  await env.DB.batch(statements);
+  return json({ ok: true, deleted_phone_id: phoneId });
+}
+
 async function resolveContactPhoneUpdate(db, contactId, body) {
   if (!body.phone) return { statements: [], duplicate: false };
   const phone = normalizePhone(body.phone);
   if (!phone) return { error: json({ error: 'invalid_phone' }, 400) };
   const found = await findPhone(db, phone);
-  if (found && found.contact_id !== contactId) return { error: duplicatePhone() };
+  if (found && found.contact_id !== contactId) return { error: duplicatePhone(found) };
   if (found) return { statements: [], duplicate: true };
   const existingPrimary = await db.prepare('SELECT id FROM crm_contact_phones WHERE contact_id=? AND is_primary=1').bind(contactId).first();
   const primary = body.is_primary === true || !existingPrimary;
@@ -932,26 +1187,86 @@ async function resolveContactPhoneUpdate(db, contactId, body) {
     db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
       .bind(id(), contactId, phone, boundedText(body.label, 40), primary ? 1 : 0),
   );
+  await pushAuditStmtIfSupported(db, statements, {
+    contactId,
+    actionType: 'phone_added',
+    fieldName: primary ? 'primary_phone' : 'secondary_phone',
+    newVal: phone,
+  });
   return { statements, duplicate: false };
+}
+
+function parseConsentPatch(body, existing) {
+  const allowed = ['request_only', 'marketing_yes', 'do_not_contact'];
+  if (body.communication_consent === undefined) {
+    return { ok: true, consent: existing.communication_consent, consentAt: existing.consent_captured_at, changed: false };
+  }
+  if (!allowed.includes(body.communication_consent)) return { ok: false };
+  const nextConsent = body.communication_consent;
+  let nextAt = existing.consent_captured_at;
+  if (body.consent_captured_at !== undefined) {
+    nextAt = body.consent_captured_at ? isoDate(body.consent_captured_at) : null;
+    if (body.consent_captured_at && !nextAt) return { ok: false };
+  } else if (nextConsent === 'marketing_yes' && !nextAt) {
+    nextAt = new Date().toISOString();
+  }
+  return {
+    ok: true,
+    consent: nextConsent,
+    consentAt: nextAt,
+    changed: nextConsent !== existing.communication_consent,
+  };
 }
 
 async function updateContact(request, env, contactId) {
   const body = await readJson(request);
-  const existing = await env.DB.prepare('SELECT id,name FROM crm_contacts WHERE id=?').bind(contactId).first();
+  const existing = await env.DB.prepare('SELECT id,name,communication_consent,consent_captured_at FROM crm_contacts WHERE id=?').bind(contactId).first();
   if (!existing) return json({ error: 'contact_not_found' }, 404);
+
   const newName = body.name === undefined ? null : boundedText(body.name, 100);
-  if (newName === '' && !body.phone) return json({ error: 'invalid_contact' }, 400);
-  if (newName === null && !body.phone) return json({ error: 'invalid_contact' }, 400);
+  const hasConsentField = body.communication_consent !== undefined;
+  if (newName === '' && !body.phone && !hasConsentField) return json({ error: 'invalid_contact' }, 400);
+  if (newName === null && !body.phone && !hasConsentField) return json({ error: 'invalid_contact' }, 400);
+
+  const consentPatch = parseConsentPatch(body, existing);
+  if (!consentPatch.ok) return json({ error: 'invalid_consent' }, 400);
+
   const phoneUpdate = await resolveContactPhoneUpdate(env.DB, contactId, body);
   if (phoneUpdate.error) return phoneUpdate.error;
   const statements = [...phoneUpdate.statements];
   const targetName = newName !== null && newName !== '' ? newName : existing.name;
+
   statements.push(
-    env.DB.prepare('UPDATE crm_contacts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(targetName, contactId),
+    env.DB.prepare('UPDATE crm_contacts SET name=?,communication_consent=?,consent_captured_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+      .bind(targetName, consentPatch.consent, consentPatch.consentAt, contactId),
   );
+  if (targetName !== existing.name) {
+    await pushAuditStmtIfSupported(env.DB, statements, {
+      contactId,
+      actionType: 'name_updated',
+      fieldName: 'name',
+      oldVal: existing.name,
+      newVal: targetName,
+    });
+  }
+  if (consentPatch.changed) {
+    await pushAuditStmtIfSupported(env.DB, statements, {
+      contactId,
+      actionType: 'consent_changed',
+      fieldName: 'communication_consent',
+      oldVal: existing.communication_consent,
+      newVal: consentPatch.consent,
+    });
+  }
   try {
     await env.DB.batch(statements);
-    return json({ ok: true, contact_id: contactId, duplicate_phone: phoneUpdate.duplicate });
+    return json({
+      ok: true,
+      contact_id: contactId,
+      communication_consent: consentPatch.consent,
+      consent_captured_at: consentPatch.consentAt,
+      duplicate_phone: phoneUpdate.duplicate,
+    });
   } catch (error) {
     if (/UNIQUE constraint failed: crm_contact_phones\.phone_key/.test(String(error?.message))) {
       return duplicatePhone();
@@ -960,7 +1275,7 @@ async function updateContact(request, env, contactId) {
   }
 }
 
-const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,520000})$/;
+const SEALED_ENVELOPE_RE = /^enc_v1\.([A-Za-z0-9_-]{64,1200})\.([A-Za-z0-9_-]{16,32})\.([A-Za-z0-9_-]{24,12000000})$/;
 
 export async function generateIngestKeyPair() {
   const pair = await crypto.subtle.generateKey(
@@ -1017,25 +1332,23 @@ async function unsealIngestPayload(envelope, privateKeyPkcs8B64u) {
     const aesKey = await crypto.subtle.importKey('raw', rawAes, { name: 'AES-GCM' }, false, ['decrypt']);
     const plainBytes = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, cipher);
     const parsed = JSON.parse(decoder.decode(plainBytes));
-    if (!parsed || !Array.isArray(parsed.entries)) return null;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.wipe_existing_customers === true) {
+      return { wipeForbidden: true };
+    }
+    if (parsed.sync_bundle && typeof parsed.sync_bundle === 'object') {
+      return {
+        syncBundle: parsed.sync_bundle,
+        dryRun: parsed.dry_run === true,
+      };
+    }
+    if (!Array.isArray(parsed.entries)) return null;
     return {
       entries: parsed.entries,
-      wipeExistingCustomers: parsed.wipe_existing_customers === true,
     };
   } catch {
     return null;
   }
-}
-
-async function wipeExistingCustomerData(db) {
-  await db.batch([
-    db.prepare('DELETE FROM crm_opportunity_properties'),
-    db.prepare('DELETE FROM crm_activities'),
-    db.prepare('DELETE FROM crm_opportunities'),
-    db.prepare('DELETE FROM crm_contact_phones'),
-    db.prepare("DELETE FROM crm_idempotency_receipts WHERE submission_key != 'system:ingest-public-key-v1' AND submission_key NOT LIKE 'sealed-ticket:%'"),
-    db.prepare('DELETE FROM crm_contacts'),
-  ]);
 }
 
 async function appendExtraPhonesStatements(db, statements, contactId, extraPhones, primaryPhone) {
@@ -1257,7 +1570,7 @@ async function handleSealedIngest(request, env, config) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const privKey = typeof env.CRM_INGEST_PRIVATE_KEY === 'string' ? env.CRM_INGEST_PRIVATE_KEY.trim() : '';
   if (!privKey) return json({ error: 'ingest_not_configured' }, 503);
-  const body = await readJson(request, 560_000);
+  const body = await readJson(request, 12_000_000);
   const envelope = typeof body.sealed_payload === 'string' ? body.sealed_payload.trim() : '';
   if (!SEALED_ENVELOPE_RE.test(envelope)) return json({ error: 'invalid_sealed_envelope' }, 400);
 
@@ -1268,7 +1581,24 @@ async function handleSealedIngest(request, env, config) {
   }
 
   const unsealed = await unsealIngestPayload(envelope, privKey);
-  if (!unsealed || unsealed.entries.length === 0 || unsealed.entries.length > 250) {
+  if (!unsealed) {
+    return json({ error: 'invalid_sealed_payload' }, 400);
+  }
+  if (unsealed.wipeForbidden) {
+    return json({ error: 'wipe_existing_customers_forbidden' }, 400);
+  }
+  if (unsealed.syncBundle) {
+    const cleanPol = String(unsealed.syncBundle?.clean_foundation_policy || '').trim();
+    if (cleanPol === 'strict_complete_contacts_only' && !unsealed.dryRun && !String(unsealed.syncBundle?.backup_verified_ref || '').trim()) {
+      return json({ ok: false, error: 'backup_verified_ref_required_before_foundation_cleanup' }, 400);
+    }
+    await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending'")
+      .bind(ticketKey)
+      .run();
+    const syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, { dryRun: unsealed.dryRun });
+    return json(syncResult, syncResult?.ok === false ? 400 : 200);
+  }
+  if (!Array.isArray(unsealed.entries) || unsealed.entries.length === 0 || unsealed.entries.length > 250) {
     return json({ error: 'invalid_sealed_payload' }, 400);
   }
 
@@ -1276,12 +1606,8 @@ async function handleSealedIngest(request, env, config) {
     .bind(ticketKey)
     .run();
 
-  if (unsealed.wipeExistingCustomers) {
-    await wipeExistingCustomerData(env.DB);
-  }
-
   const totals = {
-    wiped_existing: unsealed.wipeExistingCustomers,
+    wiped_existing: false,
     processed: 0,
     created_contacts: 0,
     updated_contacts: 0,
@@ -1541,48 +1867,24 @@ async function switchOpportunityTrack(request, env, opportunityId) {
   }
 }
 
-async function queryCatalogMatches(db, scope, opp, targetTrack) {
-  if (!scope || (opp.intent !== 'buy' && opp.intent !== 'rent')) return [];
-  const txType = opp.intent === 'buy' ? 'sale' : 'rent';
-  const rows = await db.prepare(`SELECT id,external_id,title,url,price,area_m2,bedrooms,bathrooms
-    FROM listings
-    WHERE source_id=? AND area_id IN (${scope.areaSql}) AND status='active' AND transaction_type=?
-    ORDER BY price_updated_at DESC, id DESC LIMIT 40`).bind(scope.sourceId, txType).all();
-  const filtered = rows.results.filter(item => {
-    const inferred = inferStructuralTrack(item.title, opp.intent, '');
-    return inferred === targetTrack || (targetTrack === 'sale_apt' && inferred !== 'admin_hq');
-  });
-  return filtered.slice(0, 5);
+async function getOpportunityMatches(db, opportunityId, scope, url) {
+  const allowNearBounds = url?.searchParams?.get('include_near') === '1';
+  const result = await computeOpportunityMatches(db, opportunityId, scope, { allowNearBounds });
+  if (!result) return json({ error: 'opportunity_not_found' }, 404);
+  return json(result);
 }
 
-async function getOpportunityMatches(db, opportunityId, scope) {
-  const opp = await db.prepare('SELECT id,track,intent,property_type,area_label,budget_min,budget_max,size_min_m2,size_max_m2,notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
-  if (!opp) return json({ error: 'opportunity_not_found' }, 404);
-  const targetTrack = opp.track === 'transient'
-    ? inferStructuralTrack(opp.property_type, opp.intent, opp.notes)
-    : opp.track;
-  const isSupply = opp.intent === 'sell' || opp.intent === 'lease';
-  const oppositeSql = isSupply ? "'buy','rent'" : "'sell','lease'";
-  const candidates = await db.prepare(`SELECT o.id,o.track,o.intent,o.status,o.area_label,o.budget_min,o.budget_max,o.size_min_m2,o.size_max_m2,o.property_type,o.notes,
-      c.name AS contact_name,
-      (SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key
-    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
-    WHERE o.id != ? AND o.intent IN (${oppositeSql}) AND (o.track = ? OR o.track = 'transient')
-    ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, o.updated_at DESC LIMIT 20`).bind(opportunityId, targetTrack).all();
-  const matchingOpportunities = candidates.results
-    .filter(row => row.track === targetTrack || inferStructuralTrack(row.property_type, row.intent, row.notes) === targetTrack)
-    .slice(0, 8);
-  const matchingListings = await queryCatalogMatches(db, scope, opp, targetTrack);
-  return json({
-    target_track: targetTrack,
-    opportunities: matchingOpportunities,
-    listings: matchingListings,
-  });
+async function hasActivityFullTextCol(db) {
+  const info = await db.prepare('PRAGMA table_info(crm_activities)').all();
+  return (info?.results || []).some(r => r.name === 'full_text');
 }
 
 async function addActivity(request, env, opportunityId) {
-  const body = await readJson(request);
-  const summary = boundedText(body.summary, 1200);
+  const body = await readJson(request, 300_000);
+  const rawFullText = typeof body.full_text === 'string' && body.full_text.trim()
+    ? body.full_text.trim().slice(0, 250_000)
+    : (typeof body.summary === 'string' ? body.summary.trim().slice(0, 250_000) : '');
+  const summary = rawFullText.slice(0, 1200);
   const allowedTypes = ['call', 'missed_call', 'whatsapp_note', 'visit', 'offer', 'objection', 'note', 'status_change'];
   const activityType = allowedTypes.includes(body.activity_type) ? body.activity_type : null;
   const status = body.status;
@@ -1590,7 +1892,7 @@ async function addActivity(request, env, opportunityId) {
   const nextAction = boundedText(body.next_action, 180) || null;
   const nextAt = body.next_followup_at ? isoDate(body.next_followup_at) : null;
   const reason = boundedText(body.no_followup_reason, 240) || null;
-  const current = await env.DB.prepare('SELECT id,track,status,closed_at,loss_reason,loss_notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
+  const current = await env.DB.prepare('SELECT id,contact_id,track,status,closed_at,loss_reason,loss_notes FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
   if (!current) return json({ error: 'opportunity_not_found' }, 404);
   if (!summary || !activityType || (status && !ALLOWED_STATUSES.includes(status)) || (requestedTrack && !ALLOWED_TRACKS.includes(requestedTrack)) || (body.next_followup_at && !nextAt)) {
     return json({ error: 'invalid_activity' }, 400);
@@ -1604,14 +1906,43 @@ async function addActivity(request, env, opportunityId) {
   const lossReason = resolveLossReason(nextStatus, body.loss_reason, current);
   const lossNotes = nextStatus === 'lost' ? (boundedText(body.loss_notes, 500) || current.loss_notes || '') : '';
   if (nextStatus === 'lost' && !lossReason) return json({ error: 'loss_reason_required' }, 400);
+
+  const actId = id();
+  const linksInfo = extractSafeLinks(rawFullText);
+  const hasFullCol = await hasActivityFullTextCol(env.DB);
+  const actInsertStmt = hasFullCol
+    ? env.DB.prepare(
+      'INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,full_text,source_ref,original_sent_at,external_links_json,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+    ).bind(
+      actId,
+      opportunityId,
+      activityType,
+      summary,
+      rawFullText,
+      boundedText(body.source_ref, 160) || 'crm_ui',
+      body.original_sent_at ? isoDate(body.original_sent_at) : null,
+      JSON.stringify(linksInfo.safe),
+      boundedText(body.outcome, 200),
+      nextAction,
+      nextAt,
+    )
+    : env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
+      .bind(actId, opportunityId, activityType, summary, boundedText(body.outcome, 200), nextAction, nextAt);
+
   try {
     await env.DB.batch([
       env.DB.prepare('UPDATE crm_opportunities SET track=?,status=?,next_action=?,next_followup_at=?,no_followup_reason=?,closed_at=?,loss_reason=?,loss_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
         .bind(nextTrack, nextStatus, nextAction, nextAt, reason, closed, lossReason, lossNotes, opportunityId),
-      env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
-        .bind(id(), opportunityId, activityType, summary, boundedText(body.outcome, 200), nextAction, nextAt),
+      actInsertStmt,
     ]);
-    return json({ ok: true, opportunity_id: opportunityId });
+    return json({
+      ok: true,
+      opportunity_id: opportunityId,
+      activity_id: actId,
+      stored_length: rawFullText.length,
+      safe_links: linksInfo.safe,
+      blocked_links: linksInfo.blocked,
+    });
   } catch (error) {
     return sqlError(error);
   }
@@ -1658,9 +1989,53 @@ async function serveUiAsset(request, url, env) {
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: assetHeaders });
 }
 
+async function handleFollowupsGet(db, url) {
+  const nowParam = url.searchParams.get('now');
+  const now = nowParam && isoDate(nowParam) ? new Date(isoDate(nowParam)) : new Date();
+  if (await hasTable(db, 'crm_smart_alerts')) {
+    await refreshTimeBasedSmartAlerts(db, now);
+    return json(await buildFollowupWorkspaceData(db, { now }));
+  }
+  return json({
+    timezone: 'Africa/Cairo',
+    cairo_day: getCairoClock(now).dayKey,
+    generated_at: now.toISOString(),
+    counts: { today: 0, overdue: 0, upcoming: 0, waiting_reply: 0, stalled_intervention: 0, new_chat_alerts: 0, unmatched_review_chats: 0 },
+    today: [],
+    overdue: [],
+    upcoming: [],
+    waiting_reply: [],
+    stalled_intervention: [],
+    new_chat_alerts: [],
+  });
+}
+
+async function handleConversationImportPost(request, env) {
+  const body = await readJson(request, 600_000);
+  const res = await importConversationPayload(env.DB, body);
+  if (res.error) return json({ error: res.error }, res.status || 400);
+  return json(res, res.status || 201);
+}
+
+async function handleConversationLinkPost(request, env, conversationId) {
+  const body = await readJson(request, 10_000);
+  const res = await linkConversationToContactPayload(env.DB, conversationId, body);
+  if (res.error) return json({ error: res.error }, res.status || 400);
+  return json(res, 200);
+}
+
+async function handleResolveAlertPost(request, env, alertId) {
+  const body = await readJson(request, 50_000);
+  const res = await resolveSmartAlertPayload(env.DB, alertId, body);
+  if (res.error) return json({ error: res.error }, res.status || 400);
+  return json(res, 200);
+}
+
 const EXACT_GET_ROUTES = {
   '/api/contacts': (db, url) => listContacts(db, url),
   '/api/dashboard': (db, url) => dashboard(db, url),
+  '/api/followups': (db, url) => handleFollowupsGet(db, url),
+  '/api/conversations': async (db, url) => json(await listConversationsData(db, url)),
   '/api/opportunities': (db, url) => listOpportunities(db, url),
   '/api/listings': (db, url, config) => listListings(db, url, config.scope),
   '/api/push/config': (_db, _url, _config, env) => getPushStatusResponse(env, json),
@@ -1669,6 +2044,7 @@ const EXACT_GET_ROUTES = {
 const EXACT_POST_ROUTES = {
   '/api/contacts': (request, env) => createContact(request, env),
   '/api/opportunities': (request, env) => createOpportunity(request, env),
+  '/api/conversations/import': (request, env) => handleConversationImportPost(request, env),
   '/api/push/subscribe': (request, env) => subscribePushDevice(request, env, { readJson, boundedText, jsonHelper: json }),
   '/api/push/unsubscribe': (request, env) => unsubscribePushDevice(request, env, { readJson, jsonHelper: json }),
   '/api/push/test': (request, env) => sendTestPushAlert(request, env, { readJson, jsonHelper: json }),
@@ -1676,22 +2052,30 @@ const EXACT_POST_ROUTES = {
 };
 
 const PARAM_ROUTES = [
-  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones$/, run: (req, env, idVal) => addContactPhone(req, env, idVal) },
-  { method: 'GET', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getContact(env.DB, idVal) },
-  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, idVal) => updateContact(req, env, idVal) },
-  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, idVal) => getOpportunity(env.DB, idVal) },
-  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, idVal) => updateOpportunity(req, env, idVal) },
-  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (_req, env, idVal, cfg) => getOpportunityMatches(env.DB, idVal, cfg.scope) },
-  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/track$/, run: (req, env, idVal) => switchOpportunityTrack(req, env, idVal) },
-  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/, run: (req, env, idVal) => addActivity(req, env, idVal) },
-  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/properties$/, run: (req, env, idVal, cfg) => linkProperty(req, env, idVal, cfg.scope) },
+  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones$/, run: (req, env, m) => addContactPhone(req, env, m[1]) },
+  { method: 'PATCH', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateContactPhone(req, env, m[1], m[2]) },
+  { method: 'DELETE', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => deleteContactPhone(req, env, m[1], m[2]) },
+  { method: 'GET', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => getContact(env.DB, m[1]) },
+  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateContact(req, env, m[1]) },
+  { method: 'GET', re: /^\/api\/conversations\/([a-zA-Z0-9_-]{8,80})$/, run: async (_req, env, m) => {
+    const data = await getConversationDetailData(env.DB, m[1]);
+    return data ? json(data) : json({ error: 'conversation_not_found' }, 404);
+  } },
+  { method: 'POST', re: /^\/api\/conversations\/([a-zA-Z0-9_-]{8,80})\/link-contact$/, run: (req, env, m) => handleConversationLinkPost(req, env, m[1]) },
+  { method: 'POST', re: /^\/api\/alerts\/([a-zA-Z0-9_-]{8,80})\/resolve$/, run: (req, env, m) => handleResolveAlertPost(req, env, m[1]) },
+  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => getOpportunity(env.DB, m[1]) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateOpportunity(req, env, m[1]) },
+  { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (req, env, m, cfg) => getOpportunityMatches(env.DB, m[1], cfg.scope, new URL(req.url)) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/track$/, run: (req, env, m) => switchOpportunityTrack(req, env, m[1]) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/activities$/, run: (req, env, m) => addActivity(req, env, m[1]) },
+  { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/properties$/, run: (req, env, m, cfg) => linkProperty(req, env, m[1], cfg.scope) },
 ];
 
 async function dispatchParameterizedApi(request, pathname, env, config) {
   for (const route of PARAM_ROUTES) {
     if (request.method !== route.method) continue;
     const match = route.re.exec(pathname);
-    if (match) return route.run(request, env, match[1], config);
+    if (match) return route.run(request, env, match, config);
   }
   return json({ error: 'not_found' }, 404);
 }
@@ -1708,6 +2092,7 @@ async function dispatchProtectedApi(request, url, env, config) {
 
 async function dispatchAuthRoute(request, pathname, env, config) {
   if (pathname === '/api/auth/login' && request.method === 'POST') return handleLogin(request, env, config);
+  if (pathname === '/api/auth/ci-ticket' && request.method === 'POST') return handleCiTicketLogin(request, env, config);
   if (pathname === '/api/auth/session' && request.method === 'GET') return handleSessionStatus(request, env, config);
   if (pathname === '/api/auth/logout' && request.method === 'POST') return handleLogout(request, env, config);
   return null;

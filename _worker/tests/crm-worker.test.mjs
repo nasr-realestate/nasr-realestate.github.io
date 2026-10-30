@@ -15,6 +15,7 @@ const migration0001 = await readFile(new URL('../migrations/0001_crm_opportuniti
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
 const migration0003 = await readFile(new URL('../migrations/0003_crm_push_notifications.sql', import.meta.url), 'utf8');
 const migration0004 = await readFile(new URL('../migrations/0004_crm_tracks_core.sql', import.meta.url), 'utf8');
+const migration0005 = await readFile(new URL('../migrations/0005_sync_audit_and_intelligence.sql', import.meta.url), 'utf8');
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.footcai-555.workers.dev';
 
 function randomToken(bytes = 24) {
@@ -102,6 +103,7 @@ async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
   sqlite.exec(migration0002);
   sqlite.exec(migration0003);
   sqlite.exec(migration0004);
+  sqlite.exec(migration0005);
 
   const accessCode = randomToken(24);
   const sessionSecret = randomToken(32);
@@ -512,14 +514,13 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   assert.equal(updatedDetail.phones.length, 1);
   assert.equal(updatedDetail.phones[0].phone_key, '201099887766');
 
-  // 2. Sealed-box encrypted ingest wipes prior customers when requested, supports extra_phones + contact_only, and blocks replay
+  // 2. Sealed-box encrypted ingest preserves existing customers, supports extra_phones + contact_only, and blocks replay
   const sealedEnvelope = await sealIngestPayload({
-    wipe_existing_customers: true,
     entries: [
       {
         submission_key: 'sealed-owner-test-0001',
         name: 'عميل مشفر تجريبي',
-        phone: '+33 6 22413234',
+        phone: '+33 6 00009999',
         phone_label: 'واتساب دولي',
         extra_phones: [{ phone: '01299001122', label: 'موبايل مصري' }],
         intent: 'sell',
@@ -565,7 +566,7 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   }), env);
   assert.equal(accepted.status, 200);
   const acceptedJson = await accepted.json();
-  assert.equal(acceptedJson.wiped_existing, true);
+  assert.equal(acceptedJson.wiped_existing, false);
   assert.equal(acceptedJson.processed, 2);
   assert.equal(acceptedJson.created_contacts, 2);
   assert.equal(acceptedJson.created_opportunities, 1);
@@ -579,11 +580,11 @@ test('updates placeholder owner contact atomically and enforces sealed-box encry
   assert.equal(replay.status, 403);
 
   const allContacts = await (await call('/api/contacts')).json();
-  assert.equal(allContacts.contacts.length, 2, 'Old placeholder customer wiped; only new batch exists');
+  assert.equal(allContacts.contacts.length, 3, 'Existing placeholder customer preserved alongside 2 new contacts');
   const opps = await (await call('/api/opportunities?status=active')).json();
   const sealedOpp = opps.opportunities.find(o => o.contact_name === 'عميل مشفر تجريبي');
   assert.ok(sealedOpp, 'Expected decrypted opportunity in D1');
-  assert.equal(sealedOpp.phone_key, '33622413234');
+  assert.equal(sealedOpp.phone_key, '33600009999');
   const sealedContactDetail = await (await call(`/api/contacts/${sealedOpp.contact_id}`)).json();
   assert.equal(sealedContactDetail.phones.length, 2);
 
@@ -929,9 +930,33 @@ test('5-track operational core separates live color tracks from transient archiv
   assert.equal(toFurnished.track, 'furnished_apt');
   assert.equal(toFurnished.status, 'active');
 
-  // 6) Verify sealed ingest contact_key deduplicates multi-unit contacts even without phone numbers
-  const multiEnvelope = await sealIngestPayload({
+  // 6a) Verify wipe_existing_customers: true is unconditionally forbidden and preserves all existing customers
+  const forbiddenWipeEnvelope = await sealIngestPayload({
     wipe_existing_customers: true,
+    entries: [{ submission_key: 'sealed-wipe-attempt-01', entry_type: 'contact_only', name: 'TEST ONLY forbidden' }],
+  }, keyPair.publicKeySpkiB64u);
+  const wipeDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(forbiddenWipeEnvelope));
+  const wipeTicketHash = Buffer.from(wipeDigest).toString('hex');
+  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
+    .run(`sealed-ticket:${wipeTicketHash}`);
+  const wipeRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sealed_payload: forbiddenWipeEnvelope }),
+  }), env);
+  assert.equal(wipeRes.status, 400);
+  assert.deepEqual(await wipeRes.json(), { error: 'wipe_existing_customers_forbidden' });
+  const preservedContacts = await (await call('/api/contacts')).json();
+  assert.equal(preservedContacts.contacts.length, 4, 'Zero existing contacts may ever be wiped');
+
+  // 6b) Verify sealed ingest contact_key deduplicates multi-unit contacts even without phone numbers (on isolated DB)
+  const iso = await createEnv({
+    extraEnv: { CRM_INGEST_PRIVATE_KEY: keyPair.privateKeyPkcs8B64u },
+  });
+  const isoSession = await loginSession(iso.env, iso.accessCode);
+  const isoCall = makeAuthedApiCall(iso.env, isoSession);
+
+  const multiEnvelope = await sealIngestPayload({
     entries: [
       {
         submission_key: 'sealed-multi-no-phone-01',
@@ -963,29 +988,29 @@ test('5-track operational core separates live color tracks from transient archiv
   }, keyPair.publicKeySpkiB64u);
   const digestBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(multiEnvelope));
   const ticketHash = Buffer.from(digestBuf).toString('hex');
-  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
+  iso.sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')")
     .run(`sealed-ticket:${ticketHash}`);
   const ingestRes = await (await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ sealed_payload: multiEnvelope }),
-  }), env)).json();
+  }), iso.env)).json();
   assert.equal(ingestRes.created_contacts, 1, 'Multi-unit phone-less owner must create 1 contact, zero duplicates');
   assert.equal(ingestRes.created_opportunities, 2);
 
-  const contactsAfter = await (await call('/api/contacts')).json();
+  const contactsAfter = await (await isoCall('/api/contacts')).json();
   assert.equal(contactsAfter.contacts.length, 1);
   assert.equal(contactsAfter.contacts[0].opportunity_count, 2);
 
   // 7) Verify GET /api/opportunities/:id returns sibling_opportunities + phones, and POST /api/opportunities/:id updates specs cleanly
-  const oppsList = await (await call('/api/opportunities')).json();
+  const oppsList = await (await isoCall('/api/opportunities')).json();
   assert.equal(oppsList.opportunities.length, 2);
   const firstOppId = oppsList.opportunities[0].id;
-  await call(`/api/contacts/${contactsAfter.contacts[0].id}/phones`, {
+  await isoCall(`/api/contacts/${contactsAfter.contacts[0].id}/phones`, {
     method: 'POST',
     body: { phone: '01055667788', label: 'أساسي', is_primary: true },
   });
-  const patchRes = await call(`/api/opportunities/${firstOppId}`, {
+  const patchRes = await isoCall(`/api/opportunities/${firstOppId}`, {
     method: 'POST',
     body: {
       area_label: 'مكرم عبيد الرئيسي',
@@ -998,12 +1023,13 @@ test('5-track operational core separates live color tracks from transient archiv
     },
   });
   assert.equal(patchRes.status, 200);
-  const fullOpp = await (await call(`/api/opportunities/${firstOppId}`)).json();
+  const fullOpp = await (await isoCall(`/api/opportunities/${firstOppId}`)).json();
   assert.equal(fullOpp.opportunity.budget_max, 22000);
   assert.equal(fullOpp.opportunity.size_max_m2, 165);
   assert.equal(fullOpp.opportunity.area_label, 'مكرم عبيد الرئيسي');
   assert.equal(fullOpp.phones.length, 1);
   assert.equal(fullOpp.sibling_opportunities.length, 2);
 
+  iso.sqlite.close();
   sqlite.close();
 });

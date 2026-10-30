@@ -1,6 +1,8 @@
 // Private CRM Web Push & Scheduled Alert Engine (RFC 8291 aes128gcm + RFC 8292 VAPID ES256)
 // Zero third-party services, zero PII in push payloads, backed by nasr-crm-test-db.
 
+import { getCairoClock, getCairoDayBoundsUtc } from './crm-chat-intel.js';
+
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 const VAPID_MAX_AGE_SECONDS = 12 * 3600;
 const PUSH_TTL_SECONDS = 43_200; // 12 hours
@@ -298,26 +300,12 @@ export async function sendTestPushAlert(request, env, { readJson, jsonHelper, fe
   };
   const stats = await broadcastToSubscriptions(env.DB, subscriptions, payload, vapid, fetchImpl);
   if (stats.delivered === 0) return jsonHelper({ error: 'push_delivery_failed', ...stats }, 502);
-  return jsonHelper({ ok: true, ...stats });
-}
-
-function getCairoClock(nowDate) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Cairo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(nowDate);
-  const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-  const hour = Number(map.hour === '24' ? 0 : map.hour);
-  const minute = Number(map.minute);
-  return {
-    dayKey: `${map.year}-${map.month}-${map.day}`,
-    minutesOfDay: hour * 60 + minute,
-  };
+  const subKeyPart = subscriptions.map(s => s.id).join(',').slice(0, 64);
+  const logKey = `test:${subKeyPart}:${Date.now()}`;
+  await env.DB.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind,sent_at) VALUES(?,'test',?)")
+    .bind(logKey, new Date().toISOString())
+    .run();
+  return jsonHelper({ ok: true, logged: true, log_key: logKey, ...stats });
 }
 
 function buildDueFollowupPayload(opp) {
@@ -355,8 +343,8 @@ async function dispatchDueFollowupAlerts(db, subscriptions, vapid, nowIso, fetch
     const dedupeKey = `due:${opp.id}:${opp.next_followup_at}`;
     const stats = await broadcastToSubscriptions(db, subscriptions, buildDueFollowupPayload(opp), vapid, fetchImpl);
     if (stats.delivered > 0) {
-      await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind) VALUES(?,'followup_due')")
-        .bind(dedupeKey).run();
+      await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind,sent_at) VALUES(?,'followup_due',?)")
+        .bind(dedupeKey, nowIso).run();
       sent += 1;
     }
   }
@@ -391,8 +379,63 @@ async function dispatchUpcomingViewingAlerts(db, subscriptions, vapid, nowIso, f
     };
     const stats = await broadcastToSubscriptions(db, subscriptions, payload, vapid, fetchImpl);
     if (stats.delivered > 0) {
-      await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind) VALUES(?,'viewing_due')")
-        .bind(dedupeKey).run();
+      await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind,sent_at) VALUES(?,'viewing_due',?)")
+        .bind(dedupeKey, nowIso).run();
+      sent += 1;
+    }
+  }
+  return sent;
+}
+
+const SMART_ALERT_TITLES = {
+  followup_approaching: '⏰ تنبيه متابعة ذكية تقترب — مدينة نصر',
+  followup_overdue: '🚨 متابعة ذكية متأخرة — مدينة نصر',
+  viewing_requested_unlogged: '🏠 طلب معاينة بمحادثة غير مسجل — مدينة نصر',
+  unanswered_question: '💬 سؤال عميل بمحادثة ينتظر الرد — مدينة نصر',
+};
+
+async function hasSmartAlertsTable(db) {
+  const row = await db.prepare("SELECT 1 AS ok FROM sqlite_schema WHERE type='table' AND name='crm_smart_alerts' LIMIT 1").first();
+  return Boolean(row?.ok);
+}
+
+async function dispatchSmartAlertPushes(db, subscriptions, vapid, nowIso, fetchImpl) {
+  if (!(await hasSmartAlertsTable(db))) return 0;
+  const rowsRes = await db.prepare(
+    `SELECT a.id, a.alert_type, a.alert_reason, a.suggested_action
+     FROM crm_smart_alerts a
+     WHERE a.status = 'open'
+       AND a.alert_type IN ('followup_approaching', 'followup_overdue', 'viewing_requested_unlogged', 'unanswered_question')
+       AND (a.due_at IS NULL OR datetime(a.due_at) <= datetime(?, '+30 minutes'))
+       AND NOT EXISTS (
+         SELECT 1 FROM crm_push_notifications_log l
+         WHERE l.dedupe_key = ('smart:' || a.id)
+       )
+     ORDER BY CASE WHEN a.priority='high' THEN 0 ELSE 1 END, COALESCE(a.due_at, a.created_at) ASC
+     LIMIT 8`,
+  ).bind(nowIso).all();
+
+  let sent = 0;
+  for (const row of rowsRes?.results || []) {
+    const dedupeKey = `smart:${row.id}`;
+    const title = SMART_ALERT_TITLES[row.alert_type] || '🔔 تنبيه متابعة ذكي — سمسار طلبك';
+    // Strictly zero PII on lockscreen: reason + action only, never customer name or phone!
+    const reasonText = sanitizePushText(row.alert_reason || 'متابعة مطلوبة', 90);
+    const actionText = sanitizePushText(row.suggested_action || 'افتح شاشة المتابعة الذكية', 70);
+    const payload = {
+      title,
+      body: `${reasonText} — ${actionText}`,
+      tag: `crm-smart-${String(row.id).slice(0, 20)}`,
+      url: '/',
+    };
+    const stats = await broadcastToSubscriptions(db, subscriptions, payload, vapid, fetchImpl);
+    if (stats.delivered > 0) {
+      await db.batch([
+        db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind,sent_at) VALUES(?,'followup_due',?)")
+          .bind(dedupeKey, nowIso),
+        db.prepare('UPDATE crm_smart_alerts SET push_sent_at = ?, updated_at = ? WHERE id = ?')
+          .bind(nowIso, nowIso, row.id),
+      ]);
       sent += 1;
     }
   }
@@ -412,27 +455,36 @@ async function dispatchMorningDigestIfDue(db, subscriptions, vapid, nowDate, fet
     .bind(dedupeKey).first();
   if (already) return 0;
 
+  const bounds = getCairoDayBoundsUtc(dayKey);
+  const nowIso = nowDate.toISOString();
   const counts = await db.prepare(
     `SELECT
-      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) = ? THEN 1 ELSE 0 END) AS due_today,
-      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND substr(next_followup_at,1,10) < ? THEN 1 ELSE 0 END) AS overdue
+      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND datetime(next_followup_at) >= datetime(?) AND datetime(next_followup_at) <= datetime(?) THEN 1 ELSE 0 END) AS due_today,
+      SUM(CASE WHEN status IN (${ACTIVE_OPP_SQL}) AND COALESCE(track,'sale_apt')!='transient' AND next_followup_at IS NOT NULL AND datetime(next_followup_at) < datetime(?) THEN 1 ELSE 0 END) AS overdue
      FROM crm_opportunities`,
-  ).bind(dayKey, dayKey).first();
+  ).bind(bounds.startUtcIso, bounds.endUtcIso, nowIso).first();
+
+  let smartOpenCount = 0;
+  if (await hasSmartAlertsTable(db)) {
+    const sRow = await db.prepare("SELECT COUNT(*) AS n FROM crm_smart_alerts WHERE status = 'open'").first();
+    smartOpenCount = Number(sRow?.n || 0);
+  }
 
   const dueToday = Number(counts?.due_today || 0);
   const overdue = Number(counts?.overdue || 0);
-  if (dueToday === 0 && overdue === 0) return 0;
+  if (dueToday === 0 && overdue === 0 && smartOpenCount === 0) return 0;
 
+  const smartSuffix = smartOpenCount > 0 ? ` و${smartOpenCount} تنبيه محادثات ذكي` : '';
   const payload = {
     title: '☀️ ملخص متابعات اليوم — سمسار طلبك',
-    body: `لديك اليوم ${dueToday} متابعة مستحقة و${overdue} متابعة متأخرة في مدينة نصر.`,
+    body: `لديك اليوم ${dueToday} متابعة مستحقة و${overdue} متابعة متأخرة${smartSuffix} في مدينة نصر.`,
     tag: `crm-digest-${dayKey}`,
     url: '/',
   };
   const stats = await broadcastToSubscriptions(db, digestSubs, payload, vapid, fetchImpl);
   if (stats.delivered > 0) {
-    await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind) VALUES(?,'morning_digest')")
-      .bind(dedupeKey).run();
+    await db.prepare("INSERT OR IGNORE INTO crm_push_notifications_log(dedupe_key,kind,sent_at) VALUES(?,'morning_digest',?)")
+      .bind(dedupeKey, nowIso).run();
     return 1;
   }
   return 0;
@@ -440,19 +492,20 @@ async function dispatchMorningDigestIfDue(db, subscriptions, vapid, nowDate, fet
 
 export async function runScheduledCrmNotifications(env, { now = new Date(), fetchImpl = fetch, forceCheck = false } = {}) {
   const vapid = await importVapidConfig(env);
-  if (!vapid) return { ok: false, skipped: 'push_not_configured', followup_alerts: 0, viewing_alerts: 0, morning_digest: 0 };
+  if (!vapid) return { ok: false, skipped: 'push_not_configured', followup_alerts: 0, viewing_alerts: 0, smart_alerts: 0, morning_digest: 0 };
 
   const subsRes = await env.DB.prepare(
     'SELECT id,endpoint,p256dh,auth,morning_digest FROM crm_push_subscriptions LIMIT 25',
   ).all();
   const subscriptions = subsRes?.results || [];
   if (subscriptions.length === 0) {
-    return { ok: true, skipped: 'no_subscriptions', followup_alerts: 0, viewing_alerts: 0, morning_digest: 0 };
+    return { ok: true, skipped: 'no_subscriptions', followup_alerts: 0, viewing_alerts: 0, smart_alerts: 0, morning_digest: 0 };
   }
 
   const nowIso = now.toISOString();
   const followupAlerts = await dispatchDueFollowupAlerts(env.DB, subscriptions, vapid, nowIso, fetchImpl);
   const viewingAlerts = await dispatchUpcomingViewingAlerts(env.DB, subscriptions, vapid, nowIso, fetchImpl);
+  const smartAlerts = await dispatchSmartAlertPushes(env.DB, subscriptions, vapid, nowIso, fetchImpl);
   const morningDigest = forceCheck
     ? 0
     : await dispatchMorningDigestIfDue(env.DB, subscriptions, vapid, now, fetchImpl);
@@ -464,6 +517,7 @@ export async function runScheduledCrmNotifications(env, { now = new Date(), fetc
     ok: true,
     followup_alerts: followupAlerts,
     viewing_alerts: viewingAlerts,
+    smart_alerts: smartAlerts,
     morning_digest: morningDigest,
     subscriptions_checked: subscriptions.length,
   };

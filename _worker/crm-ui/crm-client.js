@@ -47,10 +47,14 @@ function apiErrorForResponse(response, payload) {
     return new CRMApiError('configuration', 'خدمة CRM غير مهيأة بعد (يلزم ضبط أسرار المصادقة). لم تُرسل أي بيانات.', status, code || 'service_not_configured');
   }
   if (status === 409) {
+    const ownerHint = payload?.conflict_contact_name ? ` (${payload.conflict_contact_name})` : '';
     const message = code === 'duplicate_phone_review'
-      ? 'هذا الرقم مرتبط بسجل آخر؛ راجع بيانات العميل قبل المتابعة.'
+      ? `هذا الرقم مرتبط بسجل عميل آخر${ownerHint}؛ راجع ملكية الرقم قبل المتابعة.`
       : 'تعارض في الطلب؛ راجع السجل ولم يتم الدمج تلقائيًا.';
-    return new CRMApiError('conflict', message, status, code || 'conflict');
+    const err = new CRMApiError('conflict', message, status, code || 'conflict');
+    err.conflictContactId = payload?.conflict_contact_id || '';
+    err.conflictContactName = payload?.conflict_contact_name || '';
+    return err;
   }
   if (status >= 500) {
     return new CRMApiError('server', 'حدث خطأ بالخدمة. لم يتم تأكيد حفظ الطلب.', status, code || 'server_error');
@@ -169,8 +173,46 @@ export class CRMClient {
     return this.request(`/contacts/${safeId(contactId)}/phones`, { method: 'POST', body: phone });
   }
 
+  updatePhone(contactId, phoneId, payload) {
+    return this.request(`/contacts/${safeId(contactId)}/phones/${safeId(phoneId)}`, { method: 'PATCH', body: payload });
+  }
+
+  deletePhone(contactId, phoneId, promotePhoneId = '') {
+    const suffix = promotePhoneId ? `?promote_phone_id=${safeId(promotePhoneId)}` : '';
+    return this.request(`/contacts/${safeId(contactId)}/phones/${safeId(phoneId)}${suffix}`, { method: 'DELETE' });
+  }
+
   updateContact(contactId, payload) {
     return this.request(`/contacts/${safeId(contactId)}`, { method: 'POST', body: payload });
+  }
+
+  getFollowups() {
+    return this.request('/followups');
+  }
+
+  searchConversations({ matchStatus = '', contactId = '', q = '' } = {}) {
+    const params = new URLSearchParams();
+    if (matchStatus) params.set('match_status', matchStatus);
+    if (contactId) params.set('contact_id', contactId);
+    if (q) params.set('q', q);
+    const suffix = params.size ? `?${params.toString()}` : '';
+    return this.request(`/conversations${suffix}`);
+  }
+
+  getConversation(conversationId) {
+    return this.request(`/conversations/${safeId(conversationId)}`);
+  }
+
+  importConversation(payload) {
+    return this.request('/conversations/import', { method: 'POST', body: payload });
+  }
+
+  linkConversationToContact(conversationId, payload) {
+    return this.request(`/conversations/${safeId(conversationId)}/link-contact`, { method: 'POST', body: payload });
+  }
+
+  resolveSmartAlert(alertId, payload) {
+    return this.request(`/alerts/${safeId(alertId)}/resolve`, { method: 'POST', body: payload });
   }
 
   searchOpportunities(query = '', status = '', { track = '', role = '' } = {}) {

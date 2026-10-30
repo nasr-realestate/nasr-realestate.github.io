@@ -1,5 +1,9 @@
 import { CRMApiError, CRMClient } from '../crm-client.js';
 import {
+  createFollowupsController,
+  renderInlineConversationsAndAlerts,
+} from './followups-ui.js';
+import {
   buildReadyFollowupMessage,
   buildWhatsappTemplates,
   prettyPhoneFormat,
@@ -803,34 +807,41 @@ function buildAddPhoneForm(contactId, onDone) {
 
 function buildQuickContactUpdateForm(contact, onDone) {
   const form = node('form', '', 'activity-form');
-  form.append(node('h3', 'تحديث الاسم أو الرقم الأساسي'));
+  form.append(node('h3', 'تحديث الاسم أو تفضيل التواصل أو الرقم الأساسي'));
   const nameInput = node('input');
   nameInput.name = 'name';
   nameInput.maxLength = 100;
   nameInput.required = true;
   nameInput.placeholder = 'اسم العميل أو المالك';
   nameInput.value = contact.name || '';
+  const consentSelect = node('select');
+  consentSelect.name = 'communication_consent';
+  consentSelect.add(new Option('متابعة الطلب فقط (الافتراضي)', 'request_only'));
+  consentSelect.add(new Option('وافق على العروض العقارية', 'marketing_yes'));
+  consentSelect.add(new Option('عدم التواصل', 'do_not_contact'));
+  consentSelect.value = contact.communication_consent || 'request_only';
   const phoneInput = node('input');
   phoneInput.type = 'tel';
   phoneInput.name = 'phone';
   phoneInput.maxLength = 32;
-  phoneInput.placeholder = 'رقم أساسي جديد (اختياري: 010...)';
-  const submit = node('button', 'حفظ الاسم والرقم', 'button primary small');
+  phoneInput.placeholder = 'رقم إضافي/أساسي جديد (اختياري: 010... أو +971...)';
+  const submit = node('button', 'حفظ التحديثات', 'button primary small');
   submit.type = 'submit';
   const feedback = node('span', '', 'muted');
   feedback.setAttribute('aria-live', 'polite');
-  form.append(nameInput, phoneInput, submit, feedback);
+  form.append(nameInput, consentSelect, phoneInput, submit, feedback);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     setBusy(submit, true);
     try {
       await requireApi().updateContact(contact.id, {
         name: nameInput.value.trim(),
+        communication_consent: consentSelect.value,
         phone: phoneInput.value.trim() || undefined,
         label: 'أساسي',
-        is_primary: true,
+        is_primary: Boolean(phoneInput.value.trim()),
       });
-      state.lastActionToast = '✓ تم تحديث بيانات العميل';
+      state.lastActionToast = '✓ تم تحديث بيانات العميل وتفضيل التواصل وتوثيق السجل';
       void syncBackgroundListsQuietly();
       await onDone();
     } catch (error) {
@@ -943,14 +954,54 @@ function buildUnifiedQuickEditDetails(opportunity) {
   return details;
 }
 
-function renderContactPhonesSection(contactId, phones, onDone, contactName = '') {
+function buildPhoneEditDetails(contactId, phone, onDone) {
+  const details = node('details', '', 'drawer-details compact-details');
+  details.append(node('summary', '✏️ تعديل الرقم أو التسمية'));
+  const form = node('form', '', 'activity-form');
+  const numInput = node('input');
+  numInput.type = 'tel';
+  numInput.required = true;
+  numInput.value = `+${phone.phone_key}`;
+  const lblInput = node('input');
+  lblInput.maxLength = 40;
+  lblInput.value = phone.label || '';
+  lblInput.placeholder = 'التسمية (مثال: عمل، واتساب، ثانوي)';
+  const row = node('div', '', 'form-actions');
+  const saveBtn = node('button', 'حفظ التعديل', 'button primary small');
+  saveBtn.type = 'submit';
+  const fb = node('span', '', 'muted');
+  row.append(saveBtn, fb);
+  form.append(numInput, lblInput, row);
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    setBusy(saveBtn, true);
+    try {
+      await requireApi().updatePhone(contactId, phone.id, {
+        phone: numInput.value.trim(),
+        label: lblInput.value.trim(),
+      });
+      void syncBackgroundListsQuietly();
+      await onDone();
+    } catch (err) {
+      fb.textContent = errorText(err);
+    } finally {
+      setBusy(saveBtn, false);
+    }
+  });
+  details.append(form);
+  return details;
+}
+
+function renderContactPhonesSection(contactId, phones, onDone, contactName = '', primaryIntent = '') {
   const phoneSection = node('section', '', 'detail-section');
   phoneSection.append(node('h3', 'أرقام الهاتف والتواصل المباشر'));
   const phoneList = node('ul', '', 'detail-list');
-  const defaultMsg = buildReadyFollowupMessage(contactName, 'sell', 'مدينة نصر');
+  const defaultMsg = buildReadyFollowupMessage(contactName, primaryIntent, 'مدينة نصر');
+  const sectionFeedback = node('p', '', 'muted');
   for (const phone of phones) {
     const li = node('li');
-    const primarySuffix = phone.is_primary ? ' · أساسي' : '';
+    const primarySuffix = phone.is_primary ? ' · أساسي' : ' · ثانوي';
+    const provText = phone.source_type && phone.source_type !== 'manual' ? ' · مصدر موثق' : '';
     const waLink = buildWhatsappLinkNode('💬 واتساب', phone.phone_key, defaultMsg, 'button wa-btn small');
     const callLink = node('a', '📞 اتصال', 'button primary small');
     callLink.href = telHref(phone.phone_key);
@@ -959,15 +1010,40 @@ function renderContactPhonesSection(contactId, phones, onDone, contactName = '')
     }, 'button small');
     const actions = node('span', '', 'phone-actions');
     actions.append(waLink, callLink, copyBtn);
+
+    if (!phone.is_primary && phone.id) {
+      actions.append(button('⭐ تعيين أساسي', async () => {
+        try {
+          await requireApi().updatePhone(contactId, phone.id, { is_primary: true });
+          void syncBackgroundListsQuietly();
+          await onDone();
+        } catch (err) {
+          sectionFeedback.textContent = errorText(err);
+        }
+      }, 'button quiet small'));
+      actions.append(button('🗑️ حذف الثانوي', async () => {
+        try {
+          await requireApi().deletePhone(contactId, phone.id);
+          void syncBackgroundListsQuietly();
+          await onDone();
+        } catch (err) {
+          sectionFeedback.textContent = errorText(err);
+        }
+      }, 'button danger small'));
+    }
+
     li.append(
       node('span', prettyPhone(phone.phone_key), 'phone-number'),
-      document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}`),
+      document.createTextNode(` · ${phone.label || 'بدون تسمية'}${primarySuffix}${provText}`),
       actions,
     );
+    if (phone.id) {
+      li.append(buildPhoneEditDetails(contactId, phone, onDone));
+    }
     phoneList.append(li);
   }
   if (!phones.length) phoneList.append(node('li', 'لا توجد أرقام مسجلة.', 'muted'));
-  phoneSection.append(phoneList, buildAddPhoneForm(contactId, onDone));
+  phoneSection.append(phoneList, sectionFeedback, buildAddPhoneForm(contactId, onDone));
   return phoneSection;
 }
 
@@ -999,7 +1075,21 @@ function renderContactOpportunitiesSection(contactId, opportunities) {
   return oppSection;
 }
 
-function populateContactDetailDom(contact, phones, opportunities) {
+function renderContactAuditDetails(auditLog = []) {
+  const details = node('details', '', 'drawer-details');
+  details.append(node('summary', `🛡️ سجل توثيق التعديلات والموافقات (${auditLog.length})`));
+  const ul = node('ul', '', 'detail-list');
+  for (const row of auditLog) {
+    const li = node('li');
+    li.textContent = `${dateLabel(row.created_at)} · ${row.action_type} (${row.field_name || 'سجل'}): ${row.new_value || row.old_value || '—'}`;
+    ul.append(li);
+  }
+  if (!auditLog.length) ul.append(node('li', 'لا توجد تعديلات موثقة بعد.', 'muted'));
+  details.append(ul);
+  return details;
+}
+
+function populateContactDetailDom(contact, phones, opportunities, conversations = [], smartAlerts = [], auditLog = []) {
   const detail = $('#contact-detail');
   detail.replaceChildren();
   const heading = node('div', '', 'card-heading');
@@ -1008,15 +1098,18 @@ function populateContactDetailDom(contact, phones, opportunities) {
     node('span', consentLabel(contact.communication_consent), 'pill'),
   );
   const reloadContact = () => openContact(contact.id);
+  const primaryIntent = opportunities[0]?.intent || '';
   detail.append(
     heading,
     buildQuickContactUpdateForm(contact, reloadContact),
-    renderContactPhonesSection(contact.id, phones, reloadContact, contact.name || ''),
+    renderContactPhonesSection(contact.id, phones, reloadContact, contact.name || '', primaryIntent),
     renderContactOpportunitiesSection(contact.id, opportunities),
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
+    renderContactAuditDetails(auditLog),
   );
 }
 
-function renderContactOnlySheet(contact, phones) {
+function renderContactOnlySheet(contact, phones, conversations = [], smartAlerts = [], auditLog = []) {
   const body = $('#record-sheet-body');
   if (!body) return;
   body.replaceChildren();
@@ -1037,9 +1130,11 @@ function renderContactOnlySheet(contact, phones) {
   );
   body.append(
     hero,
-    buildSheetCommSection(contact.id, phones, { name: contact.name, intent: 'sell', areaLabel: 'مدينة نصر' }, reloadContact),
+    buildSheetCommSection(contact.id, phones, { name: contact.name, intent: '', areaLabel: 'مدينة نصر' }, reloadContact),
     createOppBar,
     buildQuickContactUpdateForm(contact, reloadContact),
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
+    renderContactAuditDetails(auditLog),
   );
 }
 
@@ -1056,13 +1151,16 @@ async function openContact(contactId) {
   const { contact } = result;
   const phones = result.phones || [];
   const opportunities = result.opportunities || [];
-  populateContactDetailDom(contact, phones, opportunities);
+  const conversations = result.conversations || [];
+  const smartAlerts = result.smart_alerts || [];
+  const auditLog = result.audit_log || [];
+  populateContactDetailDom(contact, phones, opportunities, conversations, smartAlerts, auditLog);
 
   if (opportunities.length > 0) {
     await openOpportunity(opportunities[0].id, { keepContactHighlight: true });
     return;
   }
-  renderContactOnlySheet(contact, phones);
+  renderContactOnlySheet(contact, phones, conversations, smartAlerts, auditLog);
 }
 
 function selectOpportunityTrackFilter(trackCode, { switchPanel = false } = {}) {
@@ -1209,6 +1307,9 @@ function buildMatchCounterpartyCard(m) {
     node('strong', `${trackBadge(m.track)} ${m.contact_name || 'عميل'} (${badgeText})`),
     node('small', formatOpportunitySubtitle(m), 'muted'),
   );
+  if (m.match_reason) {
+    card.append(node('small', `✓ سبب الترشيح: ${m.match_reason}`, 'match-reason-line'));
+  }
   const actions = node('div', '', 'form-actions');
   if (m.phone_key) {
     const matchMsg = buildReadyFollowupMessage(m.contact_name, m.intent, m.area_label, {
@@ -1282,8 +1383,22 @@ function renderHistoryDetails(activities) {
   const activityList = node('ul', '', 'detail-list');
   for (const activity of activities) {
     const li = node('li');
-    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${activity.summary}`));
+    const bodyText = activity.full_text || activity.summary || '';
+    li.append(node('strong', dateLabel(activity.created_at)), document.createTextNode(` · ${bodyText}`));
     if (activity.outcome) li.append(node('small', ` — ${activity.outcome}`));
+    if (activity.external_links_json) {
+      let links = [];
+      try { links = JSON.parse(activity.external_links_json); } catch { links = []; }
+      for (const linkUrl of links) {
+        if (/^https?:\/\//i.test(linkUrl) || String(linkUrl).startsWith('/')) {
+          const anchor = node('a', ' 🔗 فتح الرابط', 'safe-chat-link');
+          anchor.href = linkUrl;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          li.append(anchor);
+        }
+      }
+    }
     activityList.append(li);
   }
   if (!activities.length) activityList.append(node('li', 'لا توجد أنشطة سابقة.', 'muted'));
@@ -1297,6 +1412,8 @@ function buildOpportunityCommandNodes(result) {
   const siblings = result.sibling_opportunities || [];
   const activities = result.activities || [];
   const properties = result.properties || [];
+  const conversations = result.conversations || [];
+  const smartAlerts = result.smart_alerts || [];
   const nodes = [];
 
   if (state.lastActionToast) {
@@ -1350,6 +1467,7 @@ function buildOpportunityCommandNodes(result) {
   if (siteCard) nodes.push(siteCard);
 
   nodes.push(
+    renderInlineConversationsAndAlerts(conversations, smartAlerts, followupsController.controllerDeps),
     buildUnifiedQuickEditDetails(opportunity),
     renderMatchesSection(opportunity.id),
     renderCustomActivityDetails(opportunity),
@@ -1409,8 +1527,7 @@ function activityForm(opportunity) {
   const summary = node('textarea');
   summary.name = 'summary';
   summary.required = true;
-  summary.maxLength = 1200;
-  summary.placeholder = 'ملخص ما تم';
+  summary.placeholder = 'ملخص أو نص المحادثة الكامل (يُحفظ بالكامل دون اقتطاع)';
   const outcome = node('input');
   outcome.name = 'outcome';
   outcome.maxLength = 200;
@@ -1450,7 +1567,8 @@ function activityForm(opportunity) {
     try {
       await requireApi().addActivity(opportunity.id, {
         activity_type: type.value,
-        summary: summary.value,
+        summary: summary.value.slice(0, 1200),
+        full_text: summary.value,
         outcome: outcome.value,
         status: status.value || undefined,
         next_action: action.value,
@@ -1475,6 +1593,9 @@ function buildListingOption(opportunityId, listing, feedback) {
     node('strong', listing.title || listing.external_id),
     node('small', `${listing.area_name || 'مدينة نصر'} · ${listing.area_m2 ?? '—'} م² · ${money(listing.price)}`),
   );
+  if (listing.match_reason) {
+    item.append(node('small', `✓ سبب الترشيح: ${listing.match_reason}`, 'match-reason-line'));
+  }
   const actions = node('div', '', 'form-actions');
   const link = button('🔗 ربط بهذا العميل', async () => {
     link.disabled = true;
@@ -1563,8 +1684,24 @@ function asciiDigits(value) {
 }
 
 function extractPhoneFromChat(normalized) {
-  const match = /(?:\+?20[\s.-]*)?0?1[0125](?:[\s.-]*\d){8}/.exec(normalized);
-  return match ? match[0].replaceAll(/[^\d+]/g, '') : '';
+  const intlMatch = /(?:\+|00)(?:971|966|965|974|973|968|962|961|249|218|33|44|49|64|20|1)[\s.-]*(?:\d[\s.-]*){7,11}/.exec(normalized);
+  if (intlMatch) return intlMatch[0].replaceAll(/[^\d+]/g, '');
+  const egMatch = /(?:\+?20[\s.-]*)?0?1[0125](?:[\s.-]*\d){8}/.exec(normalized);
+  return egMatch ? egMatch[0].replaceAll(/[^\d+]/g, '') : '';
+}
+
+function extractSenderFromChatHeader(normalized) {
+  // iOS format: [DD/MM/YYYY, HH:MM] Sender: Message
+  const iosHeader = /^\[[^\]]{3,45}\]\s*([^:\n]{2,60}):/m.exec(normalized);
+  if (iosHeader && !/سمسار\s*طلبك|طارق\s*طنطاوي/.test(iosHeader[1])) {
+    return iosHeader[1].trim();
+  }
+  // Android format: DD/MM/YYYY, HH:MM ص/م - Sender: Message
+  for (const m of normalized.matchAll(/^\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}[،,]\s*\d{1,2}:\d{2}[^-\n]{0,12}\s-\s([^:\n]{2,60}):/gm)) {
+    const candidate = m[1].trim();
+    if (!/سمسار\s*طلبك|طارق\s*طنطاوي/.test(candidate)) return candidate;
+  }
+  return '';
 }
 
 function extractPriceFromChat(normalized) {
@@ -1640,8 +1777,13 @@ function handleQuickParseClick() {
   const normalized = asciiDigits(raw);
   const phone = extractPhoneFromChat(normalized);
   if (phone) $('#quick-phone').value = phone;
-  const headerName = /^\[[^\]]{3,40}\]\s*([^:\n]{2,50}):/.exec(normalized);
-  if (headerName && !/\d{5}/.test(headerName[1])) $('#quick-name').value = headerName[1].trim();
+  const senderLabel = extractSenderFromChatHeader(normalized);
+  if (senderLabel && !/\d{6}/.test(senderLabel)) {
+    $('#quick-name').value = senderLabel;
+  } else if (senderLabel && !phone) {
+    const senderPhone = extractPhoneFromChat(senderLabel);
+    if (senderPhone) $('#quick-phone').value = senderPhone;
+  }
   const sizeMatch = /(\d{2,4})\s*(?:م2|م²|متر)/.exec(normalized);
   if (sizeMatch) $('#quick-size').value = sizeMatch[1];
   const price = extractPriceFromChat(normalized);
@@ -1652,7 +1794,9 @@ function handleQuickParseClick() {
   setQuickTrackChip(detectTrackFromChat(normalized));
   setQuickIntentChip(detectIntentFromChat(normalized));
   $('#quick-notes').value = raw.slice(0, 1200);
-  feedback.textContent = phone ? 'تم استخراج الرقم والرمز والبيانات — راجع واضغط حفظ.' : 'تم استخراج التفاصيل والرمز؛ احفظ بالاسم أو أضف الرقم.';
+  feedback.textContent = ($('#quick-phone').value)
+    ? 'تم استخراج الرقم والرمز والبيانات (Android/iOS/دولي) — راجع واضغط حفظ.'
+    : 'تم استخراج التفاصيل والرمز؛ احفظ بالاسم أو أضف الرقم.';
 }
 
 function resolveQuickFollowupFields(preset) {
@@ -1935,10 +2079,10 @@ async function handleCheckDuePushClick() {
   const btn = $('#push-check-btn');
   const feedback = $('#push-feedback');
   setBusy(btn, true, 'جارٍ الفحص…');
-  feedback.textContent = 'جارٍ فحص المواعيد المستحقة…';
+  feedback.textContent = 'جارٍ فحص المواعيد المستحقة والتنبيهات الذكية…';
   try {
     const res = await requireApi().checkDuePushNow();
-    const sent = Number(res.followup_alerts || 0) + Number(res.viewing_alerts || 0);
+    const sent = Number(res.followup_alerts || 0) + Number(res.viewing_alerts || 0) + Number(res.smart_alerts || 0);
     feedback.textContent = sent > 0
       ? `تم إرسال ${sent} تنبيه مستحق إلى أجهزتك المفعّلة ✓`
       : 'لا توجد مواعيد مستحقة جديدة لم يُرسل تنبيهها بعد.';
@@ -1968,14 +2112,31 @@ async function handleDisablePushClick() {
   }
 }
 
+const followupsController = createFollowupsController({
+  api: () => requireApi(),
+  getContacts: () => state.contacts,
+  openContact: idVal => openContact(idVal),
+  openOpportunity: idVal => openOpportunity(idVal),
+  openPanel: idVal => openPanel(idVal),
+  showError: err => showError(err),
+  errorText: err => errorText(err),
+});
+
 async function refreshAll() {
   clearError();
   setNotice($('#app-status'), 'جارٍ تحميل بيانات CRM…', 'info');
   $('#security-status').textContent = 'جارٍ التحميل…';
   try {
-    await Promise.all([loadDashboard(), loadContacts(), loadOpportunities('', ''), loadQuickListings(), loadPushCardState()]);
+    await Promise.all([
+      loadDashboard(),
+      loadContacts(),
+      loadOpportunities('', ''),
+      loadQuickListings(),
+      loadPushCardState(),
+    ]);
+    await followupsController.refreshFollowups();
     $('#security-status').textContent = 'جلسة موثقة ومحمية';
-    setNotice($('#app-status'), 'الجلسة نشطة. البيانات لا تُحفظ في هذا المتصفح.', 'info');
+    setNotice($('#app-status'), 'الجلسة نشطة (توقيت القاهرة Africa/Cairo). يتطلب اتصال إنترنت مباشر ولا تُحفظ البيانات محليًا.', 'info');
   } catch (error) {
     showError(error);
   }
@@ -2182,12 +2343,14 @@ for (const chip of document.querySelectorAll('[data-contact-track]')) {
   chip.addEventListener('click', () => selectContactTrackFilter(chip.dataset.contactTrack));
 }
 
+followupsController.bindEvents();
+
 async function bootstrap() {
   try {
     const configuredBase = document.documentElement.dataset.crmApi || '/api';
     state.api = new CRMClient({ apiBase: configuredBase });
     void ensureCrmServiceWorker();
-    $('#dashboard-day').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    $('#dashboard-day').value = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
     addConsentValidation($('#new-contact-form'));
     buildPhoneRow({ primary: true });
     $('#new-contact-form').querySelector('[data-primary]').checked = false;
