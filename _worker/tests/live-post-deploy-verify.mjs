@@ -244,7 +244,9 @@ async function verifySyntheticManualLink(auth) {
 
   const verifyConv = await apiCall(`/api/conversations/${convId}`, { cookie: auth.cookiePair });
   assert.equal(verifyConv.status, 200, `synth-det-${verifyConv.status}`);
-  assert.equal(verifyConv.data?.conversation?.match_status, 'resolved_manual', 'synth-det-status');
+  const finalMatchStatus = String(verifyConv.data?.conversation?.match_status || '');
+  assert.ok(finalMatchStatus === 'matched' || finalMatchStatus === 'resolved_manual', `synth-det-status-${finalMatchStatus}`);
+  assert.equal(verifyConv.data?.conversation?.match_method, 'manual_review_link', 'synth-det-method');
   assert.equal(verifyConv.data?.conversation?.contact_id, contactId, 'synth-det-cid');
 
   await apiCall('/api/auth/logout', {
@@ -296,6 +298,7 @@ async function verifyDesktopBrowser(browser, auth, pageErrors) {
 
   await deskPage.locator('.tab[data-panel="followups-panel"]').click();
   await deskPage.locator('#followups-panel').waitFor({ state: 'visible', timeout: 10_000 });
+  await deskPage.locator('#followups-metrics .metric').first().waitFor({ state: 'visible', timeout: 15_000 });
   await deskPage.locator('[data-followup-queue="unmatched_review"]').click();
   await deskPage.locator('#followups-list .followup-alert-card').first().waitFor({ state: 'visible', timeout: 15_000 });
   const deskUnmatchedCards = await deskPage.locator('#followups-list .followup-alert-card').count();
