@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: crm-sealed-ingest
+  group: crm-d1-test-mutex
   cancel-in-progress: false
 
 jobs:
@@ -249,6 +249,28 @@ jobs:
           subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
           BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
 
+          d1_exec_retry() {
+            local db_name="$1"
+            local cfg_file="$2"
+            local sql_cmd="$3"
+            local out_file="$4"
+            local mode_json="${5:-no}"
+            local attempt
+            for attempt in 1 2 3; do
+              if [ "$mode_json" = 'json' ]; then
+                if npx --yes wrangler@4 d1 execute "$db_name" --remote --json --config "$cfg_file" --command "$sql_cmd" > "$out_file" 2>/dev/null; then
+                  return 0
+                fi
+              else
+                if npx --yes wrangler@4 d1 execute "$db_name" --remote --config "$cfg_file" --command "$sql_cmd" > "$out_file" 2>&1; then
+                  return 0
+                fi
+              fi
+              sleep 3
+            done
+            return 1
+          }
+
           deliver_envelope() {
             local env_val="$1"
             local tag_idx="$2"
@@ -262,7 +284,7 @@ jobs:
             local ticket_hash
             ticket_hash=$(sha256sum "$TMP/env_${tag_idx}.txt" | awk '{print $1}')
             local TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('sealed-ticket:${ticket_hash}','opportunity','authorized_pending') ON CONFLICT(submission_key) DO NOTHING;"
-            if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ticket_${tag_idx}.log" 2>&1; then
+            if ! d1_exec_retry "nasr-crm-test-db" "$WRANGLER_CFG" "$TICKET_SQL" "$TMP/ticket_${tag_idx}.log" "plain"; then
               result="d1-ticket-insert-failed-${tag_idx}"
               finish
               exit 1
@@ -298,12 +320,12 @@ jobs:
             local BAK_OPPS_SQL="SELECT o.id, COALESCE(c.name, '') AS lead_label, o.track, o.intent, o.source, o.source_url, o.status, o.area_label, o.budget_min, o.budget_max, o.size_min_m2, o.size_max_m2, o.property_type, o.notes, o.next_action, o.next_followup_at, o.no_followup_reason, o.closed_at, o.loss_reason, o.loss_notes, o.created_at, o.updated_at FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id = o.contact_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND COALESCE(c.name, '') NOT LIKE 'TEST ONLY%' ORDER BY o.created_at ASC, o.id ASC;"
             local BAK_ACTS_SQL="SELECT a.* FROM crm_activities a JOIN crm_opportunities o ON o.id = a.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') ORDER BY a.created_at ASC, a.id ASC;"
             local BAK_PROPS_SQL="SELECT op.* FROM crm_opportunity_properties op JOIN crm_opportunities o ON o.id = op.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') ORDER BY op.created_at ASC, op.id ASC;"
-            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_OPPS_SQL" > "$TMP/bak_opps_${r_idx}.json" 2>/dev/null
-            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_ACTS_SQL" > "$TMP/bak_acts_${r_idx}.json" 2>/dev/null
-            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_PROPS_SQL" > "$TMP/bak_props_${r_idx}.json" 2>/dev/null
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT id FROM crm_opportunities WHERE contact_id IS NOT NULL;" > "$TMP/live_copps_${r_idx}.json" 2>/dev/null
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT id, contact_id, chat_title FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%';" > "$TMP/live_convs_${r_idx}.json" 2>/dev/null
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;" > "$TMP/pub_${r_idx}.json" 2>/dev/null
+            d1_exec_retry "$BACKUP_DB_NAME" "$TMP/backup_ro.toml" "$BAK_OPPS_SQL" "$TMP/bak_opps_${r_idx}.json" "json"
+            d1_exec_retry "$BACKUP_DB_NAME" "$TMP/backup_ro.toml" "$BAK_ACTS_SQL" "$TMP/bak_acts_${r_idx}.json" "json"
+            d1_exec_retry "$BACKUP_DB_NAME" "$TMP/backup_ro.toml" "$BAK_PROPS_SQL" "$TMP/bak_props_${r_idx}.json" "json"
+            d1_exec_retry "nasr-crm-test-db" "$WRANGLER_CFG" "SELECT id FROM crm_opportunities WHERE contact_id IS NOT NULL;" "$TMP/live_copps_${r_idx}.json" "json"
+            d1_exec_retry "nasr-crm-test-db" "$WRANGLER_CFG" "SELECT id, contact_id, chat_title FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%';" "$TMP/live_convs_${r_idx}.json" "json"
+            d1_exec_retry "nasr-crm-test-db" "$WRANGLER_CFG" "SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;" "$TMP/pub_${r_idx}.json" "json"
             node scripts/crm/build-backup-restore-envelopes.mjs \
               "$TMP/bak_opps_${r_idx}.json" \
               "$TMP/bak_acts_${r_idx}.json" \

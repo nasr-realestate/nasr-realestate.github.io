@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: crm-isolated-test-deploy
+  group: crm-d1-test-mutex
   cancel-in-progress: false
 
 jobs:
@@ -236,65 +236,88 @@ jobs:
           fi
           backup_db="${BACKUP_DB_NAME}:${existing_backup_uuid:0:8}"
 
-          # 2. Test 0005 migration on an isolated staging copy FIRST before touching nasr-crm-test-db
-          phase='stage-test-0005-migration'
-          old_stage_uuid=$(jq -r --arg sn "$STAGE_DB_NAME" '.result[] | select(.name == $sn) | .uuid // empty' "$TMP/d1.json" | head -n1)
-          if [ -n "$old_stage_uuid" ]; then
-            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$old_stage_uuid" >/dev/null 2>&1 || true
-          fi
-          s_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-            --data "{\"name\":\"$STAGE_DB_NAME\"}" -o "$TMP/create_stage.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
-          if [ "$s_status" != '200' ]; then
-            result="stage-d1-create-http-$s_status"
-            finish
-            exit 1
-          fi
-          stage_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_stage.json")
-          write_tmp_toml "nasr-crm-stage-migrator" "$STAGE_DB_NAME" "$stage_uuid" "$TMP/stage.wrangler.toml"
-          if ! npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/live-export.sql" > "$TMP/stage_import.log" 2>&1; then
-            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            result='stage-d1-import-failed'
-            finish
-            exit 1
-          fi
+          # 2. Test pending migrations on an isolated staging copy FIRST before touching nasr-crm-test-db
+          phase='stage-test-0006-migration'
           npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" \
             --command "SELECT name FROM d1_migrations ORDER BY id ASC;" > "$TMP/live_migs.json" 2>/dev/null || true
-          node -e '
+          pending_migs=$(node -e '
             const fs = require("node:fs");
             const raw = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-            const names = [];
+            const applied = new Set();
             const walk = (x) => {
               if (!x || typeof x !== "object") return;
               if (Array.isArray(x)) { x.forEach(walk); return; }
-              if (typeof x.name === "string" && x.name.endsWith(".sql")) names.push(x.name);
+              if (typeof x.name === "string" && x.name.endsWith(".sql")) applied.add(x.name);
               Object.values(x).forEach(walk);
             };
             walk(raw);
-            const lines = ["CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);"];
-            for (const n of [...new Set(names)]) {
-              lines.push("INSERT OR IGNORE INTO d1_migrations(name) VALUES(\x27" + n.replaceAll("\x27", "\x27\x27") + "\x27);");
-            }
-            fs.writeFileSync(process.argv[2], lines.join("\n") + "\n");
-          ' "$TMP/live_migs.json" "$TMP/stage_migs.sql"
-          npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage_migs.sql" > "$TMP/stage_migs.log" 2>&1
-          if ! npx --yes wrangler@4 d1 migrations apply "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" > "$TMP/stage_migrate.log" 2>&1; then
-            err_tag=$(grep -oE 'duplicate column name: [a-zA-Z0-9_]+|no such column: [a-zA-Z0-9_.]+|no such table: [a-zA-Z0-9_]+|FOREIGN KEY constraint failed|syntax error' "$TMP/stage_migrate.log" | head -n1 | tr ' :.' '---' || true)
+            const allFiles = fs.readdirSync("_worker/migrations").filter(f => f.endsWith(".sql"));
+            process.stdout.write(String(allFiles.filter(f => !applied.has(f)).length));
+          ' "$TMP/live_migs.json")
+
+          if [ "$pending_migs" = '0' ]; then
+            stage_test='already-applied-0006'
+          else
+            old_stage_uuid=$(jq -r --arg sn "$STAGE_DB_NAME" '.result[] | select(.name == $sn) | .uuid // empty' "$TMP/d1.json" | head -n1)
+            if [ -n "$old_stage_uuid" ]; then
+              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$old_stage_uuid" >/dev/null 2>&1 || true
+            fi
+            s_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              --data "{\"name\":\"$STAGE_DB_NAME\"}" -o "$TMP/create_stage.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
+            if [ "$s_status" != '200' ]; then
+              result="stage-d1-create-http-$s_status"
+              finish
+              exit 1
+            fi
+            stage_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_stage.json")
+            write_tmp_toml "nasr-crm-stage-migrator" "$STAGE_DB_NAME" "$stage_uuid" "$TMP/stage.wrangler.toml"
+            npx --yes wrangler@4 d1 export nasr-crm-test-db --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/stage-schema.sql" > "$TMP/export_s.log" 2>&1
+            npx --yes wrangler@4 d1 export nasr-crm-test-db --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/stage-data.sql" > "$TMP/export_d.log" 2>&1
+            sed -i '/sqlite_sequence/d; /_cf_KV/d' "$TMP/stage-schema.sql" "$TMP/stage-data.sql"
+            { printf 'PRAGMA defer_foreign_keys = TRUE;\n'; cat "$TMP/stage-schema.sql" "$TMP/stage-data.sql"; } > "$TMP/stage-ordered.sql"
+            if ! npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage-ordered.sql" > "$TMP/stage_import.log" 2>&1; then
+              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
+              result='stage-d1-import-failed'
+              finish
+              exit 1
+            fi
+            node -e '
+              const fs = require("node:fs");
+              const raw = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const names = [];
+              const walk = (x) => {
+                if (!x || typeof x !== "object") return;
+                if (Array.isArray(x)) { x.forEach(walk); return; }
+                if (typeof x.name === "string" && x.name.endsWith(".sql")) names.push(x.name);
+                Object.values(x).forEach(walk);
+              };
+              walk(raw);
+              const lines = ["CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);"];
+              for (const n of [...new Set(names)]) {
+                lines.push("INSERT OR IGNORE INTO d1_migrations(name) VALUES(\x27" + n.replaceAll("\x27", "\x27\x27") + "\x27);");
+              }
+              fs.writeFileSync(process.argv[2], lines.join("\n") + "\n");
+            ' "$TMP/live_migs.json" "$TMP/stage_migs.sql"
+            npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage_migs.sql" > "$TMP/stage_migs.log" 2>&1
+            if ! npx --yes wrangler@4 d1 migrations apply "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" > "$TMP/stage_migrate.log" 2>&1; then
+              err_tag=$(grep -oE 'duplicate column name: [a-zA-Z0-9_]+|no such column: [a-zA-Z0-9_.]+|no such table: [a-zA-Z0-9_]+|FOREIGN KEY constraint failed|syntax error' "$TMP/stage_migrate.log" | head -n1 | tr ' :.' '---' || true)
+              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
+              result="stage-d1-migration-0006-failed-${err_tag:-unknown}"
+              finish
+              exit 1
+            fi
+            STAGE_VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name IN ('status','price_updated_at')) AS listing_cols, (SELECT \"notnull\" FROM pragma_table_info('crm_opportunities') WHERE name='contact_id') AS opp_contact_notnull, (SELECT COUNT(*) FROM pragma_table_info('crm_opportunities') WHERE name IN ('conversation_id','lead_label')) AS opp_0006_cols, (SELECT COUNT(*) FROM pragma_table_info('crm_contacts') WHERE name IN ('archived_at','review_note')) AS contact_0006_cols;"
+            npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --json --config "$TMP/stage.wrangler.toml" --command "$STAGE_VERIFY_SQL" > "$TMP/stage_verify.json" 2>/dev/null
+            if ! jq -e '.. | objects | select(has("crm_tables") and has("listing_cols")) | .crm_tables == 15 and .listing_cols == 2 and .opp_contact_notnull == 0 and .opp_0006_cols == 2 and .contact_0006_cols == 2' "$TMP/stage_verify.json" >/dev/null; then
+              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
+              result='stage-d1-schema-mismatch'
+              finish
+              exit 1
+            fi
             curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            result="stage-d1-migration-0006-failed-${err_tag:-unknown}"
-            finish
-            exit 1
+            stage_uuid=''
+            stage_test='passed-0006-decoupled'
           fi
-          STAGE_VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name IN ('status','price_updated_at')) AS listing_cols, (SELECT \"notnull\" FROM pragma_table_info('crm_opportunities') WHERE name='contact_id') AS opp_contact_notnull, (SELECT COUNT(*) FROM pragma_table_info('crm_opportunities') WHERE name IN ('conversation_id','lead_label')) AS opp_0006_cols, (SELECT COUNT(*) FROM pragma_table_info('crm_contacts') WHERE name IN ('archived_at','review_note')) AS contact_0006_cols;"
-          npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --json --config "$TMP/stage.wrangler.toml" --command "$STAGE_VERIFY_SQL" > "$TMP/stage_verify.json" 2>/dev/null
-          if ! jq -e '.. | objects | select(has("crm_tables") and has("listing_cols")) | .crm_tables == 15 and .listing_cols == 2 and .opp_contact_notnull == 0 and .opp_0006_cols == 2 and .contact_0006_cols == 2' "$TMP/stage_verify.json" >/dev/null; then
-            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            result='stage-d1-schema-mismatch'
-            finish
-            exit 1
-          fi
-          curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-          stage_uuid=''
-          stage_test='passed-0006-decoupled'
 
           # 3. Apply verified 0006 migration to nasr-crm-test-db
           phase='apply-0006-migration'
