@@ -149,6 +149,21 @@ async function verifyLiveCoreRecords(auth) {
   };
 }
 
+function assertNoDuplicateQueueAlerts(fuData) {
+  const uniqueAlertsById = new Map();
+  for (const qName of ['waiting_reply', 'stalled_intervention', 'new_chat_alerts', 'today', 'overdue', 'upcoming']) {
+    const qAlerts = (fuData[qName] || []).filter(a => a.item_kind === 'smart_alert');
+    const qIds = qAlerts.map(a => a.alert_id || a.id).filter(Boolean);
+    assert.equal(qIds.length, new Set(qIds).size, `dup-in-${qName}`);
+    for (const a of qAlerts) uniqueAlertsById.set(a.alert_id || a.id, a);
+  }
+  assert.ok(uniqueAlertsById.size >= 66, `unique-alerts-${uniqueAlertsById.size}`);
+  const dedupTuples = [...uniqueAlertsById.values()]
+    .filter(a => a.conversation_id)
+    .map(a => `${a.conversation_id}|${a.message_id || ''}|${a.alert_type}`);
+  assert.equal(dedupTuples.length, new Set(dedupTuples).size, 'dup-alert-tuples');
+}
+
 async function verifyLiveConversationsAndAlerts(auth) {
   activeStep = 'check3-convs-msgs';
   const convsRes = await apiCall('/api/conversations', { cookie: auth.cookiePair });
@@ -170,13 +185,7 @@ async function verifyLiveConversationsAndAlerts(auth) {
   assert.equal(fuRes.status, 200, 'fu-status');
   const fuUnmatched = (fuRes.data.unmatched_review || []).filter(c => isNotTestRow(c.chat_title));
   assert.equal(fuUnmatched.length, 21, `fu-unm-cnt-${fuUnmatched.length}`);
-
-  const alertIds = [
-    ...(fuRes.data.waiting_reply || []).map(a => a.alert_id || a.id),
-    ...(fuRes.data.stalled_intervention || []).filter(a => a.item_kind === 'smart_alert').map(a => a.alert_id || a.id),
-    ...(fuRes.data.new_chat_alerts || []).map(a => a.alert_id || a.id),
-  ].filter(Boolean);
-  assert.equal(alertIds.length, new Set(alertIds).size, 'dup-alert-ids');
+  assertNoDuplicateQueueAlerts(fuRes.data);
 
   activeStep = 'check7a-conv-search';
   const searchRes = await apiCall('/api/conversations?match_status=unmatched_review&q=%D8%AF%D8%B1%D8%AF%D8%B4%D8%A9', {
