@@ -475,11 +475,17 @@ jobs:
             SYNTH_CLEAN_SQL="DELETE FROM crm_conversation_messages WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_smart_alerts WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversation_insights WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key='201099990077' OR contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions WHERE revoked_at IS NOT NULL; DELETE FROM crm_auth_attempts;"
             d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/pre_synth_clean.log" 2>&1 || true
 
-            phase='mint-single-use-ci-ticket'
-            ci_nonce=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
-            echo "::add-mask::${ci_nonce}"
-            ci_hash=$(printf '%s' "$ci_nonce" | sha256sum | awk '{print $1}')
-            TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES('ci-e2e-ticket:${ci_hash}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
+            phase='mint-single-use-ci-tickets'
+            ci_n1=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+            ci_n2=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+            ci_n3=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+            echo "::add-mask::${ci_n1}"
+            echo "::add-mask::${ci_n2}"
+            echo "::add-mask::${ci_n3}"
+            ci_h1=$(printf '%s' "$ci_n1" | sha256sum | awk '{print $1}')
+            ci_h2=$(printf '%s' "$ci_n2" | sha256sum | awk '{print $1}')
+            ci_h3=$(printf '%s' "$ci_n3" | sha256sum | awk '{print $1}')
+            TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${ci_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h3}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
             if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ci_ticket.log" 2>&1; then
               result='ci-ticket-mint-failed'
               finish
@@ -487,10 +493,10 @@ jobs:
             fi
 
             phase='live-10-checks-http-and-ui'
-            if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_CI_TICKET_NONCE="$ci_nonce" node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
+            if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_CI_TICKET_NONCES="${ci_n1},${ci_n2},${ci_n3}" node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
               d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
-              err_diag=$(tr -cd 'A-Za-z0-9_:-' < "$TMP/live10.err" | tail -c 48 || true)
-              result="live10-err-${err_diag:-unknown}"
+              err_diag=$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live10.err" | tail -c 52 || true)
+              result="live10-${err_diag:-unknown}"
               finish
               exit 1
             fi
