@@ -202,7 +202,7 @@ jobs:
           sed -i '/sqlite_sequence/d; /_cf_KV/d' "$TMP/live-export.sql"
 
           write_tmp_toml() {
-            printf 'name = "%s"\ncompatibility_date = "2026-09-04"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\nmigrations_dir = "./_worker/migrations"\n' "$1" "$2" "$3" > "$4"
+            printf 'name = "%s"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\nmigrations_dir = "%s/_worker/migrations"\n' "$1" "$2" "$3" "$PWD" > "$4"
           }
 
           existing_backup_uuid=$(jq -r --arg bn "$BACKUP_DB_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1.json" | head -n1)
