@@ -511,12 +511,13 @@ async function handleCiTicketLogin(request, env, config) {
   }
   const ticketKey = `ci-e2e-ticket:${await sha256Hex(nonce)}`;
   const row = await env.DB.prepare(
-    'SELECT resource_id, created_at FROM crm_idempotency_receipts WHERE submission_key = ? LIMIT 1',
+    'SELECT resource_id, received_at FROM crm_idempotency_receipts WHERE submission_key = ? LIMIT 1',
   ).bind(ticketKey).first();
   if (!row || row.resource_id !== 'authorized_pending') {
     return json({ error: 'unauthorized_ci_ticket' }, 403);
   }
-  const createdMs = Date.parse(String(row.created_at || '').includes('T') ? row.created_at : `${String(row.created_at).replace(' ', 'T')}Z`);
+  const receivedRaw = String(row.received_at || '');
+  const createdMs = Date.parse(receivedRaw.includes('T') ? receivedRaw : `${receivedRaw.replace(' ', 'T')}Z`);
   if (!Number.isFinite(createdMs) || Math.abs(Date.now() - createdMs) > 90_000) {
     await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='expired' WHERE submission_key=?").bind(ticketKey).run();
     return json({ error: 'expired_ci_ticket' }, 403);

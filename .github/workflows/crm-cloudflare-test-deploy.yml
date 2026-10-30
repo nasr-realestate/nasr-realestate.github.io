@@ -479,7 +479,7 @@ jobs:
             ci_nonce=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
             echo "::add-mask::${ci_nonce}"
             ci_hash=$(printf '%s' "$ci_nonce" | sha256sum | awk '{print $1}')
-            TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,created_at) VALUES('ci-e2e-ticket:${ci_hash}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
+            TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES('ci-e2e-ticket:${ci_hash}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
             if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ci_ticket.log" 2>&1; then
               result='ci-ticket-mint-failed'
               finish

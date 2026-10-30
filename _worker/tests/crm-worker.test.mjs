@@ -1035,3 +1035,38 @@ test('5-track operational core separates live color tracks from transient archiv
   iso.sqlite.close();
   sqlite.close();
 });
+
+test('POST /api/auth/ci-ticket mints single-use session from received_at and rejects replay', async () => {
+  const { env, sqlite } = await createEnv();
+  const nonce = randomToken(36);
+  const hashHex = nodeCrypto.createHash('sha256').update(nonce).digest('hex');
+  sqlite.prepare(
+    "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,'contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+  ).run(`ci-e2e-ticket:${hashHex}`);
+
+  const loginRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`, {
+    method: 'POST',
+    headers: { origin: ALLOWED_ORIGIN, 'content-type': 'application/json' },
+    body: JSON.stringify({ ticket_nonce: nonce }),
+  }), env);
+  assert.equal(loginRes.status, 200);
+  const loginBody = await loginRes.json();
+  assert.equal(loginBody.authenticated, true);
+  assert.ok(String(loginBody.csrf_token || '').length >= 20);
+  const cookiePair = String(loginRes.headers.get('set-cookie') || '').split(';')[0];
+
+  const dashRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/dashboard`, {
+    headers: { origin: ALLOWED_ORIGIN, cookie: cookiePair },
+  }), env);
+  assert.equal(dashRes.status, 200);
+
+  const replayRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`, {
+    method: 'POST',
+    headers: { origin: ALLOWED_ORIGIN, 'content-type': 'application/json' },
+    body: JSON.stringify({ ticket_nonce: nonce }),
+  }), env);
+  assert.equal(replayRes.status, 403);
+
+  sqlite.close();
+});
+
