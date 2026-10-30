@@ -17,6 +17,7 @@ on:
       - _worker/migrations/0003_crm_push_notifications.sql
       - _worker/migrations/0004_crm_tracks_core.sql
       - _worker/migrations/0005_sync_audit_and_intelligence.sql
+      - _worker/migrations/0006_decouple_opportunities_and_contact_levels.sql
       - _worker/crm-ui/**
       - _worker/tests/live-e2e-runner.mjs
       - _worker/tests/live-browser-e2e.mjs
@@ -277,15 +278,15 @@ jobs:
           ' "$TMP/live_migs.json" "$TMP/stage_migs.sql"
           npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage_migs.sql" > "$TMP/stage_migs.log" 2>&1
           if ! npx --yes wrangler@4 d1 migrations apply "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" > "$TMP/stage_migrate.log" 2>&1; then
-            err_tag=$(grep -oE 'duplicate column name: [a-zA-Z0-9_]+|no such column: [a-zA-Z0-9_.]+|no such table: [a-zA-Z0-9_]+|syntax error' "$TMP/stage_migrate.log" | head -n1 | tr ' :.' '---' || true)
+            err_tag=$(grep -oE 'duplicate column name: [a-zA-Z0-9_]+|no such column: [a-zA-Z0-9_.]+|no such table: [a-zA-Z0-9_]+|FOREIGN KEY constraint failed|syntax error' "$TMP/stage_migrate.log" | head -n1 | tr ' :.' '---' || true)
             curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            result="stage-d1-migration-0005-failed-${err_tag:-unknown}"
+            result="stage-d1-migration-0006-failed-${err_tag:-unknown}"
             finish
             exit 1
           fi
-          STAGE_VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name IN ('status','price_updated_at')) AS listing_cols;"
+          STAGE_VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name IN ('status','price_updated_at')) AS listing_cols, (SELECT \"notnull\" FROM pragma_table_info('crm_opportunities') WHERE name='contact_id') AS opp_contact_notnull, (SELECT COUNT(*) FROM pragma_table_info('crm_opportunities') WHERE name IN ('conversation_id','lead_label')) AS opp_0006_cols, (SELECT COUNT(*) FROM pragma_table_info('crm_contacts') WHERE name IN ('archived_at','review_note')) AS contact_0006_cols;"
           npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --json --config "$TMP/stage.wrangler.toml" --command "$STAGE_VERIFY_SQL" > "$TMP/stage_verify.json" 2>/dev/null
-          if ! jq -e '.. | objects | select(has("crm_tables") and has("listing_cols")) | .crm_tables == 15 and .listing_cols == 2' "$TMP/stage_verify.json" >/dev/null; then
+          if ! jq -e '.. | objects | select(has("crm_tables") and has("listing_cols")) | .crm_tables == 15 and .listing_cols == 2 and .opp_contact_notnull == 0 and .opp_0006_cols == 2 and .contact_0006_cols == 2' "$TMP/stage_verify.json" >/dev/null; then
             curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
             result='stage-d1-schema-mismatch'
             finish
@@ -293,12 +294,12 @@ jobs:
           fi
           curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
           stage_uuid=''
-          stage_test='passed-15-tables'
+          stage_test='passed-0006-decoupled'
 
-          # 3. Apply verified 0005 migration to nasr-crm-test-db
-          phase='apply-0005-migration'
+          # 3. Apply verified 0006 migration to nasr-crm-test-db
+          phase='apply-0006-migration'
           if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db --remote --config "$WRANGLER_CFG" > "$TMP/migrate.log" 2>&1; then
-            result='d1-migration-0005-failed'
+            result='d1-migration-0006-failed'
             finish
             exit 1
           fi

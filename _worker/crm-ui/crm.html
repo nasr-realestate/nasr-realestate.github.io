@@ -125,6 +125,11 @@
             </div>
           </form>
         </details>
+        <form id="conv-search-form" class="search-row">
+          <label class="sr-only" for="conv-search-input">بحث في المحادثات وقائمة المراجعة</label>
+          <input id="conv-search-input" type="search" placeholder="ابحث في المحادثات أو مراجعة غير محسومة (العنوان، المحتوى، المنطقة، @username)…" autocomplete="off">
+          <button class="button" type="submit">بحث</button>
+        </form>
         <h2 id="followups-queue-heading">📅 مستحق اليوم (توقيت القاهرة)</h2>
         <div class="columns contacts-layout">
           <div id="followups-list" class="stack"><p class="muted">جارٍ تحميل قوائم المتابعة الذكية…</p></div>
@@ -201,6 +206,12 @@
           <button class="chip track-chip-new_rent_apt" type="button" data-contact-track="new_rent_apt">🔵 إيجار جديد</button>
           <button class="chip track-chip-admin_hq" type="button" data-contact-track="admin_hq">🟡 مقرات وإداري</button>
           <button class="chip track-chip-transient" type="button" data-contact-track="transient">✈️ طيارة</button>
+        </div>
+        <div class="chip-row filter-subbar" role="group" aria-label="تصفية العملاء حسب اكتمال السجل">
+          <button class="chip small-chip active" type="button" data-contact-completeness="">النشط (الكل)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="complete">✓ مكتملة (هاتف موثق)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="incomplete">⚠️ غير مكتملة (تحتاج مراجعة)</button>
+          <button class="chip small-chip" type="button" data-contact-completeness="archived">🗄️ مؤرشفة</button>
         </div>
         <form id="contact-search-form" class="search-row"><label class="sr-only" for="contact-search">ابحث بالاسم أو رقم الهاتف</label><input id="contact-search" type="search" placeholder="ابحث بالاسم أو الرقم" autocomplete="off"><button class="button" type="submit">بحث</button></form>
         <p id="contact-search-state" class="muted" aria-live="polite"></p>

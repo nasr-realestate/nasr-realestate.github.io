@@ -660,30 +660,34 @@ async function dashboard(db, url) {
     unmatchedChatsCount = Number(umRow?.cnt || 0);
   }
 
+  const s0006 = await inspectSchema0006(db);
+  const nameSql = oppContactNameSql(s0006);
+  const convJoin = oppConvJoinSql(s0006);
   const active = await db.prepare(`SELECT COUNT(*) AS count FROM crm_opportunities WHERE status IN (${ACTIVE}) AND track != 'transient'`).first();
   const trackRows = await db.prepare(`SELECT track, COUNT(*) AS total,
       SUM(CASE WHEN intent IN ('sell','lease') THEN 1 ELSE 0 END) AS supply_count,
       SUM(CASE WHEN intent IN ('buy','rent') THEN 1 ELSE 0 END) AS demand_count
     FROM crm_opportunities GROUP BY track`).all();
-  const today = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
-    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
+  const today = await db.prepare(`SELECT o.id,o.track,o.contact_id,${nameSql} AS name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
+    FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NOT NULL AND datetime(o.next_followup_at) >= datetime(?) AND datetime(o.next_followup_at) <= datetime(?) ORDER BY o.next_followup_at`).bind(start, end).all();
-  const overdue = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
-    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
+  const overdue = await db.prepare(`SELECT o.id,o.track,o.contact_id,${nameSql} AS name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.area_label,o.next_action,o.next_followup_at
+    FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NOT NULL AND datetime(o.next_followup_at) < datetime(?) ORDER BY o.next_followup_at LIMIT 200`).bind(current).all();
-  const noAction = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.no_followup_reason,o.updated_at
-    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
+  const noAction = await db.prepare(`SELECT o.id,o.track,o.contact_id,${nameSql} AS name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.no_followup_reason,o.updated_at
+    FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND o.next_followup_at IS NULL AND COALESCE(o.no_followup_reason,'')='' ORDER BY o.updated_at LIMIT 200`).all();
-  const stale = await db.prepare(`SELECT o.id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.updated_at,
+  const stale = await db.prepare(`SELECT o.id,o.track,o.contact_id,${nameSql} AS name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,o.intent,o.status,o.updated_at,
     (SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id) AS last_activity
-    FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id
+    FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
     WHERE o.status IN (${ACTIVE}) AND o.track != 'transient' AND COALESCE((SELECT MAX(a.created_at) FROM crm_activities a WHERE a.opportunity_id=o.id),o.updated_at) < ?
     ORDER BY COALESCE(last_activity,o.updated_at) LIMIT 200`).bind(new Date(now.getTime() - 7 * 86400000).toISOString()).all();
-  const visits = await db.prepare(`SELECT p.id,p.viewing_at,p.viewing_result,o.id AS opportunity_id,o.track,c.name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,l.title,l.url
+  const visits = await db.prepare(`SELECT p.id,p.viewing_at,p.viewing_result,o.id AS opportunity_id,o.track,${nameSql} AS name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key,l.title,l.url
     FROM crm_opportunity_properties p JOIN crm_opportunities o ON o.id=p.opportunity_id
-    JOIN crm_contacts c ON c.id=o.contact_id JOIN listings l ON l.id=p.listing_id
+    LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin} JOIN listings l ON l.id=p.listing_id
     WHERE p.presentation_status='viewing_scheduled' AND p.viewing_at IS NOT NULL AND datetime(p.viewing_at) >= datetime(?) AND datetime(p.viewing_at) <= datetime(?) ORDER BY p.viewing_at`).bind(start, end).all();
   const outcomes = await db.prepare(`SELECT status, COUNT(*) AS count FROM crm_opportunities WHERE status IN ('won','lost','paused','unqualified') GROUP BY status`).all();
+  const contactlessRow = await db.prepare("SELECT COUNT(*) AS count FROM crm_opportunities WHERE contact_id IS NULL AND track != 'transient'").first();
   return json({
     day,
     timezone: 'Africa/Cairo',
@@ -696,6 +700,7 @@ async function dashboard(db, url) {
       missing_next_step: noAction.results.length,
       smart_alerts_open: smartAlertsOpen,
       unmatched_review_chats: unmatchedChatsCount,
+      contactless_opportunities: Number(contactlessRow?.count || 0),
     },
     tracks: buildTrackCountsMap(trackRows.results),
     due_today: today.results,
@@ -705,6 +710,41 @@ async function dashboard(db, url) {
     scheduled_visits: visits.results,
     outcomes: outcomes.results,
   });
+}
+
+async function inspectSchema0006(db) {
+  const [oppInfo, contactInfo] = await Promise.all([
+    db.prepare('PRAGMA table_info(crm_opportunities)').all(),
+    db.prepare('PRAGMA table_info(crm_contacts)').all(),
+  ]);
+  const oppCols = new Set((oppInfo?.results || []).map(r => r.name));
+  const contactCols = new Set((contactInfo?.results || []).map(r => r.name));
+  return {
+    hasLeadLabel: oppCols.has('lead_label'),
+    hasConversationId: oppCols.has('conversation_id'),
+    hasArchivedAt: contactCols.has('archived_at'),
+    hasReviewNote: contactCols.has('review_note'),
+  };
+}
+
+function computeContactCompletenessStatus(row) {
+  if (row?.archived_at) return 'archived';
+  const hasPhone = Boolean(row?.primary_phone || row?.phone_numbers || Number(row?.phone_count || 0) > 0);
+  return hasPhone ? 'complete' : 'incomplete';
+}
+
+function oppContactNameSql(s0006) {
+  if (s0006.hasLeadLabel && s0006.hasConversationId) {
+    return "COALESCE(c.name, NULLIF(o.lead_label, ''), cv_link.chat_title, 'فرصة قيد استكمال جهة الاتصال')";
+  }
+  if (s0006.hasLeadLabel) {
+    return "COALESCE(c.name, NULLIF(o.lead_label, ''), 'فرصة قيد استكمال جهة الاتصال')";
+  }
+  return "COALESCE(c.name, 'عميل')";
+}
+
+function oppConvJoinSql(s0006) {
+  return s0006.hasConversationId ? 'LEFT JOIN crm_conversations cv_link ON cv_link.id=o.conversation_id' : '';
 }
 
 function appendOpportunityTrackFilter(track, where, params) {
@@ -733,7 +773,27 @@ function buildPhoneSearchClause(q, tableAlias = 'p', contactCol = 'c.id') {
   };
 }
 
+function appendOpportunitySearchClause(q, s0006, where, params) {
+  if (!q) return;
+  const pat = `%${q}%`;
+  const phoneClause = buildPhoneSearchClause(q, 'p', 'c.id');
+  const leadParts = [];
+  const leadParams = [];
+  if (s0006.hasLeadLabel) {
+    leadParts.push('o.lead_label LIKE ?');
+    leadParams.push(pat);
+  }
+  if (s0006.hasConversationId) {
+    leadParts.push('cv_link.chat_title LIKE ?');
+    leadParams.push(pat);
+  }
+  const extraSql = leadParts.length ? `${leadParts.join(' OR ')} OR ` : '';
+  where.push(`(c.name LIKE ? OR ${extraSql}${phoneClause.sql} OR o.area_label LIKE ? OR o.property_type LIKE ? OR o.notes LIKE ?)`);
+  params.push(pat, ...leadParams, ...phoneClause.params, pat, pat, pat);
+}
+
 async function listOpportunities(db, url) {
+  const s0006 = await inspectSchema0006(db);
   const status = url.searchParams.get('status') || '';
   const track = url.searchParams.get('track') || '';
   const role = url.searchParams.get('role') || '';
@@ -746,16 +806,21 @@ async function listOpportunities(db, url) {
   }
   appendOpportunityTrackFilter(track, where, params);
   appendOpportunityRoleFilter(role, where);
-  if (q) {
-    const pat = `%${q}%`;
-    const phoneClause = buildPhoneSearchClause(q, 'p', 'c.id');
-    where.push(`(c.name LIKE ? OR ${phoneClause.sql} OR o.area_label LIKE ? OR o.property_type LIKE ? OR o.notes LIKE ?)`);
-    params.push(pat, ...phoneClause.params, pat, pat, pat);
-  }
+  appendOpportunitySearchClause(q, s0006, where, params);
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const sql = `SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id ${whereSql} ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, CASE WHEN o.next_followup_at IS NULL THEN 1 ELSE 0 END, o.next_followup_at DESC, o.updated_at DESC LIMIT 300`;
+  const nameSql = oppContactNameSql(s0006);
+  const convJoin = oppConvJoinSql(s0006);
+  const sql = `SELECT o.*, ${nameSql} AS contact_name,
+    (SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key
+    FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
+    ${whereSql}
+    ORDER BY CASE WHEN o.track='transient' THEN 1 ELSE 0 END, CASE WHEN o.next_followup_at IS NULL THEN 1 ELSE 0 END, o.next_followup_at DESC, o.updated_at DESC LIMIT 300`;
   const rows = await db.prepare(sql).bind(...params).all();
-  return json({ opportunities: rows.results });
+  const opportunities = (rows.results || []).map(row => ({
+    ...row,
+    contact_completeness: row.contact_id ? (row.phone_key ? 'complete' : 'incomplete') : 'unlinked_opportunity',
+  }));
+  return json({ opportunities });
 }
 
 async function listListings(db, url, scope) {
@@ -768,36 +833,69 @@ async function listListings(db, url, scope) {
   return json({ listings: rows.results });
 }
 
+async function loadOpportunityConversationsAndAlerts(db, opportunityId, contactId, directConvId) {
+  if (!(await hasTable(db, 'crm_conversations'))) {
+    return { conversations: [], smartAlerts: [] };
+  }
+  const convSql = directConvId
+    ? `SELECT id, chat_title, match_status, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version
+       FROM crm_conversations
+       WHERE opportunity_id=? OR id=? OR (? IS NOT NULL AND contact_id=?)
+       ORDER BY last_message_at DESC LIMIT 20`
+    : `SELECT id, chat_title, match_status, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version
+       FROM crm_conversations
+       WHERE opportunity_id=? OR (? IS NOT NULL AND contact_id=?)
+       ORDER BY last_message_at DESC LIMIT 20`;
+  const convParams = directConvId
+    ? [opportunityId, directConvId, contactId || null, contactId || null]
+    : [opportunityId, contactId || null, contactId || null];
+  const [convRes, alertRes] = await Promise.all([
+    db.prepare(convSql).bind(...convParams).all(),
+    db.prepare("SELECT * FROM crm_smart_alerts WHERE opportunity_id=? OR (? IS NOT NULL AND contact_id=?) ORDER BY CASE WHEN status='open' THEN 0 ELSE 1 END, created_at DESC LIMIT 30")
+      .bind(opportunityId, contactId || null, contactId || null).all(),
+  ]);
+  return {
+    conversations: convRes?.results || [],
+    smartAlerts: alertRes?.results || [],
+  };
+}
+
 async function getOpportunity(db, opportunityId) {
-  const opportunity = await db.prepare(`SELECT o.*,c.name AS contact_name,(SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key FROM crm_opportunities o JOIN crm_contacts c ON c.id=o.contact_id WHERE o.id=?`).bind(opportunityId).first();
+  const s0006 = await inspectSchema0006(db);
+  const nameSql = oppContactNameSql(s0006);
+  const convJoin = oppConvJoinSql(s0006);
+  const opportunity = await db.prepare(
+    `SELECT o.*, ${nameSql} AS contact_name,
+      (SELECT phone_key FROM crm_contact_phones WHERE contact_id=c.id AND is_primary=1 LIMIT 1) AS phone_key
+     FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id=o.contact_id ${convJoin}
+     WHERE o.id=?`,
+  ).bind(opportunityId).first();
   if (!opportunity) return json({ error: 'opportunity_not_found' }, 404);
-  const [activities, properties, phones, siblings] = await Promise.all([
+  const contactId = opportunity.contact_id || null;
+  const [activities, properties, phones, siblings, chatBundle] = await Promise.all([
     db.prepare('SELECT * FROM crm_activities WHERE opportunity_id=? ORDER BY created_at DESC LIMIT 100').bind(opportunityId).all(),
     db.prepare(`SELECT p.*,l.external_id,l.url,l.title,l.area_m2,l.price,l.area_id,a.name_ar AS area_name FROM crm_opportunity_properties p
       JOIN listings l ON l.id=p.listing_id JOIN areas a ON a.id=l.area_id WHERE p.opportunity_id=? ORDER BY p.created_at DESC`).bind(opportunityId).all(),
-    db.prepare('SELECT * FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(opportunity.contact_id).all(),
-    db.prepare('SELECT id,track,intent,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 20').bind(opportunity.contact_id).all(),
+    contactId
+      ? db.prepare('SELECT * FROM crm_contact_phones WHERE contact_id=? ORDER BY is_primary DESC,created_at').bind(contactId).all()
+      : Promise.resolve({ results: [] }),
+    contactId
+      ? db.prepare('SELECT id,track,intent,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type FROM crm_opportunities WHERE contact_id=? ORDER BY updated_at DESC LIMIT 20').bind(contactId).all()
+      : Promise.resolve({ results: [] }),
+    loadOpportunityConversationsAndAlerts(db, opportunityId, contactId, opportunity.conversation_id || null),
   ]);
-  let conversations = [];
-  let smartAlerts = [];
-  if (await hasTable(db, 'crm_conversations')) {
-    const [convRes, alertRes] = await Promise.all([
-      db.prepare('SELECT id, chat_title, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version FROM crm_conversations WHERE contact_id=? OR opportunity_id=? ORDER BY last_message_at DESC LIMIT 20')
-        .bind(opportunity.contact_id, opportunityId).all(),
-      db.prepare('SELECT * FROM crm_smart_alerts WHERE opportunity_id=? OR contact_id=? ORDER BY CASE WHEN status=\'open\' THEN 0 ELSE 1 END, created_at DESC LIMIT 30')
-        .bind(opportunityId, opportunity.contact_id).all(),
-    ]);
-    conversations = convRes?.results || [];
-    smartAlerts = alertRes?.results || [];
+  if (!opportunity.conversation_id && chatBundle.conversations.length > 0) {
+    opportunity.conversation_id = chatBundle.conversations[0].id;
   }
+  opportunity.contact_completeness = contactId ? (phones.results.length > 0 ? 'complete' : 'incomplete') : 'unlinked_opportunity';
   return json({
     opportunity,
     activities: activities.results,
     properties: properties.results,
     phones: phones.results,
     sibling_opportunities: siblings.results,
-    conversations,
-    smart_alerts: smartAlerts,
+    conversations: chatBundle.conversations,
+    smart_alerts: chatBundle.smartAlerts,
   });
 }
 
@@ -863,12 +961,30 @@ function duplicatePhone(conflict = null) {
   return json(payload, 409);
 }
 
+function appendContactCompletenessFilter(completeness, s0006, where) {
+  if (completeness === 'archived') {
+    where.push(s0006.hasArchivedAt ? 'c.archived_at IS NOT NULL' : '1=0');
+    return;
+  }
+  if (completeness !== 'all' && s0006.hasArchivedAt) {
+    where.push('c.archived_at IS NULL');
+  }
+  if (completeness === 'complete') {
+    where.push('EXISTS (SELECT 1 FROM crm_contact_phones cp WHERE cp.contact_id=c.id)');
+  } else if (completeness === 'incomplete') {
+    where.push('NOT EXISTS (SELECT 1 FROM crm_contact_phones cp WHERE cp.contact_id=c.id)');
+  }
+}
+
 async function listContacts(db, url) {
+  const s0006 = await inspectSchema0006(db);
   const q = boundedText(url.searchParams.get('q'), 80);
   const track = url.searchParams.get('track') || '';
+  const completeness = (url.searchParams.get('completeness') || '').trim();
   const hasTrack = ALLOWED_TRACKS.includes(track);
   const where = ['1=1'];
   const params = [];
+  appendContactCompletenessFilter(completeness, s0006, where);
   if (q) {
     const pattern = `%${q}%`;
     const phoneClause = buildPhoneSearchClause(q, 'q', 'c.id');
@@ -883,15 +999,29 @@ async function listContacts(db, url) {
   const convSelect = hasConv
     ? ', (SELECT COUNT(*) FROM crm_conversations cv WHERE cv.contact_id=c.id) AS conversation_count, (SELECT COUNT(*) FROM crm_smart_alerts sa WHERE sa.contact_id=c.id AND sa.status=\'open\') AS open_alerts_count'
     : '';
+  const extra0006Select = [
+    s0006.hasArchivedAt ? 'c.archived_at' : 'NULL AS archived_at',
+    s0006.hasReviewNote ? 'c.review_note' : 'NULL AS review_note',
+  ].join(',');
   const rows = await db.prepare(`SELECT c.id,c.name,c.communication_consent,c.consent_captured_at,c.created_at,c.updated_at,
+      ${extra0006Select},
       GROUP_CONCAT(p.phone_key, ',') AS phone_numbers,
       MAX(CASE WHEN p.is_primary=1 THEN p.phone_key ELSE NULL END) AS primary_phone,
+      COUNT(p.id) AS phone_count,
       (SELECT COUNT(*) FROM crm_opportunities o WHERE o.contact_id=c.id) AS opportunity_count,
       (SELECT GROUP_CONCAT(DISTINCT o.track) FROM crm_opportunities o WHERE o.contact_id=c.id) AS tracks${convSelect}
     FROM crm_contacts c LEFT JOIN crm_contact_phones p ON p.contact_id=c.id
     WHERE ${where.join(' AND ')}
     GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 250`).bind(...params).all();
-  return json({ contacts: rows.results });
+  const contacts = (rows.results || []).map(row => {
+    const status = computeContactCompletenessStatus(row);
+    return {
+      ...row,
+      completeness_status: status,
+      needs_review: status === 'incomplete',
+    };
+  });
+  return json({ contacts });
 }
 
 async function getContact(db, contactId) {
@@ -906,7 +1036,7 @@ async function getContact(db, contactId) {
   let auditLog = [];
   if (await hasTable(db, 'crm_conversations')) {
     const [convRes, alertRes, auditRes] = await Promise.all([
-      db.prepare('SELECT id, chat_title, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version FROM crm_conversations WHERE contact_id=? ORDER BY last_message_at DESC LIMIT 30').bind(contactId).all(),
+      db.prepare('SELECT id, chat_title, match_status, source_type, source_ref, length(raw_text) AS char_length, message_count, first_message_at, last_message_at, analyzed_at, analyzed_rule_version AS rule_version FROM crm_conversations WHERE contact_id=? ORDER BY last_message_at DESC LIMIT 30').bind(contactId).all(),
       db.prepare('SELECT * FROM crm_smart_alerts WHERE contact_id=? ORDER BY CASE WHEN status=\'open\' THEN 0 ELSE 1 END, created_at DESC LIMIT 40').bind(contactId).all(),
       db.prepare('SELECT * FROM crm_contact_audit_log WHERE contact_id=? ORDER BY created_at DESC LIMIT 40').bind(contactId).all(),
     ]);
@@ -914,8 +1044,16 @@ async function getContact(db, contactId) {
     smartAlerts = alertRes?.results || [];
     auditLog = auditRes?.results || [];
   }
+  const completenessStatus = computeContactCompletenessStatus({
+    archived_at: contact.archived_at,
+    phone_count: phones.results.length,
+  });
   return json({
-    contact,
+    contact: {
+      ...contact,
+      completeness_status: completenessStatus,
+      needs_review: completenessStatus === 'incomplete',
+    },
     phones: phones.results,
     opportunities: opportunities.results,
     conversations,
@@ -956,14 +1094,17 @@ function contactPhones(body) {
 }
 
 function parseContactBody(body) {
-  const name = boundedText(body.name, 100);
+  const name = boundedText(body.name || body.chat_handle, 100);
   const phones = contactPhones(body);
   const allowedConsent = ['request_only', 'marketing_yes', 'do_not_contact'];
   const consent = allowedConsent.includes(body.communication_consent) ? body.communication_consent : 'request_only';
   const consentAt = body.consent_captured_at ? isoDate(body.consent_captured_at) : null;
   if (!phones || (!name && !phones.length)) return null;
   if ((body.consent_captured_at && !consentAt) || (consent === 'marketing_yes' && !consentAt)) return null;
-  return { name, phones, consent, consentAt };
+  const reviewNote = phones.length === 0
+    ? (boundedText(body.review_note, 240) || 'جهة اتصال غير مكتملة بدون رقم هاتف موثق — تحتاج مراجعة')
+    : (boundedText(body.review_note, 240) || '');
+  return { name, phones, consent, consentAt, reviewNote };
 }
 
 function namesCompatible(a, b) {
@@ -995,10 +1136,14 @@ async function pushAuditStmtIfSupported(db, stmts, { contactId, actionType, fiel
 
 async function saveContact(db, key, contact) {
   const contactId = id();
+  const s0006 = await inspectSchema0006(db);
   const hasProv = await hasTable(db, 'crm_contact_audit_log');
   const statements = [
-    db.prepare('INSERT INTO crm_contacts(id,name,communication_consent,consent_captured_at) VALUES(?,?,?,?)')
-      .bind(contactId, contact.name, contact.consent, contact.consentAt),
+    s0006.hasReviewNote
+      ? db.prepare('INSERT INTO crm_contacts(id,name,communication_consent,consent_captured_at,review_note) VALUES(?,?,?,?,?)')
+          .bind(contactId, contact.name, contact.consent, contact.consentAt, contact.reviewNote)
+      : db.prepare('INSERT INTO crm_contacts(id,name,communication_consent,consent_captured_at) VALUES(?,?,?,?)')
+          .bind(contactId, contact.name, contact.consent, contact.consentAt),
   ];
   for (const item of contact.phones) {
     if (hasProv) {
@@ -1017,9 +1162,16 @@ async function saveContact(db, key, contact) {
     db.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)')
       .bind(key, 'contact', contactId),
   );
+  const completenessStatus = contact.phones.length > 0 ? 'complete' : 'incomplete';
   try {
     await db.batch(statements);
-    return json({ contact_id: contactId, phone_count: contact.phones.length, duplicate_contact: false }, 201);
+    return json({
+      contact_id: contactId,
+      phone_count: contact.phones.length,
+      completeness_status: completenessStatus,
+      needs_review: completenessStatus === 'incomplete',
+      duplicate_contact: false,
+    }, 201);
   } catch (error) {
     const message = String(error?.message || '');
     if (/UNIQUE constraint failed: crm_idempotency_receipts\.submission_key/.test(message)) {
@@ -1046,6 +1198,99 @@ async function createContact(request, env) {
   const duplicate = await findContactDuplicate(env.DB, contact.name, contact.phones);
   if (duplicate) return duplicate;
   return saveContact(env.DB, key, contact);
+}
+
+async function archiveContact(request, env, contactId) {
+  const s0006 = await inspectSchema0006(env.DB);
+  if (!s0006.hasArchivedAt) return json({ error: 'migration_0006_required' }, 409);
+  const body = await readJson(request).catch(() => ({}));
+  const existing = await env.DB.prepare('SELECT id, name, archived_at FROM crm_contacts WHERE id=?').bind(contactId).first();
+  if (!existing) return json({ error: 'contact_not_found' }, 404);
+  const restore = body?.restore === true || body?.archived === false;
+  const nextArchivedAt = restore ? null : new Date().toISOString();
+  const [oppCnt, convCnt] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) AS cnt FROM crm_opportunities WHERE contact_id=?').bind(contactId).first(),
+    (await hasTable(env.DB, 'crm_conversations'))
+      ? env.DB.prepare('SELECT COUNT(*) AS cnt FROM crm_conversations WHERE contact_id=?').bind(contactId).first()
+      : Promise.resolve({ cnt: 0 }),
+  ]);
+  const stmts = [
+    env.DB.prepare('UPDATE crm_contacts SET archived_at=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(nextArchivedAt, contactId),
+  ];
+  await pushAuditStmtIfSupported(env.DB, stmts, {
+    contactId,
+    actionType: restore ? 'contact_unarchived' : 'contact_archived',
+    fieldName: 'archived_at',
+    oldVal: existing.archived_at || null,
+    newVal: nextArchivedAt,
+  });
+  await env.DB.batch(stmts);
+  return json({
+    ok: true,
+    contact_id: contactId,
+    archived: !restore,
+    archived_at: nextArchivedAt,
+    completeness_status: restore ? 'incomplete_or_complete' : 'archived',
+    opportunities_preserved: Number(oppCnt?.cnt || 0),
+    conversations_preserved: Number(convCnt?.cnt || 0),
+  });
+}
+
+async function deleteContactDetached(env, contactId) {
+  const s0006 = await inspectSchema0006(env.DB);
+  if (!s0006.hasLeadLabel) return json({ error: 'migration_0006_required' }, 409);
+  const existing = await env.DB.prepare('SELECT id, name FROM crm_contacts WHERE id=?').bind(contactId).first();
+  if (!existing) return json({ error: 'contact_not_found' }, 404);
+  const hasConv = await hasTable(env.DB, 'crm_conversations');
+  const [oppCnt, convCnt] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) AS cnt FROM crm_opportunities WHERE contact_id=?').bind(contactId).first(),
+    hasConv
+      ? env.DB.prepare('SELECT COUNT(*) AS cnt FROM crm_conversations WHERE contact_id=?').bind(contactId).first()
+      : Promise.resolve({ cnt: 0 }),
+  ]);
+  const stmts = [
+    env.DB.prepare(
+      `UPDATE crm_opportunities
+       SET lead_label = COALESCE(NULLIF(lead_label, ''), ?),
+           contact_id = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE contact_id = ?`,
+    ).bind(existing.name || '', contactId),
+  ];
+  if (hasConv) {
+    stmts.push(
+      env.DB.prepare(
+        `UPDATE crm_conversations
+         SET contact_id = NULL,
+             match_status = CASE WHEN match_status IN ('matched', 'resolved_manual') THEN 'unmatched_review' ELSE match_status END,
+             review_reason = CASE WHEN COALESCE(review_reason, '') = '' THEN 'تم حذف سجل جهة الاتصال مع الاحتفاظ بالمحادثة كاملة دون مسح' ELSE review_reason END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE contact_id = ?`,
+      ).bind(contactId),
+      env.DB.prepare('UPDATE crm_conversation_insights SET contact_id = NULL WHERE contact_id = ?').bind(contactId),
+      env.DB.prepare('UPDATE crm_smart_alerts SET contact_id = NULL WHERE contact_id = ?').bind(contactId),
+      env.DB.prepare('UPDATE crm_contact_audit_log SET contact_id = NULL WHERE contact_id = ?').bind(contactId),
+    );
+  }
+  await pushAuditStmtIfSupported(env.DB, stmts, {
+    contactId: null,
+    actionType: 'contact_deleted_detached',
+    fieldName: 'contact_id',
+    oldVal: `${contactId}:${existing.name || ''}`,
+    newVal: null,
+  });
+  stmts.push(
+    env.DB.prepare('DELETE FROM crm_contact_phones WHERE contact_id = ?').bind(contactId),
+    env.DB.prepare("DELETE FROM crm_idempotency_receipts WHERE resource_type = 'contact' AND resource_id = ?").bind(contactId),
+    env.DB.prepare('DELETE FROM crm_contacts WHERE id = ?').bind(contactId),
+  );
+  await env.DB.batch(stmts);
+  return json({
+    ok: true,
+    deleted_contact_id: contactId,
+    detached_opportunities: Number(oppCnt?.cnt || 0),
+    detached_conversations: Number(convCnt?.cnt || 0),
+  });
 }
 
 async function addContactPhone(request, env, contactId) {
@@ -1737,6 +1982,104 @@ async function buildContactSetupStatements(db, contact, contactId, name, phone, 
   return statements;
 }
 
+async function resolveOpportunityConversationRef(db, requestedConvId) {
+  if (!requestedConvId) return { conv: null };
+  if (!(await hasTable(db, 'crm_conversations'))) return { error: json({ error: 'conversation_not_found' }, 404) };
+  const conv = await db.prepare('SELECT id, contact_id, chat_title FROM crm_conversations WHERE id=?').bind(requestedConvId).first();
+  if (!conv) return { error: json({ error: 'conversation_not_found' }, 404) };
+  return { conv };
+}
+
+function buildOpportunityInsertStmt(db, s0006, {
+  opportunityId,
+  contactId,
+  conversationId,
+  leadLabel,
+  parsed,
+  body,
+  closedAt,
+}) {
+  if (s0006.hasLeadLabel && s0006.hasConversationId) {
+    return db.prepare(
+      `INSERT INTO crm_opportunities(id,contact_id,conversation_id,lead_label,track,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,closed_at,loss_reason,loss_notes)
+       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ).bind(
+      opportunityId,
+      contactId,
+      conversationId,
+      leadLabel,
+      parsed.track,
+      parsed.intent,
+      parsed.source,
+      safeSitePath(body.source_url),
+      parsed.status,
+      boundedText(body.area_label, 100),
+      parsed.budgetMin.value,
+      parsed.budgetMax.value,
+      parsed.sizeMin.value,
+      parsed.sizeMax.value,
+      boundedText(body.property_type, 80),
+      boundedText(body.notes, 1200),
+      parsed.nextAction,
+      parsed.nextAt,
+      parsed.reason,
+      closedAt,
+      body.loss_reason || null,
+      boundedText(body.loss_notes, 500),
+    );
+  }
+  return db.prepare(
+    `INSERT INTO crm_opportunities(id,contact_id,track,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,closed_at,loss_reason,loss_notes)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).bind(
+    opportunityId,
+    contactId,
+    parsed.track,
+    parsed.intent,
+    parsed.source,
+    safeSitePath(body.source_url),
+    parsed.status,
+    boundedText(body.area_label, 100),
+    parsed.budgetMin.value,
+    parsed.budgetMax.value,
+    parsed.sizeMin.value,
+    parsed.sizeMax.value,
+    boundedText(body.property_type, 80),
+    boundedText(body.notes, 1200),
+    parsed.nextAction,
+    parsed.nextAt,
+    parsed.reason,
+    closedAt,
+    body.loss_reason || null,
+    boundedText(body.loss_notes, 500),
+  );
+}
+
+async function prepareOpportunityContactOrContactless(db, s0006, body, parsed, convRow) {
+  const rawLabel = boundedText(body.lead_label || body.name, 120);
+  const name = boundedText(body.name || rawLabel || convRow?.chat_title, 100);
+  const requestedId = boundedText(body.contact_id, 80);
+  const hasExplicitContactName = Boolean(boundedText(body.name, 100));
+  const useIndependentContactless = s0006.hasLeadLabel
+    && !requestedId
+    && !parsed.phone
+    && (body.contactless === true || (!hasExplicitContactName && Boolean(body.lead_label || convRow)));
+
+  if (useIndependentContactless) {
+    const effectiveLabel = rawLabel || boundedText(convRow?.chat_title, 120);
+    if (!normalizeName(effectiveLabel) && !convRow) {
+      return { error: json({ error: 'contact_or_phone_required' }, 400) };
+    }
+    return { contactId: convRow?.contact_id || null, statements: [], name, rawLabel };
+  }
+
+  const resolved = await resolveOpportunityContact(db, requestedId, parsed.phone, name);
+  if (resolved.error) return { error: resolved.error };
+  const contactId = resolved.contact?.id || id();
+  const statements = await buildContactSetupStatements(db, resolved.contact, contactId, name, parsed.phone, resolved.phoneExists);
+  return { contactId, statements, name, rawLabel };
+}
+
 async function createOpportunity(request, env) {
   const body = await readJson(request);
   const parsed = parseOpportunityInput(body);
@@ -1745,35 +2088,53 @@ async function createOpportunity(request, env) {
   if (!key) return json({ error: 'idempotency_key_required' }, 400);
   const prior = await receipt(env.DB, key);
   if (prior) {
-    if (prior.resource_type === 'opportunity') return json({ contact_id: null, opportunity_id: prior.resource_id, duplicate_submission: true });
-    return json({ error: 'idempotency_key_reused' }, 409);
+    return prior.resource_type === 'opportunity'
+      ? json({ contact_id: null, opportunity_id: prior.resource_id, duplicate_submission: true })
+      : json({ error: 'idempotency_key_reused' }, 409);
   }
 
-  const name = boundedText(body.name, 100);
-  const requestedId = boundedText(body.contact_id, 80);
-  const resolved = await resolveOpportunityContact(env.DB, requestedId, parsed.phone, name);
-  if (resolved.error) return resolved.error;
+  const s0006 = await inspectSchema0006(env.DB);
+  const convLookup = await resolveOpportunityConversationRef(env.DB, boundedText(body.conversation_id, 80));
+  if (convLookup.error) return convLookup.error;
+  const convRow = convLookup.conv;
 
-  const contactId = resolved.contact?.id || id();
+  const prep = await prepareOpportunityContactOrContactless(env.DB, s0006, body, parsed, convRow);
+  if (prep.error) return prep.error;
+
   const opportunityId = id();
-  const statements = await buildContactSetupStatements(env.DB, resolved.contact, contactId, name, parsed.phone, resolved.phoneExists);
   const closedAt = parsed.status === 'won' || parsed.status === 'lost' ? new Date().toISOString() : null;
+  const leadLabel = prep.rawLabel || boundedText(convRow?.chat_title, 120) || '';
+  const statements = [...prep.statements, buildOpportunityInsertStmt(env.DB, s0006, {
+    opportunityId,
+    contactId: prep.contactId,
+    conversationId: convRow?.id || null,
+    leadLabel,
+    parsed,
+    body,
+    closedAt,
+  })];
+  if (convRow?.id) {
+    statements.push(
+      env.DB.prepare('UPDATE crm_conversations SET opportunity_id=COALESCE(opportunity_id, ?), updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(opportunityId, convRow.id),
+    );
+  }
   statements.push(
-    env.DB.prepare(`INSERT INTO crm_opportunities(id,contact_id,track,intent,source,source_url,status,area_label,budget_min,budget_max,size_min_m2,size_max_m2,property_type,notes,next_action,next_followup_at,no_followup_reason,closed_at,loss_reason,loss_notes)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(opportunityId, contactId, parsed.track, parsed.intent, parsed.source, safeSitePath(body.source_url), parsed.status, boundedText(body.area_label, 100), parsed.budgetMin.value, parsed.budgetMax.value, parsed.sizeMin.value, parsed.sizeMax.value, boundedText(body.property_type, 80), boundedText(body.notes, 1200), parsed.nextAction, parsed.nextAt, parsed.reason, closedAt, body.loss_reason || null, boundedText(body.loss_notes, 500)),
-  );
-  statements.push(env.DB.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)').bind(key, 'opportunity', opportunityId));
-  statements.push(
+    env.DB.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,?,?)').bind(key, 'opportunity', opportunityId),
     env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
       .bind(id(), opportunityId, initialActivityType(parsed.source), boundedText(body.notes, 1200) || 'تسجيل فرصة جديدة', '', parsed.nextAction, parsed.nextAt),
   );
 
   try {
     await env.DB.batch(statements);
-    return json({ contact_id: contactId, opportunity_id: opportunityId, duplicate_submission: false }, 201);
+    return json({
+      contact_id: prep.contactId,
+      conversation_id: convRow?.id || null,
+      opportunity_id: opportunityId,
+      duplicate_submission: false,
+    }, 201);
   } catch (error) {
-    return handleOpportunityBatchError(env.DB, error, key, parsed.phone, name);
+    return handleOpportunityBatchError(env.DB, error, key, parsed.phone, prep.name);
   }
 }
 
@@ -1826,21 +2187,79 @@ function parseOpportunityPatch(body, current) {
   return { intent, areaLabel, propertyType, notes, budgetMin: budgetMin.value, budgetMax: budgetMax.value, sizeMin: sizeMin.value, sizeMax: sizeMax.value };
 }
 
+async function attachVerifiedContactForOpportunityUpdate(db, current, body, nextLeadLabel) {
+  if (current.contact_id || !body.phone) {
+    return { contactId: current.contact_id || null, statements: [] };
+  }
+  const phone = normalizePhone(body.phone);
+  if (!phone) return { error: json({ error: 'invalid_phone' }, 400) };
+  const found = await findPhone(db, phone);
+  if (found) {
+    const stmts = [];
+    if (current.conversation_id) {
+      stmts.push(
+        db.prepare("UPDATE crm_conversations SET contact_id=?, match_status='resolved_manual', review_reason='', updated_at=CURRENT_TIMESTAMP WHERE id=?")
+          .bind(found.contact_id, current.conversation_id),
+      );
+    }
+    return { contactId: found.contact_id, statements: stmts };
+  }
+  const newContactId = id();
+  const cName = boundedText(body.name || nextLeadLabel || 'عميل موثق', 100);
+  const hasProv = await hasTable(db, 'crm_contact_audit_log');
+  const stmts = [
+    db.prepare('INSERT INTO crm_contacts(id,name) VALUES(?,?)').bind(newContactId, cName),
+    hasProv
+      ? db.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary,raw_input,source_type,source_ref) VALUES(?,?,?,?,1,?,'manual','opportunity_phone_attach')")
+          .bind(id(), newContactId, phone, boundedText(body.label, 40) || 'أساسي', boundedText(body.phone, 50))
+      : db.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,1)')
+          .bind(id(), newContactId, phone, boundedText(body.label, 40) || 'أساسي'),
+  ];
+  await pushAuditStmtIfSupported(db, stmts, {
+    contactId: newContactId,
+    actionType: 'contact_created',
+    fieldName: 'primary_phone',
+    newVal: phone,
+    sourceRef: 'opportunity_phone_attach',
+  });
+  if (current.conversation_id) {
+    stmts.push(
+      db.prepare("UPDATE crm_conversations SET contact_id=?, match_status='resolved_manual', review_reason='', updated_at=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(newContactId, current.conversation_id),
+    );
+  }
+  return { contactId: newContactId, statements: stmts };
+}
+
 async function updateOpportunity(request, env, opportunityId) {
   const body = await readJson(request);
   const current = await env.DB.prepare('SELECT * FROM crm_opportunities WHERE id=?').bind(opportunityId).first();
   if (!current) return json({ error: 'opportunity_not_found' }, 404);
   const patch = parseOpportunityPatch(body, current);
   if (patch.error) return patch.error;
+  const s0006 = await inspectSchema0006(env.DB);
+  const nextLeadLabel = body.lead_label === undefined
+    ? (current.lead_label || '')
+    : boundedText(body.lead_label, 120);
+  const attachRes = await attachVerifiedContactForOpportunityUpdate(env.DB, current, body, nextLeadLabel);
+  if (attachRes.error) return attachRes.error;
+
+  const updateStmt = s0006.hasLeadLabel
+    ? env.DB.prepare('UPDATE crm_opportunities SET contact_id=?,lead_label=?,intent=?,area_label=?,property_type=?,budget_min=?,budget_max=?,size_min_m2=?,size_max_m2=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(attachRes.contactId, nextLeadLabel, patch.intent, patch.areaLabel, patch.propertyType, patch.budgetMin, patch.budgetMax, patch.sizeMin, patch.sizeMax, patch.notes, opportunityId)
+    : env.DB.prepare('UPDATE crm_opportunities SET intent=?,area_label=?,property_type=?,budget_min=?,budget_max=?,size_min_m2=?,size_max_m2=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind(patch.intent, patch.areaLabel, patch.propertyType, patch.budgetMin, patch.budgetMax, patch.sizeMin, patch.sizeMax, patch.notes, opportunityId);
+
   try {
     await env.DB.batch([
-      env.DB.prepare('UPDATE crm_opportunities SET intent=?,area_label=?,property_type=?,budget_min=?,budget_max=?,size_min_m2=?,size_max_m2=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
-        .bind(patch.intent, patch.areaLabel, patch.propertyType, patch.budgetMin, patch.budgetMax, patch.sizeMin, patch.sizeMax, patch.notes, opportunityId),
+      ...attachRes.statements,
+      updateStmt,
       env.DB.prepare('INSERT INTO crm_activities(id,opportunity_id,activity_type,summary,outcome,next_action,next_followup_at) VALUES(?,?,?,?,?,?,?)')
         .bind(id(), opportunityId, 'note', 'تحديث مواصفات أو ملاحظات الفرصة', '', current.next_action, current.next_followup_at),
     ]);
-    return json({ ok: true, opportunity_id: opportunityId });
+    return json({ ok: true, opportunity_id: opportunityId, contact_id: attachRes.contactId });
   } catch (error) {
+    if (/UNIQUE constraint failed: crm_contact_phones\.phone_key/.test(String(error?.message))) return duplicatePhone();
     return sqlError(error);
   }
 }
@@ -2052,11 +2471,13 @@ const EXACT_POST_ROUTES = {
 };
 
 const PARAM_ROUTES = [
+  { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/archive$/, run: (req, env, m) => archiveContact(req, env, m[1]) },
   { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones$/, run: (req, env, m) => addContactPhone(req, env, m[1]) },
   { method: 'PATCH', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateContactPhone(req, env, m[1], m[2]) },
   { method: 'DELETE', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})\/phones\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => deleteContactPhone(req, env, m[1], m[2]) },
   { method: 'GET', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => getContact(env.DB, m[1]) },
   { method: 'POST', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateContact(req, env, m[1]) },
+  { method: 'DELETE', re: /^\/api\/contacts\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => deleteContactDetached(env, m[1]) },
   { method: 'GET', re: /^\/api\/conversations\/([a-zA-Z0-9_-]{8,80})$/, run: async (_req, env, m) => {
     const data = await getConversationDetailData(env.DB, m[1]);
     return data ? json(data) : json({ error: 'conversation_not_found' }, 404);

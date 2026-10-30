@@ -24,6 +24,7 @@ const MIGRATION_FILES = [
   '0003_crm_push_notifications.sql',
   '0004_crm_tracks_core.sql',
   '0005_sync_audit_and_intelligence.sql',
+  '0006_decouple_opportunities_and_contact_levels.sql',
 ];
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.example.workers.dev';
 
@@ -677,20 +678,21 @@ test('Clean Foundation Policy (strict_complete_contacts_only): enforces backup r
   assert.equal(rejected.ok, false);
   assert.equal(rejected.error, 'backup_verified_ref_required_before_foundation_cleanup');
 
-  // 4) Dry-run succeeds without mutating D1 and reports exact purge + keep counts
+  // 4) Dry-run succeeds without mutating D1 and reports exact decoupled counts (preserving active opportunities & conversations!)
   const dryRes = await runSourceSyncBundle(db, cleanBundle, { dryRun: true, now: new Date('2026-10-30T12:00:00Z') });
   assert.equal(dryRes.ok, true);
   assert.equal(dryRes.diff.incomplete_or_transient_vcf_skipped, 1);
   assert.equal(dryRes.diff.purged_incomplete_contacts, 3);
-  assert.equal(dryRes.diff.purged_incomplete_opportunities, 2);
-  assert.equal(dryRes.diff.purged_incomplete_conversations, 1);
+  assert.equal(dryRes.diff.purged_incomplete_opportunities, 1, 'Only ✈️ transient archive opportunity is purged; non-transient opportunities are NEVER deleted due to missing phone');
+  assert.equal(dryRes.diff.detached_incomplete_opportunities, 1, 'Active-track opportunity on phoneless contact is detached independently, NOT deleted');
+  assert.equal(dryRes.diff.purged_incomplete_conversations, 0, 'Conversations are NEVER cascade-deleted when contacts are cleaned');
   assert.equal(dryRes.diff.existing_contacts_with_valid_phones, 1);
   assert.equal(dryRes.diff.missing_contacts_to_add, 1);
   assert.equal(dryRes.diff.conversations_matched, 1);
-  assert.equal(dryRes.diff.incomplete_conversations_skipped, 2);
+  assert.equal(dryRes.diff.conversations_unmatched_review, 2);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS cnt FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'").get().cnt, 4, 'dry_run must not delete rows');
 
-  // 5) Live cleanup with verified backup reference executes cleanly without any FK violation
+  // 5) Live cleanup with verified backup reference executes cleanly without any FK violation and preserves active opportunities & conversations
   const liveRun1 = await runSourceSyncBundle(
     db,
     { ...cleanBundle, backup_verified_ref: 'nasr-crm-test-db-backup-20261030-unit' },
@@ -707,8 +709,12 @@ test('Clean Foundation Policy (strict_complete_contacts_only): enforces backup r
   ).all();
   assert.equal(remainingRealContacts.length, 2, 'Only the 2 complete non-transient VCF contacts remain');
   assert.ok(remainingRealContacts.every(r => r.phone_cnt >= 1 && !r.name.includes('✈')), '100% of remaining contacts have verified phones and zero ✈️ clutter');
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS cnt FROM crm_conversations WHERE match_status = 'unmatched_review'").get().cnt, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS cnt FROM crm_conversations WHERE match_status = 'unmatched_review'").get().cnt, 3, 'Unmatched conversations preserved in unmatched_review without auto-creating contacts');
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS cnt FROM crm_opportunities WHERE id = 'o-comp-1'").get().cnt, 1, 'Active opportunity on complete contact preserved');
+  const detachedOpp = sqlite.prepare("SELECT id, contact_id, lead_label FROM crm_opportunities WHERE id = 'o-phoneless-1'").get();
+  assert.ok(detachedOpp, 'Phoneless non-transient opportunity preserved independently');
+  assert.equal(detachedOpp.contact_id, null);
+  assert.match(detachedOpp.lead_label, /عميل اسم مستخدم فقط/);
 
   // 6) Second run is 100% idempotent (0 purges, 0 additions, incremental conversation skip)
   const liveRun2 = await runSourceSyncBundle(
@@ -719,7 +725,7 @@ test('Clean Foundation Policy (strict_complete_contacts_only): enforces backup r
   assert.equal(liveRun2.ok, true);
   assert.equal(liveRun2.diff.purged_incomplete_contacts, 0);
   assert.equal(liveRun2.diff.missing_contacts_to_add, 0);
-  assert.equal(liveRun2.intelligence.conversations_incremental_skipped, 1);
+  assert.equal(liveRun2.intelligence.conversations_incremental_skipped, 3);
   sqlite.close();
 });
 

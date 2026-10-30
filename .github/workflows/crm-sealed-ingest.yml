@@ -7,6 +7,7 @@ on:
       - 'arena/**'
     paths:
       - .github/workflows/crm-sealed-ingest.yml
+      - scripts/crm/build-backup-restore-envelopes.mjs
       - _worker/ingest-queue/sealed.txt
   workflow_dispatch:
     inputs:
@@ -38,13 +39,18 @@ jobs:
       cphones: ${{ steps.run_ingest.outputs.cphones }}
       phones: ${{ steps.run_ingest.outputs.phones }}
       opps: ${{ steps.run_ingest.outputs.opps }}
+      cless_opps: ${{ steps.run_ingest.outputs.cless_opps }}
       linked: ${{ steps.run_ingest.outputs.linked }}
       listings: ${{ steps.run_ingest.outputs.listings }}
       tracks: ${{ steps.run_ingest.outputs.tracks }}
       convs: ${{ steps.run_ingest.outputs.convs }}
+      unm_convs: ${{ steps.run_ingest.outputs.unm_convs }}
       msgs: ${{ steps.run_ingest.outputs.msgs }}
       alerts: ${{ steps.run_ingest.outputs.alerts }}
+      dups: ${{ steps.run_ingest.outputs.dups }}
+      backup_ref: ${{ steps.run_ingest.outputs.backup_ref }}
       sync_stats: ${{ steps.run_ingest.outputs.sync_stats }}
+      restore_stats: ${{ steps.run_ingest.outputs.restore_stats }}
       pk1: ${{ steps.run_ingest.outputs.pk1 }}
       pk2: ${{ steps.run_ingest.outputs.pk2 }}
       pk3: ${{ steps.run_ingest.outputs.pk3 }}
@@ -64,6 +70,7 @@ jobs:
           API='https://api.cloudflare.com/client/v4'
           TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
           PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
+          BACKUP_DB_NAME='nasr-crm-test-db-backup-20261030'
           WORKER_NAME='nasr-crm-api-test'
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           TMP=$(mktemp -d)
@@ -76,13 +83,18 @@ jobs:
           cphones='0'
           phones='0'
           opps='0'
+          cless_opps='0'
           linked='0'
           listings='0'
           tracks='none'
           convs='0'
+          unm_convs='0'
           msgs='0'
           alerts='0'
+          dups='0:0'
+          backup_ref='unchecked'
           sync_stats='none'
+          restore_stats='none'
           pk1=''
           pk2=''
           pk3=''
@@ -100,13 +112,18 @@ jobs:
               printf 'cphones=%s\n' "$cphones"
               printf 'phones=%s\n' "$phones"
               printf 'opps=%s\n' "$opps"
+              printf 'cless_opps=%s\n' "$cless_opps"
               printf 'linked=%s\n' "$linked"
               printf 'listings=%s\n' "$listings"
               printf 'tracks=%s\n' "$tracks"
               printf 'convs=%s\n' "$convs"
+              printf 'unm_convs=%s\n' "$unm_convs"
               printf 'msgs=%s\n' "$msgs"
               printf 'alerts=%s\n' "$alerts"
+              printf 'dups=%s\n' "$dups"
+              printf 'backup_ref=%s\n' "$backup_ref"
               printf 'sync_stats=%s\n' "$sync_stats"
+              printf 'restore_stats=%s\n' "$restore_stats"
               printf 'pk1=%s\n' "$pk1"
               printf 'pk2=%s\n' "$pk2"
               printf 'pk3=%s\n' "$pk3"
@@ -144,6 +161,55 @@ jobs:
           account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
 
+          collect_counts() {
+            COUNTS_SQL="SELECT
+              (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
+              (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
+              (SELECT COUNT(DISTINCT contact_id) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS cphones_cnt,
+              (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS opps_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL) AS cless_opps_cnt,
+              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS g_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS r_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='new_rent_apt' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS b_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='admin_hq' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS y_cnt,
+              (SELECT COUNT(*) FROM crm_opportunities WHERE track='transient' AND (contact_id IS NULL OR contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS t_cnt;"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
+            listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
+            contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
+            cphones=$(jq -r '.. | objects | select(has("cphones_cnt")) | .cphones_cnt | tostring' "$TMP/counts.json" | head -n1)
+            phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
+            opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+            cless_opps=$(jq -r '.. | objects | select(has("cless_opps_cnt")) | .cless_opps_cnt | tostring' "$TMP/counts.json" | head -n1)
+            linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+            tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
+            INTEL_SQL="SELECT
+              (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS convs_cnt,
+              (SELECT COUNT(*) FROM crm_conversations WHERE match_status='unmatched_review' AND chat_title NOT LIKE 'TEST ONLY%') AS unm_convs_cnt,
+              (SELECT COUNT(*) FROM crm_conversation_messages) AS msgs_cnt,
+              (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS alerts_cnt,
+              (SELECT COUNT(*) - COUNT(DISTINCT id) FROM crm_opportunities) AS dup_opps,
+              (SELECT COUNT(*) - COUNT(DISTINCT conversation_uid) FROM crm_conversations) AS dup_convs;"
+            if npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$INTEL_SQL" > "$TMP/intel.json" 2>/dev/null; then
+              convs=$(jq -r '.. | objects | select(has("convs_cnt")) | .convs_cnt | tostring' "$TMP/intel.json" | head -n1)
+              unm_convs=$(jq -r '.. | objects | select(has("unm_convs_cnt")) | .unm_convs_cnt | tostring' "$TMP/intel.json" | head -n1)
+              msgs=$(jq -r '.. | objects | select(has("msgs_cnt")) | .msgs_cnt | tostring' "$TMP/intel.json" | head -n1)
+              alerts=$(jq -r '.. | objects | select(has("alerts_cnt")) | .alerts_cnt | tostring' "$TMP/intel.json" | head -n1)
+              dups=$(jq -r '.. | objects | select(has("dup_opps")) | "\(.dup_opps):\(.dup_convs)"' "$TMP/intel.json" | head -n1)
+            fi
+            curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1_list.json" "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true
+            b_uuid=$(jq -r --arg bn "$BACKUP_DB_NAME" '.result[]? | select(.name == $bn) | .uuid // empty' "$TMP/d1_list.json" | head -n1)
+            if [ -n "$b_uuid" ]; then
+              printf 'name = "nasr-crm-backup-ro"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\n' "$BACKUP_DB_NAME" "$b_uuid" > "$TMP/backup_ro.toml"
+              if npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" \
+                --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/b_chk.json" 2>/dev/null; then
+                b_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/b_chk.json" | head -n1)
+                backup_ref="${b_uuid:0:8}[${b_pair}]"
+              fi
+            fi
+          }
+
           if [ -n "${SEALED_PAYLOAD:-}" ]; then
             printf '%s\n' "$SEALED_PAYLOAD" | grep -v '^[[:space:]]*#' | sed '/^[[:space:]]*$/d' > "$TMP/queue.txt" || true
           elif [ -f '_worker/ingest-queue/sealed.txt' ]; then
@@ -153,49 +219,13 @@ jobs:
           fi
           envelope=$(sed -n '1p' "$TMP/queue.txt" | tr -d '[:space:]')
           if [ -z "$envelope" ] || [ "$envelope" = 'IDLE' ]; then
-            COUNTS_SQL="SELECT
-              (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
-              (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
-              (SELECT COUNT(DISTINCT contact_id) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS cphones_cnt,
-              (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
-              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS g_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS r_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE track='new_rent_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS b_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE track='admin_hq' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS y_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE track='transient' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS t_cnt;"
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
-            listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
-            contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
-            cphones=$(jq -r '.. | objects | select(has("cphones_cnt")) | .cphones_cnt | tostring' "$TMP/counts.json" | head -n1)
-            phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
-            opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
-            linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
-            tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
-            INTEL_SQL="SELECT (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS convs_cnt, (SELECT COUNT(*) FROM crm_conversation_messages) AS msgs_cnt, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS alerts_cnt;"
-            if npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$INTEL_SQL" > "$TMP/intel.json" 2>/dev/null; then
-              convs=$(jq -r '.. | objects | select(has("convs_cnt")) | .convs_cnt | tostring' "$TMP/intel.json" | head -n1)
-              msgs=$(jq -r '.. | objects | select(has("msgs_cnt")) | .msgs_cnt | tostring' "$TMP/intel.json" | head -n1)
-              alerts=$(jq -r '.. | objects | select(has("alerts_cnt")) | .alerts_cnt | tostring' "$TMP/intel.json" | head -n1)
-            fi
+            collect_counts
             result='queue-idle-verified'
             finish
             exit 0
           fi
           if [ "$envelope" = 'READ_PUBLIC_KEY' ]; then
-            COUNTS_SQL="SELECT
-              (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
-              (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
-              (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
-              (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
-              (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt;"
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
-            listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
-            contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
-            phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
-            opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
-            linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
+            collect_counts
             PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
             npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null
             pub=$(jq -r '.. | objects | select(has("pub")) | .pub // empty' "$TMP/pub.json" | head -n1 | tr -cd 'A-Za-z0-9_-')
@@ -218,75 +248,120 @@ jobs:
           subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
           BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
 
+          deliver_envelope() {
+            local env_val="$1"
+            local tag_idx="$2"
+            local out_json="$3"
+            if [ "${#env_val}" -gt 4500000 ] || [[ ! "$env_val" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
+              result="invalid-envelope-format-${tag_idx}"
+              finish
+              exit 1
+            fi
+            printf '%s' "$env_val" > "$TMP/env_${tag_idx}.txt"
+            local ticket_hash
+            ticket_hash=$(sha256sum "$TMP/env_${tag_idx}.txt" | awk '{print $1}')
+            local TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('sealed-ticket:${ticket_hash}','opportunity','authorized_pending') ON CONFLICT(submission_key) DO NOTHING;"
+            if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ticket_${tag_idx}.log" 2>&1; then
+              result="d1-ticket-insert-failed-${tag_idx}"
+              finish
+              exit 1
+            fi
+            jq -Rs '{sealed_payload: .}' "$TMP/env_${tag_idx}.txt" > "$TMP/req_${tag_idx}.json"
+            local http_code
+            http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 120 \
+              -X POST -H 'Content-Type: application/json' \
+              --data-binary "@$TMP/req_${tag_idx}.json" \
+              -o "$out_json" -w '%{http_code}' \
+              "$BASE_URL/api/ingest/sealed" 2>/dev/null || true)
+            if [ "$http_code" != '200' ]; then
+              local err_code
+              err_code=$(jq -r '.error // "unknown"' "$out_json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
+              result="ingest-http-${http_code}-${err_code:-unknown}-${tag_idx}"
+              finish
+              exit 1
+            fi
+          }
+
+          run_backup_restore_directive() {
+            local dry_flag="$1"
+            local r_idx="$2"
+            curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1_bak_lookup.json" "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null
+            local b_uuid
+            b_uuid=$(jq -r --arg bn "$BACKUP_DB_NAME" '.result[]? | select(.name == $bn) | .uuid // empty' "$TMP/d1_bak_lookup.json" | head -n1)
+            if [ -z "$b_uuid" ]; then
+              result='backup-db-not-found-for-restore'
+              finish
+              exit 1
+            fi
+            printf 'name = "nasr-crm-backup-ro"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\n' "$BACKUP_DB_NAME" "$b_uuid" > "$TMP/backup_ro.toml"
+            local BAK_OPPS_SQL="SELECT o.id, COALESCE(c.name, '') AS lead_label, o.track, o.intent, o.source, o.source_url, o.status, o.area_label, o.budget_min, o.budget_max, o.size_min_m2, o.size_max_m2, o.property_type, o.notes, o.next_action, o.next_followup_at, o.no_followup_reason, o.closed_at, o.loss_reason, o.loss_notes, o.created_at, o.updated_at FROM crm_opportunities o LEFT JOIN crm_contacts c ON c.id = o.contact_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND COALESCE(c.name, '') NOT LIKE 'TEST ONLY%' AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY o.created_at ASC, o.id ASC;"
+            local BAK_ACTS_SQL="SELECT a.* FROM crm_activities a JOIN crm_opportunities o ON o.id = a.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY a.created_at ASC, a.id ASC;"
+            local BAK_PROPS_SQL="SELECT op.* FROM crm_opportunity_properties op JOIN crm_opportunities o ON o.id = op.opportunity_id WHERE o.track IN ('sale_apt','furnished_apt','new_rent_apt','admin_hq') AND NOT EXISTS (SELECT 1 FROM crm_contact_phones p WHERE p.contact_id = o.contact_id) ORDER BY op.created_at ASC, op.id ASC;"
+            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_OPPS_SQL" > "$TMP/bak_opps_${r_idx}.json" 2>/dev/null
+            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_ACTS_SQL" > "$TMP/bak_acts_${r_idx}.json" 2>/dev/null
+            npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup_ro.toml" --command "$BAK_PROPS_SQL" > "$TMP/bak_props_${r_idx}.json" 2>/dev/null
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;" > "$TMP/pub_${r_idx}.json" 2>/dev/null
+            node scripts/crm/build-backup-restore-envelopes.mjs \
+              "$TMP/bak_opps_${r_idx}.json" \
+              "$TMP/bak_acts_${r_idx}.json" \
+              "$TMP/bak_props_${r_idx}.json" \
+              "$TMP/pub_${r_idx}.json" \
+              "$dry_flag" \
+              "$TMP/rest_envs_${r_idx}.txt" > "$TMP/rest_build_${r_idx}.json"
+
+            local req_tot=0 rest_tot=0 pres_tot=0 lcv_tot=0 lct_tot=0 ind_tot=0 act_tot=0 prp_tot=0 unr_tot=0 sub_i=0
+            while IFS= read -r sub_env <&4 || [ -n "$sub_env" ]; do
+              sub_env=$(printf '%s' "$sub_env" | tr -d '[:space:]')
+              [ -z "$sub_env" ] && continue
+              sub_i=$((sub_i + 1))
+              deliver_envelope "$sub_env" "r${r_idx}s${sub_i}" "$TMP/rresp_${r_idx}_${sub_i}.json"
+              req_tot=$((req_tot + $(jq -r '.restoration_manifest.opportunities_requested // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              rest_tot=$((rest_tot + $(jq -r '.restoration_manifest.opportunities_restored // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              pres_tot=$((pres_tot + $(jq -r '.restoration_manifest.opportunities_already_present // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              lcv_tot=$((lcv_tot + $(jq -r '.restoration_manifest.opportunities_linked_to_conversation // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              lct_tot=$((lct_tot + $(jq -r '.restoration_manifest.opportunities_linked_to_contact // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              ind_tot=$((ind_tot + $(jq -r '.restoration_manifest.opportunities_contactless_independent // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              act_tot=$((act_tot + $(jq -r '.restoration_manifest.opportunity_activities_restored // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              prp_tot=$((prp_tot + $(jq -r '.restoration_manifest.opportunity_properties_restored // 0' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+              unr_tot=$((unr_tot + $(jq -r '(.restoration_manifest.unrestored_records // []) | length' "$TMP/rresp_${r_idx}_${sub_i}.json")))
+            done 4< "$TMP/rest_envs_${r_idx}.txt"
+
+            restore_parts+=("R${r_idx}[dry=${dry_flag},req=${req_tot},rest=${rest_tot},pres=${pres_tot},lCv=${lcv_tot},lCt=${lct_tot},ind=${ind_tot},act=${act_tot},prp=${prp_tot},unr=${unr_tot}]")
+          }
+
           batch_idx=0
+          rest_idx=0
           stats_parts=()
+          restore_parts=()
           while IFS= read -r line_env <&3 || [ -n "$line_env" ]; do
             item_env=$(printf '%s' "$line_env" | tr -d '[:space:]')
             [ -z "$item_env" ] && continue
+            if [ "$item_env" = 'RESTORE_19_FROM_BACKUP_DRY_RUN' ]; then
+              rest_idx=$((rest_idx + 1))
+              run_backup_restore_directive 'true' "$rest_idx"
+              continue
+            fi
+            if [ "$item_env" = 'RESTORE_19_FROM_BACKUP_EXECUTE' ]; then
+              rest_idx=$((rest_idx + 1))
+              run_backup_restore_directive 'false' "$rest_idx"
+              continue
+            fi
             batch_idx=$((batch_idx + 1))
-            if [ "${#item_env}" -gt 4500000 ] || [[ ! "$item_env" =~ ^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
-              result="invalid-envelope-format-b${batch_idx}"
-              finish
-              exit 1
-            fi
-            printf '%s' "$item_env" > "$TMP/env_${batch_idx}.txt"
-            ticket_hash=$(sha256sum "$TMP/env_${batch_idx}.txt" | awk '{print $1}')
-            TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('sealed-ticket:${ticket_hash}','opportunity','authorized_pending') ON CONFLICT(submission_key) DO NOTHING;"
-            if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ticket_${batch_idx}.log" 2>&1; then
-              result="d1-ticket-insert-failed-b${batch_idx}"
-              finish
-              exit 1
-            fi
-
-            jq -Rs '{sealed_payload: .}' "$TMP/env_${batch_idx}.txt" > "$TMP/req_${batch_idx}.json"
-            http_code=$(curl --silent --show-error --connect-timeout 15 --max-time 120 \
-              -X POST -H 'Content-Type: application/json' \
-              --data-binary "@$TMP/req_${batch_idx}.json" \
-              -o "$TMP/resp_${batch_idx}.json" -w '%{http_code}' \
-              "$BASE_URL/api/ingest/sealed" 2>/dev/null || true)
-
-            if [ "$http_code" != '200' ]; then
-              err_code=$(jq -r '.error // "unknown"' "$TMP/resp_${batch_idx}.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
-              result="ingest-http-${http_code}-${err_code:-unknown}-b${batch_idx}"
-              finish
-              exit 1
-            fi
-
-            b_stat=$(jq -r 'if has("diff") then "B'"${batch_idx}"'[dry=\(.dry_run),pC=\(.diff.purged_incomplete_contacts // 0),pO=\(.diff.purged_incomplete_opportunities // 0),pV=\(.diff.purged_incomplete_conversations // 0),add=\(.diff.missing_contacts_to_add // 0),bf=\(.diff.existing_contacts_phone_backfilled // 0),mV=\(.diff.conversations_matched // 0),sV=\(.diff.incomplete_conversations_skipped // 0),cL=\(.diff.chatless_vcf_contacts_retained // 0),iS=\(.intelligence.conversations_incremental_skipped // 0)]" else "B'"${batch_idx}"'[proc=\(.processed // 0)]" end' "$TMP/resp_${batch_idx}.json")
+            deliver_envelope "$item_env" "b${batch_idx}" "$TMP/resp_${batch_idx}.json"
+            b_stat=$(jq -r 'if has("diff") then "B'"${batch_idx}"'[dry=\(.dry_run),mV=\(.diff.conversations_matched // 0),uV=\(.diff.conversations_unmatched_review // 0),cC=\(.intelligence.conversations_created // 0),iS=\(.intelligence.conversations_incremental_skipped // 0),msg=\(.intelligence.messages_stored // 0)]" else "B'"${batch_idx}"'[proc=\(.processed // 0)]" end' "$TMP/resp_${batch_idx}.json")
             stats_parts+=("$b_stat")
-            processed=$(jq -r '(.processed // .diff.conversations_matched // 0) | tostring' "$TMP/resp_${batch_idx}.json")
+            processed=$(jq -r '(.processed // .diff.conversations_unmatched_review // .diff.conversations_matched // 0) | tostring' "$TMP/resp_${batch_idx}.json")
             updated=$(jq -r '(.updated_contacts // .diff.existing_contacts_with_valid_phones // 0) | tostring' "$TMP/resp_${batch_idx}.json")
           done 3< "$TMP/queue.txt"
 
-          sync_stats=$(IFS=';'; echo "${stats_parts[*]}")
-
-          COUNTS_SQL="SELECT
-            (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
-            (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS contacts_cnt,
-            (SELECT COUNT(DISTINCT contact_id) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS cphones_cnt,
-            (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS phones_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS opps_cnt,
-            (SELECT COUNT(*) FROM crm_opportunity_properties WHERE opportunity_id NOT IN (SELECT id FROM crm_opportunities WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'))) AS linked_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE track='sale_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS g_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE track='furnished_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS r_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE track='new_rent_apt' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS b_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE track='admin_hq' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS y_cnt,
-            (SELECT COUNT(*) FROM crm_opportunities WHERE track='transient' AND contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS t_cnt;"
-          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$COUNTS_SQL" > "$TMP/counts.json" 2>/dev/null
-          listings=$(jq -r '.. | objects | select(has("listings_cnt")) | .listings_cnt | tostring' "$TMP/counts.json" | head -n1)
-          contacts=$(jq -r '.. | objects | select(has("contacts_cnt")) | .contacts_cnt | tostring' "$TMP/counts.json" | head -n1)
-          cphones=$(jq -r '.. | objects | select(has("cphones_cnt")) | .cphones_cnt | tostring' "$TMP/counts.json" | head -n1)
-          phones=$(jq -r '.. | objects | select(has("phones_cnt")) | .phones_cnt | tostring' "$TMP/counts.json" | head -n1)
-          opps=$(jq -r '.. | objects | select(has("opps_cnt")) | .opps_cnt | tostring' "$TMP/counts.json" | head -n1)
-          linked=$(jq -r '.. | objects | select(has("linked_cnt")) | .linked_cnt | tostring' "$TMP/counts.json" | head -n1)
-          tracks=$(jq -r '.. | objects | select(has("g_cnt")) | "G\(.g_cnt)-R\(.r_cnt)-B\(.b_cnt)-Y\(.y_cnt)-T\(.t_cnt)"' "$TMP/counts.json" | head -n1)
-          INTEL_SQL="SELECT (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS convs_cnt, (SELECT COUNT(*) FROM crm_conversation_messages) AS msgs_cnt, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS alerts_cnt;"
-          if npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$INTEL_SQL" > "$TMP/intel.json" 2>/dev/null; then
-            convs=$(jq -r '.. | objects | select(has("convs_cnt")) | .convs_cnt | tostring' "$TMP/intel.json" | head -n1)
-            msgs=$(jq -r '.. | objects | select(has("msgs_cnt")) | .msgs_cnt | tostring' "$TMP/intel.json" | head -n1)
-            alerts=$(jq -r '.. | objects | select(has("alerts_cnt")) | .alerts_cnt | tostring' "$TMP/intel.json" | head -n1)
+          if [ "${#stats_parts[@]}" -gt 0 ]; then
+            sync_stats=$(IFS=';'; echo "${stats_parts[*]}")
+          fi
+          if [ "${#restore_parts[@]}" -gt 0 ]; then
+            restore_stats=$(IFS=';'; echo "${restore_parts[*]}")
           fi
 
+          collect_counts
           result='sealed-ingest-verified'
           finish
 
@@ -322,7 +397,7 @@ jobs:
     steps: [{ run: echo ok }]
 
   report:
-    name: 'CRM sealed ingest — ${{ needs.ingest.outputs.result }} (contacts=${{ needs.ingest.outputs.contacts }}, cphones=${{ needs.ingest.outputs.cphones }}, phones=${{ needs.ingest.outputs.phones }}, opps=${{ needs.ingest.outputs.opps }}, tracks=${{ needs.ingest.outputs.tracks }}, convs=${{ needs.ingest.outputs.convs }}, msgs=${{ needs.ingest.outputs.msgs }}, alerts=${{ needs.ingest.outputs.alerts }}, linked=${{ needs.ingest.outputs.linked }}, listings=${{ needs.ingest.outputs.listings }})'
+    name: 'CRM ingest — ${{ needs.ingest.outputs.result }} (c=${{ needs.ingest.outputs.contacts }}, ph=${{ needs.ingest.outputs.phones }}, o=${{ needs.ingest.outputs.opps }}[cl=${{ needs.ingest.outputs.cless_opps }}], tr=${{ needs.ingest.outputs.tracks }}, cv=${{ needs.ingest.outputs.convs }}[unm=${{ needs.ingest.outputs.unm_convs }}], m=${{ needs.ingest.outputs.msgs }}, al=${{ needs.ingest.outputs.alerts }}, lnk=${{ needs.ingest.outputs.linked }}, dup=${{ needs.ingest.outputs.dups }}, bak=${{ needs.ingest.outputs.backup_ref }})'
     needs: ingest
     if: always()
     runs-on: ubuntu-latest
@@ -336,3 +411,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-PII batch diff stats.'
+
+  restore-report:
+    name: 'Restore manifest — ${{ needs.ingest.outputs.restore_stats }}'
+    needs: ingest
+    if: always() && needs.ingest.outputs.restore_stats != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-PII opportunity restoration manifest.'

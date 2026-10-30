@@ -179,10 +179,10 @@ function renderFollowupQueueCard(item, deps) {
 function renderConversationSummaryCard(conv, deps) {
   const card = el('article', '', 'card followup-alert-card');
   const head = el('div', '', 'card-heading');
-  const isUnmatched = conv.match_status === 'unmatched_review';
+  const isUnmatched = conv.match_status === 'unmatched_review' || conv.match_status === 'conflict_review';
   head.append(
     el('strong', conv.chat_title || conv.contact_name || 'محادثة واتساب'),
-    el('span', isUnmatched ? '🔍 مراجعة هوية مطلوبة' : '✓ مربوطة بعميل', isUnmatched ? 'pill warn-pill' : 'pill active-pill'),
+    el('span', isUnmatched ? '🔍 مراجعة غير محسومة' : '✓ مربوطة بعميل', isUnmatched ? 'pill warn-pill' : 'pill active-pill'),
   );
   card.append(head);
   card.append(el('small', `${conv.message_count || 0} رسالة · ${(conv.char_length || 0).toLocaleString('ar-EG')} حرف كامل · آخر تواصل: ${fmtDate(conv.last_message_at)}`, 'muted'));
@@ -193,6 +193,11 @@ function renderConversationSummaryCard(conv, deps) {
   actions.append(actButton('📖 عرض المحادثة الكاملة والروابط', () => {
     void openConversationInViewer(conv.id, deps);
   }, 'button primary small'));
+  if (conv.opportunity_id && typeof deps.openOpportunity === 'function') {
+    actions.append(actButton('📂 الفرصة المرتبطة', () => {
+      void deps.openOpportunity(conv.opportunity_id);
+    }, 'button small'));
+  }
   if (conv.contact_id) {
     actions.append(actButton('👤 ملف العميل', () => { void deps.openContact(conv.contact_id); }, 'button small'));
   }
@@ -202,24 +207,43 @@ function renderConversationSummaryCard(conv, deps) {
 
 function buildManualLinkForm(conv, contacts, deps) {
   const box = el('form', '', 'activity-form');
-  box.append(el('h4', '🔗 ربط هذه المحادثة بعميل مؤكد بعد المراجعة اليدوية'));
+  box.append(el('h4', '🔗 ربط هذه المحادثة بعميل بعد التحقق من رقم هاتف موثق'));
   const sel = el('select');
-  sel.required = true;
-  sel.add(new Option('اختر العميل الصحيح من القائمة…', ''));
+  sel.add(new Option('اختر عميلًا حاليًا أو أدخل رقم هاتف موثق أدناه…', ''));
   for (const c of contacts) {
-    const ph = c.primary_phone ? ` · ${prettyPhoneFormat(c.primary_phone)}` : '';
+    const ph = c.primary_phone ? ` · ${prettyPhoneFormat(c.primary_phone)}` : ' · (بدون هاتف بعد)';
     sel.add(new Option(`${c.name || 'عميل'}${ph}`, c.id));
   }
-  const btn = el('button', 'تأكيد الربط وإعادة التحليل الذكي', 'button primary small');
+  const nameInput = el('input');
+  nameInput.type = 'text';
+  nameInput.maxLength = 100;
+  nameInput.value = conv.chat_title || '';
+  nameInput.placeholder = 'اسم العميل الموثق (عند إنشاء جهة اتصال مكتملة)';
+
+  const phoneInput = el('input');
+  phoneInput.type = 'tel';
+  phoneInput.inputMode = 'tel';
+  phoneInput.maxLength = 32;
+  phoneInput.placeholder = 'رقم الهاتف الموثق (مطلوب لعميل جديد أو غير مكتمل: 010... أو +20...)';
+
+  const btn = el('button', 'تأكيد الربط بالهاتف الموثق', 'button primary small');
   btn.type = 'submit';
   const fb = el('span', '', 'muted');
-  box.append(sel, btn, fb);
+  box.append(sel, nameInput, phoneInput, btn, fb);
   box.addEventListener('submit', async ev => {
     ev.preventDefault();
-    if (!sel.value) return;
+    const chosenId = sel.value;
+    const rawPh = phoneInput.value.trim();
+    if (!chosenId && !rawPh) {
+      fb.textContent = 'اختر عميلًا مكتملًا أو أدخل رقم هاتف موثق للربط.';
+      return;
+    }
     btn.disabled = true;
     try {
-      await deps.api().linkConversationToContact(conv.id, { contact_id: sel.value });
+      const payload = chosenId
+        ? { contact_id: chosenId, verified_phone: rawPh || undefined }
+        : { create_contact: { name: nameInput.value.trim() || conv.chat_title || 'عميل موثق', phone: rawPh } };
+      await deps.api().linkConversationToContact(conv.id, payload);
       await deps.refreshFollowups();
       await openConversationInViewer(conv.id, deps);
     } catch (err) {
@@ -228,6 +252,55 @@ function buildManualLinkForm(conv, contacts, deps) {
     }
   });
   return box;
+}
+
+function appendConversationActionsAndInsights(viewer, conversation, insights, deps) {
+  if (conversation.match_status === 'unmatched_review' || conversation.match_status === 'conflict_review') {
+    viewer.append(buildManualLinkForm(conversation, deps.getContacts(), deps));
+  } else if (conversation.contact_id) {
+    viewer.append(actButton(`👤 فتح ملف العميل (${conversation.contact_name || 'عميل'})`, () => {
+      void deps.openContact(conversation.contact_id);
+    }, 'button small'));
+  }
+  if (conversation.opportunity_id && typeof deps.openOpportunity === 'function') {
+    viewer.append(actButton('📂 فتح الفرصة العقارية المرتبطة بهذه المحادثة', () => {
+      void deps.openOpportunity(conversation.opportunity_id);
+    }, 'button small'));
+  }
+  if (!insights) return;
+  const parts = [
+    insights.inferred_intent && `الاتجاه المستنتج: ${insights.inferred_intent}`,
+    insights.inferred_area && `المنطقة: ${insights.inferred_area}`,
+    insights.inferred_property_type && `النوع: ${insights.inferred_property_type}`,
+    insights.inferred_budget && `الميزانية المذكورة: ${Number(insights.inferred_budget).toLocaleString('ar-EG')} ج.م`,
+    insights.inferred_size_m2 && `المساحة المذكورة: ${insights.inferred_size_m2} م²`,
+  ].filter(Boolean);
+  const text = parts.length
+    ? `🧠 ملخص استشاري من المحادثة (لا يغيّر بيانات العميل تلقائيًا): ${parts.join(' · ')}`
+    : '🧠 تم تحليل المحادثة وحفظ سجل التواصل بالكامل.';
+  viewer.append(el('div', text, 'notes-box'));
+}
+
+function renderChatBubble(msg) {
+  const bubble = el('div', '', `chat-bubble chat-role-${msg.sender_role || 'customer'}`);
+  const meta = el('div', '', 'chat-bubble-meta');
+  meta.append(
+    el('strong', msg.sender_label || (msg.sender_role === 'broker' ? 'طارق (سمسار طلبك)' : 'الطرف الآخر')),
+    el('small', msg.sent_at ? fmtDate(msg.sent_at) : (msg.raw_timestamp || ''), 'muted'),
+  );
+  bubble.append(meta, el('p', msg.body_text || '', 'chat-bubble-body'));
+  if (Array.isArray(msg.links) && msg.links.length > 0) {
+    const linkWrap = el('div', '', 'chat-links-row');
+    for (const u of msg.links) {
+      const a = buildSafeExternalAnchor(u, '🔗 فتح الرابط الخارجي');
+      if (a) linkWrap.append(a);
+    }
+    bubble.append(linkWrap);
+  }
+  if (msg.parse_warning) {
+    bubble.append(el('small', `⚠️ تحذير تنسيق: ${msg.parse_warning}`, 'muted'));
+  }
+  return bubble;
 }
 
 export async function openConversationInViewer(conversationId, deps) {
@@ -251,61 +324,17 @@ export async function openConversationInViewer(conversationId, deps) {
     viewer.append(el('small', `المصدر: ${conversation.source_ref || conversation.source_type} · التحليل: ${conversation.rule_version || '—'} (${fmtDate(conversation.analyzed_at)})`, 'muted'));
 
     if (Array.isArray(conversation.parse_warnings) && conversation.parse_warnings.length > 0) {
-      const warnBox = el('div', `⚠️ تنبيهات قراءة التنسيق (${conversation.parse_warnings.length}): لم يُفقد أي سطر وتم حفظ النص الأصلي بالكامل.`, 'notice error');
-      viewer.append(warnBox);
+      viewer.append(el('div', `⚠️ تنبيهات قراءة التنسيق (${conversation.parse_warnings.length}): لم يُفقد أي سطر وتم حفظ النص الأصلي بالكامل.`, 'notice error'));
     }
 
-    if (conversation.match_status === 'unmatched_review') {
-      viewer.append(buildManualLinkForm(conversation, deps.getContacts(), deps));
-    } else if (conversation.contact_id) {
-      const openBtn = actButton(`👤 فتح ملف العميل (${conversation.contact_name || 'عميل'})`, () => {
-        void deps.openContact(conversation.contact_id);
-      }, 'button small');
-      viewer.append(openBtn);
-    }
-
-    if (insights) {
-      const insBox = el('div', '', 'notes-box');
-      const parts = [];
-      if (insights.inferred_intent) parts.push(`الاتجاه المستنتج: ${insights.inferred_intent}`);
-      if (insights.inferred_area) parts.push(`المنطقة: ${insights.inferred_area}`);
-      if (insights.inferred_property_type) parts.push(`النوع: ${insights.inferred_property_type}`);
-      if (insights.inferred_budget) parts.push(`الميزانية المذكورة: ${Number(insights.inferred_budget).toLocaleString('ar-EG')} ج.م`);
-      if (insights.inferred_size_m2) parts.push(`المساحة المذكورة: ${insights.inferred_size_m2} م²`);
-      insBox.textContent = parts.length
-        ? `🧠 ملخص استشاري من المحادثة (لا يغيّر بيانات العميل تلقائيًا): ${parts.join(' · ')}`
-        : '🧠 تم تحليل المحادثة وحفظ سجل التواصل بالكامل.';
-      viewer.append(insBox);
-    }
+    appendConversationActionsAndInsights(viewer, conversation, insights, deps);
 
     const msgStream = el('div', '', 'chat-stream');
-    for (const msg of messages) {
-      const bubble = el('div', '', `chat-bubble chat-role-${msg.sender_role || 'customer'}`);
-      const meta = el('div', '', 'chat-bubble-meta');
-      meta.append(
-        el('strong', msg.sender_label || (msg.sender_role === 'broker' ? 'طارق (سمسار طلبك)' : 'الطرف الآخر')),
-        el('small', msg.sent_at ? fmtDate(msg.sent_at) : (msg.raw_timestamp || ''), 'muted'),
-      );
-      bubble.append(meta, el('p', msg.body_text || '', 'chat-bubble-body'));
-      if (Array.isArray(msg.links) && msg.links.length > 0) {
-        const linkWrap = el('div', '', 'chat-links-row');
-        for (const u of msg.links) {
-          const a = buildSafeExternalAnchor(u, `🔗 فتح الرابط الخارجي`);
-          if (a) linkWrap.append(a);
-        }
-        bubble.append(linkWrap);
-      }
-      if (msg.parse_warning) {
-        bubble.append(el('small', `⚠️ تحذير تنسيق: ${msg.parse_warning}`, 'muted'));
-      }
-      msgStream.append(bubble);
-    }
+    for (const msg of messages) msgStream.append(renderChatBubble(msg));
     viewer.append(msgStream);
 
     const rawDetails = el('details', '', 'drawer-details');
-    rawDetails.append(el('summary', '📄 عرض النص الخام الأصلي الكامل (غير مقتطع)'));
-    const pre = el('pre', conversation.raw_text || '', 'raw-chat-pre');
-    rawDetails.append(pre);
+    rawDetails.append(el('summary', '📄 عرض النص الخام الأصلي الكامل (غير مقتطع)'), el('pre', conversation.raw_text || '', 'raw-chat-pre'));
     viewer.append(rawDetails);
   } catch (err) {
     viewer.replaceChildren(el('p', deps.errorText(err), 'muted'));
@@ -355,14 +384,17 @@ export function createFollowupsController(deps) {
     if (titleEl) titleEl.textContent = QUEUE_TITLES[activeQueue] || 'قائمة المتابعة';
     listEl.replaceChildren(el('p', 'جارٍ التحميل…', 'muted'));
 
+    const searchQuery = (document.getElementById('conv-search-input')?.value || '').trim();
+
     if (activeQueue === 'unmatched_review' || activeQueue === 'all_conversations') {
       const res = await deps.api().searchConversations({
         matchStatus: activeQueue === 'unmatched_review' ? 'unmatched_review' : '',
+        q: searchQuery,
       });
       const convs = res.conversations || [];
       listEl.replaceChildren();
       if (!convs.length) {
-        listEl.append(el('p', 'لا توجد محادثات في هذا القسم حاليًا.', 'muted'));
+        listEl.append(el('p', searchQuery ? 'لا توجد محادثات مطابقة لعبارة البحث.' : 'لا توجد محادثات في هذا القسم حاليًا.', 'muted'));
         return;
       }
       for (const cv of convs) listEl.append(renderConversationSummaryCard(cv, controllerDeps));
@@ -372,10 +404,13 @@ export function createFollowupsController(deps) {
     if (!latestFollowups) {
       latestFollowups = await deps.api().getFollowups();
     }
-    const items = latestFollowups[activeQueue] || [];
+    const rawItems = latestFollowups[activeQueue] || [];
+    const items = searchQuery
+      ? rawItems.filter(it => `${it.customer_name || ''} ${it.alert_reason || ''} ${it.excerpt || ''} ${it.area_label || ''}`.includes(searchQuery))
+      : rawItems;
     listEl.replaceChildren();
     if (!items.length) {
-      listEl.append(el('p', 'لا توجد عناصر متابعة مفتوحة في هذه القائمة الآن ✓', 'muted'));
+      listEl.append(el('p', searchQuery ? 'لا توجد عناصر مطابقة للبحث في هذه القائمة.' : 'لا توجد عناصر متابعة مفتوحة في هذه القائمة الآن ✓', 'muted'));
       return;
     }
     for (const item of items) {
@@ -431,6 +466,16 @@ export function createFollowupsController(deps) {
         void renderActiveQueue().catch(deps.showError);
       });
     }
+
+    const convSearchForm = document.getElementById('conv-search-form');
+    convSearchForm?.addEventListener('submit', ev => {
+      ev.preventDefault();
+      void renderActiveQueue().catch(deps.showError);
+    });
+    const convSearchInput = document.getElementById('conv-search-input');
+    convSearchInput?.addEventListener('search', () => {
+      void renderActiveQueue().catch(deps.showError);
+    });
 
     const importForm = document.getElementById('conv-import-form');
     importForm?.addEventListener('submit', async ev => {

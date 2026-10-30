@@ -153,10 +153,11 @@ export class CRMClient {
     return this.request(`/dashboard${query}`);
   }
 
-  searchContacts(query = '', track = '') {
+  searchContacts(query = '', track = '', completeness = '') {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
     if (track) params.set('track', track);
+    if (completeness) params.set('completeness', completeness);
     const suffix = params.size ? `?${params.toString()}` : '';
     return this.request(`/contacts${suffix}`);
   }
@@ -184,6 +185,14 @@ export class CRMClient {
 
   updateContact(contactId, payload) {
     return this.request(`/contacts/${safeId(contactId)}`, { method: 'POST', body: payload });
+  }
+
+  archiveContact(contactId, payload = {}) {
+    return this.request(`/contacts/${safeId(contactId)}/archive`, { method: 'POST', body: payload });
+  }
+
+  deleteContact(contactId) {
+    return this.request(`/contacts/${safeId(contactId)}`, { method: 'DELETE' });
   }
 
   getFollowups() {

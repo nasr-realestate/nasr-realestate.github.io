@@ -16,6 +16,7 @@ const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_au
 const migration0003 = await readFile(new URL('../migrations/0003_crm_push_notifications.sql', import.meta.url), 'utf8');
 const migration0004 = await readFile(new URL('../migrations/0004_crm_tracks_core.sql', import.meta.url), 'utf8');
 const migration0005 = await readFile(new URL('../migrations/0005_sync_audit_and_intelligence.sql', import.meta.url), 'utf8');
+const migration0006 = await readFile(new URL('../migrations/0006_decouple_opportunities_and_contact_levels.sql', import.meta.url), 'utf8');
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.footcai-555.workers.dev';
 
 function randomToken(bytes = 24) {
@@ -104,6 +105,7 @@ async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
   sqlite.exec(migration0003);
   sqlite.exec(migration0004);
   sqlite.exec(migration0005);
+  sqlite.exec(migration0006);
 
   const accessCode = randomToken(24);
   const sessionSecret = randomToken(32);

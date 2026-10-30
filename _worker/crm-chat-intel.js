@@ -1057,6 +1057,106 @@ export function analyzeMessagesDeterministic(messages, { linkedOpp = null, hasLo
   };
 }
 
+async function syncOpportunityConversationRef(db, oppId, convId) {
+  if (!oppId || !convId) return;
+  try {
+    await db.prepare(
+      'UPDATE crm_opportunities SET conversation_id = COALESCE(conversation_id, ?) WHERE id = ?',
+    ).bind(convId, oppId).run();
+  } catch {
+    // Pre-0006 schema without conversation_id column on crm_opportunities.
+  }
+}
+
+async function upsertSingleSmartAlert(db, {
+  convId,
+  resolvedContactId,
+  resolvedOppId,
+  resolvedCustomerName,
+  alert,
+  nowIso,
+}) {
+  const dConv = convId || '0';
+  const dMsg = alert.message_id || '0';
+  const dContact = resolvedContactId || '0';
+  let existingAlert = await db.prepare(
+    `SELECT id, status FROM crm_smart_alerts
+     WHERE dedupe_conversation_key = ? AND dedupe_message_key = ? AND dedupe_contact_key = ? AND alert_type = ?
+     LIMIT 1`,
+  ).bind(dConv, dMsg, dContact, alert.alert_type).first();
+
+  if (!existingAlert && resolvedContactId) {
+    existingAlert = await db.prepare(
+      `SELECT id, status FROM crm_smart_alerts
+       WHERE dedupe_conversation_key = ? AND dedupe_message_key = ? AND dedupe_contact_key = '0' AND alert_type = ?
+       LIMIT 1`,
+    ).bind(dConv, dMsg, alert.alert_type).first();
+  }
+
+  if (existingAlert) {
+    if (existingAlert.status === 'open') {
+      await db.prepare(
+        `UPDATE crm_smart_alerts SET
+          contact_id = ?, dedupe_contact_key = ?, opportunity_id = ?, priority = ?, customer_name = ?,
+          alert_reason = ?, due_at = ?, due_precision = ?, date_origin = ?,
+          confidence = ?, rule_version = ?, updated_at = ?
+         WHERE id = ? AND status = 'open'`,
+      ).bind(
+        resolvedContactId,
+        dContact,
+        resolvedOppId,
+        alert.priority,
+        resolvedCustomerName,
+        alert.alert_reason,
+        alert.due_at,
+        alert.due_precision || 'none',
+        alert.date_origin || 'system',
+        alert.confidence,
+        CURRENT_RULE_VERSION,
+        nowIso,
+        existingAlert.id,
+      ).run();
+    }
+    return 0;
+  }
+
+  await db.prepare(
+    `INSERT INTO crm_smart_alerts(
+      id, conversation_id, message_id, contact_id, opportunity_id,
+      dedupe_conversation_key, dedupe_message_key, dedupe_contact_key,
+      alert_type, status, priority, customer_name, alert_reason,
+      source_message_at, excerpt, suggested_action, confidence,
+      due_at, due_precision, date_origin, metadata_json, rule_version,
+      created_at, updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  ).bind(
+    crypto.randomUUID(),
+    convId,
+    alert.message_id || null,
+    resolvedContactId,
+    resolvedOppId,
+    dConv,
+    dMsg,
+    dContact,
+    alert.alert_type,
+    alert.priority || 'normal',
+    resolvedCustomerName,
+    alert.alert_reason,
+    alert.source_message_at || null,
+    alert.excerpt || '',
+    alert.suggested_action,
+    alert.confidence,
+    alert.due_at || null,
+    alert.due_precision || 'none',
+    alert.date_origin || 'system',
+    JSON.stringify(alert.metadata || {}),
+    CURRENT_RULE_VERSION,
+    nowIso,
+    nowIso,
+  ).run();
+  return 1;
+}
+
 export async function upsertConversationAndAnalyze(db, {
   conversationUid,
   contactId = null,
@@ -1082,6 +1182,16 @@ export async function upsertConversationAndAnalyze(db, {
 
   const resolvedContactId = contactId || existing?.contact_id || null;
   let resolvedOppId = opportunityId || existing?.opportunity_id || null;
+  if (!resolvedOppId && existing?.id) {
+    try {
+      const byConv = await db.prepare(
+        'SELECT id FROM crm_opportunities WHERE conversation_id = ? LIMIT 1',
+      ).bind(existing.id).first();
+      if (byConv?.id) resolvedOppId = byConv.id;
+    } catch {
+      // Pre-0006 schema without conversation_id column on crm_opportunities.
+    }
+  }
   if (!resolvedOppId && resolvedContactId) {
     const oppRow = await db.prepare(
       'SELECT id FROM crm_opportunities WHERE contact_id = ? ORDER BY updated_at DESC LIMIT 2',
@@ -1311,79 +1421,23 @@ export async function upsertConversationAndAnalyze(db, {
     CURRENT_RULE_VERSION,
   ).run();
 
+  await syncOpportunityConversationRef(db, resolvedOppId, convId);
+
+  const isTransientArchivedChat = (linkedOpp && linkedOpp.track === 'transient')
+    || (!linkedOpp && parsed.chatTitle.includes('✈'));
+  const alertsToPersist = isTransientArchivedChat ? [] : analysis.alerts;
+
   // Deduplicated Smart Alert insertion: NEVER re-open completed/dismissed alerts!
   let alertsCreated = 0;
-  for (const alert of analysis.alerts) {
-    const dConv = convId || '0';
-    const dMsg = alert.message_id || '0';
-    const dContact = resolvedContactId || '0';
-    const existingAlert = await db.prepare(
-      `SELECT id, status FROM crm_smart_alerts
-       WHERE dedupe_conversation_key = ? AND dedupe_message_key = ? AND dedupe_contact_key = ? AND alert_type = ?
-       LIMIT 1`,
-    ).bind(dConv, dMsg, dContact, alert.alert_type).first();
-
-    if (existingAlert) {
-      if (existingAlert.status === 'open') {
-        await db.prepare(
-          `UPDATE crm_smart_alerts SET
-            contact_id = ?, opportunity_id = ?, priority = ?, customer_name = ?,
-            alert_reason = ?, due_at = ?, due_precision = ?, date_origin = ?,
-            confidence = ?, rule_version = ?, updated_at = ?
-           WHERE id = ? AND status = 'open'`,
-        ).bind(
-          resolvedContactId,
-          resolvedOppId,
-          alert.priority,
-          resolvedCustomerName,
-          alert.alert_reason,
-          alert.due_at,
-          alert.due_precision || 'none',
-          alert.date_origin || 'system',
-          alert.confidence,
-          CURRENT_RULE_VERSION,
-          nowIso,
-          existingAlert.id,
-        ).run();
-      }
-      continue;
-    }
-
-    await db.prepare(
-      `INSERT INTO crm_smart_alerts(
-        id, conversation_id, message_id, contact_id, opportunity_id,
-        dedupe_conversation_key, dedupe_message_key, dedupe_contact_key,
-        alert_type, status, priority, customer_name, alert_reason,
-        source_message_at, excerpt, suggested_action, confidence,
-        due_at, due_precision, date_origin, metadata_json, rule_version,
-        created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    ).bind(
-      crypto.randomUUID(),
+  for (const alert of alertsToPersist) {
+    alertsCreated += await upsertSingleSmartAlert(db, {
       convId,
-      alert.message_id || null,
       resolvedContactId,
       resolvedOppId,
-      dConv,
-      dMsg,
-      dContact,
-      alert.alert_type,
-      alert.priority || 'normal',
       resolvedCustomerName,
-      alert.alert_reason,
-      alert.source_message_at || null,
-      alert.excerpt || '',
-      alert.suggested_action,
-      alert.confidence,
-      alert.due_at || null,
-      alert.due_precision || 'none',
-      alert.date_origin || 'system',
-      JSON.stringify(alert.metadata || {}),
-      CURRENT_RULE_VERSION,
+      alert,
       nowIso,
-      nowIso,
-    ).run();
-    alertsCreated += 1;
+    });
   }
 
   return {

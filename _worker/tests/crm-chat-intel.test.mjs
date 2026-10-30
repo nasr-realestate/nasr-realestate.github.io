@@ -19,6 +19,7 @@ const MIGRATION_FILES = [
   '0003_crm_push_notifications.sql',
   '0004_crm_tracks_core.sql',
   '0005_sync_audit_and_intelligence.sql',
+  '0006_decouple_opportunities_and_contact_levels.sql',
 ];
 const ALLOWED_ORIGIN = 'https://nasr-crm-api-test.example.workers.dev';
 
