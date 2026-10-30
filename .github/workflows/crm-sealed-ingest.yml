@@ -89,7 +89,9 @@ jobs:
           pk4=''
           pk5=''
 
+          finished='no'
           finish() {
+            finished='yes'
             {
               printf 'result=%s\n' "$result"
               printf 'processed=%s\n' "$processed"
@@ -112,6 +114,7 @@ jobs:
               printf 'pk5=%s\n' "$pk5"
             } >> "$GITHUB_OUTPUT"
           }
+          trap 'if [ "$finished" != "yes" ]; then result="unexpected-shell-exit-line-$LINENO"; finish; fi; rm -rf "$TMP"' EXIT
 
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
             result='missing-cloudflare-token'
@@ -141,11 +144,14 @@ jobs:
           account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
 
-          raw_queue="${SEALED_PAYLOAD:-}"
-          if [ -z "$raw_queue" ] && [ -f '_worker/ingest-queue/sealed.txt' ]; then
-            raw_queue=$(grep -v '^[[:space:]]*#' _worker/ingest-queue/sealed.txt | sed '/^[[:space:]]*$/d' || true)
+          if [ -n "${SEALED_PAYLOAD:-}" ]; then
+            printf '%s\n' "$SEALED_PAYLOAD" | grep -v '^[[:space:]]*#' | sed '/^[[:space:]]*$/d' > "$TMP/queue.txt" || true
+          elif [ -f '_worker/ingest-queue/sealed.txt' ]; then
+            grep -v '^[[:space:]]*#' _worker/ingest-queue/sealed.txt | sed '/^[[:space:]]*$/d' > "$TMP/queue.txt" || true
+          else
+            : > "$TMP/queue.txt"
           fi
-          envelope=$(printf '%s' "$raw_queue" | head -n1 | tr -d '[:space:]')
+          envelope=$(sed -n '1p' "$TMP/queue.txt" | tr -d '[:space:]')
           if [ -z "$envelope" ] || [ "$envelope" = 'IDLE' ]; then
             COUNTS_SQL="SELECT
               (SELECT COUNT(*) FROM listings WHERE area_id=90001 AND external_id NOT LIKE 'crm-test-only-%') AS listings_cnt,
@@ -214,7 +220,7 @@ jobs:
 
           batch_idx=0
           stats_parts=()
-          while IFS= read -r line_env; do
+          while IFS= read -r line_env <&3 || [ -n "$line_env" ]; do
             item_env=$(printf '%s' "$line_env" | tr -d '[:space:]')
             [ -z "$item_env" ] && continue
             batch_idx=$((batch_idx + 1))
@@ -250,7 +256,7 @@ jobs:
             stats_parts+=("$b_stat")
             processed=$(jq -r '(.processed // .diff.conversations_matched // 0) | tostring' "$TMP/resp_${batch_idx}.json")
             updated=$(jq -r '(.updated_contacts // .diff.existing_contacts_with_valid_phones // 0) | tostring' "$TMP/resp_${batch_idx}.json")
-          done <<< "$raw_queue"
+          done 3< "$TMP/queue.txt"
 
           sync_stats=$(IFS=';'; echo "${stats_parts[*]}")
 
