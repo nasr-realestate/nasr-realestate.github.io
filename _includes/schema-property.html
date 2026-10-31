@@ -123,7 +123,10 @@
   "name": {{ page.title | jsonify }},
   "description": {{ page.description | default: page.title | jsonify }},
   "identifier": {{ page.slug | default: page.id | jsonify }},
-  {%- if page.image_file and page.image_file != "" %}
+  {%- assign schema_pf = site.data.listing_facets.listings[page.slug] -%}
+  {%- assign has_real_img = true -%}
+  {%- if site.data.listing_facets and schema_pf.image == nil -%}{%- assign has_real_img = false -%}{%- endif -%}
+  {%- if has_real_img and page.image_file and page.image_file != "" %}
   "image": ["{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"],
   {%- endif %}
   "datePosted": "{{ page.date | date_to_xmlschema }}",
