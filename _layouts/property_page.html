@@ -5,8 +5,17 @@ hide_navbar: true
 
 {% include schema-property.html %}
 
-{%- comment -%} تحديد أول صورة للعرض {%- endcomment -%}
-{%- assign main_img = page.image_file | default: "" -%}
+{%- comment -%} تحديد أول صورة للعرض (مع التحقق من وجود الملف فعلياً في _data/listing_facets.json حتى لا يظهر مسار 404 قبل رفع الصورة) {%- endcomment -%}
+{%- assign pf = site.data.listing_facets.listings[page.slug] -%}
+{%- if site.data.listing_facets -%}
+  {%- if pf and pf.image -%}
+    {%- assign main_img = page.image_file | default: "" -%}
+  {%- else -%}
+    {%- assign main_img = "" -%}
+  {%- endif -%}
+{%- else -%}
+  {%- assign main_img = page.image_file | default: "" -%}
+{%- endif -%}
 {%- assign img_url = site.baseurl | append: "/assets/img/properties/" | append: main_img -%}
 {%- comment -%} تدقيق الصور (2026-10-17): أبعاد الصورة الأصلية من _data/image_dims.yml —
     يُعرض الإطار بنسبة الصورة الحقيقية فلا يُقص أي جزء من العقار (كان الإطار الثابت

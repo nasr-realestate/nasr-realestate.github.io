@@ -382,7 +382,9 @@ export function normalizeProperty(data, slug, opts = {}) {
     finish: text(data.finish).trim(),
     furnished: deriveFurnished(data, title),
     description: cleanDescription(data, title),
-    image: imageFile ? `${siteUrl}${baseurl}/assets/img/properties/${imageFile}` : null,
+    image: imageFile && (!opts.imgDir || fs.existsSync(path.join(opts.imgDir, imageFile)))
+      ? `${siteUrl}${baseurl}/assets/img/properties/${imageFile}`
+      : null,
     imageFile: imageFile || null,
     audioFile: text(data.audio_file).trim() || null,
     status: text(data.status).trim() || 'available',
@@ -409,6 +411,10 @@ export function stableStringify(value, indent = 2) {
 
 export function loadProperties(dir = '_properties', opts = {}) {
   if (!fs.existsSync(dir)) return [];
+  const defaultImgDir = path.join(path.dirname(path.resolve(dir)), 'assets', 'img', 'properties');
+  const resolvedOpts = opts.imgDir !== undefined
+    ? opts
+    : { ...opts, imgDir: fs.existsSync(defaultImgDir) ? defaultImgDir : null };
   const out = [];
   for (const file of fs.readdirSync(dir).sort()) {
     if (!file.endsWith('.md')) continue;
@@ -418,7 +424,7 @@ export function loadProperties(dir = '_properties', opts = {}) {
     // بيانات المصدر: تُمكّن مزامنة D1 من قراءة قائمة الملفات من ai-feed.json
     // في طلب واحد بدل GitHub Tree API (الذي يسقط عند حد المعدل).
     out.push({
-      ...normalizeProperty(parsed.data, slug, opts),
+      ...normalizeProperty(parsed.data, slug, resolvedOpts),
       // مسار نسبي من جذر المستودع (قابل للقراءة من الـWorker) مهما كان cwd.
       source_path: path.relative(process.cwd(), path.join(dir, file)).split(path.sep).join('/'),
       source_sha256: createHash('sha256').update(raw, 'utf8').digest('hex'),

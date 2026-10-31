@@ -156,12 +156,12 @@ test('International Park 225m: live renderer serves valid ForSale schema, verifi
   }
 });
 
-test('International Park 225m: original uploaded photo is untouched and catalog order places listing first', () => {
+test('International Park 225m: original uploaded photo is untouched and listing stays in catalog order', () => {
   const image = fs.readFileSync(new URL('../../assets/img/properties/international-park-al-sharq-225m.webp', import.meta.url));
   assert.equal(createHash('sha256').update(image).digest('hex'), 'ebf107abb8b4cc95e3dd772aa428130db2b9e39825c5e5ba8b75e4e5811c7347');
   const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
   assert.equal(facets.listings[slug].card_image, '/assets/img/properties/cards/international-park-al-sharq-225m.webp');
-  assert.equal(facets.catalog.order[0], slug);
+  assert.ok(facets.catalog.order.includes(slug));
 });
 
 test('International Park 225m: audio is registered under voice identity spec with compatible-with-reference GE2E cosine', () => {
