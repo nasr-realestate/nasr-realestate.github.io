@@ -41,6 +41,8 @@ jobs:
       conversation_side: ${{ steps.review.outputs.conversation_side }}
       deferred_file: ${{ steps.review.outputs.deferred_file }}
       rest_summary: ${{ steps.review.outputs.rest_summary }}
+      third_party_detail: ${{ steps.review.outputs.third_party_detail }}
+      third_party_detail_2: ${{ steps.review.outputs.third_party_detail_2 }}
       guards: ${{ steps.review.outputs.guards }}
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +82,7 @@ jobs:
           finished='no'
 
           # Every value this job publishes is set from the verified query output below.
-          OUT_KEYS='scope class_summary evidence_summary matched_a matched_b provenance conversation_side deferred_file rest_summary ops_pre ops_post guards'
+          OUT_KEYS='scope class_summary evidence_summary matched_a matched_b provenance conversation_side deferred_file rest_summary third_party_detail third_party_detail_2 ops_pre ops_post guards'
 
           set_from_output() {
             for key in $OUT_KEYS; do
@@ -223,6 +225,19 @@ jobs:
           );
           emit('class_summary', byClass.map(r =>
             `${CLASS_CODE[r.match_class] ?? '?'}=${r.rows_cnt}r/${r.files_cnt}f/${r.with_contact}contact`).join(','));
+
+          const tDetail = await q(
+            `SELECT drive_file_id,
+                    SUM(CASE WHEN evidence = 'number_found_in_message_text_no_crm_row' THEN 1 ELSE 0 END) AS no_row,
+                    SUM(CASE WHEN evidence != 'number_found_in_message_text_no_crm_row' THEN 1 ELSE 0 END) AS with_row
+               FROM crm_drive_match_candidate WHERE match_class = 'third_party_review'
+              GROUP BY 1 ORDER BY 1`,
+          );
+          const tLines = tDetail.map(r =>
+            `${String(driveRefHash(r.drive_file_id)).slice(0, 8)}:n${r.no_row}/m${r.with_row}`);
+          const tHalf = Math.ceil(tLines.length / 2);
+          emit('third_party_detail', `files=${tLines.length};` + tLines.slice(0, tHalf).join(','));
+          emit('third_party_detail_2', tLines.slice(tHalf).join(',') || 'none');
 
           const byEvidence = await q(
             `SELECT match_class, evidence, confidence, signal_kind, COUNT(*) AS c
@@ -368,7 +383,7 @@ jobs:
 
           # 5) Reproducibility gate: every observed number must be identical in both passes.
           reproducible='yes'
-          for key in scope class_summary evidence_summary matched_a matched_b provenance conversation_side deferred_file rest_summary; do
+          for key in scope class_summary evidence_summary matched_a matched_b provenance conversation_side deferred_file rest_summary third_party_detail third_party_detail_2; do
             v1=$(sed -n "s/^${key}=//p" "$TMP/outputs.pass1" | tail -n1)
             v2=$(sed -n "s/^${key}=//p" "$TMP/outputs.txt" | tail -n1)
             if [ -z "$v1" ] || [ "$v1" != "$v2" ]; then
@@ -466,6 +481,20 @@ jobs:
     if: always()
     needs: review-phase4
     name: 'P4V deferred ${{ needs.review-phase4.outputs.deferred_file }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  p4v-r11:
+    if: always()
+    needs: review-phase4
+    name: 'P4V thirdPartyByFile ${{ needs.review-phase4.outputs.third_party_detail }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  p4v-r12:
+    if: always()
+    needs: review-phase4
+    name: 'P4V thirdPartyByFile(2) ${{ needs.review-phase4.outputs.third_party_detail_2 }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
