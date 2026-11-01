@@ -12,7 +12,10 @@ rehearsal always matches exactly what is being reviewed.
     KEEP=1 python3 …                          # keep the scratch database for inspection
 
 Exit 0 means every barrier was refused by D1 and every tampering attempt was detected.
-Companion: crm-review-sql-0009.abuse.mjs (same contract against node:sqlite, 78 checks).
+Companion: crm-review-sql-0009.abuse.mjs (same contract against node:sqlite, 113 checks).
+Both digests of this rehearsal are writer-supplied, so section 5c additionally round-trips a small
+canonical chain through scripts/crm/verify-review-event-chain.mjs — the CI-grade recomputation, on rows
+read back out of D1.
 """
 import json
 import os
@@ -135,7 +138,7 @@ def check(label, cond, detail=''):
     print(f'  {"ok  " if cond else "FAIL"} {label}{tail}')
 
 
-EXPECTED = {'table': 5, 'index': 8, 'trigger': 18, 'view': 4}   # the design's object inventory
+EXPECTED = {'table': 5, 'index': 8, 'trigger': 19, 'view': 4}   # the design's object inventory
 HEX32 = 'lower(hex(randomblob(32)))'
 TS = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
 
@@ -151,10 +154,10 @@ check('every statement of the file executed (trigger bodies intact)', 'executed 
 inv = rows("SELECT type, COUNT(*) AS c FROM sqlite_master WHERE name LIKE 'crm_drive_review%' "
            "OR name LIKE 'trg_review%' OR name LIKE 'crm_review%' OR name LIKE 'idx_crm_review%' GROUP BY type")
 got = {r['type']: r['c'] for r in inv}
-check('object inventory matches the design (5 tables, 18 triggers, 4 views, 8 indexes)',
+check('object inventory matches the design (5 tables, 19 triggers, 4 views, 8 indexes)',
       got == EXPECTED, str(got))
 tg = rows("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%'")[0]['n']
-check('all 18 guard triggers survived the statement splitter', tg == 18, f'got {tg}')
+check('all 19 guard triggers survived the statement splitter', tg == 19, f'got {tg}')
 
 # ---------------------------------------------------------- 2) seed: run, genesis head, two cases
 print('=== 2) seed: one analysis run, a genesis head and two cases ===')
@@ -275,7 +278,7 @@ refused('automation cannot sign a human decision',
       ev(type='note', ref='p4r-001', reason='automation signing a decision on behalf of a person')
       .replace("'nasr.owner'", "'system'"), 'CHECK constraint failed')
 refused('reason cannot carry a phone number', ev(type='note', ref='p4r-001',
-      reason='call him on 01012345678 before deciding anything here'), 'CHECK constraint failed')
+      reason='synthetic canary 01012345678 before deciding anything here'), 'CHECK constraint failed')
 refused('reason cannot hold pasted transcript lines', ev(type='note', ref='p4r-001',
       reason='line one\nline two of transcript content pasted in'), 'CHECK constraint failed')
 refused('reveal without a purpose', ev(type='reveal', ref='p4r-001',
@@ -358,6 +361,49 @@ check('the CI summary view exposes only counts and chain hashes',
       not [c for c in cols if c in ('reviewer', 'signal_digest', 'drive_file_id', 'session_hash',
                                     'reason', 'crm_contact_id')], ','.join(cols))
 
+# ---------------- 3c) a healthy ledger must READ healthy, and a live seal cannot be re-keyed
+print('=== 3c) genesis-aware integrity view + the seal re-key barrier ===')
+integ0 = rows('SELECT * FROM crm_review_chain_integrity')[0]
+check('an intact ledger reads intact: broken_links=0, seq_gaps=0, anchors==events==head '
+      '(a gate that is red on a good database is a gate that gets switched off)',
+      integ0['broken_links'] == 0 and integ0['seq_gaps'] == 0 and integ0['anchor_mismatches'] == 0
+      and integ0['anchors'] == integ0['events'] == integ0['head_event_count'], json.dumps(integ0))
+for label, sql in [
+    ('swapping only the ciphertext bytes',
+     "UPDATE crm_drive_review_seal SET ciphertext_b64u = 'ZZ' || substr(ciphertext_b64u, 3)"
+     " WHERE case_ref='p4r-001';"),
+    ('rewriting the bytes and the pinned digest together',
+     "UPDATE crm_drive_review_seal SET ciphertext_b64u = 'Zm9yZ2VkLWNpcGhlcnRleHQtdmFsdWUxMjM0NTY3ODkw',"
+     " ciphertext_sha256 = lower(hex(randomblob(32))) WHERE case_ref='p4r-001';"),
+    ('bumping the key version', "UPDATE crm_drive_review_seal SET key_version = 7 WHERE case_ref='p4r-001';"),
+    ('moving the plaintext digest',
+     "UPDATE crm_drive_review_seal SET plaintext_sha256 = lower(hex(randomblob(32))) WHERE case_ref='p4r-001';"),
+    ('replacing the iv', "UPDATE crm_drive_review_seal SET iv_b64u = 'BAAAAAAAAAAAAAAA'"
+     " WHERE case_ref='p4r-001';"),
+]:
+    refused('a live seal cannot be re-keyed: ' + label, sql, 'review_seal_ciphertext_immutable_while_live')
+kept = rows("SELECT key_version, length(ciphertext_b64u) AS n, iv_b64u AS iv,"
+            " substr(ciphertext_b64u,1,2) AS head"
+            " FROM crm_drive_review_seal WHERE case_ref='p4r-001'")[0]
+check('every refused update left the seal exactly as it was (bytes, iv and key version)',
+      kept['key_version'] == 1 and kept['n'] >= 24 and kept['iv'] == 'A' * 16 and kept['head'] == 'AA',
+      json.dumps(kept))
+allowed('retention metadata may still be shortened (policy may only get stricter)',
+        "UPDATE crm_drive_review_seal SET retention_days = 30 WHERE case_ref='p4r-001';")
+allowed('revocation itself is never blocked',
+        f"UPDATE crm_drive_review_seal SET revoked_at = {TS} WHERE case_ref='p4r-001';")
+allowed('after revocation the bytes may rotate — rotation is a re-seal, never a re-binding',
+        "UPDATE crm_drive_review_seal SET key_version = 2,"
+        " ciphertext_b64u = 'cm90YXRlZC1jaXBoZXJ0ZXh0LWJ5dGVzMTIzNDU2Nzg5MA',"
+        " ciphertext_sha256 = lower(hex(randomblob(32))), iv_b64u = 'Ck' || substr(iv_b64u, 3)"
+        " WHERE case_ref='p4r-001';")
+rotated = rows("SELECT key_version FROM crm_drive_review_seal WHERE case_ref='p4r-001'")[0]
+check('the rotated seal is on the next key version and marked revoked', rotated['key_version'] == 2,
+      json.dumps(rotated))
+check('the availability view flipped that case to revoked (so the reveal route will refuse it)',
+      rows("SELECT availability FROM crm_review_seal_availability WHERE case_ref='p4r-001'")[0]['availability']
+      == 'revoked')
+
 # --------------------------------------------------- 4) the ledger cannot be edited, erased or rewound
 print('=== 4) the ledger cannot be edited, erased or rewound ===')
 eid = rows('SELECT MIN(id) AS id FROM crm_drive_review_event')[0]['id']
@@ -394,8 +440,11 @@ refused('the anchors still protect themselves', 'DELETE FROM crm_drive_review_ch
         'review_anchors_are_append_only')
 allowed('edit a decision with the guard gone', f"UPDATE crm_drive_review_event SET reviewer='intruder' WHERE id={eid};")
 integ2 = rows('SELECT * FROM crm_review_chain_integrity')[0]
-check('the verification view detects the forged edit',
-      integ2['broken_links'] > 0 or integ2['anchor_mismatches'] > 0, json.dumps(integ2))
+check('the SQL view is honestly blind to a content rewrite that kept its digests — which is exactly why '
+      'the CI recompute job exists (it never claimed to see this)',
+      integ2['broken_links'] == 0 and integ2['anchor_mismatches'] == 0, json.dumps(integ2))
+allowed('the operator puts the row back (only possible while the guard is dropped)',
+        f"UPDATE crm_drive_review_event SET reviewer='nasr.owner' WHERE id={eid};")
 st = rows('SELECT case_ref, current_decision, decided_by FROM crm_review_case_state ORDER BY case_ref')
 check('the derived state view still answers the reviewer',
       len(st) == 3 and st[0]['current_decision'] == 'approve' and st[1]['current_decision'] == 'defer',
@@ -409,10 +458,13 @@ allowed('the operator repairs the head checkpoint to the true tip',
         " WHERE event_seq = (SELECT MAX(event_seq) FROM crm_drive_review_event)) WHERE run_key='%s';" % RUN)
 refused('a live seal cannot be deleted', "DELETE FROM crm_drive_review_seal WHERE case_ref='p4r-002';",
         'review_seal_delete_before_expiry')
-allowed('a seal may be re-keyed in place (rotation is allowed by design)',
-        "UPDATE crm_drive_review_seal SET key_version = 2 WHERE case_ref='p4r-002';")
+refused('a live seal cannot be re-keyed in place either (the barrier the amendment added)',
+        "UPDATE crm_drive_review_seal SET key_version = 2 WHERE case_ref='p4r-002';",
+        'review_seal_ciphertext_immutable_while_live')
 allowed('mark a seal revoked (the only way to end availability early)',
         f"UPDATE crm_drive_review_seal SET revoked_at = {TS} WHERE case_ref='p4r-002';")
+allowed('and only then may the bytes rotate (re-seal, never re-binding)',
+        "UPDATE crm_drive_review_seal SET key_version = 2 WHERE case_ref='p4r-002';")
 avail2 = rows("SELECT availability FROM crm_review_seal_availability WHERE case_ref='p4r-002'")[0]
 check('the availability view flips to revoked', avail2['availability'] == 'revoked', json.dumps(avail2))
 allowed('a revoked seal may be swept away', "DELETE FROM crm_drive_review_seal WHERE case_ref='p4r-002';")
@@ -428,6 +480,179 @@ refused('and after that sweep, approving this case is unreachable again',
 # D1 reports only the first-firing trigger, and for two simultaneous barriers that order is not
 # contractual — so the rehearsal accepts either, while CI's audit predicate below counts both.
 
+# ------------- 5c) the CI verifier, run against rows read back out of D1 (canonical digests, python side)
+print('=== 5c) canonical pre-image recomputation over a D1-resident chain ===')
+import hashlib
+import re
+
+
+def canonical(row):
+    order = ['run_key', 'event_seq', 'case_seq', 'case_ref', 'event_type', 'decision_state', 'reviewer',
+             'reviewer_attestation', 'session_hash', 'reason_sha256', 'reveal_purpose', 'reveal_outcome',
+             'seal_ciphertext_sha256', 'basis_at_event', 'case_snapshot_sha256', 'link_applied',
+             'merge_authorized', 'contact_write_count', 'supersedes_id', 'occurred_at', 'prev_event_sha256']
+    fields = []
+    for name in order:
+        value = row.get(name)
+        if name.endswith('_seq') or name in ('link_applied', 'merge_authorized', 'contact_write_count',
+                                             'supersedes_id'):
+            value = None if value is None else int(value)
+        fields.append([name, value])
+    payload = 'p4rev_event_v1' + chr(0) + json.dumps(fields, separators=(',', ':'), ensure_ascii=False)
+    return hashlib.sha256(payload.encode('utf8')).hexdigest()
+
+
+VRUN = 'p4-d1-canonical-run'
+GEN = hashlib.sha256(('p4rev_genesis|' + VRUN).encode('utf8')).hexdigest()
+allowed('the parent analysis run for the canonical chain (the head row has a real FK)',
+        f"INSERT INTO crm_drive_analysis_run (run_key, payload_fingerprint, analysis_version,"
+        f" drive_parent_id) VALUES ('{VRUN}', {HEX32}, 'p4a-v1-canonical', {HEX32});")
+allowed('a second run with a python-built canonical chain',
+        f"INSERT INTO crm_drive_review_chain_head (run_key, head_sha256, event_count, updated_at) "
+        f"VALUES ('{VRUN}', '{GEN}', 0, '2026-11-01T14:00:00.000Z');")
+allowed('its genesis checkpoint',
+        f"INSERT INTO crm_drive_review_chain_anchor (run_key, event_seq, head_sha256, event_count,"
+        f" anchor_source, anchored_at) VALUES ('{VRUN}', 0, '{GEN}', 0, 'genesis',"
+        f" '2026-11-01T14:00:00.000Z');")
+# an event may only speak about a case that belongs to ITS run, so the canonical chain needs its own
+# case row — with the snapshot digest computed here, in python, because that digest is part of the
+# pre-image that will be recomputed later
+SNAP_V = hashlib.sha256(b'canonical-case-snapshot').hexdigest()
+FILE_V = hashlib.sha256(b'canonical-drive-file').hexdigest()
+allowed('a case row of its own for the canonical run (events cannot borrow another run\'s case)',
+        CASE_COLS + f"('p4r-004','file_to_contact','{VRUN}', '{FILE_V}','VCF','exact_match',"
+        f"'vcard_tel_digest_equal_primary','high','phone','c0ffee00c0ffee00c0ffee00c0ffee0042',"
+        f"'vcard_tel',1, '{SNAP_V}','2026-11-01T14:00:00.000Z');")
+snap003 = rows("SELECT case_snapshot_sha256 AS snap, basis FROM crm_drive_review_case WHERE case_ref='p4r-004'")[0]
+check('the case stored exactly the snapshot the pre-image will claim', snap003['snap'] == SNAP_V,
+      json.dumps(snap003))
+head_hash = GEN
+for i, (typ, reason) in enumerate([('note', 'a canonical first event, written to be recomputable'),
+                                   ('note', 'a canonical second event on the same chain'),
+                                   ('note', 'a canonical closing note, still recomputable')], start=1):
+    # the per-case counter belongs to the case, not to this run: read it, then sign what was read
+    next_case_seq = rows("SELECT COUNT(*) AS c FROM crm_drive_review_event WHERE case_ref='p4r-004'")[0]['c'] + 1
+    row = {'run_key': VRUN, 'event_seq': i, 'case_seq': next_case_seq, 'case_ref': 'p4r-004', 'event_type': typ,
+           'decision_state': None, 'reviewer': 'nasr.owner',
+           'reviewer_attestation': 'session_label_not_independent_identity', 'session_hash': LIVE,
+           'reason_sha256': hashlib.sha256(reason.encode('utf8')).hexdigest(), 'reveal_purpose': None,
+           'reveal_outcome': None, 'seal_ciphertext_sha256': None, 'basis_at_event': snap003['basis'],
+           'case_snapshot_sha256': SNAP_V, 'link_applied': 0, 'merge_authorized': 0,
+           'contact_write_count': 0, 'supersedes_id': None,
+           'occurred_at': '2026-11-01T14:00:%02d.000Z' % (10 + i), 'prev_event_sha256': head_hash}
+    digest = canonical(row)
+    row['reason'] = reason
+    row['event_sha256'] = digest
+    cols = ', '.join(k for k in row)
+    vals = ', '.join('NULL' if row[k] is None else ("'%s'" % row[k] if isinstance(row[k], str) else str(row[k]))
+                     for k in row)
+    allowed('canonical event %d lands through D1 (its own CHECKs accept the pre-image)' % i,
+            f"INSERT INTO crm_drive_review_event ({cols}) VALUES ({vals});")
+    head_hash = digest
+
+dump = os.path.join(SCRATCH, 'canonical-dump.json')
+with open(dump, 'w') as fh:
+    json.dump({'events': rows(f"SELECT * FROM crm_drive_review_event WHERE run_key='{VRUN}' ORDER BY event_seq"),
+               'head': rows(f"SELECT * FROM crm_drive_review_chain_head WHERE run_key='{VRUN}'"),
+               'anchors': rows(f"SELECT * FROM crm_drive_review_chain_anchor WHERE run_key='{VRUN}'"),
+               'seals': []}, fh)
+verifier = os.path.join(REPO, 'scripts', 'crm', 'verify-review-event-chain.mjs')
+env = dict(os.environ, CI='1')
+if _wr:
+    env['WRANGLER'] = _wr
+
+
+def run_verifier(path):
+    p = subprocess.run(['node', verifier, '--from-json', path], capture_output=True, text=True,
+                       cwd=REPO, env=env)
+    try:
+        return p.returncode, json.loads(p.stdout.strip().splitlines()[-1])
+    except Exception:
+        return p.returncode, {'raw': (p.stdout + p.stderr)[-200:]}
+
+
+rc0, verdict = run_verifier(dump)
+check('the CI verifier recomputes every digest and reports the D1-resident chain clean',
+      rc0 == 0 and verdict.get('ok') is True and verdict.get('events') == 3, json.dumps(verdict)[:220])
+
+
+def run_verifier_local(run_key):
+    # the mode the CI workflow will actually use: no export, no intermediate file, one SELECT per table
+    p = subprocess.run(['node', verifier, '--local', '--db', DB, '--config', CFG, '--state', STATE,
+                        '--run', run_key] + (['--wrangler', _wr] if _wr else []),
+                       capture_output=True, text=True, cwd=REPO, env=env, timeout=900)
+    try:
+        return p.returncode, json.loads(p.stdout.strip().splitlines()[-1])
+    except Exception:
+        return p.returncode, {'raw': (p.stdout + p.stderr)[-200:]}
+
+
+rcL, verdictL = run_verifier_local(VRUN)
+check('the same ledger read LIVE out of the local D1 verifies clean too (no export step to trust)',
+      rcL == 0 and verdictL.get('ok') is True and verdictL.get('events') == 3, json.dumps(verdictL)[:220])
+check('and --run scopes it to one chain, so a CI job can verify the review run without dragging in '
+      'every other ledger in the database', verdictL.get('runs') == 1
+      and verdictL.get('integrityViewRows') == 1, json.dumps(verdictL)[:160])
+SAFE_TOKEN = re.compile(r'^([0-9a-f]{8,64}|[a-z0-9_-]{2,32})$')
+
+
+def str_values(node):
+    if isinstance(node, dict):
+        out = []
+        for v in node.values():
+            out += str_values(v)
+        return out
+    if isinstance(node, list):
+        out = []
+        for v in node:
+            out += str_values(v)
+        return out
+    return [node] if isinstance(node, str) else []
+
+
+leaks = [tk for tk in str_values(verdict) if not SAFE_TOKEN.fullmatch(tk)]
+check('its string values are digests, labels and case refs only — no reason text, no reviewer label, '
+      'no seal bytes (safe for a CI log and for an archived artifact)', not leaks, json.dumps(leaks)[:180])
+allowed('an attacker with raw write access rewrites the reason and the reviewer',
+        f"UPDATE crm_drive_review_event SET reason='rewritten in D1', reviewer='intruder.label'"
+        f" WHERE run_key='{VRUN}' AND event_seq=2;")
+rows(f"SELECT * FROM crm_drive_review_event WHERE run_key='{VRUN}'")  # warm the cache, keep the call order
+with open(dump + '.tampered', 'w') as fh:
+    json.dump({'events': rows(f"SELECT * FROM crm_drive_review_event WHERE run_key='{VRUN}' ORDER BY event_seq"),
+               'head': rows(f"SELECT * FROM crm_drive_review_chain_head WHERE run_key='{VRUN}'"),
+               'anchors': rows(f"SELECT * FROM crm_drive_review_chain_anchor WHERE run_key='{VRUN}'"),
+               'seals': []}, fh)
+rc1, verdict1 = run_verifier(dump + '.tampered')
+kinds1 = sorted({v['kind'] for v in verdict1.get('violations', [])})
+check('the same edit, invisible to every view, is reported by the verifier: digest + reason mismatch',
+      rc1 == 1 and 'digest_mismatch' in kinds1 and 'reason_mismatch' in kinds1, f'{kinds1} {json.dumps(verdict1)[:160]}')
+forged = rows(f"SELECT * FROM crm_drive_review_event WHERE run_key='{VRUN}' AND event_seq=2")[0]
+forged['reason_sha256'] = hashlib.sha256(str(forged['reason']).encode('utf8')).hexdigest()
+forged['event_sha256'] = None                              # the digest is what we are about to compute
+forged_digest = canonical(forged)
+allowed('and a forger who re-signed both digests as well (the pre-image is public by design)',
+        "UPDATE crm_drive_review_event SET reason_sha256 = '%s', event_sha256 = '%s'"
+        " WHERE run_key='%s' AND event_seq=2;" % (forged['reason_sha256'], forged_digest, VRUN))
+with open(dump + '.resigned', 'w') as fh:
+    json.dump({'events': rows(f"SELECT * FROM crm_drive_review_event WHERE run_key='{VRUN}' ORDER BY event_seq"),
+               'head': rows(f"SELECT * FROM crm_drive_review_chain_head WHERE run_key='{VRUN}'"),
+               'anchors': rows(f"SELECT * FROM crm_drive_review_chain_anchor WHERE run_key='{VRUN}'"),
+               'seals': []}, fh)
+rc2, verdict2 = run_verifier(dump + '.resigned')
+kinds2 = sorted({v['kind'] for v in verdict2.get('violations', [])})
+check('a perfectly re-signed row passes the recomputation and is still caught by the immutable mirror '
+      '(anchor_mismatch) and by the next event\'s prev link (broken_link)',
+      rc2 == 1 and 'anchor_mismatch' in kinds2 and 'broken_link' in kinds2
+      and 'digest_mismatch' not in kinds2 and 'reason_mismatch' not in kinds2,
+      f'{kinds2} {json.dumps(verdict2)[:160]}')
+check('and the anchor mirror itself could not be edited (append-only held throughout)',
+      rows(f"SELECT COUNT(*) AS n FROM crm_drive_review_chain_anchor WHERE run_key='{VRUN}'")[0]['n'] == 4)
+rcL2, verdictL2 = run_verifier_local(VRUN)
+kindsL2 = sorted({v['kind'] for v in verdictL2.get('violations', [])})
+check('and the live read catches the re-signed row exactly as the exported copy did',
+      rcL2 == 1 and 'anchor_mismatch' in kindsL2 and 'broken_link' in kindsL2,
+      f'{kindsL2} {json.dumps(verdictL2)[:160]}')
+
 # ------------------------------------------------------------------ 6) idempotency of re-applying
 print('=== 6) idempotency ===')
 before = rows('SELECT (SELECT COUNT(*) FROM crm_drive_review_case) AS c, (SELECT COUNT(*) FROM crm_drive_review_event) AS e')[0]
@@ -439,7 +664,7 @@ check('re-running the whole file succeeds (everything is IF NOT EXISTS)', 'execu
 after2 = rows('SELECT (SELECT COUNT(*) FROM crm_drive_review_case) AS c, (SELECT COUNT(*) FROM crm_drive_review_event) AS e')[0]
 check('rows unchanged on re-apply', before == after2, f'{before} -> {after2}')
 restored = rows("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%'")[0]['n']
-check('re-applying restores the triggers an attacker dropped (self-healing)', restored == 18, str(restored))
+check('re-applying restores the triggers an attacker dropped (self-healing)', restored == 19, str(restored))
 out2 = subprocess.run(WRANGLER + ['d1', 'migrations', 'apply', DB, '--local', '--config', CFG,
                                   '--persist-to', STATE],
                       capture_output=True, text=True, cwd=SCRATCH, env=ENV).stdout

@@ -13,7 +13,12 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// the canonical pre-image the ledger is signed with — the same module the CI verifier imports, so the
+// tests, the service layer and the CI job can never drift apart
+import { eventDigest, inspectCheckpoints, inspectLedger } from '../../scripts/crm/review-event-chain.mjs';
+
 const workerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repoDir = path.resolve(workerDir, '..');
 const MIG_DIR = path.join(workerDir, 'migrations');
 const DRAFT = path.join(workerDir, 'migrations-draft', '0009_crm_drive_review_workflow.sql');
 const sha = text => createHash('sha256').update(text).digest('hex');
@@ -166,7 +171,7 @@ function insertEvent(o) {
     occurred_at: o.at ?? nextAt(),
     prev_event_sha256: o.prev ?? h.head_sha256,
   };
-  row.event_sha256 = sha(JSON.stringify(row));
+  row.event_sha256 = eventDigest(row);          // the canonical 21-field pre-image, not a row dump
   const extra = o.raw || {};
   db.prepare(`INSERT INTO crm_drive_review_event
       (run_key, event_seq, case_seq, case_ref, event_type, decision_state, reviewer, reviewer_attestation,
@@ -205,7 +210,9 @@ function sealCard(caseRef, plaintext = cardPlaintext) {
   c.setAAD(aadFor(caseRef, snap));
   const ct = Buffer.concat([c.update(plaintext, 'utf8'), c.final()]);
   const row = { caseRef, iv: b64u(iv), tag: b64u(c.getAuthTag()), ct: b64u(ct),
-    ctSha: sha(ct), pSha: sha(plaintext), len: Buffer.byteLength(plaintext) };
+    // the pinned digest is taken over the stored base64url text, so a reader can recompute it from the
+    // row alone — that is what makes the CI seal check possible without the key
+    ctSha: sha(b64u(ct)), pSha: sha(plaintext), len: Buffer.byteLength(plaintext) };
   db.prepare(`INSERT INTO crm_drive_review_seal
       (case_ref, run_key, envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
        ciphertext_b64u, ciphertext_sha256, plaintext_sha256, plaintext_len, retention_days, sealed_by,
@@ -488,7 +495,7 @@ for (const short of ['', 'too short', 'ok']) {
   }), 'CHECK constraint failed');
 }
 expectFail('reason holding a phone number is refused', () => insertEvent({
-  caseRef: 'p4r-001', type: 'note', reason: 'call him on 01012345678 before deciding anything here',
+  caseRef: 'p4r-001', type: 'note', reason: 'call him on 01012345678 before deciding anything here',  // synthetic canary, never a real number
 }), 'CHECK constraint failed');
 expectFail('reason holding pasted transcript lines is refused', () => insertEvent({
   caseRef: 'p4r-001', type: 'note', reason: 'line one\nline two of transcript content pasted in',
@@ -561,12 +568,159 @@ expectDetected('blob moved to another case cannot be decrypted', () => {
 });
 db.exec(sql0009);
 
+// ------------------------------------------------- 6b) the CI-grade recompute, genesis and the re-key hole
+const liveEvents = () => db.prepare('SELECT * FROM crm_drive_review_event ORDER BY run_key, event_seq').all();
+const liveAnchors = () => db.prepare('SELECT * FROM crm_drive_review_chain_anchor ORDER BY run_key, event_seq').all();
+const liveHead = () => db.prepare('SELECT * FROM crm_drive_review_chain_head').all();
+const integrity = () => db.prepare('SELECT * FROM crm_review_chain_integrity WHERE run_key = ?').get(RUN);
+
+// (6b.1) a healthy ledger must read healthy: a gate that is red on a good database is a gate that gets
+// switched off, and this is the exact defect the genesis-unaware view had
+const healthy = integrity();
+if (healthy.broken_links === 0 && healthy.seq_gaps === 0 && healthy.anchor_mismatches === 0
+    && healthy.events === healthy.head_event_count) {
+  pass(`genesis-aware integrity view reads healthy on an intact ledger ` +
+       `(events=${healthy.events}, head=${healthy.head_event_count}, broken=0, gaps=0, anchor_mismatch=0) [ok]`);
+} else fail('integrity view on a healthy ledger', JSON.stringify(healthy));
+
+// (6b.2) the canonical recompute agrees with the database, row for row
+const recompute = inspectLedger(liveEvents());
+if (recompute.violations.length === 0 && recompute.events > 3) {
+  pass(`canonical recompute over ${recompute.events} live events finds no violation [ok]`);
+} else fail('canonical recompute on healthy data', JSON.stringify(recompute.violations.slice(0, 3)));
+const checkpoints = inspectCheckpoints({ events: liveEvents(), head: liveHead(), anchors: liveAnchors() });
+if (checkpoints.length === 0) pass(`head and anchor mirror agree with the ledger (${liveAnchors().length} anchors) [ok]`);
+else fail('checkpoint agreement', JSON.stringify(checkpoints.slice(0, 3)));
+
+// (6b.3) an in-place content rewrite: invisible to the view, loud to the recompute
+function withGuardsDropped(body) {
+  db.exec('DROP TRIGGER IF EXISTS trg_review_event_no_update');
+  try { return body(); } finally { db.exec(sql0009); }      // re-applying 0009 re-heals the guard
+}
+const editProbe = () => {
+  const before = integrity();
+  const victim = db.prepare('SELECT * FROM crm_drive_review_event ORDER BY event_seq LIMIT 1 OFFSET 1').get();
+  let invisibleToView = false;
+  let caught = false;
+  withGuardsDropped(() => {
+    db.prepare('UPDATE crm_drive_review_event SET reason = ?, reviewer = ? WHERE id = ?')
+      .run('rewritten by someone who could not be stopped', 'intruder.label', victim.id);
+    const after = integrity();
+    invisibleToView = after.broken_links === before.broken_links
+      && after.anchor_mismatches === before.anchor_mismatches;
+    const kinds = new Set(inspectLedger(liveEvents()).violations.map(v => v.kind));
+    caught = kinds.has('digest_mismatch') && kinds.has('reason_mismatch');
+    db.prepare('UPDATE crm_drive_review_event SET reason = ?, reviewer = ? WHERE id = ?')
+      .run(victim.reason, victim.reviewer, victim.id);            // put the row back exactly
+  });
+  const healed = inspectLedger(liveEvents()).violations.length === 0;
+  return invisibleToView && caught && healed;
+};
+if (editProbe()) pass('a content rewrite that keeps the digests is caught by the recompute, is invisible to ' +
+                      'the view, and the ledger is healthy again once the row is put back [ok]');
+else fail('content rewrite detection', 'expected view-blind + recompute-loud + restored');
+
+// (6b.4) a re-signed forgery: digests recomputed by the forger, so only the immutable mirror can speak
+const forgeProbe = () => {
+  const victim = db.prepare('SELECT * FROM crm_drive_review_event ORDER BY event_seq LIMIT 1 OFFSET 1').get();
+  const patched = { ...victim, reason: 'forged but re-signed', reviewer: 'intruder.label' };
+  patched.reason_sha256 = sha(patched.reason);
+  patched.event_sha256 = eventDigest(patched);
+  let selfConsistent = false;
+  let mirrorFlagged = false;
+  let successorFlagged = false;
+  withGuardsDropped(() => {
+    db.prepare('UPDATE crm_drive_review_event SET reason = ?, reason_sha256 = ?, reviewer = ?, event_sha256 = ?'
+      + ' WHERE id = ?')
+      .run(patched.reason, patched.reason_sha256, patched.reviewer, patched.event_sha256, victim.id);
+    const rows = liveEvents();
+    const forged = rows.find(r => r.id === victim.id);
+    selfConsistent = eventDigest(forged) === forged.event_sha256;   // the forger signed correctly
+    mirrorFlagged = inspectCheckpoints({ events: rows, head: liveHead(), anchors: liveAnchors() })
+      .some(v => v.kind === 'anchor_mismatch');
+    const i = rows.findIndex(r => r.id === victim.id);
+    successorFlagged = i >= 0 && i + 1 < rows.length
+      && rows[i + 1].prev_event_sha256 !== rows[i].event_sha256;
+    db.prepare('UPDATE crm_drive_review_event SET reason = ?, reason_sha256 = ?, reviewer = ?, event_sha256 = ?'
+      + ' WHERE id = ?')
+      .run(victim.reason, victim.reason_sha256, victim.reviewer, victim.event_sha256, victim.id);
+  });
+  const healed = inspectLedger(liveEvents()).violations.length === 0
+    && inspectCheckpoints({ events: liveEvents(), head: liveHead(), anchors: liveAnchors() }).length === 0;
+  return selfConsistent && mirrorFlagged && successorFlagged && healed;
+};
+if (forgeProbe()) pass('a perfectly re-signed forgery is still caught: the immutable anchor mirror and the ' +
+                       "next event's prev link both disagree, and the ledger is clean again afterwards [ok]");
+else fail('re-signed forgery', 'expected self-consistent digest + anchor_mismatch + broken successor link');
+
+// (6b.5) the seal cannot be re-keyed while it is live — otherwise a recorded approval silently binds
+// to different bytes
+const sealRow = () => db.prepare('SELECT * FROM crm_drive_review_seal WHERE case_ref = ?').get('p4r-001');
+// the replacement is built to differ from the stored bytes whatever they are: a fixture drawn from
+// randomBytes(·) starts with 'A' about one run in sixty, and a probe that writes identical bytes is a
+// vacuous pass — the guard refuses a CHANGE, not a no-op write, so the literal must always change.
+expectFail('swapping the ciphertext alone is refused', () => db.prepare(
+  "UPDATE crm_drive_review_seal SET ciphertext_b64u ="
+  + " CASE WHEN substr(ciphertext_b64u, 1, 1) = 'B' THEN 'C' ELSE 'B' END"
+  + " || substr(ciphertext_b64u, 2) WHERE case_ref = ?")
+  .run('p4r-001'), 'review_seal_ciphertext_immutable_while_live');
+expectFail('rewriting the bytes AND the pinned digest is refused too', () => {
+  const fake = sha('someone else bytes');
+  db.prepare('UPDATE crm_drive_review_seal SET ciphertext_b64u = ?, ciphertext_sha256 = ? WHERE case_ref = ?')
+    .run('Zm9yZ2VkLWNpcGhlcnRleHQtdmFsdWU', fake, 'p4r-001');
+}, 'review_seal_ciphertext_immutable_while_live');
+expectFail('a new iv for a live seal is refused', () => db.prepare(
+  'UPDATE crm_drive_review_seal SET iv_b64u = ? WHERE case_ref = ?').run('AAAAAAAAAAAAAAAA', 'p4r-001'),
+  'review_seal_ciphertext_immutable_while_live');
+expectFail('bumping the key version on a live seal is refused', () => db.prepare(
+  'UPDATE crm_drive_review_seal SET key_version = key_version + 1 WHERE case_ref = ?').run('p4r-001'),
+  'review_seal_ciphertext_immutable_while_live');
+if (sealRow().ciphertext_b64u.startsWith('AAAA') === false) pass('the live seal bytes were never touched [ok]');
+else fail('seal immutability', 'a refused UPDATE still changed the row');
+// rotation is still possible: revoke, then re-seal — revocation itself is never blocked
+expectOk('revoking a live seal is always allowed', () => db.prepare(
+  "UPDATE crm_drive_review_seal SET revoked_at = ? WHERE case_ref = ?").run('2026-11-01T13:00:00.000Z', 'p4r-001'));
+expectOk('after revocation the bytes may be replaced (rotation, not re-binding)', () => {
+  const ct = 'cm90YXRlZC1jaXBoZXJ0ZXh0LWJ5dGVz';
+  db.prepare('UPDATE crm_drive_review_seal SET ciphertext_b64u = ?, ciphertext_sha256 = ?, iv_b64u = ?, tag_b64u = ?,' +
+             ' key_version = key_version + 1 WHERE case_ref = ?')
+    .run(ct, sha(ct), 'AAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAAAA', 'p4r-001');
+});
+if (sealRow().key_version === KEY_VERSION + 1) pass('the rotated seal is on the next key version [ok]');
+else fail('rotation', JSON.stringify({ key_version: sealRow().key_version }));
+const afterRotate = inspectLedger(liveEvents());
+if (afterRotate.violations.length === 0) pass('rotation left the decision ledger untouched and still verifiable [ok]');
+else fail('rotation side effect', JSON.stringify(afterRotate.violations.slice(0, 2)));
+
+// (6b.6) the object inventory the promotion commit must gate on: 19 triggers, 4 views
+const inv = db.prepare(`SELECT type, COUNT(*) AS c FROM sqlite_master
+   WHERE name LIKE 'crm_drive_review%' OR name LIKE 'crm_review%' OR name LIKE 'trg_review%'
+      OR name LIKE 'idx_crm_review%' GROUP BY type`).all();
+const invMap = Object.fromEntries(inv.map(r => [r.type, r.c]));
+if (invMap.trigger === 19 && invMap.view === 4 && invMap.table === 5 && invMap.index === 8) {
+  pass(`review-object inventory after the amendment: ${JSON.stringify(invMap)} [ok]`);
+} else fail('review-object inventory', `expected {table:5,index:8,trigger:19,view:4}, got ${JSON.stringify(invMap)}`);
+const ciColsProbe = db.prepare('SELECT * FROM crm_review_ci_summary LIMIT 0').all();
+const ciNames = Object.keys(db.prepare('SELECT * FROM crm_review_ci_summary LIMIT 1').get() ?? {});
+if (ciNames.includes('seq_gaps') && ciNames.length === 15) {
+  pass(`crm_review_ci_summary carries seq_gaps and still exposes only ${ciNames.length} count/hash columns [ok]`);
+} else fail('ci summary columns', `${ciNames.length}: ${ciNames.join(',')}`);
+void ciColsProbe;
+
 // ---------------------------------------------------------------- 7) tampering survives guard removal
+// This used to be scored on the view alone — and the view passed it only because of a genesis defect that
+// made every healthy ledger look broken. It now asks the honest question: the SQL view cannot see this
+// edit, the recomputation can, so the tampering must be detected by the CI-grade check.
 expectDetected('edit a recorded decision after dropping the guard trigger', () => {
   db.exec('DROP TRIGGER IF EXISTS trg_review_event_no_update');
+  const original = db.prepare('SELECT reviewer FROM crm_drive_review_event WHERE id = ?').get(someId).reviewer;
   db.prepare('UPDATE crm_drive_review_event SET reviewer = ? WHERE id = ?').run('intruder.label', someId);
   const i = db.prepare('SELECT * FROM crm_review_chain_integrity WHERE run_key = ?').get(RUN);
-  return i.broken_links > 0 || i.anchor_mismatches > 0;
+  const viewBlind = i.broken_links === 0 && i.anchor_mismatches === 0;
+  const found = inspectLedger(liveEvents()).violations.some(v => v.kind === 'digest_mismatch');
+  db.prepare('UPDATE crm_drive_review_event SET reviewer = ? WHERE id = ?').run(original, someId);
+  db.exec(sql0009);
+  return viewBlind && found && inspectLedger(liveEvents()).violations.length === 0;
 });
 expectDetected('delete the newest event after dropping the guard trigger', () => {
   db.exec('DROP TRIGGER IF EXISTS trg_review_event_no_delete');

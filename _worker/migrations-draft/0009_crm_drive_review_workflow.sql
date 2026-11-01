@@ -21,6 +21,19 @@
 --   * Chain verifiable in pure SQL: per-run prev/hash linkage + per-case density + an immutable
 --     anchor mirror, so edits, deletions, reordering and ledger wipes are detected even if these
 --     triggers were dropped by a privileged raw write.
+--   * Genesis is part of the chain: crm_review_chain_integrity validates the FIRST event of a run
+--     against the 'genesis' anchor instead of demanding a predecessor row, so a healthy ledger reads
+--     broken_links = 0 (a gate that is red on a good database is a gate that gets switched off). The
+--     same view reports seq_gaps, which no hash can hide.
+--   * A live seal cannot be re-keyed: replacing ciphertext (or its pinned digest, iv, tag, key
+--     version or plaintext digest) is refused while the seal is un-revoked and un-expired, so a
+--     recorded approval can never be silently re-bound to different bytes. Rotation = revoke first.
+--   * Honest limit, by design: D1 has no SHA-256 in SQL, and event_sha256 / ciphertext_sha256 are
+--     supplied by the writer. A view therefore CANNOT see an in-place content rewrite that keeps the
+--     digests. Detection of exactly that is the read-only CI recomputation job
+--     (scripts/crm/verify-review-event-chain.mjs, sharing scripts/crm/review-event-chain.mjs with the
+--     service layer), which recomputes the canonical 21-field pre-image "p4rev_event_v1" + the 21 hashed
+--     columns in a fixed order.)
 --   * FK direction: only crm_drive_review_case references crm_drive_analysis_run. The ledger has no
 --     FK at all, so no cascade can ever erase a recorded human decision.
 
@@ -402,6 +415,28 @@ BEGIN
   UPDATE crm_drive_review_case SET seal_state = 'unavailable' WHERE case_ref = OLD.case_ref;
 END;
 
+-- (5.14) the seal bytes are pinned while they are usable. An approval binds to
+--          crm_drive_review_seal.ciphertext_sha256, so rewriting the ciphertext while the pinned
+--          digest stays put (or rewriting both) would re-bind a recorded decision to new bytes.
+--          Rotation therefore goes through revocation, which is always allowed and is itself an
+--          event-visible fact: revoke (or wait for expiry), then re-seal.
+CREATE TRIGGER IF NOT EXISTS trg_review_seal_no_rekey
+  BEFORE UPDATE OF envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
+                   ciphertext_b64u, ciphertext_sha256, plaintext_sha256
+  ON crm_drive_review_seal
+  WHEN OLD.revoked_at IS NULL
+       AND datetime(OLD.expires_at) > datetime('now')
+       AND (NEW.ciphertext_b64u    IS NOT OLD.ciphertext_b64u
+            OR NEW.ciphertext_sha256 IS NOT OLD.ciphertext_sha256
+            OR NEW.iv_b64u         IS NOT OLD.iv_b64u
+            OR NEW.tag_b64u        IS NOT OLD.tag_b64u
+            OR NEW.plaintext_sha256 IS NOT OLD.plaintext_sha256
+            OR NEW.key_version     IS NOT OLD.key_version
+            OR NEW.envelope_version IS NOT OLD.envelope_version)
+BEGIN
+  SELECT RAISE(ABORT, 'review_seal_ciphertext_immutable_while_live');
+END;
+
 -- ---------------------------------------------------------------------------
 -- 6) verification views — pure SQL, usable from CI without recomputing any hash
 -- ---------------------------------------------------------------------------
@@ -410,7 +445,11 @@ SELECT e.run_key AS run_key,
        COUNT(*) AS events,
        MIN(e.event_seq) AS first_seq,
        MAX(e.event_seq) AS last_seq,
-       SUM(CASE WHEN p.event_sha256 IS NULL OR e.prev_event_sha256 <> p.event_sha256
+       -- density, not hashing: a deleted event leaves a hole no rewrite of the digests can close
+       MAX(e.event_seq) - MIN(e.event_seq) + 1 - COUNT(*) AS seq_gaps,
+       -- the first event of a run is linked to the genesis anchor, not to a predecessor row: that is
+       -- what makes a healthy ledger readable as healthy (broken_links = 0) instead of permanently red
+       SUM(CASE WHEN e.prev_event_sha256 IS NOT COALESCE(p.event_sha256, g.head_sha256)
                 THEN 1 ELSE 0 END) AS broken_links,
        SUM(CASE WHEN a.head_sha256 IS NULL OR a.head_sha256 <> e.event_sha256
                 THEN 1 ELSE 0 END) AS anchor_mismatches,
@@ -422,6 +461,8 @@ SELECT e.run_key AS run_key,
   FROM crm_drive_review_event e
   LEFT JOIN crm_drive_review_event p
          ON p.run_key = e.run_key AND p.event_seq = e.event_seq - 1
+  LEFT JOIN crm_drive_review_chain_anchor g
+         ON g.run_key = e.run_key AND g.event_seq = 0 AND g.anchor_source = 'genesis'
   LEFT JOIN crm_drive_review_chain_anchor a
          ON a.run_key = e.run_key AND a.event_seq = e.event_seq
  GROUP BY e.run_key;
@@ -497,6 +538,8 @@ SELECT c.run_key AS run_key,
        (SELECT i.broken_links FROM crm_review_chain_integrity i WHERE i.run_key = c.run_key) AS broken_links,
        (SELECT i.anchor_mismatches FROM crm_review_chain_integrity i
          WHERE i.run_key = c.run_key) AS anchor_mismatches,
+       (SELECT i.seq_gaps FROM crm_review_chain_integrity i
+         WHERE i.run_key = c.run_key) AS seq_gaps,
        (SELECT i.head_event_count FROM crm_review_chain_integrity i
          WHERE i.run_key = c.run_key) AS head_event_count,
        (SELECT h.head_sha256 FROM crm_drive_review_chain_head h
