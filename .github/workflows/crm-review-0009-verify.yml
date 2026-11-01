@@ -1,0 +1,159 @@
+name: CRM review 0009 — local gates (SQL barriers, D1 rehearsal, backup round-trip)
+
+# Read-only, cloud-free verification of the DRAFT migration 0009 (human review workflow) and of the
+# backup/restore path it depends on. Three things run here, all against throwaway LOCAL databases in
+# the runner's filesystem:
+#
+#   * the node:sqlite abuse harness  — every barrier must refuse a bad write (113 checks);
+#   * the Cloudflare D1 rehearsal    — the same contract on the real D1 engine, plus the reveal↔approve
+#                                      binding, the retention rules, and the canonical pre-image
+#                                      recomputation through scripts/crm/verify-review-event-chain.mjs;
+#   * the backup/restore rehearsal   — a bundle built by scripts/crm/build-d1-guarded-backup.mjs must
+#                                      restore every table, index, trigger and view, and a guard-stripped
+#                                      bundle must be shown to be unsafe.
+#
+# There are deliberately no secrets, no `--remote` wrangler calls, no Cloudflare API and no artifact
+# uploads: this workflow cannot read or write a real database, and its logs contain digests and counts
+# only. Nothing here deploys or applies anything to `nasr-crm-test-db`; applying 0009 is a separate,
+# human-approved act (see CRM_PHASE4_REVIEW_SQL_APPROVAL.md).
+on:
+  pull_request:
+    paths:
+      - _worker/migrations-draft/0009_crm_drive_review_workflow.sql
+      - _worker/tests-draft/crm-review-sql-0009.abuse.mjs
+      - _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
+      - _worker/tests-draft/crm-0009-backup-restore.rehearsal.py
+      - scripts/crm/review-event-chain.mjs
+      - scripts/crm/verify-review-event-chain.mjs
+      - scripts/crm/build-d1-guarded-backup.mjs
+      - .github/workflows/crm-review-0009-verify.yml
+  push:
+    branches:
+      - master
+      - 'arena/**'
+    paths:
+      - _worker/migrations-draft/0009_crm_drive_review_workflow.sql
+      - _worker/tests-draft/crm-review-sql-0009.abuse.mjs
+      - _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
+      - _worker/tests-draft/crm-0009-backup-restore.rehearsal.py
+      - scripts/crm/review-event-chain.mjs
+      - scripts/crm/verify-review-event-chain.mjs
+      - scripts/crm/build-d1-guarded-backup.mjs
+      - .github/workflows/crm-review-0009-verify.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-review-0009-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: SQL barriers · D1 rehearsal · backup round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.repository == 'nasr-realestate/nasr-realestate.github.io'
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      NODE_NO_WARNINGS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install the toolchain the rehearsals drive (wrangler is the D1 engine; nothing is deployed)
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund wrangler@4.156.0
+          ./node_modules/.bin/wrangler --version
+          node -e "const {DatabaseSync}=require('node:sqlite');console.log('node:sqlite available')"
+
+      - name: Inventory of the migration chain the review covers (counts only)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, re
+          files = sorted(glob.glob('_worker/migrations/*.sql')) + sorted(glob.glob('_worker/migrations-draft/*.sql'))
+          tot = {'table': 0, 'index': 0, 'trigger': 0, 'view': 0}
+          for f in files:
+              sql = open(f, encoding='utf-8').read()
+              # count only statement-leading keywords; a trigger body never contains a CREATE TRIGGER
+              kinds = {'table': len(re.findall(r'(?m)^CREATE TABLE', sql)),
+                       'index': len(re.findall(r'(?m)^CREATE (?:UNIQUE )?INDEX', sql)),
+                       'trigger': len(re.findall(r'(?m)^CREATE TRIGGER', sql)),
+                       'view': len(re.findall(r'(?m)^CREATE VIEW', sql))}
+              for k, v in kinds.items():
+                  tot[k] += v
+              if 'review' in f or '0009' in f:
+                  print('  %-46s %s' % (f.split('/')[-1], ' '.join('%s=%d' % (k, v) for k, v in kinds.items())))
+          print('migrations=%d tables=%d indexes=%d triggers=%d views=%d'
+                % (len(files), tot['table'], tot['index'], tot['trigger'], tot['view']))
+          PY
+
+      - name: Existing Worker/site test suite (must stay green)
+        run: node --test _worker/tests/*.test.mjs
+
+      - name: node:sqlite abuse harness — every barrier must refuse
+        run: node --test _worker/tests-draft/crm-review-sql-0009.abuse.mjs
+
+      - name: Cloudflare D1 rehearsal — same contract on the real engine, local file only
+        env:
+          WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
+        run: python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
+
+      - name: Backup/restore rehearsal — bundle must preserve every object and guard
+        env:
+          WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
+        run: python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py
+
+      - name: The CI verifier refuses remote targets and accepts only read-only SQL
+        run: |
+          set -euo pipefail
+          out=$(node scripts/crm/verify-review-event-chain.mjs --remote --db anything || true)
+          echo "$out" | grep -q 'remote_refused' || { echo "expected remote_refused, got: $out"; exit 1; }
+          out=$(node scripts/crm/verify-review-event-chain.mjs --local --db x --config /dev/null --state /tmp/s || true)
+          echo "$out" | grep -Eq 'wrangler_failed|no input|missing' || { echo "unexpected: $out"; exit 1; }
+          echo "verified: --remote is refused, and a bogus local target fails closed rather than trying the network"
+
+      - name: No customer data, tokens or access codes in anything this branch adds
+        run: |
+          set -euo pipefail
+          # scoped on purpose: this gate watches the review tooling it belongs to. The repo-wide PII
+          # canary lives in _worker/tests (14 checks) and runs in the tests workflow on every push.
+          { git diff -U0 --name-only origin/master...HEAD -- \
+              _worker/migrations-draft scripts/crm/review-event-chain.mjs \
+              scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs \
+              _worker/tests-draft .github/workflows/crm-review-0009-verify.yml \
+              .github/workflows/crm-cloudflare-test-deploy.yml \
+              .github/workflows/crm-phase4-review.yml; \
+            git ls-files --others --exclude-standard -- _worker/tests-draft scripts/crm; } \
+            | grep -E '\.(sql|mjs|py|yml)$' | sort -u > /tmp/changed.txt || true
+          # A line that IS a detector or a labelled synthetic fixture is not a leak. The one exempted
+          # number shape 01012345678 (synthetic canary) and any run of 11 zeroes (a filler digest):
+          # a real customer number would never appear on a line that says canary/synthetic.
+          ALLOW='canary|synthetic|phone_key|database_id|TEST ONLY|00000000000'
+          # built at run time so this step does not match its own patterns
+          PEM="$(printf -- '-%.0s' 1 2 3 4 5)BEGIN"
+          bad=0
+          while read -r f; do
+            [ -f "$f" ] || continue
+            hits=$(grep -nE '[0-9]{11}' "$f" | grep -vE "$ALLOW" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::an 11-digit run looks like a phone number"; bad=1; }
+            hits=$(grep -nE '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.(com|net|org|eg)' "$f" | grep -vE "$ALLOW" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::an e-mail address does not belong in review tooling"; bad=1; }
+            hits=$(grep -nE 'AIza[A-Za-z0-9_-]{20,}|ya29\.[A-Za-z0-9_-]{20,}' "$f" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::an OAuth/API token"; bad=1; }
+            hits=$(grep -nF -- "$PEM" "$f" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::private key material"; bad=1; }
+            hits=$(grep -nE 'CRM_ACCESS_CODE[[:space:]]*=[[:space:]]*[A-Za-z0-9_-]{16,}' "$f" \
+                   | grep -vE "$ALLOW" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::an access code value"; bad=1; }
+            hits=$(grep -noE '\b[A-Za-z0-9_-]{28,}:[A-Za-z0-9_-]{28,}\b' "$f" | grep -vE "$ALLOW" || true)
+            [ -z "$hits" ] || { echo "::error file=$f::a Drive file/folder id pair does not belong in Git"; bad=1; }
+          done < /tmp/changed.txt
+          [ "$bad" -eq 0 ] || exit 1
+          echo "privacy sweep clean over $(wc -l < /tmp/changed.txt) changed files"
