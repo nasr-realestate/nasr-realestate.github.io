@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS crm_drive_review_seal (
   plaintext_sha256 TEXT NOT NULL CHECK (length(plaintext_sha256) = 64
                                         AND plaintext_sha256 NOT GLOB '*[^0-9a-f]*'),
   plaintext_len INTEGER NOT NULL CHECK (plaintext_len BETWEEN 1 AND 4096),
+  -- retention policy is data, not a convention: 90 days max, and never a day or less
+  retention_days INTEGER NOT NULL DEFAULT 90 CHECK (retention_days BETWEEN 1 AND 90),
   sealed_by     TEXT    NOT NULL CHECK (sealed_by IN ('analysis_pipeline','manual_refresh')),
   created_at    TEXT    NOT NULL CHECK (length(created_at) BETWEEN 10 AND 32
                                         AND datetime(created_at) IS NOT NULL),
@@ -112,7 +114,10 @@ CREATE TABLE IF NOT EXISTS crm_drive_review_seal (
                                         AND datetime(expires_at) IS NOT NULL
                                         AND datetime(expires_at) > datetime(created_at)),
   revoked_at    TEXT    CHECK (revoked_at IS NULL
-                               OR (length(revoked_at) BETWEEN 10 AND 32 AND datetime(revoked_at) IS NOT NULL))
+                               OR (length(revoked_at) BETWEEN 10 AND 32 AND datetime(revoked_at) IS NOT NULL)),
+  -- the window is what the sweeper honours: at least a day of availability, never past 90 days
+  CHECK (julianday(expires_at) - julianday(created_at) >= 1
+         AND julianday(expires_at) - julianday(created_at) <= 90)
 );
 CREATE INDEX IF NOT EXISTS idx_crm_review_seal_expiry ON crm_drive_review_seal(expires_at, case_ref);
 
@@ -180,12 +185,18 @@ CREATE TABLE IF NOT EXISTS crm_drive_review_event (
   CHECK ((event_type = 'reveal') = (reveal_purpose IS NOT NULL AND reveal_outcome IS NOT NULL)),
   CHECK ((event_type <> 'reveal') = (reveal_purpose IS NULL AND reveal_outcome IS NULL
                                       AND seal_ciphertext_sha256 IS NULL)),
+  -- a *granted* reveal must pin the exact ciphertext that was opened, so the approval below can
+  -- be bound to it; a denied/failed/ed reveal may not pretend otherwise
+  CHECK (NOT (event_type = 'reveal' AND reveal_outcome = 'granted')
+         OR seal_ciphertext_sha256 IS NOT NULL),
   UNIQUE (run_key, event_seq),
   UNIQUE (case_ref, case_seq)
 );
 CREATE INDEX IF NOT EXISTS idx_crm_review_event_run ON crm_drive_review_event(run_key, event_seq);
 CREATE INDEX IF NOT EXISTS idx_crm_review_event_case ON crm_drive_review_event(case_ref, case_seq);
 CREATE INDEX IF NOT EXISTS idx_crm_review_event_reviewer ON crm_drive_review_event(reviewer, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_crm_review_event_reveal
+  ON crm_drive_review_event(case_ref, event_type, reveal_outcome, event_seq);
 
 -- ---------------------------------------------------------------------------
 -- 4) checkpoints — a mutable head (fast path) mirrored per event by an immutable anchor ledger
@@ -326,7 +337,51 @@ BEGIN
   VALUES (NEW.run_key, NEW.event_seq, NEW.event_sha256, NEW.event_seq, 'trigger', NEW.occurred_at);
 END;
 
--- (5.9) a seal needs its case; sealing is reflected on the case row for the UI
+-- (5.9) a decision can only be signed by a session that is live right now: revoked or expired
+--         sessions are refused by the database itself, not only by the route handler.
+CREATE TRIGGER IF NOT EXISTS trg_review_event_session_live
+  BEFORE INSERT ON crm_drive_review_event
+  WHEN NOT EXISTS (SELECT 1 FROM crm_sessions s
+                    WHERE s.token_hash = NEW.session_hash
+                      AND s.revoked_at IS NULL
+                      AND s.expires_at > CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+BEGIN
+  SELECT RAISE(ABORT, 'review_event_session_not_live');
+END;
+
+-- (5.10) approval requires having SEEN the data: an earlier granted reveal of this same case, this
+--          same redacted snapshot, by this same reviewer, in this same live session, within 24h,
+--          pinning the ciphertext that is still the current seal. A stale or borrowed reveal fails.
+CREATE TRIGGER IF NOT EXISTS trg_review_event_approve_needs_fresh_reveal
+  BEFORE INSERT ON crm_drive_review_event
+  WHEN NEW.event_type = 'approve'
+      AND NOT EXISTS (
+        SELECT 1 FROM crm_drive_review_event r
+          WHERE r.case_ref = NEW.case_ref
+            AND r.event_type = 'reveal'
+            AND r.reveal_outcome = 'granted'
+            AND r.case_snapshot_sha256 = NEW.case_snapshot_sha256
+            AND r.reviewer = NEW.reviewer
+            AND r.session_hash = NEW.session_hash
+            AND r.event_seq < NEW.event_seq
+            AND julianday(NEW.occurred_at) - julianday(r.occurred_at) <= 1.0
+            AND (SELECT se.ciphertext_sha256 FROM crm_drive_review_seal se
+                  WHERE se.case_ref = NEW.case_ref) IS r.seal_ciphertext_sha256
+      )
+BEGIN
+  SELECT RAISE(ABORT, 'review_approve_requires_fresh_reveal');
+END;
+
+-- (5.11) retention is a delete window, not a licence to destroy availability: a live, un-revoked
+--          seal cannot be deleted; only the sweeper (after expiry) or an explicit revocation may.
+CREATE TRIGGER IF NOT EXISTS trg_review_seal_delete_window
+  BEFORE DELETE ON crm_drive_review_seal
+  WHEN OLD.revoked_at IS NULL AND datetime(OLD.expires_at) > datetime('now')
+BEGIN
+  SELECT RAISE(ABORT, 'review_seal_delete_before_expiry');
+END;
+
+-- (5.12) a seal needs its case; sealing is reflected on the case row for the UI
 CREATE TRIGGER IF NOT EXISTS trg_review_seal_case_exists
   BEFORE INSERT ON crm_drive_review_seal
   WHEN (SELECT COUNT(*) FROM crm_drive_review_case c
@@ -407,3 +462,46 @@ SELECT c.run_key AS run_key,
       FROM crm_drive_review_event e
      GROUP BY e.run_key, e.case_ref
   ) s ON s.run_key = c.run_key AND s.case_ref = c.case_ref;
+
+-- availability of a seal, without ever touching its content: this is what the reveal route checks
+CREATE VIEW IF NOT EXISTS crm_review_seal_availability AS
+SELECT c.case_ref AS case_ref,
+       c.seal_state AS seal_state,
+       CASE WHEN se.case_ref IS NULL THEN 'missing'
+            WHEN se.revoked_at IS NOT NULL THEN 'revoked'
+            WHEN datetime(se.expires_at) <= datetime('now') THEN 'expired'
+            ELSE 'available' END AS availability,
+       se.key_version AS key_version,
+       se.created_at AS created_at,
+       se.expires_at AS expires_at,
+       se.revoked_at AS revoked_at,
+       CAST((julianday('now') - julianday(se.created_at)) * 24 * 60 AS INTEGER) AS age_minutes,
+       se.plaintext_len AS plaintext_len
+  FROM crm_drive_review_case c
+  LEFT JOIN crm_drive_review_seal se ON se.case_ref = c.case_ref;
+
+-- the only shape CI may print: counts, timestamps and chain hashes, never a reviewer label,
+-- never an identity digest, never a Drive id
+CREATE VIEW IF NOT EXISTS crm_review_ci_summary AS
+SELECT c.run_key AS run_key,
+       COUNT(*) AS cases,
+       SUM(CASE WHEN s.current_decision IS NULL THEN 1 ELSE 0 END) AS undecided,
+       SUM(CASE WHEN s.current_decision = 'approve' THEN 1 ELSE 0 END) AS approved,
+       SUM(CASE WHEN s.current_decision = 'exclude' THEN 1 ELSE 0 END) AS excluded,
+       SUM(CASE WHEN s.current_decision = 'defer' THEN 1 ELSE 0 END) AS deferred,
+       SUM(CASE WHEN s.current_decision = 'conflict_investigation' THEN 1 ELSE 0 END) AS conflicts,
+       COALESCE(MAX(s.reveals), 0) AS reveals,
+       SUM(CASE WHEN se.case_ref IS NOT NULL
+                 AND datetime(se.expires_at) <= datetime('now') THEN 1 ELSE 0 END) AS expired_seals,
+       (SELECT i.events FROM crm_review_chain_integrity i WHERE i.run_key = c.run_key) AS events,
+       (SELECT i.broken_links FROM crm_review_chain_integrity i WHERE i.run_key = c.run_key) AS broken_links,
+       (SELECT i.anchor_mismatches FROM crm_review_chain_integrity i
+         WHERE i.run_key = c.run_key) AS anchor_mismatches,
+       (SELECT i.head_event_count FROM crm_review_chain_integrity i
+         WHERE i.run_key = c.run_key) AS head_event_count,
+       (SELECT h.head_sha256 FROM crm_drive_review_chain_head h
+         WHERE h.run_key = c.run_key) AS head_sha256
+  FROM crm_drive_review_case c
+  LEFT JOIN crm_review_case_state s ON s.run_key = c.run_key AND s.case_ref = c.case_ref
+  LEFT JOIN crm_drive_review_seal se ON se.case_ref = c.case_ref
+ GROUP BY c.run_key;

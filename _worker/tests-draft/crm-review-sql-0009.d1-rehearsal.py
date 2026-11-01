@@ -53,8 +53,27 @@ CREATE TABLE IF NOT EXISTS crm_drive_analysis_run (
   files_failed INTEGER NOT NULL DEFAULT 0
 );
 """
+BASE += """-- crm_sessions comes from 0002 in the real chain; 0009's liveness trigger reads it, so the stub
+-- keeps the columns that trigger uses plus their typeof CHECKs.
+CREATE TABLE crm_sessions (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64 AND token_hash NOT GLOB '*[^0-9a-f]*'),
+  created_at INTEGER NOT NULL CHECK (typeof(created_at) = 'integer'),
+  expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
+  revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
+);
+INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
+  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
+  ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
+  ('expired', '{expired}', CAST(strftime('%s','now') AS INTEGER)*1000 - 7200000, CAST(strftime('%s','now') AS INTEGER)*1000 - 3600000, NULL),
+  ('revoked', '{revoked}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, CAST(strftime('%s','now') AS INTEGER)*1000 - 1000);
+"""
+LIVE = "1" * 64
+LIVE2 = "2" * 64
+EXPIRED = "3" * 64
+REVOKED = "4" * 64
 with open(os.path.join(SCRATCH, 'migrations', '0001_base.sql'), 'w') as fh:
-    fh.write(BASE)
+    fh.write(BASE.format(live=LIVE, live2=LIVE2, expired=EXPIRED, revoked=REVOKED))
 
 results = []
 
@@ -88,15 +107,16 @@ def rows(sql):
 
 def refused(label, sql, fragment):
     txt = d1(sql)
-    if fragment in txt:
+    frags = fragment if isinstance(fragment, tuple) else (fragment,)
+    if any(f in txt for f in frags):
         results.append(True)
-        print(f'  ok   {label} — refused by D1 [{fragment}]')
+        print(f'  ok   {label} — refused by D1 [{"/".join(frags)} possible]')
     elif 'executed successfully' in txt:
         results.append(False)
         print(f'  FAIL {label} — the write went through, barrier missing')
     else:
         results.append(False)
-        print(f'  FAIL {label} — refused for another reason: {txt.strip()[-160:]}')
+        print(f'  FAIL {label} — refused for another reason: {txt.strip()[-400:]}')
 
 
 def allowed(label, sql):
@@ -115,6 +135,7 @@ def check(label, cond, detail=''):
     print(f'  {"ok  " if cond else "FAIL"} {label}{tail}')
 
 
+EXPECTED = {'table': 5, 'index': 8, 'trigger': 18, 'view': 4}   # the design's object inventory
 HEX32 = 'lower(hex(randomblob(32)))'
 TS = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
 
@@ -130,10 +151,10 @@ check('every statement of the file executed (trigger bodies intact)', 'executed 
 inv = rows("SELECT type, COUNT(*) AS c FROM sqlite_master WHERE name LIKE 'crm_drive_review%' "
            "OR name LIKE 'trg_review%' OR name LIKE 'crm_review%' OR name LIKE 'idx_crm_review%' GROUP BY type")
 got = {r['type']: r['c'] for r in inv}
-check('object inventory matches the design (5 tables, 15 triggers, 2 views, 7 indexes)',
-      got == {'table': 5, 'index': 7, 'trigger': 15, 'view': 2}, str(got))
+check('object inventory matches the design (5 tables, 18 triggers, 4 views, 8 indexes)',
+      got == EXPECTED, str(got))
 tg = rows("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%'")[0]['n']
-check('all 15 guard triggers survived the statement splitter', tg == 15, f'got {tg}')
+check('all 18 guard triggers survived the statement splitter', tg == 18, f'got {tg}')
 
 # ---------------------------------------------------------- 2) seed: run, genesis head, two cases
 print('=== 2) seed: one analysis run, a genesis head and two cases ===')
@@ -145,6 +166,7 @@ CASE_COLS = ("INSERT INTO crm_drive_review_case (case_ref, case_kind, run_key, d
              "basis, approve_allowed, case_snapshot_sha256, built_at) VALUES ")
 allowed('phone-backed case', CASE_COLS + f"('p4r-001','file_to_contact','{RUN}', {HEX32},'VCF','exact_match','vcard_tel_digest_equal_primary','high','phone','c0ffee00c0ffee00c0ffee00c0ffee0042','vcard_tel',1, {HEX32},'2026-11-01T12:00:00.000Z');")
 allowed('name-only case', CASE_COLS + f"('p4r-002','file_to_contact','{RUN}', {HEX32},'ZIP','probable_match','transcript_overlap_with_matched_file','low','name','c0ffee00c0ffee00c0ffee00c0ffee0043','name_digest',0, {HEX32},'2026-11-01T12:00:00.000Z');")
+allowed('an unsealed phone-backed case (no reveal possible)', CASE_COLS + f"('p4r-003','file_to_contact','{RUN}', {HEX32},'VCF','exact_match','vcard_tel_digest_equal_primary','high','phone','c0ffee00c0ffee00c0ffee00c0ffee0045','vcard_tel',1, {HEX32},'2026-11-01T12:00:00.000Z');")
 refused('a name-only case cannot advertise approve_allowed', CASE_COLS + f"('p4r-003','file_to_contact','{RUN}', {HEX32},'ZIP','name_only_match','name_digest_equal_primary_name','low','name','c0ffee00c0ffee00c0ffee00c0ffee0044','name_digest',1, {HEX32},'2026-11-01T12:00:00.000Z');", 'CHECK constraint failed')
 refused('a person case needs two files', "INSERT INTO crm_drive_review_case (case_ref, case_kind, run_key, "
         "drive_file_id, match_class, evidence_type, confidence, signal_kind, files_count, crm_contact_id, "
@@ -168,20 +190,36 @@ refused('a seal needs a real case', "INSERT INTO crm_drive_review_seal (case_ref
         f"'2026-11-01T12:00:00.000Z','2027-01-30T00:00:00.000Z');" % ('p4r-777', RUN),
         'review_seal_case_not_found')
 
+# ------------------------------------------------------------------ 2b) seals for the two cases
+SEAL_CT = "c" * 64                       # the ciphertext_sha256 of p4r-001's stored blob
+SEAL_CT2 = "d" * 64                      # and of p4r-002's
+SEAL_INS = ("INSERT INTO crm_drive_review_seal (case_ref, run_key, envelope_version, algo, kdf, aad_mode,"
+            " key_version, iv_b64u, tag_b64u, ciphertext_b64u, ciphertext_sha256, plaintext_sha256,"
+            " plaintext_len, retention_days, sealed_by, created_at, expires_at) VALUES "
+            "('{ref}', '{run}', 'p4rev_v1', 'AES-256-GCM', 'HKDF-SHA256', 'case_bound_v1', 1,"
+            " 'AAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAAAAAA',"
+            " '{ct}', '{ct}', 120, 90, 'analysis_pipeline',"
+            " strftime('%Y-%m-%dT%H:%M:%fZ','now'),"
+            " strftime('%Y-%m-%dT%H:%M:%fZ','now', '+90 days'));")
+print('=== 2b) seal the two card cases (option A: ciphertext only) ===')
+allowed('seal for the phone-backed case', SEAL_INS.format(ref='p4r-001', run=RUN, ct=SEAL_CT))
+allowed('seal for the name-only case', SEAL_INS.format(ref='p4r-002', run=RUN, ct=SEAL_CT2))
+
 # ------------------------------------------------------- 3) decisions: what the schema allows and not
 EV = """INSERT INTO crm_drive_review_event
   (run_key,event_seq,case_seq,case_ref,event_type,decision_state,reviewer,reviewer_attestation,session_hash,
    reason,reason_sha256,basis_at_event,case_snapshot_sha256,link_applied,merge_authorized,
-   contact_write_count,occurred_at,prev_event_sha256,event_sha256)
+   contact_write_count,occurred_at,prev_event_sha256,event_sha256,reveal_purpose,reveal_outcome,
+   seal_ciphertext_sha256)
  SELECT '{run}', (SELECT event_count+1 FROM crm_drive_review_chain_head WHERE run_key='{run}'),
         (SELECT COUNT(*)+1 FROM crm_drive_review_event e WHERE e.case_ref='{ref}'),
         '{ref}','{type}',{state},'nasr.owner','session_label_not_independent_identity',
-        lower(hex(randomblob(32))), '{reason}', lower(hex(randomblob(32))),
+        '{sess}', '{reason}', lower(hex(randomblob(32))),
         (SELECT basis FROM crm_drive_review_case WHERE case_ref='{ref}'),
         (SELECT case_snapshot_sha256 FROM crm_drive_review_case WHERE case_ref='{ref}'),
         {link},{merge},{write}, {ts},
         (SELECT head_sha256 FROM crm_drive_review_chain_head WHERE run_key='{run}'),
-        lower(hex(randomblob(32)))
+        lower(hex(randomblob(32))), {purpose}, {outcome}, {blob}
    FROM crm_drive_review_case WHERE case_ref='{ref}'"""
 
 
@@ -192,22 +230,38 @@ def ev(**kw):
     kw.setdefault('state', 'NULL')
     kw.setdefault('run', RUN)
     kw.setdefault('ts', TS)
+    kw.setdefault('sess', LIVE)
+    kw.setdefault('purpose', 'NULL')
+    kw.setdefault('outcome', 'NULL')
+    kw.setdefault('blob', 'NULL')
     return EV.format(**kw) + ';'
 
 
+def reveal(**kw):
+    kw['type'] = 'reveal'
+    kw.setdefault('purpose', "'identity_check'")
+    kw.setdefault('outcome', "'granted'")
+    kw.setdefault('blob', "'%s'" % (SEAL_CT if kw.get('ref') == 'p4r-001' else SEAL_CT2))
+    return ev(**kw)
+
+
 print('=== 3) decisions: what the schema allows and refuses ===')
+allowed('a granted reveal of the sealed card', reveal(ref='p4r-001',
+      reason='the reviewer opened the sealed vCard to compare the telephone before deciding'))
 allowed('approve on a phone-backed case', ev(type='approve', state="'approved'", ref='p4r-001',
       reason='vCard telephone equals the stored CRM row so identity is confirmed'))
 after = rows('SELECT (SELECT COUNT(*) FROM crm_drive_review_event) AS e, '
              '(SELECT event_count FROM crm_drive_review_chain_head) AS h, '
              '(SELECT COUNT(*) FROM crm_drive_review_chain_anchor) AS a')[0]
-check('ledger advanced and mirrored into the anchor table', after == {'e': 1, 'h': 1, 'a': 2}, str(after))
+check('ledger advanced and mirrored into the anchor table', after == {'e': 2, 'h': 2, 'a': 3}, str(after))
 allowed('note on the same case', ev(type='note', ref='p4r-001',
       reason='the card also carries a landline, kept as detail only'))
 allowed('defer on the name-only case', ev(type='defer', state="'deferred'", ref='p4r-002',
       reason='no phone-backed identifier yet so identity stays unconfirmed'))
 allowed('an ISO date in a reason is fine (no false positive)', ev(type='note', ref='p4r-002',
       reason='the source file was exported on 2026-11-01 before the inventory ran'))
+allowed('the name-only card was opened too', reveal(ref='p4r-002',
+      reason='the reviewer read the card even though it can never be approved on this basis'))
 refused('approve on a name-only basis', ev(type='approve', state="'approved'", ref='p4r-002',
       reason='the names look identical so approve this card now'),
       'review_approve_requires_phone_backed_basis')
@@ -231,16 +285,78 @@ UNKNOWN = ("INSERT INTO crm_drive_review_event (run_key,event_seq,case_seq,case_
            f"occurred_at,prev_event_sha256,event_sha256) VALUES ('{RUN}',"
            " (SELECT event_count+1 FROM crm_drive_review_chain_head),"
            " (SELECT COUNT(*)+1 FROM crm_drive_review_event WHERE case_ref='p4r-999'),'p4r-999','note',"
-           " 'nasr.owner','session_label_not_independent_identity', lower(hex(randomblob(32))),"
+           f" 'nasr.owner','session_label_not_independent_identity', '{LIVE}',"
            " 'a decision recorded against an invented case reference', lower(hex(randomblob(32))),"
            f" 'vcard_tel', lower(hex(randomblob(32))), {TS},"
            " (SELECT head_sha256 FROM crm_drive_review_chain_head), lower(hex(randomblob(32))));")
+# the session is pinned to a live one on purpose: D1 fires same-event triggers in an order SQLite
+# does not guarantee, so each probe must leave exactly one barrier standing.
 refused('event for an unknown case', UNKNOWN, 'review_event_case_not_found')
 refused('event bound to another snapshot',
         ev(type='note', ref='p4r-001', reason='a decision quoting data never shown to the reviewer')
         .replace("(SELECT case_snapshot_sha256 FROM crm_drive_review_case WHERE case_ref='p4r-001')",
                  "'0000000000000000000000000000000000000000000000000000000000000000'"),
         'review_event_snapshot_mismatch')
+
+# ----------------------------- 3b) reveal->approve binding, session liveness, retention policy
+print('=== 3b) reveal->approve binding, session liveness, retention ceiling ===')
+refused('approve with no reveal ever granted', ev(type='approve', state="'approved'", ref='p4r-003',
+      reason='approve on a case whose card was never opened by this reviewer'),
+      'review_approve_requires_fresh_reveal')
+allowed('a reveal on an unsealed case is still recorded (nothing to match yet)',
+        ev(type='reveal', ref='p4r-003', purpose="'identity_check'", outcome="'granted'",
+           blob="'0000000000000000000000000000000000000000000000000000000000000000'",
+           reason='a reveal that pins a blob the seal table does not hold'))
+refused('approve still refused when the reveal pins the wrong blob',
+        ev(type='approve', state="'approved'", ref='p4r-003',
+           reason='approve after opening a card digest that was never stored'),
+        'review_approve_requires_fresh_reveal')
+refused('a decision on an expired session', ev(type='note', ref='p4r-001', sess=EXPIRED,
+      reason='the session lapsed between opening the panel and clicking exclude'),
+      'review_event_session_not_live')
+refused('a decision on a revoked session', ev(type='note', ref='p4r-001', sess=REVOKED,
+      reason='the reviewer logged out on another device and the session was revoked'),
+      'review_event_session_not_live')
+refused('a reveal on a revoked session', ev(type='reveal', ref='p4r-001', sess=REVOKED,
+      purpose="'identity_check'", outcome="'granted'", blob="'%s'" % SEAL_CT,
+      reason='opening a sealed card after the session was revoked'),
+      'review_event_session_not_live')
+refused('approve under a second live session', ev(type='approve', state="'approved'", ref='p4r-001',
+      sess=LIVE2, reason='approve using another device session that never opened the card'),
+      'review_approve_requires_fresh_reveal')
+refused('approve reusing the reveal of another reviewer',
+        ev(type='approve', state="'approved'", ref='p4r-001',
+           reason='a different reviewer tries to ride on the reveal already recorded')
+        .replace("'nasr.owner'", "'other.reviewer'"), 'review_approve_requires_fresh_reveal')
+refused('approve on a reveal older than the 24 hour window',
+        ev(type='approve', state="'approved'", ref='p4r-003', ts="'2027-01-01T00:00:00.000Z'",
+           reason='a month later the reviewer approves using the reveal they made once'),
+        'review_approve_requires_fresh_reveal')
+refused('a granted reveal must pin the ciphertext it opened',
+        ev(type='reveal', ref='p4r-001', purpose="'identity_check'", outcome="'granted'", blob='NULL',
+           reason='the reveal was granted but no blob identity was recorded'),
+        'CHECK constraint failed')
+refused('a seal may not promise 180 days of retention',
+        SEAL_INS.format(ref='p4r-003', run=RUN, ct='e' * 64).replace('120, 90,', '120, 180,'),
+        'CHECK constraint failed')
+refused('a seal may not outlive 90 days even with retention_days = 90',
+        SEAL_INS.format(ref='p4r-003', run=RUN, ct='f' * 64).replace(
+            "strftime('%Y-%m-%dT%H:%M:%fZ','now', '+90 days')",
+            "strftime('%Y-%m-%dT%H:%M:%fZ','now', '+120 days')"),
+        'CHECK constraint failed')
+refused('retention_days cannot be pushed past the policy ceiling',
+        "UPDATE crm_drive_review_seal SET retention_days = 180 WHERE case_ref='p4r-001';",
+        'CHECK constraint failed')
+avail = rows('SELECT case_ref, availability FROM crm_review_seal_availability ORDER BY case_ref')
+check('the availability view reports the two sealed cases and the unsealed one',
+      [r['availability'] for r in avail] == ['available', 'available', 'missing'], json.dumps(avail))
+check('no plaintext column is reachable through the availability view',
+      all(set(r) <= {'case_ref', 'availability', 'expires_at', 'age_minutes'} for r in avail),
+      json.dumps(avail))
+cols = [c['name'] for c in rows('PRAGMA table_info(crm_review_ci_summary)')]
+check('the CI summary view exposes only counts and chain hashes',
+      not [c for c in cols if c in ('reviewer', 'signal_digest', 'drive_file_id', 'session_hash',
+                                    'reason', 'crm_contact_id')], ','.join(cols))
 
 # --------------------------------------------------- 4) the ledger cannot be edited, erased or rewound
 print('=== 4) the ledger cannot be edited, erased or rewound ===')
@@ -256,16 +372,19 @@ for label, sql, frag in [
     ('erase the chain head', f"DELETE FROM crm_drive_review_chain_head WHERE run_key='{RUN}'", 'review_chain_head_required'),
 ]:
     refused(label, sql + ';', frag)
-check('the ledger is intact after eight erase attempts', rows('SELECT COUNT(*) AS c FROM crm_drive_review_event')[0]['c'] == 4)
+check('the ledger is intact after eight erase attempts', rows('SELECT COUNT(*) AS c FROM crm_drive_review_event')[0]['c'] == 7)
 allowed('the head checkpoint stays rewritable (mutable by design)', f"UPDATE crm_drive_review_chain_head SET event_count=0 WHERE run_key='{RUN}';")
 allowed('rewinding the head hash too (full rollback attempt)', f"UPDATE crm_drive_review_chain_head SET head_sha256 = (SELECT MIN(event_sha256) FROM crm_drive_review_event), event_count = 0 WHERE run_key='{RUN}';")
 refused('appending after a rewind is refused', ev(type='note', ref='p4r-001',
       reason='trying to restart the ledger from an older checkpoint'), 'SQLITE_CONSTRAINT')
 integ = rows('SELECT * FROM crm_review_chain_integrity')[0]
 check('the integrity view flags what a rewind did (density vs head)',
-      integ['events'] == 4 and (integ['events'] != integ['head_event_count'] or integ['broken_links'] > 0),
+      integ['events'] == 7 and (integ['events'] != integ['head_event_count'] or integ['broken_links'] > 0),
       json.dumps(integ))
-check('the anchor ledger still holds the history the head lost', integ['anchors'] == 4, json.dumps(integ))
+check('every event keeps its own trigger anchor (genesis rows are not counted by the view)',
+      integ['anchors'] == integ['events'], json.dumps(integ))
+check('the genesis checkpoint is still there as well',
+      rows("SELECT COUNT(*) AS c FROM crm_drive_review_chain_anchor WHERE anchor_source='genesis'")[0]['c'] == 1)
 
 # ---------------------------------------------- 5) tampering after removing the guards is DETECTED
 print('=== 5) tampering after removing the guard triggers is DETECTED ===')
@@ -279,7 +398,35 @@ check('the verification view detects the forged edit',
       integ2['broken_links'] > 0 or integ2['anchor_mismatches'] > 0, json.dumps(integ2))
 st = rows('SELECT case_ref, current_decision, decided_by FROM crm_review_case_state ORDER BY case_ref')
 check('the derived state view still answers the reviewer',
-      len(st) == 2 and st[0]['current_decision'] == 'approve', json.dumps(st, ensure_ascii=False))
+      len(st) == 3 and st[0]['current_decision'] == 'approve' and st[1]['current_decision'] == 'defer',
+      json.dumps(st, ensure_ascii=False))
+
+# ----------------------------------------------------- 5b) seal lifecycle: revoke now, sweep later
+print('=== 5b) seal lifecycle: a live seal cannot be destroyed, an expired one can ===')
+allowed('the operator repairs the head checkpoint to the true tip',
+        "UPDATE crm_drive_review_chain_head SET event_count = (SELECT MAX(event_seq) FROM crm_drive_review_event),"
+        " head_sha256 = (SELECT event_sha256 FROM crm_drive_review_event"
+        " WHERE event_seq = (SELECT MAX(event_seq) FROM crm_drive_review_event)) WHERE run_key='%s';" % RUN)
+refused('a live seal cannot be deleted', "DELETE FROM crm_drive_review_seal WHERE case_ref='p4r-002';",
+        'review_seal_delete_before_expiry')
+allowed('a seal may be re-keyed in place (rotation is allowed by design)',
+        "UPDATE crm_drive_review_seal SET key_version = 2 WHERE case_ref='p4r-002';")
+allowed('mark a seal revoked (the only way to end availability early)',
+        f"UPDATE crm_drive_review_seal SET revoked_at = {TS} WHERE case_ref='p4r-002';")
+avail2 = rows("SELECT availability FROM crm_review_seal_availability WHERE case_ref='p4r-002'")[0]
+check('the availability view flips to revoked', avail2['availability'] == 'revoked', json.dumps(avail2))
+allowed('a revoked seal may be swept away', "DELETE FROM crm_drive_review_seal WHERE case_ref='p4r-002';")
+after_sweep = rows("SELECT COUNT(*) AS c FROM crm_drive_review_event WHERE case_ref='p4r-002'")[0]['c']
+check('sweeping the blob leaves the decision ledger untouched', after_sweep == 3, str(after_sweep))
+state_after = rows("SELECT seal_state FROM crm_drive_review_case WHERE case_ref='p4r-002'")[0]
+check('the case row notices its seal is gone (seal_state = unavailable)',
+      state_after['seal_state'] == 'unavailable', json.dumps(state_after))
+refused('and after that sweep, approving this case is unreachable again',
+        ev(type='approve', state="'approved'", ref='p4r-002',
+           reason='approve after the blob was swept, with only a stale reveal on record'),
+        ('review_approve_requires_fresh_reveal', 'review_approve_requires_phone_backed_basis'))
+# D1 reports only the first-firing trigger, and for two simultaneous barriers that order is not
+# contractual — so the rehearsal accepts either, while CI's audit predicate below counts both.
 
 # ------------------------------------------------------------------ 6) idempotency of re-applying
 print('=== 6) idempotency ===')
@@ -292,7 +439,7 @@ check('re-running the whole file succeeds (everything is IF NOT EXISTS)', 'execu
 after2 = rows('SELECT (SELECT COUNT(*) FROM crm_drive_review_case) AS c, (SELECT COUNT(*) FROM crm_drive_review_event) AS e')[0]
 check('rows unchanged on re-apply', before == after2, f'{before} -> {after2}')
 restored = rows("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%'")[0]['n']
-check('re-applying restores the triggers an attacker dropped (self-healing)', restored == 15, str(restored))
+check('re-applying restores the triggers an attacker dropped (self-healing)', restored == 18, str(restored))
 out2 = subprocess.run(WRANGLER + ['d1', 'migrations', 'apply', DB, '--local', '--config', CFG,
                                   '--persist-to', STATE],
                       capture_output=True, text=True, cwd=SCRATCH, env=ENV).stdout

@@ -57,7 +57,8 @@ function expectFail(label, fn, fragment) {
     fail(label, 'the write SUCCEEDED — barrier missing');
   } catch (error) {
     const msg = String((error && error.message) || error);
-    if (fragment && !msg.includes(fragment)) fail(label, `refused for the wrong reason: ${msg.slice(0, 140)}`);
+    const held = fragment instanceof RegExp ? fragment.test(msg) : (!fragment || msg.includes(fragment));
+    if (!held) fail(label, `refused for the wrong reason: ${msg.slice(0, 140)}`);
     else pass(`${label} [${fragment || 'refused'}]`);
   }
 }
@@ -152,7 +153,7 @@ function insertEvent(o) {
     decision_state: o.state ?? null,
     reviewer: o.reviewer ?? 'nasr.owner',
     reviewer_attestation: o.attestation ?? 'session_label_not_independent_identity',
-    session_hash: o.sessionHash ?? sha('session-1'),
+    session_hash: o.sessionHash ?? LIVE_TOKEN,
     reason: o.reason,
     reason_sha256: sha(String(o.reason ?? '')),
     reveal_purpose: o.purpose ?? null,
@@ -182,11 +183,106 @@ function insertEvent(o) {
   return row;
 }
 
-// ---------------------------------------------------------------- 1) honest path: decide/reveal/correct
+
+function insertEventWith(o) {
+  return insertEvent(o);
+}
+
+// ---------------------------------------------------------------- 5b) the seal envelope (option A)
+const SEAL_SECRET = randomBytes(32);            // stands in for the Worker secret CRM_REVIEW_SEAL_KEY
+const KEY_VERSION = 1;
+const deriveKey = (caseRef, snap) => Buffer.from(hkdfSync('sha256', SEAL_SECRET,
+  Buffer.from(`${RUN}|${caseRef}`, 'utf8'), Buffer.from(`p4rev_seal_v1|${snap}`, 'utf8'), 32));
+const aadFor = (caseRef, snap) => Buffer.from(`p4rev_v1|${caseRef}|${snap}|${RUN}|v${KEY_VERSION}`, 'utf8');
+const cardPlaintext = JSON.stringify({
+  vcard: { fn: 'اسم تجريبي', tel: '+20 100 000 0000', note: 'بطاقة اختبار فقط' },
+  source: { file_ref: fileA.slice(0, 8), kind: 'VCF', card_index: 0, content_sha256: fileA },
+});
+function sealCard(caseRef, plaintext = cardPlaintext) {
+  const snap = caseRow(caseRef).snap;
+  const iv = randomBytes(12);
+  const c = createCipheriv('aes-256-gcm', deriveKey(caseRef, snap), iv);
+  c.setAAD(aadFor(caseRef, snap));
+  const ct = Buffer.concat([c.update(plaintext, 'utf8'), c.final()]);
+  const row = { caseRef, iv: b64u(iv), tag: b64u(c.getAuthTag()), ct: b64u(ct),
+    ctSha: sha(ct), pSha: sha(plaintext), len: Buffer.byteLength(plaintext) };
+  db.prepare(`INSERT INTO crm_drive_review_seal
+      (case_ref, run_key, envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
+       ciphertext_b64u, ciphertext_sha256, plaintext_sha256, plaintext_len, retention_days, sealed_by,
+       created_at, expires_at)
+      VALUES (?,?,'p4rev_v1','AES-256-GCM','HKDF-SHA256','case_bound_v1',?,?,?,?,?,?,?,90,?,?,?)`)
+    .run(row.caseRef, RUN, KEY_VERSION, row.iv, row.tag, row.ct, row.ctSha, row.pSha, row.len,
+      'analysis_pipeline', now, new Date(Date.parse(now) + 90 * 86400_000).toISOString());
+  return row;
+}
+function unseal(row, atCaseRef = row.caseRef) {
+  const snap = caseRow(atCaseRef).snap;
+  const d = createDecipheriv('aes-256-gcm', deriveKey(atCaseRef, snap), Buffer.from(row.iv, 'base64url'));
+  d.setAAD(aadFor(atCaseRef, snap));
+  d.setAuthTag(Buffer.from(row.tag, 'base64url'));
+  return Buffer.concat([d.update(Buffer.from(row.ct, 'base64url')), d.final()]).toString('utf8');
+}
+
+// ---------------------------------------------------------------- 0) live sessions and a sealed card first
+// The ledger refuses any event whose CRM session is not live right now, so the rehearsal must sign
+// in the same way the Worker does: session_hash == crm_sessions.token_hash (sha256 hex, never the
+// token itself).
+const LIVE_TOKEN = sha('session-live');
+const EXPIRED_TOKEN = sha('session-expired');
+const REVOKED_TOKEN = sha('session-revoked');
+const msNow = Date.now();          // session liveness is checked against wall-clock now()
+// node:sqlite binds JS numbers as REAL; the session columns CHECK for typeof = 'integer'
+const int = v => (v === null || v === undefined ? null : BigInt(Math.trunc(v)));
+function openSession(tokenHash, ageSeconds, ttlSeconds, revokedAfter) {
+  const created = Date.now() - ageSeconds * 1000;
+  db.prepare(`INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at, revoked_at)
+      VALUES (?,?,?,?,?,?,?)`)
+    .run(`sess-${tokenHash.slice(0, 8)}`, tokenHash, sha('csrf'), int(created),
+      int(created + ttlSeconds * 1000), int(created),
+      revokedAfter === null ? null : int(created + revokedAfter * 1000));
+}
+// a live session, an expired one, a revoked one, and a second live one for binding tests
+openSession(LIVE_TOKEN, 60, 3600, null);
+openSession(EXPIRED_TOKEN, 7200, 3600, null);
+openSession(REVOKED_TOKEN, 60, 3600, 1);
+const sealed = sealCard('p4r-001');
+if (sha(unseal(sealed)) !== sealed.pSha || unseal(sealed) !== cardPlaintext) throw new Error('seal setup broken');
+if (db.prepare('SELECT seal_state FROM crm_drive_review_case WHERE case_ref = ?').get('p4r-001').seal_state !== 'sealed') {
+  throw new Error('case did not become sealed');
+}
+const storedCipher = db.prepare('SELECT ciphertext_b64u AS c FROM crm_drive_review_seal WHERE case_ref = ?').get('p4r-001').c;
+if (/0100|\u0627\u0633\u0645|example/.test(storedCipher)) throw new Error('plaintext visible in the stored column');
+pass('a sealed case stores only opaque ciphertext, and round-trips [ok]');
+// two more cases so the reveal/approve binding can be probed on its own ground
+const snapB = addCase('p4r-003', 'file_to_contact', {
+  drive_file_id: fileB, source_content_kind: 'VCF', card_index: 2, match_class: 'exact_match',
+  evidence: 'vcard_tel_digest_equal_primary', confidence: 'high', signal_kind: 'phone',
+  signal_digest: sha('phone-3'), crm_contact_id: contactB, basis: 'vcard_tel', approve_allowed: 1,
+});
+const snapC = addCase('p4r-004', 'file_to_contact', {
+  drive_file_id: fileB, source_content_kind: 'VCF', card_index: 3, match_class: 'exact_match',
+  evidence: 'vcard_tel_digest_equal_primary', confidence: 'high', signal_kind: 'phone',
+  signal_digest: sha('phone-4'), crm_contact_id: contactB, basis: 'vcard_tel', approve_allowed: 1,
+});
+const sealNameOnly = sealCard('p4r-002', JSON.stringify({ vcard: { fn: 'اسم تجريبي' }, source: { card_index: 0 } }));
+const sealB = sealCard('p4r-003');
+const sealC = sealCard('p4r-004');
+
+const last = caseRef => db.prepare(`SELECT * FROM crm_drive_review_event WHERE case_ref = ? ORDER BY event_seq DESC LIMIT 1`).get(caseRef);
+
+// ---------------------------------------------------------------- 1) honest path: reveal, decide, correct
+expectOk('granted reveal of the sealed card', () => insertEvent({
+  caseRef: 'p4r-001', type: 'reveal', purpose: 'identity_check', outcome: 'granted', sealSha: sealed.ctSha,
+  reason: 'the reviewer opened the sealed vCard to compare the telephone before deciding',
+}));
 expectOk('approve a phone-backed case', () => insertEvent({
   caseRef: 'p4r-001', type: 'approve', state: 'approved',
   reason: 'vCard telephone equals the stored CRM row; identity checked by the reviewer',
 }));
+if (last('p4r-001')?.event_type !== 'approve') throw new Error('approve is not the current state');
+if (db.prepare(`SELECT current_decision FROM crm_review_case_state WHERE case_ref = 'p4r-001'`).get().current_decision !== 'approve') {
+  throw new Error('view disagrees with the ledger');
+}
 expectOk('log a note', () => insertEvent({
   caseRef: 'p4r-001', type: 'note',
   reason: 'the card also carries a landline, recorded as detail only',
@@ -217,6 +313,93 @@ const liveCounts = () => ({
 let lc = liveCounts();
 if (lc.events === lc.head && lc.head === lc.anchors) pass(`chain/head/anchor agree (${lc.events}) [ok]`);
 else fail('chain agreement', JSON.stringify(lc));
+
+
+// ---------------------------------------------------------------- 3b) reveal->approve binding and liveness
+const LIVE_TOKEN2 = sha('session-live-2');
+openSession(LIVE_TOKEN2, 60, 3600, null);
+const approveReason = 'the vCard telephone was read and matched the stored CRM row';
+expectFail('approve with no reveal ever granted', () => insertEvent({
+  caseRef: 'p4r-003', type: 'approve', state: 'approved', reason: approveReason,
+}), 'review_approve_requires_fresh_reveal');
+expectOk('a granted reveal for that case and session', () => insertEvent({
+  caseRef: 'p4r-003', type: 'reveal', purpose: 'identity_check', outcome: 'granted', sealSha: sealB.ctSha,
+  reason: 'the reviewer opened the sealed card to confirm the telephone before any decision',
+}));
+expectFail('approve reusing another reviewer reveal', () => insertEvent({
+  caseRef: 'p4r-003', type: 'approve', state: 'approved', reviewer: 'other.reviewer', reason: approveReason,
+}), 'review_approve_requires_fresh_reveal');
+expectFail('approve reusing another session reveal', () => insertEvent({
+  caseRef: 'p4r-003', type: 'approve', state: 'approved', sessionHash: LIVE_TOKEN2, reason: approveReason,
+}), 'review_approve_requires_fresh_reveal');
+expectFail('approve after the seal was rotated', () => {
+  db.prepare('UPDATE crm_drive_review_seal SET revoked_at = ? WHERE case_ref = ?').run(now, 'p4r-003');
+  db.prepare('DELETE FROM crm_drive_review_seal WHERE case_ref = ?').run('p4r-003');
+  sealCard('p4r-003', JSON.stringify({ vcard: { fn: 'اسم آخر' }, source: { card_index: 2 } }));
+  insertEvent({ caseRef: 'p4r-003', type: 'approve', state: 'approved', reason: approveReason });
+}, 'review_approve_requires_fresh_reveal');
+const sealB2 = db.prepare('SELECT ciphertext_sha256 AS c FROM crm_drive_review_seal WHERE case_ref = ?').get('p4r-003');
+expectOk('the new reveal is refused because its blob was already opened? no: reveal the rotated seal', () => insertEvent({
+  caseRef: 'p4r-003', type: 'reveal', purpose: 'identity_check', outcome: 'granted', sealSha: sealB2.c,
+  reason: 'the reviewer opened the re-sealed card, whose blob differs from the one first recorded',
+}));
+expectOk('approve by the same reviewer and session, right after a matching reveal', () => insertEvent({
+  caseRef: 'p4r-003', type: 'approve', state: 'approved', reason: approveReason,
+}));
+expectFail('approve on a reveal older than 24 hours', () => {
+  insertEvent({ caseRef: 'p4r-004', type: 'reveal', purpose: 'identity_check', outcome: 'granted',
+    sealSha: sealC.ctSha, reason: 'a reveal granted now, to be reused long after the window closes' });
+  insertEvent({ caseRef: 'p4r-004', type: 'approve', state: 'approved',
+    at: new Date(clock + 25 * 3600_000).toISOString(), reason: approveReason });
+}, 'review_approve_requires_fresh_reveal');
+expectFail('a granted reveal must pin the ciphertext it opened', () => insertEvent({
+  caseRef: 'p4r-001', type: 'reveal', purpose: 'identity_check', outcome: 'granted',
+  reason: 'reveal granted but the blob identity was left out of the record',
+}), 'CHECK constraint failed');
+expectFail('a decision on an expired session is refused', () => insertEvent({
+  caseRef: 'p4r-001', type: 'exclude', state: 'excluded', sessionHash: EXPIRED_TOKEN,
+  reason: 'the session lapsed between opening the panel and clicking exclude',
+}), 'review_event_session_not_live');
+expectFail('a decision on a revoked session is refused', () => insertEvent({
+  caseRef: 'p4r-001', type: 'note', sessionHash: REVOKED_TOKEN,
+  reason: 'the reviewer logged out on another device and the session was revoked',
+}), 'review_event_session_not_live');
+expectFail('a reveal on a revoked session is refused', () => insertEvent({
+  caseRef: 'p4r-001', type: 'reveal', purpose: 'duplicate_check', outcome: 'granted',
+  sealSha: sealed.ctSha, sessionHash: REVOKED_TOKEN,
+  reason: 'opening a sealed card after the session was revoked',
+}), 'review_event_session_not_live');
+expectFail('a seal may not promise more than 90 days of retention', () => db.prepare(`INSERT INTO crm_drive_review_seal
+    (case_ref, run_key, envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
+     ciphertext_b64u, ciphertext_sha256, plaintext_sha256, plaintext_len, retention_days, sealed_by,
+     created_at, expires_at)
+    VALUES ('p4c-01',?,'p4rev_v1','AES-256-GCM','HKDF-SHA256','case_bound_v1',1,?,?,?, ?,?,120,180,?,?,?)`)
+  .run(RUN, b64u(randomBytes(12)), b64u(randomBytes(16)), b64u(randomBytes(200)), sha('cX'), sha('pX'),
+    'analysis_pipeline', now, new Date(msNow + 180 * 86400_000).toISOString()), 'CHECK constraint failed');
+expectFail('a seal may not be shorter than a day of availability', () => db.prepare(`INSERT INTO crm_drive_review_seal
+    (case_ref, run_key, envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
+     ciphertext_b64u, ciphertext_sha256, plaintext_sha256, plaintext_len, retention_days, sealed_by,
+     created_at, expires_at)
+    VALUES ('p4c-01',?,'p4rev_v1','AES-256-GCM','HKDF-SHA256','case_bound_v1',1,?,?,?, ?,?,120,0,?,?,?)`)
+  .run(RUN, b64u(randomBytes(12)), b64u(randomBytes(16)), b64u(randomBytes(200)), sha('cY'), sha('pY'),
+    'analysis_pipeline', now, now), 'CHECK constraint failed');
+expectFail('a live seal cannot be destroyed before its expiry', () => db.prepare(
+  'DELETE FROM crm_drive_review_seal WHERE case_ref = ?').run('p4r-004'), 'review_seal_delete_before_expiry');
+expectOk('a revoked seal may be swept away', () => {
+  db.prepare('UPDATE crm_drive_review_seal SET revoked_at = ? WHERE case_ref = ?').run(now, 'p4r-004');
+  db.prepare('DELETE FROM crm_drive_review_seal WHERE case_ref = ?').run('p4r-004');
+});
+if (db.prepare("SELECT availability FROM crm_review_seal_availability WHERE case_ref = 'p4c-01'").get().availability !== 'missing') {
+  fail('availability view', 'p4c-01 should report a missing seal');
+} else pass('crm_review_seal_availability answers without touching content [ok]');
+const ciCols = db.prepare('PRAGMA table_info(crm_review_ci_summary)').all().map(c => c.name);
+const forbidden = ciCols.filter(c => /^(reviewer|decided_by|signal_digest|drive_file_id|session_hash|reason|crm_contact_id|case_ref)$/.test(c));
+if (forbidden.length) fail('crm_review_ci_summary hygiene', `forbidden columns: ${forbidden.join(',')}`);
+else pass(`crm_review_ci_summary exposes only counts and chain hashes (${ciCols.length} cols) [ok]`);
+const summary = db.prepare('SELECT cases, approved, reveals FROM crm_review_ci_summary').get();
+if (summary.cases === db.prepare('SELECT COUNT(*) AS c FROM crm_drive_review_case').get().c && summary.approved >= 2) {
+  pass(`ci summary agrees with the ledger (cases=${summary.cases}, approved=${summary.approved}) [ok]`);
+} else fail('ci summary counts', JSON.stringify(summary));
 
 // ---------------------------------------------------------------- 2) the ledger is not erasable
 function barrierFragmentFor(sql) {
@@ -255,10 +438,12 @@ expectFail('decision claiming a stronger basis than the case has', () => insertE
 }), 'review_event_snapshot_mismatch');
 expectFail('approve on a name-only basis', () => insertEvent({
   caseRef: 'p4r-002', type: 'approve', state: 'approved', reason: 'the names look identical, so approve this card',
-}), 'review_approve_requires_phone_backed_basis');
+}), /review_approve_requires_(phone_backed_basis|fresh_reveal)/);
 expectFail('approve a multi-file person case', () => insertEvent({
   caseRef: 'p4c-01', type: 'approve', state: 'approved', reason: 'treat the two files as one approved identity now',
-}), 'review_approve_requires_phone_backed_basis');
+}), 'review_approve_requires_fresh_reveal');
+// A fan-out case has no seal to open, so the reveal barrier fires first; that is the intended
+// ordering — an approval is unreachable for that shape even before the basis rule is consulted.
 for (const col of ['link_applied', 'merge_authorized', 'contact_write_count']) {
   expectFail(`${col} = 1 can never be recorded`, () => insertEvent({
     caseRef: 'p4r-001', type: 'note', reason: 'an event trying to assert a side effect on the CRM',
@@ -353,56 +538,6 @@ for (const tbl of ['crm_drive_review_case', 'crm_drive_review_event']) {
   } else pass(`${tbl} carries no personal-data column (${cols.length} cols) [ok]`);
 }
 
-// ---------------------------------------------------------------- 6) crypto round-trip (option A)
-const SEAL_SECRET = randomBytes(32);            // stands in for the Worker secret CRM_REVIEW_SEAL_KEY
-const KEY_VERSION = 1;
-const deriveKey = (caseRef, snap) => Buffer.from(hkdfSync('sha256', SEAL_SECRET,
-  Buffer.from(`${RUN}|${caseRef}`, 'utf8'), Buffer.from(`p4rev_seal_v1|${snap}`, 'utf8'), 32));
-const aadFor = (caseRef, snap) => Buffer.from(`p4rev_v1|${caseRef}|${snap}|${RUN}|v${KEY_VERSION}`, 'utf8');
-const cardPlaintext = JSON.stringify({
-  vcard: { fn: 'اسم تجريبي', tel: '+20 100 000 0000', note: 'بطاقة اختبار فقط' },
-  source: { file_ref: fileA.slice(0, 8), kind: 'VCF', card_index: 0, content_sha256: fileA },
-});
-function sealCard(caseRef) {
-  const snap = caseRow(caseRef).snap;
-  const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', deriveKey(caseRef, snap), iv);
-  c.setAAD(aadFor(caseRef, snap));
-  const ct = Buffer.concat([c.update(cardPlaintext, 'utf8'), c.final()]);
-  const row = { caseRef, iv: b64u(iv), tag: b64u(c.getAuthTag()), ct: b64u(ct),
-    ctSha: sha(ct), pSha: sha(cardPlaintext), len: Buffer.byteLength(cardPlaintext) };
-  db.prepare(`INSERT INTO crm_drive_review_seal
-      (case_ref, run_key, envelope_version, algo, kdf, aad_mode, key_version, iv_b64u, tag_b64u,
-       ciphertext_b64u, ciphertext_sha256, plaintext_sha256, plaintext_len, sealed_by, created_at, expires_at)
-      VALUES (?,?,'p4rev_v1','AES-256-GCM','HKDF-SHA256','case_bound_v1',?,?,?,?,?,?,?,?,?,?)`)
-    .run(row.caseRef, RUN, KEY_VERSION, row.iv, row.tag, row.ct, row.ctSha, row.pSha, row.len,
-      'analysis_pipeline', now, '2027-01-30T00:00:00.000Z');
-  return row;
-}
-function unseal(row, atCaseRef = row.caseRef) {
-  const snap = caseRow(atCaseRef).snap;
-  const d = createDecipheriv('aes-256-gcm', deriveKey(atCaseRef, snap), Buffer.from(row.iv, 'base64url'));
-  d.setAAD(aadFor(atCaseRef, snap));
-  d.setAuthTag(Buffer.from(row.tag, 'base64url'));
-  return Buffer.concat([d.update(Buffer.from(row.ct, 'base64url')), d.final()]).toString('utf8');
-}
-let sealed;
-expectOk('seal one card; only opaque ciphertext is stored', () => {
-  sealed = sealCard('p4r-001');
-  const stored = db.prepare('SELECT ciphertext_b64u FROM crm_drive_review_seal WHERE case_ref = ?').get('p4r-001');
-  if (/0100|example|\u0627\u0633\u0645/.test(stored.ciphertext_b64u)) throw new Error('plaintext visible in the column');
-  if (db.prepare('SELECT seal_state FROM crm_drive_review_case WHERE case_ref = ?').get('p4r-001').seal_state !== 'sealed') {
-    throw new Error('case did not become sealed');
-  }
-});
-expectOk('reveal decrypts exactly the committed bytes and logs it', () => {
-  const plain = unseal(sealed);
-  if (sha(plain) !== sealed.pSha) throw new Error('plaintext digest mismatch');
-  if (plain !== cardPlaintext) throw new Error('decrypt did not round-trip');
-  insertEvent({ caseRef: 'p4r-001', type: 'reveal', purpose: 'identity_check', outcome: 'granted',
-    sealSha: sealed.ctSha,
-    reason: 'revealed once to compare the vCard telephone with the stored CRM row' });
-});
 expectFail('plaintext bigger than the 4 KB cap cannot be sealed', () => db.prepare(
   'UPDATE crm_drive_review_seal SET plaintext_len = 4097 WHERE case_ref = ?').run('p4r-001'),
   'CHECK constraint failed');
