@@ -589,6 +589,14 @@ jobs:
             const classes = await db.prepare(
               'SELECT match_class, COUNT(*) AS c FROM crm_drive_match_candidate GROUP BY match_class ORDER BY match_class',
             ).bind().all();
+            // Proof that the operational CRM records were left for a human: every conversation
+            // row must still be contact_id IS NULL / unmatched_review after the analysis run.
+            const preserved = await db.prepare(
+              `SELECT COUNT(*) AS total,
+                      SUM(CASE WHEN contact_id IS NULL THEN 1 ELSE 0 END) AS null_contact,
+                      SUM(CASE WHEN match_status = 'unmatched_review' THEN 1 ELSE 0 END) AS unmatched_review
+                 FROM crm_conversations`,
+            ).bind().first();
             const summary = {
               registry: { rows: registryRows.length, hashed, processed, failed, already, deferred: deferredRefs.length },
               statements: applied.statements,
@@ -599,7 +607,8 @@ jobs:
               signals: counts.crm_drive_identity_signal,
               duplicates: counts.crm_drive_duplicate_finding,
               matches: counts.crm_drive_match_candidate,
-              classes: (classes.results ?? []).map(r => `${r.match_class}=${r.c}`).join('|'),
+              classes: (classes.results ?? []).map(r => `${r.match_class}=${r.c}`).sort().join('|'),
+              conv: `total=${preserved.total ?? 0},null_contact=${preserved.null_contact ?? 0},unmatched_review=${preserved.unmatched_review ?? 0}`,
               ops: opCounts,
             };
             // Numbers only: no ids, no names, no transcripts.
@@ -662,7 +671,7 @@ jobs:
             exit 1
           fi
           cp "$TMP/apply.json" "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-          apply_stats=$(jq -r '"files=\(.files) conv=\(.conversations) cards=\(.cards) sig=\(.signals) dup=\(.duplicates) match=\(.matches) reg[h=\(.registry.hashed),p=\(.registry.processed),f=\(.registry.failed),a=\(.registry.already),d=\(.registry.deferred)] st=\(.statements)"' "$TMP/apply.json")
+          apply_stats=$(jq -r '"files=\(.files) conv=\(.conversations) cards=\(.cards) sig=\(.signals) dup=\(.duplicates) match=\(.matches) classes[\(.classes)] \(.conv) reg[h=\(.registry.hashed),p=\(.registry.processed),f=\(.registry.failed),a=\(.registry.already),d=\(.registry.deferred)] st=\(.statements)"' "$TMP/apply.json")
 
           # 11) Post-checks: nothing operational changed, backup and market DB untouched.
           curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
