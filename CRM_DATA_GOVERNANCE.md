@@ -119,7 +119,7 @@
 1. **يُرفض تخزين السجل الفعلي كملف JSON حي داخل Git:** لأن المستودع عام (`Public`)، وأسماء ملفات WhatsApp ومعرّفات Google Drive (`drive_file_id`) تمثل بيانات حساسة وروابط وصول محتملة لا يجوز نشرها علنًا.
 2. **يُرفض إنشاء قاعدة بيانات موازية جديدة:** منعًا لتشتت الحالة ومخالفة مبدأ وحدة البيانات، حيث تضم قاعدة CRM الحالية في Cloudflare D1 بالفعل جداول الكيانات والتدقيق ومنع التكرار (`crm_contacts`, `crm_opportunities`, `crm_conversations`, `crm_contact_audit_log`, `crm_idempotency_receipts`).
 3. **المكان الرسمي المعتمد للتخزين:**
-   - **المخزن الرئيسي (`Primary Store`):** جدول إضافي مخصص باسم **`crm_drive_file_registry`** داخل **قاعدة بيانات CRM النشطة نفسها في Cloudflare D1** (`nasr-crm-test-db` في البيئة المعزولة الحالية، يُضاف عبر migration إضافية قياسية عند بدء أول مهمة تنفيذية مخوّلة لتعديل القاعدة)، ويُقرأ ويُحدَّث آليًا عبر واجهات Worker الـCRM المحمية أو المظاريف المشفّرة (`sealed ingest`).
+   - **المخزن الرئيسي (`Primary Store`):** جدول إضافي مخصص باسم **`crm_drive_file_registry`** داخل **قاعدة بيانات CRM النشطة نفسها في Cloudflare D1** (`nasr-crm-test-db` في البيئة المعزولة الحالية). **تمت إضافته فعليًا عبر الـmigration القياسية `0007_crm_drive_file_registry.sql` وتطبيقها على `nasr-crm-test-db` فقط في `2026-11-01`** بعد نجاح اختبارات العزلة والتحقق من النسخة الاحتياطية الدائمة. ولا يُقرأ ولا يُحدَّث إلا عبر طبقة الخدمة `_worker/crm-drive-file-registry.js` المستدعاة من مسارات Worker المحمية أو عبر مظاريف الجرد المشفّرة (`_worker/ingest-queue/drive-registry-sealed.txt`)؛ **يُحظر إضافة أي Endpoint عام يقرأ السجل أو جعله متاحًا بلا مصادقة**.
    - **نسخة تشغيلية اختيارية داخل المجلد الخاص في Drive (`Optional Drive Mirror`):** يمكن حفظ لقطة JSON آلية مطابقة لنفس المخطط في مسار `_system/drive_file_registry.json` داخل مجلد CRM في Google Drive لتسهيل الفحص الفوري، **بشرط عدم كون ملف السجل متاحًا للعامة وعدم إضافته إلى Git أبدًا**.
    - **تقليل البيانات الشخصية (`Data Minimization`):** يقتصر السجل على البيانات الوصفية التقنية للملف، البصمات المشفّرة (`SHA-256`)، العدّادات الرقمية، ومعرّفات `UUID` الداخلية في CRM دون تضمين نصوص محادثات أو أرقام هواتف صريحة داخل صفوف السجل.
 
@@ -188,6 +188,25 @@ CREATE INDEX IF NOT EXISTS idx_crm_drive_registry_inner_sha256
   ON crm_drive_file_registry(inner_content_sha256) WHERE inner_content_sha256 != '';
 ```
 
+**التنفيذ الفعلي (`0007_crm_drive_file_registry.sql`) وفروقه المبرَّرة عن المخطط المرجعي:** بقِيَ المخطط المرجعي أعلاه هو الأساس، وزِيد عليه ما يفرضه تشغيل الجرد الآلي دون فقدان للبيانات:
+
+| الإضافة/الاختلاف في التنفيذ | السبب العملي |
+| :--- | :--- |
+| `id` مفتاح أولي داخلي + `drive_file_id` بقيد `UNIQUE` (بدل جعل `drive_file_id` هو الـPK) | التزامًا بمتطلبات سجل قابل للتوسّع والربط الداخلي مع بقاء هوية Drive هي الضمان ضد التكرار |
+| `file_size` بدل `size_bytes`، و`drive_created_at` + `drive_modified_at` بدل حقل واحد | تمكين اكتشاف الملف المعدّل فعليًا وتمييز الملف الجديد عن الملف المعاد لمسه |
+| `content_type` بقائمة `CHECK` (`VCF`/`ZIP`/`TXT`/`SPREADSHEET`/`DOCUMENT`/`MEDIA`/`OTHER`/`UNKNOWN`) | تصنيف ميكانيكي مستقل عن الامتداد (ملفات WhatsApp بلا امتداد موجودة فعلًا في المجلد) |
+| آلة حالات مزدوجة: `processing_status` (8 حالات) + `review_status` (5 حالات) بدل حالة واحدة | فصل «أين وصلت المعالجة» عن «هل تحتاج قرارًا بشريًا» |
+| `processing_attempts` + `last_processed_at` + `drive_modified_at_processed` + `processing_receipt_ref` + `extracted_records_count` | دليل نجاح قابل للتدقيق؛ ولا يُقبل `processed` بدونه (قيد `CHECK` على مستوى القاعدة) |
+| `error_code` + `error_message` (بطول محدود ومطهَّرة) ولا يُقبل `failed` بلا `error_code` | تسجيل الفشل تقنيًا دون إسقاط الملف من الجرد ودون تسريب بيانات شخصية |
+| `duplicate_of_file_id` برابط `REFERENCES … ON DELETE RESTRICT` | العلاقة التكرارية تشير لملف موجود، ويُمتنع حذف الملف المرجعي قبل فكاك العلاقات |
+| `metadata_json` بحجم ≤ 8192 ومفاتيح محظورة (`name`, `phone`, `raw_text`, `token`, …) | تقليل البيانات ومنع دفن أي نص محادثة أو هاتف أو سر داخل الحقل الحر |
+| `reviewed_by` + `reviewed_at` + `review_notes` مع قيد `CHECK` | لا `approved`/`rejected` دون مراجعة بشرية صريحة (يُرفض `system`/`auto`/`agent`/`ai`/`bot`/`worker`/`cron`) |
+
+**آلتا الحالات والانتقالات المسموحة (كما نُفِّذتا في طبقة الخدمة، وتُفرض القيود النهائية في القاعدة):**
+- `processing_status`: `discovered → metadata_scanned → downloaded → hashed → processed`، مع `duplicate` من `hashed` فقط، و`failed` من أي حالة نشطة، و`ignored` من `discovered`/`metadata_scanned`/`downloaded`/`hashed`/`duplicate`/`failed`. ويُسمح بالعودة من `processed` إلى `metadata_scanned`/`downloaded`/`hashed` عند تغيّر `drive_modified_at` (إعادة معالجة مبرَّرة).
+- `review_status`: `not_required ⇄ pending ⇄ needs_manual_review → approved|rejected`، على أن يكون `approved`/`rejected` مصحوبًا بمُراجِع بشري ووقت وملاحظة غير فارغة.
+- **قواعد دليل النجاح/التكرار:** `hashed` تستلزم `content_sha256` صالحًا (64 سداسيًا)؛ `processed` تستلزم بصمة + `last_processed_at` + `processing_receipt_ref` + عدّاد محاولات ≥ 1 + عدد مستخرجات؛ `duplicate` تستلزم بصمة متطابقة وعلاقة لملف مرجعي مختلف؛ **الاسم أو الحجم وحدهما لا يُنشئان حالة تكرار**، وبصمة ZIP الخارجية المختلفة تعني `indeterminate_until_inner_inspection` لا اختلاف محتوى داخلي مُثبَت.
+
 ### 5.3 التمثيل القياسي القابل للقراءة الآلية (`JSON Entry Format`)
 كل قيد في السجل (سواء استُرجع من واجهة الـWorker أو صُدِّر كملف مرآوي خاص) يلتزم بالبنية الآتية (القيم أدناه **اصطناعية للتوضيح فقط**):
 
@@ -236,6 +255,15 @@ CREATE INDEX IF NOT EXISTS idx_crm_drive_registry_inner_sha256
   "rule_version": "v1"
 }
 ```
+
+---
+
+### 5.4 آلية الجرد الآلي وحالات الثقة بالبيانات الوصفية (بعد تنفيذ المرحلة الثالثة)
+1. **مصدر الجرد:** يُجرى الجرد عبر OAuth الموثق لمالك المشروع بسرد **البيانات الوصفية فقط** (`files.list` داخل المجلد الأم) دون تنزيل أي محتوى (`files.download`) ودون فك ضغط أي أرشيف، ويُمرَّر الجرد إلى قاعدة CRM عبر **مظروف مشفَّر** (`p3reg_v1` = ECDH-X25519 + HKDF-SHA256 + AES-256-GCM) محفوظ في `_worker/ingest-queue/drive-registry-sealed.txt` مع إبقاء الملف على `IDLE` في الحالة العادية.
+2. **لا تُعدّ البيانات الوصفية بصمة محتوى:** تسجيل `size`/`modifiedTime`/`checksumSHA256` المقدَّم من Drive **لا يملأ** `content_sha256`؛ تُحسب بصمة المحتوى فقط في مرحلة مصرَّح لها بتنزيل الملف وبعدها تُنتقل الحالة إلى `hashed`.
+3. **إعادة التنفيذ آمنة (`Idempotent`):** إعادة تشغيل نفس الجرد تُحدّث `last_seen_at` والبيانات الوصفية فقط، وتحفظ `original_file_name` و`content_sha256` وعدّادات المعالجة وسجل المراجعة البشرية، ولا تُنشئ صفوفًا مكررة (المفتاح `drive_file_id` بـ`UNIQUE`).
+4. **راية موثوقية الاسم (`metadata_json.name_verified`):** `true` تعني أن الاسم المسجَّل طابق استعلام `name = '<الاسم>'` الموثَّق عبر Drive API تسلسلًا-ب-اسم؛ و`false` تعني أن الاسم منقول من مخرجات الجرد ولم يُثبت بعد بمطابقة نصية صارمة (يُصحَّح آليًا في مرحلة المعالجة عند تنزيل الملف). **لا يُبنى على الأسماء غير المؤكَّدة أي قرار مطابقة أو دمج.**
+5. **الملفات المتعذّر الوصول إليها:** تُسجَّل كصفّ بحالة `processing_status = 'failed'` مع `error_code` تقني و`review_status = 'needs_manual_review'` و`file_name` بديل مطهَّر، ولا تُحذف من الجرد ولا يُختلق لها بيانات.
 
 ---
 
