@@ -122,7 +122,15 @@ jobs:
       - name: No customer data, tokens or access codes in anything this branch adds
         run: |
           set -euo pipefail
-          { git diff -U0 --name-only origin/master...HEAD; git ls-files --others --exclude-standard; } \
+          # scoped on purpose: this gate watches the review tooling it belongs to. The repo-wide PII
+          # canary lives in _worker/tests (14 checks) and runs in the tests workflow on every push.
+          { git diff -U0 --name-only origin/master...HEAD -- \
+              _worker/migrations-draft scripts/crm/review-event-chain.mjs \
+              scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs \
+              _worker/tests-draft .github/workflows/crm-review-0009-verify.yml \
+              .github/workflows/crm-cloudflare-test-deploy.yml \
+              .github/workflows/crm-phase4-review.yml; \
+            git ls-files --others --exclude-standard -- _worker/tests-draft scripts/crm; } \
             | grep -E '\.(sql|mjs|py|yml)$' | sort -u > /tmp/changed.txt || true
           # A line that IS a detector or a labelled synthetic fixture is not a leak. The one exempted
           # number shape 01012345678 (synthetic canary) and any run of 11 zeroes (a filler digest):

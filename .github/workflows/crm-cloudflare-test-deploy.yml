@@ -1,28 +1,30 @@
 name: CRM isolated Worker deploy and live auth E2E
 
+# DEPLOY GATE (added with the 0009 review workflow, 2026-11-01).
+#
+# This workflow used to fire on `push` to master AND to `arena/**`. That is not compatible with a
+# review process in which an approval is a human act: a push to a working branch could reach the test
+# database and the test Worker with nobody deciding anything. The push trigger is therefore gone, and
+# a run needs all three of:
+#   1. the exact string `DEPLOY-TEST-DB-and-WORKER`, typed into the dispatch form (job-level `if`, so
+#      an unauthorised run never even gets a runner or the secrets);
+#   2. the `crm-test-deploy` GitHub Environment — its required-reviewer rule is the only control that
+#      makes a human approve PER RUN, because re-running a past workflow run replays its stored inputs;
+#   3. a ref of `master`, so no branch push can ever qualify.
+# Migrations are applied from `_worker/migrations` only; `_worker/migrations-draft` (where 0009 lives
+# while it is under review) is not a source this workflow will ever read.
 on:
-  push:
-    branches:
-      - master
-      - 'arena/**'
-    paths:
-      - .github/workflows/crm-cloudflare-test-deploy.yml
-      - scripts/crm/build-crm-site-seed-sql.mjs
-      - _worker/crm-worker.js
-      - _worker/crm-push.js
-      - _worker/crm-chat-intel.js
-      - _worker/crm-sync-and-match.js
-      - _worker/wrangler.crm.toml
-      - _worker/migrations/0002_crm_internal_auth.sql
-      - _worker/migrations/0003_crm_push_notifications.sql
-      - _worker/migrations/0004_crm_tracks_core.sql
-      - _worker/migrations/0005_sync_audit_and_intelligence.sql
-      - _worker/migrations/0006_decouple_opportunities_and_contact_levels.sql
-      - _worker/crm-ui/**
-      - _worker/tests/live-e2e-runner.mjs
-      - _worker/tests/live-browser-e2e.mjs
-      - _worker/tests/live-post-deploy-verify.mjs
   workflow_dispatch:
+    inputs:
+      authorize_deploy:
+        description: 'Type DEPLOY-TEST-DB-and-WORKER to let this run mutate the test D1 and the test Worker. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      reason:
+        description: 'Why this deploy is happening. Free text, kept out of the job: no customer data, no names, no codes.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -35,6 +37,10 @@ jobs:
   deploy-and-verify:
     name: Deploy nasr-crm-api-test and run live auth E2E
     runs-on: ubuntu-latest
+    environment: crm-test-deploy
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && inputs.authorize_deploy == 'DEPLOY-TEST-DB-and-WORKER'
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
@@ -53,6 +59,28 @@ jobs:
       tt_bookmark: ${{ steps.e2e.outputs.tt_bookmark }}
       stage_test: ${{ steps.e2e.outputs.stage_test }}
     steps:
+      # The job `if` above is what keeps the secrets away; this step is what keeps the failure legible
+      # (a skipped job tells nobody why) and is the place the exact-match rule is re-asserted with the
+      # value delivered through `env:`, never interpolated into the script body.
+      - name: Approval gate — exact match, no shell truthiness, ref must be master
+        shell: bash
+        env:
+          AUTHORIZE_DEPLOY: ${{ inputs.authorize_deploy }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "${AUTHORIZE_DEPLOY:-}" != 'DEPLOY-TEST-DB-and-WORKER' ]; then
+            echo "::error::not authorised: the dispatch form must contain the exact string" \
+              "DEPLOY-TEST-DB-and-WORKER (no extra whitespace, right case, nothing appended)."
+            exit 1
+          fi
+          if [ "${REF}" != 'master' ]; then
+            echo "::error::not authorised: deploys run from master only, not from ${REF}."
+            exit 1
+          fi
+          echo "authorised by the typed confirmation string; a re-run of this run would replay the same" \
+            "inputs, so the crm-test-deploy Environment approval is the per-run control (see §4 of" \
+            " CRM_PHASE4_REVIEW_SQL_APPROVAL.md)."
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
