@@ -409,13 +409,22 @@ jobs:
                 SUM(CASE WHEN processing_status = 'failed' THEN 1 ELSE 0 END) AS failed_cnt,
                 SUM(CASE WHEN processing_status = 'duplicate' OR duplicate_of_file_id IS NOT NULL THEN 1 ELSE 0 END) AS dup_cnt,
                 SUM(CASE WHEN content_sha256 IS NOT NULL THEN 1 ELSE 0 END) AS hashed_cnt,
+                SUM(CASE WHEN metadata_json LIKE '%"name_verified":true%' THEN 1 ELSE 0 END) AS ver_cnt,
+                SUM(CASE WHEN file_name IS NOT NULL AND length(trim(file_name)) > 0 THEN 1 ELSE 0 END) AS named_cnt,
+                SUM(CASE WHEN drive_modified_at IS NOT NULL THEN 1 ELSE 0 END) AS dated_cnt,
                 COALESCE(SUM(file_size), 0) AS bytes_sum
               FROM crm_drive_file_registry
             `).bind().first();
+            assert.equal(Number(summary.tot), 99, 'registry must hold exactly the 99 inventoried files');
+            assert.equal(Number(summary.hashed_cnt), 0, 'Phase 3 is metadata-only: no content_sha256 may be recorded');
+            assert.equal(Number(summary.named_cnt), 99, 'every registry row must carry a file_name');
+            assert.equal(Number(summary.dated_cnt), 99, 'every registry row must carry drive_modified_at');
             process.stdout.write(
               `p1[ins=${pass1.inserted},upd=${pass1.updated},fail=${pass1.failed}];` +
               `p2_idem[ins=${pass2.inserted},upd=${pass2.updated}];` +
-              `db[tot=${summary.tot},vcf=${summary.vcf_cnt},zip=${summary.zip_cnt},scan=${summary.scanned_cnt},fail=${summary.failed_cnt},dup=${summary.dup_cnt},hash=${summary.hashed_cnt},bytes=${summary.bytes_sum}];` +
+              `db[tot=${summary.tot},vcf=${summary.vcf_cnt},zip=${summary.zip_cnt},scan=${summary.scanned_cnt},` +
+              `fail=${summary.failed_cnt},dup=${summary.dup_cnt},hash=${summary.hashed_cnt},named=${summary.named_cnt},` +
+              `dated=${summary.dated_cnt},nameVer=${summary.ver_cnt},bytes=${summary.bytes_sum}];` +
               `queues[needProc=${needProc.length},pendRev=${pendRev.length}]`,
             );
           }
@@ -461,7 +470,8 @@ jobs:
             -o "$TMP/post_mig.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
           live_mig=$(jq -r '.result[0].results[0] | "migs=\(.migs),latest=\(.latest_mig),tbl=\(.reg_tbl),idx=\(.reg_idx),rows_before_sync=\(.reg_rows)"' "$TMP/post_mig.json")
 
-          pubkey=$(node "$TMP/p3_runner.mjs" pubkey)
+          pubkey_full=$(node "$TMP/p3_runner.mjs" pubkey)
+          pubkey="fp-${#pubkey_full}:${pubkey_full: -6}"
 
           # 8) Optional sealed metadata inventory sync if envelope is queued
           grep -v '^[[:space:]]*#' "$QUEUE_FILE" | sed '/^[[:space:]]*$/d' > "$TMP/q.txt" || true
@@ -537,6 +547,6 @@ jobs:
   p3-r6:
     if: always()
     needs: registry-phase3
-    name: 'P3 pubkey — ${{ needs.registry-phase3.outputs.pubkey }}'
+    name: 'P3 recipient key — ${{ needs.registry-phase3.outputs.pubkey }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]

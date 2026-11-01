@@ -1183,6 +1183,7 @@ export async function syncDriveFolderMetadataInventory(db, {
         inventory_source: 'google_drive_oauth_metadata_v1',
         owned_by_me: Boolean(item.owned_by_me ?? item.ownedByMe ?? true),
         shared: Boolean(item.shared ?? false),
+        ...(item.metadata && typeof item.metadata === 'object' ? item.metadata : {}),
       },
     });
     if (res.action === 'inserted') inserted += 1;
