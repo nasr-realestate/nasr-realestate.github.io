@@ -144,7 +144,10 @@ jobs:
           pay_bytes=$(wc -c < "$PAYLOAD_FILE")
           cleartext_ids=$(grep -c '"drive_file_id"' "$PAYLOAD_FILE" || true)
           arabic_hits=$(grep -cP '[\x{0600}-\x{06FF}]' "$PAYLOAD_FILE" || true)
-          id_like_hits=$(grep -oE '"[0-9A-Za-z_-]{25,40}"' "$PAYLOAD_FILE" | grep -vcE '^"[0-9a-f]{25,40}"$' || true)
+          # A Drive id is 28-33 mixed-case base64url characters. JSON keys and digests are
+          # lowercase, so anything left here is either an id or an opaque token that must not
+          # be published. (A 64-char digest is longer than the window and never matches.)
+          id_like_hits=$(grep -oE '"[0-9A-Za-z_-]{25,40}"' "$PAYLOAD_FILE" | grep -vE '^"[0-9a-z_.:-]{25,40}"$' | wc -l | tr -d '[:space:]' || true)
           if [ "$cleartext_ids" != '0' ] || [ "$arabic_hits" != '0' ] || [ "$id_like_hits" != '0' ]; then
             result="payload-not-pseudonymized(ids=${cleartext_ids},arabic=${arabic_hits},id_like=${id_like_hits})"
             finish
