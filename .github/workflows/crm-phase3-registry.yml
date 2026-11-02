@@ -424,7 +424,10 @@ jobs:
               reviewNotes: 'nope',
             }));
 
-            const migCnt = (await db.prepare('SELECT COUNT(*) AS c FROM d1_migrations').bind().first()).c;
+            const migRows = (await db.prepare('SELECT id, name FROM d1_migrations ORDER BY id').bind().all()).results;
+            const migFiles = fs.readdirSync(path.resolve(process.cwd(), '_worker/migrations'))
+              .filter(f => f.endsWith('.sql')).sort();
+            const migCnt = migRows.length;
             const idxCnt = (await db.prepare(
               "SELECT COUNT(*) AS c FROM sqlite_master WHERE type='index' AND tbl_name='crm_drive_file_registry' AND sql IS NOT NULL",
             ).bind().first()).c;
@@ -435,11 +438,21 @@ jobs:
             } catch {
               fkViol = 0;
             }
-            assert.equal(Number(migCnt), 7);
+            // The chain under test is the one in the repository, not the file count that happened to be true
+            // when this line was written. 0008 and 0009 were promoted afterwards; a hard `7` meant either
+            // "seven applied, two failed quietly" or a red check forever. So: count what is actually there,
+            // require the newest file to be the newest applied, and require the migration this phase owns
+            // to be in the set before any of the registry assertions below are allowed to mean anything.
+            assert.equal(migCnt, migFiles.length,
+              `the isolated database applied ${migCnt} of ${migFiles.length} migrations — a partially applied chain is not a pass`);
+            assert.equal(String(migRows[migRows.length - 1].name), migFiles[migFiles.length - 1],
+              'the last applied migration must be the newest file in _worker/migrations');
+            assert.ok(migRows.some(m => /0007_crm_drive_file_registry/.test(String(m.name))),
+              '0007 must be applied for the registry checks to be about anything');
             assert.equal(Number(idxCnt), 6);
             assert.equal(Number(fkDefs), 1);
             assert.equal(fkViol, 0);
-            process.stdout.write(`ok(migs=${migCnt},idx=${idxCnt},fkDef=${fkDefs},fkViol=${fkViol})`);
+            process.stdout.write(`ok(migs=${migCnt}/${migFiles.length},idx=${idxCnt},fkDef=${fkDefs},fkViol=${fkViol})`);
           } else if (mode === 'pubkey') {
             const { pubSpkiB64u } = deriveKeyPair(token);
             process.stdout.write(pubSpkiB64u);
