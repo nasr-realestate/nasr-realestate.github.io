@@ -22,13 +22,23 @@ on:
         description: 'Type DEPLOY-TEST-DB-and-WORKER to let this run mutate the test D1 and the test Worker. Anything else stops before any secret is read.'
         required: true
         type: string
-      reason:
-        description: 'Why this deploy is happening. Free text, kept out of the job: no customer data, no names, no codes.'
+      environment_protection_attested:
+        description: 'Only if the runner cannot read the environment: type ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER and also fill the two fields below. Never needed when the environment is readable.'
         required: false
         default: ''
         type: string
-      environment_protection_attested:
-        description: 'Only needed if the runner cannot READ the environment: type ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER to confirm crm-test-deploy really has required reviewers and a wait timer.'
+      environment_required_reviewers:
+        description: 'Reviewer logins actually configured on crm-test-deploy, comma separated. Deliberately not written anywhere in this repo, so it cannot be copied out of a file.'
+        required: false
+        default: ''
+        type: string
+      environment_wait_timer_seconds:
+        description: 'Wait timer configured on crm-cloudflare deploy environment, in seconds (600 or more).'
+        required: false
+        default: ''
+        type: string
+      reason:
+        description: 'Why this deploy is happening. Free text, kept out of the job: no customer data, no names, no codes.'
         required: false
         default: ''
         type: string
@@ -48,10 +58,14 @@ jobs:
     name: 'Deploy gate — crm-test-deploy environment protection audit'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.repository == 'nasr-realestate/nasr-realestate.github.io'
+    # Dispatch only: a push must never reach this workflow, and a skipped audit must not leave the
+    # deploy job needing something that silently passed. `administration` is not a permission a
+    # workflow token can request, so no read scope is claimed here at all.
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-      administration: read
     outputs:
       protection: ${{ steps.audit.outputs.protection }}
       detail: ${{ steps.audit.outputs.detail }}
@@ -64,6 +78,8 @@ jobs:
           API: ${{ github.api_url }}
           REPO: ${{ github.repository }}
           ATTEST: ${{ inputs.environment_protection_attested }}
+          REVIEWERS: ${{ inputs.environment_required_reviewers }}
+          TIMER: ${{ inputs.environment_wait_timer_seconds }}
         run: |
           set -euo pipefail
           raw=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
@@ -81,13 +97,22 @@ jobs:
             exit 1
           fi
           if [ "$code" != '200' ]; then
-            # The runner may not be allowed to read repository administration metadata. That is a
-            # blind spot, not a clean bill of health: only an explicit human attestation may pass it.
-            if [ "${ATTEST:-}" = 'ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER' ]; then
-              echo "::warning::environment state unreadable by the job token (http ${code}); proceeding on" \
-                "the dispatcher's attestation. Grant the workflow read access to remove this blind spot."
+            # A blind spot is not a pass. The token cannot request read access to repository
+            # administration metadata, so the state may be unreadable; then the dispatcher has to supply
+            # two values that exist nowhere in this repository (the reviewer logins and the timer) --
+            # something only a person who opened the settings page can type. 404 never lands here: an
+            # absent environment is refused even with attestations, because that is the exact hole.
+            n_rev=$(tr ',' '\n' <<< "${REVIEWERS:-}" | sed '/^ *$/d' | wc -l | tr -d ' ')
+            timer="${TIMER:-0}"
+            case "$timer" in ''|*[!0-9]*) timer=0 ;; esac
+            if [ "${ATTEST:-}" = 'ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER' ] \
+               && [ "$n_rev" -ge 1 ] && [ "$timer" -ge 600 ]; then
+              echo "::warning::environment state unreadable (http ${code}); proceeding on the dispatcher's" \
+                "attestation of ${n_rev} reviewer(s) and a ${timer}s wait timer. That is a claim, not a" \
+                "measurement: the run only truly waits for a human approval if the required-reviewer rule" \
+                "is really configured on crm-test-deploy."
               echo "protection=attested" >> "$GITHUB_OUTPUT"
-              echo "detail=http-${code}-attested" >> "$GITHUB_OUTPUT"
+              echo "detail=http-${code}-attested(claims=${n_rev}reviewers,${timer}s)" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "::error::environment state unreadable (http ${code}) and no attestation was typed, so the" \
@@ -763,7 +788,7 @@ jobs:
   report:
     name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (bak=${{ needs.deploy-and-verify.outputs.backup_contacts }}, stg=${{ needs.deploy-and-verify.outputs.stage_test }}, dep=${{ needs.deploy-and-verify.outputs.deployed }}, v=${{ needs.deploy-and-verify.outputs.login_and_crud }}, ui=${{ needs.deploy-and-verify.outputs.mobile_browser }}, 401=${{ needs.deploy-and-verify.outputs.unauth_rejected }}, src=${{ needs.deploy-and-verify.outputs.code_source }})'
     needs: deploy-and-verify
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-secret live E2E summary is encoded in this check name.'
