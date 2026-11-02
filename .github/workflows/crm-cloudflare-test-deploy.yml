@@ -11,8 +11,10 @@ name: CRM isolated Worker deploy and live auth E2E
 #   2. the `crm-test-deploy` GitHub Environment — its required-reviewer rule is the only control that
 #      makes a human approve PER RUN, because re-running a past workflow run replays its stored inputs;
 #   3. a ref of `master`, so no branch push can ever qualify.
-# Migrations are applied from `_worker/migrations` only; `_worker/migrations-draft` (where 0009 lives
-# while it is under review) is not a source this workflow will ever read.
+# Migrations are applied from `_worker/migrations` only; `_worker/migrations-draft` is never a source
+# this workflow reads. Since 2026-11-02 `0009_crm_drive_review_workflow.sql` is in the real path, so a
+# deploy from master would carry it -- which is exactly why the audit job below runs before any secret
+# is reachable: it refuses the run while the environment holds no per-run human approval.
 on:
   workflow_dispatch:
     inputs:
@@ -25,6 +27,11 @@ on:
         required: false
         default: ''
         type: string
+      environment_protection_attested:
+        description: 'Only needed if the runner cannot READ the environment: type ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER to confirm crm-test-deploy really has required reviewers and a wait timer.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -34,8 +41,99 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  env-protection-audit:
+    # A deploy is only as safe as the rule that makes a person say yes to THIS run. That rule lives in
+    # the repository settings, not in this file, so it is measured here before any job that holds a
+    # secret is allowed to start. Read-only: no Cloudflare API, no token, no write, no artifact.
+    name: 'Deploy gate — crm-test-deploy environment protection audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.repository == 'nasr-realestate/nasr-realestate.github.io'
+    permissions:
+      contents: read
+      administration: read
+    outputs:
+      protection: ${{ steps.audit.outputs.protection }}
+      detail: ${{ steps.audit.outputs.detail }}
+    steps:
+      - name: The environment must exist and must force a per-run approval
+        id: audit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.api_url }}
+          REPO: ${{ github.repository }}
+          ATTEST: ${{ inputs.environment_protection_attested }}
+        run: |
+          set -euo pipefail
+          raw=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -w '\n%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "${API}/repos/${REPO}/environments/crm-test-deploy")
+          code=$(tail -n1 <<< "$raw")
+          body=$(sed '$d' <<< "$raw")
+          if [ "$code" = '404' ]; then
+            echo "::error::environment crm-test-deploy does not exist, so NO per-run approval is in force." \
+              "Create it (Settings → Environments → crm-test-deploy) with at least one required reviewer and" \
+              "a wait timer before any deploy. Absent protection cannot be substituted by a typed string."
+            echo "protection=absent" >> "$GITHUB_OUTPUT"
+            echo "detail=http-404" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "$code" != '200' ]; then
+            # The runner may not be allowed to read repository administration metadata. That is a
+            # blind spot, not a clean bill of health: only an explicit human attestation may pass it.
+            if [ "${ATTEST:-}" = 'ENV-PROTECTED-BY-REVIEWERS-AND-WAIT-TIMER' ]; then
+              echo "::warning::environment state unreadable by the job token (http ${code}); proceeding on" \
+                "the dispatcher's attestation. Grant the workflow read access to remove this blind spot."
+              echo "protection=attested" >> "$GITHUB_OUTPUT"
+              echo "detail=http-${code}-attested" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::environment state unreadable (http ${code}) and no attestation was typed, so the" \
+              "deploy gate refuses: it will not assume protection it cannot see."
+            echo "protection=unreadable" >> "$GITHUB_OUTPUT"
+            echo "detail=http-${code}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          # GitHub's GET does not list who the reviewers are, only that the rule exists (and its
+          # bypass actors), so the audit asks whether a required-reviewer rule is present at all and
+          # how long the wait is. Both rule spellings are accepted: `required_reviewers` is what the
+          # API returns, `reviewers` is what older responses used.
+          has_rev=$(jq -r '[.protection_rules[]? | select(.type == "required_reviewers" or .type == "reviewers")] | length > 0' <<< "$body")
+          # The timer has been reported at the rule level and inside `params`, depending on the API
+          # version; scan every rule and take the largest number found, so a correctly configured
+          # environment is never refused because of a shape change.
+          wait_timer=$(jq -r '[.protection_rules[]? | (.wait_timer // .params.wait_timer // 0)] | max // 0' <<< "$body")
+          bypass=$(jq -r '.can_admins_bypass // "unknown"' <<< "$body")
+          detail="required_reviewers=${has_rev};wait_timer=${wait_timer};can_admins_bypass=${bypass}"
+          echo "measured: $detail"
+          if [ "$has_rev" != 'true' ]; then
+            echo "::error::crm-test-deploy has no required reviewer: a deploy would need no human approval."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            echo "detail=${detail}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "$wait_timer" -lt 600 ]; then
+            echo "::error::crm-test-deploy wait timer is ${wait_timer}s; at least 600s is required so an" \
+              "approval cannot be rubber-stamped the instant a run appears."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            echo "detail=${detail}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "$bypass" = 'true' ]; then
+            echo "::error::crm-test-deploy still lets administrators bypass protection; the approval would be" \
+              "optional for exactly the people who can change it. Turn can_admins_bypass off."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            echo "detail=${detail}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "protection=verified" >> "$GITHUB_OUTPUT"
+          echo "detail=${detail}" >> "$GITHUB_OUTPUT"
+
   deploy-and-verify:
     name: Deploy nasr-crm-api-test and run live auth E2E
+    needs: env-protection-audit
     runs-on: ubuntu-latest
     environment: crm-test-deploy
     if: >-
@@ -67,6 +165,7 @@ jobs:
         env:
           AUTHORIZE_DEPLOY: ${{ inputs.authorize_deploy }}
           REF: ${{ github.ref_name }}
+          PROTECTION: ${{ needs.env-protection-audit.outputs.protection }}
         run: |
           set -euo pipefail
           if [ "${AUTHORIZE_DEPLOY:-}" != 'DEPLOY-TEST-DB-and-WORKER' ]; then
@@ -76,6 +175,11 @@ jobs:
           fi
           if [ "${REF}" != 'master' ]; then
             echo "::error::not authorised: deploys run from master only, not from ${REF}."
+            exit 1
+          fi
+          if [ "${PROTECTION:-}" != 'verified' ] && [ "${PROTECTION:-}" != 'attested' ]; then
+            echo "::error::the environment audit did not clear the deploy (protection=${PROTECTION:-missing}):" \
+              "no deploy, no test-database mutation."
             exit 1
           fi
           echo "authorised by the typed confirmation string; a re-run of this run would replay the same" \
