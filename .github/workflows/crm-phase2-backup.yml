@@ -572,6 +572,7 @@ jobs:
             # scaffolding row in sqlite_master. Anything between those is a partially loaded copy that a
             # dead run left mid-import, and the bundle is written with `CREATE TABLE IF NOT EXISTS` plus
             # plain INSERTs — reloading that would double the data, so it stays a refusal.
+            if [ "${existing_tables:-999}" -le 1 ] 2>/dev/null; then
               new_bak_uuid="$existing_new_uuid"
               reused_empty_backup_db='yes'
             else

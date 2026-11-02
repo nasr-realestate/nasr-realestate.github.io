@@ -20,6 +20,7 @@
 // guardrail on a dependency that could disappear with the next lint upgrade.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -109,6 +110,82 @@ test('the guard catches the shape that actually broke Phase 2, and only that sha
     // and a short property with an expression is fine too
     writeFileSync(join(dir, 'ok-expr.yml'), 'name: x\njobs:\n  a:\n    steps:\n      - run: echo "${{ matrix.n }}"\n');
     assert.deepEqual(findOverlongExpressionProps(readFileSync(join(dir, 'ok-expr.yml'), 'utf8')), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A YAML file that parses can still contain a shell script that does not: one `if` eaten by a bad find-and-
+// replace in a `run: |` block leaves an orphan `fi`, GitHub starts the job happily, and the only evidence is
+// a failed step in a log this repository's automation cannot read. `bash -n` on the block costs milliseconds
+// and catches it on push. Expressions are replaced before parsing, because `${{ ... }}` is not shell — the
+// substitution can mask an unbalanced quote next to an expression, which is what the length test above is
+// for; the two checks together cover the file.
+test('every workflow run block is a script bash can actually parse', () => {
+  const dir = '.github/workflows';
+  const blocks = [];
+  for (const f of readdirSync(dir).filter(x => /\.ya?ml$/.test(x)).sort()) {
+    // Scoped to the CRM workflows, which is what this project edits and what the migration session runs.
+    // Two legacy files here write heredocs whose delimiters land at the block's own indentation column, which
+    // an indentation-based extractor reads as a cut; `bash -n` then reports a truncated here-document for a
+    // workflow GitHub parses and runs every day. Asserting about those would be asserting about the
+    // extractor, and a guard that is wrong about someone else's file is a guard that gets deleted.
+    if (!f.startsWith('crm-')) continue;
+    const lines = readFileSync(`${dir}/${f}`, 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const m = /^([ \t]*)(?:-[ \t]*)?([A-Za-z0-9_.-]+):[ \t]*[|>][-+]?[0-9]*[ \t]*(?:#.*)?$/.exec(lines[i]);
+      if (!m || m[2] !== 'run') continue;
+      const indent = m[1].length;
+      const body = [];
+      let j = i + 1;
+      for (; j < lines.length; j += 1) {
+        if (lines[j].trim() === '') { body.push(''); continue; }
+        if (lines[j].match(/^[ \t]*/)[0].length <= indent) break;
+        body.push(lines[j]);
+      }
+      i = j - 1;
+      const script = body.join('\n').replace(/\$\{\{.*?\}\}/gs, 'X');
+      if (script.length < 400 || !/(^|\n)\s*set -|\$\(|\|\|/.test(script)) continue;
+      blocks.push({ f, line: i + 1, script });
+    }
+  }
+  const dir2 = mkdtempSync(join(tmpdir(), 'wf-bash-'));
+  try {
+    const broken = [];
+    for (const [n, b] of blocks.entries()) {
+      const path = join(dir2, `blk-${n}.sh`);
+      writeFileSync(path, b.script);
+      try {
+        execFileSync('bash', ['-n', path], { stdio: ['ignore', 'ignore', 'pipe'] });
+      } catch (e) {
+        const why = String(e.stderr || e.message);
+        // Only real parse errors count. A `warning: here-document … delimited by end-of-file` is this test's
+        // own reading of the block: an indentation scan ends a `run: |` where the YAML does, and a heredoc
+        // whose delimiter sits at that column looks truncated to the extractor while the workflow itself is
+        // fine. Flagging it would put two unrelated workflows under a rule they do not violate, and a test
+        // that cries once is a test that gets silenced.
+        if (/syntax error|unexpected token|unexpected end of file/i.test(why)) {
+          broken.push(`${b.f} (near its line ${b.line}): ${why.split('\n')[0].slice(0, 140)}`);
+        }
+      }
+    }
+    assert.ok(blocks.length >= 8, `expected the CRM run blocks to be found, got ${blocks.length} — a broken extractor is not a pass`);
+    assert.deepEqual(broken, [], `these workflow scripts cannot be parsed:\n${broken.join('\n')}`);
+  } finally {
+    rmSync(dir2, { recursive: true, force: true });
+  }
+});
+
+test('the bash guard rejects an orphan fi, which is the mistake it exists for', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wf-bash-neg-'));
+  try {
+    const script = ['          set -euo pipefail', '          if [ -n "x" ]; then', '            echo yes', '          fi'].join('\n');
+    writeFileSync(join(dir, 'good.sh'), script);
+    writeFileSync(join(dir, 'bad.sh'), `${script}\n          fi\n`);
+    const ok = (() => { try { execFileSync('bash', ['-n', join(dir, 'good.sh')], { stdio: 'ignore' }); return true; } catch { return false; } })();
+    const bad = (() => { try { execFileSync('bash', ['-n', join(dir, 'bad.sh')], { stdio: 'ignore' }); return true; } catch { return false; } })();
+    assert.equal(ok, true, 'the good fixture must parse, or the fixture is wrong');
+    assert.equal(bad, false, 'an orphan `fi` must be rejected — that is the shape a bad edit leaves behind');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
