@@ -171,6 +171,17 @@ jobs:
           fi
 
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          # `GET /accounts/:id/d1/database` (the list) omits `num_tables`, so metadata guards built from it
+          # printed `tbls=0` for databases holding 4,994 rows — a lie in the one number that distinguishes an
+          # untouched database from an emptied one. The per-database endpoint has the field: read it there.
+          d1_meta() {
+            local st
+            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$2" -w '%{http_code}' \
+              "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
+            [ "$st" = '200' ] || { echo "http-$st"; return 0; }
+            jq -r '(.result[0] // .result) | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
+          }
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
             -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
           if [ "$status" != '200' ]; then
@@ -201,7 +212,7 @@ jobs:
             exit 1
           fi
 
-          market_pre=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_pre.json" | head -n1)
+          market_pre=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_pre.json")
           old_bak_uuid=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
           old_bak_pre_meta=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | "\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_pre.json" | head -n1)
           if [ -z "$old_bak_uuid" ]; then
@@ -335,6 +346,17 @@ jobs:
 
           const srcSnap = computeDbSnapshot(srcDb);
 
+          // Insertion order used to be a hand-written list, which is how a backup quietly rots: every
+          // migration that adds a foreign key adds an ordering requirement nobody remembered, and the first
+          // child table that happens to sort before its parent makes the bundle unrestorable on any engine
+          // that enforces keys. That is exactly what happened after the crm_drive_* tables arrived — run
+          // 41518627139 (`FOREIGN KEY constraint failed`) on data that the source-side `foreign_key_check`
+          // called clean. So the order is COMPUTED from the schema's own `PRAGMA foreign_key_list`, and the
+          // old list survives only as a tie-break, so intentions like "d1_migrations first" are kept.
+          //
+          // A cycle cannot be ordered by definition. The one edge the bundle already defers by hand (see
+          // `deferredConvUpdates` below) is therefore removed from the graph before sorting; any OTHER
+          // backwards edge left at the end is a hard stop that names it, instead of a silently NULL column.
           const TOPO = [
             'sources', 'areas', 'listings', 'd1_migrations',
             'crm_contacts', 'crm_contact_phones', 'crm_contact_audit_log',
@@ -345,11 +367,41 @@ jobs:
             'crm_conversation_messages', 'crm_conversation_insights',
             'crm_activities', 'crm_opportunity_properties', 'crm_smart_alerts',
           ];
+          const DEFERRED_EDGES = [{ table: 'crm_conversations', column: 'opportunity_id' }];
           const allNames = srcSnap.tables.map(t => t.name);
-          const orderedNames = [
-            ...TOPO.filter(n => allNames.includes(n)),
-            ...allNames.filter(n => !TOPO.includes(n)),
-          ];
+          const fkEdges = [];
+          for (const tName of allNames) {
+            for (const fk of srcDb.prepare(`PRAGMA foreign_key_list("${tName}")`).all()) {
+              const parent = String(fk.table);
+              if (parent === tName || !allNames.includes(parent)) continue;
+              fkEdges.push({ child: tName, parent, column: String(fk.from ?? '') });
+            }
+          }
+          const deferredKeys = new Set(DEFERRED_EDGES.map(e => `${e.table}.${e.column}`));
+          for (const e of fkEdges) e.deferred = deferredKeys.has(`${e.child}.${e.column}`);
+          const deps = new Map(allNames.map(n => [n, new Set()]));
+          for (const e of fkEdges) if (!e.deferred) deps.get(e.child).add(e.parent);
+          const rankOf = n => { const i = TOPO.indexOf(n); return i >= 0 ? i : TOPO.length + allNames.indexOf(n); };
+          const orderedNames = [];
+          const placed = new Set();
+          const rest = new Set(allNames);
+          while (rest.size > 0) {
+            const ready = [...rest]
+              .filter(t => [...deps.get(t)].every(p => placed.has(p)))
+              .sort((a, b) => (rankOf(a) - rankOf(b)) || (a < b ? -1 : 1));
+            const pick = ready.length > 0 ? ready[0]
+              : [...rest].sort((a, b) => (rankOf(a) - rankOf(b)) || (a < b ? -1 : 1))[0];
+            orderedNames.push(pick);
+            placed.add(pick);
+            rest.delete(pick);
+          }
+          const orderPos = new Map(orderedNames.map((n, i) => [n, i]));
+          const unresolvedEdges = fkEdges
+            .filter(e => !e.deferred && orderPos.get(e.child) < orderPos.get(e.parent))
+            .map(e => `${e.child}.${e.column}->${e.parent}`);
+          if (unresolvedEdges.length > 0) {
+            throw new Error(`UNORDERABLE_FOREIGN_KEY_EDGES: ${unresolvedEdges.slice(0, 8).join(' ')}`);
+          }
           const tableSqlMap = new Map(srcSnap.tables.map(t => [t.name, t.sql]));
 
           const outLines = [
@@ -509,12 +561,30 @@ jobs:
           # Create the persistent isolated backup D1 database (one dated copy, never an overwrite)
           stage='create-backup-db'
           existing_new_uuid=$(jq -r --arg bn "$NEW_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
+          new_bak_uuid=''
+          reused_empty_backup_db='no'
           if [ -n "$existing_new_uuid" ]; then
-            result='new-backup-db-name-already-exists-refusing-overwrite'
-            finish
-            exit 1
+            # A dated copy that already exists is a refusal: a backup that silently overwrites another backup
+            # is not a backup. The one exception is the husk this workflow leaves behind when a run creates
+            # the database and then dies while loading it — and a push cannot pick another name, because the
+            # suffix is today's date and `workflow_dispatch` is not reachable with this token, so without the
+            # exception the dated path would be permanently jammed by its own failed attempt. Emptiness is
+            # the test: nothing that ever held data is empty, and `num_tables` has to come from the
+            # per-database endpoint because the list payload omits it.
+            curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+              -o "$TMP/existing_new_meta.json" "$API/accounts/$account_id/d1/database/$existing_new_uuid" >/dev/null 2>&1 || true
+            existing_tables=$(jq -r '(.result[0] // .result).num_tables // -1' "$TMP/existing_new_meta.json" 2>/dev/null || echo -1)
+            if [ "$existing_tables" = '0' ]; then
+              new_bak_uuid="$existing_new_uuid"
+              reused_empty_backup_db='yes'
+            else
+              result="new-backup-db-name-already-exists-refusing-overwrite(tbls=${existing_tables})"
+              finish
+              exit 1
+            fi
           fi
 
+          if [ -z "$new_bak_uuid" ]; then
           c_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" \
             -H 'Content-Type: application/json' --data "{\"name\":\"$NEW_BACKUP_NAME\"}" \
             -o "$TMP/create_new_bak.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
@@ -528,6 +598,7 @@ jobs:
             result='create-new-backup-missing-uuid'
             finish
             exit 1
+          fi
           fi
 
           write_toml "phase2-new-backup-loader" "$NEW_BACKUP_NAME" "$new_bak_uuid" "$TMP/new_bak.toml"
@@ -611,8 +682,9 @@ jobs:
             exit 1
           fi
 
-          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):tbls=\(.num_tables // 0)"' "$TMP/d1_post.json" | head -n1)
-          market_post=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" | head -n1)
+          new_bak_d1_meta=$(d1_meta "$new_bak_uuid" "$TMP/meta_new_bak_post.json")
+          new_bak_d1_meta="${new_bak_d1_meta}|reused=${reused_empty_backup_db}"
+          market_post=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_post.json")
           old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" | head -n1)
 
           npx --yes wrangler@4 d1 execute "$OLD_BACKUP_NAME" --remote --json --config "$TMP/old_bak.toml" \

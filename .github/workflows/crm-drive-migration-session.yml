@@ -178,13 +178,16 @@ jobs:
             '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1_pre.json" > /dev/null; then
             fail "test-db-not-in-account"
           fi
+          # Two bugs this helper had already: `-H "$AUTH"` (no such variable in this step — curl died before
+          # naming a status, and the run reported `market-db-meta-unreadable-http-` with nothing after it), and
           # `GET /accounts/:id/d1/database` (the list) does not carry `num_tables`, so a guard built from it
           # printed `nasr-market-db:909312:0` and looked like "the production database is empty" when the
           # number was simply absent. The per-database endpoint has it: read the real object counts, and a
           # missing one is a hard stop rather than a zero.
           d1_meta() {
             local st out
-            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$2" -w '%{http_code}' \
+            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o "$2" -w '%{http_code}' \
               "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
             [ "$st" = '200' ] || { echo "http-$st"; return 0; }
             jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
