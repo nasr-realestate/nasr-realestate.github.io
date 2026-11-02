@@ -9,9 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       backup_suffix:
-        description: 'Name suffix for the NEW backup DB (nasr-crm-test-db-backup-<suffix>); blank = today (UTC)'
+        description: 'Name suffix for the NEW backup DB (nasr-crm-test-db-backup-NNNNNNNN); blank = today (UTC)'
         required: false
         default: ''
+        type: string
 
 permissions:
   contents: read
