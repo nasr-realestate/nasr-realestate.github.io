@@ -186,13 +186,15 @@ jobs:
             local st out
             st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$2" -w '%{http_code}' \
               "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
-            [ "$st" = '200' ] || return 0
+            [ "$st" = '200' ] || { echo "http-$st"; return 0; }
             jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
           }
+          # `name:size:tables` or nothing; a shape check is what tells "endpoint refused" from "database gone"
+          meta_ok() { case "$1" in *[A-Za-z0-9-]*:*:*) return 0 ;; *) return 1 ;; esac; }
           market_pre=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_pre.json")
           bak_pre=$(d1_meta "$REF_BACKUP_UUID" "$TMP/meta_bak_pre.json")
-          [ -n "$market_pre" ] || fail "market-db-meta-unreadable"
-          [ -n "$bak_pre" ] || fail "reference-backup-meta-unreadable"
+          meta_ok "$market_pre" || fail "market-db-meta-unreadable-$market_pre"
+          meta_ok "$bak_pre" || fail "reference-backup-meta-unreadable-$bak_pre"
 
           # ---- 2) the runner: every decision comes from the reviewed modules, not from shell arithmetic ----
           cat > "$TMP/runner.mjs" <<'EOF_NODE'

@@ -533,7 +533,12 @@ jobs:
           write_toml "phase2-new-backup-loader" "$NEW_BACKUP_NAME" "$new_bak_uuid" "$TMP/new_bak.toml"
           if ! npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --config "$TMP/new_bak.toml" \
             --file "$BUNDLE_SQL" > "$TMP/new_bak_import.log" 2>&1; then
-            result='new-backup-d1-import-failed'
+            # wrangler echoes the statements it is applying, and those rows are customer data: the log is
+            # never printed, not even its last line. Only an error CLASS is published, matched against an
+            # allowlist of constraint names, so the reason can reach a check name without the statement.
+            why=$(grep -oE 'SQLITE_CONSTRAINT[A-Z_]*|FOREIGN KEY constraint failed|UNIQUE constraint failed|NOT NULL constraint failed|CHECK constraint failed|no such table [A-Za-z0-9_]+|already exists' "$TMP/new_bak_import.log" | sort -u | head -n1)
+            [ -n "$why" ] || why='unclassified-see-import-exit-code'
+            result="new-backup-d1-import-failed:$why"
             finish
             exit 1
           fi
