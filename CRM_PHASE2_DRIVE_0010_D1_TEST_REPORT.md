@@ -14,9 +14,11 @@ Result: **`D1_VERSIONS 69/69 checks held` · `ALL_BARRIERS_HELD_ON_D1` · exit 0
 
 | what it does | file | result |
 | --- | --- | --- |
-| D1 engine rehearsal, 0010 | `_worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py` | **69/69 held** |
-| node:sqlite rehearsal, 0010 (re-run after these edits) | `_worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs` | 42/42 `ALL_BARRIERS_HELD` |
-| CI gate now running both | `.github/workflows/crm-review-0009-verify.yml` | 15 steps, both D1 rehearsals wired |
+| D1 engine rehearsal, 0010 (re-run after the §3.2 change described in §9) | `_worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py` | **69/69 held** |
+| node:sqlite rehearsal, 0010 (same re-run) | `_worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs` | **45/45** `ALL_BARRIERS_HELD` — was 42; one check became four |
+| `recordVersion()` service suite, in-process (`node:sqlite`, real migrations applied) | `_worker/tests/crm-drive-file-versions.test.mjs` | **19/19**, runs inside `npm test` |
+| `recordVersion()` on the D1 engine — the same module, unmodified | `_worker/tests-draft/crm-drive-file-versions.d1-service.mjs` | **27/27** `SERVICE_ALL_BARRIERS_HELD_ON_D1`, 193 wrangler spawns, all `--local` |
+| CI gate now running all four | `.github/workflows/crm-review-0009-verify.yml` | 16 steps |
 
 ---
 
@@ -101,7 +103,7 @@ History is never resurrected or overwritten.
   `registry_head_is_maintained_by_the_ledger` appear identically on both. The only two real differences
   are capability differences, printed by the harness rather than remembered: `sqlite_version()` and
   `PRAGMA integrity_check` are blocked by D1's authorizer, allowed by `node:sqlite`.
-  This is what makes the 42-check node rehearsal evidence *about D1* rather than about a similar engine.
+  This is what makes the 45-check node rehearsal evidence *about D1* rather than about a similar engine.
 * **A failed migration file does not leave a half-built schema.** A deliberately broken file (a valid
   `CREATE TABLE` followed by an invalid `ALTER`) was applied: local D1 **rolled back** the statement that
   had succeeded (`probe_atomic` present = 0), and re-applying 0010 afterwards lands on exactly the schema
@@ -133,9 +135,12 @@ this report):
   not the same network path or the same console.
 * **The 99 real rows were never backfilled.** Everything here uses synthetic `SYNTH…` fixtures with
   fabricated digests; no file content was read, so no real `content_sha256` exists anywhere in this work.
-* **The service layer does not exist yet.** `recordVersion()` is not written; `_worker/crm-drive-file-
-  registry.js` still overwrites `content_sha256`. 0010 alone is not deployable: the writer must record the
-  version row, then the projection, then the status, or every content-state write will be refused.
+* **The service layer now exists, and only in this repository.** `_worker/crm-drive-file-registry.js`
+  gained `recordVersion()` / `verifyVersionBinding()` / `hasVersionLedger()`, `recordContentHash()` delegates
+  to the ledger, and `recordInspectionSuccess()` refuses `processed` unless the binding verifies. Nothing was
+  deployed and no database outside a scratch directory has ever seen these writes; the intake runner change
+  in `.github/workflows/crm-phase4-analysis.yml` is inert until 0010 is applied, because every new branch is
+  taken on `hasVersionLedger(db)`.
 * **`drive_revision`/`drive_md5` stay NULL** for anything the API did not supply; the design keeps them
   nullable so the schema cannot be filled with guesses.
 * Duplicate detection across files is still *evidence*, not a conclusion: `crm_drive_duplicate_evidence`
@@ -154,13 +159,51 @@ not create a single review case. Today it creates nothing at all: it is a file i
 
 1. Approval of the *design* as written (version ledger, projection columns, evidence classes) — and the
    two engine-level consequences in §5.
-2. Approval of the companion service change (`recordVersion()` write order). Without it the migration is
-   inert, and any attempt to mirror the live `processed` state is refused by design.
+2. Approval of the companion service change, which is now on this branch for review rather than
+   hypothetical: `recordVersion()`'s write order (validate → version row → projection, one `batch()`,
+   then a read-back), and the two-line intake-runner change that stops pre-emptively claiming `downloaded`
+   once the ledger exists. Without the service the migration is inert, and any attempt to mirror the live
+   `processed` state is refused by design.
 3. Permission to read Drive file content (the digests are the point of the ledger; nothing can be
    *verified* — only declared — until then). That is the gate I have stopped at, and it is why every
    digest in this rehearsal is fabricated.
 4. A decision on the `crm-test-deploy` environment gate (`CRM_PHASE4_REVIEW_SECURITY.md` §5) before any
    push that touches `_worker/crm-ui/**` or `_worker/crm-worker.js`.
+
+## 9. What writing the service changed in the migration (§3.2), and what D1 proved about it
+
+Two things had to move once a real writer existed, and both were measured on both engines before and after.
+
+* **A deadlock in the draft, not a preference.** `trg_drive_version_ref_registered` also required
+  `r.content_sha256 IS NOT NULL`, while §4 (`trg_registry_fingerprint_is_a_projection`) refuses any write of
+  a fingerprint that is not the recorded head. A file at `metadata_scanned` with no digest — which is every
+  newly discovered file — could therefore neither insert its first version row (the ledger trigger refused)
+  nor receive its first fingerprint (§4 refused, because its head was 0). Only a destructive
+  `INSERT OR REPLACE` slipped past, which is not a path the service may take. Reproduced standalone
+  (`/tmp/deadlock.mjs`, first version refused, projection refused), then the clause was dropped and all four
+  rehearsals re-run: the first version is now accepted, the projection lands, and both refusals that still
+  matter — a fingerprint that is not the head, and a version for an unregistered file — refuse exactly as
+  before. §4 is untouched, so *"every projected fingerprint must equal a recorded head version"* still holds;
+  what the removed conjunct actually encoded was *"no file may ever get its first version"*, which is why the
+  0010 node rehearsal's T1 grew from one check into four and the D1 rehearsal still holds at 69/69.
+* **The engine answers questions `node:sqlite` cannot.** `_worker/tests-draft/crm-drive-file-versions.d1-service.mjs`
+  runs the module itself — same file, no test-only branch — with every statement sent through
+  `wrangler d1 execute --local`. Measured there, and only there:
+  `db.batch()` is atomic (a poisoned final statement leaves the version row *and* the projection absent, and
+  the retry records it once); the ledger's `AFTER INSERT` trigger moves `head_version_seq`/`versions_observed`
+  for a row inserted inside the same script, so the projection the service writes afterwards is checked
+  against a head the engine already advanced; and an upper-case digest is normalised rather than refused,
+  which is why it is no longer in the refusal list.
+* **A hole in the promotion plan, reported rather than patched.** The §5 bootstrap selects
+  `WHERE r.drive_ref IS NOT NULL`, so a row that already carries `content_sha256` but no `drive_ref` — which
+  is any row written before 0010 by a path that never derived refs — is invisible to the backfill and stays
+  flagged by `crm_drive_version_invariant_violations` (`status_without_version=1`, measured as `V15a`).
+  Anchoring the ref and re-running the draft's own bootstrap statement (the rehearsal slices it out of the
+  migration file rather than retyping it) clears the view, and a second pass adds no rows (`V15b`, `V15d`).
+  The README's checklist carries this as item 1b.
+* **One harness lesson worth repeating for the next D1 script:** wrangler's `--json` reports a failed
+  statement as `{"error":{"text":…}}` with no `✘` banner and exit status 1, so "did it refuse?" must read
+  that shape rather than grep for the banner — otherwise every refusal looks like an empty response.
 
 Reproduce locally (nothing external is touched):
 
@@ -168,4 +211,11 @@ Reproduce locally (nothing external is touched):
 npm install --no-save wrangler@4.156.0
 KEEP=1 WRANGLER=$PWD/node_modules/.bin/wrangler \
   python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py
+rm -rf /tmp/d1srv && KEEP=1 P2S_DIR=/tmp/d1srv WRANGLER=$PWD/node_modules/.bin/wrangler \
+  node _worker/tests-draft/crm-drive-file-versions.d1-service.mjs   # the service itself, on D1
+node --test _worker/tests/crm-drive-file-versions.test.mjs          # 19 checks of the same contract, in-process
 ```
+
+Both need `wrangler` on disk (`npm install --no-save wrangler@4.156.0`) and nothing else: no network, no
+token (the service rehearsal *strips* `CLOUDFLARE_*`/`GDRIVE_*`/`GOOGLE_*` from every child process and
+fails if a spawn would omit `--local`), and no Drive file — every digest in it is `sha256` of a literal.

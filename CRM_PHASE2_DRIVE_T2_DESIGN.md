@@ -152,8 +152,12 @@ until someone opens one. Dependency: 0011 must be promoted **after** 0010 (it re
 ## 3. Tests
 
 ```bash
-node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs   # VERSIONS 42/42 checks held
+node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs   # VERSIONS 45/45 checks held
 node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs      # FILE_REVIEW 35/35 checks held
+node --test _worker/tests/crm-drive-file-versions.test.mjs        # 19/19, the writer itself on node:sqlite
+python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py   # 69/69 on the D1 engine
+python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py      # 83/83 on the D1 engine
+node _worker/tests-draft/crm-drive-file-versions.d1-service.mjs  # 27/27, the writer itself on the D1 engine
 ```
 
 Both open `new DatabaseSync(':memory:')`, apply `_worker/migrations/0001..0009` then the drafts (the
@@ -165,12 +169,16 @@ insists the views *see* the damage (`counter_mismatches=1 dangling_heads=1`,
 `projection_state=registry_fingerprint_not_head`); 0011 does the same for the isolation view. Both also
 assert that nothing operational moved (`operational tables untouched (6 tables)`, all counts 0).
 
-Regression state of the rest of the repo: `npm test` → **588 pass / 12 fail**, identical to the recorded
-`16b40fd` worktree baseline ⇒ **0 regressions**, including the repo-wide PII canary test that walks every
-`.sql`/`.mjs` file (my four new files are inside that walk). CI: the two harnesses are now steps in
-`.github/workflows/crm-review-0009-verify.yml` (13 steps, 17 trigger paths on both `pull_request` and
-`push`), and that gate's privacy sweep already whitelists `_worker/migrations-draft` and
-`_worker/tests-draft`, so the drafts are scanned on every change: **clean over 26 files**.
+Regression state of the rest of the repo: `npm test` → **699 pass / 0 fail** today (the design's first
+commit recorded **588 pass / 12 fail** against `16b40fd`; the twelve were the same environment-dependent
+suite, and the suite has since grown by these tasks' files) ⇒ **0 regressions**, including the repo-wide PII
+canary that walks every `.sql`/`.mjs` file (the new test and rehearsal files are inside that walk). CI: all
+six commands above are steps in `.github/workflows/crm-review-0009-verify.yml` (16 steps, 23 trigger paths on
+both `pull_request` and `push`, including `_worker/crm-drive-file-registry.js` so the writer cannot drift from
+the schema it writes to), and that gate's privacy sweep whitelists `_worker/migrations-draft` and
+`_worker/tests-draft`, so the drafts are scanned on every change: **clean** locally over every file this task
+touched (phone-shape, e-mail, token, PEM and Drive-id heuristics; the only hit is the module's own
+`startsWith('ya29.')` redaction rule).
 
 ## 4. What the rehearsal found *in the drafts* (this is the point of writing them locally)
 
@@ -197,10 +205,22 @@ Regression state of the rest of the repo: `npm test` → **588 pass / 12 fail**,
 7. Two failures were my *test's* own bugs (a placeholder/argument mismatch, and an expected string
    containing a literal `|` treated as a substring); recorded because a harness that only ever passes is
    not evidence.
+8. **A deadlock between two of 0010's own barriers**, found by writing the writer rather than reading the
+   DDL: `trg_drive_version_ref_registered` demanded that the file row already carry `content_sha256`, while
+   §4 demanded that any `content_sha256` equal a recorded head version. A newly discovered file satisfies
+   neither at its first version, so *nothing could ever be hashed* — and the only SQL that slipped through was
+   a destructive `INSERT OR REPLACE`. The first conjunct was dropped (§4 is what actually protects the
+   fingerprint); the 0010 node rehearsal grew from 42 checks to 45 and the D1 rehearsals were re-run.
+   Lesson kept as a rule for this repo: **a schema barrier must be walked once from the inside, by the code
+   that will write it**, before it is called a design.
 
 ## 5. Remaining risks (what approval should be thinking about)
 
-1. **Engine gap.** The drafts are proven on `node:sqlite` 3.51.3, **not yet on D1's SQLite**. The only
+1. **Engine gap — closed, and only this remains of it.** Both drafts *and* the writer have since been
+   rehearsed on the engine (`69/69`, `83/83`, `27/27`, reports `CRM_PHASE2_DRIVE_0010_D1_TEST_REPORT.md` and
+   `CRM_PHASE2_DRIVE_0011_D1_TEST_REPORT.md`), so the sentence below is kept as the record of what was
+   uncertain, not as an open item; the residue is that `PRAGMA integrity_check` cannot run through D1's SQL
+   interface at all (measured) and must be run on a copy of the database file. The only
    construct without precedent in this repo's applied migrations is `ALTER TABLE … ADD COLUMN … CHECK`
    (the `ADD COLUMN` part is precedented — 0004/0005/0006; the `CHECK` on an added column is not).
    Before promotion, both drafts must be applied to a throwaway D1 database
@@ -212,13 +232,19 @@ Regression state of the rest of the repo: `npm test` → **588 pass / 12 fail**,
 2. **A migration is applied statement-by-statement, without a transaction.** A mid-file failure can leave
    a partial schema. 0010 is written so this is survivable (every object `IF NOT EXISTS`, additive
    columns first, ledger second, inert backfill last) but it is not *impossible* — hence risk 3.
-3. **Code and schema must move together.** If 0010 is applied before `recordContentHash` is reordered,
-   live ingest writes start failing closed (registration of new files, and the hash step of retries).
+3. **Code and schema must move together.** *Reordered, on this branch, undeployed:* `recordContentHash`
+   delegates to `recordVersion` when the ledger exists and is byte-for-byte the old behaviour when it does
+   not, so this risk is now about *which commit ships with which migration*, not about missing code.
+   If 0010 is applied before that code is deployed, live ingest writes start failing closed (registration of
+   new files, and the hash step of retries).
    That is a safe direction, but it is an outage, so promotion order should be: 0010 → worker release
    with the version-first write → backfill `drive_ref` → bootstrap versions → verify counts. Never the
    reverse.
 4. **Digests are still supplied by the writer.** D1 has no SHA-256, so `content_sha256` in the ledger is
-   what the tool computed; `evidence_class` is what the tool declared. 0010 makes an unverified digest
+   what the tool computed; `evidence_class` is what the tool declared. `recordVersion` will accept a
+   `verified_local_recompute` claim from a caller that hashed the bytes itself, but only against a
+   `receipt_ref` naming that measurement (no bytes, no receipt ⇒ `MISSING_RECOMPUTE_BYTES`) — the receipt is
+   what makes the claim checkable later, and it is the CI intake runner's own receipt, not a new attestation. 0010 makes an unverified digest
    impossible to *confuse* with a verified one and makes every projection auditable, but detecting a
    forged or stale `evidence_class` requires the read-only recomputation pass (the
    `verify-review-event-chain.mjs` pattern). That pass is a T2 companion, not something this design provides.

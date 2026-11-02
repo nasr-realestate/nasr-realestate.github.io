@@ -26,7 +26,7 @@
 
 ```bash
 node _worker/tests-draft/crm-review-sql-0009.abuse.mjs              # 113 فحصًا، :memory: فقط
-node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs     # 42 فحصًا: الإصدارات لا تُستبدل
+node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs     # 45 فحصًا: الإصدارات لا تُستبدل
 node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs        # 35 فحصًا: لا ربط بلا إنسان
 python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py    # 116 فحصًا، محرك D1 في مجلد مؤقت
 python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py  # 69 فحصًا على D1: 0010 (تقرير:
@@ -34,7 +34,14 @@ python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py  # 69 فحص
 python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py     # 83 فحصًا على D1: 0011 (تقرير:
                                                                      #   CRM_PHASE2_DRIVE_0011_D1_TEST_REPORT.md)
 python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصًا، حزمة احتياطية مُسيَّجة
+node _worker/tests-draft/crm-drive-file-versions.d1-service.mjs    # 27 فحصًا على D1 لطبقة الخدمة نفسها
+node --test _worker/tests/crm-drive-file-versions.test.mjs         # 17 فحصًا في-process (node:sqlite)
 ```
+
+`crm-drive-file-versions.d1-service.mjs` هو الملف الذي يُشغّل **دالة `recordVersion()` الحقيقية** (لا
+SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل عبر `wrangler d1 execute --local` إلى قاعدة مؤقتة في مجلد
+مُهمل، والملف يرفض أي أمر ليس `wrangler`، ويفشل إذا غاب `--local`، ويحذف كل سحابة/Drive من بيئة الأبناء.
+هو أيضًا المكان الذي قِيِس فيه فعليًا: ذرّية `batch()`، وترتيب المشغّلات داخل الدفعة الواحدة.
 
 كل عداءات D1 تعمل على `wrangler d1 … --local` بملف مؤقت في مجلد مهمل (`KEEP=1` يُبقيه للفحص)، وتحتاج
 `npm install --no-save wrangler@4.156.0`. لا شيء منها يلمس `api.cloudflare.com`.
@@ -43,12 +50,35 @@ python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصً
 تعديلًا عند الترويج. كلها محلية بالكامل: لا `--remote`، ولا اتصال بأي قاعدة حقيقية، ولا استدعاء Drive.
 بوابة CI بلا أسرار: `.github/workflows/crm-review-0009-verify.yml`.
 
+## طبقة الخدمة (لا SQL وحده)
+
+كتابة الإصدارات ليست مسؤولية المُهاجِر بل مسؤولية `_worker/crm-drive-file-registry.js`:
+
+- `recordVersion(db, {…})` هي القارئ والوحيد لجدول `crm_drive_file_version`. ترتيبها مُتعمَّد:
+  تحقّق من المدخلات أولًا (بصمة 64 خانة سداسية صغيرة، حجم، صنف دليل، راصد، إيصال) ← فحص وجود الدفتر ←
+  قراءة السطر ← اشتقاق `drive_ref` (نفس مفتاح T1: `hashIdentifier('drive_ref', id)`، لا مفتاح خاص) ←
+  **إدراج صف الإصدار ثم تحديث الإسقاط في `batch()` واحدة** ← قراءة رجوعية (`verifyVersionBinding`)
+  تُثبت أن الرقم والبصمة والمرجع متفقون، وإلا `VERSION_NOT_PROJECTED`.
+- `recordContentHash` تُفوّض الدفتر أولًا ثم تعمل تحديثها كما كانت؛ و`recordInspectionSuccess` ترفض
+  `processed` ما لم تكن الرابطة موثَّقة (`VERSION_BINDING_MISSING` / `VERSION_BINDING_MISMATCH`).
+  بدون 0010 كل هذا ينحدر إلى سلوك ما قبل 0010 بلا انكسار (مقيس في الاتجاهين).
+- **لماذا ليّن §3.2 بند `content_sha256 IS NOT NULL`** (2026-11-02): كان البند مع §4 يُحدث طريقًا
+  مسدودًا — ملف عند `metadata_scanned` ببصمة فارغة لا يستطيع إدراج أول إصدار (البند يمنعه) ولا يستطيع
+  كتابة أول بصمة (§4 يرفض كل بصمة ليست رأسًا مسجَّلًا، ورأسه صفر). مقيس في `/tmp/deadlock.mjs` ثم في
+  `V1/T1` من العدّائين. الرفض المتبقي مطلوب ولا يزال ساريًا: لا بصمة لسطر ملف لا تحملها نسخة رأس مسجَّلة.
+- **ملاحظة مقيسة للترقية:** مُهاجِر §5 لا يرى صفوفًا بلا `drive_ref` (مثل أي سطر كُتبت بصمته قبل 0010
+  ولم يشتق مرجعه). هذه تبقى `status_without_version=1` في عرض الانتهاكات حتى يُزرع `drive_ref` ثم تُعاد
+  عبارة §5 (مُثبت في `V15a/V15b`؛ العبارة مُكرَّرة من ملف الهجرة نفسه، وهي idempotent: `V15d`).
+
 ## قائمة الترويج (ما يُشترط في نفس الـ commit)
 
 0. **المسوّدتان غير مطبَّقتين، ولا تُطبَّقان قبل قراءة محتوى الملفات** — هذا هو الحدّ الذي
    يفتح T2؛ كل ما هنا تصميم + اختبارات محلية فقط.
 1. `git mv _worker/migrations-draft/<00XX>_*.sql _worker/migrations/` عند الموافقة على الواحدة تلو
    الأخرى (0010 أولًا لأن 0011 يقرأ `crm_drive_file_version`).
+1b. **لا تُطبَّق 0010 قبل أن تُزرع مراجع `drive_ref` لصفوف السجل القائمة**، وإلا ستبقى تلك الصفوف
+   بلا إصدار أول وتظهر في `crm_drive_version_invariant_violations`. الفحص: عدد الصفوف التي لها
+   `content_sha256` وليس لها `drive_ref` يجب أن يكون صفرًا قبل §5 وبعده.
 2. عدّاد الهجرات في `.github/workflows/crm-phase4-analysis.yml`:
    القاعدة المعزولة `migCnt = 9` وسطر `latest = 0009_crm_drive_review_workflow`،
    وعلى قاعدة الاختبار `migs = 9` + `p4_tbl = 8` + `rev_tbl/trg/view/idx = 5/19/4/8` + `rev_rows = 0`،

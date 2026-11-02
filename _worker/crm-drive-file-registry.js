@@ -650,6 +650,7 @@ export async function recordContentHash(db, {
   contentSha256,
   innerContentSha256 = null,
   hashedAt,
+  versionEvidence = null,
 } = {}) {
   const cleanId = validateDriveFileId(driveFileId);
   const outerHash = validateSha256Hex(contentSha256, 'content_sha256');
@@ -666,6 +667,33 @@ export async function recordContentHash(db, {
   }
 
   const ts = nowIso(hashedAt);
+
+  // With 0010 applied, the fingerprint below is a projection and may only be written through the
+  // version ledger, in the ledger's order: version row first, then the file row's own pointer. The
+  // UPDATE that follows re-states the same digest, which the projection trigger sees as unchanged and
+  // therefore allows; without the ledger this function behaves exactly as it always has.
+  if (await hasVersionLedger(db)) {
+    const evidence = versionEvidence ?? {};
+    await recordVersion(db, {
+      driveFileId: cleanId,
+      contentSha256: outerHash,
+      innerContentSha256: innerHash,
+      sizeBytes: evidence.sizeBytes ?? existing.file_size,
+      sourceBytes: evidence.sourceBytes ?? null,
+      // A caller that hashed the bytes itself — the intake runner is the one that downloads — may say
+      // so instead of handing the buffer over. `verified_local_recompute` then still has to arrive with
+      // a receipt (recordVersion refuses it without one), so the claim stays checkable, just not by us.
+      evidenceClass: evidence.evidenceClass
+        ?? (evidence.sourceBytes ? 'verified_local_recompute' : 'declared_by_writer'),
+      driveRevision: evidence.driveRevision ?? null,
+      driveMd5: evidence.driveMd5 ?? null,
+      driveModifiedAt: evidence.driveModifiedAt ?? existing.drive_modified_at,
+      observedAt: ts,
+      observedBy: evidence.observedBy ?? 'intake_pipeline',
+      receiptRef: evidence.receiptRef ?? existing.processing_receipt_ref,
+    });
+  }
+
   const unchangedProcessed = existing.processing_status === 'processed' && existing.content_sha256 === outerHash;
   const unchangedDuplicate = existing.processing_status === 'duplicate' && existing.content_sha256 === outerHash;
   let nextStatus = 'hashed';
@@ -692,6 +720,441 @@ export async function recordContentHash(db, {
   `).bind(outerHash, innerHash, nextStatus, resetDuplicateLink, ts, cleanId).run();
 
   return getRegistryEntryByDriveFileId(db, cleanId);
+}
+
+// ---------------------------------------------------------------------------
+// Content version ledger — draft migration 0010 (`crm_drive_file_version`)
+// ---------------------------------------------------------------------------
+//
+// Why this section exists at all: `crm_drive_file_registry.content_sha256` is a *projection*, not a
+// fact. The fact is one immutable row per observed content state. So every write here follows one
+// order, and no caller may reorder it:
+//
+//   1. validate the fingerprint — 64 lowercase hex, and if bytes were actually fetched, the digest is
+//      recomputed and must match (size/mtime are never treated as content equality);
+//   2. append the version row to the ledger — its own triggers move the head projection
+//      (head_version_seq, versions_observed, head_evidence_class, drive_revision, drive_md5) and refuse
+//      gaps, overwrites, backdating and unmarked returns to an old digest;
+//   3. project the file row's own fingerprint onto that head, in the SAME batch, so a failure here
+//      rolls step 2 back too — a half-applied version cannot be left pointing at nothing;
+//   4. read the pair back and refuse to report success unless ref, digest and sequence number agree.
+//
+// `processed` is gated on step 4 (see recordInspectionSuccess), so a state cannot exist without a valid
+// version record. And when 0010 is not applied yet — the live test database today — the ledger probe
+// below keeps every pre-0010 path byte-for-byte as it was, instead of half-writing into a table that
+// does not exist.
+
+export const VERSION_TABLE = 'crm_drive_file_version';
+
+export const ALLOWED_VERSION_EVIDENCE_CLASSES = Object.freeze([
+  'verified_local_recompute',
+  'declared_by_writer',
+  'bootstrap_backfill',
+]);
+
+export const ALLOWED_VERSION_OBSERVERS = Object.freeze([
+  'intake_pipeline',
+  'reconciliation',
+  'registry_bootstrap',
+  'manual_refresh',
+]);
+
+// sha256 of a zero-length input. A version may carry it only for a file that is genuinely empty.
+const EMPTY_INPUT_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+const DRIVE_MD5_RE = /^[0-9a-f]{32}$/;
+const DRIVE_REVISION_RE = /^[0-9]{1,32}$/;
+const TIMESTAMP_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}/;
+const ledgerProbeCache = new WeakMap();
+
+async function sha256HexOfBytes(bytes) {
+  const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// The registry's only stable handle for a Drive object. The real id stays in `drive_file_id` and never
+// appears in a log, a report or Git — same rule as the phase-4 refs (`CRM_DATA_GOVERNANCE.md` §5.5.2).
+//
+// The scheme is `hashIdentifier('drive_ref', id)` from `crm-wa-vcard-analysis.js`:
+// `sha256("crm-p4-v1\ndrive_ref\n" + id)`. It is restated here on Web APIs because that module is
+// Node-only (`node:crypto`) and this one runs inside a Worker — importing it would break the runtime.
+// The restatement is not free-floating: `_worker/tests/crm-drive-file-versions.test.mjs` asserts, for a
+// spread of ids, that this function and `driveRefHash` return the same 64 hex characters, so the two can
+// never drift apart silently.
+export const REF_NAMESPACE = 'crm-p4-v1';
+export const DRIVE_REF_KIND = 'drive_ref';
+
+export async function deriveDriveRef(driveFileId) {
+  const id = validateDriveFileId(driveFileId);
+  return sha256HexOfBytes(new TextEncoder().encode(`${REF_NAMESPACE}\n${DRIVE_REF_KIND}\n${id}`));
+}
+
+// One probe per database object: is 0010 applied here or not? Read from the catalogue, never assumed,
+// because "we deployed the migration" is exactly the kind of claim that has to be checked.
+export async function hasVersionLedger(db) {
+  // Only a positive answer is cached. "there is no ledger yet" is the normal state during the rollout of
+  // 0010, and a module-level cache would freeze it for the life of an isolate — the service would keep
+  // refusing versions against a database that has had the table for an hour. A table that exists never
+  // disappears again: these drafts only add objects.
+  if (ledgerProbeCache.get(db) === true) return true;
+  let present = false;
+  try {
+    const row = await db
+      .prepare(`SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`)
+      .bind(VERSION_TABLE)
+      .first();
+    present = Number(row?.n ?? 0) === 1;
+  } catch {
+    present = false;
+  }
+  if (present) ledgerProbeCache.set(db, true);
+  return present;
+}
+
+function validateVersionTimestamp(value, code, label) {
+  const ts = nowIso(value);
+  if (ts.length < 10 || ts.length > 32 || !TIMESTAMP_RE.test(ts) || Number.isNaN(Date.parse(ts))) {
+    throw new DriveRegistryError(code, `${label} must be a parseable timestamp between 10 and 32 chars`);
+  }
+  return ts;
+}
+
+// The one write path for content history. Returns what it did, so a caller never has to guess whether a
+// retry created a row; every refusal is a DriveRegistryError with a stable code and a scrubbed message.
+export async function recordVersion(db, {
+  driveFileId,
+  contentSha256,
+  innerContentSha256 = null,
+  evidenceClass = 'declared_by_writer',
+  sizeBytes = null,
+  sourceBytes = null,
+  driveRevision = null,
+  driveMd5 = null,
+  driveModifiedAt = null,
+  observedAt = null,
+  observedBy = 'intake_pipeline',
+  receiptRef = null,
+} = {}) {
+  const cleanId = validateDriveFileId(driveFileId);
+
+  // (1) the fingerprint, before anything is written
+  const outerHash = validateSha256Hex(contentSha256, 'content_sha256');
+  if (!outerHash) {
+    throw new DriveRegistryError('MISSING_CONTENT_SHA256', 'a version needs the content digest it records');
+  }
+  const innerHash = validateSha256Hex(innerContentSha256, 'inner_content_sha256');
+  if (!ALLOWED_VERSION_EVIDENCE_CLASSES.includes(evidenceClass)) {
+    throw new DriveRegistryError(
+      'INVALID_EVIDENCE_CLASS',
+      'evidence_class must say whether this digest was measured or only declared',
+    );
+  }
+  if (!ALLOWED_VERSION_OBSERVERS.includes(observedBy)) {
+    throw new DriveRegistryError('INVALID_OBSERVER', 'observed_by must be one of the four recording paths');
+  }
+
+  // a measurement claim is only allowed when the bytes were in hand, and then the digest is re-derived
+  let verifiedClass = evidenceClass;
+  if (sourceBytes !== null && sourceBytes !== undefined) {
+    const recomputed = await sha256HexOfBytes(sourceBytes);
+    if (recomputed !== outerHash) {
+      throw new DriveRegistryError(
+        'DIGEST_MISMATCH',
+        'the bytes supplied do not carry the fingerprint being recorded; nothing was written',
+      );
+    }
+    verifiedClass = 'verified_local_recompute';
+  } else if (evidenceClass === 'verified_local_recompute') {
+    // The job that downloads and hashes in the same breath does not hand this function the buffer — it
+    // hands a receipt pointing at the measurement it made. Either one is enough for the claim to be
+    // checkable later; a bare assertion is not, and stays refused.
+    const claimedReceipt = String(receiptRef ?? '').trim();
+    if (!RECEIPT_REF_RE.test(claimedReceipt)) {
+      throw new DriveRegistryError(
+        'MISSING_RECOMPUTE_BYTES',
+        'verified_local_recompute needs the bytes that were measured, or a receipt_ref pointing at them',
+      );
+    }
+  }
+  if (outerHash === EMPTY_INPUT_SHA256 && Number(sizeBytes ?? 0) !== 0) {
+    throw new DriveRegistryError(
+      'DIGEST_OF_EMPTY_INPUT',
+      'the empty-input digest cannot describe a non-empty file; refusing to file it as content evidence',
+    );
+  }
+
+  const size = normalizeFileSize(sizeBytes);
+  if (size === null || size > 5000000000) {
+    throw new DriveRegistryError(
+      'INVALID_FILE_SIZE',
+      'a version row records the size that was observed, as a non-negative integer',
+    );
+  }
+  const cleanReceipt = String(receiptRef ?? '').trim();
+  if (cleanReceipt && !RECEIPT_REF_RE.test(cleanReceipt)) {
+    throw new DriveRegistryError('INVALID_RECEIPT_REF', 'receipt_ref must be ASCII in [A-Za-z0-9_.:/-]');
+  }
+  if (verifiedClass === 'verified_local_recompute' && !cleanReceipt) {
+    throw new DriveRegistryError(
+      'MISSING_RECOMPUTE_RECEIPT',
+      'a claimed recompute must name the receipt that holds it; the ledger CHECK refuses it otherwise',
+    );
+  }
+  const revision = driveRevision === null || driveRevision === undefined || driveRevision === ''
+    ? null
+    : String(driveRevision).trim();
+  if (revision !== null && !DRIVE_REVISION_RE.test(revision)) {
+    throw new DriveRegistryError('INVALID_DRIVE_REVISION', 'drive_revision is digits only, 1 to 32 of them');
+  }
+  const md5 = driveMd5 === null || driveMd5 === undefined || driveMd5 === ''
+    ? null
+    : String(driveMd5).trim().toLowerCase();
+  if (md5 !== null && !DRIVE_MD5_RE.test(md5)) {
+    throw new DriveRegistryError('INVALID_DRIVE_MD5', 'drive_md5 must be 32 hex characters or absent');
+  }
+  const observed = validateVersionTimestamp(observedAt, 'INVALID_OBSERVED_AT', 'observed_at');
+  const modifiedAt = driveModifiedAt === null || driveModifiedAt === undefined || driveModifiedAt === ''
+    ? null
+    : validateVersionTimestamp(driveModifiedAt, 'INVALID_DRIVE_MODIFIED_AT', 'drive_modified_at');
+
+  if (!(await hasVersionLedger(db))) {
+    throw new DriveRegistryError(
+      'VERSION_LEDGER_UNAVAILABLE',
+      'crm_drive_file_version is not present on this database; refusing to record a version into nothing',
+    );
+  }
+
+  const entry = await getRegistryEntryByDriveFileId(db, cleanId);
+  if (!entry) {
+    throw new DriveRegistryError('DRIVE_FILE_NOT_FOUND', 'the file must be registered before a version of it');
+  }
+  const ref = await deriveDriveRef(cleanId);
+  if (entry.drive_ref && entry.drive_ref !== ref) {
+    throw new DriveRegistryError(
+      'DRIVE_REF_CONFLICT',
+      'this registry row is already anchored to a different Drive object; no version is written against it',
+    );
+  }
+  if (!entry.drive_ref) {
+    // write-once handle, provisioned by the writer because SQL has no SHA-256
+    await db
+      .prepare(`UPDATE ${REGISTRY_TABLE} SET drive_ref = ?, updated_at = ?
+                WHERE drive_file_id = ? AND drive_ref IS NULL`)
+      .bind(ref, observed, cleanId)
+      .run();
+  }
+
+  const state = await db
+    .prepare(`SELECT
+          (SELECT COALESCE(MAX(version_seq), 0) FROM ${VERSION_TABLE} WHERE drive_ref = ?) AS head_seq,
+          (SELECT COUNT(*) FROM ${VERSION_TABLE} WHERE drive_ref = ?) AS ledger_rows,
+          (SELECT content_sha256 FROM ${VERSION_TABLE} WHERE drive_ref = ?
+            ORDER BY version_seq DESC LIMIT 1) AS head_sha,
+          (SELECT version_ref FROM ${VERSION_TABLE} WHERE drive_ref = ? AND content_sha256 = ?
+            ORDER BY version_seq ASC LIMIT 1) AS prior_ref`)
+    .bind(ref, ref, ref, ref, outerHash)
+    .first();
+
+  // the projection half, on its own: a version row can exist for this file without the file row having
+  // caught up (a rival writer, or a batch that died before step 3). Re-stating the projection is always
+  // legal when the ledger head carries that digest, so a retry converges instead of reporting a state it
+  // did not repair.
+  const projectStatement = () => db
+    .prepare(`UPDATE ${REGISTRY_TABLE}
+        SET content_sha256 = ?,
+            inner_content_sha256 = COALESCE(?, inner_content_sha256),
+            updated_at = ?
+        WHERE drive_file_id = ?`)
+    .bind(outerHash, innerHash, observed, cleanId);
+
+  const headSeq = Number(state?.head_seq ?? 0);
+  const ledgerRows = Number(state?.ledger_rows ?? 0);
+  if (ledgerRows !== headSeq) {
+    throw new DriveRegistryError(
+      'VERSION_LEDGER_GAP',
+      'the recorded versions for this file are not dense; refusing to append on top of a broken history',
+    );
+  }
+  if (String(state?.head_sha ?? '') === outerHash) {
+    // the same content again: idempotency rule (§3.5) — no new version for an unchanged fingerprint.
+    // The row may still need its projection brought up to the head it already points at.
+    if (String(entry.content_sha256 ?? '') !== outerHash) {
+      await projectStatement().run();
+      return {
+        status: 'projection_repaired',
+        version_seq: headSeq,
+        version_ref: `${ref}#${headSeq}`,
+        drive_ref: ref,
+        ledger_rows: ledgerRows,
+        evidence_class: entry.head_evidence_class ?? null,
+        repeat_of_version_ref: null,
+        projection: 'aligned',
+      };
+    }
+    return {
+      status: 'unchanged',
+      version_seq: headSeq,
+      version_ref: `${ref}#${headSeq}`,
+      drive_ref: ref,
+      ledger_rows: ledgerRows,
+      evidence_class: entry.head_evidence_class ?? null,
+      repeat_of_version_ref: null,
+      projection: 'aligned',
+    };
+  }
+
+  const buildStatements = seq => {
+    const versionRef = `${ref}#${seq}`;
+    const repeatOf = state?.prior_ref && String(state.prior_ref) !== versionRef ? state.prior_ref : null;
+    const insert = db
+      .prepare(`INSERT INTO ${VERSION_TABLE}
+          (version_ref, drive_ref, version_seq, content_sha256, inner_content_sha256, size_bytes,
+           evidence_class, drive_revision, drive_md5, drive_modified_at, observed_at, observed_by,
+           receipt_ref, repeat_of_version_ref)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(versionRef, ref, seq, outerHash, innerHash, size, verifiedClass, revision, md5,
+        modifiedAt ?? (entry.drive_modified_at || null), observed, observedBy, cleanReceipt || null,
+        repeatOf);
+    return { insert, project: projectStatement() };
+  };
+
+  const runPair = async ({ insert, project }) => {
+    if (typeof db.batch === 'function') {
+      await db.batch([insert, project]);
+      return;
+    }
+    await insert.run();
+    await project.run();
+  };
+
+  try {
+    await runPair(buildStatements(headSeq + 1));
+  } catch (err) {
+    const text = String(err?.message ?? err);
+    if (!text.includes('drive_version_seq_not_next')) {
+      if (/SQLITE_|constraint|abort/i.test(text)) {
+        throw new DriveRegistryError('VERSION_WRITE_REFUSED', sanitizeTechnicalErrorMessage(text));
+      }
+      throw err;
+    }
+    // someone else appended while we were reading: re-read once, then either accept their row or append
+    // on top of it. A second loss is a conflict we report rather than paper over with a third attempt.
+    const raced = await db
+      .prepare(`SELECT COALESCE(MAX(version_seq), 0) AS head_seq,
+                        (SELECT content_sha256 FROM ${VERSION_TABLE} WHERE drive_ref = ?
+                          ORDER BY version_seq DESC LIMIT 1) AS head_sha
+                  FROM ${VERSION_TABLE} WHERE drive_ref = ?`)
+      .bind(ref, ref)
+      .first();
+    if (String(raced?.head_sha ?? '') === outerHash) {
+      const racedRow = await getRegistryEntryByDriveFileId(db, cleanId);
+      if (String(racedRow?.content_sha256 ?? '') !== outerHash) {
+        await projectStatement().run();
+      }
+      return {
+        status: 'already_recorded',
+        version_seq: Number(raced?.head_seq ?? 0),
+        version_ref: `${ref}#${Number(raced?.head_seq ?? 0)}`,
+        drive_ref: ref,
+        ledger_rows: Number(raced?.head_seq ?? 0),
+        evidence_class: racedRow?.head_evidence_class ?? null,
+        repeat_of_version_ref: null,
+        projection: 'aligned',
+      };
+    }
+    await runPair(buildStatements(Number(raced?.head_seq ?? 0) + 1));
+  }
+
+  // (4) never report a version the database did not actually project
+  const binding = await verifyVersionBinding(db, cleanId);
+  return {
+    status: 'recorded',
+    version_seq: binding.head_version_seq,
+    version_ref: `${ref}#${binding.head_version_seq}`,
+    drive_ref: ref,
+    ledger_rows: binding.ledger_rows,
+    evidence_class: binding.head_evidence_class,
+    repeat_of_version_ref: state?.prior_ref ?? null,
+    projection: 'aligned',
+    entry: await getRegistryEntryByDriveFileId(db, cleanId),
+  };
+}
+
+// The read-back that `processed` depends on: ref, digest and sequence number must all line up, and the
+// file row's counter must equal the ledger's own rows. Used by recordInspectionSuccess and by CI.
+export async function verifyVersionBinding(db, driveFileId) {
+  const cleanId = validateDriveFileId(driveFileId);
+  const row = await db
+    .prepare(`SELECT r.drive_ref AS drive_ref,
+                      r.head_version_seq AS head_version_seq,
+                      r.versions_observed AS versions_observed,
+                      r.content_sha256 AS content_sha256,
+                      r.head_evidence_class AS head_evidence_class,
+                      v.content_sha256 AS head_digest,
+                      v.version_seq AS head_seq,
+                      (SELECT COUNT(*) FROM ${VERSION_TABLE} v2 WHERE v2.drive_ref = r.drive_ref) AS ledger_rows,
+                      (SELECT MAX(v3.version_seq) FROM ${VERSION_TABLE} v3 WHERE v3.drive_ref = r.drive_ref) AS max_seq
+                 FROM ${REGISTRY_TABLE} r
+                 LEFT JOIN ${VERSION_TABLE} v ON v.drive_ref = r.drive_ref AND v.version_seq = r.head_version_seq
+                WHERE r.drive_file_id = ?
+                LIMIT 1`)
+    .bind(cleanId)
+    .first();
+  if (!row) {
+    throw new DriveRegistryError('DRIVE_FILE_NOT_FOUND', 'no registry row to verify a version against');
+  }
+  if (!row.drive_ref) {
+    throw new DriveRegistryError('VERSION_BINDING_MISSING', 'the file row has no drive_ref, so no version can be bound');
+  }
+  if (Number(row.head_version_seq ?? 0) < 1) {
+    throw new DriveRegistryError('VERSION_BINDING_MISSING', 'no head version is recorded for this file');
+  }
+  if (!row.head_digest) {
+    throw new DriveRegistryError(
+      'VERSION_BINDING_MISSING',
+      'the head pointer names a version the ledger does not hold',
+    );
+  }
+  if (String(row.content_sha256 ?? '') !== String(row.head_digest)) {
+    throw new DriveRegistryError(
+      'VERSION_BINDING_MISMATCH',
+      'the projected fingerprint is not the head version digest; re-record the version before advancing',
+    );
+  }
+  if (Number(row.versions_observed ?? -1) !== Number(row.ledger_rows) || Number(row.max_seq) !== Number(row.head_seq)) {
+    throw new DriveRegistryError(
+      'VERSION_BINDING_MISMATCH',
+      'the version counters disagree with the ledger itself',
+    );
+  }
+  const ref = await deriveDriveRef(cleanId);
+  if (row.drive_ref !== ref) {
+    throw new DriveRegistryError('VERSION_BINDING_MISMATCH', 'drive_ref is not the digest of this drive_file_id');
+  }
+  return {
+    aligned: true,
+    drive_ref: row.drive_ref,
+    head_version_seq: Number(row.head_seq),
+    content_sha256: row.content_sha256,
+    head_evidence_class: row.head_evidence_class,
+    ledger_rows: Number(row.ledger_rows),
+    versions_observed: Number(row.versions_observed),
+  };
+}
+
+// Read-only history for a file, oldest first. Nothing here can write: the ledger is append-only by
+// trigger, and this function exists so "no version was lost" is something a test can count.
+export async function listVersions(db, driveFileId) {
+  const cleanId = validateDriveFileId(driveFileId);
+  const ref = await deriveDriveRef(cleanId);
+  const { results } = await db
+    .prepare(`SELECT version_ref, version_seq, content_sha256, inner_content_sha256, size_bytes,
+                      evidence_class, drive_revision, drive_md5, drive_modified_at, observed_at,
+                      observed_by, receipt_ref, repeat_of_version_ref
+                 FROM ${VERSION_TABLE} WHERE drive_ref = ? ORDER BY version_seq ASC`)
+    .bind(ref)
+    .all();
+  return results ?? [];
 }
 
 // Detects confirmed byte-level content duplicates via content_sha256 without deleting any record.
@@ -848,6 +1311,14 @@ export async function recordInspectionSuccess(db, {
     'MISSING_PROCESSING_EVIDENCE',
     'processedAt timestamp is required as processing evidence',
   );
+
+  // A content state may not be called processed unless the fingerprint it carries is the head version
+  // the ledger actually holds: same ref, same digest, same sequence number, same counters. Below this
+  // line the database refuses it too (trg_registry_status_needs_version); the gate here is what makes
+  // the refusal say *why*.
+  if (await hasVersionLedger(db)) {
+    await verifyVersionBinding(db, cleanId);
+  }
 
   // Idempotent replay with identical receipt & unmodified Drive timestamp:
   if (

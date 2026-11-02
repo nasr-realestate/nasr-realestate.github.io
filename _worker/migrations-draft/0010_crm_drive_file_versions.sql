@@ -176,10 +176,20 @@ END;
 
 -- (3.2) a version row may only be written about a file the registry already knows by ref, so history
 --       cannot be manufactured for an arbitrary digest, and refs stay joinable in one direction.
+--
+--       Measured, not reasoned, while wiring the service layer: this barrier must NOT also require
+--       r.content_sha256 IS NOT NULL. §4 already refuses writing a fingerprint that is not a recorded
+--       head version, so demanding a fingerprint before the FIRST version row exists deadlocks the real
+--       intake path (metadata_scanned → hashed): with a NULL digest on the file row the version insert is
+--       refused here and the digest update is refused there, and no writer could ever record a file's
+--       first version — only a destructive INSERT OR REPLACE of the whole file row would slip past, which
+--       is not a path to design around. Being registered by ref is the rule; the legality of the digest is
+--       §4's job, and §4 cannot be evaded by reordering writes: after this insert the ledger holds the
+--       digest, the head projection moves to it, and the file row's fingerprint must still match or be set
+--       to exactly that value.
 CREATE TRIGGER IF NOT EXISTS trg_drive_version_ref_registered
   BEFORE INSERT ON crm_drive_file_version
-  WHEN NOT EXISTS (SELECT 1 FROM crm_drive_file_registry r
-                    WHERE r.drive_ref = NEW.drive_ref AND r.content_sha256 IS NOT NULL)
+  WHEN NOT EXISTS (SELECT 1 FROM crm_drive_file_registry r WHERE r.drive_ref = NEW.drive_ref)
 BEGIN
   SELECT RAISE(ABORT, 'drive_version_ref_not_registered');
 END;

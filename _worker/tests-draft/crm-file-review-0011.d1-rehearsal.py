@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS crm_conversations (id TEXT PRIMARY KEY, crm_contact_i
 CREATE TABLE IF NOT EXISTS crm_opportunities (id TEXT PRIMARY KEY);
 """
 
+from _scratch import guard_fresh_scratch  # a used scratch dir is refused, not misreported
+guard_fresh_scratch(STATE, 'P2F_DIR')
 os.makedirs(MDIR, exist_ok=True)
 for name, text in [('0000_rehearsal_base.sql', BASE_SQL),
                    ('0002_crm_internal_auth.sql', open(os.path.join(MIG, '0002_crm_internal_auth.sql'), encoding='utf8').read()),

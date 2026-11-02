@@ -23,6 +23,21 @@ rehearsal re-ran green alongside it: 35/35).
 | 7 | **what an out-of-order promotion does** (0011 where 0010 is missing) | 4/4 |
 | 8 | integrity, foreign keys, schema drift, and a rollback that is exact in both directions | 7/7 |
 
+**Re-run later the same day (2026-11-02), because 0010 changed under it.** Draft 0010 lost one conjunct in
+§3.2 — a clause that, together with §4, had deadlocked a new file's *first* version (see §9 of the 0010
+report). 0011 was therefore rehearsed again against the revised 0010 on a clean scratch database:
+**`D1_FILE_REVIEW 83/83 checks held` · `ALL_BARRIERS_HELD_ON_D1`**, identical object counts
+(`index=5 table=3 trigger=16 view=4` added, nothing pre-existing changed), and §0's 99 bootstrap versions
+still land. A first attempt of that re-run reported 75/83 and every failure was the reused scratch directory,
+not the schema — the "the chain stops at 0009" precondition had already been consumed by the previous run.
+Both python rehearsals and the new service rehearsal now **refuse a dirty scratch** (`_scratch.py`,
+overridable with `REUSE_SCRATCH=1`), so the same mistake cannot be read as a barrier again.
+
+The service layer, meanwhile, gives §2's central claim a second witness: `_worker/tests-draft/crm-drive-file-
+versions.d1-service.mjs` (`V14`) opens a case against a version that `recordVersion()` actually wrote — and
+the same insert pinned to sequence 99 is refused with `file_review_case_requires_a_recorded_version`. So the
+"no case without a recorded version" rule is now exercised against a *writer*, not only against hand-made rows.
+
 ---
 
 ## 1. The additive claim, tested the hard way
@@ -137,6 +152,16 @@ just a convention.
   is **exact in both directions**: every pre-existing object survives byte-identical, none of its own 28
   objects remains, 0010's ledger still holds all 100 versions, and the 99 file rows and 100 versions are
   bit-for-bit what they were. Unlike 0010 there is no residual, because 0011 altered nothing.
+
+## 6b. One consequence of the service work for 0011's promotion
+
+The 0010 report's §9 finding transfers directly: `crm_drive_version_invariant_violations` will flag any
+registry row that carries `content_sha256` but no `drive_ref`, and the §5 bootstrap cannot see such a row.
+Under 0011 that is not just a warning — a case can only be opened against a **recorded** version, so on a
+database where the refs were never anchored, *every* case insert fails with
+`file_review_case_requires_a_recorded_version`, and the operator sees a schema that looks applied and a
+review queue that cannot start. The promotion checklist in `_worker/migrations-draft/README.md` now carries
+this as item 1b (count the ref-less rows before applying, not after).
 
 ## 7. Limits of this evidence
 

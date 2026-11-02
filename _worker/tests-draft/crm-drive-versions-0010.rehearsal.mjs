@@ -197,8 +197,32 @@ expectFail('T1 not even via the download step',
   () => db.prepare(`UPDATE crm_drive_file_registry SET processing_status = 'downloaded'
                      WHERE drive_ref = '${fileC.ref}'`).run(),
   'status_requires_a_recorded_version');
-expectFail('T1 a version row cannot be created for a file with no recorded digest',
-  () => addVersion({ ref: fileC.ref, seq: 1, digest: sha('claim') }), 'drive_version_ref_not_registered');
+// T1 (revised 2026-11-02): the old "no version row before the file row has a digest" barrier was
+// removed from the draft — it deadlocked a new file, because the same migration refuses a fingerprint
+// that is not a recorded head version, so the first version could never be created. What has to hold
+// instead is that the file must be registered, and that the file row never carries a fingerprint the
+// head does not.
+expectFail('T1 a version row still cannot be created for a file the registry does not know',
+  () => addVersion({ ref: sha('an-unregistered-drive-id'), seq: 1, digest: sha('claim') }),
+  'drive_version_ref_not_registered');
+expectOk('T1 a registered file with no digest yet can be given its first version', () => {
+  addVersion({ ref: fileC.ref, seq: 1, digest: sha('claim') });
+  const r = one(`SELECT head_version_seq AS h, versions_observed AS n, content_sha256 AS c
+                   FROM crm_drive_file_registry WHERE drive_ref = '${fileC.ref}'`);
+  if (r.h !== 1 || r.n !== 1) throw new Error(`head=${r.h} count=${r.n}`);
+  if (r.c !== null) throw new Error('the projection moved without being asked');
+});
+expectFail('T1 and its file row still cannot be handed a fingerprint the head does not carry',
+  () => db.prepare(`UPDATE crm_drive_file_registry SET content_sha256 = ?, updated_at = ?
+                      WHERE drive_ref = ?`).run(sha('a different claim'), now(), fileC.ref),
+  'registry_fingerprint_must_match_recorded_head_version');
+expectOk('T1 the projection lands when it names the recorded head, and the file can then advance', () => {
+  projectHead({ ref: fileC.ref, seq: 1, digest: sha('claim') });
+  advanceStatus(fileC.ref, 'hashed');
+  const r = one(`SELECT content_sha256 AS c, processing_status AS s FROM crm_drive_file_registry
+                   WHERE drive_ref = '${fileC.ref}'`);
+  if (r.c !== sha('claim') || r.s !== 'hashed') throw new Error(`${r.c && r.c.slice(0, 8)}/${r.s}`);
+});
 
 // ---------------------------------------------------------------- T3: fingerprint hygiene
 expectFail('T3 a missing digest is refused',
@@ -277,7 +301,7 @@ expectFail('T6a a file row with history cannot be dropped',
   'registry_row_anchors_versions_or_lineage');
 expectOk('T6a and the counts are unchanged by every attempt', () => {
   const n = one(`SELECT COUNT(*) AS c FROM crm_drive_file_version`).c;
-  if (n !== 5) throw new Error(`version rows = ${n}, expected 5 (A:3 + B:2)`);
+  if (n !== 6) throw new Error(`version rows = ${n}, expected 6 (A:3 + B:2 + C:1)`);
   const v = one(`SELECT * FROM crm_drive_version_invariant_violations`);
   for (const k of ['counter_mismatches', 'dangling_heads', 'seq_gaps', 'status_without_version']) {
     if (v[k] !== 0) throw new Error(`${k}=${v[k]} on a healthy ledger`);

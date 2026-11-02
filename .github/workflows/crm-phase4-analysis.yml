@@ -254,6 +254,7 @@ jobs:
             resolvePayloadRefs,
           } = store;
           const {
+            hasVersionLedger,
             recordContentHash,
             recordInspectionFailure,
             recordInspectionSuccess,
@@ -658,7 +659,13 @@ jobs:
                 already += 1;
                 continue;
               }
-              if (row.processing_status === 'metadata_scanned') {
+              // 0010 turns `downloaded` into a state that must be backed by a recorded version, and at
+              // this point in the loop no version exists yet — the digest is what comes next. So when the
+              // ledger is present the walk skips the intermediate state (metadata_scanned -> hashed is a
+              // legal transition) and the version row is written by recordContentHash itself. Without the
+              // ledger this is byte-for-byte the behaviour that is running today.
+              const ledger = await hasVersionLedger(db);
+              if (!ledger && row.processing_status === 'metadata_scanned') {
                 await transitionProcessingStatus(db, { driveFileId: row.drive_file_id, toStatus: 'downloaded', updatedAt: nowIso });
               }
               if (upd.processing_status === 'processed') {
@@ -667,6 +674,15 @@ jobs:
                   contentSha256: upd.content_sha256,
                   innerContentSha256: upd.inner_content_sha256 ?? null,
                   hashedAt: nowIso,
+                  // what this job actually knows: it hashed the bytes it downloaded, and it has a receipt
+                  // for them. The ledger records that as evidence, not as a guess from metadata.
+                  versionEvidence: {
+                    evidenceClass: 'verified_local_recompute',
+                    receiptRef: upd.receipt_ref ?? null,
+                    sizeBytes: upd.expected_size ?? null,
+                    driveModifiedAt: upd.expected_modified_at ?? null,
+                    observedBy: 'intake_pipeline',
+                  },
                 });
                 hashed += 1;
                 await recordInspectionSuccess(db, {
