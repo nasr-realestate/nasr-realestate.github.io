@@ -28,6 +28,7 @@ on:
       - scripts/crm/verify-review-event-chain.mjs
       - scripts/crm/build-d1-guarded-backup.mjs
       - scripts/crm/build-review-case-register.mjs
+      - scripts/crm/drive-intake-discovery.mjs
       - .github/workflows/crm-review-0009-verify.yml
   push:
     branches:
@@ -43,6 +44,7 @@ on:
       - scripts/crm/verify-review-event-chain.mjs
       - scripts/crm/build-d1-guarded-backup.mjs
       - scripts/crm/build-review-case-register.mjs
+      - scripts/crm/drive-intake-discovery.mjs
       - .github/workflows/crm-review-0009-verify.yml
   workflow_dispatch:
 
@@ -164,15 +166,21 @@ jobs:
           set -euo pipefail
           # scoped on purpose: this gate watches the review tooling it belongs to. The repo-wide PII
           # canary lives in _worker/tests (14 checks) and runs in the tests workflow on every push.
-          { git diff -U0 --name-only origin/master...HEAD -- \
-              _worker/migrations _worker/migrations-draft scripts/crm/review-event-chain.mjs \
-              scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs \
-              scripts/crm/build-review-case-register.mjs \
-              _worker/tests-draft .github/workflows/crm-review-0009-verify.yml \
-              .github/workflows/crm-cloudflare-test-deploy.yml \
-              .github/workflows/crm-phase4-review.yml; \
-            git ls-files --others --exclude-standard -- _worker/tests-draft scripts/crm; } \
+          # The list is the whitelist itself, not a diff against a base ref: actions/checkout@v4 with
+          # the default depth-1 clone usually has no `origin/master`, and `git diff` then fails into the
+          # trailing `|| true`, leaving the sweep to scan zero files and pass. A fixed explicit set is
+          # cheap, and the assert below makes an empty list an error instead of a green check mark.
+          SWEEP_PATHS='_worker/migrations _worker/migrations-draft _worker/tests-draft
+            .github/workflows/crm-review-0009-verify.yml .github/workflows/crm-cloudflare-test-deploy.yml
+            .github/workflows/crm-phase4-review.yml scripts/crm/review-event-chain.mjs
+            scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs
+            scripts/crm/build-review-case-register.mjs scripts/crm/drive-intake-discovery.mjs'
+          { git ls-files -- $SWEEP_PATHS; git ls-files --others --exclude-standard -- $SWEEP_PATHS; } \
             | grep -E '\.(sql|mjs|py|yml)$' | sort -u > /tmp/changed.txt || true
+          if [ ! -s /tmp/changed.txt ]; then
+            echo "::error::privacy sweep found no files to scan: the whitelist no longer matches the tree"
+            exit 1
+          fi
           # A line that IS a detector or a labelled synthetic fixture is not a leak. The one exempted
           # number shape 01012345678 (synthetic canary) and any run of 11 zeroes (a filler digest):
           # a real customer number would never appear on a line that says canary/synthetic.

@@ -24,8 +24,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-const REF_VERSION = 'p2ref_v1';
-const refOf = id => createHash('sha256').update(`${REF_VERSION}|${id}`).digest('hex');
+// The reference scheme is NOT a local invention: it is the one the registry and the Phase 4 payload
+// already store (governance §5.5.2). Importing it keeps discovery joinable against `nasr-crm-test-db`;
+// a private prefix would make every registered file look new.
+import { driveRefHash } from '../../_worker/crm-wa-vcard-analysis.js';
+
+const REF_SCHEME = 'crm-p4-v1/drive_ref';
+const refOf = id => driveRefHash(String(id ?? ''));
 const stableStringify = v => (v === null || typeof v !== 'object'
   ? JSON.stringify(v)
   : Array.isArray(v) ? `[${v.map(stableStringify).join(',')}]`
@@ -162,7 +167,7 @@ export function buildPlan(listing, registry) {
   for (const a of actions) counts[a.action] = (counts[a.action] ?? 0) + 1;
   return {
     schema: 'p2intake_plan_v1',
-    ref_version: REF_VERSION,
+    ref_scheme: REF_SCHEME,
     files_in_listing: items.length,
     files_in_registry: known.size,
     actions,
@@ -230,6 +235,12 @@ function selftest() {
     Object.values(act).includes('missing_from_listing') && !plan.actions.some(a => /delete/i.test(a.action)));
   ck('no raw Drive id ever reaches the plan',
     !listing.some(i => JSON.stringify(plan).includes(i.id)));
+  ck('the join key is the scheme the registry itself stores, not a local prefix',
+    refOf('syntheticKnown000000000000000') === driveRefHash('syntheticKnown000000000000000')
+    && refOf('syntheticKnown000000000000000') !== createHash('sha256')
+      .update('syntheticKnown000000000000000').digest('hex')
+    && refOf('syntheticKnown000000000000000') !== createHash('sha256')
+      .update('p2ref_v1|syntheticKnown000000000000000').digest('hex'));
   ck('every emitted file handle is a sha256 reference',
     plan.actions.every(a => a.ref === null || /^[0-9a-f]{64}$/.test(a.ref)));
   ck('provisional fingerprint can never declare a duplicate',
