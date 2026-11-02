@@ -33,7 +33,12 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, '..', '..'))
-DRAFT = os.path.join(REPO, '_worker', 'migrations-draft', '0009_crm_drive_review_workflow.sql')
+# Follow the file under test: draft before promotion, `_worker/migrations/` after it.
+DRAFT_CANDIDATES = [os.path.join(REPO, '_worker', 'migrations', '0009_crm_drive_review_workflow.sql'),
+                    os.path.join(REPO, '_worker', 'migrations-draft', '0009_crm_drive_review_workflow.sql')]
+DRAFT = next((q for q in DRAFT_CANDIDATES if os.path.exists(q)), None)
+if DRAFT is None:
+    raise SystemExit('0009 migration not found in _worker/migrations or _worker/migrations-draft')
 BUILDER = os.path.join(REPO, 'scripts', 'crm', 'build-d1-guarded-backup.mjs')
 ROOT = os.environ.get('P9BK_DIR') or tempfile.mkdtemp(prefix='crm-0009-backup-')
 ENV = dict(os.environ, CI='1', WRANGLER_SEND_METRICS='false')

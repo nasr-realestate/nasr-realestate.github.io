@@ -20,7 +20,15 @@ import { eventDigest, inspectCheckpoints, inspectLedger } from '../../scripts/cr
 const workerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoDir = path.resolve(workerDir, '..');
 const MIG_DIR = path.join(workerDir, 'migrations');
-const DRAFT = path.join(workerDir, 'migrations-draft', '0009_crm_drive_review_workflow.sql');
+// The file under test lives in `migrations-draft/` while it is a draft and in `migrations/` once
+// it is promoted. Both rehearsals follow it, so no edit is needed at either moment -- and neither
+// can quietly test a stale copy while the real one drifts.
+const DRAFT_CANDIDATES = [
+  path.join(MIG_DIR, '0009_crm_drive_review_workflow.sql'),
+  path.join(workerDir, 'migrations-draft', '0009_crm_drive_review_workflow.sql'),
+];
+const DRAFT = DRAFT_CANDIDATES.find(p => existsSync(p));
+if (!DRAFT) throw new Error('0009 migration not found in _worker/migrations or _worker/migrations-draft');
 const sha = text => createHash('sha256').update(text).digest('hex');
 const b64u = buf => Buffer.from(buf).toString('base64url');
 const sql0009 = readFileSync(DRAFT, 'utf8');
@@ -790,7 +798,7 @@ if (mode === 'migrations') {
   else pass(`operational tables still empty in this rehearsal (${Object.keys(ops).length} tables) [ok]`);
 }
 const files = existsSync(MIG_DIR) ? readdirSync(MIG_DIR).filter(f => f.startsWith('0009')) : [];
-console.log(`draft_is_outside_migrations=${files.length === 0 ? 'yes' : 'NO'}`);
+console.log(`migration_location=${files.length ? 'promoted:_worker/migrations' : 'draft:_worker/migrations-draft'}`);
 console.log(`migrations_applied=${applied.join(',')} skipped=${skipped.join(',') || 'none'}`);
 
 const failed = results.filter(r => !r.ok);

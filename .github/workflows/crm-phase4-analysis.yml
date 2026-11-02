@@ -11,6 +11,7 @@ on:
     paths:
       - .github/workflows/crm-phase4-analysis.yml
       - _worker/migrations/0008_crm_phase4_analysis.sql
+      - _worker/migrations/0009_crm_drive_review_workflow.sql
       - _worker/crm-safe-archive.js
       - _worker/crm-wa-vcard-analysis.js
       - _worker/crm-drive-analysis-pipeline.js
@@ -204,7 +205,7 @@ jobs:
             curl --silent --show-error -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stale_ephem" >/dev/null 2>&1 || true
           fi
 
-          # 6) Isolated D1 database FIRST: 0001..0008 plus a live D1 round trip of the store layer.
+          # 6) Isolated D1 database FIRST: 0001..0009 plus a live D1 round trip of the store layer.
           http_ep=$(curl --silent --show-error --connect-timeout 15 --max-time 30 \
             -X POST -H "$AUTH" -H 'Content-Type: application/json' \
             --data "{\"name\":\"$EPHEM_DB_NAME\"}" \
@@ -398,10 +399,108 @@ jobs:
             } catch {
               fkViol = 0;
             }
-            assert.equal(Number(migCnt), 8, 'isolated DB must have applied 0001..0008');
-            assert.match(String(latest), /0008_crm_phase4_analysis/);
+            assert.equal(Number(migCnt), 9, 'isolated DB must have applied 0001..0009');
+            assert.match(String(latest), /0009_crm_drive_review_workflow/);
             assert.equal(tables, PHASE4_TABLES.length, 'all Phase 4 analysis tables must exist');
             assert.equal(fkViol, 0);
+
+            // The promoted 0009 objects must exist on real D1 exactly as the migration file
+            // declares them -- names are read from the promoted file, never hardcoded here, so
+            // the check cannot drift. Then: the review path must start EMPTY (a migration must
+            // not fabricate a review row), the views must be queryable, and the two decision
+            // barriers must be refused by the live engine (not just by miniflare folklore).
+            const migRel = '_worker/migrations/0009_crm_drive_review_workflow.sql';
+            const migSrc = fs.readFileSync(path.resolve(process.cwd(), migRel), 'utf8');
+            const declared = { table: [], index: [], view: [], trigger: [] };
+            for (const m of migSrc.matchAll(
+              /^CREATE (TABLE|VIEW|TRIGGER|INDEX|UNIQUE INDEX) IF NOT EXISTS (\w+)/gm,
+            )) {
+              const kind = m[1] === 'UNIQUE INDEX' ? 'index' : m[1].toLowerCase();
+              declared[kind].push(m[2]);
+            }
+            const wantNames = new Set([].concat(...Object.values(declared)));
+            const live = (await db.prepare(
+              `SELECT type, name, COALESCE(sql, '') AS sql FROM sqlite_master
+               WHERE name LIKE 'crm_drive_review_%' OR name LIKE 'idx_crm_review_%'
+                  OR name LIKE 'trg_review_%' OR (type = 'view' AND name LIKE 'crm_review_%')`,
+            ).bind().all()).results;
+            const gotNames = new Set(live.map(r => r.name));
+            assert.deepEqual([...wantNames].sort(), [...gotNames].sort(),
+              'live D1 must hold exactly the objects the promoted migration declares');
+            for (const kind of ['table', 'index', 'view', 'trigger']) {
+              const n = live.filter(r => (r.type === kind)).length;
+              assert.equal(n, declared[kind].length, `0009 ${kind} count drifted on live D1`);
+            }
+            const REVIEW_TABLES = declared.table;
+            let revRowsTotal = 0;
+            for (const t of REVIEW_TABLES) {
+              const r = await db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).bind().first();
+              revRowsTotal += Number(r.c);
+            }
+            assert.equal(revRowsTotal, 0, 'migration must not fabricate review rows');
+            for (const v of declared.view) {
+              const r = await db.prepare(`SELECT COUNT(*) AS c FROM ${v}`).bind().first();
+              assert.ok(r && Number.isFinite(Number(r.c)), `${v} must be queryable`);
+            }
+            // Refusal probes. BEFORE INSERT triggers fire before any constraint is evaluated, so
+            // the error code below can only come from the barrier itself -- a missing column or a
+            // broken CHECK could never produce it. A refusal on an unknown case is also
+            // content-free: nothing is written and no real case is touched.
+            const barrierCode = async sql => {
+              let raw = null;
+              try {
+                await db.prepare(sql).bind().run();
+              } catch (e) {
+                raw = String(e && e.message ? e.message : e);
+              }
+              assert.ok(raw !== null, 'live D1 must refuse the probe insert');
+              // A barrier RAISE is the only acceptable reason; a typo, a missing column or a
+              // CHECK failure must never be mistaken for enforcement.
+              assert.ok(!/no such|NOT NULL constraint failed|CHECK constraint failed|FOREIGN KEY constraint failed/i
+                .test(raw), `probe refused for the wrong reason: ${raw.slice(0, 180)}`);
+              const m = raw.match(/review_[a-z_]+/);
+              assert.ok(m, `probe must be refused by a review barrier, got: ${raw.slice(0, 180)}`);
+              return m[0];
+            };
+            const probeCols = 'run_key, event_seq, case_seq, case_ref, event_type, reviewer, reason, basis_at_event';
+            const probeVals = kind => `'p1-probe-run', 1, 1, 'p4r-999', '${kind}', 'p1 probe operator',`
+              + ` 'promotion barrier probe', 'name_digest'`;
+            const noteProbe = await barrierCode(
+              `INSERT INTO crm_drive_review_event (${probeCols}) VALUES (${probeVals('note')})`,
+            );
+            const approveProbe = await barrierCode(
+              `INSERT INTO crm_drive_review_event (${probeCols}) VALUES (${probeVals('approve')})`,
+            );
+            // SQLite fires same-table triggers in reverse creation order, so which barrier
+            // answers first is an engine fact we do not rely on: both inserts must be refused by
+            // a review barrier, and the reveal gate must be installed verbatim (below).
+            assert.notEqual(noteProbe, approveProbe,
+              'the two probes must be stopped by different barriers, not one blanket failure');
+            const revealGate = await db.prepare(
+              `SELECT COALESCE(sql, '') AS s FROM sqlite_master
+               WHERE type = 'trigger' AND name = 'trg_review_event_approve_needs_fresh_reveal'`,
+            ).bind().first();
+            assert.ok(/review_approve_requires_fresh_reveal/.test(revealGate.s),
+              'the approve-needs-fresh-reveal guard must be installed as reviewed');
+            assert.ok(/NEW\.event_type = 'approve'/.test(revealGate.s),
+              'the guard must key on approve events');
+            // The ledger is append-only *as stored*: D1 keeps the trigger text, so the guard that
+            // was reviewed is provably the guard that is installed.
+            const appendOnly = (await db.prepare(
+              `SELECT COUNT(*) AS c FROM sqlite_master
+               WHERE type = 'trigger' AND sql LIKE '%review_events_are_append_only%'`,
+            ).bind().first()).c;
+            assert.equal(Number(appendOnly), 2, 'event ledger must refuse UPDATE and DELETE');
+            const reviewFacts = {
+              declared: {
+                table: declared.table.length, index: declared.index.length,
+                view: declared.view.length, trigger: declared.trigger.length,
+              },
+              rowsAfterMigration: revRowsTotal,
+              viewsQueryable: declared.view.length,
+              appendOnlyTriggers: Number(appendOnly),
+              barriers: { note: noteProbe, approve: approveProbe },
+            };
 
             // Live D1 round trip of the store layer: barriers are enforced remotely too, and a
             // rerun of the same payload must not create a second copy of any row.
@@ -610,6 +709,7 @@ jobs:
               classes: (classes.results ?? []).map(r => `${r.match_class}=${r.c}`).sort().join('|'),
               conv: `total=${preserved.total ?? 0},null_contact=${preserved.null_contact ?? 0},unmatched_review=${preserved.unmatched_review ?? 0}`,
               ops: opCounts,
+              review: reviewFacts,
             };
             // Numbers only: no ids, no names, no transcripts.
             process.stdout.write(JSON.stringify(summary));
@@ -650,18 +750,49 @@ jobs:
           # 9) Apply migration 0008 (idempotent) and verify the barrier columns exist.
           npx --yes wrangler@4 d1 migrations apply "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" > "$TMP/live_mig.log" 2>&1
 
-          POST_MIG_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS migs, (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest_mig, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('crm_drive_analysis_run','crm_drive_file_analysis','crm_drive_archive_entry','crm_wa_conversation','crm_vcard_record','crm_drive_identity_signal','crm_drive_duplicate_finding','crm_drive_match_candidate')) AS p4_tbl, (SELECT COUNT(*) FROM crm_drive_file_registry) AS reg_rows;"
+          POST_MIG_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS migs, (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest_mig, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('crm_drive_analysis_run','crm_drive_file_analysis','crm_drive_archive_entry','crm_wa_conversation','crm_vcard_record','crm_drive_identity_signal','crm_drive_duplicate_finding','crm_drive_match_candidate')) AS p4_tbl, (SELECT COUNT(*) FROM crm_drive_file_registry) AS reg_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'crm_drive_review_%') AS rev_tbl, (SELECT (SELECT COUNT(*) FROM crm_drive_review_case)+(SELECT COUNT(*) FROM crm_drive_review_seal)+(SELECT COUNT(*) FROM crm_drive_review_event)+(SELECT COUNT(*) FROM crm_drive_review_chain_head)+(SELECT COUNT(*) FROM crm_drive_review_chain_anchor)) AS rev_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%') AS rev_trg, (SELECT COUNT(*) FROM sqlite_master WHERE type='view' AND name LIKE 'crm_review_%') AS rev_view, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name LIKE 'idx_crm_review_%') AS rev_idx;"
           curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
             --data "{\"sql\":\"$POST_MIG_SQL\",\"params\":[]}" \
             -o "$TMP/post_mig.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
-          live_mig=$(jq -r '.result[0].results[0] | "migs=\(.migs),latest=\(.latest_mig),p4_tables=\(.p4_tbl),registry_rows=\(.reg_rows)"' "$TMP/post_mig.json")
+          live_mig=$(jq -r '.result[0].results[0] | "migs=\(.migs),latest=\(.latest_mig),p4_tables=\(.p4_tbl),registry_rows=\(.reg_rows),rev_tables=\(.rev_tbl),rev_triggers=\(.rev_trg),rev_views=\(.rev_view),rev_indexes=\(.rev_idx),rev_rows=\(.rev_rows)"' "$TMP/post_mig.json")
           p4_tbl=$(jq -r '.result[0].results[0].p4_tbl' "$TMP/post_mig.json")
           migs=$(jq -r '.result[0].results[0].migs' "$TMP/post_mig.json")
-          if [ "$p4_tbl" != '8' ] || [ "$migs" != '8' ]; then
-            result="migration-0008-incomplete-migs=${migs}-tables=${p4_tbl}"
+          latest_mig=$(jq -r '.result[0].results[0].latest_mig' "$TMP/post_mig.json")
+          rev_tbl=$(jq -r '.result[0].results[0].rev_tbl' "$TMP/post_mig.json")
+          rev_trg=$(jq -r '.result[0].results[0].rev_trg' "$TMP/post_mig.json")
+          rev_view=$(jq -r '.result[0].results[0].rev_view' "$TMP/post_mig.json")
+          rev_idx=$(jq -r '.result[0].results[0].rev_idx' "$TMP/post_mig.json")
+          rev_rows=$(jq -r '.result[0].results[0].rev_rows' "$TMP/post_mig.json")
+          if [ "$p4_tbl" != '8' ] || [ "$migs" != '9' ] || [ "$latest_mig" != '0009_crm_drive_review_workflow' ]; then
+            result="migration-0009-incomplete-migs=${migs}-latest=${latest_mig}-tables=${p4_tbl}"
             finish
             exit 1
           fi
+          if [ "$rev_tbl" != '5' ] || [ "$rev_trg" != '19' ] || [ "$rev_view" != '4' ] || [ "$rev_idx" != '8' ] || [ "$rev_rows" != '0' ]; then
+            result="review-schema-unexpected-t${rev_tbl}-tr${rev_trg}-v${rev_view}-i${rev_idx}-rows${rev_rows}"
+            finish
+            exit 1
+          fi
+
+          # 9b) Structural integrity of the migrated test DB (content-free, safe to publish).
+          for pragma in 'PRAGMA integrity_check' 'PRAGMA foreign_key_check'; do
+            curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              --data "{\"sql\":\"$pragma\",\"params\":[]}" \
+              -o "$TMP/pragma.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
+            pragma_rows=$(jq -r '.result[0].results | length' "$TMP/pragma.json")
+            pragma_all=$(jq -r '[.result[0].results[]? | tostring] | join("|")' "$TMP/pragma.json" | cut -c1-120)
+            if [ "$pragma" = 'PRAGMA integrity_check' ] && ! grep -q '"integrity_check":"ok"' <<< "$pragma_all"; then
+              result="integrity-check-not-ok-${pragma_all}"
+              finish
+              exit 1
+            fi
+            if [ "$pragma" = 'PRAGMA foreign_key_check' ] && [ "$pragma_rows" != '0' ]; then
+              result="foreign-key-check-rows=${pragma_rows}-${pragma_all}"
+              finish
+              exit 1
+            fi
+          done
+          integrity='integrity_check=ok;foreign_key_check=clean'
 
           # 10) Apply the committed, pseudonymized analysis payload (registry + analysis tables only)
           if ! node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
@@ -701,7 +832,7 @@ jobs:
             exit 1
           fi
 
-          guards="crm_rows_unchanged=yes(${biz_post_only});registry_hashed=${reg_hashed_post};bak_untouched=yes(${bak_post_meta});market_db_untouched=yes(${prod_post});queues_idle=yes"
+          guards="crm_rows_unchanged=yes(${biz_post_only});registry_hashed=${reg_hashed_post};bak_untouched=yes(${bak_post_meta});market_db_untouched=yes(${prod_post});queues_idle=yes;review_schema=t5/tr19/v4/i8;review_rows=${rev_rows};${integrity}"
           result='phase4-analysis-applied-and-guards-verified'
           finish
 

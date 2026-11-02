@@ -1,36 +1,44 @@
-# migrations-draft — هجرات معدّة للمراجعة، غير مطبَّقة
+# migrations-draft — مجلد المسودات (0009 لم تعد هنا)
 
-كل ملف هنا **مسودة للمراجعة فقط**: لا يطبّقه أي سير عمل ولا `npm test` ولا فاحص Sonar.
+**الحالة (2026-11-02):** `0009_crm_drive_review_workflow.sql` **روِّجت** إلى
+`_worker/migrations/0009_crm_drive_review_workflow.sql` بعد استيفاء شروط الاعتماد المسجلة في
+`CRM_PHASE4_REVIEW_TEST_REPORT.md`. المحتوى لم يتغيّر عند النقل (`git mv` فقط، بلا تحرير).
+لا توجد مسودة معلَّقة هنا الآن؛ المجلد يبقى للتالي: كل هجرة جديدة تبدأ هنا ولا تدخل
+`_worker/migrations/` إلا بموافقة طارق الصريحة.
 
-## لماذا ليس في `_worker/migrations/`
+## لماذا ليس في `_worker/migrations/` قبل الموافقة
 
-كل سير عمل CRM يطبّق الهجرات ينفّذ `wrangler d1 migrations apply` على **المجلد كاملًا**:
+كل سير عمل يطبّق الهجرات ينفّذ `wrangler d1 migrations apply` على **المجلد كاملًا**:
 
-- `.github/workflows/crm-phase4-analysis.yml` (سطر 232 مؤقت، 651 على `nasr-crm-test-db`)
-- `.github/workflows/crm-phase3-registry.yml` (190، 465)
-- `.github/workflows/crm-cloudflare-test-d1.yml` (99)
-- `.github/workflows/crm-cloudflare-test-deploy.yml` (313، 335)
+- `.github/workflows/crm-phase4-analysis.yml` (المؤقت المعزول، ثم `nasr-crm-test-db` فقط)
+- `.github/workflows/crm-phase3-registry.yml`
+- `.github/workflows/crm-cloudflare-test-d1.yml`
+- `.github/workflows/crm-cloudflare-test-deploy.yml` (على `master`، بعد موافقة Environment)
 
-فوجود `0009_*.sql` داخل `_worker/migrations/` يعني تطبيقه على قاعدة الاختبار في أول تشغيل لأيٍّ من
-هذه الأربعة (وأحدها يعمل تلقائيًا على `push` لأي فرع `arena/**`). لذلك تُحفظ المسودة هنا حتى
-الموافقة الصريحة على SQL.
+لذلك كانت المسودة محفوظة هنا حتى الموافقة الصريحة على SQL. بوابة النشر قُفِلت في
+`1e183df`: لم يعد `crm-cloudflare-test-deploy.yml` يعمل تلقائيًا على `push` لأي فرع.
 
-## كيف تراجع المسودة بدون لمس أي قاعدة
+## كيف تراجع أي مسودة بدون لمس أي قاعدة
 
 ```bash
-node _worker/tests-draft/crm-review-sql-0009.abuse.mjs              # 78 فحصًا، :memory: فقط
-python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py    # 53 فحصًا، محرك D1 في مجلد مؤقت
+node _worker/tests-draft/crm-review-sql-0009.abuse.mjs              # 113 فحصًا، :memory: فقط
+python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py    # 116 فحصًا، محرك D1 في مجلد مؤقت
+python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصًا، حزمة احتياطية مُسيَّجة
 ```
 
-كلاهما محلي بالكامل: لا `--remote`، ولا اتصال بأي قاعدة حقيقية، ولا استدعاء Drive.
+الاختبارات الثلاثة تمشّط `_worker/migrations/` **و** `_worker/migrations-draft/` معًا، فلا تحتاج
+تعديلًا عند الترويج. كلها محلية بالكامل: لا `--remote`، ولا اتصال بأي قاعدة حقيقية، ولا استدعاء Drive.
+بوابة CI بلا أسرار: `.github/workflows/crm-review-0009-verify.yml`.
 
-## قائمة الترويج (بعد الموافقة فقط)
+## قائمة الترويج (ما يُشترط في نفس الـ commit)
 
-1. `git mv _worker/migrations-draft/0009_*.sql _worker/migrations/` في **نفس** الـ commit الذي يحدّث
-   `.github/workflows/crm-phase4-analysis.yml:660` من `migs = 8` إلى `migs = 9`.
-2. نقل الاختبارين إلى `_worker/tests/crm-phase4-review-sql.test.mjs` (صيغة `node --test`).
-3. بوابة CI إضافية: `d1_review_triggers = 15`، `latest_mig = 0009_crm_drive_review_workflow`،
-   ومنظَر `crm_review_chain_integrity` بصفر انحراف.
-4. **قبل** أي push يمسّ `_worker/crm-ui/**` أو `_worker/crm-worker.js`: بوابة صريحة في
-   `crm-cloudflare-test-deploy.yml` تمنع النشر التلقائي (قرار المستخدم، القسم 5 من
-   `CRM_PHASE4_REVIEW_SECURITY.md`).
+1. `git mv _worker/migrations-draft/0009_*.sql _worker/migrations/`.
+2. عدّاد الهجرات في `.github/workflows/crm-phase4-analysis.yml`:
+   القاعدة المعزولة `migCnt = 9` وسطر `latest = 0009_crm_drive_review_workflow`،
+   وعلى قاعدة الاختبار `migs = 9` + `p4_tbl = 8` + `rev_tbl/trg/view/idx = 5/19/4/8` + `rev_rows = 0`،
+   مع `PRAGMA integrity_check = ok` و`foreign_key_check` نظيفًا.
+3. مسار `push.paths` في نفس الملف ليشمل ملف الهجرة المُروَّج.
+4. **لا** تُضاف أسماء الجداول/المشغّلات يدويًا إلى أي مكان آخر: فاحص CI يقرأ الأسماء المعلنة من
+   ملف الهجرة ويقارنها بـ `sqlite_master` الحيّ، فانحرافٌ واحد يُفشل التشغيل.
+5. **قبل** أي push يمسّ `_worker/crm-ui/**` أو `_worker/crm-worker.js`: بوابة `crm-test-deploy`
+   يجب أن تكون قائمة ومحميّة (قرار المستخدم، `CRM_PHASE4_REVIEW_SECURITY.md` §5).

@@ -19,6 +19,7 @@ name: CRM review 0009 — local gates (SQL barriers, D1 rehearsal, backup round-
 on:
   pull_request:
     paths:
+      - _worker/migrations/0009_crm_drive_review_workflow.sql
       - _worker/migrations-draft/0009_crm_drive_review_workflow.sql
       - _worker/tests-draft/crm-review-sql-0009.abuse.mjs
       - _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
@@ -32,6 +33,7 @@ on:
       - master
       - 'arena/**'
     paths:
+      - _worker/migrations/0009_crm_drive_review_workflow.sql
       - _worker/migrations-draft/0009_crm_drive_review_workflow.sql
       - _worker/tests-draft/crm-review-sql-0009.abuse.mjs
       - _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
@@ -125,7 +127,7 @@ jobs:
           # scoped on purpose: this gate watches the review tooling it belongs to. The repo-wide PII
           # canary lives in _worker/tests (14 checks) and runs in the tests workflow on every push.
           { git diff -U0 --name-only origin/master...HEAD -- \
-              _worker/migrations-draft scripts/crm/review-event-chain.mjs \
+              _worker/migrations _worker/migrations-draft scripts/crm/review-event-chain.mjs \
               scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs \
               _worker/tests-draft .github/workflows/crm-review-0009-verify.yml \
               .github/workflows/crm-cloudflare-test-deploy.yml \
