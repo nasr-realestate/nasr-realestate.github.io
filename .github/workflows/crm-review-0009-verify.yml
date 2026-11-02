@@ -8,6 +8,9 @@ name: CRM review 0009 — local gates (SQL barriers, D1 rehearsal, backup round-
 #   * the Cloudflare D1 rehearsal    — the same contract on the real D1 engine, plus the reveal↔approve
 #                                      binding, the retention rules, and the canonical pre-image
 #                                      recomputation through scripts/crm/verify-review-event-chain.mjs;
+#   * two further D1 rehearsals      — drafts 0010 (per-version content tracking) and 0011 (contact-less
+#                                      file review) on the same engine, including what an out-of-order
+#                                      promotion does and whether a rollback is clean;
 #   * the backup/restore rehearsal   — a bundle built by scripts/crm/build-d1-guarded-backup.mjs must
 #                                      restore every table, index, trigger and view, and a guard-stripped
 #                                      bundle must be shown to be unsafe.
@@ -36,6 +39,8 @@ on:
       - _worker/migrations-draft/0011_crm_drive_file_intake_review.sql
       - _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs
       - _worker/tests-draft/crm-file-review-0011.rehearsal.mjs
+      - _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py
+      - _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py
   push:
     branches:
       - master
@@ -58,6 +63,8 @@ on:
       - _worker/migrations-draft/0011_crm_drive_file_intake_review.sql
       - _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs
       - _worker/tests-draft/crm-file-review-0011.rehearsal.mjs
+      - _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py
+      - _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py
   workflow_dispatch:
 
 permissions:
@@ -71,7 +78,7 @@ jobs:
   verify:
     name: SQL barriers · D1 rehearsal · backup round-trip
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     if: github.repository == 'nasr-realestate/nasr-realestate.github.io'
     env:
       CI: 'true'
@@ -168,6 +175,16 @@ jobs:
         env:
           WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
         run: python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py
+
+      - name: D1 rehearsal for draft 0010 — version tracking on the engine that will run it
+        env:
+          WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
+        run: python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py
+
+      - name: D1 rehearsal for draft 0011 — contact-less file review, and the 0010/0011 promotion order
+        env:
+          WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
+        run: python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py
 
       - name: Backup/restore rehearsal — bundle must preserve every object and guard
         env:

@@ -29,8 +29,15 @@ node _worker/tests-draft/crm-review-sql-0009.abuse.mjs              # 113 فحص
 node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs     # 42 فحصًا: الإصدارات لا تُستبدل
 node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs        # 35 فحصًا: لا ربط بلا إنسان
 python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py    # 116 فحصًا، محرك D1 في مجلد مؤقت
+python3 _worker/tests-draft/crm-drive-versions-0010.d1-rehearsal.py  # 69 فحصًا على D1: 0010 (تقرير:
+                                                                     #   CRM_PHASE2_DRIVE_0010_D1_TEST_REPORT.md)
+python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py     # 83 فحصًا على D1: 0011 (تقرير:
+                                                                     #   CRM_PHASE2_DRIVE_0011_D1_TEST_REPORT.md)
 python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصًا، حزمة احتياطية مُسيَّجة
 ```
+
+كل عداءات D1 تعمل على `wrangler d1 … --local` بملف مؤقت في مجلد مهمل (`KEEP=1` يُبقيه للفحص)، وتحتاج
+`npm install --no-save wrangler@4.156.0`. لا شيء منها يلمس `api.cloudflare.com`.
 
 الاختبارات الثلاثة تمشّط `_worker/migrations/` **و** `_worker/migrations-draft/` معًا، فلا تحتاج
 تعديلًا عند الترويج. كلها محلية بالكامل: لا `--remote`، ولا اتصال بأي قاعدة حقيقية، ولا استدعاء Drive.
@@ -45,7 +52,18 @@ python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصً
 2. عدّاد الهجرات في `.github/workflows/crm-phase4-analysis.yml`:
    القاعدة المعزولة `migCnt = 9` وسطر `latest = 0009_crm_drive_review_workflow`،
    وعلى قاعدة الاختبار `migs = 9` + `p4_tbl = 8` + `rev_tbl/trg/view/idx = 5/19/4/8` + `rev_rows = 0`،
-   مع `PRAGMA integrity_check = ok` و`foreign_key_check` نظيفًا.
+   مع `foreign_key_check` نظيفًا. **تنبيه مقيس على المحرك:** `PRAGMA integrity_check` مرفوض من مُخيِّل
+   الأمان في D1 (`SQLITE_AUTH`) — محليًا وبعيدًا — فلا يمكن تشغيله من واجهة SQL؛ يُقاس على نسخة ملف
+   القاعدة (كما يفعل عداء 0010) أو يُستبدل بعدّ الأشياء في `sqlite_master` + `foreign_key_check`.
+2b. **فحص ترتيب قبل 0011** (مقيس، لا افتراض): SQLite لا يحلّ جسم المُشغِّل مقابل جداول غائبة، فـ
+   `wrangler d1 migrations apply` يقبل 0011 حتى لو لم تكن 0010 مطبَّقة، والفشل يظهر عند أول كتابة حالة
+   مراجعة فقط. الترويج لذلك يجب أن يسبقه هذا السطر، ولا يُعتمد على رفض المحرك:
+
+   ```sql
+   SELECT CASE WHEN EXISTS (SELECT 1 FROM sqlite_master
+                             WHERE type='table' AND name='crm_drive_file_version')
+               THEN 'ok' ELSE 'abort: 0010 must be applied before 0011' END AS preflight;
+   ```
 3. مسار `push.paths` في نفس الملف ليشمل ملف الهجرة المُروَّج.
 4. **لا** تُضاف أسماء الجداول/المشغّلات يدويًا إلى أي مكان آخر: فاحص CI يقرأ الأسماء المعلنة من
    ملف الهجرة ويقارنها بـ `sqlite_master` الحيّ، فانحرافٌ واحد يُفشل التشغيل.

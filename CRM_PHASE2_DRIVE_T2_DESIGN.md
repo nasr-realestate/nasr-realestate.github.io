@@ -82,6 +82,13 @@ measured through the registry snapshot). Applying 0010:
    SHA-256. That ordering is deliberate: the safest failure mode of this migration is "nothing
    happened", and re-running is harmless (the `NOT EXISTS` guard plus the density trigger make a second
    attempt impossible to fake as a new version).
+3b. **`observed_at` on a bootstrap version is the file row's own last sighting, not a Drive timestamp.**
+   The backfill uses `COALESCE(r.last_seen_at, r.created_at)`, and `last_seen_at` carries
+   `DEFAULT CURRENT_TIMESTAMP`. On the live database the scanner writes that column for all 99 rows, so
+   the inherited value is honest; but a row whose sighting was never recorded would stamp its version with
+   "now". The D1 rehearsal found this from the other side: a fixture that left `last_seen_at` unset made a
+   legitimately-forward second version look backdated, and `drive_version_time_moved_backwards` refused it
+   — the barrier was right, the input was wrong. Nobody should read a bootstrap timestamp as Drive data.
 4. **The one breaking change is in code, not data**: `recordContentHash` currently sets the fingerprint
    and the status in a single `UPDATE`, which 0010 refuses by design. T2 must therefore ship
    `insertNewDriveFileStrict`/`upsertDriveFileMetadata` → *append version row* → *advance status +
