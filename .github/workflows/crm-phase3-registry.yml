@@ -15,6 +15,8 @@ on:
       - _worker/tests/_registry-fixture.mjs
       - scripts/crm/verify-phase3-metadata-boundary.mjs
       - scripts/crm/seed-drive-file-refs.mjs
+      - scripts/crm/drive-registry-envelope.mjs
+      - _worker/tests/crm-drive-registry-envelope-sync.test.mjs
       - _worker/ingest-queue/drive-registry-sealed.txt
   workflow_dispatch:
 
@@ -152,6 +154,28 @@ jobs:
               ;;
           esac
 
+          # 2a2) The sealed path is only as trustworthy as its codec, and the codec is the one piece of this
+          # job that CI used to implement inline (open) while nothing reviewed it (seal). Now both directions
+          # come from scripts/crm/drive-registry-envelope.mjs, and its 13 barriers run here — including the
+          # rule that a *metadata* envelope may not carry a content digest, which is phase separation enforced
+          # before a single statement is sent rather than row by row mid-write.
+          if ! p3_env=$(node scripts/crm/drive-registry-envelope.mjs selftest | tee "$TMP/p3env.log" | tail -1); then
+            cat "$TMP/p3env.log"
+            result='phase3-envelope-selftest-failed'
+            finish
+            exit 1
+          fi
+          case "$p3_env" in
+            P3_ENVELOPE_ALL_HELD) echo "phase 3 envelope codec: $p3_env" ;;
+            *)
+              echo "::error::the p3reg_v1 codec does not hold its own barriers ($p3_env)"
+              node scripts/crm/drive-registry-envelope.mjs selftest || true
+              result='phase3-envelope-selftest-failed'
+              finish
+              exit 1
+              ;;
+          esac
+
           # 2) Run automated local unit/integration tests first. This is where the gate's own tests live:
           # the boundary cases that refuse an undocumented fingerprint, and the bootstrap cases that refuse a
           # version claim the migration cannot support. All of it on synthetic rows in memory — no Drive, no
@@ -159,15 +183,16 @@ jobs:
           if ! node --test _worker/tests/crm-drive-file-registry.test.mjs \
                    _worker/tests/crm-phase3-metadata-boundary.test.mjs \
                    _worker/tests/crm-drive-ref-bootstrap.test.mjs \
-                   _worker/tests/crm-drive-file-versions.test.mjs > "$TMP/unit.log" 2>&1; then
+                   _worker/tests/crm-drive-file-versions.test.mjs \
+                   _worker/tests/crm-drive-registry-envelope-sync.test.mjs > "$TMP/unit.log" 2>&1; then
             { grep -E "^# (pass|fail)" "$TMP/unit.log" | tr "\n" " "; echo; grep -E "^not ok" "$TMP/unit.log" | head -8; }
               > "$TMP/unit.report" 2>&1 || true
             report_failure "unit-tests-failed" "$TMP/unit.report"
           fi
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
-          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 43: 12 registry + 7 boundary + 5 bootstrap + 19 versions)"
-          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 43 ]; then
+          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 53: 12 registry + 7 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
+          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 53 ]; then
             result='unit-tests-failed'
             finish
             exit 1
@@ -267,6 +292,7 @@ jobs:
 
           const regModUrl = pathToFileURL(path.resolve(process.cwd(), '_worker/crm-drive-file-registry.js')).href;
           const p3BoundaryUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/verify-phase3-metadata-boundary.mjs')).href;
+          const envModUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/drive-registry-envelope.mjs')).href;
           const {
             detectAndRegisterDuplicate,
             insertNewDriveFileStrict,
@@ -278,45 +304,10 @@ jobs:
             syncDriveFolderMetadataInventory,
             upsertDriveFileMetadata,
           } = await import(regModUrl);
-
-          const PKCS8_X25519_PREFIX = Buffer.from('302e020100300506032b656e04220420', 'hex');
-
-          export function deriveKeyPair(secret) {
-            const seed = crypto.createHmac('sha256', secret)
-              .update('nasr-crm-phase3-drive-registry-envelope-v1')
-              .digest();
-            const privKey = crypto.createPrivateKey({
-              key: Buffer.concat([PKCS8_X25519_PREFIX, seed]),
-              format: 'der',
-              type: 'pkcs8',
-            });
-            const pubKey = crypto.createPublicKey(privKey);
-            const pubSpkiB64u = pubKey.export({ format: 'der', type: 'spki' }).toString('base64url');
-            return { privKey, pubSpkiB64u };
-          }
-
-          function openEnvelope(envelope, privKey) {
-            const parts = String(envelope || '').trim().split('.');
-            if (parts.length !== 4 || parts[0] !== 'p3reg_v1') {
-              throw new Error('invalid_p3_envelope_header');
-            }
-            const ephemPub = crypto.createPublicKey({
-              key: Buffer.from(parts[1], 'base64url'),
-              format: 'der',
-              type: 'spki',
-            });
-            const shared = crypto.diffieHellman({ privateKey: privKey, publicKey: ephemPub });
-            const aesKey = Buffer.from(
-              crypto.hkdfSync('sha256', shared, Buffer.alloc(0), Buffer.from('p3-reg-aes256gcm'), 32),
-            );
-            const raw = Buffer.from(parts[3], 'base64url');
-            const ct = raw.subarray(0, raw.length - 16);
-            const tag = raw.subarray(raw.length - 16);
-            const decipher = crypto.createDecipheriv('aes-256-gcm', aesKey, Buffer.from(parts[2], 'base64url'));
-            decipher.setAuthTag(tag);
-            const pt = Buffer.concat([decipher.update(ct), decipher.final()]);
-            return JSON.parse(pt.toString('utf8'));
-          }
+          // The queue parser, the key derivation, the open and the payload contract all come from the module
+          // that CI self-tested above — the workflow used to carry its own copy of `openEnvelope`, which is
+          // how a sealed path ends up "green in CI" without ever having been exercised as one piece.
+          const { assertPayloadShape, deriveKeyPair, describePayload, openEnvelope, readQueueLine } = await import(envModUrl);
 
           function makeRemoteD1(accountId, dbUuid, token) {
             const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbUuid}/query`;
@@ -456,11 +447,21 @@ jobs:
           } else if (mode === 'pubkey') {
             const { pubSpkiB64u } = deriveKeyPair(token);
             process.stdout.write(pubSpkiB64u);
+          } else if (mode === 'queue_status') {
+            // The queue rules (comments, blanks, IDLE, exactly one pending envelope) live in the codec the
+            // tests cover. A shell `grep | sed` here would silently reorder or accept a doubled queue.
+            process.stdout.write(readQueueLine(fs.readFileSync(process.argv[3], 'utf8')) ?? '');
           } else if (mode === 'sync_sealed') {
             const testDbUuid = process.argv[3];
             const envelopeStr = fs.readFileSync(process.argv[4], 'utf8').trim();
             const { privKey } = deriveKeyPair(token);
-            const payload = openEnvelope(envelopeStr, privKey);
+            // open → shape-assert, in that order: the payload contract is the closed schema the tests prove,
+            // and it runs before a single statement reaches D1. `describePayload` is the only form of the
+            // payload that may be printed — counts, kinds and hashes, never an id, a filename or the folder.
+            const payload = assertPayloadShape(openEnvelope(envelopeStr, privKey));
+            const envDesc = describePayload(payload);
+            const envSummary = `items=${envDesc.items},unreach=${envDesc.unreachable},`
+              + `parent=${envDesc.parent_ref},sha=${envDesc.payload_sha256.slice(0, 8)}`;
             const db = makeRemoteD1(accountId, testDbUuid, token);
             const boundary = await import(p3BoundaryUrl);
             // asked, not assumed: 0010 may or may not be on this database, and the rule differs
@@ -523,6 +524,7 @@ jobs:
             assert.equal(Number(summary.named_cnt), Number(summary.tot), 'every registry row must carry a file_name');
             assert.equal(Number(summary.dated_cnt), Number(summary.tot), 'every registry row must carry drive_modified_at');
             process.stdout.write(
+              `env[${envSummary}];` +
               `p1[ins=${pass1.inserted},upd=${pass1.updated},fail=${pass1.failed}];` +
               `p2_idem[ins=${pass2.inserted},upd=${pass2.updated}];` +
               `db[tot=${summary.tot},vcf=${summary.vcf_cnt},zip=${summary.zip_cnt},scan=${summary.scanned_cnt},` +
@@ -582,8 +584,9 @@ jobs:
           pubkey="fp-${#pubkey_full}:${pubkey_full: -6}"
 
           # 8) Optional sealed metadata inventory sync if envelope is queued
-          grep -v '^[[:space:]]*#' "$QUEUE_FILE" | sed '/^[[:space:]]*$/d' > "$TMP/q.txt" || true
-          env_line=$(sed -n '1p' "$TMP/q.txt" | tr -d '[:space:]')
+          if ! env_line=$(node "$TMP/p3_runner.mjs" queue_status "$QUEUE_FILE" 2>"$TMP/q.err"); then
+            report_failure 'sealed-queue-unreadable' "$TMP/q.err"
+          fi
           if [ -n "$env_line" ] && [ "$env_line" != 'IDLE' ]; then
             printf '%s' "$env_line" > "$TMP/env.txt"
             if ! sync_stats=$(node "$TMP/p3_runner.mjs" sync_sealed "$TEST_DB_UUID" "$TMP/env.txt" 2>"$TMP/sync.err"); then
