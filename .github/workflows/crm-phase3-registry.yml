@@ -283,8 +283,30 @@ jobs:
           EOF
 
           BASE_CATALOG_SQL="CREATE TABLE IF NOT EXISTS sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS listings (id INTEGER PRIMARY KEY, source_id INTEGER, external_id TEXT, url TEXT, title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL, bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT);"
-          npx --yes wrangler@4 d1 execute "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" --command "$BASE_CATALOG_SQL" >/dev/null 2>&1
-          npx --yes wrangler@4 d1 migrations apply "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" >/dev/null 2>&1
+          npx --yes wrangler@4 d1 execute "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" --command "$BASE_CATALOG_SQL" > "$TMP/ephem_base.log" 2>&1 || true
+          # Both of these used to end in `>/dev/null 2>&1`, and that silence is why an isolated test that
+          # died before printing anything could only ever be reported as `exit=1`: the apply's own words were
+          # thrown away, and the log that kept them is not readable from here. Keep the file, keep the exit
+          # code, and then ask the isolated database directly how much of the chain it actually has.
+          ephem_mig_rc=0
+          npx --yes wrangler@4 d1 migrations apply "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" > "$TMP/ephem_mig.log" 2>&1 || ephem_mig_rc=$?
+
+          # Read-only probe of the throwaway database (never the test DB, never the backup): migration count,
+          # installed registry indexes, and whether 0010's version table exists. If the chain did not apply,
+          # every assertion inside verify_isolated below is meaningless, and this is the line that says so.
+          ISO_PROBE_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS m, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='crm_drive_file_registry' AND sql IS NOT NULL) AS i, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crm_drive_file_version') AS v, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%') AS t;"
+          http_ip=$(curl --silent --show-error --connect-timeout 15 --max-time 30 \
+            -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+            --data "{\"sql\":\"$ISO_PROBE_SQL\",\"params\":[]}" \
+            -o "$TMP/iso_probe.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database/$ephem_uuid/query")
+          iso_probe="apply_rc=${ephem_mig_rc}"
+          if [ "$http_ip" = '200' ]; then
+            iso_probe="${iso_probe};$(jq -r '.result[0].results[0] | "migs=\(.m),idx=\(.i),verTbl=\(.v),tbls=\(.t)"' "$TMP/iso_probe.json" 2>/dev/null)"
+          else
+            iso_probe="${iso_probe};probe-http-${http_ip}"
+          fi
+          ephem_mig_err=$(p3_excerpt "$TMP/ephem_mig.log" 2>/dev/null | head -c 120)
 
           # Node helper for remote D1 HTTP /query + key derivation + isolated test + sealed sync
           cat << 'EOF_NODE' > "$TMP/p3_runner.mjs"
@@ -561,7 +583,12 @@ jobs:
           iso_status=0
           iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid" 2>"$TMP/iso.err") || iso_status=$?
           cleanup_ephem
-          iso_d1_test="exit=${iso_status};${iso_res};cleaned=${ephem_cleaned}"
+          # The first line the runner actually complained about, sanitised the same way the log excerpt is,
+          # goes into the check name. A check named `exit=1` tells the next reader nothing; a check named
+          # `err[AssertionError: the isolated database applied 9 of 10 migrations ...]` tells them where to
+          # look. No token, no uuid, no customer value can survive `p3_excerpt` + this character class.
+          iso_err=$( { p3_excerpt "$TMP/iso.err" 2>/dev/null || true; } | sed -E 's/^[0-9]{4}-..-..T[0-9:.Z]+ //' | tr -cd 'A-Za-z0-9_,=:.()[] /-' | cut -c1-150)
+          iso_d1_test="exit=${iso_status};${iso_res};cleaned=${ephem_cleaned};probe[${iso_probe}];err[${iso_err}];mig[${ephem_mig_err}]"
           if [ "$iso_status" != '0' ]; then
             defer_failure 'isolated-d1-test-failed' "$TMP/iso.err"
           fi
