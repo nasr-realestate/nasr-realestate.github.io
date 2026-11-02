@@ -680,7 +680,10 @@ jobs:
             exit 1
           fi
 
-          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):reused=${reused_empty_backup_db}"' "$TMP/d1_post.json" | head -n1)
+          # the jq program is single-quoted, so `${reused_empty_backup_db}` inside it printed literally — a
+          # report line that says `${...}` is a report nobody can trust. Pass it in as a jq variable instead.
+          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" --arg reused "$reused_empty_backup_db" \
+            '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):reused=\($reused)"' "$TMP/d1_post.json" | head -n1)
           market_post=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
           old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
 

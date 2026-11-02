@@ -301,6 +301,37 @@ For the record: the migration session workflow was at 20,241 characters with one
 was found — 759 characters from the same wall, i.e. one more guard would have broken A4 and A5. It uses `env:`
 too.
 
+### Measured state at execution time (2026-11-02, from the `preflight` run, not from the plan)
+
+`Session target — migs=9,latest=0009_crm_drive_review_workflow,ledger=no,ref_col=no,rows=99,fp=99,proc=99,needs_bootstrap=99,svv=n/a`
+with `Session guards — market_pre=nasr-market-db:909312;ref_backup_pre=nasr-crm-test-db-backup-20261101:3256320`.
+
+That is §3 step 1 and step 2 confirmed against the live database: the ledger table and the `drive_ref`
+column are both absent (so 0010 has not been applied), 99 registry rows carry fingerprints, 99 are
+`processed`, and **99 rows need the Bootstrap** — the count §5 predicted, now measured. `svv=n/a` is the
+correct answer rather than a zero, because the violations view does not exist yet.
+
+The `preflight` mode is read-only, and the run that produced these numbers wrote nothing: its guard block
+records only `name:file_size` for `nasr-market-db` and the reference backup, and no D1 write statement is
+reachable in that mode (`assertReadOnly` rejects anything but `SELECT`/`PRAGMA` at the query layer).
+
+### A2 delivered: the dated copy, verified
+
+`nasr-crm-test-db-backup-20261102` (uuid `5007799b-89ad-4db6-8123-768faa3d8df4`) built from a fresh export —
+raw 3,837,520 bytes `sha256=3d9fbaa6…`, bundle 3,939,453 bytes `sha256=841d3f5a…`, 33 tables / 46 explicit
+indexes / 43 auto-unique / 37 FKs / 29 check-constrained / 4,994 rows — and verified three ways:
+
+```
+P2 restore — local_sqlite=ok(fk0,digest=100%);saved_bak_d1=ok(digest=100%);isolated_d1_restore=ok(ephem=b1b5f344,digest=100%,cleaned=yes)
+P2 guards  — src_db_unmodified=yes;old_bak=b8f1e723-…(93:97,meta=589824,untouched=yes);market_db=untouched(nasr-market-db:909312)
+```
+
+The restore-test database `nasr-crm-ephem-restore-chk` was deleted by the same run (`cleaned=yes`), the
+source was not written, `nasr-crm-test-db-backup-20261101` is unchanged, `nasr-market-db` is unchanged, and
+the time-travel bookmark for the session is `tt=00000234-00000000-…` — the rollback anchor for step 3 and
+step 8. Getting here cost the discovery of two verifier bugs (§2.7 and §2.4 check 6), both of which had been
+making the backup step *unrunnable or wrong* rather than merely noisy.
+
 ## 3. Phase 3 — the migration, in the mandated order
 
 Pre-flight disqualifiers (any one stops the session before it starts):
