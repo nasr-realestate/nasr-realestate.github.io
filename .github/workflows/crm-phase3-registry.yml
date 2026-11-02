@@ -65,6 +65,7 @@ jobs:
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           QUEUE_FILE='_worker/ingest-queue/drive-registry-sealed.txt'
           TMP=$(mktemp -d)
+          deferred_failure=''
 
           result='not-run'
           ts_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -175,14 +176,32 @@ jobs:
           # A GitHub Actions log is not reachable from this workspace, so every local failure in this step
           # is also published as an annotation, with identifiers redacted. This is how a gate stays
           # maintainable: it has to say what it refused, not just that it refused.
+          # Node prints its own deprecation noise before the interesting part, so the noise is filtered and
+          # both ends of what remains are reported: the thrown line usually opens the block, the assertion
+          # diff closes it. Long opaque tokens (drive ids) are scrubbed either way.
+          p3_excerpt() {
+            grep -vE 'ExperimentalWarning|MODULE_TYPELESS|Reparsing as ES module|trace-warnings|To eliminate this warning|"type": "module"' "$1" 2>/dev/null \
+              | tr -d '\r' | tr '\n' ' ' | sed -E 's/[A-Za-z0-9_.\/-]{25,}/[redacted]/g' | sed 's/%/%25/g'
+          }
           report_failure() {
             local what="$1" file="$2"
-            local excerpt
-            excerpt=$(tr '\n' ' ' < "$file" 2>/dev/null | sed -E 's/[A-Za-z0-9_-]{25,}/[redacted]/g' | cut -c1-460)
-            echo "::error::${what}: ${excerpt:-no output captured}"
+            local head tail
+            head=$(p3_excerpt "$file" | head -c 320)
+            tail=$(p3_excerpt "$file" | tail -c 320)
+            echo "::error::${what}: head=[${head:-no output captured}] tail=[${tail}]"
             result="$what"
             finish
             exit 1
+          }
+          # Same announcement, but the job continues so one run answers more than one question. The failure
+          # is still what decides the outcome — it is only reported after the later steps have spoken too.
+          defer_failure() {
+            local what="$1" file="$2"
+            local head tail
+            head=$(p3_excerpt "$file" | head -c 320)
+            tail=$(p3_excerpt "$file" | tail -c 320)
+            echo "::error::${what} (deferred, the steps below still run): head=[${head:-no output captured}] tail=[${tail}]"
+            deferred_failure="$what"
           }
 
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
@@ -502,11 +521,13 @@ jobs:
           }
           EOF_NODE
 
-          if ! iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid" 2>"$TMP/iso.err"); then
-            report_failure 'isolated-d1-test-failed' "$TMP/iso.err"
-          fi
+          iso_status=0
+          iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid" 2>"$TMP/iso.err") || iso_status=$?
           cleanup_ephem
-          iso_d1_test="${iso_res};cleaned=${ephem_cleaned}"
+          iso_d1_test="exit=${iso_status};${iso_res};cleaned=${ephem_cleaned}"
+          if [ "$iso_status" != '0' ]; then
+            defer_failure 'isolated-d1-test-failed' "$TMP/iso.err"
+          fi
 
           # 5) Verify permanent reference backup nasr-crm-test-db-backup-20261101 BEFORE live migration (read-only!)
           BAK_CHECK_SQL="SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%') AS tbls, (SELECT COUNT(*) FROM crm_contacts) AS c, (SELECT COUNT(*) FROM crm_opportunities) AS o, (SELECT COUNT(*) FROM crm_conversations) AS cv, (SELECT COUNT(*) FROM crm_conversation_messages) AS m;"
@@ -582,6 +603,12 @@ jobs:
           fi
 
           guards="biz_unchanged=yes(${biz_post});bak_untouched=yes(${bak_post_meta});market_db_untouched=yes(${prod_post})"
+          if [ -n "$deferred_failure" ]; then
+            # every step above still got to speak, but a failed isolated test is a failed run
+            result="$deferred_failure"
+            finish
+            exit 1
+          fi
           result='phase3-migration-and-guards-verified'
           finish
 
