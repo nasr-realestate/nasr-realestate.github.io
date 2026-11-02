@@ -574,6 +574,31 @@ jobs:
               `revRows=${reviewFacts.rowsAfterMigration},appendOnly=${reviewFacts.appendOnlyTriggers},` +
               `barriers=${reviewFacts.barriers.note}+${reviewFacts.barriers.approve})`,
             );
+          } else if (mode === 'verify_pragmas') {
+            const db = makeRemoteD1(process.env.CLOUDFLARE_ACCOUNT_ID, process.argv[3], process.env.CLOUDFLARE_API_TOKEN);
+            const verdict = {};
+            for (const [name, sql, judge] of [
+              ['integrity', 'PRAGMA integrity_check', rows => (rows.length === 0
+                ? 'empty'
+                : (rows.every(r => Object.values(r).some(v => String(v).includes('ok'))) ? 'ok' : 'failed'))],
+              ['fkc', 'PRAGMA foreign_key_check', rows => (rows.length === 0 ? 'clean' : `violations=${rows.length}`)],
+            ]) {
+              let rows = null;
+              let refused = null;
+              try {
+                rows = (await db.prepare(sql).bind().all()).results ?? [];
+              } catch (e) {
+                refused = String(e && e.message ? e.message : e).slice(0, 120);
+              }
+              verdict[name] = rows === null ? `refused(${refused})` : judge(rows);
+              if (rows !== null && name === 'integrity' && rows.length === 0) {
+                verdict.integrity = 'empty(d1 returned no row)';
+              }
+            }
+            // Numbers and verdicts only. A refusal is reported as a refusal -- never as a pass.
+            const bad = Object.values(verdict).filter(v => /failed|violations=/.test(String(v)));
+            process.stdout.write(JSON.stringify({ ok: bad.length === 0, ...verdict }));
+            if (bad.length) process.exitCode = 1;
           } else if (mode === 'apply_payload') {
             const testDbUuid = process.argv[3];
             const payloadPath = process.argv[4];
@@ -777,25 +802,15 @@ jobs:
             exit 1
           fi
 
-          # 9b) Structural integrity of the migrated test DB (content-free, safe to publish).
-          for pragma in 'PRAGMA integrity_check' 'PRAGMA foreign_key_check'; do
-            curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-              --data "{\"sql\":\"$pragma\",\"params\":[]}" \
-              -o "$TMP/pragma.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
-            pragma_rows=$(jq -r '.result[0].results | length' "$TMP/pragma.json")
-            pragma_all=$(jq -r '[.result[0].results[]? | tostring] | join("|")' "$TMP/pragma.json" | cut -c1-120)
-            if [ "$pragma" = 'PRAGMA integrity_check' ] && ! grep -q '"integrity_check":"ok"' <<< "$pragma_all"; then
-              result="integrity-check-not-ok-${pragma_all}"
-              finish
-              exit 1
-            fi
-            if [ "$pragma" = 'PRAGMA foreign_key_check' ] && [ "$pragma_rows" != '0' ]; then
-              result="foreign-key-check-rows=${pragma_rows}-${pragma_all}"
-              finish
-              exit 1
-            fi
-          done
-          integrity='integrity_check=ok;foreign_key_check=clean'
+          # 9b) Structural integrity of the migrated test DB, measured through the same D1 client the
+          # store layer uses (content-free: verdicts only, and a refused PRAGMA is reported as refused).
+          if node "$TMP/p4_runner.mjs" verify_pragmas "$TEST_DB_UUID" > "$TMP/pragma.json" 2> "$TMP/pragma.err"; then
+            integrity=$(jq -r '"integrity=\(.integrity),foreign_key_check=\(.fkc)"' "$TMP/pragma.json")
+          else
+            result="pragma-verification-failed-$(tr -dc 'a-zA-Z0-9:,()=.-' < "$TMP/pragma.err" | cut -c1-120)"
+            finish
+            exit 1
+          fi
 
           # 10) Apply the committed, pseudonymized analysis payload (registry + analysis tables only)
           if ! node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
