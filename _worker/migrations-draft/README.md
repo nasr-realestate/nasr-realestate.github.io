@@ -1,10 +1,14 @@
 # migrations-draft — مجلد المسودات (0009 لم تعد هنا)
 
-**الحالة (2026-11-02):** `0009_crm_drive_review_workflow.sql` **روِّجت** إلى
-`_worker/migrations/0009_crm_drive_review_workflow.sql` بعد استيفاء شروط الاعتماد المسجلة في
-`CRM_PHASE4_REVIEW_TEST_REPORT.md`. المحتوى لم يتغيّر عند النقل (`git mv` فقط، بلا تحرير).
-لا توجد مسودة معلَّقة هنا الآن؛ المجلد يبقى للتالي: كل هجرة جديدة تبدأ هنا ولا تدخل
-`_worker/migrations/` إلا بموافقة طارق الصريحة.
+**الحالة (2026-11-02):** `0009` رُوِّجت سابقًا إلى `_worker/migrations/` (`git mv` فقط، بلا تحرير)،
+وفي هذا المجلد الآن مسوّدتان معلَّقتان من Phase 2 / T2، ولا يُطبَّق أيٌّ منهما على أي قاعدة:
+
+| مسودة | تعالج | أشياء جديدة | لا تلمس |
+| --- | --- | --- | --- |
+| `0010_crm_drive_file_versions.sql` | تتبّع إصدارات محتوى ملف Drive | جدول `crm_drive_file_version` + 8 أعمدة إسقاطية في `crm_drive_file_registry` + 20 مشغّلًا + 6 عروض | لا `DROP`، لا `UPDATE` على صفوف قائمة، لا حذف أي قيد |
+| `0011_crm_drive_file_intake_review.sql` | حالة مراجعة لملف بلا عميل | `crm_drive_file_review_case` + `..._decision` + `..._anchor` + 4 عروض + 16 مشغّلًا | **لا تعديل ولا إعادة بناء لجدول 0009**; العزل مقصود |
+
+كل هجرة جديدة تبدأ هنا ولا تدخل `_worker/migrations/` إلا بموافقة طارق الصريحة.
 
 ## لماذا ليس في `_worker/migrations/` قبل الموافقة
 
@@ -22,6 +26,8 @@
 
 ```bash
 node _worker/tests-draft/crm-review-sql-0009.abuse.mjs              # 113 فحصًا، :memory: فقط
+node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs     # 42 فحصًا: الإصدارات لا تُستبدل
+node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs        # 35 فحصًا: لا ربط بلا إنسان
 python3 _worker/tests-draft/crm-review-sql-0009.d1-rehearsal.py    # 116 فحصًا، محرك D1 في مجلد مؤقت
 python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصًا، حزمة احتياطية مُسيَّجة
 ```
@@ -32,7 +38,10 @@ python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصً
 
 ## قائمة الترويج (ما يُشترط في نفس الـ commit)
 
-1. `git mv _worker/migrations-draft/0009_*.sql _worker/migrations/`.
+0. **المسوّدتان غير مطبَّقتين، ولا تُطبَّقان قبل قراءة محتوى الملفات** — هذا هو الحدّ الذي
+   يفتح T2؛ كل ما هنا تصميم + اختبارات محلية فقط.
+1. `git mv _worker/migrations-draft/<00XX>_*.sql _worker/migrations/` عند الموافقة على الواحدة تلو
+   الأخرى (0010 أولًا لأن 0011 يقرأ `crm_drive_file_version`).
 2. عدّاد الهجرات في `.github/workflows/crm-phase4-analysis.yml`:
    القاعدة المعزولة `migCnt = 9` وسطر `latest = 0009_crm_drive_review_workflow`،
    وعلى قاعدة الاختبار `migs = 9` + `p4_tbl = 8` + `rev_tbl/trg/view/idx = 5/19/4/8` + `rev_rows = 0`،

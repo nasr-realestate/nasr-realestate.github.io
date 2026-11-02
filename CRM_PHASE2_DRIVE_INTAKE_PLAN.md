@@ -179,3 +179,31 @@ Drive (نفس `refs_sha256` الذي نشره CI)، وأي حرف منقول خ�
 المجلد عند نسخ 2–6، فلا تُرى استبدالات المحتوى بنفس الحجم والتاريخ؛ ولا تُبنى حالة مراجعة في 0009
 لملف بلا جهة (`crm_contact_id NOT NULL`). لا تطبيق migration، ولا كتابة لـ D1، ولا تعديل Drive،
 ولا نشر، ولا دمج لأي PR — بانتظار موافقتك على T2.
+
+### T2 — عوائق مُزالَتها بالتصميم (2026-11-02، تصميم + اختبارات محلية فقط)
+
+التقرير: `CRM_PHASE2_DRIVE_T2_DESIGN.md`. لا تطبيق، لا كتابة، لا قراءة محتوى ملفات، لا Call واحد إلى
+Drive أو Cloudflare في هذه الجولة.
+
+- **العائق 1 (الإصدارات):** مسودة `_worker/migrations-draft/0010_crm_drive_file_versions.sql`:
+  جدول `crm_drive_file_version` لاصق للمحتوى (immutable)، و`crm_drive_file_registry` يصبح إسقاطًا
+  (projection) له: بصمة الملف لا تُستبدل إلا بإلحاق إصدار، ولا تُمحى، ولا يُرفع `processing_status`
+  بدون صف إصدار حقيقي — أي أن تطابق الحجم مع `modifiedTime` لم يعد دليلاً بنيةً لا عرفًا.
+  `evidence_class` يفرّق القياس عن الادعاء، و`crm_drive_rehash_queue` هو قائمة ما يجب إعادة hashّه.
+  الأثر على 99 صفًا الحالية: 8 أعمدة بقيم افتراضية + 99 صف إصدار `bootstrap_backfill` (لا يعمل إلا بعد
+  تعبئة `drive_ref`، وهو فشل آمن الاتجاه)، **لكن** `recordContentHash` في
+  `_worker/crm-drive-file-registry.js:683` يجب أن يتغيّر ترتيب كتابته في نفس الإصدار.
+- **العائق 2 (ملف بلا عميل):** `_worker/migrations-draft/0011_crm_drive_file_intake_review.sql`:
+  جدول حالة مراجعة مستقل `crm_drive_file_review_case` + سجل قرارات ملحق-only + مراسٍ (anchors)،
+  بلا أي تعديل على 0009 (قِسنا أن إعادة بناء جدول تطال أجسام العروض المشيدة عليه). الربط اختياري،
+  ويحدث فقط بعد قرار مسجّل بإنسان مسمّى وأساس مدعوم بهاتف أو تثبيت يدوي؛ `approved_by_contact_review`
+  يستلزم حالة تصعيد مقبولة في 0009؛ ولا يوجد أي مسار إلى `crm_contacts` ولا عمود يكتب تشغيليًا
+  (`import_implied/merge_authorized/contact_write_count` مثبّتة على 0 بـ CHECK).
+- **الاختبارات:** `node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs` ⇒ 42/42،
+  `node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs` ⇒ 35/35 — `:memory:` فقط، مع ضوابط
+  إيجابية تُثبت أن العروض ترى الضرر فعلًا. بوابة CI تشغّلهما الآن
+  (`.github/workflows/crm-review-0009-verify.yml`، 17 مسارًا، 13 خطوة). `npm test` = 588/12 أي خط
+  الأساس ⇒ صفر انحدار.
+- **مفتوح للاعتماد:** مراجعة الـ SQL نفسه؛ ترتيب الترويج (هجرة → كود → تعبئة ref → إصدارات bootstrap →
+  تحقّق)؛ ونطاق T2 على البيانات: الملفان غير المسجَّلَين فقط، أم إعادة hash الـ 99 أيضًا (التوصية:
+  الاثنان معًا، لأن الـ 99 هي ما يمكن أن يكذب بصمت اليوم). الوقف هنا حتى موافقتك الصريحة.

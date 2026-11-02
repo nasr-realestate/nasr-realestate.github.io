@@ -32,6 +32,10 @@ on:
       - scripts/crm/drive-registry-snapshot.mjs
       - .github/workflows/crm-drive-registry-snapshot.yml
       - .github/workflows/crm-review-0009-verify.yml
+      - _worker/migrations-draft/0010_crm_drive_file_versions.sql
+      - _worker/migrations-draft/0011_crm_drive_file_intake_review.sql
+      - _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs
+      - _worker/tests-draft/crm-file-review-0011.rehearsal.mjs
   push:
     branches:
       - master
@@ -50,6 +54,10 @@ on:
       - scripts/crm/drive-registry-snapshot.mjs
       - .github/workflows/crm-drive-registry-snapshot.yml
       - .github/workflows/crm-review-0009-verify.yml
+      - _worker/migrations-draft/0010_crm_drive_file_versions.sql
+      - _worker/migrations-draft/0011_crm_drive_file_intake_review.sql
+      - _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs
+      - _worker/tests-draft/crm-file-review-0011.rehearsal.mjs
   workflow_dispatch:
 
 permissions:
@@ -145,6 +153,16 @@ jobs:
 
       - name: node:sqlite abuse harness — every barrier must refuse
         run: node --test _worker/tests-draft/crm-review-sql-0009.abuse.mjs
+
+      - name: Drive version barriers (draft 0010) — content versions cannot be overwritten or faked
+        run: |
+          set -euo pipefail
+          node _worker/tests-draft/crm-drive-versions-0010.rehearsal.mjs | tail -3
+
+      - name: File review barriers (draft 0011) — no link without a human, no lost review records
+        run: |
+          set -euo pipefail
+          node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs | tail -3
 
       - name: Cloudflare D1 rehearsal — same contract on the real engine, local file only
         env:
