@@ -29,6 +29,8 @@ on:
       - scripts/crm/build-d1-guarded-backup.mjs
       - scripts/crm/build-review-case-register.mjs
       - scripts/crm/drive-intake-discovery.mjs
+      - scripts/crm/drive-registry-snapshot.mjs
+      - .github/workflows/crm-drive-registry-snapshot.yml
       - .github/workflows/crm-review-0009-verify.yml
   push:
     branches:
@@ -45,6 +47,8 @@ on:
       - scripts/crm/build-d1-guarded-backup.mjs
       - scripts/crm/build-review-case-register.mjs
       - scripts/crm/drive-intake-discovery.mjs
+      - scripts/crm/drive-registry-snapshot.mjs
+      - .github/workflows/crm-drive-registry-snapshot.yml
       - .github/workflows/crm-review-0009-verify.yml
   workflow_dispatch:
 
@@ -174,7 +178,8 @@ jobs:
             .github/workflows/crm-review-0009-verify.yml .github/workflows/crm-cloudflare-test-deploy.yml
             .github/workflows/crm-phase4-review.yml scripts/crm/review-event-chain.mjs
             scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs
-            scripts/crm/build-review-case-register.mjs scripts/crm/drive-intake-discovery.mjs'
+            scripts/crm/build-review-case-register.mjs scripts/crm/drive-intake-discovery.mjs
+            scripts/crm/drive-registry-snapshot.mjs .github/workflows/crm-drive-registry-snapshot.yml'
           { git ls-files -- $SWEEP_PATHS; git ls-files --others --exclude-standard -- $SWEEP_PATHS; } \
             | grep -E '\.(sql|mjs|py|yml)$' | sort -u > /tmp/changed.txt || true
           if [ ! -s /tmp/changed.txt ]; then
