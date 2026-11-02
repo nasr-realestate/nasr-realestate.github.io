@@ -144,7 +144,7 @@ jobs:
                 "$API/accounts/$account_id/d1/database/$ephem_uuid" >/dev/null 2>&1 || true
             fi
             if [ "$finished" != 'yes' ]; then
-              result="unexpected-exit-line-$LINENO"
+              result="unexpected-exit-at-stage-${stage:-none}"
               finish
             fi
             rm -rf "$TMP"
@@ -221,6 +221,7 @@ jobs:
           old_pre_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/old_pre_cnt.json" | head -n1)
 
           # Record Time Travel bookmark on nasr-crm-test-db (read-only)
+          stage='time-travel'
           npx --yes wrangler@4 d1 time-travel info "$TEST_DB_NAME" --config "$WRANGLER_CFG" --json > "$TMP/tt.json" 2>/dev/null || true
           tt_bookmark=$(jq -r '.bookmark // "available"' "$TMP/tt.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-80 || true)
           [ -z "$tt_bookmark" ] && tt_bookmark='available'
@@ -229,6 +230,7 @@ jobs:
           ts_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           ts_cairo=$(TZ=Africa/Cairo date +%Y-%m-%d_%H:%M:%S_%Z)
 
+          stage='export-raw'
           npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" --output "$TMP/raw-export.sql" > "$TMP/exp_raw.log" 2>&1
           npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/schema-export.sql" > "$TMP/exp_sch.log" 2>&1
           npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/data-export.sql" > "$TMP/exp_dat.log" 2>&1
@@ -432,7 +434,25 @@ jobs:
           }, null, 2), { mode: 0o600 });
           EOF_NODE
 
-          node "$TMP/build_and_verify.mjs" "primary-backup" \
+          # The builder's own errors are about counts and table names — schema, not customer data — but they land
+          # in a $TMP log nobody can reach: Actions serves logs from a host this sandbox cannot resolve, and
+          # `gh run view --log` returns nothing at all. Without this, a run that dies inside the builder reports
+          # `unexpected-exit-line-82` — the line number of its own EXIT trap, a constant that tells nobody
+          # anything. So the reason is harvested, reduced to identifiers and counts, and published in a check
+          # name, which is the only channel this repository's CI has that a human can read.
+          run_builder() {
+            mode="$1"; shift
+            if ! node "$TMP/build_and_verify.mjs" "$mode" "$@" > "$TMP/build-$mode.log" 2>&1; then
+              why=$(sed -n 's/^Error: //p' "$TMP/build-$mode.log" | head -n1 | tr -cd 'A-Za-z0-9_:.() -' | cut -c1-90)
+              [ -n "$why" ] || why='no-Error-line'
+              result="build-$mode-failed:$why"
+              finish
+              exit 1
+            fi
+          }
+
+          stage='build-bundle'
+          run_builder "primary-backup" \
             "$TMP/schema-export.sql" "$TMP/data-export.sql" "$TMP/live_migs.json" \
             "$BUNDLE_SQL" "$TMP/source_meta.json" ""
 
@@ -464,6 +484,7 @@ jobs:
           ' "$TMP/source_meta.json")
 
           # Create the persistent isolated backup D1 database (one dated copy, never an overwrite)
+          stage='create-backup-db'
           existing_new_uuid=$(jq -r --arg bn "$NEW_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
           if [ -n "$existing_new_uuid" ]; then
             result='new-backup-db-name-already-exists-refusing-overwrite'
@@ -500,7 +521,8 @@ jobs:
           npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --json --config "$TMP/new_bak.toml" \
             --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/bak_migs.json" 2>/dev/null
 
-          node "$TMP/build_and_verify.mjs" "verify-saved-backup" \
+          stage='verify-new-backup'
+          run_builder "verify-saved-backup" \
             "$TMP/bak-sch.sql" "$TMP/bak-dat.sql" "$TMP/bak_migs.json" \
             "$TMP/roundtrip-from-backup.sql" "$TMP/bak_meta.json" "$TMP/source_meta.json"
 
@@ -536,11 +558,13 @@ jobs:
           npx --yes wrangler@4 d1 execute "$EPHEM_RESTORE_NAME" --remote --json --config "$TMP/ephem.toml" \
             --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/eph_migs.json" 2>/dev/null
 
-          node "$TMP/build_and_verify.mjs" "verify-ephem-d1-restore" \
+          stage='verify-ephem-restore'
+          run_builder "verify-ephem-d1-restore" \
             "$TMP/eph-sch.sql" "$TMP/eph-dat.sql" "$TMP/eph_migs.json" \
             "$TMP/eph-out.sql" "$TMP/eph_meta.json" "$TMP/source_meta.json"
 
           # Clean up ONLY the ephemeral scratch restore-test DB
+          stage='delete-ephemeral'
           del_status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" \
             -o "$TMP/del_ephem.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database/$ephem_uuid" 2>/dev/null || true)
           if [ "$del_status" = '200' ]; then
@@ -573,7 +597,8 @@ jobs:
           npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --json --config "$WRANGLER_CFG" \
             --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/post_src_migs.json" 2>/dev/null
 
-          node "$TMP/build_and_verify.mjs" "verify-source-unmodified" \
+          stage='verify-source-intact'
+          run_builder "verify-source-unmodified" \
             "$TMP/post-src-sch.sql" "$TMP/post-src-dat.sql" "$TMP/post_src_migs.json" \
             "$TMP/post-src-out.sql" "$TMP/post_src_meta.json" "$TMP/source_meta.json"
 
