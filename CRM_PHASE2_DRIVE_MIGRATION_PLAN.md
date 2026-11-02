@@ -506,7 +506,12 @@ the `seed_sha256`, and then stops — no `wrangler d1 execute` is reachable in t
 `seed_apply=not-run(plan-only,review required)` so the absence of a write is stated rather than inferred. What
 is reviewed is therefore the digest of exactly what `bootstrap` would apply. Its guarantees, in code rather than prose:
 
-- it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers;
+- it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers. That protection
+  has a cost worth knowing before A4: GitHub **cancels a waiting request** in a shared group — at `c3cd6c9`
+  this job was ended 2 seconds after the push with *"Canceling since a higher priority waiting request for
+  crm-d1-test-mutex exists"*, no job created, nothing run. So a session is pushed when the group is idle, not
+  alongside the other test-db jobs; and a `cancelled` session means **it never happened**, which is a different
+  statement from a failed one and must not be re-tried blind;
 - it refuses to start if `nasr-market-db` or the production uuid appears in the wrangler config, and requires
   the test-db uuid; it refuses while the sealed queue is not `IDLE`;
 - all three of the repo's gate scripts must pass their selftests first (20 + 14 + 13);

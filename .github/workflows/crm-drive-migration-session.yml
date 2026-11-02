@@ -54,6 +54,15 @@ permissions:
   contents: read
 
 concurrency:
+  # One group across every job that can touch nasr-crm-test-db, so nothing interleaves with a write.
+  # `cancel-in-progress: false` protects a run that has started; it does nothing for a run that is still
+  # waiting. GitHub cancels a *waiting* request in a shared group when it decides another pending request
+  # has higher priority — seen on 2026-11-02 at c3cd6c9, where this job and crm-phase4-review were both
+  # ended 2 seconds after the push with "Canceling since a higher priority waiting request for
+  # crm-d1-test-mutex exists" and no job ever created. Nothing was written by that, because nothing ran,
+  # which is the only reason it was harmless. Operationally: a migration session is pushed when the group is
+  # idle rather than alongside four other test-db jobs, and a `cancelled` session is read as "it did not
+  # happen" — never as a result, and never retried without reading the `Session *` check names first.
   group: crm-d1-test-mutex
   cancel-in-progress: false
 
