@@ -172,16 +172,6 @@ jobs:
 
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
-          # `GET /accounts/:id/d1/database` (the list) omits `num_tables`, so metadata guards built from it
-          # printed `tbls=0` for databases holding 4,994 rows — a lie in the one number that distinguishes an
-          # untouched database from an emptied one. The per-database endpoint has the field: read it there.
-          d1_meta() {
-            local st
-            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$2" -w '%{http_code}' \
-              "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
-            [ "$st" = '200' ] || { echo "http-$st"; return 0; }
-            jq -r '(.result[0] // .result) | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
-          }
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
             -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
           if [ "$status" != '200' ]; then
@@ -212,9 +202,9 @@ jobs:
             exit 1
           fi
 
-          market_pre=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_pre.json")
+          market_pre=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
           old_bak_uuid=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
-          old_bak_pre_meta=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | "\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_pre.json" | head -n1)
+          old_bak_pre_meta=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | "\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
           if [ -z "$old_bak_uuid" ]; then
             result='old-backup-20261030-missing'
             finish
@@ -564,21 +554,24 @@ jobs:
           new_bak_uuid=''
           reused_empty_backup_db='no'
           if [ -n "$existing_new_uuid" ]; then
+            write_toml "phase2-existing-backup-probe" "$NEW_BACKUP_NAME" "$existing_new_uuid" "$TMP/probe.toml"
             # A dated copy that already exists is a refusal: a backup that silently overwrites another backup
             # is not a backup. The one exception is the husk this workflow leaves behind when a run creates
             # the database and then dies while loading it — and a push cannot pick another name, because the
             # suffix is today's date and `workflow_dispatch` is not reachable with this token, so without the
             # exception the dated path would be permanently jammed by its own failed attempt. Emptiness is
-            # the test: nothing that ever held data is empty, and `num_tables` has to come from the
-            # per-database endpoint because the list payload omits it.
-            curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
-              -o "$TMP/existing_new_meta.json" "$API/accounts/$account_id/d1/database/$existing_new_uuid" >/dev/null 2>&1 || true
-            existing_tables=$(jq -r '(.result[0] // .result).num_tables // -1' "$TMP/existing_new_meta.json" 2>/dev/null || echo -1)
-            if [ "$existing_tables" = '0' ]; then
+            # the test, counted inside the database (`sqlite_master` objects, over the D1 execute path this job
+            # already uses) — the list payload omits the field, and a `tbls=0` that means "not reported" is worse
+            # than no number at all.
+            npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --json --config "$TMP/probe.toml" \
+              --command "SELECT COUNT(*) AS c FROM sqlite_master WHERE type IN ('table','view','trigger','index');" \
+              > "$TMP/existing_new_meta.json" 2>/dev/null || true
+            existing_tables=$(jq -r '.. | objects | select(has("c")) | .c' "$TMP/existing_new_meta.json" 2>/dev/null | head -n1)
+            if [ "${existing_tables:-unreadable}" = '0' ]; then
               new_bak_uuid="$existing_new_uuid"
               reused_empty_backup_db='yes'
             else
-              result="new-backup-db-name-already-exists-refusing-overwrite(tbls=${existing_tables})"
+              result="new-backup-db-name-already-exists-refusing-overwrite(objs=${existing_tables:-unreadable})"
               finish
               exit 1
             fi
@@ -682,10 +675,9 @@ jobs:
             exit 1
           fi
 
-          new_bak_d1_meta=$(d1_meta "$new_bak_uuid" "$TMP/meta_new_bak_post.json")
-          new_bak_d1_meta="${new_bak_d1_meta}|reused=${reused_empty_backup_db}"
-          market_post=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_post.json")
-          old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" | head -n1)
+          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):reused=${reused_empty_backup_db}"' "$TMP/d1_post.json" | head -n1)
+          market_post=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
+          old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
 
           npx --yes wrangler@4 d1 execute "$OLD_BACKUP_NAME" --remote --json --config "$TMP/old_bak.toml" \
             --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/old_post_cnt.json" 2>/dev/null

@@ -178,26 +178,15 @@ jobs:
             '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1_pre.json" > /dev/null; then
             fail "test-db-not-in-account"
           fi
-          # Two bugs this helper had already: `-H "$AUTH"` (no such variable in this step — curl died before
-          # naming a status, and the run reported `market-db-meta-unreadable-http-` with nothing after it), and
-          # `GET /accounts/:id/d1/database` (the list) does not carry `num_tables`, so a guard built from it
-          # printed `nasr-market-db:909312:0` and looked like "the production database is empty" when the
-          # number was simply absent. The per-database endpoint has it: read the real object counts, and a
-          # missing one is a hard stop rather than a zero.
-          d1_meta() {
-            local st out
-            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o "$2" -w '%{http_code}' \
-              "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
-            [ "$st" = '200' ] || { echo "http-$st"; return 0; }
-            jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
-          }
-          # `name:size:tables` or nothing; a shape check is what tells "endpoint refused" from "database gone"
-          meta_ok() { case "$1" in *[A-Za-z0-9-]*:*:*) return 0 ;; *) return 1 ;; esac; }
-          market_pre=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_pre.json")
-          bak_pre=$(d1_meta "$REF_BACKUP_UUID" "$TMP/meta_bak_pre.json")
-          meta_ok "$market_pre" || fail "market-db-meta-unreadable-$market_pre"
-          meta_ok "$bak_pre" || fail "reference-backup-meta-unreadable-$bak_pre"
+          # `name:file_size` only: the D1 *list* payload does not carry `num_tables`, and printing
+          # `nasr-market-db:909312:0` reads as "the production database is empty" when the number is simply
+          # not reported. Object counts come from queries (see `verify`), not from an absent field.
+          market_pre=$(jq -r --arg u "$PROD_DB_UUID" \
+            '.result[] | select(.uuid == $u) | "\(.name):\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
+          bak_pre=$(jq -r --arg u "$REF_BACKUP_UUID" \
+            '.result[] | select(.uuid == $u) | "\(.name):\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
+          [ -n "$market_pre" ] || fail "market-db-meta-unreadable"
+          [ -n "$bak_pre" ] || fail "reference-backup-meta-unreadable"
 
           # ---- 2) the runner: every decision comes from the reviewed modules, not from shell arithmetic ----
           cat > "$TMP/runner.mjs" <<'EOF_NODE'
@@ -527,13 +516,11 @@ jobs:
           [ -n "$account_id" ] || { echo "::error::account unreadable"; exit 1; }
           # this step only *reports*: the authoritative comparison is the one inside the session, where the
           # pre-snapshot exists. A moved reference backup or market DB after the fact is visible in the name.
-          # Per-database endpoint, for the same reason as above: `num_tables` is not in the list payload.
-          pm() {
-            curl --silent --show-error --max-time 30 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -o "/tmp/meta_$1.json" "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true
-            jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "/tmp/meta_$1.json" 2>/dev/null | head -n1
-          }
-          echo "post[market=$(pm "$PROD_DB_UUID"),bak=$(pm "$REF_BACKUP_UUID")]"
+          curl --silent --show-error --max-time 30 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -o /tmp/d1_post.json "$API/accounts/$account_id/d1/database?per_page=100"
+          jq -r --arg m "$PROD_DB_UUID" --arg b "$REF_BACKUP_UUID" \
+            '"post[" + ([.result[] | select(.uuid == $m) | "market:\(.file_size // 0)"] | first // "market:absent") + "," + ([.result[] | select(.uuid == $b) | "bak:\(.file_size // 0)"] | first // "bak:absent") + "]"' \
+            /tmp/d1_post.json
 
   report:
     if: always()
