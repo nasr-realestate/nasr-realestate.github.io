@@ -195,7 +195,7 @@ jobs:
           fi
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
-          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 53: 12 registry + 7 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
+          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 54: 12 registry + 8 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
           if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 54 ]; then
             result='unit-tests-failed'
             finish
@@ -431,8 +431,17 @@ jobs:
             // 0007 declares six, and 0010 adds a seventh (the partial unique index on drive_ref). A frozen
             // `6` would turn a correct promotion into a red check — the same mistake this step already made
             // once with a hard-coded migration count, so the expectation is derived and reported together.
+            // Counted over the DDL with whitespace collapsed, because every index here is written as
+            // `CREATE INDEX IF NOT EXISTS name\n  ON table (cols)`: a line-anchored regex reads that as zero,
+            // the assertion `idxExpected >= 6` fires, and the isolated verification dies for a bug in the
+            // *expectation* — which is the failure mode this whole file has been chasing (a frozen count, a
+            // regex that matches one layout, a name nobody re-checks). Normalising the text and allowing the
+            // optional UNIQUE / IF NOT EXISTS clauses makes the count a property of the schema, not of line
+            // breaks. Measured on the chain as it stands: 0007 declares 6, 0010 declares 2, and applying all
+            // eleven migrations installs exactly 8 indexes on crm_drive_file_registry.
             const idxExpected = migFiles.reduce((n, f) => n + ((fs.readFileSync(path.resolve(process.cwd(), '_worker/migrations', f), 'utf8')
-              .match(/^CREATE\s+(?:UNIQUE\s+)?INDEX\s+\S+\s+ON\s+crm_drive_file_registry\b/gim) ?? []).length), 0);
+              .replace(/\s+/g, ' ')
+              .match(/CREATE (?:UNIQUE )?INDEX (?:IF NOT EXISTS )?"?[\w]+"? ON crm_drive_file_registry\b/gi) ?? []).length), 0);
             let fkViol = 0;
             try {
               fkViol = (await db.prepare('PRAGMA foreign_key_check').bind().all()).results.length;
