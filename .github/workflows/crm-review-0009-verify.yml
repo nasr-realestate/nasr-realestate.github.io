@@ -27,6 +27,7 @@ on:
       - scripts/crm/review-event-chain.mjs
       - scripts/crm/verify-review-event-chain.mjs
       - scripts/crm/build-d1-guarded-backup.mjs
+      - scripts/crm/build-review-case-register.mjs
       - .github/workflows/crm-review-0009-verify.yml
   push:
     branches:
@@ -41,6 +42,7 @@ on:
       - scripts/crm/review-event-chain.mjs
       - scripts/crm/verify-review-event-chain.mjs
       - scripts/crm/build-d1-guarded-backup.mjs
+      - scripts/crm/build-review-case-register.mjs
       - .github/workflows/crm-review-0009-verify.yml
   workflow_dispatch:
 
@@ -96,6 +98,42 @@ jobs:
                 % (len(files), tot['table'], tot['index'], tot['trigger'], tot['view']))
           PY
 
+      - name: Review register rebuild contract (encrypted output must never reach Git)
+        run: |
+          set -euo pipefail
+          # The register was once a sandbox-local file and was lost with the sandbox. The rebuild is
+          # now a command: if it drifts, or starts writing into the repo, this gate goes red.
+          node scripts/crm/build-review-case-register.mjs selftest
+          OUT="$(mktemp -d)"
+          node scripts/crm/build-review-case-register.mjs build --out "$OUT"
+          node scripts/crm/build-review-case-register.mjs verify --out "$OUT" > "$RUNNER_TEMP/register-summary.json"
+          node -e '
+            const j = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/register-summary.json", "utf8"));
+            const bad = [];
+            if (j.ok !== true) bad.push("verify reported problems: " + JSON.stringify(j.problems));
+            if (j.cases < 100) bad.push("expected at least the 100-file review queue, got " + j.cases);
+            if (j.sealed_bytes_stored !== false) bad.push("a register must not hold sealed original bytes");
+            if (j.personal_fields_present !== false) bad.push("personal fields must be absent by construction");
+            if (typeof j.plaintext_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(j.plaintext_sha256)) bad.push("no plaintext digest");
+            if (bad.length) { console.error(bad.join("\n")); process.exit(1); }
+            console.log("register ok: cases=" + j.cases + " digest=" + j.plaintext_sha256.slice(0, 16));
+          '
+          # the tool must refuse to write inside the checkout at all
+          guard_out=$(node scripts/crm/build-review-case-register.mjs build --out . 2>&1 || true)
+          case "$guard_out" in
+            *'must live outside the repository'*) echo "repo-write guard held" ;;
+            *)
+              echo "::error::the register tool would write inside the repository"
+              exit 1
+              ;;
+          esac
+          # nothing it produced may be left behind in the tree
+          if git ls-files --others --exclude-standard | grep -E 'register\.enc|key\.bin|MANIFEST\.json'; then
+            echo "::error::register material is present in the working tree"
+            exit 1
+          fi
+          rm -rf "$OUT"
+
       - name: Existing Worker/site test suite (must stay green)
         run: node --test _worker/tests/*.test.mjs
 
@@ -129,6 +167,7 @@ jobs:
           { git diff -U0 --name-only origin/master...HEAD -- \
               _worker/migrations _worker/migrations-draft scripts/crm/review-event-chain.mjs \
               scripts/crm/verify-review-event-chain.mjs scripts/crm/build-d1-guarded-backup.mjs \
+              scripts/crm/build-review-case-register.mjs \
               _worker/tests-draft .github/workflows/crm-review-0009-verify.yml \
               .github/workflows/crm-cloudflare-test-deploy.yml \
               .github/workflows/crm-phase4-review.yml; \

@@ -568,7 +568,11 @@ jobs:
             assert.equal(badLink, 0, 'auto_link is pinned to 0 by the schema');
             process.stdout.write(
               `ok(migs=${migCnt},tables=${tables},stmt=${first.statements}/${first.batches}x,` +
-              `idem=${second.statements},fkViol=0,import=0,auto_link=0)`,
+              `idem=${second.statements},fkViol=0,import=0,auto_link=0,` +
+              `rev=${reviewFacts.declared.table}t/${reviewFacts.declared.trigger}tr/` +
+              `${reviewFacts.declared.view}v/${reviewFacts.declared.index}i,` +
+              `revRows=${reviewFacts.rowsAfterMigration},appendOnly=${reviewFacts.appendOnlyTriggers},` +
+              `barriers=${reviewFacts.barriers.note}+${reviewFacts.barriers.approve})`,
             );
           } else if (mode === 'apply_payload') {
             const testDbUuid = process.argv[3];
@@ -709,7 +713,6 @@ jobs:
               classes: (classes.results ?? []).map(r => `${r.match_class}=${r.c}`).sort().join('|'),
               conv: `total=${preserved.total ?? 0},null_contact=${preserved.null_contact ?? 0},unmatched_review=${preserved.unmatched_review ?? 0}`,
               ops: opCounts,
-              review: reviewFacts,
             };
             // Numbers only: no ids, no names, no transcripts.
             process.stdout.write(JSON.stringify(summary));
@@ -763,7 +766,7 @@ jobs:
           rev_view=$(jq -r '.result[0].results[0].rev_view' "$TMP/post_mig.json")
           rev_idx=$(jq -r '.result[0].results[0].rev_idx' "$TMP/post_mig.json")
           rev_rows=$(jq -r '.result[0].results[0].rev_rows' "$TMP/post_mig.json")
-          if [ "$p4_tbl" != '8' ] || [ "$migs" != '9' ] || [ "$latest_mig" != '0009_crm_drive_review_workflow' ]; then
+          if [ "$p4_tbl" != '8' ] || [ "$migs" != '9' ] || [ "$latest_mig" != '0009_crm_drive_review_workflow.sql' ]; then
             result="migration-0009-incomplete-migs=${migs}-latest=${latest_mig}-tables=${p4_tbl}"
             finish
             exit 1
