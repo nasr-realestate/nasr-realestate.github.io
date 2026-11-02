@@ -15,6 +15,8 @@ import test from 'node:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildRegistry } from './_registry-fixture.mjs';
+
 const workerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIG_DIR = path.join(workerDir, 'migrations');
 const DRAFT_DIR = path.join(workerDir, 'migrations-draft');
@@ -73,23 +75,15 @@ function wrapD1(sqlite, { failOnBatchStep = null } = {}) {
   };
 }
 
+// One fixture, in one place. This suite used to keep its own copy of "apply the chain, then the drafts",
+// and when 0010 was promoted out of `migrations-draft/` the copy began applying it twice — `duplicate
+// column name: drive_ref`, 13 failures that looked like a broken migration and were a stale test harness.
+// `buildRegistry` knows that a promoted migration is already in the chain and that `ledger: false` must
+// exclude it, so the pre-0010 and post-0010 states stay two different databases either way.
 function build({ ledger = true, intake = false, failOnBatchStep = null } = {}) {
-  const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec('PRAGMA foreign_keys = ON;');
-  sqlite.exec(`
-    CREATE TABLE areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE);
-    CREATE TABLE sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
-    CREATE TABLE listings (id INTEGER PRIMARY KEY, source_id INTEGER, external_id TEXT, url TEXT,
-      title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL,
-      bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT NOT NULL);
-  `);
-  for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) {
-    try { sqlite.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); } catch { /* needs tables this fixture omits */ }
-  }
-  if (ledger) sqlite.exec(readFileSync(DRAFT_0010, 'utf8'));
-  if (intake) sqlite.exec(readFileSync(DRAFT_0011, 'utf8'));
-  return { sqlite, db: wrapD1(sqlite, { failOnBatchStep }) };
+  return buildRegistry({ ledger, intake, failOnBatchStep });
 }
+
 
 // one synthetic file, registered the way the intake path registers it
 async function newFile(db, tag, { size = 1024, modifiedAt = T0 } = {}) {

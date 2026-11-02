@@ -1,11 +1,17 @@
 # migrations-draft — مجلد المسودات (0009 لم تعد هنا)
 
-**الحالة (2026-11-02):** `0009` رُوِّجت سابقًا إلى `_worker/migrations/` (`git mv` فقط، بلا تحرير)،
-وفي هذا المجلد الآن مسوّدتان معلَّقتان من Phase 2 / T2، ولا يُطبَّق أيٌّ منهما على أي قاعدة:
+**الحالة (2026-11-02، بعد الاعتماد A3):** `0009` و`0010` رُوِّجتا إلى `_worker/migrations/`
+(`git mv` فقط، بلا تحرير للنصّ) — ترويج `0010` يعني أن `crm-phase3-registry.yml` سيطبّقه على
+`nasr-crm-test-db` في CI؛ هذا هو التطبيق المقصود، وليس هذا المجلد. بقيت هنا مسوّدة واحدة معلَّقة:
+
+- `0011_crm_drive_file_intake_review.sql` — **لا تُروَّج** إلا بعد أن قراءة `status_without_version = 0`
+  على قاعدة الاختبار (أي بعد زرع `drive_ref` وإعادة §5 من `0010`)؛ الشرط في `CRM_PHASE2_DRIVE_MIGRATION_PLAN.md` §3 خطوة 8.
+
+وفي هذا المجلد قاعدة الترويج نفسها: كل هجرة جديدة تبدأ هنا ولا تدخل `_worker/migrations/` إلا بموافقة صريحة.
 
 | مسودة | تعالج | أشياء جديدة | لا تلمس |
 | --- | --- | --- | --- |
-| `0010_crm_drive_file_versions.sql` | تتبّع إصدارات محتوى ملف Drive | جدول `crm_drive_file_version` + 8 أعمدة إسقاطية في `crm_drive_file_registry` + 20 مشغّلًا + 6 عروض | لا `DROP`، لا `UPDATE` على صفوف قائمة، لا حذف أي قيد |
+| `0010_crm_drive_file_versions.sql` | *(رُوِّجت — انظر `_worker/migrations/`)* | جدول `crm_drive_file_version` + 8 أعمدة إسقاطية في `crm_drive_file_registry` + 20 مشغّلًا + 6 عروض | لا `DROP`، لا `UPDATE` على صفوف قائمة، لا حذف أي قيد |
 | `0011_crm_drive_file_intake_review.sql` | حالة مراجعة لملف بلا عميل | `crm_drive_file_review_case` + `..._decision` + `..._anchor` + 4 عروض + 16 مشغّلًا | **لا تعديل ولا إعادة بناء لجدول 0009**; العزل مقصود |
 
 كل هجرة جديدة تبدأ هنا ولا تدخل `_worker/migrations/` إلا بموافقة طارق الصريحة.

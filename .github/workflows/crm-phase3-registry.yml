@@ -195,7 +195,7 @@ jobs:
           fi
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
-          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 53: 12 registry + 7 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
+          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 54: 12 registry + 8 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
           if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 54 ]; then
             result='unit-tests-failed'
             finish
@@ -283,8 +283,30 @@ jobs:
           EOF
 
           BASE_CATALOG_SQL="CREATE TABLE IF NOT EXISTS sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS listings (id INTEGER PRIMARY KEY, source_id INTEGER, external_id TEXT, url TEXT, title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL, bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT);"
-          npx --yes wrangler@4 d1 execute "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" --command "$BASE_CATALOG_SQL" >/dev/null 2>&1
-          npx --yes wrangler@4 d1 migrations apply "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" >/dev/null 2>&1
+          npx --yes wrangler@4 d1 execute "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" --command "$BASE_CATALOG_SQL" > "$TMP/ephem_base.log" 2>&1 || true
+          # Both of these used to end in `>/dev/null 2>&1`, and that silence is why an isolated test that
+          # died before printing anything could only ever be reported as `exit=1`: the apply's own words were
+          # thrown away, and the log that kept them is not readable from here. Keep the file, keep the exit
+          # code, and then ask the isolated database directly how much of the chain it actually has.
+          ephem_mig_rc=0
+          npx --yes wrangler@4 d1 migrations apply "$EPHEM_DB_NAME" --remote --config "$TMP/ephem.toml" > "$TMP/ephem_mig.log" 2>&1 || ephem_mig_rc=$?
+
+          # Read-only probe of the throwaway database (never the test DB, never the backup): migration count,
+          # installed registry indexes, and whether 0010's version table exists. If the chain did not apply,
+          # every assertion inside verify_isolated below is meaningless, and this is the line that says so.
+          ISO_PROBE_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS m, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='crm_drive_file_registry' AND sql IS NOT NULL) AS i, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crm_drive_file_version') AS v, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%') AS t;"
+          http_ip=$(curl --silent --show-error --connect-timeout 15 --max-time 30 \
+            -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+            --data "{\"sql\":\"$ISO_PROBE_SQL\",\"params\":[]}" \
+            -o "$TMP/iso_probe.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database/$ephem_uuid/query")
+          iso_probe="apply_rc=${ephem_mig_rc}"
+          if [ "$http_ip" = '200' ]; then
+            iso_probe="${iso_probe};$(jq -r '.result[0].results[0] | "migs=\(.m),idx=\(.i),verTbl=\(.v),tbls=\(.t)"' "$TMP/iso_probe.json" 2>/dev/null)"
+          else
+            iso_probe="${iso_probe};probe-http-${http_ip}"
+          fi
+          ephem_mig_err=$(p3_excerpt "$TMP/ephem_mig.log" 2>/dev/null | head -c 120)
 
           # Node helper for remote D1 HTTP /query + key derivation + isolated test + sealed sync
           cat << 'EOF_NODE' > "$TMP/p3_runner.mjs"
@@ -431,8 +453,17 @@ jobs:
             // 0007 declares six, and 0010 adds a seventh (the partial unique index on drive_ref). A frozen
             // `6` would turn a correct promotion into a red check — the same mistake this step already made
             // once with a hard-coded migration count, so the expectation is derived and reported together.
+            // Counted over the DDL with whitespace collapsed, because every index here is written as
+            // `CREATE INDEX IF NOT EXISTS name\n  ON table (cols)`: a line-anchored regex reads that as zero,
+            // the assertion `idxExpected >= 6` fires, and the isolated verification dies for a bug in the
+            // *expectation* — which is the failure mode this whole file has been chasing (a frozen count, a
+            // regex that matches one layout, a name nobody re-checks). Normalising the text and allowing the
+            // optional UNIQUE / IF NOT EXISTS clauses makes the count a property of the schema, not of line
+            // breaks. Measured on the chain as it stands: 0007 declares 6, 0010 declares 2, and applying all
+            // eleven migrations installs exactly 8 indexes on crm_drive_file_registry.
             const idxExpected = migFiles.reduce((n, f) => n + ((fs.readFileSync(path.resolve(process.cwd(), '_worker/migrations', f), 'utf8')
-              .match(/^CREATE\s+(?:UNIQUE\s+)?INDEX\s+\S+\s+ON\s+crm_drive_file_registry\b/gim) ?? []).length), 0);
+              .replace(/\s+/g, ' ')
+              .match(/CREATE (?:UNIQUE )?INDEX (?:IF NOT EXISTS )?"?[\w]+"? ON crm_drive_file_registry\b/gi) ?? []).length), 0);
             let fkViol = 0;
             try {
               fkViol = (await db.prepare('PRAGMA foreign_key_check').bind().all()).results.length;
@@ -552,7 +583,12 @@ jobs:
           iso_status=0
           iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid" 2>"$TMP/iso.err") || iso_status=$?
           cleanup_ephem
-          iso_d1_test="exit=${iso_status};${iso_res};cleaned=${ephem_cleaned}"
+          # The first line the runner actually complained about, sanitised the same way the log excerpt is,
+          # goes into the check name. A check named `exit=1` tells the next reader nothing; a check named
+          # `err[AssertionError: the isolated database applied 9 of 10 migrations ...]` tells them where to
+          # look. No token, no uuid, no customer value can survive `p3_excerpt` + this character class.
+          iso_err=$( { p3_excerpt "$TMP/iso.err" 2>/dev/null || true; } | sed -E 's/^[0-9]{4}-..-..T[0-9:.Z]+ //' | tr -cd 'A-Za-z0-9_,=:.()[] /-' | cut -c1-150)
+          iso_d1_test="exit=${iso_status};${iso_res};cleaned=${ephem_cleaned};probe[${iso_probe}];err[${iso_err}];mig[${ephem_mig_err}]"
           if [ "$iso_status" != '0' ]; then
             defer_failure 'isolated-d1-test-failed' "$TMP/iso.err"
           fi
