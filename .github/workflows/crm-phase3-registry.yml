@@ -155,10 +155,14 @@ jobs:
           # the boundary cases that refuse an undocumented fingerprint, and the bootstrap cases that refuse a
           # version claim the migration cannot support. All of it on synthetic rows in memory — no Drive, no
           # remote database.
-          node --test _worker/tests/crm-drive-file-registry.test.mjs \
+          if ! node --test _worker/tests/crm-drive-file-registry.test.mjs \
                    _worker/tests/crm-phase3-metadata-boundary.test.mjs \
                    _worker/tests/crm-drive-ref-bootstrap.test.mjs \
-                   _worker/tests/crm-drive-file-versions.test.mjs > "$TMP/unit.log" 2>&1
+                   _worker/tests/crm-drive-file-versions.test.mjs > "$TMP/unit.log" 2>&1; then
+            { grep -E "^# (pass|fail)" "$TMP/unit.log" | tr "\n" " "; echo; grep -E "^not ok" "$TMP/unit.log" | head -8; }
+              > "$TMP/unit.report" 2>&1 || true
+            report_failure "unit-tests-failed" "$TMP/unit.report"
+          fi
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 43: 12 registry + 7 boundary + 5 bootstrap + 19 versions)"
@@ -167,6 +171,19 @@ jobs:
             finish
             exit 1
           fi
+
+          # A GitHub Actions log is not reachable from this workspace, so every local failure in this step
+          # is also published as an annotation, with identifiers redacted. This is how a gate stays
+          # maintainable: it has to say what it refused, not just that it refused.
+          report_failure() {
+            local what="$1" file="$2"
+            local excerpt
+            excerpt=$(tr '\n' ' ' < "$file" 2>/dev/null | sed -E 's/[A-Za-z0-9_-]{25,}/[redacted]/g' | cut -c1-460)
+            echo "::error::${what}: ${excerpt:-no output captured}"
+            result="$what"
+            finish
+            exit 1
+          }
 
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
           http_acc=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
@@ -463,11 +480,16 @@ jobs:
                 COALESCE(SUM(file_size), 0) AS bytes_sum
               FROM crm_drive_file_registry
             `).bind().first();
-            assert.equal(Number(summary.tot), 99, 'registry must hold exactly the 99 inventoried files');
+            // The sealed inventory is a *scan*, not a snapshot of one Tuesday: the folder can grow between
+            // runs, and a registered new file is the inventory working, not an incident. So the count is a
+            // floor (nothing may disappear) and completeness is stated per row, which is what actually
+            // matters. `tot = 99` exactly was as brittle as the digest count it sat next to.
+            assert.ok(Number(summary.tot) >= 99,
+              `the 99 inventoried files must all still be registered (registry holds ${summary.tot})`);
             assert.equal(Number(summary.hashed_cnt), gate.summary.fingerprinted,
               'the boundary query and the inventory summary must count the same fingerprints');
-            assert.equal(Number(summary.named_cnt), 99, 'every registry row must carry a file_name');
-            assert.equal(Number(summary.dated_cnt), 99, 'every registry row must carry drive_modified_at');
+            assert.equal(Number(summary.named_cnt), Number(summary.tot), 'every registry row must carry a file_name');
+            assert.equal(Number(summary.dated_cnt), Number(summary.tot), 'every registry row must carry drive_modified_at');
             process.stdout.write(
               `p1[ins=${pass1.inserted},upd=${pass1.updated},fail=${pass1.failed}];` +
               `p2_idem[ins=${pass2.inserted},upd=${pass2.updated}];` +
@@ -480,7 +502,9 @@ jobs:
           }
           EOF_NODE
 
-          iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid")
+          if ! iso_res=$(node "$TMP/p3_runner.mjs" verify_isolated "$ephem_uuid" 2>"$TMP/iso.err"); then
+            report_failure 'isolated-d1-test-failed' "$TMP/iso.err"
+          fi
           cleanup_ephem
           iso_d1_test="${iso_res};cleaned=${ephem_cleaned}"
 
@@ -528,7 +552,9 @@ jobs:
           env_line=$(sed -n '1p' "$TMP/q.txt" | tr -d '[:space:]')
           if [ -n "$env_line" ] && [ "$env_line" != 'IDLE' ]; then
             printf '%s' "$env_line" > "$TMP/env.txt"
-            sync_stats=$(node "$TMP/p3_runner.mjs" sync_sealed "$TEST_DB_UUID" "$TMP/env.txt")
+            if ! sync_stats=$(node "$TMP/p3_runner.mjs" sync_sealed "$TEST_DB_UUID" "$TMP/env.txt" 2>"$TMP/sync.err"); then
+              report_failure 'sealed-sync-failed' "$TMP/sync.err"
+            fi
           else
             # Report current registry count if IDLE
             cur_reg=$(jq -r '.result[0].results[0].reg_rows // 0' "$TMP/post_mig.json")
