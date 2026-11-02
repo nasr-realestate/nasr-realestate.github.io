@@ -552,7 +552,7 @@ jobs:
           stage='create-backup-db'
           existing_new_uuid=$(jq -r --arg bn "$NEW_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
           new_bak_uuid=''
-          reused_empty_backup_db='no'
+          bak_action='create-and-import'
           if [ -n "$existing_new_uuid" ]; then
             write_toml "phase2-existing-backup-probe" "$NEW_BACKUP_NAME" "$existing_new_uuid" "$TMP/probe.toml"
             # A dated copy that already exists is a refusal: a backup that silently overwrites another backup
@@ -573,9 +573,24 @@ jobs:
             # dead run left mid-import, and the bundle is written with `CREATE TABLE IF NOT EXISTS` plus
             # plain INSERTs — reloading that would double the data, so it stays a refusal.
             if [ "${existing_tables:-999}" -le 1 ] 2>/dev/null; then
+            # an empty husk: finish the load the dead run never did
+              bak_action='import-into-empty-dated-copy'
               new_bak_uuid="$existing_new_uuid"
-              reused_empty_backup_db='yes'
+            elif [ "${existing_tables:-0}" -ge 100 ] 2>/dev/null; then
+              # Already a loaded copy of today's database, built by an earlier run of this same
+              # workflow. Re-importing over it would double its rows, and refusing outright would
+              # make the dated path unrunnable a second time in one day — which a push-triggered
+              # workflow has to survive, because a push cannot choose a new suffix. So the copy is
+              # re-verified instead: the steps below re-export it, compare per-table digests
+              # against the fresh source export, and restore it into the throw-away database. If
+              # today's copy has gone stale, digest parity fails and says so — a stale backup is a
+              # finding, not something to paper over with a green skip.
+              new_bak_uuid="$existing_new_uuid"
+              bak_action='reverify-existing-dated-copy'
             else
+              # between those: a copy stopped mid-import — tables present, data partial, and the
+              # bundle re-applies CREATE TABLE IF NOT EXISTS with plain INSERTs, so finishing it
+              # here is not safe. A human decides, with the object count in the reason.
               result="new-backup-db-name-already-exists-refusing-overwrite(objs=${existing_tables:-unreadable})"
               finish
               exit 1
@@ -600,7 +615,10 @@ jobs:
           fi
 
           write_toml "phase2-new-backup-loader" "$NEW_BACKUP_NAME" "$new_bak_uuid" "$TMP/new_bak.toml"
-          if ! npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --config "$TMP/new_bak.toml" \
+          if [ "$bak_action" = 'reverify-existing-dated-copy' ]; then
+            # nothing to load: the verification steps read the copy as it stands
+            :
+          elif ! npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --config "$TMP/new_bak.toml" \
             --file "$BUNDLE_SQL" > "$TMP/new_bak_import.log" 2>&1; then
             # wrangler echoes the statements it is applying, and those rows are customer data: the log is
             # never printed, not even its last line. Only an error CLASS is published, matched against an
@@ -682,8 +700,8 @@ jobs:
 
           # the jq program is single-quoted, so `${reused_empty_backup_db}` inside it printed literally — a
           # report line that says `${...}` is a report nobody can trust. Pass it in as a jq variable instead.
-          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" --arg reused "$reused_empty_backup_db" \
-            '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):reused=\($reused)"' "$TMP/d1_post.json" | head -n1)
+          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" --arg action "$bak_action" \
+            '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):action=\($action)"' "$TMP/d1_post.json" | head -n1)
           market_post=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
           old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
 
