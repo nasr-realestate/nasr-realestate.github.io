@@ -15,16 +15,16 @@ import {
   DRAFT_0010, DRAFT_0011, T0, T1, buildRegistry, newRegistryFile, oneOf, sha,
 } from './_registry-fixture.mjs';
 import { deriveDriveRef, recordContentHash, recordInspectionSuccess } from '../crm-drive-file-registry.js';
-import { assertSeedIsOneColumn, buildSeedPlan, driveRefFor, renderSeedSql, summarizeSeed }
-  from '../../scripts/crm/seed-drive-file-refs.mjs';
+import {
+  assertBackfillIsIdempotentAnchorOnly, assertSeedIsOneColumn, buildSeedPlan, driveRefFor,
+  extractBackfillSql, renderSeedSql, summarizeSeed,
+} from '../../scripts/crm/seed-drive-file-refs.mjs';
 
 const migrationText = readFileSync(DRAFT_0010, 'utf8');
-const section5 = (() => {
-  const start = migrationText.indexOf('-- 5) backfill');
-  const end = migrationText.indexOf('-- 6) read-only surfaces', start);
-  assert.ok(start > 0 && end > start, 'the bootstrap section must stay addressable — the test slices it by its headings');
-  return migrationText.slice(start, end);
-})();
+// The same extractor the migration plan tells an operator to run (`seed-drive-file-refs.mjs backfill-sql`),
+// not a second copy of the slicing rules. A test that re-implemented the extraction would pass even if the
+// shipped command started handing out a different statement — which is the one thing worth guarding here.
+const section5 = extractBackfillSql(migrationText);
 
 // a pre-promotion database: registered by the metadata walk, fingerprinted and processed by Phase 4
 async function legacyRow(db, sqlite, tag, bytes) {
@@ -179,6 +179,71 @@ test('a row anchored to something else is a conflict, and the seed refuses to sm
     'the row is recorded, and still reported as an unproven claim — nothing about the conflict was laundered');
   assert.equal(oneOf(sqlite, 'SELECT status_without_version AS n FROM crm_drive_version_invariant_violations').n, 0);
 });
+
+test('the artifact the plan applies is one idempotent statement, and every drift of it is refused', () => {
+  assert.match(section5.trim(), /^INSERT INTO crm_drive_file_version[\s\S]*;$/);
+  assert.equal(section5.split(';').filter(t => t.trim()).length, 1, 'the re-run must be a single statement');
+  assert.equal(assertBackfillIsIdempotentAnchorOnly(section5), true);
+  const drifted = [
+    [section5.replace(/AND NOT EXISTS[\s\S]*?\);/, ');'), 'a backfill that can double a version row'],
+    [section5.replace('bootstrap_backfill', 'verified_local_recompute'), 'a backfill that claims re-verification'],
+    [section5.replace('AND r.content_sha256 IS NOT NULL', ''), 'a backfill that invents versions for unfingerprinted rows'],
+    [section5.replace('WHERE r.drive_ref IS NOT NULL AND', 'WHERE'), 'a backfill that anchors rows by force'],
+    [`${section5}\nDELETE FROM crm_drive_rehash_queue;`, 'a second statement hiding behind the first'],
+  ];
+  for (const [sql, why] of drifted) {
+    assert.throws(() => assertBackfillIsIdempotentAnchorOnly(sql), /BACKFILL_/, why);
+  }
+});
+
+test('after the seed and the §5 re-run the numbers step 7 promises are the numbers the schema holds', async () => {
+  // The state the plan is really in: rows fingerprinted *before* the promotion, then 0010 applied over them.
+  // Building with ledger:true instead would anchor the row as it was fingerprinted — the version writer
+  // projects `drive_ref` itself — and the bootstrap gap would vanish before the test could demonstrate it.
+  const { sqlite, db } = buildRegistry({ ledger: false });
+  const digest = await legacyRow(db, sqlite, 'PLAN-A', 'plan bytes a');
+  const id = 'SYNTH-PLAN-A';
+  sqlite.exec(migrationText);                     // <- the promotion commit's effect, nothing else
+  assert.equal(oneOf(sqlite, 'SELECT COUNT(*) AS n FROM crm_drive_file_registry WHERE drive_ref IS NOT NULL').n, 0,
+    'a pre-promotion fingerprint has no anchor until the seed lays one down');
+  assert.equal(Number(oneOf(sqlite, 'SELECT status_without_version AS n FROM crm_drive_version_invariant_violations').n), 1,
+    'and while that is true the ledger is knowingly incomplete — which is why steps 4 to 7 must run as one session');
+
+  // 1) the seed writes the anchor and nothing else
+  const plan = buildSeedPlan(exportRows(sqlite));
+  assert.equal(plan.seeded.length, 1);
+  sqlite.exec(renderSeedSql(plan));
+  assert.equal(registryAnchor(sqlite, id), driveRefFor(id), 'the anchor is the repo key, exactly');
+  assert.equal(sqlite.prepare('SELECT content_sha256 AS d FROM crm_drive_file_registry').get().d, digest,
+    'the seed pass did not disturb the fingerprint');
+
+  // 2) the §5 re-run turns the anchor into a bootstrap version, once
+  sqlite.exec(section5);
+  sqlite.exec(section5);
+  const counts = oneOf(sqlite, `SELECT
+      (SELECT COUNT(*) FROM crm_drive_file_version) AS v,
+      (SELECT head_version_seq FROM crm_drive_file_registry) AS head,
+      (SELECT versions_observed FROM crm_drive_file_registry) AS obs`);
+  assert.deepEqual({ v: counts.v, head: counts.head, obs: counts.obs }, { v: 1, head: 1, obs: 1 },
+    'one version, projected as the head, counted once — a second run added nothing');
+  const evidence = oneOf(sqlite, `SELECT evidence_class AS e, observed_by AS o, receipt_ref AS r
+    FROM crm_drive_file_version`);
+  assert.equal(evidence.e, 'bootstrap_backfill');
+  assert.equal(evidence.o, 'registry_bootstrap');
+  assert.equal(evidence.r, 'phase2-0010-bootstrap', 'the receipt is the one the gate accepts as a bootstrap claim');
+
+  // 3) step 7's acceptance number, straight from the view CI will print
+  const violations = oneOf(sqlite, 'SELECT * FROM crm_drive_version_invariant_violations');
+  assert.equal(Number(violations.status_without_version), 0,
+    'step 7 of the plan is this number and nothing else');
+  for (const key of ['counter_mismatches', 'dangling_heads', 'seq_gaps']) {
+    assert.equal(Number(violations[key]), 0, `${key} must be zero once the ledger is whole`);
+  }
+});
+
+function registryAnchor(sqlite, id) {
+  return sqlite.prepare('SELECT drive_ref AS r FROM crm_drive_file_registry WHERE drive_file_id = ?').get(id).r;
+}
 
 test('the migration and the tool agree on the claim vocabulary, and neither invents one', () => {
   assert.match(migrationText, /'bootstrap_backfill', COALESCE\(r\.file_size, 0\)/,

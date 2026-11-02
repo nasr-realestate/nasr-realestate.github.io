@@ -33,9 +33,10 @@
  *
  *   node scripts/crm/seed-drive-file-refs.mjs selftest
  *   node scripts/crm/seed-drive-file-refs.mjs --from export.json --out seed-out/ [--all]
+ *   node scripts/crm/seed-drive-file-refs.mjs backfill-sql [--migration <path>] --out rerun-0010-s5.sql
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /** The repo's Drive-ref scheme, spelled the same way here so a mismatch is visible rather than silent:
@@ -159,6 +160,67 @@ export function assertSeedIsOneColumn(sqlText) {
   return true;
 }
 
+// ------------------------------------------------------------------ the §5 re-run, extracted not copied
+/** Where the 0010 file lives: applied chain first, then the drafts directory. The promotion moves the file
+ *  and nothing in this tool should have to change because of it. */
+export function resolveMigrationPath(name = '0010_crm_drive_file_versions.sql') {
+  const here = path.dirname(new URL(import.meta.url).pathname);
+  const roots = [path.resolve(here, '../../_worker/migrations'), path.resolve(here, '../../_worker/migrations-draft')];
+  for (const dir of roots) {
+    const file = path.join(dir, name);
+    if (existsSync(file)) return file;
+  }
+  throw new Error(`MIGRATION_FILE_NOT_FOUND: ${name} is in neither _worker/migrations nor _worker/migrations-draft`);
+}
+
+/** What 0010 §5 must always look like, checked before the text is handed to anybody. The re-run exists
+ *  because `d1 migrations apply` will not run a section twice — a plan that says "re-run §5" without a
+ *  machine-readable way to extract it is a plan that invites a hand-typed copy. */
+export function assertBackfillIsIdempotentAnchorOnly(sql) {
+  const required = [
+    [/^INSERT INTO crm_drive_file_version\b/, 'it must add versions and nothing else'],
+    [/NOT EXISTS/, 'it must be idempotent (a re-run cannot double a version row)'],
+    [/'bootstrap_backfill'/, 'it must claim only what a backfill can claim'],
+    [/'phase2-0010-bootstrap'/, 'it must carry the bootstrap receipt, not a measurement receipt'],
+    [/drive_ref IS NOT NULL/, 'it must anchor only rows whose drive_ref exists — otherwise it invents one'],
+    [/content_sha256 IS NOT NULL/, 'it must not create a version for a row with no fingerprint'],
+  ];
+  for (const [re, why] of required) if (!re.test(sql)) throw new Error(`BACKFILL_SHAPE_UNEXPECTED: ${re} (${why})`);
+  for (const bad of [/\bUPDATE\b/i, /\bDELETE\b/i, /\bDROP\b/i, /\bALTER\b/i, /\bTRUNCATE\b/i, /\bPRAGMA\b/i]) {
+    if (bad.test(sql)) throw new Error(`BACKFILL_TOUCHES_MORE_THAN_THE_LEDGER: ${bad}`);
+  }
+  return true;
+}
+
+/** Pull the numbered backfill section out of the migration file. Section headers are the file's own
+ *  `-- 5) backfill …` line and the `-- ---…` rules around it, so the extraction follows the document. */
+export function extractBackfillSql(migrationText) {
+  const lines = String(migrationText).split('\n');
+  const at = lines.findIndex(l => /^-- \d+\) backfill\b/.test(l.trim()));
+  if (at === -1) throw new Error('BACKFILL_BLOCK_MISSING: no numbered "backfill" section in this migration');
+  // The header is wrapped in rules and followed by prose, so walk forward: skip everything until the SQL
+  // starts, and stop at the terminator or the next section rule. A `;` inside a comment cannot end the
+  // statement because comment lines are never part of `taken`.
+  const taken = [];
+  for (let i = at + 1; i < lines.length; i += 1) {
+    const t = lines[i].trim();
+    if (t.startsWith('-- ') && taken.length === 0) continue;
+    if (/^-- -{5,}$/.test(t) && taken.length > 0) break;
+    if (t.startsWith('--')) continue;
+    taken.push(t);
+    if (/;\s*$/.test(t)) break;
+  }
+  const body = taken.join('\n').trim();
+  const statements = body.split(';').map(t => t.trim()).filter(Boolean);
+  if (statements.length !== 1) {
+    throw new Error(`BACKFILL_BLOCK_AMBIGUOUS: ${statements.length} statements, expected exactly one`);
+  }
+  const sql = `${statements[0]};
+`;
+  assertBackfillIsIdempotentAnchorOnly(sql);
+  return sql;
+}
+
 // ------------------------------------------------------------------ selftest (files and strings only)
 export function selftest() {
   const checks = [];
@@ -261,6 +323,37 @@ export function selftest() {
     return `${imports.length} node: builtins, ${flags.length} guarded flag`;
   });
 
+  check('B11 the repo 0010 backfill section extracts to exactly the statement §5 promises', () => {
+    const file = resolveMigrationPath();
+    const sql = extractBackfillSql(readFileSync(file, 'utf8'));
+    if (sql.split('\n').filter(l => /;\s*$/.test(l)).length !== 1) throw new Error('more than one statement came out');
+    if (!/INSERT INTO crm_drive_file_version/.test(sql)) throw new Error('the wrong section was extracted');
+    return `${path.basename(file)} · ${sql.length} bytes · sha ${createHash('sha256').update(sql).digest('hex').slice(0, 12)}…`;
+  });
+  check('B12 a backfill block that drifted is refused rather than run', () => {
+    const real = extractBackfillSql(readFileSync(resolveMigrationPath(), 'utf8'));
+    const tampered = [
+      real.replace(/AND NOT EXISTS[\s\S]*?\);/, ');'),           // re-run would double every version row
+      real.replace(/'bootstrap_backfill'/, "'verified_local_recompute'"), // a claim the file has not earned
+      real.replace('AND r.content_sha256 IS NOT NULL', ''),        // versions for rows with no fingerprint
+      `${real}\nUPDATE crm_drive_file_registry SET head_version_seq = 1;`, // a second statement, and a write outside the ledger
+      real.replace(/^INSERT INTO crm_drive_file_version/, 'DELETE FROM crm_drive_file_version'),
+    ];
+    for (const t of tampered) {
+      let msg = 'ACCEPTED';
+      try { assertBackfillIsIdempotentAnchorOnly(t); } catch (e) { msg = String(e.message); }
+      if (!msg.startsWith('BACKFILL_')) throw new Error(`drift went unnoticed: ${msg.slice(0, 60)}`);
+    }
+    return 'five drifts refused';
+  });
+  check('B13 extraction follows the file wherever it lives, so promotion does not break the plan', () => {
+    const file = resolveMigrationPath();
+    if (!/_worker\/migrations(-draft)?\/0010_crm_drive_file_versions\.sql$/.test(file)) throw new Error(`unexpected location: ${file}`);
+    let missing = false;
+    try { resolveMigrationPath('0013_does_not_exist.sql'); } catch (e) { missing = /MIGRATION_FILE_NOT_FOUND/.test(String(e.message)); }
+    if (!missing) throw new Error('a missing migration must be an error, not an empty re-run');
+    return `${file.includes('/migrations/') ? 'applied chain' : 'drafts'} · refuses absence`;
+  });
   return checks;
 }
 
@@ -277,10 +370,24 @@ function main(argv) {
     process.stdout.write('DRIVE_REF_SEED_ALL_HELD\n');
     return 0;
   }
+  if (argv[0] === 'backfill-sql') {
+    const outIdx = argv.indexOf('--out');
+    if (outIdx === -1) {
+      process.stderr.write('backfill-sql needs --out <file> to write the extracted statement to\n');
+      return 2;
+    }
+    const migIdx = argv.indexOf('--migration');
+    const file = migIdx === -1 ? resolveMigrationPath() : argv[migIdx + 1];
+    const sql = extractBackfillSql(readFileSync(file, 'utf8'));
+    writeFileSync(argv[outIdx + 1], sql);
+    const digest = createHash('sha256').update(sql).digest('hex');
+    process.stdout.write(`statements=1 bytes=${sql.length} sha256=${digest}\n`);
+    return 0;
+  }
   const fromIdx = argv.indexOf('--from');
   const outIdx = argv.indexOf('--out');
   if (fromIdx === -1 || outIdx === -1) {
-    process.stdout.write('usage: seed-drive-file-refs.mjs selftest | --from <export.json> --out <dir> [--all]\n');
+    process.stdout.write('usage: seed-drive-file-refs.mjs selftest | --from <export.json> --out <dir> [--all] | backfill-sql [--migration <path>] --out <file>\n');
     return 2;
   }
   if (argv.includes('--remote')) {
