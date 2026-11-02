@@ -321,6 +321,7 @@ jobs:
           const envModUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/drive-registry-envelope.mjs')).href;
           const {
             detectAndRegisterDuplicate,
+            deriveDriveRef,
             insertNewDriveFileStrict,
             listFilesNeedingProcessing,
             listFilesPendingHumanReview,
@@ -415,9 +416,21 @@ jobs:
             });
             await recordContentHash(db, { driveFileId: 'iso_synth_1', contentSha256: h });
             await recordContentHash(db, { driveFileId: 'iso_synth_2', contentSha256: h });
+            // 0010 turned a duplicate claim into a claim about versions: trg_registry_duplicate_pin refuses
+            // 'duplicate' unless the row names the canonical file's ref and head version, and a write path
+            // that ignores that dies mid-transaction with SQLITE_CONSTRAINT and no reason. So the isolated
+            // chain asserts the claim lands *pinned*. `recordVersion` is what gives these rows their drive_ref,
+            // which is why the pin is available here; the state where it is not — rows carrying digests from
+            // before the promotion, refs still NULL, i.e. exactly this database between step 3 and step 5 of
+            // the plan — is asserted in _worker/tests/crm-drive-file-versions.test.mjs, where a pre-0010
+            // schema can actually be built and then grown.
             const dup = await detectAndRegisterDuplicate(db, { driveFileId: 'iso_synth_2' });
             assert.equal(dup.isDuplicate, true);
             assert.equal(dup.canonicalDriveFileId, 'iso_synth_1');
+            assert.equal(String(dup.entry?.duplicate_of_drive_ref ?? ''), await deriveDriveRef('iso_synth_1'),
+              'the pin must name the canonical file by ref, not only by drive id');
+            assert.equal(Number(dup.entry?.duplicate_of_version_seq), 1,
+              'the pin must point at a version, and version 1 is the only one this file has');
 
             await assert.rejects(() => recordInspectionSuccess(db, {
               driveFileId: 'iso_synth_1',

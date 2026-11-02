@@ -1302,15 +1302,52 @@ export async function detectAndRegisterDuplicate(db, { driveFileId, detectedAt }
 
   assertProcessingTransitionAllowed(target.processing_status, 'duplicate');
   const ts = nowIso(detectedAt);
+
+  // With 0010 applied, `processing_status = 'duplicate'` stops being a statement about two rows and becomes a
+  // statement about two *content versions*: trg_registry_duplicate_pin refuses the change unless the row names
+  // the canonical file's drive_ref and the version sequence it duplicates. This UPDATE predates that rule, so
+  // on a ledger database it died inside the trigger — mid-write, reported as SQLITE_CONSTRAINT (`code:7500`
+  // on D1), with no mention of what was missing. The pin is resolved here, from the canonical row. And when
+  // the canonical row cannot be named at all — which is exactly the state of a database where 0010 is applied
+  // and the ref bootstrap has not run, drive_ref NULL and head_version_seq 0 in every row — the claim is
+  // refused with a code that says so, leaving the row where it was. Nothing about the trigger is relaxed: the
+  // gate here only makes the same refusal legible instead of mysterious.
+  //
+  // The two assignments are built together with the values they bind, as one fragment. The first version of
+  // this fix kept the column names in the SQL text and made only their *values* conditional (`col = col`),
+  // which read as correct and then died on a 0007 database with `no such column: duplicate_of_drive_ref` —
+  // a schema that predates the promotion must not see those identifiers at all. That is also what keeps the
+  // order in the plan possible: 0010 first, refs after, with the intake path still working in between.
+  const ledger = await hasVersionLedger(db);
+  let duplicatePinSet = '';
+  const duplicatePinValues = [];
+  if (ledger) {
+    const canonicalRow = canonicalId === cleanId
+      ? target
+      : await getRegistryEntryByDriveFileId(db, canonicalId);
+    const pinDriveRef = canonicalRow?.drive_ref ?? null;
+    const pinVersionSeq = Number(canonicalRow?.head_version_seq ?? 0);
+    if (!pinDriveRef || pinVersionSeq < 1) {
+      throw new DriveRegistryError(
+        'DUPLICATE_PIN_UNAVAILABLE',
+        `the canonical file ${canonicalId} carries no drive_ref/head_version yet, so this duplicate claim cannot be pinned to a version; the ref bootstrap must run first`,
+      );
+    }
+    duplicatePinSet = `
+        duplicate_of_drive_ref = ?,
+        duplicate_of_version_seq = ?,`;
+    duplicatePinValues.push(pinDriveRef, pinVersionSeq);
+  }
+
   await db.prepare(`
     UPDATE ${REGISTRY_TABLE}
     SET processing_status = 'duplicate',
-        duplicate_of_file_id = ?,
+        duplicate_of_file_id = ?,${duplicatePinSet}
         error_code = NULL,
         error_message = NULL,
         updated_at = ?
     WHERE drive_file_id = ?
-  `).bind(canonicalId, ts, cleanId).run();
+  `).bind(canonicalId, ...duplicatePinValues, ts, cleanId).run();
 
   const updated = await getRegistryEntryByDriveFileId(db, cleanId);
   return {
