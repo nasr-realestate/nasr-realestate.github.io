@@ -1,0 +1,793 @@
+name: CRM Phase 2 Full Backup and Isolated Restore Verification
+
+on:
+  push:
+    branches:
+      - arena/1c171b6c-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-phase2-backup.yml
+  workflow_dispatch:
+    inputs:
+      backup_suffix:
+        description: 'Name suffix for the NEW backup DB (nasr-crm-test-db-backup-NNNNNNNN); blank = today (UTC)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-d1-test-mutex
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Full schema+data backup of nasr-crm-test-db and isolated restore test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    outputs:
+      result: ${{ steps.run_backup.outputs.result }}
+      ts_utc: ${{ steps.run_backup.outputs.ts_utc }}
+      ts_cairo: ${{ steps.run_backup.outputs.ts_cairo }}
+      new_bak_uuid: ${{ steps.run_backup.outputs.new_bak_uuid }}
+      new_bak_name: ${{ steps.run_backup.outputs.new_bak_name }}
+      new_bak_d1_meta: ${{ steps.run_backup.outputs.new_bak_d1_meta }}
+      tt_bookmark: ${{ steps.run_backup.outputs.tt_bookmark }}
+      bundle_bytes: ${{ steps.run_backup.outputs.bundle_bytes }}
+      bundle_sha256: ${{ steps.run_backup.outputs.bundle_sha256 }}
+      raw_bytes: ${{ steps.run_backup.outputs.raw_bytes }}
+      raw_sha256: ${{ steps.run_backup.outputs.raw_sha256 }}
+      schema_summary: ${{ steps.run_backup.outputs.schema_summary }}
+      idx_part1: ${{ steps.run_backup.outputs.idx_part1 }}
+      idx_part2: ${{ steps.run_backup.outputs.idx_part2 }}
+      counts_part1: ${{ steps.run_backup.outputs.counts_part1 }}
+      counts_part2: ${{ steps.run_backup.outputs.counts_part2 }}
+      restore_summary: ${{ steps.run_backup.outputs.restore_summary }}
+      guards_summary: ${{ steps.run_backup.outputs.guards_summary }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Export full schema+data, create persistent D1 backup, and test isolated restore
+        id: run_backup
+        shell: bash
+        # Deliberately via `env`, not inline in the script: a workflow property that holds an expression is
+        # expression-rendered and capped at 21,000 characters, and this script is longer than that. Run
+        # 41517416869 was refused with "Exceeded max expression length 21000" for exactly this reason.
+        # Every long job in this repo (p3, p4, test-deploy) already passes secrets and inputs through `env`.
+        # Guarded by _worker/tests/crm-workflow-expression-limits.test.mjs.
+        env:
+          BACKUP_SUFFIX: ${{ github.event.inputs.backup_suffix }}
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TEST_DB_NAME='nasr-crm-test-db'
+          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
+          OLD_BACKUP_NAME='nasr-crm-test-db-backup-20261030'
+          EPHEM_RESTORE_NAME='nasr-crm-ephem-restore-chk'
+          WRANGLER_CFG='_worker/wrangler.crm.toml'
+          TMP=$(mktemp -d)
+          # The suffix is an input so a migration session can take its OWN dated copy. The name is never
+          # reused: `new-backup-db-name-already-exists-refusing-overwrite` below is a hard refusal, and a
+          # backup that silently overwrites another backup is not a backup. Digits only, so a dispatch
+          # cannot smuggle a name (or a shell metacharacter) into the API call or the bundle path.
+          backup_suffix="$BACKUP_SUFFIX"
+          if [ -z "$backup_suffix" ]; then backup_suffix=$(date -u +%Y%m%d); fi
+          case "$backup_suffix" in
+            ''|*[!0-9]*)
+              echo "::error::backup_suffix must be digits only (a UTC date like 20261103); got a value that is not"
+              exit 1
+              ;;
+          esac
+          if [ "${#backup_suffix}" -lt 8 ]; then
+            echo "::error::backup_suffix must be at least 8 digits so the copy is dated, not labelled at whim"
+            exit 1
+          fi
+          NEW_BACKUP_NAME="nasr-crm-test-db-backup-$backup_suffix"
+          BUNDLE_SQL="$TMP/$NEW_BACKUP_NAME.sql"
+          ephem_uuid=''
+          account_id=''
+          AUTH=''
+
+          result='not-run'
+          ts_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ts_cairo=$(TZ=Africa/Cairo date +%Y-%m-%d_%H:%M:%S_%Z)
+          new_bak_uuid='none'
+          new_bak_d1_meta='none'
+          tt_bookmark='none'
+          bundle_bytes='0'
+          bundle_sha256='none'
+          raw_bytes='0'
+          raw_sha256='none'
+          schema_summary='none'
+          idx_part1='none'
+          idx_part2='none'
+          counts_part1='none'
+          counts_part2='none'
+          restore_summary='none'
+          guards_summary='none'
+          finished='no'
+
+          finish() {
+            finished='yes'
+            {
+              printf 'result=%s\n' "$result"
+              printf 'ts_utc=%s\n' "$ts_utc"
+              printf 'ts_cairo=%s\n' "$ts_cairo"
+              printf 'new_bak_uuid=%s\n' "$new_bak_uuid"
+              printf 'new_bak_name=%s\n' "$NEW_BACKUP_NAME"
+              printf 'new_bak_d1_meta=%s\n' "$new_bak_d1_meta"
+              printf 'tt_bookmark=%s\n' "$tt_bookmark"
+              printf 'bundle_bytes=%s\n' "$bundle_bytes"
+              printf 'bundle_sha256=%s\n' "$bundle_sha256"
+              printf 'raw_bytes=%s\n' "$raw_bytes"
+              printf 'raw_sha256=%s\n' "$raw_sha256"
+              printf 'schema_summary=%s\n' "$schema_summary"
+              printf 'idx_part1=%s\n' "$idx_part1"
+              printf 'idx_part2=%s\n' "$idx_part2"
+              printf 'counts_part1=%s\n' "$counts_part1"
+              printf 'counts_part2=%s\n' "$counts_part2"
+              printf 'restore_summary=%s\n' "$restore_summary"
+              printf 'guards_summary=%s\n' "$guards_summary"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          cleanup_all() {
+            if [ -n "$ephem_uuid" ] && [ -n "$account_id" ] && [ -n "$AUTH" ]; then
+              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" \
+                "$API/accounts/$account_id/d1/database/$ephem_uuid" >/dev/null 2>&1 || true
+            fi
+            if [ "$finished" != 'yes' ]; then
+              result="unexpected-exit-at-stage-${stage:-none}"
+              finish
+            fi
+            rm -rf "$TMP"
+          }
+          trap cleanup_all EXIT
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            result='missing-cloudflare-token'
+            finish
+            exit 1
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+
+          # Strict static guard: wrangler.crm.toml must point ONLY to nasr-crm-test-db
+          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq 'nasr-market-db' "$WRANGLER_CFG"; then
+            result='forbidden-market-db-in-config'
+            finish
+            exit 1
+          fi
+          if ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
+            result='test-db-uuid-mismatch'
+            finish
+            exit 1
+          fi
+
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != '200' ]; then
+            result="accounts-http-$status"
+            finish
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
+          if [ -z "$account_id" ]; then
+            result='empty-account-id'
+            finish
+            exit 1
+          fi
+          echo "::add-mask::${account_id}"
+          export CLOUDFLARE_ACCOUNT_ID="$account_id"
+
+          # Pre-snapshot of Cloudflare D1 inventory (read-only metadata check)
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1_pre.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != '200' ]; then
+            result="d1-list-pre-http-$status"
+            finish
+            exit 1
+          fi
+          if ! jq -e --arg id "$TEST_DB_UUID" '.result[] | select(.name == "nasr-crm-test-db" and .uuid == $id)' "$TMP/d1_pre.json" >/dev/null; then
+            result='nasr-crm-test-db-not-verified'
+            finish
+            exit 1
+          fi
+
+          market_pre=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
+          old_bak_uuid=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
+          old_bak_pre_meta=$(jq -r --arg bn "$OLD_BACKUP_NAME" '.result[] | select(.name == $bn) | "\(.file_size // 0)"' "$TMP/d1_pre.json" | head -n1)
+          if [ -z "$old_bak_uuid" ]; then
+            result='old-backup-20261030-missing'
+            finish
+            exit 1
+          fi
+
+          write_toml() {
+            printf 'name = "%s"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\n' "$1" "$2" "$3" > "$4"
+          }
+
+          # Read-only check of old backup counts before any operation
+          write_toml "ro-old-bak" "$OLD_BACKUP_NAME" "$old_bak_uuid" "$TMP/old_bak.toml"
+          npx --yes wrangler@4 d1 execute "$OLD_BACKUP_NAME" --remote --json --config "$TMP/old_bak.toml" \
+            --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/old_pre_cnt.json" 2>/dev/null
+          old_pre_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/old_pre_cnt.json" | head -n1)
+
+          # Record Time Travel bookmark on nasr-crm-test-db (read-only)
+          stage='time-travel'
+          npx --yes wrangler@4 d1 time-travel info "$TEST_DB_NAME" --config "$WRANGLER_CFG" --json > "$TMP/tt.json" 2>/dev/null || true
+          tt_bookmark=$(jq -r '.bookmark // "available"' "$TMP/tt.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-80 || true)
+          [ -z "$tt_bookmark" ] && tt_bookmark='available'
+
+          # Export full raw SQL, schema-only SQL, data-only SQL, and d1_migrations from nasr-crm-test-db (READ-ONLY)
+          ts_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ts_cairo=$(TZ=Africa/Cairo date +%Y-%m-%d_%H:%M:%S_%Z)
+
+          stage='export-raw'
+          npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" --output "$TMP/raw-export.sql" > "$TMP/exp_raw.log" 2>&1
+          npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/schema-export.sql" > "$TMP/exp_sch.log" 2>&1
+          npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/data-export.sql" > "$TMP/exp_dat.log" 2>&1
+          npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --json --config "$WRANGLER_CFG" \
+            --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/live_migs.json" 2>/dev/null
+          npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --json --config "$WRANGLER_CFG" \
+            --command "SELECT type, name, tbl_name, CASE WHEN sql IS NULL THEN 1 ELSE 0 END AS is_auto FROM sqlite_schema WHERE name NOT LIKE '_cf_%' AND name != 'sqlite_sequence' ORDER BY type DESC, name ASC;" > "$TMP/live_schema_objs.json" 2>/dev/null
+
+          raw_bytes=$(wc -c < "$TMP/raw-export.sql" | tr -d '[:space:]')
+          raw_sha256=$(sha256sum "$TMP/raw-export.sql" | awk '{print $1}')
+
+          # Build topological restorable SQL backup bundle + run Local Isolated SQLite Restore Test
+          cat << 'EOF_NODE' > "$TMP/build_and_verify.mjs"
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          import { DatabaseSync } from 'node:sqlite';
+
+          const [mode, schemaPath, dataPath, migsJsonPath, outSqlPath, outMetaPath, expectedMetaPath] = process.argv.slice(2);
+
+          function stripInternalSql(sqlText) {
+            return sqlText
+              .split('\n')
+              .filter(line => !/^(CREATE\s+TABLE|INSERT\s+INTO|DELETE\s+FROM)\s+["`']?(?:_cf_|sqlite_sequence)/i.test(line.trim()))
+              .join('\n');
+          }
+
+          function extractMigs(rawJson) {
+            const rows = [];
+            const walk = x => {
+              if (!x || typeof x !== 'object') return;
+              if (Array.isArray(x)) { x.forEach(walk); return; }
+              if (typeof x.name === 'string' && x.name.endsWith('.sql') && ('id' in x)) {
+                rows.push({ id: Number(x.id), name: String(x.name), applied_at: String(x.applied_at || '') });
+                return;
+              }
+              Object.values(x).forEach(walk);
+            };
+            walk(rawJson);
+            const seen = new Set();
+            return rows.filter(r => { if (seen.has(r.name)) return false; seen.add(r.name); return true; }).sort((a, b) => a.id - b.id);
+          }
+
+          function sqlLiteral(v) {
+            if (v === null || v === undefined) return 'NULL';
+            if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
+            if (typeof v === 'bigint') return v.toString();
+            if (v instanceof Uint8Array || Buffer.isBuffer(v)) return `X'${Buffer.from(v).toString('hex')}'`;
+            return `'${String(v).replaceAll("'", "''")}'`;
+          }
+
+          function computeDbSnapshot(db) {
+            const intg = db.prepare('PRAGMA integrity_check').all();
+            const fkc = db.prepare('PRAGMA foreign_key_check').all();
+            if (intg.length !== 1 || intg[0].integrity_check !== 'ok') {
+              throw new Error('SQLite integrity_check failed: ' + JSON.stringify(intg));
+            }
+            if (fkc.length !== 0) {
+              throw new Error('SQLite foreign_key_check failed with violations: ' + fkc.length);
+            }
+            const tables = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name ASC").all();
+            const expIndexes = db.prepare("SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL AND name NOT LIKE '_cf_%' ORDER BY name ASC").all();
+            const autoIndexes = db.prepare("SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND sql IS NULL AND name NOT LIKE 'sqlite_autoindex__cf_%' ORDER BY name ASC").all();
+
+            const tableStats = {};
+            let fkTotal = 0;
+            let checkTables = 0;
+            for (const t of tables) {
+              const fks = db.prepare(`PRAGMA foreign_key_list("${t.name}")`).all();
+              fkTotal += fks.length;
+              if (/\bCHECK\s*\(/i.test(t.sql || '')) checkTables += 1;
+              const cols = db.prepare(`PRAGMA table_info("${t.name}")`).all().map(c => c.name);
+              const orderCols = cols.map(c => `"${c}"`).join(', ');
+              const rows = db.prepare(`SELECT * FROM "${t.name}" ORDER BY ${orderCols}`).all();
+              const h = crypto.createHash('sha256');
+              h.update(JSON.stringify(cols) + '\n');
+              for (const r of rows) {
+                h.update(JSON.stringify(cols.map(c => r[c])) + '\n');
+              }
+              tableStats[t.name] = { count: rows.length, digest: h.digest('hex') };
+            }
+            return {
+              tableCount: tables.length,
+              tables: tables.map(t => ({ name: t.name, sql: t.sql })),
+              expIndexes: expIndexes.map(i => ({ name: i.name, tbl_name: i.tbl_name, sql: i.sql })),
+              autoIndexCount: autoIndexes.length,
+              fkTotal,
+              checkTables,
+              tableStats,
+            };
+          }
+
+          const cleanSchema = stripInternalSql(fs.readFileSync(schemaPath, 'utf8'));
+          const cleanData = stripInternalSql(fs.readFileSync(dataPath, 'utf8'));
+          const migRows = extractMigs(JSON.parse(fs.readFileSync(migsJsonPath, 'utf8')));
+
+          const srcDb = new DatabaseSync(':memory:');
+          srcDb.exec('PRAGMA foreign_keys = OFF;\n' + cleanSchema + '\n' + cleanData);
+          srcDb.exec('CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);');
+          const insMig = srcDb.prepare('INSERT OR IGNORE INTO d1_migrations(id, name, applied_at) VALUES (?, ?, ?)');
+          for (const m of migRows) insMig.run(m.id, m.name, m.applied_at);
+          srcDb.exec('PRAGMA foreign_keys = ON;');
+
+          const srcSnap = computeDbSnapshot(srcDb);
+
+          // Insertion order used to be a hand-written list, which is how a backup quietly rots: every
+          // migration that adds a foreign key adds an ordering requirement nobody remembered, and the first
+          // child table that happens to sort before its parent makes the bundle unrestorable on any engine
+          // that enforces keys. That is exactly what happened after the crm_drive_* tables arrived — run
+          // 41518627139 (`FOREIGN KEY constraint failed`) on data that the source-side `foreign_key_check`
+          // called clean. So the order is COMPUTED from the schema's own `PRAGMA foreign_key_list`, and the
+          // old list survives only as a tie-break, so intentions like "d1_migrations first" are kept.
+          //
+          // A cycle cannot be ordered by definition. The one edge the bundle already defers by hand (see
+          // `deferredConvUpdates` below) is therefore removed from the graph before sorting; any OTHER
+          // backwards edge left at the end is a hard stop that names it, instead of a silently NULL column.
+          const TOPO = [
+            'sources', 'areas', 'listings', 'd1_migrations',
+            'crm_contacts', 'crm_contact_phones', 'crm_contact_audit_log',
+            'crm_sessions', 'crm_auth_attempts',
+            'crm_push_subscriptions', 'crm_push_notifications_log',
+            'crm_idempotency_receipts',
+            'crm_conversations', 'crm_opportunities',
+            'crm_conversation_messages', 'crm_conversation_insights',
+            'crm_activities', 'crm_opportunity_properties', 'crm_smart_alerts',
+          ];
+          const DEFERRED_EDGES = [{ table: 'crm_conversations', column: 'opportunity_id' }];
+          const allNames = srcSnap.tables.map(t => t.name);
+          const fkEdges = [];
+          for (const tName of allNames) {
+            for (const fk of srcDb.prepare(`PRAGMA foreign_key_list("${tName}")`).all()) {
+              const parent = String(fk.table);
+              if (parent === tName || !allNames.includes(parent)) continue;
+              fkEdges.push({ child: tName, parent, column: String(fk.from ?? '') });
+            }
+          }
+          const deferredKeys = new Set(DEFERRED_EDGES.map(e => `${e.table}.${e.column}`));
+          for (const e of fkEdges) e.deferred = deferredKeys.has(`${e.child}.${e.column}`);
+          const deps = new Map(allNames.map(n => [n, new Set()]));
+          for (const e of fkEdges) if (!e.deferred) deps.get(e.child).add(e.parent);
+          const rankOf = n => { const i = TOPO.indexOf(n); return i >= 0 ? i : TOPO.length + allNames.indexOf(n); };
+          const orderedNames = [];
+          const placed = new Set();
+          const rest = new Set(allNames);
+          while (rest.size > 0) {
+            const ready = [...rest]
+              .filter(t => [...deps.get(t)].every(p => placed.has(p)))
+              .sort((a, b) => (rankOf(a) - rankOf(b)) || (a < b ? -1 : 1));
+            const pick = ready.length > 0 ? ready[0]
+              : [...rest].sort((a, b) => (rankOf(a) - rankOf(b)) || (a < b ? -1 : 1))[0];
+            orderedNames.push(pick);
+            placed.add(pick);
+            rest.delete(pick);
+          }
+          const orderPos = new Map(orderedNames.map((n, i) => [n, i]));
+          const unresolvedEdges = fkEdges
+            .filter(e => !e.deferred && orderPos.get(e.child) < orderPos.get(e.parent))
+            .map(e => `${e.child}.${e.column}->${e.parent}`);
+          if (unresolvedEdges.length > 0) {
+            throw new Error(`UNORDERABLE_FOREIGN_KEY_EDGES: ${unresolvedEdges.slice(0, 8).join(' ')}`);
+          }
+          const tableSqlMap = new Map(srcSnap.tables.map(t => [t.name, t.sql]));
+
+          const outLines = [
+            '-- Nasr City CRM Full Schema + Data Restorable Backup',
+            `-- Mode: ${mode}`,
+            `-- Tables: ${orderedNames.length}, Explicit Indexes: ${srcSnap.expIndexes.length}`,
+          ];
+          for (const tName of orderedNames) {
+            const rawCreate = tableSqlMap.get(tName).trim().replace(/;$/, '')
+              .replace(/^CREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS\b)/i, 'CREATE TABLE IF NOT EXISTS ');
+            outLines.push(`${rawCreate};`);
+          }
+          for (const idx of srcSnap.expIndexes) {
+            const rawIdx = idx.sql.trim().replace(/;$/, '')
+              .replace(/^CREATE\s+(UNIQUE\s+)?INDEX\s+(?!IF\s+NOT\s+EXISTS\b)/i, 'CREATE $1INDEX IF NOT EXISTS ');
+            outLines.push(`${rawIdx};`);
+          }
+
+          const deferredConvUpdates = [];
+          for (const tName of orderedNames) {
+            const cols = srcDb.prepare(`PRAGMA table_info("${tName}")`).all().map(c => c.name);
+            const colList = cols.map(c => `"${c}"`).join(', ');
+            const orderCols = cols.map(c => `"${c}"`).join(', ');
+            const rows = srcDb.prepare(`SELECT * FROM "${tName}" ORDER BY ${orderCols}`).all();
+            const insVerb = tName === 'd1_migrations' ? 'INSERT OR IGNORE INTO' : 'INSERT INTO';
+            for (const r of rows) {
+              const vals = cols.map(c => {
+                if (tName === 'crm_conversations' && c === 'opportunity_id' && r[c] !== null && r[c] !== undefined) {
+                  deferredConvUpdates.push(`UPDATE "crm_conversations" SET "opportunity_id" = ${sqlLiteral(r[c])} WHERE "id" = ${sqlLiteral(r.id)};`);
+                  return 'NULL';
+                }
+                return sqlLiteral(r[c]);
+              });
+              outLines.push(`${insVerb} "${tName}" (${colList}) VALUES (${vals.join(', ')});`);
+            }
+            if (tName === 'crm_opportunities' && deferredConvUpdates.length > 0) {
+              outLines.push(...deferredConvUpdates);
+              deferredConvUpdates.length = 0;
+            }
+          }
+          if (deferredConvUpdates.length > 0) outLines.push(...deferredConvUpdates);
+
+          const bundleText = outLines.join('\n') + '\n';
+          fs.writeFileSync(outSqlPath, bundleText, { mode: 0o600 });
+
+          // The invariant that matters about a restore is: once the whole bundle is in, no declared foreign
+          // key is unsatisfied. Enforcing FKs *during* the load — the previous behaviour, "from the start" —
+          // silently demanded that the dump be in topological order, and a per-table export never is:
+          // `crm_contacts` is inserted before `crm_leads`, so a perfectly healthy database failed with
+          // `FOREIGN KEY constraint failed` (run 41518627139, after the test DB grew past the point where an
+          // alphabetically-early child table had a parent that sorts later). It was also the wrong check in the
+          // other direction: a violation whose rows happened to sort last would have passed.
+          //
+          // `defer_foreign_keys` inside one transaction keeps the enforcement — SQLite fails the COMMIT if a
+          // deferred constraint is still unsatisfied — and makes it independent of insert order, for every FK
+          // including the ones 0010 and 0011 add, not only the one column the hand-written
+          // `deferredConvUpdates` INSERT-NULL-then-UPDATE dance used to work around. That workaround stays:
+          // it is about what the bundle does when *D1* applies it, which is a different question from what this
+          // verifier asserts.
+          const localRestoreDb = new DatabaseSync(':memory:');
+          localRestoreDb.exec('PRAGMA foreign_keys = ON; BEGIN; PRAGMA defer_foreign_keys = ON;');
+          localRestoreDb.exec(bundleText);
+          localRestoreDb.exec('COMMIT;');
+          const restoreFkc = localRestoreDb.prepare('PRAGMA foreign_key_check').all();
+          if (restoreFkc.length > 0) {
+            const offenders = [...new Set(restoreFkc.map(r => String(r.table)))].sort().join(' ');
+            throw new Error(`Restored database has ${restoreFkc.length} foreign-key violation(s): ${offenders}`);
+          }
+          const restoreIntegrity = localRestoreDb.prepare('PRAGMA integrity_check').all();
+          if (restoreIntegrity.length !== 1 || restoreIntegrity[0].integrity_check !== 'ok') {
+            throw new Error('Restored database failed integrity_check');
+          }
+          const restoreSnap = computeDbSnapshot(localRestoreDb);
+
+          for (const tName of orderedNames) {
+            const a = srcSnap.tableStats[tName];
+            const b = restoreSnap.tableStats[tName];
+            if (!b || a.count !== b.count || a.digest !== b.digest) {
+              throw new Error(`Local restore mismatch on ${tName}`);
+            }
+          }
+
+          if (expectedMetaPath) {
+            const exp = JSON.parse(fs.readFileSync(expectedMetaPath, 'utf8'));
+            if (exp.tableCount !== restoreSnap.tableCount || exp.expIndexes.length !== restoreSnap.expIndexes.length) {
+              throw new Error('Roundtrip table/index count mismatch against source');
+            }
+            for (const [tName, st] of Object.entries(exp.tableStats)) {
+              const cur = restoreSnap.tableStats[tName];
+              if (!cur || cur.count !== st.count || cur.digest !== st.digest) {
+                throw new Error(`Roundtrip digest mismatch against source on ${tName}`);
+              }
+            }
+          }
+
+          fs.writeFileSync(outMetaPath, JSON.stringify({
+            orderedNames,
+            tableCount: srcSnap.tableCount,
+            crmTableCount: orderedNames.filter(n => n.startsWith('crm_')).length,
+            expIndexes: srcSnap.expIndexes.map(i => i.name),
+            autoIndexCount: srcSnap.autoIndexCount,
+            fkTotal: srcSnap.fkTotal,
+            checkTables: srcSnap.checkTables,
+            tableStats: srcSnap.tableStats,
+          }, null, 2), { mode: 0o600 });
+          EOF_NODE
+
+          # The builder's own errors are about counts and table names — schema, not customer data — but they land
+          # in a $TMP log nobody can reach: Actions serves logs from a host this sandbox cannot resolve, and
+          # `gh run view --log` returns nothing at all. Without this, a run that dies inside the builder reports
+          # `unexpected-exit-line-82` — the line number of its own EXIT trap, a constant that tells nobody
+          # anything. So the reason is harvested, reduced to identifiers and counts, and published in a check
+          # name, which is the only channel this repository's CI has that a human can read.
+          run_builder() {
+            mode="$1"; shift
+            if ! node "$TMP/build_and_verify.mjs" "$mode" "$@" > "$TMP/build-$mode.log" 2>&1; then
+              why=$(sed -n 's/^Error: //p' "$TMP/build-$mode.log" | head -n1 | tr -cd 'A-Za-z0-9_:.() -' | cut -c1-90)
+              [ -n "$why" ] || why='no-Error-line'
+              result="build-$mode-failed:$why"
+              finish
+              exit 1
+            fi
+          }
+
+          stage='build-bundle'
+          run_builder "primary-backup" \
+            "$TMP/schema-export.sql" "$TMP/data-export.sql" "$TMP/live_migs.json" \
+            "$BUNDLE_SQL" "$TMP/source_meta.json" ""
+
+          bundle_bytes=$(wc -c < "$BUNDLE_SQL" | tr -d '[:space:]')
+          bundle_sha256=$(sha256sum "$BUNDLE_SQL" | awk '{print $1}')
+
+          schema_summary=$(node -e '
+            const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            const totRows = Object.values(m.tableStats).reduce((s, x) => s + x.count, 0);
+            process.stdout.write(`tbls=${m.tableCount}(crm=${m.crmTableCount}),expIdx=${m.expIndexes.length},autoUqIdx=${m.autoIndexCount},fk=${m.fkTotal},chkTbls=${m.checkTables},totRows=${totRows}`);
+          ' "$TMP/source_meta.json")
+
+          idx_part1=$(node -e '
+            const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            process.stdout.write(m.expIndexes.slice(0, 9).join(","));
+          ' "$TMP/source_meta.json")
+          idx_part2=$(node -e '
+            const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            process.stdout.write(m.expIndexes.slice(9).join(","));
+          ' "$TMP/source_meta.json")
+
+          counts_part1=$(node -e '
+            const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            process.stdout.write(m.orderedNames.slice(0, 10).map(n => `${n}=${m.tableStats[n].count}`).join(","));
+          ' "$TMP/source_meta.json")
+          counts_part2=$(node -e '
+            const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            process.stdout.write(m.orderedNames.slice(10).map(n => `${n}=${m.tableStats[n].count}`).join(","));
+          ' "$TMP/source_meta.json")
+
+          # Create the persistent isolated backup D1 database (one dated copy, never an overwrite)
+          stage='create-backup-db'
+          existing_new_uuid=$(jq -r --arg bn "$NEW_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
+          new_bak_uuid=''
+          reused_empty_backup_db='no'
+          if [ -n "$existing_new_uuid" ]; then
+            write_toml "phase2-existing-backup-probe" "$NEW_BACKUP_NAME" "$existing_new_uuid" "$TMP/probe.toml"
+            # A dated copy that already exists is a refusal: a backup that silently overwrites another backup
+            # is not a backup. The one exception is the husk this workflow leaves behind when a run creates
+            # the database and then dies while loading it — and a push cannot pick another name, because the
+            # suffix is today's date and `workflow_dispatch` is not reachable with this token, so without the
+            # exception the dated path would be permanently jammed by its own failed attempt. Emptiness is
+            # the test, counted inside the database (`sqlite_master` objects, over the D1 execute path this job
+            # already uses) — the list payload omits the field, and a `tbls=0` that means "not reported" is worse
+            # than no number at all.
+            npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --json --config "$TMP/probe.toml" \
+              --command "SELECT COUNT(*) AS c FROM sqlite_master WHERE type IN ('table','view','trigger','index');" \
+              > "$TMP/existing_new_meta.json" 2>/dev/null || true
+            existing_tables=$(jq -r '.. | objects | select(has("c")) | .c' "$TMP/existing_new_meta.json" 2>/dev/null | head -n1)
+            # `<= 1`, not `== 0`: a database that ever received a Phase 2 bundle holds at least 100
+            # objects (33 tables + 46 indexes + triggers + views), while a fresh D1 database carries one
+            # scaffolding row in sqlite_master. Anything between those is a partially loaded copy that a
+            # dead run left mid-import, and the bundle is written with `CREATE TABLE IF NOT EXISTS` plus
+            # plain INSERTs — reloading that would double the data, so it stays a refusal.
+            if [ "${existing_tables:-999}" -le 1 ] 2>/dev/null; then
+              new_bak_uuid="$existing_new_uuid"
+              reused_empty_backup_db='yes'
+            else
+              result="new-backup-db-name-already-exists-refusing-overwrite(objs=${existing_tables:-unreadable})"
+              finish
+              exit 1
+            fi
+          fi
+
+          if [ -z "$new_bak_uuid" ]; then
+          c_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" \
+            -H 'Content-Type: application/json' --data "{\"name\":\"$NEW_BACKUP_NAME\"}" \
+            -o "$TMP/create_new_bak.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
+          if [ "$c_status" != '200' ]; then
+            result="create-new-backup-http-$c_status"
+            finish
+            exit 1
+          fi
+          new_bak_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_new_bak.json")
+          if [ -z "$new_bak_uuid" ]; then
+            result='create-new-backup-missing-uuid'
+            finish
+            exit 1
+          fi
+          fi
+
+          write_toml "phase2-new-backup-loader" "$NEW_BACKUP_NAME" "$new_bak_uuid" "$TMP/new_bak.toml"
+          if ! npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --config "$TMP/new_bak.toml" \
+            --file "$BUNDLE_SQL" > "$TMP/new_bak_import.log" 2>&1; then
+            # wrangler echoes the statements it is applying, and those rows are customer data: the log is
+            # never printed, not even its last line. Only an error CLASS is published, matched against an
+            # allowlist of constraint names, so the reason can reach a check name without the statement.
+            why=$(grep -oE 'SQLITE_CONSTRAINT[A-Z_]*|FOREIGN KEY constraint failed|UNIQUE constraint failed|NOT NULL constraint failed|CHECK constraint failed|no such table [A-Za-z0-9_]+|already exists' "$TMP/new_bak_import.log" | sort -u | head -n1)
+            [ -n "$why" ] || why='unclassified-see-import-exit-code'
+            result="new-backup-d1-import-failed:$why"
+            finish
+            exit 1
+          fi
+
+          # Verify saved backup D1 database by re-exporting it and checking full digest parity
+          npx --yes wrangler@4 d1 export "$NEW_BACKUP_NAME" --remote --no-data --config "$TMP/new_bak.toml" --output "$TMP/bak-sch.sql" > "$TMP/b1.log" 2>&1
+          npx --yes wrangler@4 d1 export "$NEW_BACKUP_NAME" --remote --no-schema --config "$TMP/new_bak.toml" --output "$TMP/bak-dat.sql" > "$TMP/b2.log" 2>&1
+          npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --json --config "$TMP/new_bak.toml" \
+            --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/bak_migs.json" 2>/dev/null
+
+          stage='verify-new-backup'
+          run_builder "verify-saved-backup" \
+            "$TMP/bak-sch.sql" "$TMP/bak-dat.sql" "$TMP/bak_migs.json" \
+            "$TMP/roundtrip-from-backup.sql" "$TMP/bak_meta.json" "$TMP/source_meta.json"
+
+          # Isolated Remote Cloudflare D1 Restore Test (into separate ephemeral D1 DB, never touching source or backup)
+          old_ephem=$(jq -r --arg en "$EPHEM_RESTORE_NAME" '.result[] | select(.name == $en) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
+          if [ -n "$old_ephem" ]; then
+            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" \
+              "$API/accounts/$account_id/d1/database/$old_ephem" >/dev/null 2>&1 || true
+          fi
+
+          e_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" \
+            -H 'Content-Type: application/json' --data "{\"name\":\"$EPHEM_RESTORE_NAME\"}" \
+            -o "$TMP/create_ephem.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
+          if [ "$e_status" != '200' ]; then
+            result="create-ephem-restore-db-http-$e_status"
+            finish
+            exit 1
+          fi
+          ephem_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_ephem.json")
+          ephem_uuid8="${ephem_uuid:0:8}"
+          write_toml "phase2-ephem-restore-verifier" "$EPHEM_RESTORE_NAME" "$ephem_uuid" "$TMP/ephem.toml"
+
+          if ! npx --yes wrangler@4 d1 execute "$EPHEM_RESTORE_NAME" --remote --config "$TMP/ephem.toml" \
+            --file "$TMP/roundtrip-from-backup.sql" > "$TMP/ephem_import.log" 2>&1; then
+            result='ephem-restore-d1-import-failed'
+            finish
+            exit 1
+          fi
+
+          # Export back from ephemeral restored D1 DB and assert 100% digest parity across all 19 tables
+          npx --yes wrangler@4 d1 export "$EPHEM_RESTORE_NAME" --remote --no-data --config "$TMP/ephem.toml" --output "$TMP/eph-sch.sql" > "$TMP/e1.log" 2>&1
+          npx --yes wrangler@4 d1 export "$EPHEM_RESTORE_NAME" --remote --no-schema --config "$TMP/ephem.toml" --output "$TMP/eph-dat.sql" > "$TMP/e2.log" 2>&1
+          npx --yes wrangler@4 d1 execute "$EPHEM_RESTORE_NAME" --remote --json --config "$TMP/ephem.toml" \
+            --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/eph_migs.json" 2>/dev/null
+
+          stage='verify-ephem-restore'
+          run_builder "verify-ephem-d1-restore" \
+            "$TMP/eph-sch.sql" "$TMP/eph-dat.sql" "$TMP/eph_migs.json" \
+            "$TMP/eph-out.sql" "$TMP/eph_meta.json" "$TMP/source_meta.json"
+
+          # Clean up ONLY the ephemeral scratch restore-test DB
+          stage='delete-ephemeral'
+          del_status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" \
+            -o "$TMP/del_ephem.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database/$ephem_uuid" 2>/dev/null || true)
+          if [ "$del_status" = '200' ]; then
+            ephem_uuid=''
+            ephem_cleaned='yes'
+          else
+            ephem_cleaned="http-$del_status"
+          fi
+
+          # Final post-check of all D1 databases (source unmodified, new backup intact, old backup untouched, market DB untouched)
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1_post.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != '200' ]; then
+            result="d1-list-post-http-$status"
+            finish
+            exit 1
+          fi
+
+          new_bak_d1_meta=$(jq -r --arg id "$new_bak_uuid" '.result[] | select(.uuid == $id) | "size=\(.file_size // 0):reused=${reused_empty_backup_db}"' "$TMP/d1_post.json" | head -n1)
+          market_post=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
+          old_bak_post_meta=$(jq -r --arg id "$old_bak_uuid" '.result[] | select(.uuid == $id) | "\(.file_size // 0)"' "$TMP/d1_post.json" | head -n1)
+
+          npx --yes wrangler@4 d1 execute "$OLD_BACKUP_NAME" --remote --json --config "$TMP/old_bak.toml" \
+            --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/old_post_cnt.json" 2>/dev/null
+          old_post_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/old_post_cnt.json" | head -n1)
+
+          # Re-verify source nasr-crm-test-db was not mutated during backup
+          npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/post-src-sch.sql" > "$TMP/ps1.log" 2>&1
+          npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/post-src-dat.sql" > "$TMP/ps2.log" 2>&1
+          npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --json --config "$WRANGLER_CFG" \
+            --command "SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;" > "$TMP/post_src_migs.json" 2>/dev/null
+
+          stage='verify-source-intact'
+          run_builder "verify-source-unmodified" \
+            "$TMP/post-src-sch.sql" "$TMP/post-src-dat.sql" "$TMP/post_src_migs.json" \
+            "$TMP/post-src-out.sql" "$TMP/post_src_meta.json" "$TMP/source_meta.json"
+
+          if [ "$market_pre" != "$market_post" ]; then
+            result='market-db-metadata-changed-unexpectedly'
+            finish
+            exit 1
+          fi
+          if [ "$old_bak_pre_meta" != "$old_bak_post_meta" ] || [ "$old_pre_pair" != "$old_post_pair" ]; then
+            result='old-backup-20261030-changed-unexpectedly'
+            finish
+            exit 1
+          fi
+
+          restore_summary="local_sqlite=ok(fk0,digest=100%);saved_bak_d1=ok(digest=100%);isolated_d1_restore=ok(ephem=${ephem_uuid8},digest=100%,cleaned=${ephem_cleaned})"
+          guards_summary="src_db_unmodified=yes;old_bak=${old_bak_uuid}(${old_post_pair},meta=${old_bak_post_meta},untouched=yes);market_db=untouched(${market_post})"
+          result='phase2-full-backup-and-isolated-restore-verified'
+          finish
+
+  r1-status:
+    name: 'P2 status — ${{ needs.backup.outputs.result }} | utc=${{ needs.backup.outputs.ts_utc }} | cairo=${{ needs.backup.outputs.ts_cairo }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r2-backup-db:
+    name: 'P2 backup DB — ${{ needs.backup.outputs.new_bak_name }} (${{ needs.backup.outputs.new_bak_uuid }}) | ${{ needs.backup.outputs.new_bak_d1_meta }} | tt=${{ needs.backup.outputs.tt_bookmark }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r3-bundle-sha:
+    name: 'P2 bundle SQL — bytes=${{ needs.backup.outputs.bundle_bytes }} | sha256=${{ needs.backup.outputs.bundle_sha256 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r4-raw-sha:
+    name: 'P2 raw export — bytes=${{ needs.backup.outputs.raw_bytes }} | sha256=${{ needs.backup.outputs.raw_sha256 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r5-schema:
+    name: 'P2 schema — ${{ needs.backup.outputs.schema_summary }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r6-idx-1:
+    name: 'P2 idx1 — ${{ needs.backup.outputs.idx_part1 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r7-idx-2:
+    name: 'P2 idx2 — ${{ needs.backup.outputs.idx_part2 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r8-counts-1:
+    name: 'P2 counts1 — ${{ needs.backup.outputs.counts_part1 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r9-counts-2:
+    name: 'P2 counts2 — ${{ needs.backup.outputs.counts_part2 }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r10-restore:
+    name: 'P2 restore — ${{ needs.backup.outputs.restore_summary }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  r11-guards:
+    name: 'P2 guards — ${{ needs.backup.outputs.guards_summary }}'
+    needs: backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]

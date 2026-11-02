@@ -1,0 +1,141 @@
+name: CRM Drive registry snapshot (read-only D1 read, published as a PR comment)
+
+# T1 needs the registry side of the reconciliation from the ORIGINAL source: the live
+# `crm_drive_file_registry` table in `nasr-crm-test-db`. This sandbox has no Cloudflare credential, so
+# the read is executed here instead, and the result is published as a pull-request comment that the
+# agent fetches programmatically. No human-readable transcription and no copy-paste is involved on
+# either side.
+#
+# What this workflow is allowed to do:
+#   * one SELECT, built by scripts/crm/drive-registry-snapshot.mjs (`sql` mode) and re-checked in
+#     shell, over a database resolved BY NAME (`nasr-crm-test-db`);
+#   * read `drive_file_id` solely to reproduce the join key, then drop it — the emitted rows carry
+#     `sha256("crm-p4-v1\ndrive_ref\n<id>")` refs, which is what the registry and the committed
+#     payload already use;
+#   * print counts and post the pseudonymous rows.
+# What it must never do: any INSERT/UPDATE/DELETE/DDL, any migration, any artifact upload, any
+# `file_name`/`original_file_name`/`drive_path` read, and any write to Drive or Cloudflare storage.
+# The formatter module refuses a non-SELECT statement, a forbidden column, an empty registry and any
+# output containing Arabic, an 11-digit run, an e-mail or the raw id, and its own selftest runs first.
+on:
+  push:
+    branches:
+      - arena/1c171b6c-nasr-realestate-github-io
+    paths:
+      - .github/workflows/crm-drive-registry-snapshot.yml
+      - scripts/crm/drive-registry-snapshot.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: crm-drive-registry-snapshot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    name: SELECT-only read of crm_drive_file_registry, pseudonymous result published to the PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_NO_WARNINGS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read the registry table and publish the joinable side
+        id: read
+        run: |
+          set -euo pipefail
+          umask 077
+          TMP=$(mktemp -d)
+          API='https://api.cloudflare.com/client/v4'
+          TEST_DB_NAME='nasr-crm-test-db'
+          SNAP='scripts/crm/drive-registry-snapshot.mjs'
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          # 1) the guard that will judge the output must pass before anything is read
+          node "$SNAP" selftest | tail -1
+
+          # 2) the statement is generated, then re-checked independently in shell, then never edited
+          SQL=$(node "$SNAP" sql)
+          printf '%s' "$SQL" > "$TMP/sql.txt"
+          case "$SQL" in
+            SELECT*FROM\ crm_drive_file_registry*) : ;;
+            *) echo "::error::generated sql does not look like the agreed single SELECT"; exit 1 ;;
+          esac
+          if printf '%s' "$SQL" | grep -qiE 'insert|update|delete|drop|alter|create[[:space:]]+(table|index|view|trigger)|attach|detach|pragma|vacuum|;'; then
+            echo "::error::generated sql carries a write or DDL keyword"; exit 1
+          fi
+          if printf '%s' "$SQL" | grep -qE 'file_name|original_file_name|drive_path|drive_parent_id|error_message'; then
+            echo "::error::generated sql selects a customer-facing column"; exit 1
+          fi
+
+          # 3) resolve the account, then the database BY NAME so a rename cannot silently retarget
+          http_acc=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" || true)
+          if [ "$http_acc" != '200' ]; then echo "::error::accounts-http-$http_acc"; exit 1; fi
+          account_id=$(jq -r '.result[0].id // empty' "$TMP/accounts.json")
+          if [ -z "$account_id" ]; then echo "::error::no-cloudflare-account-for-token"; exit 1; fi
+
+          http_list=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "$AUTH" -o "$TMP/d1.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database?per_page=100" || true)
+          if [ "$http_list" != '200' ]; then echo "::error::d1-list-http-$http_list"; exit 1; fi
+          db_uuid=$(jq -r --arg n "$TEST_DB_NAME" '.result[]? | select(.name == $n) | .uuid' "$TMP/d1.json" | head -n1)
+          if [ -z "$db_uuid" ]; then echo "::error::test-db-not-found-by-name"; exit 1; fi
+
+          # 4) the single read
+          jq -n --arg sql "$(cat "$TMP/sql.txt")" '{sql: $sql}' > "$TMP/req.json"
+          http_q=$(curl --silent --show-error --connect-timeout 10 --max-time 60 \
+            -X POST -H "$AUTH" -H 'Content-Type: application/json' --data-binary "@$TMP/req.json" \
+            -o "$TMP/resp.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database/$db_uuid/query" || true)
+          if [ "$http_q" != '200' ]; then echo "::error::d1-query-http-$http_q"; exit 1; fi
+          if ! jq -e '.success == true' "$TMP/resp.json" > /dev/null; then
+            echo "::error::d1-query-rejected"; exit 1
+          fi
+
+          # 5) pseudonymise + assert (refuses an empty result, a forbidden column, any personal shape)
+          node "$SNAP" format --in "$TMP/resp.json" --out "$TMP/registry.jsonl" --summary "$GITHUB_OUTPUT"
+
+          # 6) belt: no long opaque token that is not a hex digest may leave this job. mime values are
+          #    masked out first because `application/x-zip-compressed` is legitimately long and non-hex.
+          sed -E 's/"mime_type":"[^"]*"//g' "$TMP/registry.jsonl" > "$TMP/masked.jsonl"
+          if grep -oE '[0-9A-Za-z_-]{25,}' "$TMP/masked.jsonl" | grep -vE '^[0-9a-f]{64}$' | grep -q .; then
+            echo "::error::output carries a non-hex opaque token (a raw id?) — refusing to publish"; exit 1
+          fi
+          rows=$(wc -l < "$TMP/registry.jsonl" | tr -d ' ')
+          echo "registry rows published: $rows"
+
+          # 7) publish to the PR that owns this branch, and only after the guards above passed
+          PR=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number -q '.[0].number // empty')
+          if [ -z "$PR" ]; then echo "::error::no-open-pr-for-${GITHUB_REF_NAME}"; exit 1; fi
+          case "$PR" in
+            ''|*[!0-9]*) echo "::error::unexpected-pr-number-$PR"; exit 1 ;;
+          esac
+          {
+            echo "<!-- p2reg-v1 run=${{ github.run_id }} sha=${{ github.sha }} -->"
+            echo
+            echo "Read-only snapshot of \`nasr-crm-test-db.crm_drive_file_registry\` for T1."
+            echo "Statement: \`$(cat "$TMP/sql.txt")\`"
+            echo "Summary: $(grep '^summary=' "$GITHUB_OUTPUT" | tail -1)"
+            echo
+            echo '```jsonl'
+            cat "$TMP/registry.jsonl"
+            echo '```'
+          } > "$TMP/body.md"
+          gh pr comment "$PR" --body-file "$TMP/body.md"
+          echo "comment posted on PR #$PR"
+          {
+            echo "### Drive registry snapshot (read-only)"
+            echo
+            echo "- database: \`$TEST_DB_NAME\` (resolved by name), statement: \`SELECT\` only"
+            echo "- rows: \`$rows\`; join keys are \`driveRefHash\` of the stored ids, never the ids"
+            echo "- published as a PR comment so the reconciliation reads it programmatically"
+          } >> "$GITHUB_STEP_SUMMARY"
