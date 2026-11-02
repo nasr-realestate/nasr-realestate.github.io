@@ -9,13 +9,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DOCUMENTED_RECEIPT_RE, LEDGER_PROBE_SQL, evaluatePhase3Boundary, registryProvenanceSql, selftest,
+  DOCUMENTED_RECEIPT_RE, LEDGER_PROBE_SQL, evaluatePhase3Boundary, migrationProbeSql, registryProvenanceSql, selftest,
 } from '../../scripts/crm/verify-phase3-metadata-boundary.mjs';
 import {
   T0, T1, buildRegistry, newRegistryFile, oneOf, sha,
 } from './_registry-fixture.mjs';
 import {
-  recordContentHash, recordInspectionSuccess, recordVersion, syncDriveFolderMetadataInventory, upsertDriveFileMetadata,
+  deriveDriveRef, recordContentHash, recordInspectionSuccess, recordVersion, syncDriveFolderMetadataInventory,
+  upsertDriveFileMetadata,
 } from '../crm-drive-file-registry.js';
 
 const snap = (sqlite, { withLedger = false } = {}) =>
@@ -149,4 +150,80 @@ test('the receipt pattern is the documented one, not a vibe', () => {
     'phase2-bootstrap', 'verified', 'p2v:whatever', 'manual note']) {
     assert.ok(!DOCUMENTED_RECEIPT_RE.test(bad), `${bad} must not count as provenance`);
   }
+});
+
+// The migration session's read path. `.github/workflows/crm-drive-migration-session.yml` holds no SQL of its
+// own — it imports these builders — which is what makes this test the place where a bad query is found: on a
+// real schema, in memory, before a run that has one shot at a live database. A typo in a workflow literal is
+// normally discovered by the migration itself, at 03:00, against rows that cannot be un-written.
+test('every migration-session probe runs against the real schema, on both sides of the promotion', async () => {
+  const pre = buildRegistry({ ledger: false });
+  await newRegistryFile(pre.db, 'SESSION-A', { size: 1024 });
+  // wrangler owns `d1_migrations`; the fixture does not, so the table the probe reads is stubbed with the
+  // same shape. Without it the query is untestable, and "untestable" is not the same as "fine".
+  const stubMigrations = sqlite => {
+    sqlite.exec('CREATE TABLE IF NOT EXISTS d1_migrations (id INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT);');
+    sqlite.prepare('INSERT INTO d1_migrations (id, name, applied_at) VALUES (1, ?, ?)')
+      .run('0010_crm_drive_file_versions.sql', T1);
+  };
+  stubMigrations(pre.sqlite);
+  const P0 = migrationProbeSql({ withLedger: false });
+  const P1 = migrationProbeSql({ withLedger: true });
+  for (const [name, sql] of Object.entries(P0)) {
+    assert.match(String(sql).trim(), /^(?:SELECT|PRAGMA)\b/, `${name} must be a read-only statement`);
+    assert.ok(!/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|ATTACH|REPLACE)\b/i.test(String(sql).replace(/processing_status/g, '')),
+      `${name} is not a read-only statement`);
+    // `seedRows` is only ever read by the bootstrap pass, which runs after the promotion: it is asserted to
+    // fail here rather than skipped, because "the session would have stopped" is only worth saying measured.
+    // `needsBootstrap` is the opposite case — the no-ledger variant deliberately counts fingerprints instead
+    // of anchors, so a pre-promotion probe is a number, not an error.
+    if (name === 'seedRows') continue;
+    pre.sqlite.prepare(String(sql).replace(/;+$/, '')).all();
+  }
+  assert.throws(() => pre.sqlite.prepare(String(P0.seedRows).replace(/;+$/, '')).get(),
+    /no such column: drive_ref/,
+    'the seeder read must be unusable before the promotion — the anchor column does not exist yet');
+  assert.ok(!P0.needsBootstrap.includes('drive_ref'),
+    'the pre-promotion variant must not name a column that does not exist yet');
+  assert.match(P1.needsBootstrap, /drive_ref IS NULL/, 'the post-promotion variant asks the real question');
+  const counts = pre.sqlite.prepare(P0.counts).get();
+  assert.equal(Number(counts.migs), 1, 'the migration ledger is read from the table wrangler maintains');
+  assert.equal(String(counts.latest), '0010_crm_drive_file_versions.sql', 'and the newest row is the newest name');
+  assert.equal(Number(counts.rows_all), 1, 'the registry exists pre-promotion with its one row');
+  assert.equal(Number(counts.fp), 0, 'nothing is fingerprinted yet');
+  assert.equal(Number(pre.sqlite.prepare(P0.needsBootstrap).get().n), 0,
+    'without a fingerprint there is nothing to anchor, and the session must see that as a stop, not a pass');
+  const unavailable = pre.sqlite.prepare(P0.violations).get();
+  assert.deepEqual(Object.keys(unavailable).sort(),
+    ['counter_mismatches', 'dangling_heads', 'seq_gaps', 'status_without_version']);
+  for (const key of Object.keys(unavailable)) {
+    assert.equal(Number(unavailable[key]), -1,
+      `pre-0010 there is no violations view, so ${key} reports "unavailable", never an invented zero`);
+  }
+  assert.equal(Number(pre.sqlite.prepare(P0.registryHasRef).get().c), 0, 'the column is created BY 0010');
+
+
+  const post = buildRegistry({ ledger: true });
+  stubMigrations(post.sqlite);
+  const row = await newRegistryFile(post.db, 'SESSION-B', { size: 2048 });
+  await recordVersion(post.db, {
+    driveFileId: row.drive_file_id, contentSha256: sha('session bytes'), evidenceClass: 'bootstrap_backfill',
+    sizeBytes: 2048, observedBy: 'registry_bootstrap', receiptRef: 'phase2-0010-bootstrap', observedAt: T1,
+  });
+  for (const [name, sql] of Object.entries(P1)) {
+    post.sqlite.prepare(String(sql).replace(/;+$/, '')).all();
+  }
+  const health = post.sqlite.prepare(P1.anchorHealth).get();
+  assert.equal(Number(health.anchored), 1, 'the version writer projects the anchor onto the row');
+  assert.equal(Number(health.unanchored), 0, 'no fingerprint is left un-anchored');
+  assert.equal(Number(health.orphans), 0, 'and no version points at nothing');
+  assert.equal(Number(post.sqlite.prepare(P1.needsBootstrap).get().n), 0, 'the seed plan has nothing to write');
+  const viol = post.sqlite.prepare(P1.violations).get();
+  for (const key of Object.keys(viol)) assert.equal(Number(viol[key]), 0, `${key} must be zero on a whole ledger`);
+  const seed = post.sqlite.prepare(P1.seedRows).all();
+  assert.deepEqual(Object.keys(seed[0]).sort(),
+    ['content_sha256', 'drive_file_id', 'drive_ref', 'processing_status'],
+    'the seeder reads four columns and no name, path, receipt or customer field');
+  assert.equal(seed[0].drive_ref, await deriveDriveRef(row.drive_file_id),
+    'what the probe reads back is the same ref the tool would have written');
 });

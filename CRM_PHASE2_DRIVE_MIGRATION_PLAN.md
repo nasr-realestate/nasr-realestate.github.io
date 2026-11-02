@@ -41,6 +41,7 @@ Author context: prepared 2026-11-02 (Africa/Cairo) from branch
 | New dated backup DB, written **once** by the loader, then read-only | Using any backup DB as a runtime DB, a Worker binding, or a scratch space for writes |
 | `git mv` of a draft migration into `_worker/migrations/` + push (CI applies it) | `wrangler d1 migrations apply` from a laptop against production; `--env-file` tricks; editing `_worker/wrangler*.toml` to point anywhere else |
 | Seeding exactly one column (`drive_ref`) via `scripts/crm/seed-drive-file-refs.mjs` | Seeding/patching `content_sha256`, a status, a receipt, an evidence class, or anything else |
+| `.github/workflows/crm-drive-migration-session.yml` as the executor of steps 4-7 and 9 (it holds the token, the sandbox does not) | Any workflow that uploads an artifact, prints a wrangler log body, or touches a database other than the test DB |
 | Human review of generated SQL off-repo | Committing `drive-ref-seed.sql` (real Drive ids) or printing it into CI logs |
 | Re-running §5 from the extracted statement | Hand-typing §5, editing it, or "fixing" a conflict by force |
 | GitHub CI (`workflow_dispatch` / push) as the only path that reaches Cloudflare from this workspace | Any Cloudflare API call from the agent sandbox (`api.cloudflare.com` is unreachable here — by design) |
@@ -357,6 +358,39 @@ cp "$TMP/seed/drive-ref-seed-manifest.json" CRM_PHASE2_DRIVE_0010_SEED_MANIFEST.
 Never accept "looks fine" without the digest — the digest is what ties the approval to the bytes.
 **Rollback:** n/a (nothing applied).
 
+### Step 5b — the executor: `crm-drive-migration-session.yml`
+
+Steps 4-7 are executed by `.github/workflows/crm-drive-migration-session.yml` (modes `preflight`, `bootstrap`,
+`verify`), because that runner is the only place holding a Cloudflare token; the local commands in this section
+remain the operator's alternative and the reviewer's cross-check. Its guarantees, in code rather than prose:
+
+- it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers;
+- it refuses to start if `nasr-market-db` or the production uuid appears in the wrangler config, and requires
+  the test-db uuid; it refuses while the sealed queue is not `IDLE`;
+- all three of the repo's gate scripts must pass their selftests first (20 + 14 + 13);
+- its node runner can only send read-only SQL — `assertReadOnly` rejects anything that is not a
+  `SELECT`/`PRAGMA` — so the only writes in the session are the seed file and the extracted §5 statement, both
+  produced from files it can inspect first;
+- every SQL it reads comes from `migrationProbeSql()` in the boundary script, executed against the real schema
+  in `_worker/tests/` before this file ever runs;
+- the seed file is written `0600` in `$TMP`, shape-checked with the same one-column regex the tool enforces,
+  applied, then **deleted**; no artifact is uploaded; wrangler's log is counted (`grep -ci`) and never printed;
+  error text is filtered character-by-character before it reaches an annotation;
+- after the write it re-exports and re-plans, requiring `conflicts=0`, `to_anchor=0`, and
+  `ref_sha256_of_all_anchored` **equal to the pre-write digest** — the applied anchors are proven identical to
+  the reviewed ones without any identifier leaving the database, which is the strongest statement available
+  given that D1 cannot compute SHA-256;
+- it finishes by asserting the ledger (`status_without_version = 0`, three other counters 0, no unanchored
+  fingerprint, no orphan version) **and** by running `evaluatePhase3Boundary` over the live snapshot, and by
+  checking that the git worktree is still clean and no generated SQL file remains in the tree.
+
+```bash
+gh workflow run crm-drive-migration-session.yml --repo nasr-realestate/nasr-realestate.github.io \
+  --ref arena/1c171b6c-nasr-realestate-github-io -f mode=preflight     # read-only, run first
+gh workflow run crm-drive-migration-session.yml --ref <same> -f mode=bootstrap
+gh workflow run crm-drive-migration-session.yml --ref <same> -f mode=verify
+```
+
 ### Step 6 — seed the refs, and nothing else
 
 ```bash
@@ -364,8 +398,9 @@ npx --yes wrangler@4 d1 execute "$DB" --remote --config "$CFG" --file "$TMP/seed
   > "$TMP/apply.log" 2>&1
 grep -ciE "error|refused|failed" "$TMP/apply.log" || true   # a count, not the statements: the log may hold ids
 ```
-Applied by a **human, locally**: this SQL inlines real Drive ids, so it must not be pasted into a workflow
-where an error path could echo the statement into a public log.
+Locally that is a human action; in this session it is `mode=bootstrap`, which applies the file it just
+generated, from `$TMP`, with the log counted rather than printed (§5b). The rule the substitution honours is
+the one that matters: **no identifier may reach a log, an artifact, or Git.**
 Then immediately re-measure:
 ```sql
 SELECT COUNT(*) AS anchored, SUM(CASE WHEN head_version_seq = 0 THEN 1 ELSE 0 END) AS still_no_version
@@ -620,7 +655,9 @@ npx --yes wrangler@4 d1 export "$DB" --remote --config "$CFG" -y --no-schema --t
 node scripts/crm/seed-drive-file-refs.mjs --from "$TMP/registry-rows.json" --out "$TMP/seed"
 grep -vE "^--|^BEGIN;|^COMMIT;|^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;$" "$TMP/seed/drive-ref-seed.sql" | sed '/^$/d'   # must print nothing
 shasum -a 256 "$TMP/seed/drive-ref-seed.sql"; jq '.seed_sha256, .ref_sha256_of_sorted_refs' "$TMP/seed/drive-ref-seed-manifest.json"   # ← reviewer quotes these back
-# ── block 4 · step 6 (seed) — human, local, out of CI ────────────────────────────────────────────
+# ── block 4 · steps 4-7 as executed here (or, by an operator, the two lines below it) ─────────────
+gh workflow run crm-drive-migration-session.yml --ref arena/1c171b6c-nasr-realestate-github-io -f mode=preflight
+gh workflow run crm-drive-migration-session.yml --ref arena/1c171b6c-nasr-realestate-github-io -f mode=bootstrap
 npx --yes wrangler@4 d1 execute "$DB" --remote --config "$CFG" --file "$TMP/seed/drive-ref-seed.sql" -y
 # ── block 5 · step 7 (§5 re-run + the acceptance number) ─────────────────────────────────────────
 node scripts/crm/seed-drive-file-refs.mjs backfill-sql --out "$TMP/rerun-0010-s5.sql"

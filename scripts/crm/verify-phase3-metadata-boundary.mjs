@@ -63,6 +63,45 @@ export function registryProvenanceSql({ withLedger = false } = {}) {
   ORDER BY r.drive_file_id`;
 }
 
+/**
+ * The read-only probes a migration session runs against the live registry, in one place because they are the
+ * same facts the gate reasons about. They live here rather than inline in a workflow so they can be executed
+ * against the real schema in `_worker/tests/` — a typo in a CI SQL literal is normally discovered by the
+ * migration itself, which is the worst possible time.
+ *
+ * The `withLedger` switch matters: `drive_ref`, `head_version_seq` and the violations view are all created BY
+ * 0010, so on a pre-promotion database these columns are not merely empty, they are an error.
+ */
+export function migrationProbeSql({ withLedger = false } = {}) {
+  const registryHasRef = `SELECT COUNT(*) AS c FROM sqlite_master
+     WHERE type = 'table' AND name = 'crm_drive_file_registry' AND sql LIKE '%drive_ref%'`;
+  const counts = `SELECT
+    (SELECT COUNT(*) FROM d1_migrations) AS migs,
+    (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest,
+    (SELECT COUNT(*) FROM crm_drive_file_registry) AS rows_all,
+    (SELECT COUNT(*) FROM crm_drive_file_registry WHERE content_sha256 IS NOT NULL) AS fp,
+    (SELECT COUNT(*) FROM crm_drive_file_registry WHERE processing_status = 'processed') AS proc,
+    (SELECT COUNT(*) FROM crm_drive_file_registry
+      WHERE processing_status IN ('downloaded','hashed','metadata_scanned','duplicate')) AS other`;
+  const needsBootstrap = withLedger
+    ? 'SELECT COUNT(*) AS n FROM crm_drive_file_registry WHERE content_sha256 IS NOT NULL AND drive_ref IS NULL'
+    : 'SELECT COUNT(*) AS n FROM crm_drive_file_registry WHERE content_sha256 IS NOT NULL';
+  const violations = withLedger
+    ? `SELECT status_without_version, counter_mismatches, dangling_heads, seq_gaps
+         FROM crm_drive_version_invariant_violations`
+    : 'SELECT -1 AS status_without_version, -1 AS counter_mismatches, -1 AS dangling_heads, -1 AS seq_gaps';
+  const anchorHealth = withLedger
+    ? `SELECT
+        (SELECT COUNT(*) FROM crm_drive_file_registry WHERE content_sha256 IS NOT NULL AND drive_ref IS NULL) AS unanchored,
+        (SELECT COUNT(*) FROM crm_drive_file_version v WHERE NOT EXISTS
+           (SELECT 1 FROM crm_drive_file_registry r WHERE r.drive_ref = v.drive_ref)) AS orphans,
+        (SELECT COUNT(*) FROM crm_drive_file_registry WHERE drive_ref IS NOT NULL) AS anchored`
+    : 'SELECT 0 AS unanchored, 0 AS orphans, 0 AS anchored';
+  const seedRows = `SELECT drive_file_id, drive_ref, content_sha256, processing_status
+     FROM crm_drive_file_registry ORDER BY drive_file_id`;
+  return { registryHasRef, counts, needsBootstrap, violations, anchorHealth, seedRows };
+}
+
 /** Whether the version ledger is on this database — asked, never assumed, because the gate runs against
  *  a database that is mid-promotion for as long as the drafts stay unapplied. */
 export const LEDGER_PROBE_SQL = `SELECT COUNT(*) AS n FROM sqlite_master

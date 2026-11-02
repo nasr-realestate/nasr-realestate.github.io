@@ -7,6 +7,10 @@ on:
     paths:
       - .github/workflows/crm-phase3-registry.yml
       - _worker/migrations/0007_crm_drive_file_registry.sql
+      - _worker/migrations/0010_crm_drive_file_versions.sql
+      - _worker/migrations/0011_crm_drive_file_intake_review.sql
+      - _worker/migrations-draft/0010_crm_drive_file_versions.sql
+      - _worker/migrations-draft/0011_crm_drive_file_intake_review.sql
       - _worker/crm-drive-file-registry.js
       - _worker/tests/crm-drive-file-registry.test.mjs
       - _worker/tests/crm-drive-file-versions.test.mjs
@@ -192,7 +196,7 @@ jobs:
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 53: 12 registry + 7 boundary + 7 bootstrap + 19 versions + 8 sealed-envelope)"
-          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 53 ]; then
+          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 54 ]; then
             result='unit-tests-failed'
             finish
             exit 1
@@ -423,6 +427,12 @@ jobs:
               "SELECT COUNT(*) AS c FROM sqlite_master WHERE type='index' AND tbl_name='crm_drive_file_registry' AND sql IS NOT NULL",
             ).bind().first()).c;
             const fkDefs = (await db.prepare("PRAGMA foreign_key_list('crm_drive_file_registry')").bind().all()).results.length;
+            // Expected index count, read out of the DDL this run installed instead of being remembered:
+            // 0007 declares six, and 0010 adds a seventh (the partial unique index on drive_ref). A frozen
+            // `6` would turn a correct promotion into a red check — the same mistake this step already made
+            // once with a hard-coded migration count, so the expectation is derived and reported together.
+            const idxExpected = migFiles.reduce((n, f) => n + ((fs.readFileSync(path.resolve(process.cwd(), '_worker/migrations', f), 'utf8')
+              .match(/^CREATE\s+(?:UNIQUE\s+)?INDEX\s+\S+\s+ON\s+crm_drive_file_registry\b/gim) ?? []).length), 0);
             let fkViol = 0;
             try {
               fkViol = (await db.prepare('PRAGMA foreign_key_check').bind().all()).results.length;
@@ -440,10 +450,13 @@ jobs:
               'the last applied migration must be the newest file in _worker/migrations');
             assert.ok(migRows.some(m => /0007_crm_drive_file_registry/.test(String(m.name))),
               '0007 must be applied for the registry checks to be about anything');
-            assert.equal(Number(idxCnt), 6);
-            assert.equal(Number(fkDefs), 1);
+            assert.ok(idxExpected >= 6, `the repository declares ${idxExpected} registry indexes — the DDL was not read correctly`);
+            assert.equal(Number(idxCnt), idxExpected,
+              `the registry carries ${idxCnt} explicit indexes where the applied migrations declare ${idxExpected} — an index that failed to install is a guard that is not there`);
+            assert.equal(Number(fkDefs), 1,
+              'the registry has exactly one declared FK: SQLite cannot add one by ALTER, so 0010 must not change this');
             assert.equal(fkViol, 0);
-            process.stdout.write(`ok(migs=${migCnt}/${migFiles.length},idx=${idxCnt},fkDef=${fkDefs},fkViol=${fkViol})`);
+            process.stdout.write(`ok(migs=${migCnt}/${migFiles.length},idx=${idxCnt}/${idxExpected},fkDef=${fkDefs},fkViol=${fkViol})`);
           } else if (mode === 'pubkey') {
             const { pubSpkiB64u } = deriveKeyPair(token);
             process.stdout.write(pubSpkiB64u);

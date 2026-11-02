@@ -140,7 +140,19 @@ export function summarizeSeed(plan) {
     ref_sha256_of_sorted_refs: plan.seeded.length === 0
       ? null
       : createHash('sha256').update(plan.seeded.map(r => r.drive_ref).sort().join('\n')).digest('hex'),
+    // The cross-run digest: the plan that WRITES the anchors and the verification pass that finds them
+    // ALREADY THERE cover the same row set, so this digest must be identical across the two runs even
+    // though the buckets differ. It is the only way to prove the applied seed equals the reviewed seed
+    // without exchanging identifiers, because D1 has no SHA-256 to recompute with.
+    ref_sha256_of_all_anchored: sortedRefDigest(plan),
+    anchored_rows: plan.seeded.length + plan.alreadyAnchored.length,
   };
+}
+
+function sortedRefDigest(plan) {
+  const refs = [...plan.seeded, ...plan.alreadyAnchored].map(r => r.drive_ref).sort();
+  if (refs.length === 0) return null;
+  return createHash('sha256').update(refs.join('\n')).digest('hex');
 }
 
 export function assertSeedIsOneColumn(sqlText) {
@@ -323,6 +335,20 @@ export function selftest() {
     return `${imports.length} node: builtins, ${flags.length} guarded flag`;
   });
 
+  check('B14 the cross-run digest is the same for a plan that writes and a pass that verifies', () => {
+    const rows = [{ drive_file_id: A, content_sha256: dig('a') }, { drive_file_id: B, content_sha256: dig('b') }];
+    const before = summarizeSeed(buildSeedPlan(rows));
+    if (before.anchored !== 2 || before.already_anchored !== 0) throw new Error('the first pass should anchor both');
+    const after = summarizeSeed(buildSeedPlan(rows.map(r => ({ ...r, drive_ref: driveRefFor(r.drive_file_id) }))));
+    if (after.anchored !== 0 || after.already_anchored !== 2) throw new Error('the second pass should find both anchored');
+    if (after.ref_sha256_of_sorted_refs !== null) throw new Error('a verification pass has nothing new to sort');
+    if (before.ref_sha256_of_all_anchored !== after.ref_sha256_of_all_anchored) {
+      throw new Error('the two runs disagree about the anchored set — the seed cannot be verified without ids');
+    }
+    if (!/^[0-9a-f]{64}$/.test(String(before.ref_sha256_of_all_anchored))) throw new Error('no cross-run digest');
+    if (before.anchored_rows !== 2 || after.anchored_rows !== 2) throw new Error('the anchored row count drifted');
+    return `${before.ref_sha256_of_all_anchored.slice(0, 12)}… across both passes`;
+  });
   check('B11 the repo 0010 backfill section extracts to exactly the statement §5 promises', () => {
     const file = resolveMigrationPath();
     const sql = extractBackfillSql(readFileSync(file, 'utf8'));

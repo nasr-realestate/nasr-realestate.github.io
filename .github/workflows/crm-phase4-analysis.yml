@@ -401,8 +401,19 @@ jobs:
             } catch {
               fkViol = 0;
             }
-            assert.equal(Number(migCnt), 9, 'isolated DB must have applied 0001..0009');
-            assert.match(String(latest), /0009_crm_drive_review_workflow/);
+            // Derived, not remembered: this step asserted `migCnt == 9` and a 0009 filename, which is exactly
+            // the shape of check that goes red on a *correct* promotion (0010, then 0011, land after it).
+            // The rule stays strict — every file in the repo must be applied, and the newest applied must be
+            // the newest file — it is just read from the repository instead of from a comment's memory.
+            const migFilesP4 = fs.readdirSync(path.resolve(process.cwd(), '_worker/migrations'))
+              .filter(f => f.endsWith('.sql')).sort();
+            assert.ok(migFilesP4.length >= 9, 'the analysis chain requires at least 0001..0009 to be in the repo');
+            assert.equal(Number(migCnt), migFilesP4.length,
+              `the isolated database applied ${migCnt} of ${migFilesP4.length} migrations — a partially applied chain is not a pass`);
+            assert.equal(String(latest), String(migFilesP4[migFilesP4.length - 1]),
+              'the newest applied migration must be the newest file in _worker/migrations');
+            assert.ok(migFilesP4.some(f => /0009_crm_drive_review_workflow/.test(f)),
+              '0009 must be part of the chain this phase verifies');
             assert.equal(tables, PHASE4_TABLES.length, 'all Phase 4 analysis tables must exist');
             assert.equal(fkViol, 0);
 

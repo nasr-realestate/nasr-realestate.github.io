@@ -7,6 +7,11 @@ on:
     paths:
       - .github/workflows/crm-phase2-backup.yml
   workflow_dispatch:
+    inputs:
+      backup_suffix:
+        description: 'Name suffix for the NEW backup DB (nasr-crm-test-db-backup-<suffix>); blank = today (UTC)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -27,6 +32,7 @@ jobs:
       ts_utc: ${{ steps.run_backup.outputs.ts_utc }}
       ts_cairo: ${{ steps.run_backup.outputs.ts_cairo }}
       new_bak_uuid: ${{ steps.run_backup.outputs.new_bak_uuid }}
+      new_bak_name: ${{ steps.run_backup.outputs.new_bak_name }}
       new_bak_d1_meta: ${{ steps.run_backup.outputs.new_bak_d1_meta }}
       tt_bookmark: ${{ steps.run_backup.outputs.tt_bookmark }}
       bundle_bytes: ${{ steps.run_backup.outputs.bundle_bytes }}
@@ -56,10 +62,27 @@ jobs:
           TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
           PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
           OLD_BACKUP_NAME='nasr-crm-test-db-backup-20261030'
-          NEW_BACKUP_NAME='nasr-crm-test-db-backup-20261101'
           EPHEM_RESTORE_NAME='nasr-crm-ephem-restore-chk'
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           TMP=$(mktemp -d)
+          # The suffix is an input so a migration session can take its OWN dated copy. The name is never
+          # reused: `new-backup-db-name-already-exists-refusing-overwrite` below is a hard refusal, and a
+          # backup that silently overwrites another backup is not a backup. Digits only, so a dispatch
+          # cannot smuggle a name (or a shell metacharacter) into the API call or the bundle path.
+          backup_suffix='${{ github.event.inputs.backup_suffix }}'
+          if [ -z "$backup_suffix" ]; then backup_suffix=$(date -u +%Y%m%d); fi
+          case "$backup_suffix" in
+            ''|*[!0-9]*)
+              echo "::error::backup_suffix must be digits only (a UTC date like 20261103); got a value that is not"
+              exit 1
+              ;;
+          esac
+          if [ "${#backup_suffix}" -lt 8 ]; then
+            echo "::error::backup_suffix must be at least 8 digits so the copy is dated, not labelled at whim"
+            exit 1
+          fi
+          NEW_BACKUP_NAME="nasr-crm-test-db-backup-$backup_suffix"
+          BUNDLE_SQL="$TMP/$NEW_BACKUP_NAME.sql"
           ephem_uuid=''
           account_id=''
           AUTH=''
@@ -90,6 +113,7 @@ jobs:
               printf 'ts_utc=%s\n' "$ts_utc"
               printf 'ts_cairo=%s\n' "$ts_cairo"
               printf 'new_bak_uuid=%s\n' "$new_bak_uuid"
+              printf 'new_bak_name=%s\n' "$NEW_BACKUP_NAME"
               printf 'new_bak_d1_meta=%s\n' "$new_bak_d1_meta"
               printf 'tt_bookmark=%s\n' "$tt_bookmark"
               printf 'bundle_bytes=%s\n' "$bundle_bytes"
@@ -402,10 +426,10 @@ jobs:
 
           node "$TMP/build_and_verify.mjs" "primary-backup" \
             "$TMP/schema-export.sql" "$TMP/data-export.sql" "$TMP/live_migs.json" \
-            "$TMP/nasr-crm-test-db-backup-20261101.sql" "$TMP/source_meta.json" ""
+            "$BUNDLE_SQL" "$TMP/source_meta.json" ""
 
-          bundle_bytes=$(wc -c < "$TMP/nasr-crm-test-db-backup-20261101.sql" | tr -d '[:space:]')
-          bundle_sha256=$(sha256sum "$TMP/nasr-crm-test-db-backup-20261101.sql" | awk '{print $1}')
+          bundle_bytes=$(wc -c < "$BUNDLE_SQL" | tr -d '[:space:]')
+          bundle_sha256=$(sha256sum "$BUNDLE_SQL" | awk '{print $1}')
 
           schema_summary=$(node -e '
             const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
@@ -431,7 +455,7 @@ jobs:
             process.stdout.write(m.orderedNames.slice(10).map(n => `${n}=${m.tableStats[n].count}`).join(","));
           ' "$TMP/source_meta.json")
 
-          # Create persistent isolated backup D1 database: nasr-crm-test-db-backup-20261101
+          # Create the persistent isolated backup D1 database (one dated copy, never an overwrite)
           existing_new_uuid=$(jq -r --arg bn "$NEW_BACKUP_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
           if [ -n "$existing_new_uuid" ]; then
             result='new-backup-db-name-already-exists-refusing-overwrite'
@@ -456,7 +480,7 @@ jobs:
 
           write_toml "phase2-new-backup-loader" "$NEW_BACKUP_NAME" "$new_bak_uuid" "$TMP/new_bak.toml"
           if ! npx --yes wrangler@4 d1 execute "$NEW_BACKUP_NAME" --remote --config "$TMP/new_bak.toml" \
-            --file "$TMP/nasr-crm-test-db-backup-20261101.sql" > "$TMP/new_bak_import.log" 2>&1; then
+            --file "$BUNDLE_SQL" > "$TMP/new_bak_import.log" 2>&1; then
             result='new-backup-d1-import-failed'
             finish
             exit 1
@@ -569,7 +593,7 @@ jobs:
     steps: [{ run: echo ok }]
 
   r2-backup-db:
-    name: 'P2 backup DB — nasr-crm-test-db-backup-20261101 (${{ needs.backup.outputs.new_bak_uuid }}) | ${{ needs.backup.outputs.new_bak_d1_meta }} | tt=${{ needs.backup.outputs.tt_bookmark }}'
+    name: 'P2 backup DB — ${{ needs.backup.outputs.new_bak_name }} (${{ needs.backup.outputs.new_bak_uuid }}) | ${{ needs.backup.outputs.new_bak_d1_meta }} | tt=${{ needs.backup.outputs.tt_bookmark }}'
     needs: backup
     if: always()
     runs-on: ubuntu-latest
