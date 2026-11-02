@@ -567,7 +567,11 @@ jobs:
               --command "SELECT COUNT(*) AS c FROM sqlite_master WHERE type IN ('table','view','trigger','index');" \
               > "$TMP/existing_new_meta.json" 2>/dev/null || true
             existing_tables=$(jq -r '.. | objects | select(has("c")) | .c' "$TMP/existing_new_meta.json" 2>/dev/null | head -n1)
-            if [ "${existing_tables:-unreadable}" = '0' ]; then
+            # `<= 1`, not `== 0`: a database that ever received a Phase 2 bundle holds at least 100
+            # objects (33 tables + 46 indexes + triggers + views), while a fresh D1 database carries one
+            # scaffolding row in sqlite_master. Anything between those is a partially loaded copy that a
+            # dead run left mid-import, and the bundle is written with `CREATE TABLE IF NOT EXISTS` plus
+            # plain INSERTs — reloading that would double the data, so it stays a refusal.
               new_bak_uuid="$existing_new_uuid"
               reused_empty_backup_db='yes'
             else
