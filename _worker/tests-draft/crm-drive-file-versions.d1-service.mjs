@@ -19,7 +19,7 @@
  * scratch database is `crm-versions-service` with a nil UUID, so wrangler cannot resolve a real one.
  * Cloudflare credentials are stripped from the child environment before anything is spawned.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -55,6 +55,14 @@ const CREDENTIALS_PASSED_TO_CHILDREN = Object.keys(ENV).filter(k =>
   /^(CLOUDFLARE|CF_|GDRIVE|GOOGLE|GCLOUD|WRANGLER_LOGIN)/i.test(k)).length;
 const WR = process.env.WRANGLER ? [process.env.WRANGLER] : ['npx', '--yes', 'wrangler@4'];
 
+// A racer is this same file, re-executed as a second OS process against the same scratch database file.
+// Two processes is the point: `recordVersion()` in the parent and in the child interleave only through
+// SQLite's own locking, with no test-side queue between them. The role is chosen by env, so the child
+// needs no separate harness to drift.
+const RACER = process.env.P2S_ROLE || '';
+const ROLE = RACER || 'main';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 // the scratch project: a real migration chain (0002/0007/0008/0009) + 0010 then 0011 in order
 const BASE_SQL = `-- rehearsal base: the tables 0004..0006 expect, so the chain applies in order
 CREATE TABLE IF NOT EXISTS areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE);
@@ -66,18 +74,20 @@ CREATE TABLE IF NOT EXISTS crm_contacts (id TEXT PRIMARY KEY, display_name TEXT 
 CREATE TABLE IF NOT EXISTS crm_conversations (id TEXT PRIMARY KEY, crm_contact_id TEXT);
 CREATE TABLE IF NOT EXISTS crm_opportunities (id TEXT PRIMARY KEY);
 `;
-mkdirSync(MDIR, { recursive: true });
+if (!RACER) mkdirSync(MDIR, { recursive: true });
 const files = [['0000_rehearsal_base.sql', BASE_SQL]];
 for (const n of ['0002_crm_internal_auth.sql', '0007_crm_drive_file_registry.sql',
   '0008_crm_phase4_analysis.sql', '0009_crm_drive_review_workflow.sql']) {
   files.push([n, readFileSync(path.join(MIG, n), 'utf8')]);
 }
-files.forEach(([n, t], i) => writeFileSync(path.join(MDIR, `${String(i).padStart(4, '0')}_${n}`), t));
-// the drafts under rehearsal are applied by hand, in order, after this chain
-writeFileSync(path.join(SCRATCH, 'empty.mjs'), 'export default { fetch() { return new Response("ok"); } };\n');
-writeFileSync(CFG, `name = "${DB}"\nmain = "empty.mjs"\ncompatibility_date = "2026-11-01"\n\n`
-  + `[[d1_databases]]\nbinding = "DB"\ndatabase_name = "${DB}"\n`
-  + `database_id = "00000000-0000-0000-0000-000000000000"\nmigrations_dir = "./migrations"\n`);
+if (!RACER) {
+  files.forEach(([n, t], i) => writeFileSync(path.join(MDIR, `${String(i).padStart(4, '0')}_${n}`), t));
+  // the drafts under rehearsal are applied by hand, in order, after this chain
+  writeFileSync(path.join(SCRATCH, 'empty.mjs'), 'export default { fetch() { return new Response("ok"); } };\n');
+  writeFileSync(CFG, `name = "${DB}"\nmain = "empty.mjs"\ncompatibility_date = "2026-11-01"\n\n`
+    + `[[d1_databases]]\nbinding = "DB"\ndatabase_name = "${DB}"\n`
+    + `database_id = "00000000-0000-0000-0000-000000000000"\nmigrations_dir = "./migrations"\n`);
+}
 
 let spawns = 0, withoutLocal = 0, remoteFlagged = 0, splitBatches = 0;
 function shRaw(args) {
@@ -131,7 +141,7 @@ function terminate(text) {
   return text.trim().endsWith(';') ? `${text.trim()}\n` : `${text.trim()};\n`;
 }
 function runScript(sql, what) {
-  const f = path.join(SCRATCH, `stmt-${String(++tmpCount.n).padStart(4, '0')}.sql`);
+  const f = path.join(SCRATCH, `stmt-${ROLE}-${String(++tmpCount.n).padStart(4, '0')}.sql`);
   writeFileSync(f, terminate(sql));
   return execFile(f, what);
 }
@@ -151,7 +161,7 @@ function render(sql, binds) {
 }
 // a D1-shaped binding over the CLI, so the service module needs no test-only code path.
 // `mode` lets one rehearsal force the failure shapes the service must survive.
-const knobs = { failAfterVersionInsert: false, breakLastStatementOfBatch: false };
+const knobs = { failAfterVersionInsert: false, breakLastStatementOfBatch: false, pauseBeforeBatchMs: 0 };
 function makeDb() {
   class Stmt {
     constructor(sql) { this._sql = sql; this._binds = []; }
@@ -170,6 +180,10 @@ function makeDb() {
     prepare: sql => new Stmt(sql),
     async batch(statements) {
       const parts = statements.map(s => s.toString());
+      if (knobs.pauseBeforeBatchMs) {
+        // parked between the head read and the write, which is where a concurrent writer gets in
+        await sleep(knobs.pauseBeforeBatchMs);
+      }
       if (knobs.failAfterVersionInsert) {
         // a crash between the ledger write and the projection: the first statement is committed, the
         // rest never run — the exact partial-failure shape the service must be able to recover from
@@ -198,7 +212,7 @@ function walk(dir) {
 // a rehearsal that mutates its scratch database proves nothing on a used one: the "no draft applied yet"
 // precondition is already consumed and the object counts describe the previous run. Refuse, don't misreport.
 const heldState = walk(STATE).filter(f => /\.sqlite(-wal|-shm|-reset)?$/.test(f));
-if (heldState.length && process.env.REUSE_SCRATCH !== '1') {
+if (heldState.length && process.env.REUSE_SCRATCH !== '1' && !RACER) {
   process.stderr.write(`refusing to rehearse on a used scratch database: ${STATE} holds ${heldState.map(f => path.basename(f)).join(', ').slice(0, 160)}\n`
     + `start a clean run (export P2S_DIR=$(mktemp -d)) or set REUSE_SCRATCH=1 to proceed anyway\n`);
   process.exit(1);
@@ -249,6 +263,37 @@ const REG_PATH = path.join(REPO, '_worker', 'crm-drive-file-registry.js');
 const REG = await import(pathToFileURL(REG_PATH).href);
 const { deriveDriveRef, hasVersionLedger, insertNewDriveFileStrict, recordContentHash,
   recordInspectionSuccess, recordVersion, verifyVersionBinding } = REG;
+
+// ---------------------------------------------------------------- racer role: one recordVersion call, no checks
+if (RACER) {
+  const spec = JSON.parse(process.env.P2S_RACER || '{}');
+  if (spec.mid_pause_ms) knobs.pauseBeforeBatchMs = spec.mid_pause_ms;
+  await sleep(spec.delay_ms ?? 0);
+  const report = { role: ROLE, digest: spec.digest ?? null, attempts: [], spawns: 0 };
+  for (let attempt = 1; attempt <= (spec.attempts ?? 1); attempt += 1) {
+    const t0 = Date.now();
+    try {
+      const res = await recordVersion(db, {
+        driveFileId: spec.file_id, contentSha256: spec.digest, sizeBytes: spec.size_bytes ?? 64,
+        observedAt: spec.observed_at ?? T1, observer: 'intake_pipeline',
+        evidenceClass: 'verified_local_recompute',
+        // a claim without bytes needs a receipt naming the measurement; the digest itself is not evidence,
+        // so the racer supplies the same receipt shape the intake pipeline writes
+        receiptRef: spec.receipt ?? `p4a:sha256:${(spec.digest || '').slice(0, 32)}`,
+      });
+      report.attempts.push({ attempt, ok: true, status: res.status, seq: res.version_seq ?? null, ms: Date.now() - t0 });
+      break;
+    } catch (e) {
+      report.attempts.push({ attempt, ok: false, error: String(e.message || e).replace(/\s+/g, ' ').slice(0, 220), ms: Date.now() - t0 });
+    }
+  }
+  report.spawns = spawns;
+  report.without_local = withoutLocal;
+  report.remote = remoteFlagged;
+  report.creds = CREDENTIALS_PASSED_TO_CHILDREN;
+  writeFileSync(path.join(SCRATCH, `racer-${ROLE}.json`), JSON.stringify(report));
+  process.exit(0);
+}
 
 const beforeMigrations = inventory();
 check('M0 the scratch database starts with no registry at all', () => {
@@ -669,6 +714,158 @@ check('V16 the service never invented a key: drive_ref on disk is the repo hash 
   if (r !== refA) throw new Error('the ref the service derived is not the ref stored');
   return `${refA.slice(0, 12)}… (${refA.length} hex chars, the real id nowhere)`;
 });
+// ---------------------------------------------------------------- 6) two writers, one file, no queue between them
+// Each racer is this same module running as its own process against the same scratch database. The parent
+// does not serialize them and does not own a lock: the only thing that decides who lands first is SQLite and
+// the triggers draft 0010 installed. `mid_pause_ms` parks a racer between reading the head and writing the
+// next sequence number, so the interleaving is produced on purpose and then verified against the ledger.
+function race(specs) {
+  const self = new URL(import.meta.url).pathname;
+  const kids = specs.map(spec => spawn(process.execPath, [self], {
+    cwd: REPO,
+    env: { ...ENV, P2S_DIR: SCRATCH, P2S_ROLE: spec.role, P2S_RACER: JSON.stringify(spec), REUSE_SCRATCH: '1' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }));
+  return Promise.all(kids.map((k, i) => new Promise(resolve => {
+    let out = '';
+    k.stdout.on('data', d => { out += d; });
+    k.stderr.on('data', d => { out += d; });
+    k.on('close', code => {
+      const f = path.join(SCRATCH, `racer-${specs[i].role}.json`);
+      resolve({
+        role: specs[i].role,
+        code,
+        report: existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null,
+        tail: strip(out).replace(/\s+/g, ' ').slice(-300),
+      });
+    });
+  })));
+}
+// every column qualified: the registry and the version row both carry content_sha256, and an ambiguous
+// probe is worse than no probe — it reads as a barrier failure on a run where the race actually held
+const seqsOf = file => sql(`SELECT v.version_seq AS seq, v.content_sha256 AS d, v.repeat_of_version_ref AS back,
+    v.evidence_class AS e, v.observed_by AS obs, v.version_ref AS vref
+  FROM crm_drive_file_version v JOIN crm_drive_file_registry r ON r.drive_ref = v.drive_ref
+  WHERE r.drive_file_id = '${file}' ORDER BY v.version_seq`);
+const headOf = file => one(`SELECT head_version_seq AS h, versions_observed AS n, content_sha256 AS c,
+  processing_status AS st, drive_ref AS ref FROM crm_drive_file_registry WHERE drive_file_id = '${file}'`);
+
+
+await acheck('C1 two processes, the same digest, one winner row — the loser finds it already recorded', async () => {
+  await newFile('RACE1');
+  const digest = sha('race1-shared-content');
+  const before = await sql(`SELECT COUNT(*) AS c FROM crm_drive_file_version`)[0].c;
+  const kids = await race([
+    { role: 'c1a', file_id: 'SYNTH-RACE1', digest, mid_pause_ms: 900, attempts: 3 },
+    { role: 'c1b', file_id: 'SYNTH-RACE1', digest, attempts: 3 },
+  ]);
+  for (const k of kids) {
+    if (!k.report) throw new Error(`${k.role} died (exit ${k.code}): ${k.tail}`);
+    if (!k.report.attempts.at(-1).ok) throw new Error(`${k.role} never landed: ${JSON.stringify(k.report.attempts)}`);
+    if (k.report.without_local || k.report.remote) throw new Error(`${k.role} left the local sandbox`);
+  }
+  const rows = seqsOf('SYNTH-RACE1');
+  if (rows.length !== 1) throw new Error(`${rows.length} version rows for one content state: ${JSON.stringify(rows)}`);
+  if (rows[0].seq !== 1) throw new Error(`the single row is seq ${rows[0].seq}`);
+  const h = headOf('SYNTH-RACE1');
+  if (Number(h.h) !== 1 || Number(h.n) !== 1 || h.c !== digest) throw new Error(`projection ${JSON.stringify(h)}`);
+  if (Number(await sql(`SELECT COUNT(*) AS c FROM crm_drive_file_version`)[0].c) - before !== 1) {
+    throw new Error('the ledger grew by something other than one row');
+  }
+  const statuses = kids.map(k => k.report.attempts.at(-1).status).sort().join('+');
+  return `rows=1 seq=1 statuses=${statuses}`;
+});
+
+await acheck('C2 two processes, two digests: both versions land, and they never share a sequence number', async () => {
+  await newFile('RACE2');
+  const dX = sha('race2-before'), dY = sha('race2-after');
+  const kids = await race([
+    { role: 'c2a', file_id: 'SYNTH-RACE2', digest: dX, mid_pause_ms: 1200, attempts: 3 },
+    { role: 'c2b', file_id: 'SYNTH-RACE2', digest: dY, attempts: 3 },
+  ]);
+  for (const k of kids) if (!k.report || !k.report.attempts.at(-1).ok) throw new Error(`${k.role}: ${JSON.stringify(k.report?.attempts ?? k.tail)}`);
+  const rows = seqsOf('SYNTH-RACE2');
+  if (rows.map(r => r.seq).join(',') !== '1,2') throw new Error(`sequences ${JSON.stringify(rows.map(r => r.seq))}`);
+  if (new Set(rows.map(r => r.seq)).size !== rows.length) throw new Error('two versions share a seq');
+  const got = rows.map(r => r.d).sort().join(',');
+  if (got !== [dX, dY].sort().join(',')) throw new Error('a version that was written is not in the ledger — lost under contention');
+  const h = headOf('SYNTH-RACE2');
+  if (Number(h.h) !== 2 || Number(h.n) !== 2) throw new Error(`head projection ${JSON.stringify(h)}`);
+  if (h.c !== rows[1].d) throw new Error('the projection is not the head version the ledger holds');
+  return `rows=2 head=${h.h} winner_seq=${rows[0].seq} loser_retried=${kids[0].report.attempts.length > 1 ? 'yes' : 'no'}`;
+});
+
+await acheck('C3 three processes, one of them slow: density 1..3, nothing overwritten, no duplicate seq', async () => {
+  await newFile('RACE3');
+  const dX = sha('race3-x'), dY = sha('race3-y');
+  const kids = await race([
+    { role: 'c3a', file_id: 'SYNTH-RACE3', digest: dX, attempts: 4 },
+    { role: 'c3b', file_id: 'SYNTH-RACE3', digest: dY, delay_ms: 300, attempts: 4 },
+    { role: 'c3c', file_id: 'SYNTH-RACE3', digest: dX, delay_ms: 600, mid_pause_ms: 1500, attempts: 4 },
+  ]);
+  for (const k of kids) {
+    if (!k.report) throw new Error(`${k.role} produced no report (exit ${k.code}): ${k.tail}`);
+    if (!k.report.attempts.at(-1).ok) throw new Error(`${k.role} failed for good: ${k.report.attempts.at(-1).error}`);
+  }
+  const rows = seqsOf('SYNTH-RACE3');
+  if (rows.map(r => r.seq).join(',') !== '1,2,3') throw new Error(`sequences came out ${JSON.stringify(rows.map(r => r.seq))}`);
+  if (new Set(rows.map(r => r.vref)).size !== rows.length) throw new Error('two rows share a version_ref');
+  const h = headOf('SYNTH-RACE3');
+  if (Number(h.h) !== 3 || Number(h.n) !== 3) throw new Error(`projection ${JSON.stringify(h)}`);
+  const attempts = kids.map(k => k.report.attempts.length).join('/');
+  return `rows=3 head=3 per-racer attempts=${attempts}`;
+});
+
+await acheck('C4 a writer that lost the race converges on retry, and a repeat observation is never duplicated', async () => {
+  const rows0 = seqsOf('SYNTH-RACE2');
+  const dX = rows0.find(r => r.seq === 1).d;
+  const again = await recordVersion(db, {
+    driveFileId: 'SYNTH-RACE2', contentSha256: dX, sizeBytes: 64, observedAt: T2,
+    observer: 'intake_pipeline', evidenceClass: 'verified_local_recompute', receiptRef: `p4a:sha256:${dX.slice(0, 32)}`,
+  });
+  if (!['recorded', 'already_recorded'].includes(again.status)) throw new Error(`retry came back ${again.status}`);
+  const rows1 = seqsOf('SYNTH-RACE2');
+  if (rows1.length !== 3) throw new Error(`${rows1.length} rows after re-observing an old content state`);
+  if (rows1[2].back !== `${headOf('SYNTH-RACE2').ref}#1`) {
+    throw new Error(`the repeat is not pinned to the version it repeats (${rows1[2].back})`);
+  }
+  const head = headOf('SYNTH-RACE2');
+  if (Number(head.h) !== 3 || head.c !== dX) throw new Error(`projection after the retry: ${JSON.stringify(head)}`);
+  // and a call that repeats the *current* head adds nothing at all
+  const same = await recordVersion(db, {
+    driveFileId: 'SYNTH-RACE2', contentSha256: dX, sizeBytes: 64, observedAt: T2,
+    observer: 'intake_pipeline', evidenceClass: 'verified_local_recompute', receiptRef: `p4a:sha256:${dX.slice(0, 32)}`,
+  });
+  if (same.status !== 'unchanged') throw new Error(`a head repeat reported ${same.status}`);
+  if (seqsOf('SYNTH-RACE2').length !== 3) throw new Error('a no-op observation still wrote a version');
+  return `retry→${again.status} pinned_to=${rows1[2].back.slice(0, 10)}… head_repeat→${same.status}`;
+});
+
+check('C5 after every race the ledger still satisfies its own invariants, and the racers stayed local', () => {
+  const v = one(`SELECT counter_mismatches AS cm, dangling_heads AS dh, seq_gaps AS sg,
+    status_without_version AS sw FROM crm_drive_version_invariant_violations`);
+  for (const [name, n] of [['counter_mismatches', v.cm], ['dangling_heads', v.dh], ['seq_gaps', v.sg],
+    ['status_without_version', v.sw]]) {
+    if (Number(n) !== 0) throw new Error(`${name} = ${n} after the races`);
+  }
+  const dup = one(`SELECT COUNT(*) - COUNT(DISTINCT version_ref) AS d,
+    COUNT(*) - COUNT(DISTINCT drive_ref || '#' || version_seq) AS ds FROM crm_drive_file_version`);
+  if (Number(dup.d) || Number(dup.ds)) throw new Error('two version rows share an identity');
+  // counted from what the children actually left behind, not from a counter the parent might under-increment
+  const reports = readdirSync(SCRATCH)
+    .filter(f => f.startsWith('racer-') && f.endsWith('.json'))
+    .map(f => JSON.parse(readFileSync(path.join(SCRATCH, f), 'utf8')));
+  if (reports.length < 7) throw new Error(`only ${reports.length} racing processes took part — this is not a race`);
+  const unfinished = reports.filter(r => !r.attempts.length || !r.attempts.at(-1).ok);
+  if (unfinished.length) throw new Error(`${unfinished.length} racer(s) never landed: ${JSON.stringify(unfinished.map(u => u.attempts.at(-1)))}`.slice(0, 300));
+  const strayed = reports.filter(r => r.without_local || r.remote || r.creds);
+  if (strayed.length) throw new Error(`${strayed.length} racer(s) left the local sandbox or saw a credential`);
+  const kidSpawns = reports.reduce((n, r) => n + r.spawns, 0);
+  const retries = reports.reduce((n, r) => n + r.attempts.length - 1, 0);
+  if (retries === 0) DIFFNOTES.push('no racer needed a second attempt in this run: every interleaving was absorbed by the service\'s own conflict handling. The retry path itself is V8/C4, but a race where nothing collided proves less than one where something did.');
+  return `${reports.length} processes, ${kidSpawns} child spawns (all --local), ${retries} caller-side retries, invariants zero`;
+});
+
 check('X1 every D1 statement went to a local file, and no credential was passed to a child', () => {
   if (withoutLocal) throw new Error(`${withoutLocal} executes without --local`);
   if (remoteFlagged) throw new Error(`${remoteFlagged} --remote flags`);

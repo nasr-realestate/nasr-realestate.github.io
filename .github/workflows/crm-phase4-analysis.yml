@@ -256,6 +256,7 @@ jobs:
           const {
             hasVersionLedger,
             recordContentHash,
+            verifyProcessingOrder,
             recordInspectionFailure,
             recordInspectionSuccess,
             transitionProcessingStatus,
@@ -645,6 +646,7 @@ jobs:
               throw new Error(`SOURCE_DRIFT_AFTER_REGISTRATION:${drift.join(',')}`);
             }
 
+            let summary_versions = null;
             const nowIso = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             // The run row records the real folder id; it exists only in this process and in D1.
             resolved.driveParentId = driveParentId;
@@ -652,9 +654,16 @@ jobs:
             let processed = 0;
             let failed = 0;
             let already = 0;
+            let missingRow = 0;
+            const ledger = await hasVersionLedger(db);
+            const versionsBefore = ledger
+              ? Number((await db.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_version').bind().first()).c)
+              : null;
             for (const upd of resolved.registryUpdates) {
               const row = byId.get(upd.drive_file_id);
-              if (!row) continue;
+              // an update with no registry row behind it is not "nothing to do": the payload claimed work on
+              // a file the registry never saw. Counted, then refused below — never skipped in silence.
+              if (!row) { missingRow += 1; continue; }
               if (row.content_sha256 && upd.processing_status === 'processed' && row.processing_status === 'processed') {
                 already += 1;
                 continue;
@@ -664,7 +673,6 @@ jobs:
               // ledger is present the walk skips the intermediate state (metadata_scanned -> hashed is a
               // legal transition) and the version row is written by recordContentHash itself. Without the
               // ledger this is byte-for-byte the behaviour that is running today.
-              const ledger = await hasVersionLedger(db);
               if (!ledger && row.processing_status === 'metadata_scanned') {
                 await transitionProcessingStatus(db, { driveFileId: row.drive_file_id, toStatus: 'downloaded', updatedAt: nowIso });
               }
@@ -706,6 +714,22 @@ jobs:
               }
             }
 
+            // The order this job claims to keep, checked against the database it just wrote: version first,
+            // projection second, `processed` only on a fingerprint the ledger carries. If any of the three
+            // were skipped or reordered, one of these numbers moves.
+            // The order this job claims to keep, read back from the database it just wrote through the same
+            // service the Worker uses — version first, projection second, `processed` only on a fingerprint
+            // the ledger carries. If any step were skipped or reordered, one of these counters moves.
+            assert.equal(missingRow, 0, `${missingRow} registry update(s) had no registry row behind them`);
+            const order = await verifyProcessingOrder(db);
+            assert.deepEqual(order.problems, [], `PHASE4_WRITE_ORDER:${order.problems.join(' | ')}`.slice(0, 300));
+            if (ledger) {
+              const versionsAfter = Number((await db.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_version').bind().first()).c);
+              assert.ok(versionsAfter - versionsBefore <= hashed,
+                `${versionsAfter - versionsBefore} version rows for ${hashed} newly hashed files — something registered twice`);
+              summary_versions = { before: versionsBefore, after: versionsAfter };
+            }
+
             const index = await readCrmIndex(db);
             const firstPass = new Map();
             for (const file of resolved.fileAnalysis) {
@@ -742,7 +766,10 @@ jobs:
                  FROM crm_conversations`,
             ).bind().first();
             const summary = {
-              registry: { rows: registryRows.length, hashed, processed, failed, already, deferred: deferredRefs.length },
+              registry: { rows: registryRows.length, hashed, processed, failed, already,
+                missing_row: missingRow, deferred: deferredRefs.length, ledger, versions: summary_versions,
+                order: { problems: order.problems.length, processed_rows: order.counters.processed_rows,
+                  fingerprinted: order.counters.fingerprinted_rows } },
               statements: applied.statements,
               batches: applied.batches,
               files: counts.crm_drive_file_analysis,
@@ -836,7 +863,7 @@ jobs:
             exit 1
           fi
           cp "$TMP/apply.json" "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-          apply_stats=$(jq -r '"files=\(.files) conv=\(.conversations) cards=\(.cards) sig=\(.signals) dup=\(.duplicates) match=\(.matches) classes[\(.classes)] \(.conv) reg[h=\(.registry.hashed),p=\(.registry.processed),f=\(.registry.failed),a=\(.registry.already),d=\(.registry.deferred)] st=\(.statements)"' "$TMP/apply.json")
+          apply_stats=$(jq -r '"files=\(.files) conv=\(.conversations) cards=\(.cards) sig=\(.signals) dup=\(.duplicates) match=\(.matches) classes[\(.classes)] \(.conv) reg[h=\(.registry.hashed),p=\(.registry.processed),f=\(.registry.failed),a=\(.registry.already),m=\(.registry.missing_row),d=\(.registry.deferred)] ledger=\(.registry.ledger) ver[\(.registry.versions.before // "-")>\(.registry.versions.after // "-")] ord[p=\(.registry.order.problems),proc=\(.registry.order.processed_rows),fp=\(.registry.order.fingerprinted)] st=\(.statements)"' "$TMP/apply.json")
 
           # 11) Post-checks: nothing operational changed, backup and market DB untouched.
           curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \

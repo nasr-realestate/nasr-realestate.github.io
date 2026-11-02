@@ -48,6 +48,12 @@ on:
       - _worker/tests/crm-drive-file-versions.test.mjs
       - _worker/tests-draft/crm-drive-file-versions.d1-service.mjs
       - _worker/tests-draft/_scratch.py
+      - scripts/crm/verify-phase3-metadata-boundary.mjs
+      - scripts/crm/seed-drive-file-refs.mjs
+      - _worker/tests/_registry-fixture.mjs
+      - _worker/tests/crm-phase3-metadata-boundary.test.mjs
+      - _worker/tests/crm-drive-ref-bootstrap.test.mjs
+      - _worker/tests/crm-phase4-order-proof.test.mjs
   push:
     branches:
       - master
@@ -76,6 +82,12 @@ on:
       - _worker/tests/crm-drive-file-versions.test.mjs
       - _worker/tests-draft/crm-drive-file-versions.d1-service.mjs
       - _worker/tests-draft/_scratch.py
+      - scripts/crm/verify-phase3-metadata-boundary.mjs
+      - scripts/crm/seed-drive-file-refs.mjs
+      - _worker/tests/_registry-fixture.mjs
+      - _worker/tests/crm-phase3-metadata-boundary.test.mjs
+      - _worker/tests/crm-drive-ref-bootstrap.test.mjs
+      - _worker/tests/crm-phase4-order-proof.test.mjs
   workflow_dispatch:
 
 permissions:
@@ -89,7 +101,7 @@ jobs:
   verify:
     name: SQL barriers · D1 rehearsal · backup round-trip
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     if: github.repository == 'nasr-realestate/nasr-realestate.github.io'
     env:
       CI: 'true'
@@ -197,15 +209,29 @@ jobs:
           WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
         run: python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py
 
-      - name: Version ledger service on D1 — the real recordVersion(), one local file, no Drive anywhere
+      - name: Phase 3 boundary gate and the anchor seed — the rules themselves, with no database
+        # Two pieces of logic that decide what CI accepts, proven before anything touches D1: the Phase 3
+        # metadata boundary (which replaced the stale "no fingerprint may exist anywhere" count) and the
+        # drive_ref seeding tool that closes 0010's bootstrap gap. Both are pure — files and strings only,
+        # no token, no network — and each refuses to pass on an empty or vacuous result set.
+        run: |
+          set -euo pipefail
+          node scripts/crm/verify-phase3-metadata-boundary.mjs selftest | tail -2
+          node scripts/crm/seed-drive-file-refs.mjs selftest | tail -2
+
+      - name: Version ledger service on D1 — the real recordVersion() racing from separate processes, one local file, no Drive anywhere
         # The same module the Worker imports, with no test-only code path: every D1 statement is spawned
         # through `wrangler d1 execute --local` against a scratch database in the runner's tmpfs. The
         # script refuses to spawn anything that is not wrangler, fails if a call lacks --local, and
         # strips every Cloudflare/Google credential from the child environment — so a green check here
         # also proves the service was exercised without a token, a Drive read, or a real database.
+        # The C-checks are the concurrency proof: `recordVersion()` runs in five to seven *separate node
+        # processes* against the same scratch database file, with no queue between them — the only arbiter
+        # is SQLite plus draft 0010's triggers. That is real competition on a local file; it is not D1's
+        # distributed commit path, and the script says so rather than implying it.
         env:
           WRANGLER: ${{ github.workspace }}/node_modules/.bin/wrangler
-        timeout-minutes: 25
+        timeout-minutes: 35
         run: node _worker/tests-draft/crm-drive-file-versions.d1-service.mjs
 
       - name: Backup/restore rehearsal — bundle must preserve every object and guard

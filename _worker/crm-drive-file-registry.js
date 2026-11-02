@@ -1082,6 +1082,78 @@ export async function recordVersion(db, {
 
 // The read-back that `processed` depends on: ref, digest and sequence number must all line up, and the
 // file row's counter must equal the ledger's own rows. Used by recordInspectionSuccess and by CI.
+/**
+ * The counters that describe whether an intake run kept its order: version first, projection second,
+ * `processed` only on a fingerprint the ledger carries. Pure, so the mapping from counter to problem is
+ * testable without manufacturing a broken database (which the triggers mostly prevent anyway).
+ */
+export function processingOrderProblems(counters, { ledger = true } = {}) {
+  const c = counters || {};
+  const problems = [];
+  const num = v => Number(v ?? 0);
+  if (num(c.fingerprint_without_receipt) > 0) {
+    problems.push(`${num(c.fingerprint_without_receipt)} fingerprint(s) recorded with no receipt documenting the measurement`);
+  }
+  if (num(c.fingerprint_without_processed_time) > 0) {
+    problems.push(`${num(c.fingerprint_without_processed_time)} row(s) marked processed with no last_processed_at`);
+  }
+  if (!ledger) return problems;
+  if (num(c.processed_without_version) > 0) {
+    problems.push(`${num(c.processed_without_version)} row(s) reached processed with no recorded version — recordVersion was bypassed`);
+  }
+  if (num(c.projection_disagrees) > 0) {
+    problems.push(`${num(c.projection_disagrees)} row(s) project a fingerprint the head version does not carry — the projection was written out of order`);
+  }
+  return problems;
+}
+
+/**
+ * Reads those counters back from the database. The ledger columns are only queried when 0010 is actually
+ * applied here — on an un-promoted database the whole point is that there is no version table to disagree
+ * with, so the receipt checks still run and the head checks are reported as not applicable rather than as a
+ * pass. Used by the Phase 4 workflow after it writes, and by the local suite; kept in the module so the two
+ * cannot drift apart.
+ */
+export async function verifyProcessingOrder(db) {
+  const ledger = await hasVersionLedger(db);
+  // "undocumented" means: no receipt on the row, and nothing in the ledger agreeing with the fingerprint.
+  // A row sitting at 'hashed' with a recorded head version is therefore fine — the ledger is its provenance —
+  // while 'processed' always needs its own receipt, because that is the state claiming content was handled.
+  // Without 0010 there is no ledger to consult, so only the `processed` half applies (0007's own rules
+  // govern the rest, and a check that invents findings on a legal mid-flight state teaches people to ignore it).
+  const undocumented = ledger
+    ? `r.content_sha256 IS NOT NULL AND COALESCE(r.processing_receipt_ref, '') = ''
+                AND (r.processing_status = 'processed'
+                     OR COALESCE(v.content_sha256, '') <> r.content_sha256)`
+    : `r.content_sha256 IS NOT NULL AND COALESCE(r.processing_receipt_ref, '') = ''
+                AND r.processing_status = 'processed'`;
+  const headCols = ledger
+    ? `SUM(CASE WHEN r.processing_status = 'processed' AND COALESCE(r.head_version_seq, 0) < 1 THEN 1 ELSE 0 END) AS processed_without_version,
+                 SUM(CASE WHEN r.processing_status = 'processed'
+                           AND COALESCE(v.content_sha256, '') <> COALESCE(r.content_sha256, '') THEN 1 ELSE 0 END) AS projection_disagrees,`
+    : `0 AS processed_without_version, 0 AS projection_disagrees,`;
+  const join = ledger
+    ? `LEFT JOIN ${VERSION_TABLE} v ON v.drive_ref = r.drive_ref AND v.version_seq = r.head_version_seq`
+    : '';
+  const row = await db.prepare(`SELECT
+                 SUM(CASE WHEN ${undocumented} THEN 1 ELSE 0 END) AS fingerprint_without_receipt,
+                 SUM(CASE WHEN r.processing_status = 'processed' AND r.last_processed_at IS NULL THEN 1 ELSE 0 END) AS fingerprint_without_processed_time,
+                 ${headCols}
+                 SUM(CASE WHEN r.processing_status = 'processed' THEN 1 ELSE 0 END) AS processed_rows,
+                 SUM(CASE WHEN r.content_sha256 IS NOT NULL THEN 1 ELSE 0 END) AS fingerprinted_rows
+               FROM ${REGISTRY_TABLE} r
+               ${join}`).bind().first();
+  const counters = {
+    fingerprint_without_receipt: Number(row?.fingerprint_without_receipt ?? 0),
+    fingerprint_without_processed_time: Number(row?.fingerprint_without_processed_time ?? 0),
+    processed_without_version: Number(row?.processed_without_version ?? 0),
+    projection_disagrees: Number(row?.projection_disagrees ?? 0),
+    processed_rows: Number(row?.processed_rows ?? 0),
+    fingerprinted_rows: Number(row?.fingerprinted_rows ?? 0),
+  };
+  return { ledger, counters, problems: processingOrderProblems(counters, { ledger }) };
+}
+
 export async function verifyVersionBinding(db, driveFileId) {
   const cleanId = validateDriveFileId(driveFileId);
   const row = await db

@@ -9,6 +9,12 @@ on:
       - _worker/migrations/0007_crm_drive_file_registry.sql
       - _worker/crm-drive-file-registry.js
       - _worker/tests/crm-drive-file-registry.test.mjs
+      - _worker/tests/crm-drive-file-versions.test.mjs
+      - _worker/tests/crm-phase3-metadata-boundary.test.mjs
+      - _worker/tests/crm-drive-ref-bootstrap.test.mjs
+      - _worker/tests/_registry-fixture.mjs
+      - scripts/crm/verify-phase3-metadata-boundary.mjs
+      - scripts/crm/seed-drive-file-refs.mjs
       - _worker/ingest-queue/drive-registry-sealed.txt
   workflow_dispatch:
 
@@ -125,12 +131,38 @@ jobs:
             exit 1
           fi
 
-          # 2) Run automated local unit/integration tests first
-          node --test _worker/tests/crm-drive-file-registry.test.mjs > "$TMP/unit.log" 2>&1
+          # 2a) The Phase 3 boundary rule itself, with no database and no token: the gate that used to be
+          #     "no fingerprint may exist anywhere" is now stated in scripts/crm/, so its logic is proven
+          #     here even on a run that never reaches the sealed sync.
+          if ! p3_gate=$(node scripts/crm/verify-phase3-metadata-boundary.mjs selftest | tee "$TMP/p3gate.log" | tail -1); then
+            cat "$TMP/p3gate.log"
+            result='phase3-boundary-selftest-failed'
+            finish
+            exit 1
+          fi
+          case "$p3_gate" in
+            P3_BOUNDARY_ALL_HELD) echo "phase 3 boundary gate: $p3_gate" ;;
+            *)
+              echo "::error::the Phase 3 boundary gate does not hold its own cases ($p3_gate)"
+              node scripts/crm/verify-phase3-metadata-boundary.mjs selftest || true
+              result='phase3-boundary-selftest-failed'
+              finish
+              exit 1
+              ;;
+          esac
+
+          # 2) Run automated local unit/integration tests first. This is where the gate's own tests live:
+          # the boundary cases that refuse an undocumented fingerprint, and the bootstrap cases that refuse a
+          # version claim the migration cannot support. All of it on synthetic rows in memory — no Drive, no
+          # remote database.
+          node --test _worker/tests/crm-drive-file-registry.test.mjs \
+                   _worker/tests/crm-phase3-metadata-boundary.test.mjs \
+                   _worker/tests/crm-drive-ref-bootstrap.test.mjs \
+                   _worker/tests/crm-drive-file-versions.test.mjs > "$TMP/unit.log" 2>&1
           pass_cnt=$(grep -E '^# pass ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
           fail_cnt=$(grep -E '^# fail ' "$TMP/unit.log" | awk '{print $3}' | tail -n1)
-          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0}"
-          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 12 ]; then
+          unit_tests="pass=${pass_cnt:-0}:fail=${fail_cnt:-0} (floor 43: 12 registry + 7 boundary + 5 bootstrap + 19 versions)"
+          if [ "${fail_cnt:-1}" != '0' ] || [ "${pass_cnt:-0}" -lt 43 ]; then
             result='unit-tests-failed'
             finish
             exit 1
@@ -198,6 +230,7 @@ jobs:
           import { pathToFileURL } from 'node:url';
 
           const regModUrl = pathToFileURL(path.resolve(process.cwd(), '_worker/crm-drive-file-registry.js')).href;
+          const p3BoundaryUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/verify-phase3-metadata-boundary.mjs')).href;
           const {
             detectAndRegisterDuplicate,
             insertNewDriveFileStrict,
@@ -380,6 +413,12 @@ jobs:
             const { privKey } = deriveKeyPair(token);
             const payload = openEnvelope(envelopeStr, privKey);
             const db = makeRemoteD1(accountId, testDbUuid, token);
+            const boundary = await import(p3BoundaryUrl);
+            // asked, not assumed: 0010 may or may not be on this database, and the rule differs
+            const ledger = Number((await db.prepare(boundary.LEDGER_PROBE_SQL).bind().first())?.n ?? 0) > 0;
+            const provenanceSnap = async () =>
+              (await db.prepare(boundary.registryProvenanceSql({ withLedger: ledger })).bind().all()).results;
+            const beforeSnap = await provenanceSnap();
 
             const pass1 = await syncDriveFolderMetadataInventory(db, {
               driveParentId: payload.driveParentId,
@@ -400,6 +439,15 @@ jobs:
               driveParentId: payload.driveParentId,
               limit: 500,
             });
+            const afterSnap = await provenanceSnap();
+            // The phase boundary, measured rather than counted: the inventory pass may register files and
+            // refresh metadata, but it neither writes, erases, swaps nor delivers a fingerprint that lacks
+            // a receipt (and, once 0010 is live, a head version carrying it). This replaces
+            // `hashed_cnt = 0`, which was written before Phase 4 recorded content at all.
+            const gate = boundary.evaluatePhase3Boundary({
+              before: beforeSnap, after: afterSnap, withLedger: ledger,
+            });
+            assert.ok(gate.ok, `PHASE3_METADATA_BOUNDARY:${gate.problems.join(' | ')}`.slice(0, 300));
             const summary = await db.prepare(`
               SELECT
                 COUNT(*) AS tot,
@@ -416,7 +464,8 @@ jobs:
               FROM crm_drive_file_registry
             `).bind().first();
             assert.equal(Number(summary.tot), 99, 'registry must hold exactly the 99 inventoried files');
-            assert.equal(Number(summary.hashed_cnt), 0, 'Phase 3 is metadata-only: no content_sha256 may be recorded');
+            assert.equal(Number(summary.hashed_cnt), gate.summary.fingerprinted,
+              'the boundary query and the inventory summary must count the same fingerprints');
             assert.equal(Number(summary.named_cnt), 99, 'every registry row must carry a file_name');
             assert.equal(Number(summary.dated_cnt), 99, 'every registry row must carry drive_modified_at');
             process.stdout.write(
@@ -425,6 +474,7 @@ jobs:
               `db[tot=${summary.tot},vcf=${summary.vcf_cnt},zip=${summary.zip_cnt},scan=${summary.scanned_cnt},` +
               `fail=${summary.failed_cnt},dup=${summary.dup_cnt},hash=${summary.hashed_cnt},named=${summary.named_cnt},` +
               `dated=${summary.dated_cnt},nameVer=${summary.ver_cnt},bytes=${summary.bytes_sum}];` +
+              `p3gate[fp=${gate.summary.fingerprinted},untouched=${gate.summary.metadataOnly},ledger=${ledger ? 'yes' : 'no'},rows=${gate.summary.rows}];` +
               `queues[needProc=${needProc.length},pendRev=${pendRev.length}]`,
             );
           }
