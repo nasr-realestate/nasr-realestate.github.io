@@ -46,7 +46,11 @@ for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) 
   try { db.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); applied.push(file.slice(0, 4)); }
   catch { /* same policy as the 0009 rehearsal: skip what needs tables this file does not model */ }
 }
-db.exec(readFileSync(D10, 'utf8'));
+  // A promoted migration arrives with the directory walk above, so "apply the draft file too" became
+  // "apply it twice": `duplicate column name: drive_ref`, which is what this rehearsal died on the moment
+  // 0010 moved from migrations-draft/ into migrations/. Read from wherever the file lives, apply it once.
+  // Same rule _registry-fixture.mjs follows, for the same reason.
+if (!applied.includes('0010')) db.exec(readFileSync(D10, 'utf8'));
 db.exec(readFileSync(D11, 'utf8'));
 
 // ---------------------------------------------------------------- assertions

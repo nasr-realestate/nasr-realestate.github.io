@@ -332,6 +332,52 @@ the time-travel bookmark for the session is `tt=00000234-00000000-…` — the r
 step 8. Getting here cost the discovery of two verifier bugs (§2.7 and §2.4 check 6), both of which had been
 making the backup step *unrunnable or wrong* rather than merely noisy.
 
+### A3 delivered — 0010 is on the test database, and the promotion exposed three things
+
+Applied by CI only, via `git mv` with no edit to the SQL, then `wrangler d1 migrations apply`:
+
+```
+P3 live mig — migs=10,latest=0010_crm_drive_file_versions.sql,tbl=1,idx=8,rows_before_sync=99
+P3 guards   — biz_unchanged=yes(60:64:83:76:2984);bak_untouched=yes(nasr-crm-test-db-backup-20261101:3256320:0);market_db_untouched=yes(nasr-market-db:909312:0)
+```
+
+Ten migrations, `crm_drive_file_version` present, eight indexes on the registry, all 99 rows still there,
+and no business table moved. What it exposed, each one found by a check rather than by reading:
+
+- **`detectAndRegisterDuplicate` could no longer mark a duplicate.** 0010's `trg_registry_duplicate_pin`
+  refuses `processing_status = 'duplicate'` unless the row names the canonical file's `drive_ref` and
+  `duplicate_of_version_seq`; the 0007-era write path set only `duplicate_of_file_id`. On a ledger database
+  every duplicate found by the intake path would have died inside the trigger as `SQLITE_CONSTRAINT`
+  (`code:7500` on D1) with no reason attached. Fixed in the service — the pin is resolved from the canonical
+  row, and when the canonical row cannot be named (a database with 0010 applied and the Bootstrap not yet
+  run) the claim is refused with `DUPLICATE_PIN_UNAVAILABLE` and nothing is written. **No trigger was
+  touched, no constraint widened**; without a ledger the statement keeps its 0007 shape, which is what makes
+  the order in §3 (schema now, refs later) possible at all. Proven in
+  `_worker/tests/crm-drive-file-versions.test.mjs` over three states — 0007 alone, 0010 applied on top of the
+  same rows (refusal, no version conjured), refs and versions arriving through `recordVersion` (claim lands,
+  pinned to `deriveDriveRef('SYNTH-CANON')` at version 1) — and asserted against real D1 in §3 step 3's
+  isolated chain.
+- **Three harnesses applied 0010 twice.** `_registry-fixture.mjs` and two `tests-draft/` rehearsals exec'd
+  "the chain, then the draft file", which became "the chain, then a file the chain already contains":
+  `duplicate column name: drive_ref`, and in `crm-file-review-0011.d1-rehearsal.py` a plain
+  `FileNotFoundError` for the draft path. The rule is now stated in the harnesses, not in prose: read a
+  migration from wherever it lives, apply it once, and *exclude* it by name when a test wants the pre-0010
+  state (`ledger: false`, `exclude: [...]`). After that: rehearsals 45/45, 35/35, 113/113 local and
+  69/69, 83/83 on the D1 engine; `npm test` 734/734.
+- **A check pinned to a branch name is a check that can sit silent.** `crm-phase3-registry.yml`,
+  `crm-drive-migration-session.yml`, `crm-phase4-analysis.yml` and `crm-phase4-review.yml` triggered on
+  `push.branches: [arena/1c171b6c-…]` — the previous session's branch. After that branch merged, pushes here
+  ran *nothing* from them: not a failure, an absence, the same class as §2.7. They now trigger on `arena/**`,
+  which is what `crm-review-0009-verify.yml` and `crm-sealed-ingest.yml` already did. The boundary that
+  matters is unchanged and is not the branch: test-database uuid required, `nasr-market-db` refused in the
+  wrangler config, the untouched-guards, and `crm-cloudflare-test-deploy.yml` still `workflow_dispatch` only.
+
+The first attempt at this gate also produced a false alarm of its own, recorded so it is not repeated: the
+index expectation was a line-anchored regex over DDL that writes `ON table (cols)` on the *next* line, so it
+counted 0 declared indexes and failed a correct promotion. The count is derived with whitespace collapsed
+(0007 declares 6, 0010 declares 2, installing the chain gives 8, live probe says 8), and the unit-floor label
+was corrected to the number the check actually enforces.
+
 ## 3. Phase 3 — the migration, in the mandated order
 
 Pre-flight disqualifiers (any one stops the session before it starts):
@@ -446,12 +492,19 @@ Never accept "looks fine" without the digest — the digest is what ties the app
 
 ### Step 5b — the executor: `crm-drive-migration-session.yml`
 
-Steps 4-7 are executed by `.github/workflows/crm-drive-migration-session.yml` (modes `preflight`, `bootstrap`,
-`verify`), because that runner is the only place holding a Cloudflare token; the local commands in this section
-remain the operator's alternative and the reviewer's cross-check. The mode arrives either as a dispatch input
-(human) or as the contents of `.crm/migration-session-mode` (this agent, whose token is refused by
-`workflow_dispatch`); the file is validated against the three-word allowlist inside the job, so its content
-cannot become a command. Its guarantees, in code rather than prose:
+Steps 4-7 are executed by `.github/workflows/crm-drive-migration-session.yml` (modes `preflight`,
+`bootstrap-plan`, `bootstrap`, `verify`), because that runner is the only place holding a Cloudflare token; the
+local commands in this section remain the operator's alternative and the reviewer's cross-check. The mode
+arrives either as a dispatch input (human) or as the contents of `.crm/migration-session-mode` (this agent,
+whose token is refused by `workflow_dispatch`); the file is validated against the allowlist inside the job, so
+its content cannot become a command.
+
+`bootstrap-plan` exists because `bootstrap` cannot satisfy step 5 on its own: it plans **and** applies in one
+run, so nobody could review a file before it was written. The new mode runs the same probe and the same
+`plan()` over a fresh export, applies the same one-column shape check, prints the same `seed_plan=` line and
+the `seed_sha256`, and then stops — no `wrangler d1 execute` is reachable in that branch, and the run reports
+`seed_apply=not-run(plan-only,review required)` so the absence of a write is stated rather than inferred. What
+is reviewed is therefore the digest of exactly what `bootstrap` would apply. Its guarantees, in code rather than prose:
 
 - it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers;
 - it refuses to start if `nasr-market-db` or the production uuid appears in the wrangler config, and requires

@@ -32,6 +32,7 @@ const DRAFT_CANDIDATES = [
 ];
 const DRAFT = DRAFT_CANDIDATES.find(p => existsSync(p));
 if (!DRAFT) throw new Error('0010 not found in _worker/migrations or _worker/migrations-draft');
+const DRAFT_NAME = '0010_crm_drive_file_versions.sql';
 const DRAFT_SQL = readFileSync(DRAFT, 'utf8');
 
 const sha = t => createHash('sha256').update(t).digest('hex');
@@ -41,7 +42,7 @@ const LATER = '2026-11-02T12:00:00.000Z';
 const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 // ---------------------------------------------------------------- isolated database
-function build({ applyDraft = true } = {}) {
+function build({ applyDraft = true, exclude = [] } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(`
@@ -52,12 +53,16 @@ function build({ applyDraft = true } = {}) {
       bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT NOT NULL);
   `);
   const applied = [];
-  for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) {
+  for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql') && !exclude.includes(f)).sort()) {
     try { db.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); applied.push(file.slice(0, 4)); }
     catch { /* migrations that need tables this rehearsal does not model are skipped, as in 0009's */ }
   }
   if (!applied.includes('0007')) throw new Error('0007 (the registry) must apply for this to mean anything');
-  if (applyDraft) db.exec(DRAFT_SQL);
+  // A promoted migration arrives with the directory walk above, so "apply the draft file too" became
+  // "apply it twice": `duplicate column name: drive_ref`, which is what this rehearsal died on the moment
+  // 0010 moved from migrations-draft/ into migrations/. Read from wherever the file lives, apply it once.
+  // Same rule _registry-fixture.mjs follows, for the same reason.
+  if (applyDraft && !applied.includes('0010')) db.exec(DRAFT_SQL);
   return { db, applied };
 }
 const { db, applied } = build();
@@ -334,7 +339,11 @@ expectOk('T2 a pinned claim is accepted and stays true when the canonical row mo
 {
   const noTriggers = DRAFT_SQL.replace(/^CREATE TRIGGER [\s\S]*?^END;\n/gm, '');
   if (/CREATE TRIGGER/.test(noTriggers)) throw new Error('could not strip triggers for the positive control');
-  const { db: bare } = build({ applyDraft: false });
+  // `applyDraft: false` used to be enough to say "give me the schema before 0010": while 0010 lived in
+  // migrations-draft/ the walk never touched it. Now it is part of the applied chain, so the pre-promotion
+  // state has to *exclude* the file by name — otherwise this positive control execs 0010 twice, and the
+  // failure it reports (`duplicate column name: drive_ref`) is about the harness, not about any barrier.
+  const { db: bare } = build({ applyDraft: false, exclude: [DRAFT_NAME] });
   bare.exec(noTriggers);
   // a writer that bypassed the triggers: stale head, missing rows, a gap, and a processed file with no
   // version — the exact states the views promise to report

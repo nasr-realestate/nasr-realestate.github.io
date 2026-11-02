@@ -25,20 +25,28 @@ name: CRM Drive Migration Session — 0010 anchor bootstrap and ledger verificat
 # commit is the stop lever, and no mode other than the three below can be requested by file content.
 on:
   push:
+    # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
+    # moment the session that pinned it merges and the next session works on a new branch — which is exactly
+    # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
+    # CRM_PHASE2_DRIVE_MIGRATION_PLAN.md). What bounds this job is not the branch: it is the target-database
+    # allowlist, the `nasr-market-db` prohibition, the guards that prove nothing else moved, and the fact
+    # that `crm-cloudflare-test-deploy.yml` stays workflow_dispatch-only. So no branch edit can turn this
+    # into a deploy, and no branch edit can make it write to production.
     branches:
-      - arena/1c171b6c-nasr-realestate-github-io
+      - "arena/**"
     paths:
       - .crm/migration-session-mode
       - .github/workflows/crm-drive-migration-session.yml
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preflight = read-only probes · bootstrap = plan steps 4-7 · verify = plan step 9'
+        description: 'preflight = read-only probes · bootstrap-plan = generate the seed and stop · bootstrap = plan steps 4-7 and apply · verify = plan step 9'
         required: true
         default: 'preflight'
         type: choice
         options:
           - preflight
+          - bootstrap-plan
           - bootstrap
           - verify
 
@@ -92,13 +100,13 @@ jobs:
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           QUEUE_FILE='_worker/ingest-queue/drive-registry-sealed.txt'
           MODE="$SESSION_MODE_INPUT"
-          case "$MODE" in preflight|bootstrap|verify) : ;; *) MODE='' ;; esac
+          case "$MODE" in preflight|bootstrap-plan|bootstrap|verify) : ;; *) MODE='' ;; esac
           if [ -z "$MODE" ] && [ -f .crm/migration-session-mode ]; then
             MODE=$(tr -d '[:space:]' < .crm/migration-session-mode)
           fi
           case "$MODE" in
-            preflight|bootstrap|verify) : ;;
-            *) echo "::error::no usable mode: the dispatch input or .crm/migration-session-mode must say preflight, bootstrap or verify"
+            preflight|bootstrap-plan|bootstrap|verify) : ;;
+            *) echo "::error::no usable mode: the dispatch input or .crm/migration-session-mode must say preflight, bootstrap-plan, bootstrap or verify"
                exit 1 ;;
           esac
           TMP=$(mktemp -d)
@@ -138,7 +146,7 @@ jobs:
           }
 
           case "$MODE" in
-            preflight|bootstrap|verify) : ;;
+            preflight|bootstrap-plan|bootstrap|verify) : ;;
             *) fail "unknown-mode" ;;
           esac
 
@@ -160,7 +168,7 @@ jobs:
               fail "local-gate-unheld:$(basename "$script")"
             fi
           done
-          if [ "$MODE" = 'bootstrap' ]; then
+          if [ "$MODE" = 'bootstrap' ] || [ "$MODE" = 'bootstrap-plan' ]; then
             # the plan's first disqualifier: never interleave a schema session with a queued content pass
             if ! node scripts/crm/drive-registry-envelope.mjs inspect --in "$QUEUE_FILE" | grep -q 'IDLE'; then
               fail "sealed-queue-not-idle"
@@ -285,7 +293,11 @@ jobs:
               + `ref_col=${out.has_ref ? 'yes' : 'no'},rows=${out.rows_all},fp=${out.fp},proc=${out.proc},`
               + `needs_bootstrap=${out.needs_bootstrap}`
               + (out.ledger ? `,svv=${out.svv},ctr=${out.ctr},dang=${out.dang},gaps=${out.gaps}` : ',svv=n/a'));
-            if (MODE === 'bootstrap') {
+            // The plan run is held to the same disqualifiers as the apply run: a seed planned against a
+            // database that does not have the ledger yet is not a reviewable artifact, it is a mistake that
+            // happens to be readable. Review before write only means something if what is reviewed is what
+            // would have been written.
+            if (MODE === 'bootstrap' || MODE === 'bootstrap-plan') {
               if (!out.ledger) throw new Error('ABORT_BOOTSTRAP_WITHOUT_0010');
               if (out.svv < 0 || out.ctr < 0 || out.dang < 0 || out.gaps < 0) {
                 throw new Error('LEDGER_COUNTERS_UNREADABLE');
@@ -423,12 +435,53 @@ jobs:
           }
           read_out() { cat "$TMP/out.$1" | tr -d '\n'; }
 
+          # The one-column rule, in one place. `bootstrap-plan` checks the shape of the file a human is being
+          # asked to approve; `bootstrap` checks the shape of the file it is about to apply. Written twice,
+          # those two rules drift, and then the digest under review describes a file that is not the file that
+          # gets written — so there is one function, called twice.
+          assert_one_column_seed() {
+            if grep -vE "^--|^BEGIN;$|^COMMIT;$|^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;$|^$" "$1" | grep -q .; then
+              fail "seed-shape-unexpected"
+            fi
+          }
+
           # ---- 3) preflight: read-only, and the only mode that is safe to run at any time ----
           run_runner probe probe
           probe=$(read_out probe)
           if [ "$MODE" = 'preflight' ]; then
             result='preflight-ok'
             guards="market_pre=${market_pre};ref_backup_pre=${bak_pre}"
+            finish
+            exit 0
+          fi
+
+          # ---- 3b) bootstrap-plan: make step 5's review possible, then stop before any write.
+          # `bootstrap` plans and applies in one run, so "the file is available for human review before any
+          # write" could not be satisfied by it. This branch runs the same probe and the same plan() over a
+          # fresh export, applies the same one-column shape rule, and reports the same digest — and no
+          # `wrangler d1 execute` is reachable from it. The absence of a write is stated in the check names
+          # (seed_apply=not-run, ledger/verify=not-run) rather than left to be inferred from blank fields.
+          if [ "$MODE" = 'bootstrap-plan' ]; then
+            run_runner plan plan
+            seed_plan=$(read_out plan)
+            assert_one_column_seed "$TMP/seed.sql"
+            seed_statements=$(grep -c "^UPDATE crm_drive_file_registry SET drive_ref = " "$TMP/seed.sql" || true)
+            seed_sha=$(sha256sum "$TMP/seed.sql" | awk '{print $1}')
+            # The file inlines real drive ids, so it is never committed, never uploaded, and never echoed: what
+            # a reviewer approves is its sha256 plus the counts and the refusal tally in `seed_plan`, and the
+            # copy here dies with $TMP when the job ends.
+            rm -f "$TMP/seed.sql"
+            if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+              fail "worktree-dirty-after-plan"
+            fi
+            if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' | grep -q .; then
+              fail "generated-sql-left-in-tree"
+            fi
+            seed_apply="not-run(plan-only,review required)"
+            ledger="not-run(plan-only,sha=${seed_sha:0:12},statements=${seed_statements})"
+            verify="not-run(plan-only)"
+            guards="market_pre=${market_pre};ref_backup_pre=${bak_pre}"
+            result="plan-only(statements=${seed_statements},sha=${seed_sha:0:12})"
             finish
             exit 0
           fi
@@ -449,9 +502,7 @@ jobs:
           # the one-column rule, checked in the shell as well as in the tool: a file that contains anything
           # other than `UPDATE … SET drive_ref = '<64 hex>' WHERE drive_file_id = '<id>' AND drive_ref IS NULL`
           # is not the artifact this plan authorised, and it is not applied.
-          if grep -vE "^--|^BEGIN;$|^COMMIT;$|^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;$|^$" "$TMP/seed.sql" | grep -q .; then
-            fail "seed-shape-unexpected"
-          fi
+          assert_one_column_seed "$TMP/seed.sql"
           seed_statements=$(grep -c "^UPDATE crm_drive_file_registry SET drive_ref = " "$TMP/seed.sql" || true)
           seed_sha=$(sha256sum "$TMP/seed.sql" | awk '{print $1}')
           if [ "$seed_statements" = "0" ]; then

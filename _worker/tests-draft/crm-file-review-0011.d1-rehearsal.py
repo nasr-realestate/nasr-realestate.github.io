@@ -32,8 +32,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, '..', '..'))
 MIG = os.path.join(REPO, '_worker', 'migrations')
 DRAFT_DIR = os.path.join(REPO, '_worker', 'migrations-draft')
-DRAFT10 = os.path.join(DRAFT_DIR, '0010_crm_drive_file_versions.sql')
-DRAFT11 = os.path.join(DRAFT_DIR, '0011_crm_drive_file_intake_review.sql')
+# Read from wherever the file lives. `crm-drive-versions-0010.d1-rehearsal.py` already resolved its
+# migration this way; this one did not, so the day 0010 moved from migrations-draft/ into migrations/ the
+# rehearsal died on `FileNotFoundError` before it could test anything. The variable keeps its old name
+# because "draft" here means "the file under rehearsal", not "the folder it sits in".
+DRAFT10 = next(q for q in (os.path.join(MIG, '0010_crm_drive_file_versions.sql'),
+                           os.path.join(DRAFT_DIR, '0010_crm_drive_file_versions.sql')) if os.path.exists(q))
+DRAFT11 = next(q for q in (os.path.join(MIG, '0011_crm_drive_file_intake_review.sql'),
+                           os.path.join(DRAFT_DIR, '0011_crm_drive_file_intake_review.sql')) if os.path.exists(q))
 SCRATCH = os.environ.get('P2F_DIR') or tempfile.mkdtemp(prefix='crm-file-review-0011-')
 STATE = os.path.join(SCRATCH, 'state')
 MDIR = os.path.join(SCRATCH, 'migrations')
