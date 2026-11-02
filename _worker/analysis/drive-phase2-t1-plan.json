@@ -1,7 +1,7 @@
 {
   "schema": "p2intake_plan_v1",
   "ref_scheme": "crm-p4-v1/drive_ref",
-  "files_in_listing": 100,
+  "files_in_listing": 101,
   "files_in_registry": 99,
   "actions": [
     {
@@ -47,6 +47,18 @@
       "size_bytes": 3314,
       "action": "unchanged",
       "reason": "same reference, same verified fingerprint"
+    },
+    {
+      "ref": "0800b5e061ed3e78807b4424ba763f028c64f8f88f6140375a5e981c2c3e074c",
+      "kind": "vcf",
+      "fingerprint_level": "provisional",
+      "content_sha256": null,
+      "drive_modified_at": "2026-11-02T11:05:06.873Z",
+      "drive_version": "2",
+      "size_bytes": 1540,
+      "action": "register_new",
+      "review_status": "not_required",
+      "reason": "first sighting of this file reference"
     },
     {
       "ref": "0b9502e7f713b6a70714f81605e1ab252859324aacd12405310b23d8439a057c",
@@ -1108,7 +1120,7 @@
   ],
   "counts": {
     "unchanged": 99,
-    "register_new": 1
+    "register_new": 2
   },
   "not_authorized": [
     "import_to_crm",
@@ -1118,11 +1130,11 @@
     "declare_duplicate_from_provisional_fingerprint"
   ],
   "provenance": {
-    "plan_sha256": "fdfc30be4966d306d4ae418bace5bdb61dc66cb89fab0df79a6ea7d817572af4",
+    "plan_sha256": "eae1efe2a36283913c01bf53ed942e4063159348d52023e44513e1f2c0bb617d",
     "kinds": {
       "zip": 90,
-      "vcf": 10
+      "vcf": 11
     },
-    "provisional_only": 100
+    "provisional_only": 101
   }
 }
