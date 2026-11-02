@@ -395,10 +395,33 @@ jobs:
           const bundleText = outLines.join('\n') + '\n';
           fs.writeFileSync(outSqlPath, bundleText, { mode: 0o600 });
 
-          // Verify local isolated restore with foreign_keys = ON from the start
+          // The invariant that matters about a restore is: once the whole bundle is in, no declared foreign
+          // key is unsatisfied. Enforcing FKs *during* the load — the previous behaviour, "from the start" —
+          // silently demanded that the dump be in topological order, and a per-table export never is:
+          // `crm_contacts` is inserted before `crm_leads`, so a perfectly healthy database failed with
+          // `FOREIGN KEY constraint failed` (run 41518627139, after the test DB grew past the point where an
+          // alphabetically-early child table had a parent that sorts later). It was also the wrong check in the
+          // other direction: a violation whose rows happened to sort last would have passed.
+          //
+          // `defer_foreign_keys` inside one transaction keeps the enforcement — SQLite fails the COMMIT if a
+          // deferred constraint is still unsatisfied — and makes it independent of insert order, for every FK
+          // including the ones 0010 and 0011 add, not only the one column the hand-written
+          // `deferredConvUpdates` INSERT-NULL-then-UPDATE dance used to work around. That workaround stays:
+          // it is about what the bundle does when *D1* applies it, which is a different question from what this
+          // verifier asserts.
           const localRestoreDb = new DatabaseSync(':memory:');
-          localRestoreDb.exec('PRAGMA foreign_keys = ON;');
+          localRestoreDb.exec('PRAGMA foreign_keys = ON; BEGIN; PRAGMA defer_foreign_keys = ON;');
           localRestoreDb.exec(bundleText);
+          localRestoreDb.exec('COMMIT;');
+          const restoreFkc = localRestoreDb.prepare('PRAGMA foreign_key_check').all();
+          if (restoreFkc.length > 0) {
+            const offenders = [...new Set(restoreFkc.map(r => String(r.table)))].sort().join(' ');
+            throw new Error(`Restored database has ${restoreFkc.length} foreign-key violation(s): ${offenders}`);
+          }
+          const restoreIntegrity = localRestoreDb.prepare('PRAGMA integrity_check').all();
+          if (restoreIntegrity.length !== 1 || restoreIntegrity[0].integrity_check !== 'ok') {
+            throw new Error('Restored database failed integrity_check');
+          }
           const restoreSnap = computeDbSnapshot(localRestoreDb);
 
           for (const tName of orderedNames) {

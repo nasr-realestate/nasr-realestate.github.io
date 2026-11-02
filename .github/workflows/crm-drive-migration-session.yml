@@ -178,10 +178,19 @@ jobs:
             '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1_pre.json" > /dev/null; then
             fail "test-db-not-in-account"
           fi
-          market_pre=$(jq -r --arg u "$PROD_DB_UUID" \
-            '.result[] | select(.uuid == $u) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_pre.json" | head -n1)
-          bak_pre=$(jq -r --arg u "$REF_BACKUP_UUID" \
-            '.result[] | select(.uuid == $u) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_pre.json" | head -n1)
+          # `GET /accounts/:id/d1/database` (the list) does not carry `num_tables`, so a guard built from it
+          # printed `nasr-market-db:909312:0` and looked like "the production database is empty" when the
+          # number was simply absent. The per-database endpoint has it: read the real object counts, and a
+          # missing one is a hard stop rather than a zero.
+          d1_meta() {
+            local st out
+            st=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$2" -w '%{http_code}' \
+              "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true)
+            [ "$st" = '200' ] || return 0
+            jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "$2" 2>/dev/null | head -n1
+          }
+          market_pre=$(d1_meta "$PROD_DB_UUID" "$TMP/meta_market_pre.json")
+          bak_pre=$(d1_meta "$REF_BACKUP_UUID" "$TMP/meta_bak_pre.json")
           [ -n "$market_pre" ] || fail "market-db-meta-unreadable"
           [ -n "$bak_pre" ] || fail "reference-backup-meta-unreadable"
 
@@ -511,13 +520,15 @@ jobs:
           account_id=$(curl --silent --show-error --max-time 30 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             "$API/accounts" | jq -r '.result[0].id // empty')
           [ -n "$account_id" ] || { echo "::error::account unreadable"; exit 1; }
-          curl --silent --show-error --max-time 30 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -o /tmp/d1_post.json "$API/accounts/$account_id/d1/database?per_page=100"
           # this step only *reports*: the authoritative comparison is the one inside the session, where the
           # pre-snapshot exists. A moved reference backup or market DB after the fact is visible in the name.
-          jq -r --arg m "$PROD_DB_UUID" --arg b "$REF_BACKUP_UUID" \
-            '"post[" + ([.result[] | select(.uuid == $m) | "market:\(.file_size // 0):\(.num_tables // 0)"] | first // "market:absent") + "," + ([.result[] | select(.uuid == $b) | "bak:\(.file_size // 0):\(.num_tables // 0)"] | first // "bak:absent") + "]"' \
-            /tmp/d1_post.json
+          # Per-database endpoint, for the same reason as above: `num_tables` is not in the list payload.
+          pm() {
+            curl --silent --show-error --max-time 30 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -o "/tmp/meta_$1.json" "$API/accounts/$account_id/d1/database/$1" 2>/dev/null || true
+            jq -r '.result[0] // .result | "\(.name):\(.file_size // 0):\(.num_tables)"' "/tmp/meta_$1.json" 2>/dev/null | head -n1
+          }
+          echo "post[market=$(pm "$PROD_DB_UUID"),bak=$(pm "$REF_BACKUP_UUID")]"
 
   report:
     if: always()

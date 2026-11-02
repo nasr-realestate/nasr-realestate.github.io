@@ -215,7 +215,7 @@ jq '{object_counts, guards_present, stages}' "$TMP/bundle/manifest.json"
 node -e 'const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync("/tmp/copy.db");db.exec(require("node:fs").readFileSync(process.argv[1],"utf8"));console.log(db.prepare("PRAGMA integrity_check").get(), db.prepare("PRAGMA foreign_key_check").all().length)' "$TMP/bundle/restore.sql"
 ```
 
-### 2.4 Integrity verification — five things that must all be true, without touching the original
+### 2.4 Integrity verification — six things that must all be true, without touching the original
 
 1. **Object parity:** bundle `inventory.json` counts (tables / explicit indexes / triggers / views) equal the
    counts re-exported from the restored copy.
@@ -226,7 +226,24 @@ node -e 'const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync("
    guard-rejected write (the reason the bundle is built by `build-d1-guarded-backup.mjs` and not by
    splitting the dump on `;`).
 5. **Untouched-source proof:** the source DB, the previous backup DB and `nasr-market-db` are compared
-   before/after (name + `file_size` + `num_tables`) and must be byte-identical in metadata.
+   before/after (name + `file_size` + `num_tables`) and must be byte-identical in metadata. `num_tables` is
+   read from `GET /accounts/:id/d1/database/:uuid` — the *list* endpoint omits it, which is why a guard once
+   printed `nasr-market-db:909312:0` and looked like an empty production database.
+6. **Order-independent foreign-key truth (added 2026-11-02, by failure):** the restored copy must satisfy
+   every declared FK *as a set* — `PRAGMA foreign_key_check` over the finished database, loaded inside one
+   `defer_foreign_keys` transaction whose COMMIT is itself the enforcement. Checking FKs *while* statements
+   are applied is not this property: `d1 export` emits tables in name order, so a child table's rows arrive
+   before its parent exists, and a perfectly healthy database fails with `FOREIGN KEY constraint failed`.
+   That is what run `41518627139` did (`build-primary-backup-failed:FOREIGN KEY constraint failed`); the same
+   run carries the counter-evidence that the data was clean, because the builder's source-snapshot
+   `foreign_key_check` had already passed — which is exactly why it got as far as the restore.
+   `_worker/tests/crm-restore-verification-invariants.test.mjs` pins both directions: misordered-but-valid
+   must load, a dangling reference must not. So neither the bug nor a "fix" that simply disables the check
+   can come back quietly.
+
+**Consequence for the migration, stated plainly:** an FK-shaped failure inside the backup verifier is a
+verifier bug and does not stop 0010; a real violation in the live data (which the source-side check above
+would have named) does.
 
 ### 2.5 Rules for the backup copy
 
