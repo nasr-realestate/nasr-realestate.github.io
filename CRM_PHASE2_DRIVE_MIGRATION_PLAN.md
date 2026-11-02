@@ -246,6 +246,44 @@ acts of the approved session — they are *not* evidence this document can produ
 
 ---
 
+### 2.7 A ceiling that can silently delete the backup step (measured the hard way)
+
+`crm-phase2-backup.yml` is the only dated-backup mechanism, and its `on.push.paths` names only itself — so it
+runs on the push that edits it and on a dispatch. Commit `f4dc343` edited it, the push started run
+`41516664341`, and the run **failed with no job, no log, no check run and no annotation in the API**. The
+Actions UI alone said why:
+
+```
+Invalid workflow file: .github/workflows/crm-phase2-backup.yml
+(Line: 58, Col: 14): Exceeded max expression length 21000
+```
+
+The rule GitHub enforces, established by comparison inside this repo rather than assumed: a workflow
+**property whose value contains an expression is capped at 21,000 characters**, while a property with no
+expression in it is not — the Phase 4 job's script is 51,295 characters and has always run. Adding
+`backup_suffix='${{ github.event.inputs.backup_suffix }}'` inside that 28,326-character script pushed the
+whole `run:` value over the cap, so the file stopped being startable at all. Measured at each commit of that
+file: `c1d160f` 28,326 with no expression (ok) → `f4dc343` 29,309 with one (unstartable) → fixed in the
+commit that adds this paragraph, which moves the input into `env:` the way `p3`, `p4` and
+`crm-cloudflare-test-deploy.yml` already pass every secret and input.
+
+Two consequences that matter for this plan:
+
+1. **A CI-only workflow can be broken for weeks and show green.** No check is created for a file GitHub
+   refuses to start, so "all checks pass" said nothing about the backup path. Reading the workflow's shape
+   is not the same as knowing it can start; that is why the dated backup is *attempted* before the migration
+   rather than assumed available.
+2. `_worker/tests/crm-workflow-expression-limits.test.mjs` now asserts, over every file in
+   `.github/workflows/`, that no property carries an expression past the cap — with the broken shape
+   reproduced in a temp fixture and a long-but-expression-free one proven *not* to be flagged, so the guard
+   cannot be deleted as "too noisy". It runs in `npm test`, hence in the `node-tests` job that every push
+   executes, which means the next edit to any CRM workflow fails loudly on a normal push instead of quietly
+   on the day the backup is needed.
+
+For the record: the migration session workflow was at 20,241 characters with one inline expression when this
+was found — 759 characters from the same wall, i.e. one more guard would have broken A4 and A5. It uses `env:`
+too.
+
 ## 3. Phase 3 — the migration, in the mandated order
 
 Pre-flight disqualifiers (any one stops the session before it starts):

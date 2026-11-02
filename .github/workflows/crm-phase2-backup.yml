@@ -55,6 +55,13 @@ jobs:
       - name: Export full schema+data, create persistent D1 backup, and test isolated restore
         id: run_backup
         shell: bash
+        # Deliberately via `env`, not inline in the script: a workflow property that holds an expression is
+        # expression-rendered and capped at 21,000 characters, and this script is longer than that. Run
+        # 41517416869 was refused with "Exceeded max expression length 21000" for exactly this reason.
+        # Every long job in this repo (p3, p4, test-deploy) already passes secrets and inputs through `env`.
+        # Guarded by _worker/tests/crm-workflow-expression-limits.test.mjs.
+        env:
+          BACKUP_SUFFIX: ${{ github.event.inputs.backup_suffix }}
         run: |
           set -euo pipefail
           umask 077
@@ -70,7 +77,7 @@ jobs:
           # reused: `new-backup-db-name-already-exists-refusing-overwrite` below is a hard refusal, and a
           # backup that silently overwrites another backup is not a backup. Digits only, so a dispatch
           # cannot smuggle a name (or a shell metacharacter) into the API call or the bundle path.
-          backup_suffix='${{ github.event.inputs.backup_suffix }}'
+          backup_suffix="$BACKUP_SUFFIX"
           if [ -z "$backup_suffix" ]; then backup_suffix=$(date -u +%Y%m%d); fi
           case "$backup_suffix" in
             ''|*[!0-9]*)

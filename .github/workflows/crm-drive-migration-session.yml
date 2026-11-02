@@ -73,6 +73,12 @@ jobs:
       - name: Preflight, bootstrap, and verify (one mode per run)
         id: session
         shell: bash
+        # `env`, never inline: a property holding an expression is expression-rendered and capped at 21,000
+        # characters (run 41517416869 died on exactly that in the sibling backup workflow), and this script
+        # is already 20,241 characters long. One more guard written inline would have broken the migration
+        # session for a reason that has nothing to do with the migration.
+        env:
+          SESSION_MODE_INPUT: ${{ github.event.inputs.mode }}
         run: |
           set -euo pipefail
           umask 077
@@ -85,7 +91,7 @@ jobs:
           REF_BACKUP_UUID='a7681217-32a3-48fd-b8f5-8a54ac7b35e7'
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           QUEUE_FILE='_worker/ingest-queue/drive-registry-sealed.txt'
-          MODE='${{ github.event.inputs.mode }}'
+          MODE="$SESSION_MODE_INPUT"
           case "$MODE" in preflight|bootstrap|verify) : ;; *) MODE='' ;; esac
           if [ -z "$MODE" ] && [ -f .crm/migration-session-mode ]; then
             MODE=$(tr -d '[:space:]' < .crm/migration-session-mode)
