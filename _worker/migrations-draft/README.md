@@ -36,7 +36,17 @@ python3 _worker/tests-draft/crm-file-review-0011.d1-rehearsal.py     # 83 فحص
 python3 _worker/tests-draft/crm-0009-backup-restore.rehearsal.py   # 33 فحصًا، حزمة احتياطية مُسيَّجة
 node _worker/tests-draft/crm-drive-file-versions.d1-service.mjs    # 27 فحصًا على D1 لطبقة الخدمة نفسها
 node --test _worker/tests/crm-drive-file-versions.test.mjs         # 17 فحصًا في-process (node:sqlite)
+node scripts/crm/drive-registry-envelope.mjs selftest       # 13 فحصًا: ترميز p3reg_v1 في الاتجاهين
+node scripts/crm/seed-drive-file-refs.mjs selftest          # 13 فحصًا: الزرع بعمود واحد + استخراج §5
+node --test _worker/tests/crm-drive-registry-envelope-sync.test.mjs  # 8: مغلف اصطناعي عبر sync_sealed كامل
 ```
+
+**الخطة التشغيلية للترحيل الآمن** (نسخة احتياطية مُتحقَّق منها ← 0010 ← زرع ← §5 ← 0011 ← تحقق):
+`CRM_PHASE2_DRIVE_MIGRATION_PLAN.md` — فيها أوامر كل خطوة، وشروط التوقف، والتراجع لكل مرحلة، وما لا يُسمح به
+(لا `nasr-market-db`، لا قراءة محتوى، لا تغيير إعدادات، لا deploy، لا دمج). وتُثبّت الفخّ الذي لا يظهر إلا أثناء
+التنفيذ: بعد 0010 مباشرة يكون `status_without_version = 99` **متوقعًا**، لذلك الخطوات 3→7 جلسة واحدة متصلة،
+ولابد أن يكون `_worker/ingest-queue/drive-registry-sealed.txt` على `IDLE` قبل البدء. إذا تعارض هذا الملف مع
+الخطة، تُصحَّح المسودة هنا — لا العكس.
 
 `crm-drive-file-versions.d1-service.mjs` هو الملف الذي يُشغّل **دالة `recordVersion()` الحقيقية** (لا
 SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل عبر `wrangler d1 execute --local` إلى قاعدة مؤقتة في مجلد
@@ -73,8 +83,9 @@ SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل ع
   (`file_review_case_requires_a_recorded_version`). الزرع لذلك **ليس خطوة قبل 0010** — هو خطوة بعدها:
   `scripts/crm/seed-drive-file-refs.mjs` يولّد `UPDATE` لعمود واحد من تصدير مقروء، ثم تُعاد عبارة §5
   (idempotent). مُثبت على D1 في `V15a–V15d` + `C/S`، وعلى node:sqlite في
-  `_worker/tests/crm-drive-ref-bootstrap.test.mjs` (٥ اختبارات: الفجوة، الإغلاق، عدم التكرار،
-  تعارض مرجع مفروض، ومنع ادّعاء تحقّق غير مُثبت).
+  `_worker/tests/crm-drive-ref-bootstrap.test.mjs` (٧ اختبارات: الفجوة، الإغلاق، عدم التكرار،
+  تعارض مرجع مفروض، منع ادّعاء تحقّق غير مُثبت، وأن **الملف الذي ستُطبّقه الخطة هو نفسه المُختبَر**
+  (لا نسخة ثانية من استخراج §5)، ورقم القبول `status_without_version = 0` بعد الزرع وإعادة §5).
 
 ## قائمة الترويج (ما يُشترط في نفس الـ commit)
 
@@ -96,7 +107,11 @@ SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل ع
    node scripts/crm/seed-drive-file-refs.mjs --from /tmp/reg.json --out /tmp/seed
    #    يرفض: id خارج [A-Za-z0-9_-]{10,128}، بصمة غير 64 سداسية، ومرجعًا موجودًا يختلف عن المفتاح
    #    (تعارض يُترك لإنسان؛ لا يُكتب فوقه أبدًا). لا يلمس أي عمود غير `drive_ref`.
-   # 4) طبِّق /tmp/seed/drive-ref-seed.sql ثم أعد عبارة §5 من ملف الهجرة (idempotent)
+   # 4) طبِّق /tmp/seed/drive-ref-seed.sql ثم أعد عبارة §5 — بلا نسخ يدوي:
+   node scripts/crm/seed-drive-file-refs.mjs backfill-sql --out /tmp/rerun-0010-s5.sql
+   #    يرفض الأداة إن لم يكن المستخرَج عبارة واحدة `INSERT INTO crm_drive_file_version` فيها
+   #    NOT EXISTS و'bootstrap_backfill' و'phase2-0010-bootstrap'، وما زال شرطا drive_ref/content_sha256،
+   #    ولا UPDATE/DELETE/DROP/ALTER/PRAGMA. الملف يتغيّر بمسارته الجديدة بعد الترويج — والمُستخرِج يتبعه.
    # 5) الفحص الواجب قبل أي اعتماد على 0011:
    #    SELECT status_without_version FROM crm_drive_version_invariant_violations;   -- يجب أن يكون 0
    ```
