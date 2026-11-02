@@ -275,7 +275,28 @@ function build() {
   const candidates = candPath ? JSON.parse(fs.readFileSync(candPath, 'utf8')) : null;
   if (Array.isArray(candidates) === false && candPath) throw new Error('--candidates must be a JSON array');
 
+  const candSummary = opt('candidate-summary')
+    ? (opt('candidate-summary').endsWith('.json')
+        ? JSON.parse(fs.readFileSync(path.resolve(opt('candidate-summary')), 'utf8'))
+        : JSON.parse(opt('candidate-summary')))
+    : null;
   const rows = buildCases(payload, candidates);
+  if (candSummary) {
+    // Keys are what matters: a count keyed `phone` is fine, a value carrying a phone is not, and a
+    // key named `crm_contact_id` means somebody exported the join itself into the wrong channel.
+    const forbiddenKeys = /^(crm_contact_id|drive_file_id|drive_file_ref|contact_id|name|full_name|phone|tel|transcript|body|reason)$/i;
+    const walk = v => {
+      if (Array.isArray(v)) return v.some(walk);
+      if (v && typeof v === 'object') {
+        for (const k of Object.keys(v)) { if (forbiddenKeys.test(k)) return true; if (walk(v[k])) return true; }
+      }
+      return false;
+    };
+    if (walk(candSummary)) {
+      throw new Error('--candidate-summary accepts counts and class names only, never identifiers or text');
+    }
+    assertClean(stableStringify(candSummary), 'candidate summary');
+  }
   const plain = rows.map(r => stableStringify(r)).join('\n') + '\n';
   assertClean(plain, 'register plaintext');
 
@@ -314,6 +335,10 @@ function build() {
     plaintext_sha256: sha(plain),
     ciphertext_sha256: sha(JSON.stringify(env)),
     candidate_export_used: candPath ? path.basename(candPath) : null,
+    // The CI run that applied 0009 publishes the *shape* of the candidate ledger (counts and match
+    // classes only). Recording it here lets a reader cross-check this register against that check name
+    // without anyone exporting personal data; it is metadata, not part of the sealed plaintext.
+    candidate_ledger_measured: candSummary ?? null,
     crm_join_complete: rows.every(r => r.crm_contact_id !== null),
     // What this register provably is, and what it can never be.
     scope: 'review queue index rebuilt from the committed pseudonymized Phase 4 payload',
@@ -436,6 +461,18 @@ function selftest() {
   ck('a candidate export fills the CRM side for exactly the joined case',
     withCand.filter(r => r.crm_contact_id !== null).length === 1
     && withCand.find(r => r.crm_contact_id !== null).match_class === 'probable_match');
+  ck('a candidate summary with an identifier key is refused',
+    (() => {
+      const forbiddenKeys = /^(crm_contact_id|drive_file_id|drive_file_ref|contact_id|name|full_name|phone|tel|transcript|body|reason)$/i;
+      const walk = v => {
+        if (Array.isArray(v)) return v.some(walk);
+        if (v && typeof v === 'object') {
+          for (const k of Object.keys(v)) { if (forbiddenKeys.test(k)) return true; if (walk(v[k])) return true; }
+        }
+        return false;
+      };
+      return walk({ crm_contact_id: 'x' }) && !walk({ match_classes: { exact_match: 61 }, files: 99 });
+    })());
   ck('repo-write guard refuses an --out inside the repository',
     (() => { try { guardOutsideRepo(path.resolve(import.meta.dirname, '..', '..'), path.resolve(import.meta.dirname, '..', '..')); return false; } catch { return true; } })());
   let fail = 0;
