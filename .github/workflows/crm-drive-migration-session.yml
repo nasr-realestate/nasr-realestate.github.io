@@ -561,9 +561,12 @@ jobs:
             # write command ran. Each is a number a reviewer can compare against a future run.
             seed_in_git=$(git ls-files | grep -c 'seed\.sql\|drive-ref-seed' || true)
             seed_in_tree=$(find . -path ./node_modules -prune -o \( -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'plan.json' \) -print | grep -c . || true)
-            artifact_steps=$(grep -c 'actions/upload-artifact' .github/workflows/crm-drive-migration-session.yml || true)
+            # `- uses:` anchored on purpose: counting the raw string matched the line doing the counting, and
+            # the first review run failed on its own measurement. A step that uploads is `- uses:
+            # actions/upload-artifact@v4`; a shell comment or grep pattern is not, and only the former leaks.
+            artifact_steps=$(grep -cE '^[[:space:]]*-+[[:space:]]+uses:[[:space:]]*actions/upload-artifact' .github/workflows/crm-drive-migration-session.yml || true)
             if [ "$seed_in_git" != '0' ] || [ "$seed_in_tree" != '0' ] || [ "$artifact_steps" != '0' ] || [ "$d1_writes" != '0' ]; then
-              fail "plan-channel-not-clean"
+              fail "plan-channel-not-clean(git=${seed_in_git:-?},tree=${seed_in_tree:-?},artifacts=${artifact_steps:-?},writes=${d1_writes:-?})"
             fi
             digests="anchor=${anchor_full},seed=${seed_sha},statements=${seed_statements},guarded=${seed_guarded},unlisted=${seed_unlisted},forbidden=${seed_forbidden},commas=${seed_multi_assign},writes=${d1_writes}"
             # A check name is truncated in GitHub's UI and a run log cannot be read from a sandbox, so
