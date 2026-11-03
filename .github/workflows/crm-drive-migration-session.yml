@@ -81,6 +81,7 @@ jobs:
       ledger: ${{ steps.session.outputs.ledger }}
       verify: ${{ steps.session.outputs.verify }}
       guards: ${{ steps.session.outputs.guards }}
+      digests: ${{ steps.session.outputs.digests }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -129,6 +130,7 @@ jobs:
           ledger='not-run'
           verify='not-run'
           guards='not-run'
+          digests='not-run'
           finished='no'
 
           finish() {
@@ -142,6 +144,7 @@ jobs:
               printf 'ledger=%s\n' "$ledger"
               printf 'verify=%s\n' "$verify"
               printf 'guards=%s\n' "$guards"
+              printf 'digests=%s\n' "$digests"
             } >> "$GITHUB_OUTPUT"
             rm -rf "$TMP"
           }
@@ -476,6 +479,23 @@ jobs:
             assert_one_column_seed "$TMP/seed.sql"
             seed_statements=$(grep -c "^UPDATE crm_drive_file_registry SET drive_ref = " "$TMP/seed.sql" || true)
             seed_sha=$(sha256sum "$TMP/seed.sql" | awk '{print $1}')
+            # ---- the full review key, requested for A4: 64 hex each, published where a reviewer can read it.
+            # Two independent computations of the same artifact: node's digest over the anchored refs it
+            # planned (`plan.json:digest`), and sha256sum over the exact bytes of the seed file. A short
+            # prefix (the 12-hex in the other names) catches accidental drift; only the full value can be
+            # compared against a future run's own recomputation, which is what the approval will pin.
+            anchor_full=$(jq -r '.digest // "none"' "$TMP/plan.json")
+            plan_statements=$(jq -r '.statements' "$TMP/plan.json")
+            if ! printf '%s,%s' "$anchor_full" "$seed_sha" | grep -qE '^[0-9a-f]{64},[0-9a-f]{64}$'; then
+              # a truncated or absent digest must never be presented as a review key
+              fail "digest-shape-unexpected"
+            fi
+            # the sha describes the file the plan counted: if the line tally and the plan's own count differ,
+            # what is being reviewed is not what would be applied, and the review is worthless.
+            if [ "$seed_statements" != "$plan_statements" ]; then
+              fail "seed-line-count-differs-from-plan"
+            fi
+            digests="anchor=${anchor_full},seed=${seed_sha},statements=${seed_statements},plan=${plan_statements}"
             # The file inlines real drive ids, so it is never committed, never uploaded, and never echoed: what
             # a reviewer approves is its sha256 plus the counts and the refusal tally in `seed_plan`, and the
             # copy here dies with $TMP when the job ends.
@@ -629,5 +649,14 @@ jobs:
     if: always()
     needs: session
     name: 'Session guards — ${{ needs.session.outputs.guards }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  # Digests only — no identifier, no filename, no SQL. This is the name a human compares against the
+  # approval they are about to give; the file it hashes is deleted in the same step that made it.
+  r7:
+    if: always()
+    needs: session
+    name: 'Session digests — ${{ needs.session.outputs.digests }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
