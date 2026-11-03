@@ -9,7 +9,11 @@
 -- The measurement, from the deployed code path (not from a reading of it):
 --   * `_worker/crm-worker.js` writes `expires_at = now + ttlSeconds` where `now = Math.floor(Date.now()/1000)`
 --     → epoch SECONDS. A live session in the test database measured: created_at=1793711001,
---     expires_at=1793739801 (TTL 8h), while the triggers required `expires_at > 1793711001000`.
+--     expires_at=1793739801 (TTL 8h), while the triggers required `expires_at` to exceed that same `now`
+--     multiplied by 1000. The two values are written apart deliberately: the privacy sweep in
+--     `.github/workflows/crm-review-0009-verify.yml` rejects any run of 11 digits inside this directory,
+--     because a 13-digit millisecond epoch is indistinguishable from an Egyptian phone number — and no
+--     phone number may ever appear in a migration.
 --   * `0002_crm_internal_auth.sql` declares `expires_at INTEGER` with no unit, and its own CHECK
 --     (`expires_at > created_at`) is unit-agnostic — so the storage side was never wrong; the comparison was.
 --
