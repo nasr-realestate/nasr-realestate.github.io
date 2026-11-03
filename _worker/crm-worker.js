@@ -2448,6 +2448,22 @@ function a5Actor(body) {
   return raw.slice(0, 120) || 'crm-session-operator';
 }
 
+/**
+ * A5 reads must not answer 200 with an error body: the internal UI shows refusals as they are, and a live
+ * check that reads `status` would otherwise see success where the service said `…_not_found`. The payload's
+ * own `status` is what gets returned; success bodies pass through untouched.
+ */
+function a5Get(result) {
+  if (result && typeof result === 'object' && result.error) {
+    const body = { error: result.error };
+    if (result.detail !== undefined) body.detail = result.detail;
+    if (result.barrier !== undefined) body.barrier = result.barrier;
+    if (result.current_status !== undefined) body.current_status = result.current_status;
+    return json(body, Number(result.status) >= 400 ? Number(result.status) : 400);
+  }
+  return json(result);
+}
+
 async function a5Post(request, env, run, { needsSession = false } = {}) {
   const body = await readJson(request, 60_000);
   const context = { actor: a5Actor(body) };
@@ -2519,15 +2535,15 @@ const EXACT_GET_ROUTES = {
   '/api/opportunities': (db, url) => listOpportunities(db, url),
   '/api/listings': (db, url, config) => listListings(db, url, config.scope),
   '/api/push/config': (_db, _url, _config, env) => getPushStatusResponse(env, json),
-  '/api/requests': async (db, url) => json(await listCustomerRequestsPayload(db, Object.fromEntries(url.searchParams))),
-  '/api/queues': async (db, url) => json(await operationalQueuesPayload(db, {
+  '/api/requests': async (db, url) => a5Get(await listCustomerRequestsPayload(db, Object.fromEntries(url.searchParams))),
+  '/api/queues': async (db, url) => a5Get(await operationalQueuesPayload(db, {
     now: url.searchParams.get('now'), limit: Number(url.searchParams.get('limit') ?? 50),
   })),
-  '/api/interactions': async (db, url) => json(await listInteractionsPayload(db, Object.fromEntries(url.searchParams))),
-  '/api/followups/needs': async (db, url) => json(await contactsNeedingFollowupPayload(db, {
+  '/api/interactions': async (db, url) => a5Get(await listInteractionsPayload(db, Object.fromEntries(url.searchParams))),
+  '/api/followups/needs': async (db, url) => a5Get(await contactsNeedingFollowupPayload(db, {
     now: url.searchParams.get('now'), limit: Number(url.searchParams.get('limit') ?? 50),
   })),
-  '/api/reviews/drive': async (db, url) => json(await listDriveReviewCasesPayload(db, Object.fromEntries(url.searchParams))),
+  '/api/reviews/drive': async (db, url) => a5Get(await listDriveReviewCasesPayload(db, Object.fromEntries(url.searchParams))),
 };
 
 const EXACT_POST_ROUTES = {
@@ -2560,13 +2576,13 @@ const PARAM_ROUTES = [
   } },
   { method: 'POST', re: /^\/api\/conversations\/([a-zA-Z0-9_-]{8,80})\/link-contact$/, run: (req, env, m) => handleConversationLinkPost(req, env, m[1]) },
   { method: 'POST', re: /^\/api\/alerts\/([a-zA-Z0-9_-]{8,80})\/resolve$/, run: (req, env, m) => handleResolveAlertPost(req, env, m[1]) },
-  { method: 'GET', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})$/, run: async (_req, env, m) => json(await getCustomerRequestPayload(env.DB, m[1])) },
+  { method: 'GET', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})$/, run: async (_req, env, m) => a5Get(await getCustomerRequestPayload(env.DB, m[1])) },
   { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => a5Post(req, env, body => updateCustomerRequestPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
   { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/status$/, run: (req, env, m) => a5Post(req, env, body => setCustomerRequestStatusPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
   { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/links$/, run: (req, env, m) => a5Post(req, env, body => linkRequestListingPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
   { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/links\/([a-zA-Z0-9_-]{8,80})\/decision$/, run: (req, env, m) => a5Post(req, env, body => decideRequestListingLinkPayload(env.DB, m[1], m[2], body, { actor: a5Actor(body) })) },
   { method: 'POST', re: /^\/api\/followups\/([a-zA-Z0-9_-]{8,80})\/complete$/, run: (req, env, m) => a5Post(req, env, body => completeFollowupPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
-  { method: 'GET', re: /^\/api\/reviews\/drive\/(frw-[A-Za-z0-9_-]{1,36})$/, run: async (_req, env, m) => json(await getDriveReviewCasePayload(env.DB, m[1])) },
+  { method: 'GET', re: /^\/api\/reviews\/drive\/(frw-[A-Za-z0-9_-]{1,36})$/, run: async (_req, env, m) => a5Get(await getDriveReviewCasePayload(env.DB, m[1])) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => getOpportunity(env.DB, m[1]) },
   { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateOpportunity(req, env, m[1]) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (req, env, m, cfg) => getOpportunityMatches(env.DB, m[1], cfg.scope, new URL(req.url)) },

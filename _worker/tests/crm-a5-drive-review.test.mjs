@@ -120,8 +120,17 @@ test('A5R-1 قائمة الحالات تُقرأ عبر API موثَّق، وم�
   assert.equal(filtered.body.total, 0, 'the status filter is real, not decoration');
   const anonymous = await worker.fetch(new Request(`${ORIGIN}/api/reviews/drive`, {}), (await buildEnv()).env);
   assert.ok(anonymous.status === 401 || anonymous.status === 403, `unauthenticated read must not work (${anonymous.status})`);
+  // قراءة بحالة غير موجودة تُجيب برمز الخطأ نفسه، لا 200 يحمل جسم خطأ: اللوحة تعرض الرفض كما هو.
+  const ghost = await call(`/api/reviews/drive/${'frw-' + '0'.repeat(16) + '-1'}`);
+  assert.equal(ghost.status, 404, JSON.stringify(ghost.body));
+  assert.equal(ghost.body.error, 'review_case_not_found');
   const badRef = await call('/api/reviews/drive/not-a-case-ref!!');
-  assert.ok(badRef.status === 400 || badRef.status === 404, JSON.stringify(badRef.body));
+  assert.equal(badRef.status, 404, JSON.stringify(badRef.body));
+  assert.equal(badRef.body.error, 'not_found', 'a malformed case_ref never reaches the service');
+  const badStatus = await call('/api/reviews/drive?status=not_a_status');
+  assert.equal(badStatus.status, 400, JSON.stringify(badStatus.body));
+  const missingRequest = await call('/api/requests/no-such-request-1');
+  assert.ok(missingRequest.status >= 400, `a missing request must not answer 200 (${missingRequest.status})`);
 });
 
 test('A5R-2 القرار يُسجَّل في السلسلة، والحالة تتحرك بواسطة 0011 نفسها لا بتراخيص الخدمة', async () => {

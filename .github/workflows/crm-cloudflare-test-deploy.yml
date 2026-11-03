@@ -181,6 +181,7 @@ jobs:
       backup_contacts: ${{ steps.e2e.outputs.backup_contacts }}
       tt_bookmark: ${{ steps.e2e.outputs.tt_bookmark }}
       stage_test: ${{ steps.e2e.outputs.stage_test }}
+      a5_live: ${{ steps.e2e.outputs.a5_live }}
     steps:
       # The job `if` above is what keeps the secrets away; this step is what keeps the failure legible
       # (a skipped job tells nobody why) and is the place the exact-match rule is re-asserted with the
@@ -252,6 +253,7 @@ jobs:
           backup_contacts='0'
           tt_bookmark='none'
           stage_test='not-run'
+          a5_live='not-run'
 
           finish() {
             {
@@ -266,6 +268,7 @@ jobs:
               printf 'backup_contacts=%s\n' "$backup_contacts"
               printf 'tt_bookmark=%s\n' "$tt_bookmark"
               printf 'stage_test=%s\n' "$stage_test"
+              printf 'a5_live=%s\n' "$a5_live"
             } >> "$GITHUB_OUTPUT"
           }
 
@@ -356,6 +359,58 @@ jobs:
               sleep $((n * 3))
               n=$((n + 1))
             done
+          }
+
+          # A5 — التحقق التشغيلي على العامل المنشور فعليًا (طلبات العميل + الخط الزمني + المتابعات + مراجعة
+          # Drive). يقود نفس `CRMClient` الذي يستخدمه المتصفح، فلا يكون أخضر CI دليلًا على المسار بغيره.
+          # دفتر المراجعة append-only، لذا الافتراضي قراءة فقط. السطور المكتوبة تُوسم `TEST ONLY A5`
+          # وتستثنيها عدادات الثبات أصلًا، وما لا يسمح الدفتر بحذفه يُبلَّغ كبقايا معلنًا لا يُخفى.
+          # الدخول بتذكرة CI لمرة واحدة، لأن رمز الوصول قد يبقى في لوحة Cloudflare بلا نسخة في GitHub.
+          run_a5_live() {
+            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_expire='' a5_residue
+            : > "$a5_state"
+            chmod 600 "$a5_state"
+            a5_n1=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+            a5_n2=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+            echo "::add-mask::${a5_n1}"
+            echo "::add-mask::${a5_n2}"
+            a5_h1=$(printf '%s' "$a5_n1" | sha256sum | awk '{print $1}')
+            a5_h2=$(printf '%s' "$a5_n2" | sha256sum | awk '{print $1}')
+            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
+              a5_live='ticket-mint-failed'
+              return 1
+            fi
+            # إنهاء الصلاحية في القاعدة هو ما يقيس 0014 على D1 الحقيقي. يُفعَّل فقط حين يكون ما في
+            # $TMP/session_secret هو الرمز الذي يعرفه العامل المنشور، وإلا صار الرفض دليلًا كاذبًا.
+            if [ -s "$TMP/session_secret" ] && { [ "$has_session_secret" != 'true' ] || [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; }; then
+              printf '%s\n' \
+                'const { createHmac } = require("node:crypto");' \
+                'const { readFileSync } = require("node:fs");' \
+                'const t = readFileSync(process.env.CRM_A5_STATE_FILE, "utf8").trim();' \
+                'if (!t) process.exit(2);' \
+                'process.stdout.write(createHmac("sha256", readFileSync(process.env.OWNER_CRM_SESSION_SECRET_FILE, "utf8").trim()).update("session:" + t).digest("hex"));' \
+                > "$TMP/a5_token_hash.cjs"
+              a5_expire="hash=\$(CRM_A5_STATE_FILE=\"$a5_state\" OWNER_CRM_SESSION_SECRET_FILE=\"$TMP/session_secret\" node \"$TMP/a5_token_hash.cjs\")"
+              a5_expire="$a5_expire && [ -n \"\$hash\" ]"
+              a5_expire="$a5_expire && npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config $WRANGLER_CFG --command \"UPDATE crm_sessions SET created_at = CAST(strftime('%s','now') - 7200 AS INTEGER), expires_at = CAST(strftime('%s','now') - 60 AS INTEGER) WHERE token_hash = '\$hash' AND revoked_at IS NULL;\""
+            fi
+            if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_A5_ORIGIN="$BASE_URL" CRM_A5_STATE_FILE="$a5_state" \
+                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="$a5_n1" CRM_A5_EXPIRE_CMD="$a5_expire" \
+                 CRM_A5_WRITE_DECISION="${CRM_A5_WRITE_DECISION:-none}" \
+                 node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
+              a5_live="error:$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live_a5.err" | tail -c 40 || echo unknown)"
+              return 1
+            fi
+            a5_live=$(jq -r 'if ([.checks[] | select(.status == "fail")] | length) == 0 then "all-\(.checks | length)-pass" else "fail:" + ([.checks[] | select(.status == "fail") | .id] | join(",")) end' "$TMP/live_a5.json" 2>/dev/null || echo 'unparsable')
+            jq -r '.checks[] | "  \(.status) \(.id) \(.evidence // "")"' "$TMP/live_a5.json" 2>/dev/null \
+              | sed -E 's/[0-9]{9,}/<digits>/g' | head -14 || true
+            A5_CLEAN_SQL="DELETE FROM crm_request_listing_link WHERE request_id IN (SELECT id FROM crm_customer_requests WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%')); UPDATE crm_followups SET status = 'done', outcome = 'TEST ONLY A5 - cleanup', completed_at = datetime('now') WHERE status = 'pending' AND contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_followups WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); UPDATE crm_customer_requests SET status = 'closed' WHERE status NOT IN ('closed','cancelled') AND contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_customer_requests WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_contact_phones WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%');"
+            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$A5_CLEAN_SQL" >/dev/null 2>&1 \
+              || echo "A5 cleanup: append-only rows are kept by design"
+            a5_residue=$(npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT (SELECT COUNT(*) FROM crm_interactions WHERE summary LIKE 'TEST ONLY A5%' OR created_by LIKE 'TEST ONLY A5%') AS inter, (SELECT COUNT(*) FROM crm_request_status_history WHERE reason LIKE 'TEST ONLY A5%' OR actor LIKE 'TEST ONLY A5%') AS hist, (SELECT COUNT(*) FROM crm_operational_audit_log WHERE actor LIKE 'TEST ONLY A5%') AS audit, (SELECT COUNT(*) FROM crm_drive_file_review_decision WHERE reviewer LIKE 'TEST ONLY A5%') AS review;" 2>/dev/null | jq -r '.results[0] | "inter=\(.inter) hist=\(.hist) audit=\(.audit) review=\(.review)"' || echo 'unknown')
+            echo "::notice::A5 synthetic residue left in nasr-crm-test-db (append-only by design): ${a5_residue}"
+            if [ "${a5_live#fail}" != "$a5_live" ]; then return 1; fi
+            return 0
           }
 
           # 1. Capture D1 Time Travel restore bookmark + full restorable SQL backup BEFORE any migration or mutation
@@ -658,6 +713,16 @@ jobs:
               exit 1
             fi
 
+            phase='live-a5-operational-verification'
+            a5_rc=0
+            run_a5_live || a5_rc=$?
+            if [ "$a5_rc" != '0' ]; then
+              d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
+              result='live-a5-operational-checks-failed'
+              finish
+              exit 1
+            fi
+
             phase='post-verify-cleanup-and-invariance'
             if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/post_synth_clean.log" 2>&1; then
               result='post-verify-synth-cleanup-failed'
@@ -786,7 +851,7 @@ jobs:
           retention-days: 5
 
   report:
-    name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (bak=${{ needs.deploy-and-verify.outputs.backup_contacts }}, stg=${{ needs.deploy-and-verify.outputs.stage_test }}, dep=${{ needs.deploy-and-verify.outputs.deployed }}, v=${{ needs.deploy-and-verify.outputs.login_and_crud }}, ui=${{ needs.deploy-and-verify.outputs.mobile_browser }}, 401=${{ needs.deploy-and-verify.outputs.unauth_rejected }}, src=${{ needs.deploy-and-verify.outputs.code_source }})'
+    name: 'CRM live E2E — ${{ needs.deploy-and-verify.outputs.result }} (bak=${{ needs.deploy-and-verify.outputs.backup_contacts }}, stg=${{ needs.deploy-and-verify.outputs.stage_test }}, dep=${{ needs.deploy-and-verify.outputs.deployed }}, v=${{ needs.deploy-and-verify.outputs.login_and_crud }}, ui=${{ needs.deploy-and-verify.outputs.mobile_browser }}, 401=${{ needs.deploy-and-verify.outputs.unauth_rejected }}, src=${{ needs.deploy-and-verify.outputs.code_source }}, a5=${{ needs.deploy-and-verify.outputs.a5_live }})'
     needs: deploy-and-verify
     if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

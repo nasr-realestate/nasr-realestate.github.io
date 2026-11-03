@@ -136,7 +136,28 @@ export class CRMClient {
       body: { access_code: accessCode },
       includeCsrf: false,
     });
-    this.#csrfToken = typeof session.csrf_token === 'string' ? session.csrf_token : '';
+    return this.#adoptSession(session);
+  }
+
+  /**
+   * جلسة بتذكرة CI لمرة واحدة (`POST /auth/ci-ticket`) بدل رمز الوصول — المسار الموجود أصلًا
+   * للنشر المُصرَّح به، ولا يوسّع أي صلاحية: التذكرة تُطبع في القاعدة بخطوة CI قبل ذلك وتُستهلك
+   * عند أول استعمال. الجلسة ورمز CSRF يُتبنَّيان بالخطوة نفسها حرفيًا كما في login العادي، فلا
+   * يختلف ما يفحصه اختبار النشر عن ما يفعله المتصفح.
+   */
+  async loginWithTicket(ticketNonce) {
+    const nonce = typeof ticketNonce === 'string' ? ticketNonce.trim() : '';
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(nonce)) throw new TypeError('ticket_nonce_invalid');
+    const session = await this.request('/auth/ci-ticket', {
+      method: 'POST',
+      body: { ticket_nonce: nonce },
+      includeCsrf: false,
+    });
+    return this.#adoptSession(session);
+  }
+
+  #adoptSession(session) {
+    this.#csrfToken = typeof session?.csrf_token === 'string' ? session.csrf_token : '';
     return session;
   }
 
