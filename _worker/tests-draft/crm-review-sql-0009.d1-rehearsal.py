@@ -70,13 +70,18 @@ CREATE TABLE crm_sessions (
   expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
   revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
 );
--- epoch seconds, exactly as crm-worker.js writes them and as migration 0014 makes the guard compare:
--- 60s old with a 1h TTL (live), 2h old with a 1h TTL (expired), live but revoked_at set (revoked).
+-- Milliseconds, deliberately: this rehearsal applies 0009 alone into a scratch database (see the copy
+-- into SCRATCH/migrations below), so the liveness guard installed here is 0009 §5.9 as written, which
+-- compares `expires_at` against strftime('%s','now')*1000. The fixture must therefore be seeded in that
+-- unit or every allowed event in this rehearsal would be refused for the wrong reason.
+-- The unit the *deployed* database actually uses is epoch seconds, and migration 0014 aligned the guard
+-- to it; that chain-level contract (0001..0014 together) is pinned by
+-- _worker/tests/crm-a5-drive-review.test.mjs (A5R-2b) and by the CI apply on nasr-crm-test-db — not here.
 INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
-  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, NULL),
-  ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, NULL),
-  ('expired', '{expired}', CAST(strftime('%s','now') AS INTEGER) - 7200, CAST(strftime('%s','now') AS INTEGER) - 3600, NULL),
-  ('revoked', '{revoked}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, CAST(strftime('%s','now') AS INTEGER) - 1);
+  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
+  ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
+  ('expired', '{expired}', CAST(strftime('%s','now') AS INTEGER)*1000 - 7200000, CAST(strftime('%s','now') AS INTEGER)*1000 - 3600000, NULL),
+  ('revoked', '{revoked}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, CAST(strftime('%s','now') AS INTEGER)*1000 - 1000);
 """
 LIVE = "1" * 64
 LIVE2 = "2" * 64
