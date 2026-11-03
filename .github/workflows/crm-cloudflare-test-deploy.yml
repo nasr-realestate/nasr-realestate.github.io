@@ -11,10 +11,13 @@ name: CRM isolated Worker deploy and live auth E2E
 #   2. the `crm-test-deploy` GitHub Environment — its required-reviewer rule is the only control that
 #      makes a human approve PER RUN, because re-running a past workflow run replays its stored inputs;
 #   3. a ref of `master`, so no branch push can ever qualify.
-# Migrations are applied from `_worker/migrations` only; `_worker/migrations-draft` is never a source
-# this workflow reads. Since 2026-11-02 `0009_crm_drive_review_workflow.sql` is in the real path, so a
-# deploy from master would carry it -- which is exactly why the audit job below runs before any secret
-# is reachable: it refuses the run while the environment holds no per-run human approval.
+# Migrations are NEVER applied by this workflow. Before any deploy it verifies, read-only, that
+# `nasr-crm-test-db` already carries exactly the expected `_worker/migrations/*.sql` sequence and the
+# A5 schema/triggers/FKs. Applying migrations stays in the separate, already-approved CI channel.
+# Worker secrets are never created, updated, rotated, displayed, or guessed: missing required names stop
+# the deploy with a clear message. Only `nasr-crm-test-db` and the read-only reference backup
+# `nasr-crm-test-db-backup-20261101` are queried; no database, backup, or stage DB is created, imported,
+# or deleted. The production `nasr-market-db` is measured as unchanged before and after, never written.
 on:
   workflow_dispatch:
     inputs:
@@ -176,7 +179,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       OWNER_CRM_ACCESS_CODE: ${{ secrets.CRM_ACCESS_CODE }}
-      OWNER_CRM_SESSION_SECRET: ${{ secrets.CRM_SESSION_SECRET }}
       A5_WRITE_DECISION_INPUT: ${{ github.event.inputs.a5_write_decision }}
     outputs:
       result: ${{ steps.e2e.outputs.result }}
@@ -186,9 +188,7 @@ jobs:
       mobile_browser: ${{ steps.e2e.outputs.mobile_browser }}
       unauth_rejected: ${{ steps.e2e.outputs.unauth_rejected }}
       code_source: ${{ steps.e2e.outputs.code_source }}
-      backup_db: ${{ steps.e2e.outputs.backup_db }}
       backup_contacts: ${{ steps.e2e.outputs.backup_contacts }}
-      tt_bookmark: ${{ steps.e2e.outputs.tt_bookmark }}
       stage_test: ${{ steps.e2e.outputs.stage_test }}
       a5_live: ${{ steps.e2e.outputs.a5_live }}
     steps:
@@ -226,30 +226,309 @@ jobs:
           node-version: "22"
       - name: Install Playwright Chromium for live mobile browser verification
         run: npm install --no-save playwright@1.52.0 && npx playwright install --with-deps chromium
-      - name: Backup D1, stage-test 0005 migration, deploy nasr-crm-api-test, and run live E2E
-        id: e2e
+
+      # Read-only inventory. It deliberately names missing secrets/config and stops; it never calls
+      # `wrangler secret put`, never generates a key/code/session secret, and never writes to a database.
+      - name: Preflight isolation, required-secret inventory, and read-only reference backup
+        id: preflight
         shell: bash
+        env:
+          API: https://api.cloudflare.com/client/v4
+          TEST_DB_NAME: nasr-crm-test-db
+          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          REF_BACKUP_NAME: nasr-crm-test-db-backup-20261101
+          REF_BACKUP_UUID: a7681217-32a3-48fd-b8f5-8a54ac7b35e7
+          PROD_DB_NAME: nasr-market-db
+          PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          WORKER_NAME: nasr-crm-api-test
+          WRANGLER_CFG: _worker/wrangler.crm.toml
         run: |
           set -euo pipefail
           umask 077
-          API='https://api.cloudflare.com/client/v4'
-          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
-          PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
-          BACKUP_DB_NAME='nasr-crm-test-db-backup-20261030'
-          STAGE_DB_NAME='nasr-crm-test-db-stage'
-          WORKER_NAME='nasr-crm-api-test'
-          WRANGLER_CFG='_worker/wrangler.crm.toml'
           TMP=$(mktemp -d)
-          stage_uuid=''
-          account_id=''
-          AUTH=''
-          cleanup_stage() {
-            if [ -n "$stage_uuid" ] && [ -n "$account_id" ] && [ -n "$AUTH" ]; then
-              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            fi
-            rm -rf "$TMP"
+          trap 'rm -rf "$TMP"' EXIT
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::missing GitHub Secret ARENA_CLOUDFLARE_TOKEN; deployment stopped before any request."
+            exit 1
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then echo "::add-mask::${OWNER_CRM_ACCESS_CODE}"; fi
+
+          # Hard local config isolation: never touch nasr-market-db or any non-test Worker.
+          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq "$PROD_DB_NAME" "$WRANGLER_CFG"; then
+            echo "::error::forbidden production DB in $WRANGLER_CFG; deployment stopped."
+            exit 1
+          fi
+          if ! grep -Fq "name = \"$WORKER_NAME\"" "$WRANGLER_CFG" \
+             || ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
+            echo "::error::wrangler config test-target mismatch; deployment stopped."
+            exit 1
+          fi
+
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ] || [ "$(jq -r '.result | length' "$TMP/accounts.json" 2>/dev/null)" != 1 ]; then
+            echo "::error::Cloudflare account inventory unreadable (http=$status); deployment stopped."
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/sub.json" -w '%{http_code}' "$API/accounts/$account_id/workers/subdomain" 2>/dev/null || true)
+          subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json" 2>/dev/null || true)
+          if [ "$status" != 200 ] || [ -z "$subdomain" ]; then
+            echo "::error::Workers subdomain unreadable (http=$status); deployment stopped."
+            exit 1
+          fi
+          BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
+          if ! grep -Fq "CRM_ALLOWED_ORIGIN = \"$BASE_URL\"" "$WRANGLER_CFG"; then
+            echo "::error::allowed-origin mismatch in $WRANGLER_CFG; deployment stopped."
+            exit 1
+          fi
+
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            echo "::error::D1 database inventory unreadable (http=$status); deployment stopped."
+            exit 1
+          fi
+          if ! jq -e --arg id "$TEST_DB_UUID" --arg n "$TEST_DB_NAME" \
+                '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1.json" >/dev/null; then
+            echo "::error::authorised test D1 nasr-crm-test-db / $TEST_DB_UUID not verified; deployment stopped."
+            exit 1
+          fi
+          ref_backup_uuid=$(jq -r --arg u "$REF_BACKUP_UUID" --arg n "$REF_BACKUP_NAME" \
+            '.result[] | select(.uuid == $u and .name == $n) | .uuid' "$TMP/d1.json" | head -n1)
+          if [ -z "$ref_backup_uuid" ]; then
+            echo "::error::read-only reference backup $REF_BACKUP_NAME / $REF_BACKUP_UUID not verified; deployment stopped."
+            exit 1
+          fi
+          market_pre_sig=$(jq -r --arg id "$PROD_DB_UUID" \
+            '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1.json" | head -n1)
+          if [ -z "$market_pre_sig" ]; then
+            echo "::error::production DB nasr-market-db signature unreadable; deployment stopped."
+            exit 1
+          fi
+
+          # Read-only count from the one approved backup. No create, import, delete, or DML.
+          bak_sql="SELECT COUNT(*) AS cnt FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%';"
+          bak_payload=$(jq -nc --arg sql "$bak_sql" '{sql:$sql}')
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" \
+            -H 'Content-Type: application/json' --data "$bak_payload" \
+            -o "$TMP/bak.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database/$REF_BACKUP_UUID/query" 2>/dev/null || true)
+          backup_contacts=$(jq -r '.result[0].results[0].cnt // empty' "$TMP/bak.json" 2>/dev/null || true)
+          if [ "$status" != 200 ] || [ -z "$backup_contacts" ] || [ "$backup_contacts" -lt 1 ]; then
+            echo "::error::read-only reference backup verification failed (http=$status); deployment stopped."
+            exit 1
+          fi
+
+          # Worker secret NAMES only. Missing names stop the run; values are never read, generated, or shown.
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/secrets.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/secrets" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            echo "::error::Worker secret inventory unreadable (http=$status); deployment stopped."
+            exit 1
+          fi
+          has_name() { jq -e --arg s "$1" '[.result[]?.name] | index($s) != null' "$TMP/secrets.json" >/dev/null; }
+          missing=()
+          for s in CRM_SESSION_SECRET CRM_INGEST_PRIVATE_KEY CRM_VAPID_PRIVATE_KEY CRM_VAPID_PUBLIC_KEY; do
+            has_name "$s" || missing+=("$s")
+          done
+          has_direct_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")
+          has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")
+          owner_code_present=false
+          [ -n "${OWNER_CRM_ACCESS_CODE:-}" ] && owner_code_present=true
+          auth_mode=''
+          if [ "$has_direct_code" = 'true' ]; then
+            auth_mode='worker-direct-code'
+          elif [ "$has_verifier" = 'true' ] && [ "$owner_code_present" = 'true' ]; then
+            auth_mode='github-code-plus-worker-verifier'
+          else
+            missing+=("AUTH: Worker CRM_ACCESS_CODE OR (Worker CRM_ACCESS_CODE_VERIFIER + GitHub CRM_ACCESS_CODE)")
+          fi
+
+          # Public ingest key is a non-secret DB row, not a generated key pair.
+          pub_sql="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
+          pub_payload=$(jq -nc --arg sql "$pub_sql" '{sql:$sql}')
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" \
+            -H 'Content-Type: application/json' --data "$pub_payload" \
+            -o "$TMP/pub.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query" 2>/dev/null || true)
+          ingest_public_key=$(jq -r '.result[0].results[0].pub // empty' "$TMP/pub.json" 2>/dev/null || true)
+          if [ "$status" != 200 ] || [ -z "$ingest_public_key" ]; then
+            missing+=("DB row system:ingest-public-key-v1")
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::required Worker secrets/config missing: ${missing[*]}. Deployment stopped; no secret was created, updated, rotated, or displayed."
+            exit 1
+          fi
+
+          {
+            echo "account_id=$account_id"
+            echo "base_url=$BASE_URL"
+            echo "market_pre_sig=$market_pre_sig"
+            echo "backup_contacts=$backup_contacts"
+            echo "auth_mode=$auth_mode"
+            echo "has_direct_code=$has_direct_code"
+            echo "ingest_public_key=$ingest_public_key"
+          } >> "$GITHUB_OUTPUT"
+          echo "preflight-ok: auth=$auth_mode; backup=read-only($backup_contacts); market-db=unchanged-measured"
+
+      # Replaces the stale `crm_tables == 15` assertion. It is read-only: exact expected migration
+      # sequence, A5 tables/views/triggers, FK definitions and required columns. It never applies a
+      # migration and never targets any DB other than the authorised test D1.
+      - name: Verify expected migrations and A5 schema (read-only)
+        id: schema
+        shell: bash
+        env:
+          API: https://api.cloudflare.com/client/v4
+          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
+          MIGRATIONS_DIR: _worker/migrations
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          node --input-type=module <<'NODE'
+          import { readdirSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+
+          const api = process.env.API;
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const testDb = process.env.TEST_DB_UUID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const dir = process.env.MIGRATIONS_DIR;
+          if (!api || !account || !testDb || !token || !dir) throw new Error('schema-guard-env-missing');
+          if (testDb !== '65bfcb14-4b48-423b-916f-00eefdb9ae1e') throw new Error('schema-guard-wrong-test-db');
+
+          const expected = readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+          if (expected.length === 0) throw new Error('no-expected-migrations');
+          if (expected.at(-1) !== '0014_fix_drive_review_session_expiry_units.sql') {
+            throw new Error(`expected-latest-migration-mismatch:${expected.at(-1)}`);
           }
-          trap cleanup_stage EXIT
+
+          function d1Query(sql) {
+            const payload = JSON.stringify({ sql });
+            const out = execFileSync('curl', [
+              '--silent', '--show-error', '--connect-timeout', '10', '--max-time', '30',
+              '-X', 'POST', '-H', `Authorization: Bearer ${token}`, '-H', 'Content-Type: application/json',
+              '--data', payload,
+              `${api}/accounts/${account}/d1/database/${testDb}/query`
+            ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+            const parsed = JSON.parse(out);
+            const rows = parsed?.result?.[0]?.results;
+            if (!Array.isArray(rows)) throw new Error('unexpected-d1-query-response');
+            return rows;
+          }
+
+          const applied = d1Query('SELECT name FROM d1_migrations ORDER BY id ASC;').map(r => String(r.name));
+          const missingMigrations = expected.filter(n => !applied.includes(n));
+          const unexpectedMigrations = applied.filter(n => !expected.includes(n));
+          const sameOrder = applied.length === expected.length && expected.every((n, i) => applied[i] === n);
+          if (missingMigrations.length || unexpectedMigrations.length || !sameOrder) {
+            throw new Error(`migration-guard-failed:missing=${missingMigrations.join(',') || '-'};unexpected=${unexpectedMigrations.join(',') || '-'};order=${sameOrder ? 'ok' : 'mismatch'}`);
+          }
+
+          const objects = d1Query("SELECT type, name FROM sqlite_schema WHERE type IN ('table','view','trigger') AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%';");
+          const byType = { table: new Set(), view: new Set(), trigger: new Set() };
+          for (const r of objects) if (byType[r.type]) byType[r.type].add(String(r.name));
+
+          const requiredTables = [
+            'd1_migrations', 'crm_contacts', 'crm_contact_phones', 'crm_sessions',
+            'crm_idempotency_receipts', 'listings', 'crm_opportunities',
+            'crm_customer_requests', 'crm_request_status_history', 'crm_request_listing_link',
+            'crm_operational_audit_log', 'crm_interactions', 'crm_followups',
+            'crm_drive_file_review_case', 'crm_drive_file_review_decision', 'crm_drive_file_review_anchor'
+          ];
+          const requiredViews = [
+            'crm_drive_file_review_state', 'crm_drive_file_review_chain_integrity',
+            'crm_drive_file_review_ci_summary', 'crm_drive_file_review_isolation',
+            'crm_followups_queue_v', 'crm_requests_unmatched_v',
+            'crm_opportunity_stages_v', 'crm_stale_opportunities_v'
+          ];
+          const requiredTriggers = [
+            'trg_review_event_session_live', 'trg_file_review_decision_session_live',
+            'trg_file_review_decision_no_delete', 'trg_file_review_decision_no_update',
+            'trg_crm_operational_audit_no_delete', 'trg_crm_operational_audit_no_update',
+            'trg_crm_request_history_no_delete', 'trg_crm_request_history_no_update',
+            'trg_crm_interaction_append_only', 'trg_crm_interaction_no_delete',
+            'trg_crm_followup_done_records_interaction', 'trg_crm_followup_no_delete'
+          ];
+          const absent = [];
+          for (const n of requiredTables) if (!byType.table.has(n)) absent.push(`table:${n}`);
+          for (const n of requiredViews) if (!byType.view.has(n)) absent.push(`view:${n}`);
+          for (const n of requiredTriggers) if (!byType.trigger.has(n)) absent.push(`trigger:${n}`);
+
+          const fkTables = [
+            'crm_customer_requests', 'crm_request_status_history', 'crm_request_listing_link',
+            'crm_operational_audit_log', 'crm_interactions', 'crm_followups',
+            'crm_drive_file_review_decision'
+          ];
+          const fkRows = d1Query(`SELECT name, sql FROM sqlite_schema WHERE type='table' AND name IN (${fkTables.map(n => `'${n}'`).join(',')});`);
+          const sqlByName = new Map(fkRows.map(r => [String(r.name), String(r.sql || '')]));
+          const fkRules = [
+            ['crm_customer_requests', 'REFERENCES crm_contacts'],
+            ['crm_request_status_history', 'REFERENCES crm_customer_requests'],
+            ['crm_request_listing_link', 'REFERENCES crm_customer_requests'],
+            ['crm_request_listing_link', 'REFERENCES listings'],
+            ['crm_operational_audit_log', 'REFERENCES crm_contacts'],
+            ['crm_interactions', 'REFERENCES crm_contacts'],
+            ['crm_followups', 'REFERENCES crm_contacts'],
+            ['crm_followups', 'REFERENCES crm_customer_requests'],
+            ['crm_followups', 'REFERENCES crm_opportunities'],
+            ['crm_drive_file_review_decision', 'REFERENCES crm_drive_file_review_case']
+          ];
+          for (const [name, needle] of fkRules) {
+            if (!sqlByName.get(name)?.includes(needle)) absent.push(`fk:${name}:${needle}`);
+          }
+
+          const columnChecks = [
+            ['crm_customer_requests', ['id','contact_id','dedupe_key','status','created_at','updated_at']],
+            ['crm_request_status_history', ['request_id','from_status','to_status','actor','changed_at']],
+            ['crm_request_listing_link', ['request_id','listing_id','evidence_ref','state','decided_by']],
+            ['crm_operational_audit_log', ['entity','entity_id','contact_id','action','actor']],
+            ['crm_interactions', ['id','contact_id','kind','summary','dedupe_key','created_at']],
+            ['crm_followups', ['id','contact_id','request_id','opportunity_id','due_at','status','dedupe_key']],
+            ['crm_drive_file_review_decision', ['case_ref','seq','decision','reviewer','created_at']],
+            ['crm_sessions', ['id','token_hash','csrf_hash','created_at','expires_at','revoked_at']],
+            ['crm_idempotency_receipts', ['submission_key','resource_type','resource_id','received_at']]
+          ];
+          for (const [table, cols] of columnChecks) {
+            const rows = d1Query(`SELECT name FROM pragma_table_info('${table}');`);
+            const present = new Set(rows.map(r => String(r.name)));
+            for (const c of cols) if (!present.has(c)) absent.push(`column:${table}.${c}`);
+          }
+
+          if (absent.length) throw new Error(`a5-schema-guard-failed:missing=${absent.join(',')}`);
+          console.log(`schema-guard-ok:migrations=${expected.length};tables=${requiredTables.length};views=${requiredViews.length};triggers=${requiredTriggers.length}`);
+          NODE
+
+      - name: Deploy nasr-crm-api-test and run live A5 E2E
+        id: e2e
+        shell: bash
+        env:
+          API: https://api.cloudflare.com/client/v4
+          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          WORKER_NAME: nasr-crm-api-test
+          WRANGLER_CFG: _worker/wrangler.crm.toml
+          BASE_URL: ${{ steps.preflight.outputs.base_url }}
+          BACKUP_CONTACTS: ${{ steps.preflight.outputs.backup_contacts }}
+          AUTH_MODE: ${{ steps.preflight.outputs.auth_mode }}
+          HAS_DIRECT_CODE: ${{ steps.preflight.outputs.has_direct_code }}
+          INGEST_PUBLIC_KEY: ${{ steps.preflight.outputs.ingest_public_key }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          umask 077
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          printf '%s' "$INGEST_PUBLIC_KEY" > ./ingest-public-key.txt
 
           result='not-run'
           phase='preflight'
@@ -257,13 +536,10 @@ jobs:
           login_and_crud='no'
           mobile_browser='no'
           unauth_rejected='no'
-          code_source='unknown'
-          backup_db='none'
-          backup_contacts='0'
-          tt_bookmark='none'
-          stage_test='not-run'
+          code_source='existing-worker-secrets'
+          backup_contacts="$BACKUP_CONTACTS"
+          stage_test='removed-no-stage-db'
           a5_live='not-run'
-
           finish() {
             {
               printf 'result=%s\n' "$result"
@@ -273,92 +549,11 @@ jobs:
               printf 'mobile_browser=%s\n' "$mobile_browser"
               printf 'unauth_rejected=%s\n' "$unauth_rejected"
               printf 'code_source=%s\n' "$code_source"
-              printf 'backup_db=%s\n' "$backup_db"
               printf 'backup_contacts=%s\n' "$backup_contacts"
-              printf 'tt_bookmark=%s\n' "$tt_bookmark"
               printf 'stage_test=%s\n' "$stage_test"
               printf 'a5_live=%s\n' "$a5_live"
             } >> "$GITHUB_OUTPUT"
           }
-
-          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            result='cloudflare-token-secret-unavailable'
-            phase='no-request'
-            finish
-            exit 1
-          fi
-          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
-          if [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then echo "::add-mask::${OWNER_CRM_ACCESS_CODE}"; fi
-          if [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; then echo "::add-mask::${OWNER_CRM_SESSION_SECRET}"; fi
-
-          # Hard local config isolation guard: never touch nasr-market-db or any non-test Worker
-          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq 'nasr-market-db' "$WRANGLER_CFG"; then
-            result='forbidden-production-db-in-wrangler-config'
-            phase='isolation-guard'
-            finish
-            exit 1
-          fi
-          if ! grep -Fq "name = \"$WORKER_NAME\"" "$WRANGLER_CFG" || ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
-            result='wrangler-config-test-target-mismatch'
-            phase='isolation-guard'
-            finish
-            exit 1
-          fi
-
-          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
-          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
-          if [ "$status" != 200 ]; then
-            result="account-read-http-$status"
-            phase='preflight-account'
-            finish
-            exit 1
-          fi
-          account_count=$(jq -r '.result | length' "$TMP/accounts.json")
-          if [ "$account_count" -ne 1 ]; then
-            result="account-count-$account_count"
-            phase='preflight-account'
-            finish
-            exit 1
-          fi
-          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
-          export CLOUDFLARE_ACCOUNT_ID="$account_id"
-
-          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/sub.json" -w '%{http_code}' "$API/accounts/$account_id/workers/subdomain" 2>/dev/null || true)
-          if [ "$status" != 200 ]; then
-            result="workers-subdomain-http-$status"
-            phase='preflight-subdomain'
-            finish
-            exit 1
-          fi
-          subdomain=$(jq -r '.result.subdomain // empty' "$TMP/sub.json")
-          if [ -z "$subdomain" ]; then
-            result='workers-subdomain-empty'
-            phase='preflight-subdomain'
-            finish
-            exit 1
-          fi
-          BASE_URL="https://${WORKER_NAME}.${subdomain}.workers.dev"
-          if ! grep -Fq "CRM_ALLOWED_ORIGIN = \"$BASE_URL\"" "$WRANGLER_CFG"; then
-            result='allowed-origin-mismatch'
-            phase='preflight-origin'
-            finish
-            exit 1
-          fi
-
-          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
-          if [ "$status" != 200 ]; then
-            result="d1-list-http-$status"
-            phase='preflight-d1'
-            finish
-            exit 1
-          fi
-          if ! jq -e --arg id "$TEST_DB_UUID" '.result[] | select(.name == "nasr-crm-test-db" and .uuid == $id)' "$TMP/d1.json" >/dev/null; then
-            result='test-d1-uuid-not-verified'
-            phase='preflight-d1'
-            finish
-            exit 1
-          fi
-          market_pre_sig=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1.json" | head -n1)
 
           d1_exec_retry() {
             local n=1
@@ -370,17 +565,26 @@ jobs:
             done
           }
 
-          # A5 — التحقق التشغيلي على العامل المنشور فعليًا (طلبات العميل + الخط الزمني + المتابعات + مراجعة
-          # Drive). يقود نفس `CRMClient` الذي يستخدمه المتصفح، فلا يكون أخضر CI دليلًا على المسار بغيره.
-          # دفتر المراجعة append-only، لذا الافتراضي قراءة فقط. السطور المكتوبة تُوسم `TEST ONLY A5`
-          # وتستثنيها عدادات الثبات أصلًا، وما لا يسمح الدفتر بحذفه يُبلَّغ كبقايا معلنًا لا يُخفى.
-          # الدخول بتذكرة CI لمرة واحدة، لأن رمز الوصول قد يبقى في لوحة Cloudflare بلا نسخة في GitHub.
+          # The existing GitHub Secret is copied to a 0600 temp file only when the verifier auth mode is
+          # in use. No access code, verifier, session secret, VAPID key, or ingest key is ever generated.
+          if [ "$AUTH_MODE" = 'github-code-plus-worker-verifier' ]; then
+            if [ "${#OWNER_CRM_ACCESS_CODE}" -lt 24 ]; then
+              result='github-access-code-too-short'
+              finish
+              exit 1
+            fi
+            printf '%s\n' "$OWNER_CRM_ACCESS_CODE" > "$TMP/access_code"
+            chmod 600 "$TMP/access_code"
+            echo "::add-mask::${OWNER_CRM_ACCESS_CODE}"
+          fi
+
+          # A5 live operational verification — unchanged A5 client path, now driven only by secrets
+          # that already exist. No D1 session-expiry rewrite: 0014 is proven by the schema guard and
+          # the already-passing local contract tests; logout-then-401 remains the live check.
           run_a5_live() {
-            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_expire='' a5_residue a5_code_env
+            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_residue a5_code_env=''
             : > "$a5_state"
             chmod 600 "$a5_state"
-            # إن كان مسار النشر يعرف رمز الوصول في ملف 0600 يُستعمل كما هو، وإلا تُطبع تذكرة CI لمرة
-            # واحدة (صلاحيّتها 90 ثانية) — لا جلسة دائمة ولا رمز يُخزَّن في سجل الوظيفة.
             if [ -s "$TMP/access_code" ]; then
               a5_code_env="$TMP/access_code"
             else
@@ -390,27 +594,14 @@ jobs:
               echo "::add-mask::${a5_n2}"
               a5_h1=$(printf '%s' "$a5_n1" | sha256sum | awk '{print $1}')
               a5_h2=$(printf '%s' "$a5_n2" | sha256sum | awk '{print $1}')
-              if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
+              if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" \
+                   --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
                 a5_live='ticket-mint-failed'
                 return 1
               fi
-              fi
-            # إنهاء الصلاحية في القاعدة هو ما يقيس 0014 على D1 الحقيقي. يُفعَّل فقط حين يكون ما في
-            # $TMP/session_secret هو الرمز الذي يعرفه العامل المنشور، وإلا صار الرفض دليلًا كاذبًا.
-            if [ -s "$TMP/session_secret" ] && { [ "$has_session_secret" != 'true' ] || [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; }; then
-              printf '%s\n' \
-                'const { createHmac } = require("node:crypto");' \
-                'const { readFileSync } = require("node:fs");' \
-                'const t = readFileSync(process.env.CRM_A5_STATE_FILE, "utf8").trim();' \
-                'if (!t) process.exit(2);' \
-                'process.stdout.write(createHmac("sha256", readFileSync(process.env.OWNER_CRM_SESSION_SECRET_FILE, "utf8").trim()).update("session:" + t).digest("hex"));' \
-                > "$TMP/a5_token_hash.cjs"
-              a5_expire="hash=\$(CRM_A5_STATE_FILE=\"$a5_state\" OWNER_CRM_SESSION_SECRET_FILE=\"$TMP/session_secret\" node \"$TMP/a5_token_hash.cjs\")"
-              a5_expire="$a5_expire && [ -n \"\$hash\" ]"
-              a5_expire="$a5_expire && npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config $WRANGLER_CFG --command \"UPDATE crm_sessions SET created_at = CAST(strftime('%s','now') - 7200 AS INTEGER), expires_at = CAST(strftime('%s','now') - 60 AS INTEGER) WHERE token_hash = '\$hash' AND revoked_at IS NULL;\""
             fi
             if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_A5_ORIGIN="$BASE_URL" CRM_A5_STATE_FILE="$a5_state" \
-                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="${a5_n1:-}" CRM_A5_EXPIRE_CMD="$a5_expire" \
+                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="${a5_n1:-}" \
                  CRM_LIVE_ACCESS_CODE_FILE="${a5_code_env:-}" \
                  CRM_A5_WRITE_DECISION="${A5_WRITE_DECISION_INPUT:-none}" \
                  node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
@@ -429,287 +620,28 @@ jobs:
             return 0
           }
 
-          # 1. Capture D1 Time Travel restore bookmark + full restorable SQL backup BEFORE any migration or mutation
-          phase='backup-before-migration'
-          npx --yes wrangler@4 d1 time-travel info nasr-crm-test-db --config "$WRANGLER_CFG" --json > "$TMP/tt.json" 2>/dev/null || true
-          tt_bookmark=$(jq -r '.bookmark // "recorded"' "$TMP/tt.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-80 || true)
-          [ -z "$tt_bookmark" ] && tt_bookmark='available'
-
-          write_tmp_toml() {
-            printf 'name = "%s"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\nmigrations_dir = "%s/_worker/migrations"\n' "$1" "$2" "$3" "$PWD" > "$4"
-          }
-
-          existing_backup_uuid=$(jq -r --arg bn "$BACKUP_DB_NAME" '.result[] | select(.name == $bn) | .uuid // empty' "$TMP/d1.json" | head -n1)
-          if [ -z "$existing_backup_uuid" ]; then
-            if ! npx --yes wrangler@4 d1 export nasr-crm-test-db --remote --config "$WRANGLER_CFG" --output "$TMP/live-export.sql" > "$TMP/export.log" 2>&1; then
-              result='d1-export-backup-failed'
-              finish
-              exit 1
-            fi
-            sed -i '/sqlite_sequence/d; /_cf_KV/d' "$TMP/live-export.sql"
-            b_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-              --data "{\"name\":\"$BACKUP_DB_NAME\"}" -o "$TMP/create_backup.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
-            if [ "$b_status" != '200' ]; then
-              result="backup-d1-create-http-$b_status"
-              finish
-              exit 1
-            fi
-            existing_backup_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_backup.json")
-            write_tmp_toml "nasr-crm-backup-loader" "$BACKUP_DB_NAME" "$existing_backup_uuid" "$TMP/backup.wrangler.toml"
-            if ! npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --config "$TMP/backup.wrangler.toml" --file "$TMP/live-export.sql" > "$TMP/backup_import.log" 2>&1; then
-              result='backup-d1-import-failed'
-              finish
-              exit 1
-            fi
-          else
-            write_tmp_toml "nasr-crm-backup-loader" "$BACKUP_DB_NAME" "$existing_backup_uuid" "$TMP/backup.wrangler.toml"
-          fi
-
-          npx --yes wrangler@4 d1 execute "$BACKUP_DB_NAME" --remote --json --config "$TMP/backup.wrangler.toml" \
-            --command "SELECT COUNT(*) AS cnt FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%';" > "$TMP/backup_cnt.json" 2>/dev/null
-          backup_contacts=$(jq -r '.. | objects | select(has("cnt")) | .cnt | tostring' "$TMP/backup_cnt.json" | head -n1)
-          if [ -z "$backup_contacts" ] || [ "$backup_contacts" -lt 1 ]; then
-            result='backup-d1-verification-empty'
-            finish
-            exit 1
-          fi
-          backup_db="${BACKUP_DB_NAME}:${existing_backup_uuid:0:8}"
-
-          # 2. Test pending migrations on an isolated staging copy FIRST before touching nasr-crm-test-db
-          phase='stage-test-0006-migration'
-          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" \
-            --command "SELECT name FROM d1_migrations ORDER BY id ASC;" > "$TMP/live_migs.json" 2>/dev/null || true
-          pending_migs=$(node -e '
-            const fs = require("node:fs");
-            const raw = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-            const applied = new Set();
-            const walk = (x) => {
-              if (!x || typeof x !== "object") return;
-              if (Array.isArray(x)) { x.forEach(walk); return; }
-              if (typeof x.name === "string" && x.name.endsWith(".sql")) applied.add(x.name);
-              Object.values(x).forEach(walk);
-            };
-            walk(raw);
-            const allFiles = fs.readdirSync("_worker/migrations").filter(f => f.endsWith(".sql"));
-            process.stdout.write(String(allFiles.filter(f => !applied.has(f)).length));
-          ' "$TMP/live_migs.json")
-
-          if [ "$pending_migs" = '0' ]; then
-            stage_test='already-applied-0006'
-          else
-            old_stage_uuid=$(jq -r --arg sn "$STAGE_DB_NAME" '.result[] | select(.name == $sn) | .uuid // empty' "$TMP/d1.json" | head -n1)
-            if [ -n "$old_stage_uuid" ]; then
-              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$old_stage_uuid" >/dev/null 2>&1 || true
-            fi
-            s_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-              --data "{\"name\":\"$STAGE_DB_NAME\"}" -o "$TMP/create_stage.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
-            if [ "$s_status" != '200' ]; then
-              result="stage-d1-create-http-$s_status"
-              finish
-              exit 1
-            fi
-            stage_uuid=$(jq -r '.result.uuid // empty' "$TMP/create_stage.json")
-            write_tmp_toml "nasr-crm-stage-migrator" "$STAGE_DB_NAME" "$stage_uuid" "$TMP/stage.wrangler.toml"
-            npx --yes wrangler@4 d1 export nasr-crm-test-db --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/stage-schema.sql" > "$TMP/export_s.log" 2>&1
-            npx --yes wrangler@4 d1 export nasr-crm-test-db --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/stage-data.sql" > "$TMP/export_d.log" 2>&1
-            sed -i '/sqlite_sequence/d; /_cf_KV/d' "$TMP/stage-schema.sql" "$TMP/stage-data.sql"
-            { printf 'PRAGMA defer_foreign_keys = TRUE;\n'; cat "$TMP/stage-schema.sql" "$TMP/stage-data.sql"; } > "$TMP/stage-ordered.sql"
-            if ! npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage-ordered.sql" > "$TMP/stage_import.log" 2>&1; then
-              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-              result='stage-d1-import-failed'
-              finish
-              exit 1
-            fi
-            node -e '
-              const fs = require("node:fs");
-              const raw = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-              const names = [];
-              const walk = (x) => {
-                if (!x || typeof x !== "object") return;
-                if (Array.isArray(x)) { x.forEach(walk); return; }
-                if (typeof x.name === "string" && x.name.endsWith(".sql")) names.push(x.name);
-                Object.values(x).forEach(walk);
-              };
-              walk(raw);
-              const lines = ["CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);"];
-              for (const n of [...new Set(names)]) {
-                lines.push("INSERT OR IGNORE INTO d1_migrations(name) VALUES(\x27" + n.replaceAll("\x27", "\x27\x27") + "\x27);");
-              }
-              fs.writeFileSync(process.argv[2], lines.join("\n") + "\n");
-            ' "$TMP/live_migs.json" "$TMP/stage_migs.sql"
-            npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" --file "$TMP/stage_migs.sql" > "$TMP/stage_migs.log" 2>&1
-            if ! npx --yes wrangler@4 d1 migrations apply "$STAGE_DB_NAME" --remote --config "$TMP/stage.wrangler.toml" > "$TMP/stage_migrate.log" 2>&1; then
-              err_tag=$(grep -oE 'duplicate column name: [a-zA-Z0-9_]+|no such column: [a-zA-Z0-9_.]+|no such table: [a-zA-Z0-9_]+|FOREIGN KEY constraint failed|syntax error' "$TMP/stage_migrate.log" | head -n1 | tr ' :.' '---' || true)
-              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-              result="stage-d1-migration-0006-failed-${err_tag:-unknown}"
-              finish
-              exit 1
-            fi
-            STAGE_VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name IN ('status','price_updated_at')) AS listing_cols, (SELECT \"notnull\" FROM pragma_table_info('crm_opportunities') WHERE name='contact_id') AS opp_contact_notnull, (SELECT COUNT(*) FROM pragma_table_info('crm_opportunities') WHERE name IN ('conversation_id','lead_label')) AS opp_0006_cols, (SELECT COUNT(*) FROM pragma_table_info('crm_contacts') WHERE name IN ('archived_at','review_note')) AS contact_0006_cols;"
-            npx --yes wrangler@4 d1 execute "$STAGE_DB_NAME" --remote --json --config "$TMP/stage.wrangler.toml" --command "$STAGE_VERIFY_SQL" > "$TMP/stage_verify.json" 2>/dev/null
-            if ! jq -e '.. | objects | select(has("crm_tables") and has("listing_cols")) | .crm_tables == 15 and .listing_cols == 2 and .opp_contact_notnull == 0 and .opp_0006_cols == 2 and .contact_0006_cols == 2' "$TMP/stage_verify.json" >/dev/null; then
-              curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-              result='stage-d1-schema-mismatch'
-              finish
-              exit 1
-            fi
-            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" "$API/accounts/$account_id/d1/database/$stage_uuid" >/dev/null 2>&1 || true
-            stage_uuid=''
-            stage_test='passed-0006-decoupled'
-          fi
-
-          # 3. Apply verified 0006 migration to nasr-crm-test-db
-          phase='apply-0006-migration'
-          if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db --remote --config "$WRANGLER_CFG" > "$TMP/migrate.log" 2>&1; then
-            result='d1-migration-0006-failed'
-            finish
-            exit 1
-          fi
-
-          VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
-          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then
-            result='d1-schema-verify-failed'
-            finish
-            exit 1
-          fi
-          if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 15 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then
-            result='d1-schema-table-count-mismatch'
-            finish
-            exit 1
-          fi
-
-          phase='sync-site-catalog-and-batch1-owners'
-          node scripts/crm/build-crm-site-seed-sql.mjs ai-feed.json "$TMP/site-seed.sql"
-          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --file "$TMP/site-seed.sql" > "$TMP/site-seed.log" 2>&1; then
-            result='d1-site-catalog-seed-failed'
-            finish
-            exit 1
-          fi
-
           phase='deploy-test-worker'
           if ! npx --yes wrangler@4 deploy --config "$WRANGLER_CFG" > "$TMP/deploy.log" 2>&1; then
             result='worker-deploy-failed'
             finish
             exit 1
           fi
-          curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-            --data '{"enabled":true}' -o "$TMP/enable_sub.json" "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/subdomain" >/dev/null 2>&1 || true
+          curl --silent --show-error --connect-timeout 10 --max-time 30 -X POST -H "$AUTH" \
+            -H 'Content-Type: application/json' --data '{"enabled":true}' \
+            -o "$TMP/enable_sub.json" "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/subdomain" >/dev/null 2>&1 || true
           deployed='yes'
 
-          phase='configure-worker-secrets'
-          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/secrets.json" -w '%{http_code}' "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/secrets" 2>/dev/null || true)
-          if [ "$status" != 200 ]; then
-            result="worker-secrets-read-http-$status"
-            finish
-            exit 1
-          fi
+          SYNTH_CLEAN_SQL="DELETE FROM crm_conversation_messages WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_smart_alerts WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversation_insights WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key='201099990077' OR contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions WHERE revoked_at IS NOT NULL; DELETE FROM crm_auth_attempts;"
+          d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/pre_synth_clean.log" 2>&1 || true
 
-          has_session_secret=$(jq -r '[.result[]?.name] | index("CRM_SESSION_SECRET") != null' "$TMP/secrets.json")
-          has_direct_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")
-          has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")
-          has_ingest_priv=$(jq -r '[.result[]?.name] | index("CRM_INGEST_PRIVATE_KEY") != null' "$TMP/secrets.json")
-          has_vapid_priv=$(jq -r '[.result[]?.name] | index("CRM_VAPID_PRIVATE_KEY") != null' "$TMP/secrets.json")
-          has_vapid_pub=$(jq -r '[.result[]?.name] | index("CRM_VAPID_PUBLIC_KEY") != null' "$TMP/secrets.json")
-
-          if [ "$has_vapid_priv" != 'true' ] || [ "$has_vapid_pub" != 'true' ]; then
-            node --input-type=module -e '
-              import { writeFileSync } from "node:fs";
-              import { generateVapidKeyPair } from "./_worker/crm-worker.js";
-              const pair = await generateVapidKeyPair();
-              writeFileSync(process.argv[1], pair.privateKeyB64u, { mode: 0o600 });
-              writeFileSync(process.argv[2], pair.publicKeyB64u, { mode: 0o600 });
-            ' "$TMP/vapid_priv" "$TMP/vapid_pub"
-            echo "::add-mask::$(cat "$TMP/vapid_priv")"
-            if ! npx --yes wrangler@4 secret put CRM_VAPID_PRIVATE_KEY --config "$WRANGLER_CFG" < "$TMP/vapid_priv" > "$TMP/put_vapid_priv.log" 2>&1; then
-              result='put-vapid-private-key-failed'
-              finish
-              exit 1
-            fi
-            if ! npx --yes wrangler@4 secret put CRM_VAPID_PUBLIC_KEY --config "$WRANGLER_CFG" < "$TMP/vapid_pub" > "$TMP/put_vapid_pub.log" 2>&1; then
-              result='put-vapid-public-key-failed'
-              finish
-              exit 1
-            fi
-          fi
-
-          PUB_SQL="SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;"
-          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$PUB_SQL" > "$TMP/pub.json" 2>/dev/null || true
-          existing_pub=$(jq -r '.. | objects | select(has("pub")) | .pub // empty' "$TMP/pub.json" 2>/dev/null | head -n1 || true)
-
-          if [ "$has_ingest_priv" != 'true' ] || [ -z "$existing_pub" ]; then
-            node --input-type=module -e '
-              import { writeFileSync } from "node:fs";
-              import { generateIngestKeyPair } from "./_worker/crm-worker.js";
-              const pair = await generateIngestKeyPair();
-              writeFileSync(process.argv[1], pair.privateKeyPkcs8B64u, { mode: 0o600 });
-              writeFileSync(process.argv[2], pair.publicKeySpkiB64u, { mode: 0o644 });
-            ' "$TMP/ingest_priv" "./ingest-public-key.txt"
-            echo "::add-mask::$(cat "$TMP/ingest_priv")"
-            if ! npx --yes wrangler@4 secret put CRM_INGEST_PRIVATE_KEY --config "$WRANGLER_CFG" < "$TMP/ingest_priv" > "$TMP/put_ingest.log" 2>&1; then
-              result='put-ingest-private-key-failed'
-              finish
-              exit 1
-            fi
-            new_pub=$(tr -cd 'A-Za-z0-9_-' < ./ingest-public-key.txt)
-            SAVE_PUB_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES('system:ingest-public-key-v1','contact','${new_pub}') ON CONFLICT(submission_key) DO UPDATE SET resource_id=excluded.resource_id;"
-            npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SAVE_PUB_SQL" > "$TMP/save_pub.log" 2>&1
+          ci_n1='' ci_n2='' ci_n3='' ci_h1='' ci_h2='' ci_h3=''
+          if [ -s "$TMP/access_code" ]; then
+            live10_env="CRM_LIVE_ACCESS_CODE_FILE=$TMP/access_code"
           else
-            printf '%s' "$existing_pub" > ./ingest-public-key.txt
-          fi
-
-          node --input-type=module -e '
-            import { writeFileSync } from "node:fs";
-            const ownerSession = (process.env.OWNER_CRM_SESSION_SECRET || "").trim();
-            const sessionSecret = ownerSession.length >= 32
-              ? ownerSession
-              : Buffer.from(crypto.getRandomValues(new Uint8Array(48))).toString("base64url");
-            writeFileSync(process.argv[1], sessionSecret, { mode: 0o600 });
-          ' "$TMP/session_secret"
-
-          if [ "$has_session_secret" != 'true' ] || [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; then
-            if ! npx --yes wrangler@4 secret put CRM_SESSION_SECRET --config "$WRANGLER_CFG" < "$TMP/session_secret" > "$TMP/put_sess.log" 2>&1; then
-              result='put-session-secret-failed'
-              finish
-              exit 1
-            fi
-          fi
-
-          # Preserve owner's direct Cloudflare Dashboard CRM_ACCESS_CODE if set without GitHub mirror
-          if [ "$has_direct_code" = 'true' ] && [ -z "${OWNER_CRM_ACCESS_CODE:-}" ]; then
-            code_source='cloudflare-direct-secret'
-            phase='verify-unauth-and-public-site'
-            ui_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/" 2>/dev/null || true)
-            sw_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-sw.js" 2>/dev/null || true)
-            manifest_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-manifest.webmanifest" 2>/dev/null || true)
-            fui_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-assets/followups-ui.js" 2>/dev/null || true)
-            wat_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/crm-assets/whatsapp-templates.js" 2>/dev/null || true)
-            api_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
-            push_api_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/push/config" 2>/dev/null || true)
-            followups_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/followups" 2>/dev/null || true)
-            convs_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/conversations" 2>/dev/null || true)
-            alerts_code=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/alerts" 2>/dev/null || true)
-            pub_code=$(curl --silent --connect-timeout 10 --max-time 20 -o "$TMP/pub_home.html" -w '%{http_code}' 'https://nasr-realestate.github.io/' 2>/dev/null || true)
-            if [ "$ui_code" != '200' ] || [ "$sw_code" != '200' ] || [ "$manifest_code" != '200' ] || [ "$fui_code" != '200' ] || [ "$wat_code" != '200' ] || [ "$api_code" != '401' ] || [ "$push_api_code" != '401' ] || [ "$followups_code" != '401' ] || [ "$convs_code" != '401' ] || [ "$alerts_code" != '401' ] || [ "$pub_code" != '200' ]; then
-              result="direct-secret-smoke-failed-ui-${ui_code}-sw-${sw_code}-api-${api_code}-fu-${followups_code}-cv-${convs_code}-pub-${pub_code}"
-              finish
-              exit 1
-            fi
-            if grep -Fq 'nasr-crm-api-test' "$TMP/pub_home.html" || grep -Fq 'crm_conversations' "$TMP/pub_home.html"; then
-              result='public-site-crm-leak-detected'
-              finish
-              exit 1
-            fi
-
-            SYNTH_CLEAN_SQL="DELETE FROM crm_conversation_messages WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_smart_alerts WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversation_insights WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key='201099990077' OR contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions WHERE revoked_at IS NOT NULL; DELETE FROM crm_auth_attempts;"
-            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/pre_synth_clean.log" 2>&1 || true
-
-            phase='mint-single-use-ci-tickets'
             ci_n1=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
             ci_n2=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
             ci_n3=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
-            echo "::add-mask::${ci_n1}"
-            echo "::add-mask::${ci_n2}"
-            echo "::add-mask::${ci_n3}"
+            echo "::add-mask::${ci_n1}"; echo "::add-mask::${ci_n2}"; echo "::add-mask::${ci_n3}"
             ci_h1=$(printf '%s' "$ci_n1" | sha256sum | awk '{print $1}')
             ci_h2=$(printf '%s' "$ci_n2" | sha256sum | awk '{print $1}')
             ci_h3=$(printf '%s' "$ci_n3" | sha256sum | awk '{print $1}')
@@ -719,155 +651,99 @@ jobs:
               finish
               exit 1
             fi
-
-            phase='live-10-checks-http-and-ui'
-            if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_CI_TICKET_NONCES="${ci_n1},${ci_n2},${ci_n3}" node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
-              d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
-              err_diag=$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live10.err" | tail -c 52 || true)
-              result="live10-${err_diag:-unknown}"
-              finish
-              exit 1
-            fi
-
-            phase='live-a5-operational-verification'
-            a5_rc=0
-            run_a5_live || a5_rc=$?
-            if [ "$a5_rc" != '0' ]; then
-              d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
-              result='live-a5-operational-checks-failed'
-              finish
-              exit 1
-            fi
-
-            phase='post-verify-cleanup-and-invariance'
-            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/post_synth_clean.log" 2>&1; then
-              result='post-verify-synth-cleanup-failed'
-              finish
-              exit 1
-            fi
-
-            FINAL_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
-            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
-              result='post-verify-counts-query-failed'
-              finish
-              exit 1
-            fi
-            if ! jq -e '.. | objects | select(has("c") and has("cv")) | .c == 60 and .ph == 64 and .o == 83 and .cl == 19 and .cv == 76 and .unm == 21 and .m == 2984 and .al >= 66' "$TMP/final_cnt.json" >/dev/null; then
-              result='post-verify-counts-mismatch'
-              finish
-              exit 1
-            fi
-            al_cnt=$(jq -r '.. | objects | select(has("c") and has("al")) | .al | tostring' "$TMP/final_cnt.json" | head -n1)
-
-            final_401=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
-            if [ "$final_401" != '401' ]; then
-              result="post-verify-unauth-status-${final_401}"
-              finish
-              exit 1
-            fi
-
-            d1_post_status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1_post.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
-            market_post_sig=$(jq -r --arg id "$PROD_DB_UUID" '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" 2>/dev/null | head -n1 || true)
-            if [ "$d1_post_status" != '200' ] || [ -z "$market_pre_sig" ] || [ "$market_pre_sig" != "$market_post_sig" ]; then
-              result='market-db-invariance-check-failed'
-              finish
-              exit 1
-            fi
-
-            mobile_browser="desk+mob+pwa"
-            login_and_crud="60c-64ph-83o[19]-76cv[21]-2984m-${al_cnt}al-mdb0"
-            unauth_rejected='yes'
-            phase='completed'
-            result='deployed-10checks-verified'
-            finish
-            exit 0
+            live10_env="CRM_CI_TICKET_NONCES=${ci_n1},${ci_n2},${ci_n3}"
           fi
 
-          if [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then
-            code_source='github-secret'
-          else
-            code_source='generated-verifier'
-          fi
-
-          node --input-type=module -e '
-            import { writeFileSync } from "node:fs";
-            import { createAccessCodeVerifier } from "./_worker/crm-worker.js";
-            const ownerCode = (process.env.OWNER_CRM_ACCESS_CODE || "").trim();
-            const code = ownerCode.length >= 24
-              ? ownerCode
-              : Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
-            const verifier = await createAccessCodeVerifier(code);
-            writeFileSync(process.argv[1], code, { mode: 0o600 });
-            writeFileSync(process.argv[2], verifier, { mode: 0o600 });
-          ' "$TMP/access_code" "$TMP/access_verifier"
-
-          if ! npx --yes wrangler@4 secret put CRM_ACCESS_CODE_VERIFIER --config "$WRANGLER_CFG" < "$TMP/access_verifier" > "$TMP/put_ver.log" 2>&1; then
-            result='put-access-verifier-failed'
+          phase='live-10-checks-http-and-ui'
+          if ! env CRM_TEST_BASE_URL="$BASE_URL" $live10_env node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
+            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
+            result="live10-$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live10.err" | tail -c 52 || echo unknown)"
             finish
             exit 1
           fi
-          sleep 4
-
-          PRE_CLEAN_SQL="DELETE FROM crm_opportunity_properties WHERE opportunity_id IN (SELECT id FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'); DELETE FROM crm_activities WHERE opportunity_id IN (SELECT id FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'); DELETE FROM crm_opportunities WHERE notes LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key IN ('201099990001','201199990002','201099990088'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'live-e2e-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_auth_attempts;"
-          npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$PRE_CLEAN_SQL" > "$TMP/preclean.log" 2>&1 || true
-
-          phase='live-http-e2e'
-          if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-e2e-runner.mjs > "$TMP/e2e_out.json"; then
-            failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/e2e_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
-            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/e2e_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
-            result="e2e-failed-${failed_step:-unknown}-${failed_reason:-unknown}"
-            finish
-            exit 1
-          fi
-
-          created_contact_id=$(jq -r '.contact_id' "$TMP/e2e_out.json")
-          created_opp_id=$(jq -r '.opportunity_id' "$TMP/e2e_out.json")
-          login_and_crud='yes'
+          mobile_browser='desk+mob+pwa'
           unauth_rejected='yes'
 
-          phase='live-mobile-browser-e2e'
-          if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" node _worker/tests/live-browser-e2e.mjs > "$TMP/browser_out.json"; then
-            failed_step=$(jq -r '.failed_step // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-40 || true)
-            failed_reason=$(jq -r '.reason // "unknown"' "$TMP/browser_out.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-90 || true)
-            result="mobile-browser-failed-${failed_step:-unknown}-${failed_reason:-unknown}"
-            finish
-            exit 1
-          fi
-          mobile_browser='yes'
-
-          # نفس فحوص A5 على هذا المسار أيضًا: لا يجوز أن يوجد طريق نشر لا يتحقق من A5.
           phase='live-a5-operational-verification'
           a5_rc=0
           run_a5_live || a5_rc=$?
           if [ "$a5_rc" != '0' ]; then
+            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
             result='live-a5-operational-checks-failed'
             finish
             exit 1
           fi
 
-          phase='cleanup-synthetic-e2e-rows'
-          if [[ ! "$created_contact_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]] || [[ ! "$created_opp_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]]; then
-            result='invalid-id-for-cleanup'
-            finish
-            exit 1
-          fi
-          CLEANUP_SQL="DELETE FROM crm_opportunity_properties WHERE opportunity_id='${created_opp_id}'; DELETE FROM crm_activities WHERE opportunity_id='${created_opp_id}'; DELETE FROM crm_opportunities WHERE id='${created_opp_id}'; DELETE FROM crm_contact_phones WHERE contact_id='${created_contact_id}' OR phone_key='201099990088'; DELETE FROM crm_idempotency_receipts WHERE resource_id IN ('${created_contact_id}','${created_opp_id}') OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE id='${created_contact_id}' OR name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions WHERE revoked_at IS NOT NULL; DELETE FROM crm_auth_attempts;"
-          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$CLEANUP_SQL" > "$TMP/cleanup.log" 2>&1; then
-            result='synthetic-row-cleanup-failed'
-            finish
-            exit 1
-          fi
-
-          post_cleanup_status=$(curl --silent --connect-timeout 10 --max-time 15 -o "$TMP/final401.json" -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
-          if [ "$post_cleanup_status" != '401' ]; then
-            result="post-cleanup-unauth-status-$post_cleanup_status"
-            finish
-            exit 1
+          if [ -s "$TMP/access_code" ]; then
+            phase='legacy-e2e-with-existing-access-code'
+            if ! env CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" \
+                    node _worker/tests/live-e2e-runner.mjs > "$TMP/e2e_out.json"; then
+              result='legacy-e2e-failed'
+              finish
+              exit 1
+            fi
+            if ! env CRM_TEST_BASE_URL="$BASE_URL" CRM_LIVE_ACCESS_CODE_FILE="$TMP/access_code" \
+                    node _worker/tests/live-browser-e2e.mjs > "$TMP/browser_out.json"; then
+              result='legacy-browser-e2e-failed'
+              finish
+              exit 1
+            fi
           fi
 
+          phase='post-verify-cleanup-and-invariance'
+          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/post_synth_clean.log" 2>&1; then
+            result='post-verify-synth-cleanup-failed'
+            finish
+            exit 1
+          fi
+          FINAL_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
+          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
+            result='post-verify-counts-query-failed'
+            finish
+            exit 1
+          fi
+          if ! jq -e '.. | objects | select(has("c") and has("cv")) | .c == 60 and .ph == 64 and .o == 83 and .cl == 19 and .cv == 76 and .unm == 21 and .m == 2984 and .al >= 66' "$TMP/final_cnt.json" >/dev/null; then
+            result='post-verify-counts-mismatch'
+            finish
+            exit 1
+          fi
+          al_cnt=$(jq -r '.. | objects | select(has("c") and has("al")) | .al | tostring' "$TMP/final_cnt.json" | head -n1)
+          final_401=$(curl --silent --connect-timeout 10 --max-time 15 -o /dev/null -w '%{http_code}' "$BASE_URL/api/contacts" 2>/dev/null || true)
+          if [ "$final_401" != '401' ]; then
+            result="post-verify-unauth-status-${final_401}"
+            finish
+            exit 1
+          fi
+          login_and_crud="60c-64ph-83o[19]-76cv[21]-2984m-${al_cnt}al-mdb0"
           phase='completed'
-          result='deployed-and-live-auth-e2e-passed'
+          result='deployed-a5-verified'
           finish
+
+      - name: Verify nasr-market-db invariance (read-only)
+        id: invariance
+        shell: bash
+        env:
+          API: https://api.cloudflare.com/client/v4
+          PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          EXPECTED_SIG: ${{ steps.preflight.outputs.market_pre_sig }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1_post.json" -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" 2>/dev/null || true)
+          market_post_sig=$(jq -r --arg id "$PROD_DB_UUID" \
+            '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" 2>/dev/null | head -n1)
+          if [ "$status" != '200' ] || [ -z "$EXPECTED_SIG" ] || [ "$EXPECTED_SIG" != "$market_post_sig" ]; then
+            echo "::error::nasr-market-db invariance check failed (http=$status, before=${EXPECTED_SIG:-missing}, after=${market_post_sig:-missing}); no further deploy action."
+            exit 1
+          fi
+          echo "market-db-invariance-ok: signature unchanged"
+
       - name: Publish non-secret RSA-OAEP public key artifact for sealed CRM ingest
         if: always() && hashFiles('ingest-public-key.txt') != ''
         uses: actions/upload-artifact@v4
