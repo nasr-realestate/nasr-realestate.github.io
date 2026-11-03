@@ -85,6 +85,15 @@ jobs:
       approval: ${{ steps.session.outputs.approval }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The approval pin is checked with git objects -- `cat-file -e <plan_head>`,
+          # `merge-base --is-ancestor`, and `diff --quiet <plan_head> HEAD -- <guarded paths>`. The default
+          # `fetch-depth: 1` gives the job one commit, so all three fail for a reason that has nothing to do
+          # with the plan: the run at 2dd0469 matched every digest and every counter and was still refused,
+          # because the reviewed head was not present to be looked at. Fetching the history is what lets the
+          # check answer at all; the check itself is unchanged, and it stays fatal. Only this job needs the
+          # history -- the report jobs publish from outputs and never read the repository.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
