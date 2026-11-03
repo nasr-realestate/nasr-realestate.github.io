@@ -70,6 +70,13 @@ CREATE TABLE crm_sessions (
   expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
   revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
 );
+-- Milliseconds, deliberately: this rehearsal applies 0009 alone into a scratch database (see the copy
+-- into SCRATCH/migrations below), so the liveness guard installed here is 0009 §5.9 as written, which
+-- compares `expires_at` against strftime('%s','now')*1000. The fixture must therefore be seeded in that
+-- unit or every allowed event in this rehearsal would be refused for the wrong reason.
+-- The unit the *deployed* database actually uses is epoch seconds, and migration 0014 aligned the guard
+-- to it; that chain-level contract (0001..0014 together) is pinned by
+-- _worker/tests/crm-a5-drive-review.test.mjs (A5R-2b) and by the CI apply on nasr-crm-test-db — not here.
 INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
   ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
   ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),

@@ -1,11 +1,17 @@
 # migrations-draft — مجلد المسودات (0009 لم تعد هنا)
 
-**الحالة (2026-11-02):** `0009` رُوِّجت سابقًا إلى `_worker/migrations/` (`git mv` فقط، بلا تحرير)،
-وفي هذا المجلد الآن مسوّدتان معلَّقتان من Phase 2 / T2، ولا يُطبَّق أيٌّ منهما على أي قاعدة:
+**الحالة (2026-11-02، بعد الاعتماد A3):** `0009` و`0010` رُوِّجتا إلى `_worker/migrations/`
+(`git mv` فقط، بلا تحرير للنصّ) — ترويج `0010` يعني أن `crm-phase3-registry.yml` سيطبّقه على
+`nasr-crm-test-db` في CI؛ هذا هو التطبيق المقصود، وليس هذا المجلد. بقيت هنا مسوّدة واحدة معلَّقة:
+
+- `0011_crm_drive_file_intake_review.sql` — **لا تُروَّج** إلا بعد أن قراءة `status_without_version = 0`
+  على قاعدة الاختبار (أي بعد زرع `drive_ref` وإعادة §5 من `0010`)؛ الشرط في `CRM_PHASE2_DRIVE_MIGRATION_PLAN.md` §3 خطوة 8.
+
+وفي هذا المجلد قاعدة الترويج نفسها: كل هجرة جديدة تبدأ هنا ولا تدخل `_worker/migrations/` إلا بموافقة صريحة.
 
 | مسودة | تعالج | أشياء جديدة | لا تلمس |
 | --- | --- | --- | --- |
-| `0010_crm_drive_file_versions.sql` | تتبّع إصدارات محتوى ملف Drive | جدول `crm_drive_file_version` + 8 أعمدة إسقاطية في `crm_drive_file_registry` + 20 مشغّلًا + 6 عروض | لا `DROP`، لا `UPDATE` على صفوف قائمة، لا حذف أي قيد |
+| `0010_crm_drive_file_versions.sql` | *(رُوِّجت — انظر `_worker/migrations/`)* | جدول `crm_drive_file_version` + 8 أعمدة إسقاطية في `crm_drive_file_registry` + 20 مشغّلًا + 6 عروض | لا `DROP`، لا `UPDATE` على صفوف قائمة، لا حذف أي قيد |
 | `0011_crm_drive_file_intake_review.sql` | حالة مراجعة لملف بلا عميل | `crm_drive_file_review_case` + `..._decision` + `..._anchor` + 4 عروض + 16 مشغّلًا | **لا تعديل ولا إعادة بناء لجدول 0009**; العزل مقصود |
 
 كل هجرة جديدة تبدأ هنا ولا تدخل `_worker/migrations/` إلا بموافقة طارق الصريحة.
@@ -141,3 +147,20 @@ SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل ع
    ملف الهجرة ويقارنها بـ `sqlite_master` الحيّ، فانحرافٌ واحد يُفشل التشغيل.
 5. **قبل** أي push يمسّ `_worker/crm-ui/**` أو `_worker/crm-worker.js`: بوابة `crm-test-deploy`
    يجب أن تكون قائمة ومحميّة (قرار المستخدم، `CRM_PHASE4_REVIEW_SECURITY.md` §5).
+
+---
+
+## سجل الترقية — 0011 (3 نوفمبر 2026)
+
+رُفِّع `0011_crm_drive_file_intake_review.sql` إلى `_worker/migrations/` بعد أن تحققت الشروط المقيسة لا المزعومة:
+
+| الشرط (المطلوب في §7 أعلاه) | القيمة المقيسة من CI | المصدر |
+|---|---|---|
+| `status_without_version = 0` | `svv=0` (وقبلها `needs_bootstrap=0, ctr=0, dang=0, gaps=0, orphans=0`) | تشغيل التوثيق المستقل `41632541771` ثم `verify` على `6c8fa51` |
+| 0010 مطبَّقة أولًا | `migs=10,latest=0010_crm_drive_file_versions` قبل الترقية | `Session ledger` في نفس التشغيل |
+| زرع المراجع مكتمل ومطابق للخطة | `anchored=99, digest_match=yes` مع `anchor_digest=300c442a0c87…0504` | `Session anchors` |
+| تمرينات 0011 خضراء على الحالة الجديدة | `FILE_REVIEW 35/35 ALL_BARRIERS_HELD` و`D1_FILE_REVIEW 83/83 ALL_BARRIERS_HELD_ON_D1` | `node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs` + `python3 …d1-rehearsal.py` محليًا |
+| الحزمة الكاملة | `734/734` (`fail 0`) مع 0011 داخل `_worker/migrations/` | `npm test` |
+| طابور ingest مختوم لا يكتب شيئًا عرضيًا | `IDLE` | `_worker/ingest-queue/drive-registry-sealed.txt` |
+
+التطبيق على `nasr-crm-test-db` يتم حصريًا عبر CI (خطوة `d1 migrations apply` في `crm-phase3-registry.yml`، وهي نفس القناة التي طبّقت 0010). لا تُطبَّق يدويًا من أي جهاز. ملاحظة صريحة للجلسة التالية: `crm-phase4-analysis.yml` ينفّذ `d1 migrations apply` في الخطوة 9 **قبل** فرع المؤشر `.crm/p4-diagnostic-read-only`، فوصف المؤشر بأنه "قراءة فقط" لا يشمل تلك الخطوة؛ من يريد brake حقيقيًا على تطبيق migration عبر p4 يجب أن ينقل الفحص إلى ما قبل الخطوة 9 (لم يُفعَّل هنا لأنه يغيّر سلوك مرحلة مغلقة).

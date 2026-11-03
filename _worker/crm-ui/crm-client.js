@@ -136,7 +136,28 @@ export class CRMClient {
       body: { access_code: accessCode },
       includeCsrf: false,
     });
-    this.#csrfToken = typeof session.csrf_token === 'string' ? session.csrf_token : '';
+    return this.#adoptSession(session);
+  }
+
+  /**
+   * جلسة بتذكرة CI لمرة واحدة (`POST /auth/ci-ticket`) بدل رمز الوصول — المسار الموجود أصلًا
+   * للنشر المُصرَّح به، ولا يوسّع أي صلاحية: التذكرة تُطبع في القاعدة بخطوة CI قبل ذلك وتُستهلك
+   * عند أول استعمال. الجلسة ورمز CSRF يُتبنَّيان بالخطوة نفسها حرفيًا كما في login العادي، فلا
+   * يختلف ما يفحصه اختبار النشر عن ما يفعله المتصفح.
+   */
+  async loginWithTicket(ticketNonce) {
+    const nonce = typeof ticketNonce === 'string' ? ticketNonce.trim() : '';
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(nonce)) throw new TypeError('ticket_nonce_invalid');
+    const session = await this.request('/auth/ci-ticket', {
+      method: 'POST',
+      body: { ticket_nonce: nonce },
+      includeCsrf: false,
+    });
+    return this.#adoptSession(session);
+  }
+
+  #adoptSession(session) {
+    this.#csrfToken = typeof session?.csrf_token === 'string' ? session.csrf_token : '';
     return session;
   }
 
@@ -285,4 +306,89 @@ export class CRMClient {
   checkDuePushNow() {
     return this.request('/push/check-now', { method: 'POST', body: {} });
   }
+
+  /* ── A5: الطبقة التشغيلية — الطلبات، الخط الزمني الموحَّد، المتابعات، مراجعة ملفات Drive ──
+     كل ما هنا يمر عبر request() نفسه: نفس الجلسة، نفس CSRF، نفس أخطاء CRMApiError المسمّاة حتى
+     تظهر للداخلي كما هي (لا تُخفى) — ولا شيء من هذا يُستدعى من أي صفحة عامة. */
+  #query(params = {}) {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value === '' || value === null || value === undefined) continue;
+      search.set(key, typeof value === 'number' ? String(value) : value);
+    }
+    return search.size ? `?${search.toString()}` : '';
+  }
+
+  listRequests(params = {}) {
+    return this.request(`/requests${this.#query(params)}`);
+  }
+
+  getRequest(requestId) {
+    return this.request(`/requests/${safeId(requestId)}`);
+  }
+
+  createRequest(payload, idempotencyKey = crypto.randomUUID()) {
+    return this.request('/requests', { method: 'POST', body: payload, idempotencyKey });
+  }
+
+  updateRequest(requestId, payload) {
+    return this.request(`/requests/${safeId(requestId)}`, { method: 'POST', body: payload });
+  }
+
+  setRequestStatus(requestId, payload) {
+    return this.request(`/requests/${safeId(requestId)}/status`, { method: 'POST', body: payload });
+  }
+
+  linkRequestListing(requestId, payload) {
+    return this.request(`/requests/${safeId(requestId)}/links`, { method: 'POST', body: payload });
+  }
+
+  decideRequestListingLink(requestId, linkId, payload) {
+    return this.request(`/requests/${safeId(requestId)}/links/${safeId(linkId)}/decision`, { method: 'POST', body: payload });
+  }
+
+  listInteractions(params = {}) {
+    return this.request(`/interactions${this.#query(params)}`);
+  }
+
+  recordInteraction(payload, idempotencyKey = crypto.randomUUID()) {
+    return this.request('/interactions', { method: 'POST', body: payload, idempotencyKey });
+  }
+
+  linkLegacyInteraction(payload) {
+    return this.request('/interactions/legacy-link', { method: 'POST', body: payload });
+  }
+
+  operationalQueues(params = {}) {
+    return this.request(`/queues${this.#query(params)}`);
+  }
+
+  contactsNeedingFollowup(params = {}) {
+    return this.request(`/followups/needs${this.#query(params)}`);
+  }
+
+  createFollowup(payload) {
+    return this.request('/followups', { method: 'POST', body: payload });
+  }
+
+  completeFollowup(followupId, payload) {
+    return this.request(`/followups/${safeId(followupId)}/complete`, { method: 'POST', body: payload });
+  }
+
+  listDriveReviews(params = {}) {
+    return this.request(`/reviews/drive${this.#query(params)}`);
+  }
+
+  getDriveReview(caseRef) {
+    return this.request(`/reviews/drive/${encodeURIComponent(String(caseRef ?? '').trim())}`);
+  }
+
+  recordDriveReviewDecision(payload) {
+    return this.request('/reviews/drive/decision', { method: 'POST', body: payload });
+  }
+
+  proposeDriveReviewLink(payload) {
+    return this.request('/reviews/drive/link-proposal', { method: 'POST', body: payload });
+  }
 }
+

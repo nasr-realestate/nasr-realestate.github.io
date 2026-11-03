@@ -1232,6 +1232,34 @@ export async function listVersions(db, driveFileId) {
 // Detects confirmed byte-level content duplicates via content_sha256 without deleting any record.
 // Never uses file_size or file_name alone, and never treats ZIP files with different outer
 // content_sha256 as inner-identical or inner-distinct when inner_content_sha256 is uninspected.
+// The pin a duplicate claim must carry — or the reason it cannot carry one. It lives apart from
+// detectAndRegisterDuplicate for two reasons: the rule "with the ledger a duplicate names a version, without
+// it nothing changes" is one function with one exit path, and the caller stays inside its complexity budget
+// instead of one more inline branch that someone later trims to make a lint pass.
+async function duplicatePinClause(db, target, canonicalId, cleanId) {
+  if (!(await hasVersionLedger(db))) return { clause: '', values: [] };
+  const canonicalRow = canonicalId === cleanId
+    ? target
+    : await getRegistryEntryByDriveFileId(db, canonicalId);
+  const pinRef = canonicalRow?.drive_ref ?? null;
+  const pinSeq = Number(canonicalRow?.head_version_seq ?? 0);
+  if (!pinRef || pinSeq < 1) {
+    throw new DriveRegistryError(
+      'DUPLICATE_PIN_UNAVAILABLE',
+      `the canonical file ${canonicalId} carries no drive_ref/head_version yet, so this duplicate claim cannot be pinned to a version; the ref bootstrap must run first`,
+    );
+  }
+  // The assignments and the values they bind are returned together on purpose. Splitting them is how the
+  // first draft of this rule produced `no such column: duplicate_of_drive_ref` on a pre-0010 schema: the
+  // identifiers were unconditional while only their values were conditional.
+  return {
+    clause: `
+        duplicate_of_drive_ref = ?,
+        duplicate_of_version_seq = ?,`,
+    values: [pinRef, pinSeq],
+  };
+}
+
 export async function detectAndRegisterDuplicate(db, { driveFileId, detectedAt } = {}) {
   const cleanId = validateDriveFileId(driveFileId);
   const target = await getRegistryEntryByDriveFileId(db, cleanId);
@@ -1302,15 +1330,26 @@ export async function detectAndRegisterDuplicate(db, { driveFileId, detectedAt }
 
   assertProcessingTransitionAllowed(target.processing_status, 'duplicate');
   const ts = nowIso(detectedAt);
+
+  // With 0010 applied, `processing_status = 'duplicate'` is a claim about two *content versions*:
+  // trg_registry_duplicate_pin refuses it unless the row names the canonical file's drive_ref and head
+  // version. This UPDATE predates that rule, so on a ledger database it died inside the trigger — mid-write,
+  // reported as SQLITE_CONSTRAINT (`code:7500` on D1) with no mention of what was missing. `duplicatePinClause`
+  // resolves the pin, refuses the claim when the canonical row cannot be named — exactly the state of a
+  // database where 0010 is applied and the ref bootstrap has not run, `drive_ref` NULL and `head_version_seq`
+  // 0 in every row — and leaves a pre-0010 database alone, which is what keeps the promotion order (schema
+  // now, refs later) a thing that can exist. Nothing about the trigger is relaxed; the point is that the
+  // refusal arrives as a name and before any statement runs, not as a constraint code after half a write.
+  const pin = await duplicatePinClause(db, target, canonicalId, cleanId);
   await db.prepare(`
     UPDATE ${REGISTRY_TABLE}
     SET processing_status = 'duplicate',
-        duplicate_of_file_id = ?,
+        duplicate_of_file_id = ?,${pin.clause}
         error_code = NULL,
         error_message = NULL,
         updated_at = ?
     WHERE drive_file_id = ?
-  `).bind(canonicalId, ts, cleanId).run();
+  `).bind(canonicalId, ...pin.values, ts, cleanId).run();
 
   const updated = await getRegistryEntryByDriveFileId(db, cleanId);
   return {

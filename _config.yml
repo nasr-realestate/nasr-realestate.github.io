@@ -258,6 +258,27 @@ exclude:
   - .DS_Store
   - scripts
 
+# وثائق CRM الداخلية (تقارير مراجعة/أمن/ترحيل ودليل تشغيل) ملفاتُ جذر بلا front matter، وJekyll
+# ينسخ ما لا front matter فيه حرفيًا إلى _site ⇒ كانت تُنشر علنًا. قيس في 2026-11-03:
+# https://nasr-realestate.github.io/CRM_PHASE4_REVIEW_SECURITY.md يرجع 200 بكامل النص. لا بيانات
+# عملاء فيها، لكنها تصف الحواجز وأسماء قواعد الاختبار ومسارات CI؛ والاستبعاد لا يحذف شيئًا من Git
+# ولا يترك رابطًا معطوبًا (لا إحالة عامة إلى أيٍّ منها في الطبقة المنشورة — مفحوص في
+# scripts/tests/crm-internal-docs-not-published.test.mjs الذي يغطّي كل ما يُضاف لاحقًا باسم CRM_*.md).
+  - CRM_A5_GO_LIVE_RUNBOOK.md
+  - CRM_PHASE2_DRIVE_0010_D1_TEST_REPORT.md
+  - CRM_PHASE2_DRIVE_0011_D1_TEST_REPORT.md
+  - CRM_PHASE2_DRIVE_INTAKE_PLAN.md
+  - CRM_PHASE2_DRIVE_MIGRATION_PLAN.md
+  - CRM_PHASE2_DRIVE_T1_RECONCILIATION.md
+  - CRM_PHASE2_DRIVE_T2_DESIGN.md
+  - CRM_PHASE4_ANALYSIS_REPORT.md
+  - CRM_PHASE4_REVIEW_PREPARATION.md
+  - CRM_PHASE4_REVIEW_REPORT.md
+  - CRM_PHASE4_REVIEW_SECURITY.md
+  - CRM_PHASE4_REVIEW_SQL_APPROVAL.md
+  - CRM_PHASE4_REVIEW_TEST_REPORT.md
+  - CRM_PHASE4_VCF514_PROVENANCE.md
+
 # ⚠️ 2026-10-16 (اكتشاف من CI في verify-ai-layer.yml) — المضيدة الرابعة:
 # GitHub Pages تُفعّل تلقائيًا الإضافة jekyll-optional-front-matter (انظر
 # DEFAULT_PLUGINS في github/pages-gem v231)، وهي تحوّل **كل** ملف Markdown بلا

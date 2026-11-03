@@ -15,6 +15,8 @@ import test from 'node:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildRegistry } from './_registry-fixture.mjs';
+
 const workerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIG_DIR = path.join(workerDir, 'migrations');
 const DRAFT_DIR = path.join(workerDir, 'migrations-draft');
@@ -28,6 +30,7 @@ const DRAFT_0011 = draft('0011_crm_drive_file_intake_review.sql');
 const {
   DriveRegistryError,
   deriveDriveRef,
+  detectAndRegisterDuplicate,
   hasVersionLedger,
   insertNewDriveFileStrict,
   listVersions,
@@ -73,23 +76,15 @@ function wrapD1(sqlite, { failOnBatchStep = null } = {}) {
   };
 }
 
+// One fixture, in one place. This suite used to keep its own copy of "apply the chain, then the drafts",
+// and when 0010 was promoted out of `migrations-draft/` the copy began applying it twice — `duplicate
+// column name: drive_ref`, 13 failures that looked like a broken migration and were a stale test harness.
+// `buildRegistry` knows that a promoted migration is already in the chain and that `ledger: false` must
+// exclude it, so the pre-0010 and post-0010 states stay two different databases either way.
 function build({ ledger = true, intake = false, failOnBatchStep = null } = {}) {
-  const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec('PRAGMA foreign_keys = ON;');
-  sqlite.exec(`
-    CREATE TABLE areas (id INTEGER PRIMARY KEY, name_ar TEXT NOT NULL UNIQUE);
-    CREATE TABLE sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
-    CREATE TABLE listings (id INTEGER PRIMARY KEY, source_id INTEGER, external_id TEXT, url TEXT,
-      title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL,
-      bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT NOT NULL);
-  `);
-  for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) {
-    try { sqlite.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); } catch { /* needs tables this fixture omits */ }
-  }
-  if (ledger) sqlite.exec(readFileSync(DRAFT_0010, 'utf8'));
-  if (intake) sqlite.exec(readFileSync(DRAFT_0011, 'utf8'));
-  return { sqlite, db: wrapD1(sqlite, { failOnBatchStep }) };
+  return buildRegistry({ ledger, intake, failOnBatchStep });
 }
+
 
 // one synthetic file, registered the way the intake path registers it
 async function newFile(db, tag, { size = 1024, modifiedAt = T0 } = {}) {
@@ -610,4 +605,79 @@ test('a strong evidence claim with neither bytes nor a receipt is still a refusa
     /MISSING_RECOMPUTE_BYTES/,
     'a malformed receipt does not qualify a claim either',
   );
+});
+
+// A helper for the duplicate cases below. The canonical file is chosen by `COALESCE(drive_created_at,
+// created_at)`, and `id` is a uuid — so two rows created in the same millisecond are ordered by a random
+// tie-break and the "which one is the original" answer flips between runs. The registry rows here therefore
+// get explicit, distinct creation timestamps: a test that depends on a uuid ordering is a test that fails
+// on an unlucky day and teaches nothing.
+async function hashPair(db, bytes) {
+  const rows = [['CANON', '2026-10-01T09:00:00.000Z'], ['COPY', '2026-10-02T09:00:00.000Z']];
+  for (const [tag, createdAt] of rows) {
+    await insertNewDriveFileStrict(db, {
+      drive_file_id: `SYNTH-${tag}`,
+      file_name: `${tag}.zip`,
+      mime_type: 'application/zip',
+      file_size: 1024,
+      drive_parent_id: 'SYNTH-FOLDER',
+      drive_created_at: createdAt,
+      drive_modified_at: T1,
+      last_seen_at: T1,
+    });
+    await recordContentHash(db, { driveFileId: `SYNTH-${tag}`, contentSha256: bytes });
+  }
+}
+
+test('a duplicate claim pins the canonical version — and the promotion before the bootstrap is exactly the state that refuses', async () => {
+  const bytes = sha('same-bytes-two-files');
+
+  // A 0007 database on its own terms: "same bytes" was the whole story, so the claim lands, and there is no
+  // pin column to land it on. If this half ever stops being true, the promotion order stops being possible.
+  const legacy = build({ ledger: false });
+  await hashPair(legacy.db, bytes);
+  const before = await detectAndRegisterDuplicate(legacy.db, { driveFileId: 'SYNTH-COPY' });
+  assert.equal(before.isDuplicate, true, 'no ledger means no pin requirement');
+  assert.equal(before.canonicalDriveFileId, 'SYNTH-CANON');
+  assert.throws(
+    () => legacy.sqlite.prepare('SELECT duplicate_of_drive_ref FROM crm_drive_file_registry').get(),
+    /no such column/,
+    'this schema genuinely predates 0010 — the write path must not name the pin columns here',
+  );
+
+  // The same data with 0010 applied on top of it: the test database between the promotion and the bootstrap.
+  // Both rows hold digests, neither has a drive_ref, head_version_seq is 0. There is nothing to pin a claim
+  // to, so the refusal has to say that itself instead of letting a trigger abort the write with a code.
+  const promoted = build({ ledger: false });
+  await hashPair(promoted.db, bytes);
+  promoted.sqlite.exec(readFileSync(DRAFT_0010, 'utf8'));
+  assert.equal(await hasVersionLedger(promoted.db), true, 'the ledger arrived');
+  const statusBefore = promoted.sqlite
+    .prepare("SELECT processing_status AS st FROM crm_drive_file_registry WHERE drive_file_id = 'SYNTH-COPY'").get().st;
+  await assert.rejects(
+    () => detectAndRegisterDuplicate(promoted.db, { driveFileId: 'SYNTH-COPY' }),
+    /DUPLICATE_PIN_UNAVAILABLE/,
+  );
+  assert.equal(
+    promoted.sqlite.prepare("SELECT processing_status AS st FROM crm_drive_file_registry WHERE drive_file_id = 'SYNTH-COPY'").get().st,
+    statusBefore,
+    'a refusal that wrote something would be worse than no refusal at all',
+  );
+  assert.equal(promoted.sqlite.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_version').get().c, 0,
+    'and no version row was conjured to make the claim pass');
+
+  // Once the refs and versions exist, the same claim on the same rows lands — pinned to a version the ledger
+  // actually holds. Nothing is hand-written into head_version_seq: re-running recordContentHash goes through
+  // recordVersion, the only way this projection may move, so the state below is one the engine can reach.
+  await recordContentHash(promoted.db, { driveFileId: 'SYNTH-CANON', contentSha256: bytes });
+  await recordContentHash(promoted.db, { driveFileId: 'SYNTH-COPY', contentSha256: bytes });
+  const pinned = await detectAndRegisterDuplicate(promoted.db, { driveFileId: 'SYNTH-COPY' });
+  assert.equal(pinned.isDuplicate, true);
+  const row = promoted.sqlite.prepare(`SELECT duplicate_of_file_id AS canon, duplicate_of_drive_ref AS ref,
+    duplicate_of_version_seq AS seq FROM crm_drive_file_registry WHERE drive_file_id = 'SYNTH-COPY'`).get();
+  assert.equal(row.canon, 'SYNTH-CANON');
+  assert.equal(row.ref, await deriveDriveRef('SYNTH-CANON'), 'the pin names the canonical file by ref');
+  assert.equal(Number(row.seq), 1, 'and names the head version, not just the row');
+  assert.equal(promoted.sqlite.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_registry').get().c, 2,
+    'a duplicate is a relationship: no row is deleted, merged, or overwritten');
 });

@@ -1,0 +1,22 @@
+{
+  "_what": "Template, not an approval. Copy to .crm/drive-ref-bootstrap-approval.json and fill every REPLACE_AFTER_HUMAN_APPROVAL from the 'Session digests' check name and the run's step summary of a bootstrap-plan run, then commit it yourself. The bootstrap write path refuses to apply while any placeholder remains (APPROVAL_NOT_FINALISED) and refuses outright if any value differs from the plan it just recomputed (REVIEWED_PLAN_NOT_MATCHED).",
+  "_why": "A run that compares itself to its own plan proves the write matched that plan; it cannot prove the write matches what a human reviewed in an earlier run. These values are that pin, and the digests are the only content allowed here - no drive ids, no filenames, no SQL.",
+  "anchor_digest": "REPLACE_AFTER_HUMAN_APPROVAL",
+  "seed_sha256": "REPLACE_AFTER_HUMAN_APPROVAL",
+  "counters": {
+    "to_anchor": 0,
+    "already_anchored": 0,
+    "conflicts": 0,
+    "refused": 0,
+    "skipped_without_fingerprint": 0,
+    "update_statements": 0
+  },
+  "review_run": {
+    "workflow": "crm-drive-migration-session.yml",
+    "run_id": 0,
+    "mode": "bootstrap-plan",
+    "produced_at_utc": "REPLACE_AFTER_HUMAN_APPROVAL"
+  },
+  "plan_head": "REPLACE_AFTER_HUMAN_APPROVAL",
+  "approved_utc": "REPLACE_AFTER_HUMAN_APPROVAL"
+}

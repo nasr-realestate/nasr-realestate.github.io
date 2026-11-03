@@ -53,8 +53,20 @@ jobs:
         run: node scripts/check-ai-artifacts-in-sync.mjs
 
       - name: Blocking suite — every test, no skips
+        # نفس الأمر ونفس الدلالة: كل ملفات الاختبار، ولا skip مقبول، وقيمة خروج node هي نتيجة الخطوة.
+        # المُضاف طباعةُ الفحص الساقط نفسه في السجل فقط عند السقوط. السبب مقيس في 2026-11-03: هذه الخطوة
+        # سقطت exit 1 بلا سطر مُدين على شجين متجاورين — مرة في تشغيل push وعلى نفس الـ SHA في تشغيل
+        # pull_request — وسجل الوظيفة غير قابل للقراءة من بيئات المراجعة، فيبقى السبب مجهولًا. لم يُستثنَ
+        # أي ملف اختبار ولم تُخفَّف أي متابعة؛ السجل يُقطَع إلى 60 سطرًا عند الفشل فقط.
         run: |
-          node --test $(ls _worker/tests/*.test.mjs scripts/tests/*.test.mjs | tr '\n' ' ')
+          set -o pipefail
+          if ! node --test $(ls _worker/tests/*.test.mjs scripts/tests/*.test.mjs | tr '\n' ' ') 2>&1 \
+               | tee /tmp/blocking-suite.log; then
+            echo '::group::failing tests, read from the TAP stream'
+            grep -E '^not ok|^[[:space:]]+error:|^# (tests|pass|fail|skipped)' /tmp/blocking-suite.log | head -60 || true
+            echo '::endgroup::'
+            exit 1
+          fi
 
       # بوابة منفصلة وحاجزة لطبقة الذكاء الاصطناعي: هذه هي المخرجات التي
       # يقرأها الذكاء الاصطناعي، ولا يجوز أن تُنشر متناقضة مع المصدر.

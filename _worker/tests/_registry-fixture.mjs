@@ -75,11 +75,21 @@ export function buildRegistry({ ledger = true, intake = false, failOnBatchStep =
       title TEXT, property_type TEXT, transaction_type TEXT, area_id INTEGER, area_m2 REAL, price REAL,
       bedrooms INTEGER, bathrooms INTEGER, finishing TEXT, observed_at TEXT NOT NULL);
   `);
+  // `ledger: false` does not mean "no drafts" any more. 0010 was promoted, so the version ledger now arrives
+  // with the applied chain: the flag has to *exclude* that file, or every test that claims "before the ledger
+  // existed" would run against a schema that has the very table it says is absent. The mirror case matters
+  // just as much: when the migration is already in the applied chain there is nothing to exec, and applying
+  // `CREATE TABLE crm_drive_file_version` a second time throws `already exists` — which kills every suite in
+  // a file at the fixture, where a reader would see 13 failures and no assertion.
+  const LEDGER_FILE = '0010_crm_drive_file_versions.sql';
+  const INTAKE_FILE = '0011_crm_drive_file_intake_review.sql';
+  const promoted = f => existsSync(path.join(MIG_DIR, f));
   for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) {
+    if (!ledger && file === LEDGER_FILE) continue;
     try { sqlite.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); } catch { /* unrelated tables */ }
   }
-  if (ledger) sqlite.exec(readFileSync(DRAFT_0010, 'utf8'));
-  if (intake) sqlite.exec(readFileSync(DRAFT_0011, 'utf8'));
+  if (ledger && !promoted(LEDGER_FILE)) sqlite.exec(readFileSync(DRAFT_0010, 'utf8'));
+  if (intake && !promoted(INTAKE_FILE)) sqlite.exec(readFileSync(DRAFT_0011, 'utf8'));
   return { sqlite, db: wrapD1(sqlite, { failOnBatchStep }) };
 }
 

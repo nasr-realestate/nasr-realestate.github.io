@@ -301,6 +301,83 @@ For the record: the migration session workflow was at 20,241 characters with one
 was found — 759 characters from the same wall, i.e. one more guard would have broken A4 and A5. It uses `env:`
 too.
 
+### Measured state at execution time (2026-11-02, from the `preflight` run, not from the plan)
+
+`Session target — migs=9,latest=0009_crm_drive_review_workflow,ledger=no,ref_col=no,rows=99,fp=99,proc=99,needs_bootstrap=99,svv=n/a`
+with `Session guards — market_pre=nasr-market-db:909312;ref_backup_pre=nasr-crm-test-db-backup-20261101:3256320`.
+
+That is §3 step 1 and step 2 confirmed against the live database: the ledger table and the `drive_ref`
+column are both absent (so 0010 has not been applied), 99 registry rows carry fingerprints, 99 are
+`processed`, and **99 rows need the Bootstrap** — the count §5 predicted, now measured. `svv=n/a` is the
+correct answer rather than a zero, because the violations view does not exist yet.
+
+The `preflight` mode is read-only, and the run that produced these numbers wrote nothing: its guard block
+records only `name:file_size` for `nasr-market-db` and the reference backup, and no D1 write statement is
+reachable in that mode (`assertReadOnly` rejects anything but `SELECT`/`PRAGMA` at the query layer).
+
+### A2 delivered: the dated copy, verified
+
+`nasr-crm-test-db-backup-20261102` (uuid `5007799b-89ad-4db6-8123-768faa3d8df4`) built from a fresh export —
+raw 3,837,520 bytes `sha256=3d9fbaa6…`, bundle 3,939,453 bytes `sha256=841d3f5a…`, 33 tables / 46 explicit
+indexes / 43 auto-unique / 37 FKs / 29 check-constrained / 4,994 rows — and verified three ways:
+
+```
+P2 restore — local_sqlite=ok(fk0,digest=100%);saved_bak_d1=ok(digest=100%);isolated_d1_restore=ok(ephem=b1b5f344,digest=100%,cleaned=yes)
+P2 guards  — src_db_unmodified=yes;old_bak=b8f1e723-…(93:97,meta=589824,untouched=yes);market_db=untouched(nasr-market-db:909312)
+```
+
+The restore-test database `nasr-crm-ephem-restore-chk` was deleted by the same run (`cleaned=yes`), the
+source was not written, `nasr-crm-test-db-backup-20261101` is unchanged, `nasr-market-db` is unchanged, and
+the time-travel bookmark for the session is `tt=00000234-00000000-…` — the rollback anchor for step 3 and
+step 8. Getting here cost the discovery of two verifier bugs (§2.7 and §2.4 check 6), both of which had been
+making the backup step *unrunnable or wrong* rather than merely noisy.
+
+### A3 delivered — 0010 is on the test database, and the promotion exposed three things
+
+Applied by CI only, via `git mv` with no edit to the SQL, then `wrangler d1 migrations apply`:
+
+```
+P3 live mig — migs=10,latest=0010_crm_drive_file_versions.sql,tbl=1,idx=8,rows_before_sync=99
+P3 guards   — biz_unchanged=yes(60:64:83:76:2984);bak_untouched=yes(nasr-crm-test-db-backup-20261101:3256320:0);market_db_untouched=yes(nasr-market-db:909312:0)
+```
+
+Ten migrations, `crm_drive_file_version` present, eight indexes on the registry, all 99 rows still there,
+and no business table moved. What it exposed, each one found by a check rather than by reading:
+
+- **`detectAndRegisterDuplicate` could no longer mark a duplicate.** 0010's `trg_registry_duplicate_pin`
+  refuses `processing_status = 'duplicate'` unless the row names the canonical file's `drive_ref` and
+  `duplicate_of_version_seq`; the 0007-era write path set only `duplicate_of_file_id`. On a ledger database
+  every duplicate found by the intake path would have died inside the trigger as `SQLITE_CONSTRAINT`
+  (`code:7500` on D1) with no reason attached. Fixed in the service — the pin is resolved from the canonical
+  row, and when the canonical row cannot be named (a database with 0010 applied and the Bootstrap not yet
+  run) the claim is refused with `DUPLICATE_PIN_UNAVAILABLE` and nothing is written. **No trigger was
+  touched, no constraint widened**; without a ledger the statement keeps its 0007 shape, which is what makes
+  the order in §3 (schema now, refs later) possible at all. Proven in
+  `_worker/tests/crm-drive-file-versions.test.mjs` over three states — 0007 alone, 0010 applied on top of the
+  same rows (refusal, no version conjured), refs and versions arriving through `recordVersion` (claim lands,
+  pinned to `deriveDriveRef('SYNTH-CANON')` at version 1) — and asserted against real D1 in §3 step 3's
+  isolated chain.
+- **Three harnesses applied 0010 twice.** `_registry-fixture.mjs` and two `tests-draft/` rehearsals exec'd
+  "the chain, then the draft file", which became "the chain, then a file the chain already contains":
+  `duplicate column name: drive_ref`, and in `crm-file-review-0011.d1-rehearsal.py` a plain
+  `FileNotFoundError` for the draft path. The rule is now stated in the harnesses, not in prose: read a
+  migration from wherever it lives, apply it once, and *exclude* it by name when a test wants the pre-0010
+  state (`ledger: false`, `exclude: [...]`). After that: rehearsals 45/45, 35/35, 113/113 local and
+  69/69, 83/83 on the D1 engine; `npm test` 734/734.
+- **A check pinned to a branch name is a check that can sit silent.** `crm-phase3-registry.yml`,
+  `crm-drive-migration-session.yml`, `crm-phase4-analysis.yml` and `crm-phase4-review.yml` triggered on
+  `push.branches: [arena/1c171b6c-…]` — the previous session's branch. After that branch merged, pushes here
+  ran *nothing* from them: not a failure, an absence, the same class as §2.7. They now trigger on `arena/**`,
+  which is what `crm-review-0009-verify.yml` and `crm-sealed-ingest.yml` already did. The boundary that
+  matters is unchanged and is not the branch: test-database uuid required, `nasr-market-db` refused in the
+  wrangler config, the untouched-guards, and `crm-cloudflare-test-deploy.yml` still `workflow_dispatch` only.
+
+The first attempt at this gate also produced a false alarm of its own, recorded so it is not repeated: the
+index expectation was a line-anchored regex over DDL that writes `ON table (cols)` on the *next* line, so it
+counted 0 declared indexes and failed a correct promotion. The count is derived with whitespace collapsed
+(0007 declares 6, 0010 declares 2, installing the chain gives 8, live probe says 8), and the unit-floor label
+was corrected to the number the check actually enforces.
+
 ## 3. Phase 3 — the migration, in the mandated order
 
 Pre-flight disqualifiers (any one stops the session before it starts):
@@ -415,14 +492,26 @@ Never accept "looks fine" without the digest — the digest is what ties the app
 
 ### Step 5b — the executor: `crm-drive-migration-session.yml`
 
-Steps 4-7 are executed by `.github/workflows/crm-drive-migration-session.yml` (modes `preflight`, `bootstrap`,
-`verify`), because that runner is the only place holding a Cloudflare token; the local commands in this section
-remain the operator's alternative and the reviewer's cross-check. The mode arrives either as a dispatch input
-(human) or as the contents of `.crm/migration-session-mode` (this agent, whose token is refused by
-`workflow_dispatch`); the file is validated against the three-word allowlist inside the job, so its content
-cannot become a command. Its guarantees, in code rather than prose:
+Steps 4-7 are executed by `.github/workflows/crm-drive-migration-session.yml` (modes `preflight`,
+`bootstrap-plan`, `bootstrap`, `verify`), because that runner is the only place holding a Cloudflare token; the
+local commands in this section remain the operator's alternative and the reviewer's cross-check. The mode
+arrives either as a dispatch input (human) or as the contents of `.crm/migration-session-mode` (this agent,
+whose token is refused by `workflow_dispatch`); the file is validated against the allowlist inside the job, so
+its content cannot become a command.
 
-- it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers;
+`bootstrap-plan` exists because `bootstrap` cannot satisfy step 5 on its own: it plans **and** applies in one
+run, so nobody could review a file before it was written. The new mode runs the same probe and the same
+`plan()` over a fresh export, applies the same one-column shape check, prints the same `seed_plan=` line and
+the `seed_sha256`, and then stops — no `wrangler d1 execute` is reachable in that branch, and the run reports
+`seed_apply=not-run(plan-only,review required)` so the absence of a write is stated rather than inferred. What
+is reviewed is therefore the digest of exactly what `bootstrap` would apply. Its guarantees, in code rather than prose:
+
+- it holds `crm-d1-test-mutex`, so it cannot interleave with the registry or analysis writers. That protection
+  has a cost worth knowing before A4: GitHub **cancels a waiting request** in a shared group — at `c3cd6c9`
+  this job was ended 2 seconds after the push with *"Canceling since a higher priority waiting request for
+  crm-d1-test-mutex exists"*, no job created, nothing run. So a session is pushed when the group is idle, not
+  alongside the other test-db jobs; and a `cancelled` session means **it never happened**, which is a different
+  statement from a failed one and must not be re-tried blind;
 - it refuses to start if `nasr-market-db` or the production uuid appears in the wrangler config, and requires
   the test-db uuid; it refuses while the sealed queue is not `IDLE`;
 - all three of the repo's gate scripts must pass their selftests first (20 + 14 + 13);
@@ -759,3 +848,36 @@ no shell-quoting hazard sits in the middle of a migration session.
 | `scripts/crm/drive-registry-snapshot.mjs` | read-only registry export, hashed refs only |
 | `.github/workflows/crm-phase3-registry.yml` | isolated-DB-first promotion, sealed sync, guards on market DB and the reference backup |
 | `.github/workflows/crm-phase2-backup.yml` | the backup + isolated restore, refuse-overwrite naming |
+
+
+---
+
+## A4/A5 — التنفيذ الفعلي (3 نوفمبر 2026)، بأرقام مقروءة من القاعدة لا من الخطة
+
+**الحالة: أ.4 منفَّذ ومُتحقَّق منه؛ خطوة A5 الأولى (ترقية 0011) منفَّذة ومُتحقَّق منها.**
+
+الاعتماد والقيود: ملف الاعتماد `.crm/drive-ref-bootstrap-approval.json` يثبّت `anchor_digest`
+و`seed_sha256` والعدّادات الستة و`plan_head`+`review_run`؛ بوابة الكتابة ترفض قبل أول عبارة عند أي فرق،
+وحزام `APPLIED_ANCHORS_DIFFER_FROM_THE_REVIEWED_PLAN` يعاير القيم المُطبَّقة بالمعتمد.
+
+| الحدث | التشغيل | ما نُشر |
+|---|---|---|
+| خطة معتمدة بعد إصلاح `fetch-depth: 0` | `41614908118` (success) | `anchor=300c442a0c87…0504`, `seed=13c87bb521e9…76fc`, `statements=99, guarded=99, unlisted=0, forbidden=0, commas=0, writes=0` |
+| محاولة كتابة أولى | `41621177286` (failure) | `seed-apply-failed(problems=1,sha=13c87bb521e9)` — لم تُطبَّق أي عبارة |
+| إصلاح قناة النقل (تعليق فقط على البصمتين) | `add3ada` → خطة `41632050909` (success) | نفس البصمتين حرفيًا، و`needs_bootstrap=99, already=0` (القاعدة لم تتحرك) |
+| **الكتابة** | **`41632541771` (success)** | `applied(sha=13c87bb521e9,statements=99,tx_lines=0,same_lines=yes)` ثم `anchors already=99,digest_match=yes` و`ledger … needs_bootstrap=0,svv=0,ctr=0,dang=0,gaps=0,orphans=0,anchored=99,gate=ok` |
+| تحقق مستقل بعد التنفيذ | `6c8fa51` (`verify`) | `needs_bootstrap=0,svv=0,ctr=0,dang=0,gaps=0` |
+| ترقية 0011 عبر CI | `53f5510` (p3 success) | `live mig — migs=11,latest=0011_crm_drive_file_intake_review.sql,tbl=1,idx=8,rows_before_sync=99`؛ `guards — biz_unchanged=yes(60:64:83:76:2984);bak_untouched=yes;market_db_untouched=yes(nasr-market-db:913408:0)`؛ `ok(migs=11/11,idx=8/8,fkDef=1,fkViol=0)`؛ `sync — queue_idle(current_registry_rows=99)` |
+| تحقق بعد 0011 | `720ef79` (`verify` success) | `Migration verify-ok`, `migs=11`, `declared[tbl=4,idx=11,trg=36,view=10] ≤ installed[16,32,55,14]`, `svv=0` |
+
+**سبب الفشل الأول، موثّقًا لأنه سيظهر لأي مولِّد بذور آخر:** `renderSeedSql` يغلّف العبارات بـ`BEGIN;`/`COMMIT;`.
+محرك D1 يرفض عبارات المعاملة على قناة `wrangler d1 execute --file` بنصّ:
+`To execute a transaction, please use the state.storage.transaction() or state.storage.transactionSync() APIs
+instead of the SQL BEGIN TRANSACTION or SAVEPOINT statements` — والقَيْد الجديد
+`seed-apply-failed(problems=…,sha=…,first=…)` ينشر الآن أول سطر خطأ بعد تنقيحه (حذف كل تسلسلة من 12
+محرفًا شبيهة بالمعرّفات) بدل عددٍ مجرّد، و`seed-transport-not-equivalent` يمنع إرسال أي نصّ مختلف عن
+عبارات الملف المعتمد (مُثبت محليًا: ملف good يمر، وتهريب `DELETE` أو عمودان أو بتر = رفض).
+
+**ما لم يحدث:** لا لمس لـ`nasr-market-db`، لا كتابة على `nasr-crm-test-db-backup-20261101`، لا قراءة محتوى
+ملفات Drive، لا حذف/نقل/إعادة تسمية لأي ملف أصلي، لا مشاركة عامة، لا نشر موقع، لا دمج PR. الطابور المختوم
+بقى `IDLE` فلم تكتب خطوة الـsync أي صف. الأرقام المرجعية `60/83/76/2984` بقيت صحيحة.

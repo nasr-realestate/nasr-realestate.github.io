@@ -107,10 +107,11 @@ test('CRMClient clears CSRF token on 401 and classifies auth, rate-limit, offlin
 });
 
 test('private CRM UI keeps workspace hidden until login, removes Cloudflare Access requirement, and avoids public site, storage, contact import, and unsafe DOM APIs', async () => {
-  const [html, appJs, followupsUiJs, waTemplatesJs, clientJs, crmSwJs, crmManifestRaw, css, indexHtml, swJs, workerJs] = await Promise.all([
+  const [html, appJs, followupsUiJs, a5UiJs, waTemplatesJs, clientJs, crmSwJs, crmManifestRaw, css, indexHtml, swJs, workerJs] = await Promise.all([
     readFile(new URL('../crm-ui/crm.html', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/followups-ui.js', import.meta.url), 'utf8'),
+    readFile(new URL('../crm-ui/crm-assets/crm-a5-ui.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-assets/whatsapp-templates.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-client.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-ui/crm-sw.js', import.meta.url), 'utf8'),
@@ -120,7 +121,7 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
     readFile(new URL('../../sw.js', import.meta.url), 'utf8'),
     readFile(new URL('../crm-worker.js', import.meta.url), 'utf8'),
   ]);
-  const uiBundle = `${html}\n${appJs}\n${followupsUiJs}\n${waTemplatesJs}\n${clientJs}\n${crmSwJs}\n${css}`;
+  const uiBundle = `${html}\n${appJs}\n${followupsUiJs}\n${a5UiJs}\n${waTemplatesJs}\n${clientJs}\n${crmSwJs}\n${css}`;
   const manifest = JSON.parse(crmManifestRaw);
 
   assert.equal(manifest.id, '/');
@@ -166,6 +167,13 @@ test('private CRM UI keeps workspace hidden until login, removes Cloudflare Acce
   assert.doesNotMatch(uiBundle, /navigator\.contacts|ContactsManager|\.vcf|vcard|FileReader/i);
   assert.match(uiBundle, /https:\/\/wa\.me\//);
   assert.match(workerJs, /\/crm-assets\/whatsapp-templates\.js/);
+  // A5: اللوحة التشغيلية الداخلية مركّوبة ومخدومة من نفس القائمة المسموحة، وتترك بياناتها داخل النطاق الداخلي
+  assert.match(appJs, /createCrmA5Controller/);
+  assert.match(html, /id="a5-requests-panel"/);
+  assert.match(html, /id="a5-review-panel"/);
+  assert.match(workerJs, /'\/crm-assets\/crm-a5-ui\.js'/);
+  assert.match(a5UiJs, /refusalMessage/);
+  assert.doesNotMatch(a5UiJs, /googleapis|Drive\s*API|files\.(get|list|update|delete)/i);
   assert.doesNotMatch(uiBundle, /cloudflareaccess|cf-access-jwt-assertion|Zero\s*Trust/i);
   assert.doesNotMatch(workerJs, /cloudflareaccess|cf-access-jwt-assertion|ACCESS_TEAM_DOMAIN|ACCESS_AUD|ADMIN_EMAIL/);
   assert.doesNotMatch(indexHtml, /crm\.html|crm-assets|crm-client\.js/);

@@ -32,8 +32,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, '..', '..'))
 MIG = os.path.join(REPO, '_worker', 'migrations')
 DRAFT_DIR = os.path.join(REPO, '_worker', 'migrations-draft')
-DRAFT10 = os.path.join(DRAFT_DIR, '0010_crm_drive_file_versions.sql')
-DRAFT11 = os.path.join(DRAFT_DIR, '0011_crm_drive_file_intake_review.sql')
+# Read from wherever the file lives. `crm-drive-versions-0010.d1-rehearsal.py` already resolved its
+# migration this way; this one did not, so the day 0010 moved from migrations-draft/ into migrations/ the
+# rehearsal died on `FileNotFoundError` before it could test anything. The variable keeps its old name
+# because "draft" here means "the file under rehearsal", not "the folder it sits in".
+DRAFT10 = next(q for q in (os.path.join(MIG, '0010_crm_drive_file_versions.sql'),
+                           os.path.join(DRAFT_DIR, '0010_crm_drive_file_versions.sql')) if os.path.exists(q))
+DRAFT11 = next(q for q in (os.path.join(MIG, '0011_crm_drive_file_intake_review.sql'),
+                           os.path.join(DRAFT_DIR, '0011_crm_drive_file_intake_review.sql')) if os.path.exists(q))
 SCRATCH = os.environ.get('P2F_DIR') or tempfile.mkdtemp(prefix='crm-file-review-0011-')
 STATE = os.path.join(SCRATCH, 'state')
 MDIR = os.path.join(SCRATCH, 'migrations')
@@ -272,6 +278,10 @@ allowed('advance the 99 rows to processed as the live database has them',
 check('99 file rows and 99 bootstrap versions are in place before 0011 is even offered',
       counts("SELECT COUNT(*) AS n FROM crm_drive_file_registry WHERE id LIKE 'reg-%'")['n'] == 99
       and counts('SELECT COUNT(*) AS n FROM crm_drive_file_version')['n'] == 99)
+# Milliseconds on purpose: this rehearsal builds a scratch database from 0010 + 0011 only, so the guard it
+# installs is 0011 §3.7 as written (`strftime('%s','now')*1000`) and the fixture has to match that unit.
+# Migration 0014 moved the *chain* to the seconds the Worker stores; that contract is pinned by
+# _worker/tests/crm-a5-drive-review.test.mjs (A5R-2b) and by the CI apply on nasr-crm-test-db.
 NOWMS = "CAST(strftime('%s','now') AS INTEGER)*1000"
 allowed('a live session row exists for the decision rules to read',
         "INSERT INTO crm_sessions (id, token_hash, csrf_hash, created_at, expires_at, last_seen_at)"

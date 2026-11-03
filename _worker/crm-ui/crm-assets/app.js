@@ -4,6 +4,7 @@ import {
   openConversationInViewer,
   renderInlineConversationsAndAlerts,
 } from './followups-ui.js';
+import { createCrmA5Controller } from './crm-a5-ui.js';
 import {
   buildReadyFollowupMessage,
   buildWhatsappTemplates,
@@ -2464,6 +2465,10 @@ for (const chip of document.querySelectorAll('[data-contact-completeness]')) {
 
 followupsController.bindEvents();
 
+// لوحة A5 التشغيلية: ملف العميل الموحَّد، الطلبات، قوائم العمل، ومراجعة Drive — نفس قاعدة «لا بيانات قبل الجلسة».
+const a5Controller = createCrmA5Controller({ api: requireApi, showError: error => showError(error) });
+a5Controller.bindEvents();
+
 async function bootstrap() {
   try {
     const configuredBase = document.documentElement.dataset.crmApi || '/api';
@@ -2476,6 +2481,7 @@ async function bootstrap() {
     const session = await state.api.getSession();
     if (session?.authenticated) {
       unlockWorkspace();
+      void a5Controller.unlock();
       await refreshAll();
     } else {
       lockWorkspace('أدخل رمز الدخول للوصول إلى إدارة العملاء.', { clearInput: false });

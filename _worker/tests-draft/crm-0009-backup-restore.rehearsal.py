@@ -71,6 +71,8 @@ CREATE TABLE crm_sessions (
   expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
   revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
 );
+-- milliseconds, matching the 0009-only schema this rehearsal restores into (0014 is not in that chain);
+-- see crm-review-sql-0009.d1-rehearsal.py for why, and A5R-2b for the seconds contract that ships.
 INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
   ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000,
    CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL);

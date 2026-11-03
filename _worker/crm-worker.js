@@ -20,6 +20,30 @@ import {
   sanitizeExternalOrSiteUrl,
 } from './crm-chat-intel.js';
 import {
+  createCustomerRequestPayload,
+  decideRequestListingLinkPayload,
+  getCustomerRequestPayload,
+  linkRequestListingPayload,
+  listCustomerRequestsPayload,
+  setCustomerRequestStatusPayload,
+  updateCustomerRequestPayload,
+} from './crm-customer-requests.js';
+import {
+  completeFollowupPayload,
+  contactsNeedingFollowupPayload,
+  createFollowupPayload,
+  linkLegacyInteractionPayload,
+  listInteractionsPayload,
+  operationalQueuesPayload,
+  recordInteractionPayload,
+} from './crm-interactions.js';
+import {
+  getDriveReviewCasePayload,
+  listDriveReviewCasesPayload,
+  proposeReviewContactLinkPayload,
+  recordReviewDecisionPayload,
+} from './crm-drive-file-review.js';
+import {
   buildFollowupWorkspaceData,
   computeOpportunityMatches,
   getConversationDetailData,
@@ -77,6 +101,7 @@ const UI_ASSET_PATHS = new Set([
   '/crm-sw.js',
   '/crm-assets/app.css',
   '/crm-assets/app.js',
+  '/crm-assets/crm-a5-ui.js',
   '/crm-assets/followups-ui.js',
   '/crm-assets/whatsapp-templates.js',
   '/crm-assets/icon-192.png',
@@ -389,7 +414,10 @@ async function verifySession(request, env, config) {
   if (now - row.last_seen_at >= 60) {
     await env.DB.prepare('UPDATE crm_sessions SET last_seen_at = ? WHERE id = ?').bind(now, row.id).run();
   }
-  return { ok: true, sessionId: row.id, sessionToken, expiresAt: row.expires_at };
+  // `sessionHash` is what 0011 binds a review decision to (`session_hash`, live-session trigger). It is
+  // derived here from the verified cookie so a client can never name its own session identity, and it is
+  // deliberately not returned to the caller of any endpoint.
+  return { ok: true, sessionId: row.id, sessionToken, sessionHash: tokenHash, expiresAt: row.expires_at };
 }
 
 async function clientIpBucket(request, sessionSecret) {
@@ -2409,6 +2437,54 @@ async function serveUiAsset(request, url, env) {
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: assetHeaders });
 }
 
+/**
+ * A5 helpers. The actor is a label the operator types (or the session's own label when they do not); 0011
+ * records it together with `reviewer_attestation = 'session_label_not_independent_identity'`, which is the
+ * honest statement that this is a label, not an independent identity — so the label is kept, never invented.
+ */
+function a5Actor(body) {
+  const raw = typeof body?.actor === 'string' ? body.actor.trim()
+    : (typeof body?.reviewer === 'string' ? body.reviewer.trim() : '');
+  return raw.slice(0, 120) || 'crm-session-operator';
+}
+
+/**
+ * A5 reads must not answer 200 with an error body: the internal UI shows refusals as they are, and a live
+ * check that reads `status` would otherwise see success where the service said `…_not_found`. The payload's
+ * own `status` is what gets returned; success bodies pass through untouched.
+ */
+function a5Get(result) {
+  if (result && typeof result === 'object' && result.error) {
+    const body = { error: result.error };
+    if (result.detail !== undefined) body.detail = result.detail;
+    if (result.barrier !== undefined) body.barrier = result.barrier;
+    if (result.current_status !== undefined) body.current_status = result.current_status;
+    return json(body, Number(result.status) >= 400 ? Number(result.status) : 400);
+  }
+  return json(result);
+}
+
+async function a5Post(request, env, run, { needsSession = false } = {}) {
+  const body = await readJson(request, 60_000);
+  const context = { actor: a5Actor(body) };
+  if (needsSession) {
+    const auth = await verifySession(request, env, authConfig(env));
+    if (!auth.ok) return json({ error: auth.code }, auth.status);
+    context.sessionHash = auth.sessionHash;
+  }
+  const result = await run(body, context);
+  if (result?.error) return json({ error: result.error, ...(result.detail ? { detail: result.detail } : {}),
+    ...(result.existing_request_id ? { existing_request_id: result.existing_request_id } : {}),
+    ...(result.existing_interaction_id ? { existing_interaction_id: result.existing_interaction_id } : {}),
+    ...(result.existing_link_id ? { existing_link_id: result.existing_link_id } : {}),
+    ...(result.existing_followup_id ? { existing_followup_id: result.existing_followup_id } : {}),
+    ...(result.current_status ? { current_status: result.current_status } : {}),
+    ...(result.current_state ? { current_state: result.current_state } : {}),
+    ...(result.barrier ? { barrier: result.barrier } : {}) },
+  result.status || 400);
+  return json(result, result.replayed === true ? 200 : (result.followup || result.request || result.interaction || result.decision || result.proposal || result.link ? 201 : 200));
+}
+
 async function handleFollowupsGet(db, url) {
   const nowParam = url.searchParams.get('now');
   const now = nowParam && isoDate(nowParam) ? new Date(isoDate(nowParam)) : new Date();
@@ -2459,6 +2535,15 @@ const EXACT_GET_ROUTES = {
   '/api/opportunities': (db, url) => listOpportunities(db, url),
   '/api/listings': (db, url, config) => listListings(db, url, config.scope),
   '/api/push/config': (_db, _url, _config, env) => getPushStatusResponse(env, json),
+  '/api/requests': async (db, url) => a5Get(await listCustomerRequestsPayload(db, Object.fromEntries(url.searchParams))),
+  '/api/queues': async (db, url) => a5Get(await operationalQueuesPayload(db, {
+    now: url.searchParams.get('now'), limit: Number(url.searchParams.get('limit') ?? 50),
+  })),
+  '/api/interactions': async (db, url) => a5Get(await listInteractionsPayload(db, Object.fromEntries(url.searchParams))),
+  '/api/followups/needs': async (db, url) => a5Get(await contactsNeedingFollowupPayload(db, {
+    now: url.searchParams.get('now'), limit: Number(url.searchParams.get('limit') ?? 50),
+  })),
+  '/api/reviews/drive': async (db, url) => a5Get(await listDriveReviewCasesPayload(db, Object.fromEntries(url.searchParams))),
 };
 
 const EXACT_POST_ROUTES = {
@@ -2469,6 +2554,12 @@ const EXACT_POST_ROUTES = {
   '/api/push/unsubscribe': (request, env) => unsubscribePushDevice(request, env, { readJson, jsonHelper: json }),
   '/api/push/test': (request, env) => sendTestPushAlert(request, env, { readJson, jsonHelper: json }),
   '/api/push/check-now': async (_request, env) => json(await runScheduledCrmNotifications(env, { forceCheck: true })),
+  '/api/requests': (request, env) => a5Post(request, env, body => createCustomerRequestPayload(env.DB, body, { actor: a5Actor(body) })),
+  '/api/interactions': (request, env) => a5Post(request, env, body => recordInteractionPayload(env.DB, body, { actor: a5Actor(body) })),
+  '/api/interactions/legacy-link': (request, env) => a5Post(request, env, body => linkLegacyInteractionPayload(env.DB, body, { actor: a5Actor(body) })),
+  '/api/followups': (request, env) => a5Post(request, env, body => createFollowupPayload(env.DB, body, { actor: a5Actor(body) })),
+  '/api/reviews/drive/decision': (request, env) => a5Post(request, env, (body, ctx) => recordReviewDecisionPayload(env.DB, body, ctx), { needsSession: true }),
+  '/api/reviews/drive/link-proposal': (request, env) => a5Post(request, env, (body, ctx) => proposeReviewContactLinkPayload(env.DB, body, ctx), { needsSession: true }),
 };
 
 const PARAM_ROUTES = [
@@ -2485,6 +2576,13 @@ const PARAM_ROUTES = [
   } },
   { method: 'POST', re: /^\/api\/conversations\/([a-zA-Z0-9_-]{8,80})\/link-contact$/, run: (req, env, m) => handleConversationLinkPost(req, env, m[1]) },
   { method: 'POST', re: /^\/api\/alerts\/([a-zA-Z0-9_-]{8,80})\/resolve$/, run: (req, env, m) => handleResolveAlertPost(req, env, m[1]) },
+  { method: 'GET', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})$/, run: async (_req, env, m) => a5Get(await getCustomerRequestPayload(env.DB, m[1])) },
+  { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => a5Post(req, env, body => updateCustomerRequestPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
+  { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/status$/, run: (req, env, m) => a5Post(req, env, body => setCustomerRequestStatusPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
+  { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/links$/, run: (req, env, m) => a5Post(req, env, body => linkRequestListingPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
+  { method: 'POST', re: /^\/api\/requests\/([a-zA-Z0-9_-]{8,80})\/links\/([a-zA-Z0-9_-]{8,80})\/decision$/, run: (req, env, m) => a5Post(req, env, body => decideRequestListingLinkPayload(env.DB, m[1], m[2], body, { actor: a5Actor(body) })) },
+  { method: 'POST', re: /^\/api\/followups\/([a-zA-Z0-9_-]{8,80})\/complete$/, run: (req, env, m) => a5Post(req, env, body => completeFollowupPayload(env.DB, m[1], body, { actor: a5Actor(body) })) },
+  { method: 'GET', re: /^\/api\/reviews\/drive\/(frw-[A-Za-z0-9_-]{1,36})$/, run: async (_req, env, m) => a5Get(await getDriveReviewCasePayload(env.DB, m[1])) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (_req, env, m) => getOpportunity(env.DB, m[1]) },
   { method: 'POST', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})$/, run: (req, env, m) => updateOpportunity(req, env, m[1]) },
   { method: 'GET', re: /^\/api\/opportunities\/([a-zA-Z0-9_-]{8,80})\/matches$/, run: (req, env, m, cfg) => getOpportunityMatches(env.DB, m[1], cfg.scope, new URL(req.url)) },

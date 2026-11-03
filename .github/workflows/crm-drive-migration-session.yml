@@ -5,6 +5,10 @@ name: CRM Drive Migration Session — 0010 anchor bootstrap and ledger verificat
 # integrity) run here because this runner is the only place that can reach Cloudflare: the agent sandbox has
 # no route to api.cloudflare.com by design.
 #
+# Status (3 Nov 2026): the bootstrap executed -- 99 anchors and 99 version rows on nasr-crm-test-db, read
+# back as anchored=99, needs_bootstrap=0, svv=0, ctr=0, dang=0, gaps=0, orphans=0 with digest_match=yes, and
+# 0011 was promoted afterwards. The seed is sent without its `BEGIN;`/`COMMIT;` transport lines because D1
+# refuses SQL transaction statements on this channel; the reviewed file and its sha pin are unchanged.
 # Why the seed is applied in CI even though it inlines real Drive ids: `wrangler d1 execute --file` echoes the
 # statements it runs, and an error path would put customer-owned identifiers in a log that outlives the job.
 # So every write log is redirected to a file that is only ever *counted* (never printed), nothing is uploaded
@@ -25,20 +29,28 @@ name: CRM Drive Migration Session — 0010 anchor bootstrap and ledger verificat
 # commit is the stop lever, and no mode other than the three below can be requested by file content.
 on:
   push:
+    # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
+    # moment the session that pinned it merges and the next session works on a new branch — which is exactly
+    # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
+    # CRM_PHASE2_DRIVE_MIGRATION_PLAN.md). What bounds this job is not the branch: it is the target-database
+    # allowlist, the `nasr-market-db` prohibition, the guards that prove nothing else moved, and the fact
+    # that `crm-cloudflare-test-deploy.yml` stays workflow_dispatch-only. So no branch edit can turn this
+    # into a deploy, and no branch edit can make it write to production.
     branches:
-      - arena/1c171b6c-nasr-realestate-github-io
+      - "arena/**"
     paths:
       - .crm/migration-session-mode
       - .github/workflows/crm-drive-migration-session.yml
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preflight = read-only probes · bootstrap = plan steps 4-7 · verify = plan step 9'
+        description: 'preflight = read-only probes · bootstrap-plan = generate the seed and stop · bootstrap = plan steps 4-7 and apply · verify = plan step 9'
         required: true
         default: 'preflight'
         type: choice
         options:
           - preflight
+          - bootstrap-plan
           - bootstrap
           - verify
 
@@ -46,6 +58,15 @@ permissions:
   contents: read
 
 concurrency:
+  # One group across every job that can touch nasr-crm-test-db, so nothing interleaves with a write.
+  # `cancel-in-progress: false` protects a run that has started; it does nothing for a run that is still
+  # waiting. GitHub cancels a *waiting* request in a shared group when it decides another pending request
+  # has higher priority — seen on 2026-11-02 at c3cd6c9, where this job and crm-phase4-review were both
+  # ended 2 seconds after the push with "Canceling since a higher priority waiting request for
+  # crm-d1-test-mutex exists" and no job ever created. Nothing was written by that, because nothing ran,
+  # which is the only reason it was harmless. Operationally: a migration session is pushed when the group is
+  # idle rather than alongside four other test-db jobs, and a `cancelled` session is read as "it did not
+  # happen" — never as a result, and never retried without reading the `Session *` check names first.
   group: crm-d1-test-mutex
   cancel-in-progress: false
 
@@ -64,8 +85,19 @@ jobs:
       ledger: ${{ steps.session.outputs.ledger }}
       verify: ${{ steps.session.outputs.verify }}
       guards: ${{ steps.session.outputs.guards }}
+      digests: ${{ steps.session.outputs.digests }}
+      approval: ${{ steps.session.outputs.approval }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The approval pin is checked with git objects -- `cat-file -e <plan_head>`,
+          # `merge-base --is-ancestor`, and `diff --quiet <plan_head> HEAD -- <guarded paths>`. The default
+          # `fetch-depth: 1` gives the job one commit, so all three fail for a reason that has nothing to do
+          # with the plan: the run at 2dd0469 matched every digest and every counter and was still refused,
+          # because the reviewed head was not present to be looked at. Fetching the history is what lets the
+          # check answer at all; the check itself is unchanged, and it stays fatal. Only this job needs the
+          # history -- the report jobs publish from outputs and never read the repository.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -92,18 +124,36 @@ jobs:
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           QUEUE_FILE='_worker/ingest-queue/drive-registry-sealed.txt'
           MODE="$SESSION_MODE_INPUT"
-          case "$MODE" in preflight|bootstrap|verify) : ;; *) MODE='' ;; esac
+          case "$MODE" in preflight|bootstrap-plan|bootstrap|verify) : ;; *) MODE='' ;; esac
           if [ -z "$MODE" ] && [ -f .crm/migration-session-mode ]; then
             MODE=$(tr -d '[:space:]' < .crm/migration-session-mode)
           fi
           case "$MODE" in
-            preflight|bootstrap|verify) : ;;
-            *) echo "::error::no usable mode: the dispatch input or .crm/migration-session-mode must say preflight, bootstrap or verify"
+            preflight|bootstrap-plan|bootstrap|verify) : ;;
+            *) echo "::error::no usable mode: the dispatch input or .crm/migration-session-mode must say preflight, bootstrap-plan, bootstrap or verify"
                exit 1 ;;
           esac
           TMP=$(mktemp -d)
           export SESSION_TMP="$TMP"
           export SESSION_MODE="$MODE"
+
+          # `d1 execute` is the only command in this job that changes a database. In review mode a call to
+          # it is a bug, so the command is watched and counted rather than trusted to be absent: the count
+          # is published with the review key, and a non-zero count fails the run. Reads (`d1 export`) are
+          # untouched, because the plan is derived from a fresh export and must keep being so.
+          d1_writes=0
+          if [ "$MODE" = 'bootstrap-plan' ]; then
+            npx() {
+              case " $* " in
+                *"d1 execute"*)
+                  d1_writes=$((d1_writes + 1))
+                  echo "::error::review mode attempted a database write" >&2
+                  return 97
+                  ;;
+              esac
+              command npx "$@"
+            }
+          fi
 
           result='not-run'
           probe='not-run'
@@ -112,6 +162,8 @@ jobs:
           ledger='not-run'
           verify='not-run'
           guards='not-run'
+          digests='not-run'
+          approval='no-write-attempted(review mode)'
           finished='no'
 
           finish() {
@@ -125,6 +177,8 @@ jobs:
               printf 'ledger=%s\n' "$ledger"
               printf 'verify=%s\n' "$verify"
               printf 'guards=%s\n' "$guards"
+              printf 'digests=%s\n' "$digests"
+              printf 'approval=%s\n' "$approval"
             } >> "$GITHUB_OUTPUT"
             rm -rf "$TMP"
           }
@@ -138,7 +192,7 @@ jobs:
           }
 
           case "$MODE" in
-            preflight|bootstrap|verify) : ;;
+            preflight|bootstrap-plan|bootstrap|verify) : ;;
             *) fail "unknown-mode" ;;
           esac
 
@@ -160,7 +214,7 @@ jobs:
               fail "local-gate-unheld:$(basename "$script")"
             fi
           done
-          if [ "$MODE" = 'bootstrap' ]; then
+          if [ "$MODE" = 'bootstrap' ] || [ "$MODE" = 'bootstrap-plan' ]; then
             # the plan's first disqualifier: never interleave a schema session with a queued content pass
             if ! node scripts/crm/drive-registry-envelope.mjs inspect --in "$QUEUE_FILE" | grep -q 'IDLE'; then
               fail "sealed-queue-not-idle"
@@ -285,7 +339,11 @@ jobs:
               + `ref_col=${out.has_ref ? 'yes' : 'no'},rows=${out.rows_all},fp=${out.fp},proc=${out.proc},`
               + `needs_bootstrap=${out.needs_bootstrap}`
               + (out.ledger ? `,svv=${out.svv},ctr=${out.ctr},dang=${out.dang},gaps=${out.gaps}` : ',svv=n/a'));
-            if (MODE === 'bootstrap') {
+            // The plan run is held to the same disqualifiers as the apply run: a seed planned against a
+            // database that does not have the ledger yet is not a reviewable artifact, it is a mistake that
+            // happens to be readable. Review before write only means something if what is reviewed is what
+            // would have been written.
+            if (MODE === 'bootstrap' || MODE === 'bootstrap-plan') {
               if (!out.ledger) throw new Error('ABORT_BOOTSTRAP_WITHOUT_0010');
               if (out.svv < 0 || out.ctr < 0 || out.dang < 0 || out.gaps < 0) {
                 throw new Error('LEDGER_COUNTERS_UNREADABLE');
@@ -315,6 +373,16 @@ jobs:
             fs.writeFileSync(path.join(TMP, 'plan.json'), JSON.stringify({
               digest: summary.ref_sha256_of_all_anchored, anchored_rows: summary.anchored_rows,
               statements: summary.anchored,
+              // The full sha of the exact bytes written above. node hashes the string it rendered and the
+              // shell hashes the file; the two must agree, and the approval file pins both. A 12-hex
+              // prefix can catch accidental drift inside one run, but it cannot be compared across runs
+              // and cannot carry an approval -- this can.
+              seed_sha256: createHash('sha256').update(sqlText).digest('hex'),
+              counters: {
+                to_anchor: summary.anchored, already_anchored: summary.already_anchored,
+                conflicts: summary.conflicts, refused: summary.refused,
+                skipped_without_fingerprint: summary.skipped_without_fingerprint,
+              },
             }), { mode: 0o600 });
             console.log(`rows=${found.length},to_anchor=${summary.anchored},already=${summary.already_anchored},`
               + `conflicts=${summary.conflicts},refused=${summary.refused},skipped=${summary.skipped_without_fingerprint},`
@@ -423,12 +491,125 @@ jobs:
           }
           read_out() { cat "$TMP/out.$1" | tr -d '\n'; }
 
+          # The one-column rule, in one place. `bootstrap-plan` checks the shape of the file a human is being
+          # asked to approve; `bootstrap` checks the shape of the file it is about to apply. Written twice,
+          # those two rules drift, and then the digest under review describes a file that is not the file that
+          # gets written — so there is one function, called twice.
+          # The review key and the shape tallies are one function used by both `bootstrap-plan` and
+          # `bootstrap`. Two copies of a rule drift, and then "what was reviewed" and "what was applied"
+          # would be two different claims about two different files -- which is the whole thing the
+          # approval exists to prevent.
+          measure_seed() {
+            anchor_full=$(jq -r '.digest // "none"' "$TMP/plan.json")
+            plan_statements=$(jq -r '.statements' "$TMP/plan.json")
+            node_seed_sha=$(jq -r '.seed_sha256 // "none"' "$TMP/plan.json")
+            plan_counters=$(jq -r '.counters | "to_anchor=\(.to_anchor) already=\(.already_anchored) conflicts=\(.conflicts) refused=\(.refused) skipped=\(.skipped_without_fingerprint)"' "$TMP/plan.json")
+            seed_guarded=$(grep -c "AND drive_ref IS NULL;\$" "$TMP/seed.sql" || true)
+            seed_full_shape=$(grep -cE "^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;\$" "$TMP/seed.sql" || true)
+            seed_unlisted=$(grep -v '^--' "$TMP/seed.sql" | grep -cEv '^$|^BEGIN;$|^COMMIT;$|^UPDATE crm_drive_file_registry SET drive_ref = ' || true)
+            seed_forbidden=$(grep -v '^--' "$TMP/seed.sql" | grep -ciE 'DELETE|DROP|ALTER|CREATE|INSERT|TRUNCATE|REPLACE|PRAGMA|GRANT|REVOKE|ATTACH' || true)
+            seed_multi_assign=$(grep -v '^--' "$TMP/seed.sql" | grep -c ',' || true)
+            # a truncated or absent digest must never be presented as a review key
+            if ! printf '%s,%s' "$anchor_full" "$seed_sha" | grep -qE '^[0-9a-f]{64},[0-9a-f]{64}$'; then
+              fail "digest-shape-unexpected"
+            fi
+            # two implementations over the same artifact: the string node rendered, the file sha256sum read
+            if [ "$node_seed_sha" != "$seed_sha" ]; then
+              fail "node-shell-sha256-disagree"
+            fi
+            # the sha must describe the file the plan counted, not a file that merely looks alike
+            if [ "$seed_statements" != "$plan_statements" ]; then
+              fail "seed-line-count-differs-from-plan"
+            fi
+            # every statement is one drive_ref UPDATE guarded by `drive_ref IS NULL`; no DDL, no delete,
+            # no second column, no second table. `assert_one_column_seed` refuses a line it does not know;
+            # these tallies are what a human reads next to the digests to see that it was not merely silent.
+            if [ "$seed_guarded" != "$seed_statements" ] || [ "$seed_full_shape" != "$seed_statements" ] \
+              || [ "$seed_unlisted" != '0' ] || [ "$seed_forbidden" != '0' ] || [ "$seed_multi_assign" != '0' ]; then
+              fail "seed-shape-tally-unexpected"
+            fi
+          }
+
+          assert_one_column_seed() {
+            if grep -vE "^--|^BEGIN;$|^COMMIT;$|^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;$|^$" "$1" | grep -q .; then
+              fail "seed-shape-unexpected"
+            fi
+          }
+
           # ---- 3) preflight: read-only, and the only mode that is safe to run at any time ----
           run_runner probe probe
           probe=$(read_out probe)
           if [ "$MODE" = 'preflight' ]; then
             result='preflight-ok'
             guards="market_pre=${market_pre};ref_backup_pre=${bak_pre}"
+            finish
+            exit 0
+          fi
+
+          # ---- 3b) bootstrap-plan: make step 5's review possible, then stop before any write.
+          # `bootstrap` plans and applies in one run, so "the file is available for human review before any
+          # write" could not be satisfied by it. This branch runs the same probe and the same plan() over a
+          # fresh export, applies the same one-column shape rule, and reports the same digest — and no
+          # `wrangler d1 execute` is reachable from it. The absence of a write is stated in the check names
+          # (seed_apply=not-run, ledger/verify=not-run) rather than left to be inferred from blank fields.
+          if [ "$MODE" = 'bootstrap-plan' ]; then
+            run_runner plan plan
+            seed_plan=$(read_out plan)
+            assert_one_column_seed "$TMP/seed.sql"
+            seed_statements=$(grep -c "^UPDATE crm_drive_file_registry SET drive_ref = " "$TMP/seed.sql" || true)
+            seed_sha=$(sha256sum "$TMP/seed.sql" | awk '{print $1}')
+            measure_seed
+            # The file inlines real drive ids, so it is never committed, never uploaded, and never echoed: what
+            # a reviewer approves is its sha256 plus the counts and the refusal tally in `seed_plan`, and the
+            # copy here dies with $TMP when the job ends.
+            rm -f "$TMP/seed.sql"
+            if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+              fail "worktree-dirty-after-plan"
+            fi
+            if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'seed.apply.sql' | grep -q .; then
+              fail "generated-sql-left-in-tree"
+            fi
+            # The leak rules, measured rather than promised: the generated file was never tracked by git,
+            # nothing like it survives in the tree, this workflow has no step that could upload it, and no
+            # write command ran. Each is a number a reviewer can compare against a future run.
+            seed_in_git=$(git ls-files | grep -c 'seed\.sql\|drive-ref-seed' || true)
+            seed_in_tree=$(find . -path ./node_modules -prune -o \( -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'plan.json' \) -print | grep -c . || true)
+            # `- uses:` anchored on purpose: counting the raw string matched the line doing the counting, and
+            # the first review run failed on its own measurement. A step that uploads is `- uses:
+            # actions/upload-artifact@v4`; a shell comment or grep pattern is not, and only the former leaks.
+            artifact_steps=$(grep -cE '^[[:space:]]*-+[[:space:]]+uses:[[:space:]]*actions/upload-artifact' .github/workflows/crm-drive-migration-session.yml || true)
+            if [ "$seed_in_git" != '0' ] || [ "$seed_in_tree" != '0' ] || [ "$artifact_steps" != '0' ] || [ "$d1_writes" != '0' ]; then
+              fail "plan-channel-not-clean(git=${seed_in_git:-?},tree=${seed_in_tree:-?},artifacts=${artifact_steps:-?},writes=${d1_writes:-?})"
+            fi
+            digests="anchor=${anchor_full},seed=${seed_sha},statements=${seed_statements},guarded=${seed_guarded},unlisted=${seed_unlisted},forbidden=${seed_forbidden},commas=${seed_multi_assign},writes=${d1_writes}"
+            # A check name is truncated in GitHub's UI and a run log cannot be read from a sandbox, so
+            # neither is a review medium on its own. The step summary is the durable, human-readable one.
+            {
+              printf '### A4 review key - bootstrap-plan, no write performed\n\n'
+              printf '| measurement | value |\n|---|---|\n'
+              printf '| anchor_digest (sha256 over the anchored refs) | `%s` |\n' "$anchor_full"
+              printf '| seed_sha256 as computed by node | `%s` |\n' "$node_seed_sha"
+              printf '| seed_sha256 as computed by sha256sum | `%s` |\n' "$seed_sha"
+              printf '| UPDATE statements in the file | %s |\n' "$seed_statements"
+              printf '| UPDATE statements counted by the planner | %s |\n' "$plan_statements"
+              printf '| every statement guarded by `drive_ref IS NULL` | %s of %s |\n' "$seed_guarded" "$seed_statements"
+              printf '| lines outside the one-column shape | %s |\n' "$seed_unlisted"
+              printf '| DDL or destructive words in the file | %s |\n' "$seed_forbidden"
+              printf '| commas (a second assignment would need one) | %s |\n' "$seed_multi_assign"
+              printf '| plan counters | %s |\n' "$plan_counters"
+              printf '| `d1 execute` calls in this run | %s |\n' "$d1_writes"
+              printf '| generated SQL tracked in git / left in tree | %s / %s |\n' "$seed_in_git" "$seed_in_tree"
+              printf '| upload-artifact steps in this workflow | %s |\n' "$artifact_steps"
+              printf '| head the plan was produced from | `%s` |\n' "$GITHUB_SHA"
+              printf '| review run | `%s` (workflow `%s`) |\n' "$GITHUB_RUN_ID" "$GITHUB_WORKFLOW"
+              printf '\nNo drive ids, no filenames, no SQL text: the file that held them was deleted in this step, and only digests and counts are published here.\n'
+              printf '\nWrite paths are unchanged by this run: `bootstrap` refuses to apply anything until `.crm/drive-ref-bootstrap-approval.json` (committed by a human) matches every value above.\n'
+            } >> "$GITHUB_STEP_SUMMARY"
+            seed_apply="not-run(plan-only,review required)"
+            ledger="not-run(plan-only,sha=${seed_sha:0:12},statements=${seed_statements})"
+            verify="not-run(plan-only)"
+            guards="market_pre=${market_pre};ref_backup_pre=${bak_pre}"
+            result="plan-only(statements=${seed_statements},sha=${seed_sha:0:12})"
             finish
             exit 0
           fi
@@ -449,26 +630,87 @@ jobs:
           # the one-column rule, checked in the shell as well as in the tool: a file that contains anything
           # other than `UPDATE … SET drive_ref = '<64 hex>' WHERE drive_file_id = '<id>' AND drive_ref IS NULL`
           # is not the artifact this plan authorised, and it is not applied.
-          if grep -vE "^--|^BEGIN;$|^COMMIT;$|^UPDATE crm_drive_file_registry SET drive_ref = '[0-9a-f]{64}' WHERE drive_file_id = '[A-Za-z0-9_-]{10,128}' AND drive_ref IS NULL;$|^$" "$TMP/seed.sql" | grep -q .; then
-            fail "seed-shape-unexpected"
-          fi
+          assert_one_column_seed "$TMP/seed.sql"
           seed_statements=$(grep -c "^UPDATE crm_drive_file_registry SET drive_ref = " "$TMP/seed.sql" || true)
           seed_sha=$(sha256sum "$TMP/seed.sql" | awk '{print $1}')
+          measure_seed
+
+          # ---- 4a) the write is authorised against a reviewed file, not against this run's own plan.
+          # Comparing a run with itself proves the write matched the plan that run made -- worth having, it
+          # catches drift inside a run -- but it cannot prove the write matches what a human read earlier.
+          # The approval file is that pin: digests, counters, the review run, and the head the plan came
+          # from. It is committed by a human, and an unfilled template is refused rather than trusted.
+          APPROVAL_FILE='.crm/drive-ref-bootstrap-approval.json'
+          if [ ! -f "$APPROVAL_FILE" ]; then
+            fail "APPROVAL_FILE_MISSING"
+          fi
+          ap_anchor=$(jq -r '.anchor_digest // empty' "$APPROVAL_FILE")
+          ap_seed=$(jq -r '.seed_sha256 // empty' "$APPROVAL_FILE")
+          ap_statements=$(jq -r '.counters.update_statements // empty' "$APPROVAL_FILE")
+          ap_to_anchor=$(jq -r '.counters.to_anchor // empty' "$APPROVAL_FILE")
+          ap_already=$(jq -r '.counters.already_anchored // empty' "$APPROVAL_FILE")
+          ap_conflicts=$(jq -r '.counters.conflicts // empty' "$APPROVAL_FILE")
+          ap_refused=$(jq -r '.counters.refused // empty' "$APPROVAL_FILE")
+          ap_skipped=$(jq -r '.counters.skipped_without_fingerprint // empty' "$APPROVAL_FILE")
+          ap_run=$(jq -r '.review_run.run_id // empty' "$APPROVAL_FILE")
+          ap_head=$(jq -r '.plan_head // empty' "$APPROVAL_FILE")
+          case "${ap_anchor}${ap_seed}${ap_head}${ap_run}${ap_statements}" in
+            ''|*REPLACE*) fail "APPROVAL_NOT_FINALISED" ;;
+          esac
+          mismatch=''
+          [ "$ap_anchor" = "$anchor_full" ] || mismatch="${mismatch}anchor_digest "
+          [ "$ap_seed" = "$seed_sha" ] || mismatch="${mismatch}seed_sha256 "
+          [ "$ap_statements" = "$seed_statements" ] || mismatch="${mismatch}update_statements "
+          [ "$plan_counters" = "to_anchor=${ap_to_anchor} already=${ap_already} conflicts=${ap_conflicts} refused=${ap_refused} skipped=${ap_skipped}" ] || mismatch="${mismatch}counters "
+          if [ -n "$mismatch" ]; then
+            # the refusal is before the first statement, so a mismatched approval never half-applies
+            fail "REVIEWED_PLAN_NOT_MATCHED(${mismatch% })"
+          fi
+          if ! git cat-file -e "$ap_head" 2>/dev/null || ! git merge-base --is-ancestor "$ap_head" HEAD; then
+            fail "APPROVAL_HEAD_NOT_AN_ANCESTOR"
+          fi
+          # the comparison only means something if the thing that computes the plan did not move since
+          if ! git diff --quiet "$ap_head" HEAD -- _worker/migrations scripts/crm/seed-drive-file-refs.mjs .github/workflows/crm-drive-migration-session.yml; then
+            fail "PLANNER_CHANGED_SINCE_APPROVAL"
+          fi
+          approval="pinned(run=${ap_run},head=$(git rev-parse --short "$ap_head"))"
           if [ "$seed_statements" = "0" ]; then
             # every fingerprinted row already carries exactly the repo-derived anchor: the session is a no-op,
             # which is what a re-run of this plan is supposed to look like. §5 still has to be asserted below.
             seed_apply="no-op(all-rows-already-anchored,sha=${seed_sha:0:12})"
             rm -f "$TMP/seed.sql"
           else
-            if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
-              --file "$TMP/seed.sql" -y > "$TMP/apply.log" 2>&1; then
-              # the log can contain the statements that were applied; count it, never print it
-              n_problems=$(grep -ciE 'error|refused|failed' "$TMP/apply.log" || true)
-              rm -f "$TMP/seed.sql" "$TMP/apply.log"
-              fail "seed-apply-failed(problems=${n_problems},sha=${seed_sha:0:12})"
+            # D1 refuses a SQL transaction sent through this channel: against a real D1 the reviewed file,
+            # wrapper and all, applied 0 of 99 statements, while the same file minus exactly the two
+            # transport lines applied all 99. So only the transport changes here -- the reviewed artifact
+            # keeps its bytes (its sha is still what the approval pins), and what is sent is asserted below
+            # to be the reviewed UPDATE lines and nothing else.
+            grep -vE '^BEGIN;$|^COMMIT;$' "$TMP/seed.sql" > "$TMP/seed.apply.sql"
+            assert_one_column_seed "$TMP/seed.apply.sql"
+            applied_statements=$(grep -c '^UPDATE ' "$TMP/seed.apply.sql" || true)
+            tx_lines=$(grep -cE '^BEGIN;$|^COMMIT;$' "$TMP/seed.apply.sql" || true)
+            reviewed_stmt_sha=$(grep '^UPDATE ' "$TMP/seed.sql" | sha256sum | awk '{print $1}')
+            applied_stmt_sha=$(grep '^UPDATE ' "$TMP/seed.apply.sql" | sha256sum | awk '{print $1}')
+            same_lines=no
+            [ "$reviewed_stmt_sha" = "$applied_stmt_sha" ] && same_lines=yes
+            if [ "$applied_statements" != "$seed_statements" ] || [ "$tx_lines" != '0' ] || [ "$same_lines" != 'yes' ]; then
+              rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
+              fail "seed-transport-not-equivalent(reviewed=${seed_statements},applied=${applied_statements},tx=${tx_lines},same_lines=${same_lines})"
             fi
-            seed_apply="applied(sha=${seed_sha:0:12},statements=${seed_statements})"
-            rm -f "$TMP/seed.sql" "$TMP/apply.log"
+            if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
+              --file "$TMP/seed.apply.sql" -y > "$TMP/apply.log" 2>&1; then
+              # the log holds the inlined statements; publish only a scrubbed headline, never a line of it
+              n_problems=$(grep -ciE 'error|refused|failed' "$TMP/apply.log" || true)
+              first_error=$(grep -iE 'error|refused|failed' "$TMP/apply.log" | head -1 \
+                | sed -E 's/[A-Za-z0-9_-]{12,}/REDACTED/g; s/[[:space:]]+/ /g' | tr -dc '[:print:]' | cut -c1-56 || true)
+              if printf '%s' "$first_error" | grep -qE '[A-Za-z0-9_-]{16,}'; then
+                first_error=redacted
+              fi
+              rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
+              fail "seed-apply-failed(problems=${n_problems},sha=${seed_sha:0:12},first=${first_error})"
+            fi
+            seed_apply="applied(sha=${seed_sha:0:12},statements=${seed_statements},tx_lines=${tx_lines},same_lines=${same_lines})"
+            rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
           fi
 
           run_runner reverify reverify
@@ -481,7 +723,13 @@ jobs:
           if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
             --file "$TMP/s5.sql" -y > "$TMP/s5.log" 2>&1; then
             n_problems=$(grep -ciE 'error|refused|failed' "$TMP/s5.log" || true)
-            fail "backfill-apply-failed(problems=${n_problems},sha=${s5_sha:0:12})"
+            s5_first=$(grep -iE 'error|refused|failed' "$TMP/s5.log" | head -1 \
+              | sed -E 's/[A-Za-z0-9_-]{12,}/REDACTED/g; s/[[:space:]]+/ /g' | tr -dc '[:print:]' | cut -c1-52 || true)
+            if printf '%s' "$s5_first" | grep -qE '[A-Za-z0-9_-]{16,}'; then
+              s5_first=redacted
+            fi
+            rm -f "$TMP/s5.log"
+            fail "backfill-apply-failed(problems=${n_problems},sha=${s5_sha:0:12},first=${s5_first})"
           fi
           rm -f "$TMP/s5.sql" "$TMP/s5.log"
 
@@ -494,7 +742,7 @@ jobs:
           if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
             fail "worktree-dirty-after-session"
           fi
-          if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 's5.sql' | grep -q .; then
+          if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'seed.apply.sql' -o -name 's5.sql' | grep -q .; then
             fail "generated-sql-left-in-tree"
           fi
 
@@ -569,5 +817,23 @@ jobs:
     if: always()
     needs: session
     name: 'Session guards — ${{ needs.session.outputs.guards }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  # What the write run was pinned against: an approval file that does not exist is a refusal, not a
+  # silence. `no-write-attempted(review mode)` is the plan-only answer.
+  r8:
+    if: always()
+    needs: session
+    name: 'Session approval — ${{ needs.session.outputs.approval }}'
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+
+  # Digests only — no identifier, no filename, no SQL. This is the name a human compares against the
+  # approval they are about to give; the file it hashes is deleted in the same step that made it.
+  r7:
+    if: always()
+    needs: session
+    name: 'Session digests — ${{ needs.session.outputs.digests }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]

@@ -797,11 +797,17 @@ await acheck('C2 two processes, two digests: both versions land, and they never 
 
 await acheck('C3 three processes, one of them slow: density 1..3, nothing overwritten, no duplicate seq', async () => {
   await newFile('RACE3');
-  const dX = sha('race3-x'), dY = sha('race3-y');
+  const dX = sha('race3-x'), dY = sha('race3-y'), dZ = sha('race3-z');
+  // كان c3c يعيد dX نفسه: إن وصل قبل أن يصير dY رأسًا كانت نتيجته already_recorded — صفّان لا ثلاثة،
+  // فعدد الصفوف يتحدّد بسرعة الآلة لا بالقاعدة. على آلة بطيئة قياس ذلك هنا أنتج: sequences came out
+  // [1,2]. المطلوب إثباته يبقى كما هو بحرفه (كثافة 1..3، لا دوس على صف، لا seq مكرَّر)، فلا يُترك
+  // معلّقًا على حظٍّ في التبادُل: ثلاثة محتوى مختلف، وثلاثة كتّاب متسابقون فعليًا. مسار dedupe تحت
+  // التسابق يغطّيه C1 (بصمة واحدة وفائز واحد) وC4 (إعادة رصد حالة قديمة لا تكرّر الصف) — لا يُخفَّف
+  // أيّ منهما هنا.
   const kids = await race([
     { role: 'c3a', file_id: 'SYNTH-RACE3', digest: dX, attempts: 4 },
     { role: 'c3b', file_id: 'SYNTH-RACE3', digest: dY, delay_ms: 300, attempts: 4 },
-    { role: 'c3c', file_id: 'SYNTH-RACE3', digest: dX, delay_ms: 600, mid_pause_ms: 1500, attempts: 4 },
+    { role: 'c3c', file_id: 'SYNTH-RACE3', digest: dZ, delay_ms: 600, mid_pause_ms: 1500, attempts: 4 },
   ]);
   for (const k of kids) {
     if (!k.report) throw new Error(`${k.role} produced no report (exit ${k.code}): ${k.tail}`);

@@ -46,7 +46,11 @@ for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) 
   try { db.exec(readFileSync(path.join(MIG_DIR, file), 'utf8')); applied.push(file.slice(0, 4)); }
   catch { /* same policy as the 0009 rehearsal: skip what needs tables this file does not model */ }
 }
-db.exec(readFileSync(D10, 'utf8'));
+  // A promoted migration arrives with the directory walk above, so "apply the draft file too" became
+  // "apply it twice": `duplicate column name: drive_ref`, which is what this rehearsal died on the moment
+  // 0010 moved from migrations-draft/ into migrations/. Read from wherever the file lives, apply it once.
+  // Same rule _registry-fixture.mjs follows, for the same reason.
+if (!applied.includes('0010')) db.exec(readFileSync(D10, 'utf8'));
 db.exec(readFileSync(D11, 'utf8'));
 
 // ---------------------------------------------------------------- assertions
@@ -106,13 +110,16 @@ function openCase(file, { disposition = 'register_new_file', seq = 1 } = {}) {
 const LIVE = sha('session-live');
 const EXPIRED = sha('session-expired');
 const REVOKED = sha('session-revoked');
+// epoch seconds, the unit the Worker stores and the unit migration 0014 made the 0011 §3.7 guard compare
+// against — so an "expired" session here is expired the way it is expired in the deployed database.
+const secNow = Math.floor(Date.now() / 1000);
 function openSession(tokenHash, ageSeconds, ttlSeconds, revokedAfter) {
-  const created = Date.now() - ageSeconds * 1000;
+  const created = secNow - ageSeconds;
   db.prepare(`INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at, revoked_at)
       VALUES (?,?,?,?,?,?,?)`)
     .run(`s-${tokenHash.slice(0, 8)}`, tokenHash, sha('csrf'), int(created),
-      int(created + ttlSeconds * 1000), int(created),
-      revokedAfter === null ? null : int(created + revokedAfter * 1000));
+      int(created + ttlSeconds), int(created),
+      revokedAfter === null ? null : int(created + revokedAfter));
 }
 openSession(LIVE, 60, 3600, null);
 openSession(EXPIRED, 7200, 3600, null);

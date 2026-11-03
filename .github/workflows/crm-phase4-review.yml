@@ -7,8 +7,15 @@ name: CRM Phase 4 Review Query (read-only)
 # number, transcript text, Drive id or CRM contact id.
 on:
   push:
+    # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
+    # moment the session that pinned it merges and the next session works on a new branch — which is exactly
+    # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
+    # CRM_PHASE2_DRIVE_MIGRATION_PLAN.md). What bounds this job is not the branch: it is the target-database
+    # allowlist, the `nasr-market-db` prohibition, the guards that prove nothing else moved, and the fact
+    # that `crm-cloudflare-test-deploy.yml` stays workflow_dispatch-only. So no branch edit can turn this
+    # into a deploy, and no branch edit can make it write to production.
     branches:
-      - arena/1c171b6c-nasr-realestate-github-io
+      - "arena/**"
     paths:
       - .github/workflows/crm-phase4-review.yml
   workflow_dispatch:

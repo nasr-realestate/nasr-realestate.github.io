@@ -6,8 +6,24 @@ name: CRM Phase 4 Drive Analysis Migration and Payload Apply
 # backup as read-only. If any barrier below cannot be proven, the job fails before writing.
 on:
   push:
+    # Status (3 Nov 2026), for whoever reads this file next: the barrier that made this job refuse to apply
+    # its payload was `PHASE4_WRITE_ORDER` -- 99 registry rows reaching `processed` with no recorded version.
+    # The A4 bootstrap landed those 99 anchors and re-ran 0010 section 5, so the live database now measures
+    # svv=0, ctr=0, dang=0, gaps=0 (run 41632541771, reproduced read-only by 41635306106). That precondition
+    # is satisfied; what still holds this job at exit 1 is the diagnostic marker `.crm/p4-diagnostic-read-only`
+    # below, and the payload's own staleness -- both are Phase 4 decisions, not A4 ones.
+    # Honest limitation of that marker: step 9's `d1 migrations apply` runs BEFORE the marker branch, so the
+    # marker does not make the job free of writes; with the chain fully applied that step is a no-op, but the
+    # next reader should not assume the marker covers it.
+    # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
+    # moment the session that pinned it merges and the next session works on a new branch — which is exactly
+    # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
+    # CRM_PHASE2_DRIVE_MIGRATION_PLAN.md). What bounds this job is not the branch: it is the target-database
+    # allowlist, the `nasr-market-db` prohibition, the guards that prove nothing else moved, and the fact
+    # that `crm-cloudflare-test-deploy.yml` stays workflow_dispatch-only. So no branch edit can turn this
+    # into a deploy, and no branch edit can make it write to production.
     branches:
-      - arena/1c171b6c-nasr-realestate-github-io
+      - "arena/**"
     paths:
       - .github/workflows/crm-phase4-analysis.yml
       - _worker/migrations/0008_crm_phase4_analysis.sql
@@ -83,6 +99,24 @@ jobs:
           ephem_uuid=''
           ephem_cleaned='n/a'
           finished='no'
+
+          # The published reason used to be `tr -d '\n' | cut -c1-140` of stderr, and stderr here opens with
+          # node's MODULE_TYPELESS_PACKAGE_JSON warning -- so the name carried a warning about package.json
+          # while the actual failure sat below the cut. Selection, redaction, an honest fallback. The verdict
+          # is untouched: this step still fails exactly when the command fails.
+          p4_first_error() {
+            local line
+            line=$(grep -m1 -aE '(AssertionError|^[A-Za-z]*Error:|error:)' "$TMP/apply.err" 2>/dev/null | head -1 || true)
+            if [ -z "$line" ]; then
+              line=$(grep -m1 -aE 'Error|error' "$TMP/apply.err" 2>/dev/null | head -1 || true)
+            fi
+            [ -n "$line" ] || line='no error line captured (stderr held only warnings)'
+            printf '%s' "$line" \
+              | sed -E 's#https?://[^ ]+#URL#g' \
+              | sed -E 's/[A-Za-z0-9_-]{25,}/REDACTED/g' \
+              | tr -dc 'a-zA-Z0-9 .,:()=[]/_-' \
+              | cut -c1-140
+          }
 
           cleanup_ephem() {
             if [ -n "$account_id" ] && [ -n "$ephem_uuid" ] && [ "$ephem_uuid" != "$TEST_DB_UUID" ] && [ "$ephem_uuid" != "$PROD_DB_UUID" ] && [ "$ephem_uuid" != "$REF_BACKUP_UUID" ]; then
@@ -271,9 +305,21 @@ jobs:
             'crm_drive_duplicate_finding', 'crm_drive_match_candidate',
           ];
 
-          function makeRemoteD1(accountId, dbUuid, token) {
+          function makeRemoteD1(accountId, dbUuid, token, readOnly = false) {
             const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbUuid}/query`;
+            // A diagnostic run must be *incapable* of writing, not merely unlikely to: every statement this
+            // client sends leaves through execOne or execBatch, so the refusal sits in both and no caller can
+            // forget it. Anything that is not a plain SELECT/WITH is refused before a request is built, and the
+            // refusal names the keyword, so a check-run says where execution stopped.
+            const headKeyword = sql => String(sql).replace(/^(?:\s+|--[^\n]*\n)+/, '').slice(0, 12).toUpperCase();
+            function refuseIfReadOnly(sql) {
+              if (!readOnly) return;
+              const h = headKeyword(sql);
+              if (h.startsWith('SELECT') || h.startsWith('WITH')) return;
+              throw new Error(`READ_ONLY_REFUSED:${(h.split(/[^A-Z_]+/)[0] || 'UNKNOWN').slice(0, 12)}`);
+            }
             async function execOne(sql, params = []) {
+              refuseIfReadOnly(sql);
               let lastErr = null;
               for (let attempt = 1; attempt <= 3; attempt += 1) {
                 const res = await fetch(endpoint, {
@@ -297,6 +343,7 @@ jobs:
               throw lastErr;
             }
             async function execBatch(statements) {
+              for (const s of statements) refuseIfReadOnly(s.sql);
               const payload = statements.map(s => ({ sql: s.sql, params: s.params }));
               const res = await fetch(endpoint, {
                 method: 'POST',
@@ -615,7 +662,9 @@ jobs:
           } else if (mode === 'apply_payload') {
             const testDbUuid = process.argv[3];
             const payloadPath = process.argv[4];
-            const db = makeRemoteD1(accountId, testDbUuid, token);
+            // P4_READ_ONLY=yes turns this mode into a read-only preflight of itself: same code, same asserts,
+            // and a client that refuses the first statement that would change data.
+            const db = makeRemoteD1(accountId, testDbUuid, token, process.env.P4_READ_ONLY === 'yes');
             const rawPayload = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
             assertPiiFreePayload(rawPayload);
 
@@ -832,11 +881,11 @@ jobs:
           # 9) Apply migration 0008 (idempotent) and verify the barrier columns exist.
           npx --yes wrangler@4 d1 migrations apply "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" > "$TMP/live_mig.log" 2>&1
 
-          POST_MIG_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS migs, (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest_mig, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('crm_drive_analysis_run','crm_drive_file_analysis','crm_drive_archive_entry','crm_wa_conversation','crm_vcard_record','crm_drive_identity_signal','crm_drive_duplicate_finding','crm_drive_match_candidate')) AS p4_tbl, (SELECT COUNT(*) FROM crm_drive_file_registry) AS reg_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'crm_drive_review_%') AS rev_tbl, (SELECT (SELECT COUNT(*) FROM crm_drive_review_case)+(SELECT COUNT(*) FROM crm_drive_review_seal)+(SELECT COUNT(*) FROM crm_drive_review_event)+(SELECT COUNT(*) FROM crm_drive_review_chain_head)+(SELECT COUNT(*) FROM crm_drive_review_chain_anchor)) AS rev_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%') AS rev_trg, (SELECT COUNT(*) FROM sqlite_master WHERE type='view' AND name LIKE 'crm_review_%') AS rev_view, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name LIKE 'idx_crm_review_%') AS rev_idx;"
+          POST_MIG_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS migs, (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest_mig, (SELECT COUNT(*) FROM d1_migrations WHERE name IN ('0008_crm_phase4_analysis.sql','0009_crm_drive_review_workflow.sql')) AS p4_migs, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('crm_drive_analysis_run','crm_drive_file_analysis','crm_drive_archive_entry','crm_wa_conversation','crm_vcard_record','crm_drive_identity_signal','crm_drive_duplicate_finding','crm_drive_match_candidate')) AS p4_tbl, (SELECT COUNT(*) FROM crm_drive_file_registry) AS reg_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'crm_drive_review_%') AS rev_tbl, (SELECT (SELECT COUNT(*) FROM crm_drive_review_case)+(SELECT COUNT(*) FROM crm_drive_review_seal)+(SELECT COUNT(*) FROM crm_drive_review_event)+(SELECT COUNT(*) FROM crm_drive_review_chain_head)+(SELECT COUNT(*) FROM crm_drive_review_chain_anchor)) AS rev_rows, (SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_review%') AS rev_trg, (SELECT COUNT(*) FROM sqlite_master WHERE type='view' AND name LIKE 'crm_review_%') AS rev_view, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name LIKE 'idx_crm_review_%') AS rev_idx;"
           curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
             --data "{\"sql\":\"$POST_MIG_SQL\",\"params\":[]}" \
             -o "$TMP/post_mig.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
-          live_mig=$(jq -r '.result[0].results[0] | "migs=\(.migs),latest=\(.latest_mig),p4_tables=\(.p4_tbl),registry_rows=\(.reg_rows),rev_tables=\(.rev_tbl),rev_triggers=\(.rev_trg),rev_views=\(.rev_view),rev_indexes=\(.rev_idx),rev_rows=\(.rev_rows)"' "$TMP/post_mig.json")
+          live_mig=$(jq -r '.result[0].results[0] | "migs=\(.migs),latest=\(.latest_mig),p4_migs=\(.p4_migs),p4_tables=\(.p4_tbl),registry_rows=\(.reg_rows),rev_tables=\(.rev_tbl),rev_triggers=\(.rev_trg),rev_views=\(.rev_view),rev_indexes=\(.rev_idx),rev_rows=\(.rev_rows)"' "$TMP/post_mig.json")
           p4_tbl=$(jq -r '.result[0].results[0].p4_tbl' "$TMP/post_mig.json")
           migs=$(jq -r '.result[0].results[0].migs' "$TMP/post_mig.json")
           latest_mig=$(jq -r '.result[0].results[0].latest_mig' "$TMP/post_mig.json")
@@ -845,8 +894,17 @@ jobs:
           rev_view=$(jq -r '.result[0].results[0].rev_view' "$TMP/post_mig.json")
           rev_idx=$(jq -r '.result[0].results[0].rev_idx' "$TMP/post_mig.json")
           rev_rows=$(jq -r '.result[0].results[0].rev_rows' "$TMP/post_mig.json")
-          if [ "$p4_tbl" != '8' ] || [ "$migs" != '9' ] || [ "$latest_mig" != '0009_crm_drive_review_workflow.sql' ]; then
-            result="migration-0009-incomplete-migs=${migs}-latest=${latest_mig}-tables=${p4_tbl}"
+          # What this job depends on is that *its own* migrations are applied and its tables exist — not
+          # that the chain happens to end with 0009. It asserted `migs == 9` and `latest ==
+          # 0009_crm_drive_review_workflow.sql`, so the day 0010 was promoted it reported
+          # `migration-0009-incomplete` against a database holding everything it needed. A newer migration is
+          # not a missing one, and a gate that fails on progress trains everyone to ignore the gate. So the
+          # expectation is derived: the applied chain must be as long as `_worker/migrations` declares, and
+          # both migrations this phase owns (0008, 0009) must be recorded as applied.
+          p4_migs=$(jq -r '.result[0].results[0].p4_migs' "$TMP/post_mig.json")
+          chain_expected=$(ls _worker/migrations/*.sql | wc -l | tr -d '[:space:]')
+          if [ "$p4_tbl" != '8' ] || [ "$migs" != "$chain_expected" ] || [ "$p4_migs" != '2' ]; then
+            result="phase4-migrations-incomplete-migs=${migs}-of-${chain_expected}-p4=${p4_migs}-of-2-tables=${p4_tbl}"
             finish
             exit 1
           fi
@@ -867,9 +925,37 @@ jobs:
           fi
 
           # 10) Apply the committed, pseudonymized analysis payload (registry + analysis tables only)
+          #
+          #     The marker is a diagnostic brake, not a gate: while `.crm/p4-diagnostic-read-only` is committed,
+          #     the write attempt is replaced by the same code path on a client that refuses any non-SELECT
+          #     statement. The job still exits 1 -- a failure is never reported as a pass -- and the reason
+          #     says which assert the read-only walk stopped on, which is the information the log was hiding.
+          #     Removing the marker is itself an authorisation: that push runs the real apply.
+          if [ -f .crm/p4-diagnostic-read-only ]; then
+            if P4_READ_ONLY=yes node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
+              apply_stats='read-only-preflight-passed(every assert before the first write held,no statement sent)'
+            else
+              apply_stats="read-only-preflight-tripped-$(p4_first_error)"
+            fi
+            # and proof that the brake really braked: the operational baseline read before the step is
+            # compared against the same read after it. A moved number here means the diagnostic wrote.
+            curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              --data "{\"sql\":\"$PRE_BIZ_SQL\",\"params\":[]}" \
+              -o "$TMP/biz_ro.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
+            biz_ro=$(jq -r '.result[0].results[0] | "\(.c):\(.ph):\(.o):\(.cv):\(.m):\(.a):\(.al):\(.reg):\(.reg_hashed)"' "$TMP/biz_ro.json")
+            if [ "$(cut -d: -f1-7 <<< "$biz_ro")" != "$(cut -d: -f1-7 <<< "$biz_pre")" ]; then
+              result="diagnostic-changed-operational-rows-${biz_pre}-vs-${biz_ro}"
+              finish
+              exit 1
+            fi
+            result="apply-deferred-for-diagnostic(read-only,operational_rows_unchanged=${biz_ro})"
+            finish
+            exit 1
+          fi
           if ! node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
-            # Only the failure *code* is echoed; the payload never reaches the log with content.
-            result="payload-apply-failed-$(tr -d '\n' < "$TMP/apply.err" | cut -c1-140)"
+            # the error itself, not whatever node printed first; ids and URLs are scrubbed before they can
+            # reach a check name, and the payload file never reaches the log at all
+            result="payload-apply-failed-$(p4_first_error)"
             finish
             exit 1
           fi
