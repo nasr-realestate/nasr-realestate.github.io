@@ -147,3 +147,20 @@ SQL مُعاد كتابتها) على محرك D1: كل عبارة تُرسل ع
    ملف الهجرة ويقارنها بـ `sqlite_master` الحيّ، فانحرافٌ واحد يُفشل التشغيل.
 5. **قبل** أي push يمسّ `_worker/crm-ui/**` أو `_worker/crm-worker.js`: بوابة `crm-test-deploy`
    يجب أن تكون قائمة ومحميّة (قرار المستخدم، `CRM_PHASE4_REVIEW_SECURITY.md` §5).
+
+---
+
+## سجل الترقية — 0011 (3 نوفمبر 2026)
+
+رُفِّع `0011_crm_drive_file_intake_review.sql` إلى `_worker/migrations/` بعد أن تحققت الشروط المقيسة لا المزعومة:
+
+| الشرط (المطلوب في §7 أعلاه) | القيمة المقيسة من CI | المصدر |
+|---|---|---|
+| `status_without_version = 0` | `svv=0` (وقبلها `needs_bootstrap=0, ctr=0, dang=0, gaps=0, orphans=0`) | تشغيل التوثيق المستقل `41632541771` ثم `verify` على `6c8fa51` |
+| 0010 مطبَّقة أولًا | `migs=10,latest=0010_crm_drive_file_versions` قبل الترقية | `Session ledger` في نفس التشغيل |
+| زرع المراجع مكتمل ومطابق للخطة | `anchored=99, digest_match=yes` مع `anchor_digest=300c442a0c87…0504` | `Session anchors` |
+| تمرينات 0011 خضراء على الحالة الجديدة | `FILE_REVIEW 35/35 ALL_BARRIERS_HELD` و`D1_FILE_REVIEW 83/83 ALL_BARRIERS_HELD_ON_D1` | `node _worker/tests-draft/crm-file-review-0011.rehearsal.mjs` + `python3 …d1-rehearsal.py` محليًا |
+| الحزمة الكاملة | `734/734` (`fail 0`) مع 0011 داخل `_worker/migrations/` | `npm test` |
+| طابور ingest مختوم لا يكتب شيئًا عرضيًا | `IDLE` | `_worker/ingest-queue/drive-registry-sealed.txt` |
+
+التطبيق على `nasr-crm-test-db` يتم حصريًا عبر CI (خطوة `d1 migrations apply` في `crm-phase3-registry.yml`، وهي نفس القناة التي طبّقت 0010). لا تُطبَّق يدويًا من أي جهاز. ملاحظة صريحة للجلسة التالية: `crm-phase4-analysis.yml` ينفّذ `d1 migrations apply` في الخطوة 9 **قبل** فرع المؤشر `.crm/p4-diagnostic-read-only`، فوصف المؤشر بأنه "قراءة فقط" لا يشمل تلك الخطوة؛ من يريد brake حقيقيًا على تطبيق migration عبر p4 يجب أن ينقل الفحص إلى ما قبل الخطوة 9 (لم يُفعَّل هنا لأنه يغيّر سلوك مرحلة مغلقة).
