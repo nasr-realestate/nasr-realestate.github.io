@@ -91,6 +91,24 @@ jobs:
           ephem_cleaned='n/a'
           finished='no'
 
+          # The published reason used to be `tr -d '\n' | cut -c1-140` of stderr, and stderr here opens with
+          # node's MODULE_TYPELESS_PACKAGE_JSON warning -- so the name carried a warning about package.json
+          # while the actual failure sat below the cut. Selection, redaction, an honest fallback. The verdict
+          # is untouched: this step still fails exactly when the command fails.
+          p4_first_error() {
+            local line
+            line=$(grep -m1 -aE '(AssertionError|^[A-Za-z]*Error:|error:)' "$TMP/apply.err" 2>/dev/null | head -1 || true)
+            if [ -z "$line" ]; then
+              line=$(grep -m1 -aE 'Error|error' "$TMP/apply.err" 2>/dev/null | head -1 || true)
+            fi
+            [ -n "$line" ] || line='no error line captured (stderr held only warnings)'
+            printf '%s' "$line" \
+              | sed -E 's#https?://[^ ]+#URL#g' \
+              | sed -E 's/[A-Za-z0-9_-]{25,}/REDACTED/g' \
+              | tr -dc 'a-zA-Z0-9 .,:()=[]/_-' \
+              | cut -c1-140
+          }
+
           cleanup_ephem() {
             if [ -n "$account_id" ] && [ -n "$ephem_uuid" ] && [ "$ephem_uuid" != "$TEST_DB_UUID" ] && [ "$ephem_uuid" != "$PROD_DB_UUID" ] && [ "$ephem_uuid" != "$REF_BACKUP_UUID" ]; then
               del_code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
@@ -278,9 +296,21 @@ jobs:
             'crm_drive_duplicate_finding', 'crm_drive_match_candidate',
           ];
 
-          function makeRemoteD1(accountId, dbUuid, token) {
+          function makeRemoteD1(accountId, dbUuid, token, readOnly = false) {
             const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbUuid}/query`;
+            // A diagnostic run must be *incapable* of writing, not merely unlikely to: every statement this
+            // client sends leaves through execOne or execBatch, so the refusal sits in both and no caller can
+            // forget it. Anything that is not a plain SELECT/WITH is refused before a request is built, and the
+            // refusal names the keyword, so a check-run says where execution stopped.
+            const headKeyword = sql => String(sql).replace(/^(?:\s+|--[^\n]*\n)+/, '').slice(0, 12).toUpperCase();
+            function refuseIfReadOnly(sql) {
+              if (!readOnly) return;
+              const h = headKeyword(sql);
+              if (h.startsWith('SELECT') || h.startsWith('WITH')) return;
+              throw new Error(`READ_ONLY_REFUSED:${(h.split(/[^A-Z_]+/)[0] || 'UNKNOWN').slice(0, 12)}`);
+            }
             async function execOne(sql, params = []) {
+              refuseIfReadOnly(sql);
               let lastErr = null;
               for (let attempt = 1; attempt <= 3; attempt += 1) {
                 const res = await fetch(endpoint, {
@@ -304,6 +334,7 @@ jobs:
               throw lastErr;
             }
             async function execBatch(statements) {
+              for (const s of statements) refuseIfReadOnly(s.sql);
               const payload = statements.map(s => ({ sql: s.sql, params: s.params }));
               const res = await fetch(endpoint, {
                 method: 'POST',
@@ -622,7 +653,9 @@ jobs:
           } else if (mode === 'apply_payload') {
             const testDbUuid = process.argv[3];
             const payloadPath = process.argv[4];
-            const db = makeRemoteD1(accountId, testDbUuid, token);
+            // P4_READ_ONLY=yes turns this mode into a read-only preflight of itself: same code, same asserts,
+            // and a client that refuses the first statement that would change data.
+            const db = makeRemoteD1(accountId, testDbUuid, token, process.env.P4_READ_ONLY === 'yes');
             const rawPayload = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
             assertPiiFreePayload(rawPayload);
 
@@ -883,9 +916,37 @@ jobs:
           fi
 
           # 10) Apply the committed, pseudonymized analysis payload (registry + analysis tables only)
+          #
+          #     The marker is a diagnostic brake, not a gate: while `.crm/p4-diagnostic-read-only` is committed,
+          #     the write attempt is replaced by the same code path on a client that refuses any non-SELECT
+          #     statement. The job still exits 1 -- a failure is never reported as a pass -- and the reason
+          #     says which assert the read-only walk stopped on, which is the information the log was hiding.
+          #     Removing the marker is itself an authorisation: that push runs the real apply.
+          if [ -f .crm/p4-diagnostic-read-only ]; then
+            if P4_READ_ONLY=yes node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
+              apply_stats='read-only-preflight-passed(every assert before the first write held,no statement sent)'
+            else
+              apply_stats="read-only-preflight-tripped-$(p4_first_error)"
+            fi
+            # and proof that the brake really braked: the operational baseline read before the step is
+            # compared against the same read after it. A moved number here means the diagnostic wrote.
+            curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              --data "{\"sql\":\"$PRE_BIZ_SQL\",\"params\":[]}" \
+              -o "$TMP/biz_ro.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
+            biz_ro=$(jq -r '.result[0].results[0] | "\(.c):\(.ph):\(.o):\(.cv):\(.m):\(.a):\(.al):\(.reg):\(.reg_hashed)"' "$TMP/biz_ro.json")
+            if [ "$(cut -d: -f1-7 <<< "$biz_ro")" != "$(cut -d: -f1-7 <<< "$biz_pre")" ]; then
+              result="diagnostic-changed-operational-rows-${biz_pre}-vs-${biz_ro}"
+              finish
+              exit 1
+            fi
+            result="apply-deferred-for-diagnostic(read-only,operational_rows_unchanged=${biz_ro})"
+            finish
+            exit 1
+          fi
           if ! node "$TMP/p4_runner.mjs" apply_payload "$TEST_DB_UUID" "$PAYLOAD_FILE" > "$TMP/apply.json" 2>"$TMP/apply.err"; then
-            # Only the failure *code* is echoed; the payload never reaches the log with content.
-            result="payload-apply-failed-$(tr -d '\n' < "$TMP/apply.err" | cut -c1-140)"
+            # the error itself, not whatever node printed first; ids and URLs are scrubbed before they can
+            # reach a check name, and the payload file never reaches the log at all
+            result="payload-apply-failed-$(p4_first_error)"
             finish
             exit 1
           fi

@@ -1,0 +1,2 @@
+read-only: the payload apply step must not write while its cause is unknown.
+Deleting this file (together with a change to .github/workflows/crm-phase4-analysis.yml, which is what re-triggers the job) restores the real apply attempt -- that is a write to nasr-crm-test-db and needs its own approval.
