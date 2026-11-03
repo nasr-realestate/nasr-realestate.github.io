@@ -58,6 +58,10 @@
         <button class="tab" type="button" data-panel="opportunities-panel" aria-selected="false">الفرص</button>
         <button class="tab" type="button" data-panel="new-contact-panel" aria-selected="false">إضافة عميل</button>
         <button class="tab" type="button" data-panel="new-opportunity-panel" aria-selected="false">إضافة فرصة</button>
+        <button class="tab" type="button" data-panel="a5-customer-panel" aria-selected="false">🗂 ملف العميل</button>
+        <button class="tab" type="button" data-panel="a5-requests-panel" aria-selected="false">🏠 طلبات العملاء</button>
+        <button class="tab" type="button" data-panel="a5-work-panel" aria-selected="false">📋 قوائم العمل</button>
+        <button class="tab" type="button" data-panel="a5-review-panel" aria-selected="false">🗃 مراجعة Drive</button>
       </nav>
 
       <section class="panel" id="dashboard-panel" aria-labelledby="dashboard-title">
@@ -273,6 +277,79 @@
           <label>سبب عدم تحديد متابعة <input name="no_followup_reason" maxlength="240" placeholder="اختياري"></label>
           <label class="full">ملاحظات <textarea name="notes" maxlength="1200" rows="3"></textarea></label>
           <div class="full form-actions"><button class="button primary" type="submit">حفظ الفرصة</button><span id="new-opportunity-feedback" class="muted" aria-live="polite"></span></div>
+        </form>
+      </section>
+
+
+      <section class="panel" id="a5-customer-panel" hidden aria-labelledby="a5-customer-title">
+        <div class="section-heading"><div><p class="eyebrow">داخلي · بيانات صناعية في الاختبارات فقط</p><h1 id="a5-customer-title">ملف العميل الموحَّد</h1></div><button class="button primary" type="button" data-open-panel="new-contact-panel">＋ عميل جديد</button></div>
+        <form class="search-row" id="a5-cust-form"><label class="sr-only" for="a5-cust-search">ابحث بالاسم أو الهاتف</label><input id="a5-cust-search" type="search" placeholder="اسم العميل أو رقم هاتفه" autocomplete="off" inputmode="tel"><button class="button" type="submit" id="a5-cust-submit">بحث</button></form>
+        <div id="a5-cust-error" aria-live="polite"></div>
+        <div class="columns contacts-layout"><div id="a5-cust-results" class="stack"><p class="muted">ابحث لفتح الملف: الأرقام، الطلبات، الفرص، والخط الزمني في مكان واحد.</p></div><section id="a5-cust-file" class="card detail-card"><p class="muted">اختر عميلًا من النتائج.</p></section></div>
+        <p class="notice info">تشابه الاسم أو جزء من الرقم لا يثبت الهوية: لا دمج تلقائي لعميلين ولا نقل أرقام — الطلبات المتعارضة تُعرض للمراجعة اليدوية.</p>
+      </section>
+
+      <section class="panel" id="a5-requests-panel" hidden aria-labelledby="a5-requests-title">
+        <div class="section-heading"><div><p class="eyebrow">طلب ≠ عقار معروض · الطلب لكيان العميل، والعقار للموقع</p><h1 id="a5-requests-title">طلبات العملاء</h1></div><button class="button" type="button" id="a5-req-refresh">تحديث</button></div>
+        <div class="chip-row filter-bar" role="group" aria-label="تصفية الطلبات">
+          <label class="compact-label">النوع <select id="a5-req-kind"><option value="">الكل</option><option value="buy">شراء</option><option value="rent">إيجار</option></select></label>
+          <label class="compact-label">الحالة <select id="a5-req-status"><option value="">الكل</option><option value="new">جديد</option><option value="active">قيد العمل</option><option value="paused">موقوف</option><option value="closed">مغلق</option><option value="cancelled">ملغي</option></select></label>
+          <label class="compact-label"><input type="checkbox" id="a5-req-unmatched"> بلا عقار مطابق</label>
+        </div>
+        <div id="a5-req-error" aria-live="polite"></div>
+        <div class="columns"><div id="a5-req-list" class="stack"><p class="muted">جارٍ التحميل…</p></div><section id="a5-req-detail" class="card detail-card"><p class="muted">اختر طلبًا لعرض حالته وسجلّه وروابطه الموثَّقة.</p></section></div>
+        <form class="card form-grid" id="a5-request-form">
+          <div class="full"><h2>طلب جديد لهذا العميل</h2><p class="muted" id="a5-request-form-target">لا عميل محدَّد — اختر العميل من لوحة «ملف العميل» أولًا.</p></div>
+          <label>شراء أو إيجار <select name="kind" required><option value="buy">شراء</option><option value="rent">إيجار</option></select></label>
+          <label>نوع العقار <select name="property_type"><option value="apartment">شقة</option><option value="penthouse">بنتهاوس</option><option value="duplex">دوبلكس</option><option value="villa">فيلا</option><option value="office">مكتب</option><option value="retail">محل</option><option value="hq">مقر إداري</option></select></label>
+          <label>المنطقة داخل مدينة نصر <input name="area" maxlength="80" placeholder="الأندلس، الـ300، الزهراء…"></label>
+          <label>المربع إن عُرف <input name="sub_area" maxlength="80"></label>
+          <label>غرف <input name="rooms" type="number" min="0" max="12" inputmode="numeric"></label>
+          <label>مساحة من (م²) <input name="area_min" type="number" min="1" step="0.5" inputmode="decimal"></label>
+          <label>مساحة إلى (م²) <input name="area_max" type="number" min="1" step="0.5" inputmode="decimal"></label>
+          <label>ميزانية من <input name="budget_min" type="number" min="1" step="1000" inputmode="numeric"></label>
+          <label>ميزانية إلى <input name="budget_max" type="number" min="1" step="1000" inputmode="numeric"></label>
+          <label>المصدر <select name="source"><option value="manual">إدخال يدوي</option><option value="call">مكالمة</option><option value="whatsapp">واتساب</option><option value="website">الموقع</option><option value="referral">إحالة</option></select></label>
+          <label class="full">شروط ومواصفات <textarea name="requirements" rows="3" maxlength="2000" placeholder="دور علوي، مصعد، تشطيب… (المدينة مدينة نصر فقط — لا مناطق خارجها)"></textarea></label>
+          <label>اسمك (يظهر في سجل التدقيق) <input name="actor" id="a5-req-actor" maxlength="120" placeholder="اتركه فارغًا ليُنسب إلى جلسة الدخول"></label>
+          <div class="full form-actions"><button class="button primary" type="submit">حفظ الطلب</button><span class="muted">إعادة إرسال نفس الطلب لا تنسخه: يظهر طلبك الموجود بدلًا من صفٍ مكرر.</span></div>
+        </form>
+      </section>
+
+      <section class="panel" id="a5-work-panel" hidden aria-labelledby="a5-work-title">
+        <div class="section-heading"><div><p class="eyebrow">مستحق · متأخر · صامت · بلا مطابق</p><h1 id="a5-work-title">قوائم العمل</h1></div><button class="button" type="button" id="a5-queues-refresh">تحديث</button></div>
+        <div id="a5-work-error" aria-live="polite"></div>
+        <div id="a5-queues" class="stack"><p class="muted">جارٍ التحميل…</p></div>
+        <form class="card form-grid" id="a5-followup-form">
+          <div class="full"><h2>متابعة جديدة</h2><p class="muted">المتابعة لازم ترتبط بطلب أو بفرصة، وتُسجَّل بتاريخ وحالة، والنتيجة عند الإنهاء تُضاف للخط الزمني تلقائيًا (0013).</p></div>
+          <label>الهدف <select name="target_kind"><option value="request">طلب</option><option value="opportunity">فرصة</option></select></label>
+          <label>معرّف الهدف <input name="target_id" maxlength="80" placeholder="req-… أو opp-…"></label>
+          <label>الموعد <input name="due_at" type="datetime-local" required></label>
+          <label>اسمك <input name="actor" maxlength="120"></label>
+          <div class="full form-actions"><button class="button primary" type="submit">جدولة</button><span class="muted">لا متابعة تلقائية مختلقة: الموعد والسبب من كلام موثَّق فقط.</span></div>
+        </form>
+      </section>
+
+      <section class="panel" id="a5-review-panel" hidden aria-labelledby="a5-review-title">
+        <div class="section-heading"><div><p class="eyebrow">قراءة من سجل 0011 · لا استدعاء لـDrive ولا تعديل لملف أصلي</p><h1 id="a5-review-title">مراجعة ملفات Drive</h1></div><button class="button" type="button" id="a5-review-refresh">تحديث</button></div>
+        <div class="chip-row filter-bar" role="group" aria-label="تصفية حالات المراجعة">
+          <label class="compact-label">الحالة <select id="a5-review-status"><option value="">الكل</option><option value="open">مفتوحة</option><option value="awaiting_content">بانتظار قراءة المحتوى</option><option value="decided">مُقرَّر</option><option value="escalated">مُصعَّد</option><option value="closed_no_action">مغلقة بلا إجراء</option></select></label>
+          <label class="compact-label">التصنيف <select id="a5-review-disposition"><option value="">الكل</option><option value="needs_governance_review">يحتاج مراجعة حوكمة</option><option value="catalogue_metadata">وصف كتالوج</option><option value="not_crm_data">ليس بيانات CRM</option></select></label>
+        </div>
+        <div id="a5-review-error" aria-live="polite"></div>
+        <div class="columns"><div id="a5-review-list" class="stack"><p class="muted">جارٍ التحميل…</p></div><section id="a5-review-detail" class="card detail-card"><p class="muted">اختر حالة لعرض سلسلة قراراتها واتخاذ قرار مسموح.</p></section></div>
+        <form class="card form-grid" id="a5-review-form" hidden>
+          <div class="full"><h2>قرار المراجع</h2><p class="muted">القرار يُضاف إلى سلسلة غير قابلة للتعديل؛ الحالة تتحرك بقواعد 0011 نفسها، ولا يُطبَّق أي دمج أو ربط من هنا.</p></div>
+          <label>القرار <select id="a5-review-decision"><option value="noted">ملاحظة فقط</option><option value="close_no_action">إغلاق بلا إجراء</option><option value="request_content_read">طلب قراءة المحتوى</option><option value="recommend_registration">توصية بالتسجيل</option><option value="schedule_rehash">جدولة إعادة البصمة</option><option value="flag_description_mismatch">رصد اختلاف وصف</option><option value="unlink_recorded">توثيق فك ربط</option><option value="escalate_to_contact_review">تصعيد لمراجعة جهة اتصال</option></select></label>
+          <label>اسمك <input id="a5-review-actor" maxlength="120"></label>
+          <label class="full">السبب (١٢ حرفًا على الأقل، بلا أرقام هواتف) <textarea id="a5-review-reason" rows="3" maxlength="1000"></textarea></label>
+          <div class="full form-actions"><button class="button primary" type="submit">تسجيل القرار</button><span class="muted">الرفض يظهر هنا كما هو، باسم الحاجز، ولا يُخفى.</span></div>
+        </form>
+        <form class="card form-grid" id="a5-review-link-form" hidden>
+          <div class="full"><h2>اقتراح ربط بعميل (لا يُطبَّق)</h2></div>
+          <label>معرّف العميل <input id="a5-review-link-contact" maxlength="80"></label>
+          <label>أساس الربط <select id="a5-review-link-basis"><option value="manual_pin">تثبيت يدوي</option><option value="phone_match">مطابقة رقم موثَّقة</option></select></label>
+          <div class="full form-actions"><button class="button" type="submit">تسجيل الاقتراح</button><span class="muted">يتطلب قرار link_proposed أولًا، ولا يلمس سجل العميل.</span></div>
         </form>
       </section>
 

@@ -208,3 +208,46 @@ label{display:grid;gap:5px;color:var(--muted);font-size:13px}
 .raw-chat-pre{max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word;padding:10px;border-radius:8px;background:rgba(0,0,0,.35);font-size:.86rem}
 .compact-details{margin-top:6px}
 
+/* ── A5: طبقة التشغيل الداخلي (طلبات/خط زمني/متابعات/مراجعة Drive) — الموبايل أولًا ── */
+.a5-item{display:grid;gap:6px;text-align:start;background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:11px 12px;color:inherit;font:inherit;width:100%}
+button.a5-item{cursor:pointer}
+button.a5-item:hover,.a5-item.selected{border-color:var(--green);background:#1b3022}
+.a5-item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.a5-item-head h4{margin:0;font-size:15px}
+.a5-meta{margin:0;color:var(--muted);font-size:12.5px;line-height:1.55}
+.a5-chip{font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:#132a1b;color:var(--green-soft);white-space:nowrap}
+.a5-chip.a5-status-paused{background:#2a2410;color:#f2df9a}
+.a5-chip.a5-status-closed,.a5-chip.a5-status-cancelled{background:#2a1212;color:#ffd0cb}
+.a5-overdue{border-color:#713631;background:#20100f}
+.a5-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.a5-mini-button{background:#17331f;border:1px solid var(--line);color:var(--green-soft);border-radius:10px;padding:5px 10px;font-size:12.5px;cursor:pointer}
+.a5-mini-button.ghost{background:transparent;color:var(--muted)}
+.a5-list{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.a5-list li{padding:7px 0;border-bottom:1px solid #203528;font-size:13.5px}
+.a5-facts{display:grid;grid-template-columns:minmax(90px,.45fr) minmax(0,1fr);gap:4px 10px;margin:10px 0 0}
+.a5-facts dt{color:var(--muted);font-size:12px}
+.a5-facts dd{margin:0;font-size:13.5px;overflow-wrap:anywhere}
+.a5-block{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.a5-inline-form{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.a5-inline-form input{flex:1 1 140px;min-width:0}
+.a5-detail{padding:13px}
+.a5-timeline{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.a5-event{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.a5-event-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.a5-event-head time{font-size:12px;color:var(--muted)}
+.a5-event p{margin:6px 0 0;font-size:13.5px;line-height:1.6;overflow-wrap:anywhere}
+.a5-refusal{background:#2a1212;border:1px solid #713631;color:#ffd0cb;border-radius:12px;padding:10px 12px;margin:10px 0}
+.a5-refusal strong{display:block;font-size:13px;margin-bottom:4px}
+.a5-refusal p{margin:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.a5-ok{color:var(--green-soft);font-size:12.5px;margin:6px 0 0}
+.a5-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px}
+.a5-count{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:9px 11px}
+.a5-count-number{display:block;font-size:24px;color:var(--green-soft);line-height:1.2}
+.a5-count-label{display:block;font-size:12px;color:var(--muted)}
+.a5-count-overdue .a5-count-number{color:#ffc1ba}
+.a5-case{width:100%}
+.a5-link-row{display:grid;gap:5px}
+.a5-chain{margin:8px 0 0;font-size:12.5px}
+.a5-chain.ok{color:var(--green-soft)}
+.a5-chain.danger{color:#ffc1ba}
+@media (max-width:640px){.a5-facts{grid-template-columns:1fr}.a5-item-head{align-items:flex-start}}
