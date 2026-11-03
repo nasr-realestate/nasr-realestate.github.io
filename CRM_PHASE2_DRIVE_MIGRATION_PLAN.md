@@ -848,3 +848,36 @@ no shell-quoting hazard sits in the middle of a migration session.
 | `scripts/crm/drive-registry-snapshot.mjs` | read-only registry export, hashed refs only |
 | `.github/workflows/crm-phase3-registry.yml` | isolated-DB-first promotion, sealed sync, guards on market DB and the reference backup |
 | `.github/workflows/crm-phase2-backup.yml` | the backup + isolated restore, refuse-overwrite naming |
+
+
+---
+
+## A4/A5 — التنفيذ الفعلي (3 نوفمبر 2026)، بأرقام مقروءة من القاعدة لا من الخطة
+
+**الحالة: أ.4 منفَّذ ومُتحقَّق منه؛ خطوة A5 الأولى (ترقية 0011) منفَّذة ومُتحقَّق منها.**
+
+الاعتماد والقيود: ملف الاعتماد `.crm/drive-ref-bootstrap-approval.json` يثبّت `anchor_digest`
+و`seed_sha256` والعدّادات الستة و`plan_head`+`review_run`؛ بوابة الكتابة ترفض قبل أول عبارة عند أي فرق،
+وحزام `APPLIED_ANCHORS_DIFFER_FROM_THE_REVIEWED_PLAN` يعاير القيم المُطبَّقة بالمعتمد.
+
+| الحدث | التشغيل | ما نُشر |
+|---|---|---|
+| خطة معتمدة بعد إصلاح `fetch-depth: 0` | `41614908118` (success) | `anchor=300c442a0c87…0504`, `seed=13c87bb521e9…76fc`, `statements=99, guarded=99, unlisted=0, forbidden=0, commas=0, writes=0` |
+| محاولة كتابة أولى | `41621177286` (failure) | `seed-apply-failed(problems=1,sha=13c87bb521e9)` — لم تُطبَّق أي عبارة |
+| إصلاح قناة النقل (تعليق فقط على البصمتين) | `add3ada` → خطة `41632050909` (success) | نفس البصمتين حرفيًا، و`needs_bootstrap=99, already=0` (القاعدة لم تتحرك) |
+| **الكتابة** | **`41632541771` (success)** | `applied(sha=13c87bb521e9,statements=99,tx_lines=0,same_lines=yes)` ثم `anchors already=99,digest_match=yes` و`ledger … needs_bootstrap=0,svv=0,ctr=0,dang=0,gaps=0,orphans=0,anchored=99,gate=ok` |
+| تحقق مستقل بعد التنفيذ | `6c8fa51` (`verify`) | `needs_bootstrap=0,svv=0,ctr=0,dang=0,gaps=0` |
+| ترقية 0011 عبر CI | `53f5510` (p3 success) | `live mig — migs=11,latest=0011_crm_drive_file_intake_review.sql,tbl=1,idx=8,rows_before_sync=99`؛ `guards — biz_unchanged=yes(60:64:83:76:2984);bak_untouched=yes;market_db_untouched=yes(nasr-market-db:913408:0)`؛ `ok(migs=11/11,idx=8/8,fkDef=1,fkViol=0)`؛ `sync — queue_idle(current_registry_rows=99)` |
+| تحقق بعد 0011 | `720ef79` (`verify` success) | `Migration verify-ok`, `migs=11`, `declared[tbl=4,idx=11,trg=36,view=10] ≤ installed[16,32,55,14]`, `svv=0` |
+
+**سبب الفشل الأول، موثّقًا لأنه سيظهر لأي مولِّد بذور آخر:** `renderSeedSql` يغلّف العبارات بـ`BEGIN;`/`COMMIT;`.
+محرك D1 يرفض عبارات المعاملة على قناة `wrangler d1 execute --file` بنصّ:
+`To execute a transaction, please use the state.storage.transaction() or state.storage.transactionSync() APIs
+instead of the SQL BEGIN TRANSACTION or SAVEPOINT statements` — والقَيْد الجديد
+`seed-apply-failed(problems=…,sha=…,first=…)` ينشر الآن أول سطر خطأ بعد تنقيحه (حذف كل تسلسلة من 12
+محرفًا شبيهة بالمعرّفات) بدل عددٍ مجرّد، و`seed-transport-not-equivalent` يمنع إرسال أي نصّ مختلف عن
+عبارات الملف المعتمد (مُثبت محليًا: ملف good يمر، وتهريب `DELETE` أو عمودان أو بتر = رفض).
+
+**ما لم يحدث:** لا لمس لـ`nasr-market-db`، لا كتابة على `nasr-crm-test-db-backup-20261101`، لا قراءة محتوى
+ملفات Drive، لا حذف/نقل/إعادة تسمية لأي ملف أصلي، لا مشاركة عامة، لا نشر موقع، لا دمج PR. الطابور المختوم
+بقى `IDLE` فلم تكتب خطوة الـsync أي صف. الأرقام المرجعية `60/83/76/2984` بقيت صحيحة.

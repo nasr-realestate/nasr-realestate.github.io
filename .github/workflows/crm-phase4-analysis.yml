@@ -6,6 +6,15 @@ name: CRM Phase 4 Drive Analysis Migration and Payload Apply
 # backup as read-only. If any barrier below cannot be proven, the job fails before writing.
 on:
   push:
+    # Status (3 Nov 2026), for whoever reads this file next: the barrier that made this job refuse to apply
+    # its payload was `PHASE4_WRITE_ORDER` -- 99 registry rows reaching `processed` with no recorded version.
+    # The A4 bootstrap landed those 99 anchors and re-ran 0010 section 5, so the live database now measures
+    # svv=0, ctr=0, dang=0, gaps=0 (run 41632541771, reproduced read-only by 41635306106). That precondition
+    # is satisfied; what still holds this job at exit 1 is the diagnostic marker `.crm/p4-diagnostic-read-only`
+    # below, and the payload's own staleness -- both are Phase 4 decisions, not A4 ones.
+    # Honest limitation of that marker: step 9's `d1 migrations apply` runs BEFORE the marker branch, so the
+    # marker does not make the job free of writes; with the chain fully applied that step is a no-op, but the
+    # next reader should not assume the marker covers it.
     # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
     # moment the session that pinned it merges and the next session works on a new branch — which is exactly
     # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
