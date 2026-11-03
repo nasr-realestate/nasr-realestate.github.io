@@ -37,6 +37,14 @@ on:
         required: false
         default: ''
         type: string
+      a5_write_decision:
+        description: 'A5 live checks never write the append-only Drive review ledger unless this is changed. none = read-only (default). noted = record one non-state-changing noted row on the test DB.'
+        required: false
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - noted
       reason:
         description: 'Why this deploy is happening. Free text, kept out of the job: no customer data, no names, no codes.'
         required: false
@@ -169,6 +177,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       OWNER_CRM_ACCESS_CODE: ${{ secrets.CRM_ACCESS_CODE }}
       OWNER_CRM_SESSION_SECRET: ${{ secrets.CRM_SESSION_SECRET }}
+      A5_WRITE_DECISION_INPUT: ${{ github.event.inputs.a5_write_decision }}
     outputs:
       result: ${{ steps.e2e.outputs.result }}
       phase: ${{ steps.e2e.outputs.phase }}
@@ -367,19 +376,25 @@ jobs:
           # وتستثنيها عدادات الثبات أصلًا، وما لا يسمح الدفتر بحذفه يُبلَّغ كبقايا معلنًا لا يُخفى.
           # الدخول بتذكرة CI لمرة واحدة، لأن رمز الوصول قد يبقى في لوحة Cloudflare بلا نسخة في GitHub.
           run_a5_live() {
-            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_expire='' a5_residue
+            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_expire='' a5_residue a5_code_env
             : > "$a5_state"
             chmod 600 "$a5_state"
-            a5_n1=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
-            a5_n2=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
-            echo "::add-mask::${a5_n1}"
-            echo "::add-mask::${a5_n2}"
-            a5_h1=$(printf '%s' "$a5_n1" | sha256sum | awk '{print $1}')
-            a5_h2=$(printf '%s' "$a5_n2" | sha256sum | awk '{print $1}')
-            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
-              a5_live='ticket-mint-failed'
-              return 1
-            fi
+            # إن كان مسار النشر يعرف رمز الوصول في ملف 0600 يُستعمل كما هو، وإلا تُطبع تذكرة CI لمرة
+            # واحدة (صلاحيّتها 90 ثانية) — لا جلسة دائمة ولا رمز يُخزَّن في سجل الوظيفة.
+            if [ -s "$TMP/access_code" ]; then
+              a5_code_env="$TMP/access_code"
+            else
+              a5_n1=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+              a5_n2=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(36).toString("base64url"));')
+              echo "::add-mask::${a5_n1}"
+              echo "::add-mask::${a5_n2}"
+              a5_h1=$(printf '%s' "$a5_n1" | sha256sum | awk '{print $1}')
+              a5_h2=$(printf '%s' "$a5_n2" | sha256sum | awk '{print $1}')
+              if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
+                a5_live='ticket-mint-failed'
+                return 1
+              fi
+              fi
             # إنهاء الصلاحية في القاعدة هو ما يقيس 0014 على D1 الحقيقي. يُفعَّل فقط حين يكون ما في
             # $TMP/session_secret هو الرمز الذي يعرفه العامل المنشور، وإلا صار الرفض دليلًا كاذبًا.
             if [ -s "$TMP/session_secret" ] && { [ "$has_session_secret" != 'true' ] || [ -n "${OWNER_CRM_SESSION_SECRET:-}" ]; }; then
@@ -395,8 +410,9 @@ jobs:
               a5_expire="$a5_expire && npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config $WRANGLER_CFG --command \"UPDATE crm_sessions SET created_at = CAST(strftime('%s','now') - 7200 AS INTEGER), expires_at = CAST(strftime('%s','now') - 60 AS INTEGER) WHERE token_hash = '\$hash' AND revoked_at IS NULL;\""
             fi
             if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_A5_ORIGIN="$BASE_URL" CRM_A5_STATE_FILE="$a5_state" \
-                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="$a5_n1" CRM_A5_EXPIRE_CMD="$a5_expire" \
-                 CRM_A5_WRITE_DECISION="${CRM_A5_WRITE_DECISION:-none}" \
+                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="${a5_n1:-}" CRM_A5_EXPIRE_CMD="$a5_expire" \
+                 CRM_LIVE_ACCESS_CODE_FILE="${a5_code_env:-}" \
+                 CRM_A5_WRITE_DECISION="${A5_WRITE_DECISION_INPUT:-none}" \
                  node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
               a5_live="error:$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live_a5.err" | tail -c 40 || echo unknown)"
               return 1
@@ -818,6 +834,16 @@ jobs:
             exit 1
           fi
           mobile_browser='yes'
+
+          # نفس فحوص A5 على هذا المسار أيضًا: لا يجوز أن يوجد طريق نشر لا يتحقق من A5.
+          phase='live-a5-operational-verification'
+          a5_rc=0
+          run_a5_live || a5_rc=$?
+          if [ "$a5_rc" != '0' ]; then
+            result='live-a5-operational-checks-failed'
+            finish
+            exit 1
+          fi
 
           phase='cleanup-synthetic-e2e-rows'
           if [[ ! "$created_contact_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]] || [[ ! "$created_opp_id" =~ ^[A-Za-z0-9_-]{8,80}$ ]]; then

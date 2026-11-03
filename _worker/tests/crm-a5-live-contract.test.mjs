@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
-import { readFileSync, statSync, unlinkSync } from 'node:fs';
+import { readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
@@ -250,5 +250,34 @@ test('LIVE-5 دخول تذكرة CI يمرّر كل فحوص A5 ويكتب مل�
   } finally {
     await harness.started.close();
     try { unlinkSync(stateFile); } catch { /* لا شيء */ }
+  }
+});
+
+// مسار النشر الثاني (حيث تكون مرآة الرمز في GitHub) يمرّر الرمز في ملف 0600 عبر CRM_LIVE_ACCESS_CODE_FILE،
+// لا في متغير البيئة. يُثبَّت هنا بنفس الصيغة: ملف خاص، وضع access_code، ونجاح كامل.
+test('LIVE-6 قراءة رمز الوصول من ملف 0600 تعمل كما في مسار النشر الثاني', async () => {
+  const harness = await buildLiveHarness();
+  const codeFile = path.join(os.tmpdir(), `a5-live6-${crypto.randomBytes(4).toString('hex')}.code`);
+  try {
+    writeFileSync(codeFile, harness.accessCode, { mode: 0o600 });
+    const child = spawn(process.execPath, [SCRIPT], {
+      env: { ...process.env, CRM_TEST_BASE_URL: harness.started.baseUrl, CRM_A5_ORIGIN: TEST_ORIGIN,
+        CRM_A5_ACCESS_CODE: '', CRM_LIVE_ACCESS_CODE_FILE: codeFile, CRM_A5_RUN_TAG: 'file-mode' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    const code = await new Promise(resolve => child.on('exit', resolve));
+    assert.equal(code, 0, `cli exit ${code}: ${stdout}${stderr}`);
+    const parsed = JSON.parse(stdout.trim().split('\n').pop());
+    assert.equal(parsed.ok, true, JSON.stringify(parsed.checks.filter(c => c.status === 'fail')));
+    const login = parsed.checks.find(c => c.id === 'A5-L2');
+    assert.match(login.evidence, /mode=access_code/, login.evidence);
+    assert.equal((statSync(codeFile).mode & 0o777).toString(8), '600', 'the harness must not widen the code file');
+  } finally {
+    await harness.started.close();
+    try { unlinkSync(codeFile); } catch { /* لا شيء */ }
   }
 });

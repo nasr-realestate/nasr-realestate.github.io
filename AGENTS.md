@@ -20,6 +20,7 @@
 - **أمن وعزل Worker وقاعدة بيانات CRM:** راجع [`_worker/CRM-README.md`](./_worker/CRM-README.md) و[`_worker/wrangler.crm.toml`](./_worker/wrangler.crm.toml) *(يُحظر لمس قاعدة العقارات `nasr-market-db` ضمن أعمال CRM، كما يُحظر حفظ أي أسرار أو بيانات شخصية في Git)*.
 - **مواصفة وبوابة الهوية الصوتية للإعلانات:** راجع [`_data/voice_identity.json`](./_data/voice_identity.json).
 - **التحقق قبل فتح Pull Request:** شغّل `npm test` للتأكد من نجاح جميع اختبارات المستودع.
+- **تشغيل CRM الفعلي (A5):** قبل أي ادّعاء بأن طبقة تشغيلية «حيّة»، راجع [`CRM_A5_GO_LIVE_RUNBOOK.md`](./CRM_A5_GO_LIVE_RUNBOOK.md): الفحوص العشرة في `_worker/tests/live-a5-verify.mjs` تُقاد في آخر خطوة نشر (`a5=all-10-pass`)، و`npm test` الأخضر وحده لا يثبت أن البنية المنشورة تعرف المسارات. لا تُكتب قرارات في `crm_drive_file_review_decision` (append-only) إلا بتفويض صريح، ولا يُخفَّف أي حاجز جلسة/origin/CSRF لكي ينجح فحص.
 
 ---
 
