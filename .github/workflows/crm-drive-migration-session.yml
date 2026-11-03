@@ -562,7 +562,7 @@ jobs:
             if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
               fail "worktree-dirty-after-plan"
             fi
-            if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' | grep -q .; then
+            if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'seed.apply.sql' | grep -q .; then
               fail "generated-sql-left-in-tree"
             fi
             # The leak rules, measured rather than promised: the generated file was never tracked by git,
@@ -676,15 +676,37 @@ jobs:
             seed_apply="no-op(all-rows-already-anchored,sha=${seed_sha:0:12})"
             rm -f "$TMP/seed.sql"
           else
-            if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
-              --file "$TMP/seed.sql" -y > "$TMP/apply.log" 2>&1; then
-              # the log can contain the statements that were applied; count it, never print it
-              n_problems=$(grep -ciE 'error|refused|failed' "$TMP/apply.log" || true)
-              rm -f "$TMP/seed.sql" "$TMP/apply.log"
-              fail "seed-apply-failed(problems=${n_problems},sha=${seed_sha:0:12})"
+            # D1 refuses a SQL transaction sent through this channel: against a real D1 the reviewed file,
+            # wrapper and all, applied 0 of 99 statements, while the same file minus exactly the two
+            # transport lines applied all 99. So only the transport changes here -- the reviewed artifact
+            # keeps its bytes (its sha is still what the approval pins), and what is sent is asserted below
+            # to be the reviewed UPDATE lines and nothing else.
+            grep -vE '^BEGIN;$|^COMMIT;$' "$TMP/seed.sql" > "$TMP/seed.apply.sql"
+            assert_one_column_seed "$TMP/seed.apply.sql"
+            applied_statements=$(grep -c '^UPDATE ' "$TMP/seed.apply.sql" || true)
+            tx_lines=$(grep -cE '^BEGIN;$|^COMMIT;$' "$TMP/seed.apply.sql" || true)
+            reviewed_stmt_sha=$(grep '^UPDATE ' "$TMP/seed.sql" | sha256sum | awk '{print $1}')
+            applied_stmt_sha=$(grep '^UPDATE ' "$TMP/seed.apply.sql" | sha256sum | awk '{print $1}')
+            same_lines=no
+            [ "$reviewed_stmt_sha" = "$applied_stmt_sha" ] && same_lines=yes
+            if [ "$applied_statements" != "$seed_statements" ] || [ "$tx_lines" != '0' ] || [ "$same_lines" != 'yes' ]; then
+              rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
+              fail "seed-transport-not-equivalent(reviewed=${seed_statements},applied=${applied_statements},tx=${tx_lines},same_lines=${same_lines})"
             fi
-            seed_apply="applied(sha=${seed_sha:0:12},statements=${seed_statements})"
-            rm -f "$TMP/seed.sql" "$TMP/apply.log"
+            if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
+              --file "$TMP/seed.apply.sql" -y > "$TMP/apply.log" 2>&1; then
+              # the log holds the inlined statements; publish only a scrubbed headline, never a line of it
+              n_problems=$(grep -ciE 'error|refused|failed' "$TMP/apply.log" || true)
+              first_error=$(grep -iE 'error|refused|failed' "$TMP/apply.log" | head -1 \
+                | sed -E 's/[A-Za-z0-9_-]{12,}/REDACTED/g; s/[[:space:]]+/ /g' | tr -dc '[:print:]' | cut -c1-56 || true)
+              if printf '%s' "$first_error" | grep -qE '[A-Za-z0-9_-]{16,}'; then
+                first_error=redacted
+              fi
+              rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
+              fail "seed-apply-failed(problems=${n_problems},sha=${seed_sha:0:12},first=${first_error})"
+            fi
+            seed_apply="applied(sha=${seed_sha:0:12},statements=${seed_statements},tx_lines=${tx_lines},same_lines=${same_lines})"
+            rm -f "$TMP/seed.sql" "$TMP/seed.apply.sql" "$TMP/apply.log"
           fi
 
           run_runner reverify reverify
@@ -697,7 +719,13 @@ jobs:
           if ! npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
             --file "$TMP/s5.sql" -y > "$TMP/s5.log" 2>&1; then
             n_problems=$(grep -ciE 'error|refused|failed' "$TMP/s5.log" || true)
-            fail "backfill-apply-failed(problems=${n_problems},sha=${s5_sha:0:12})"
+            s5_first=$(grep -iE 'error|refused|failed' "$TMP/s5.log" | head -1 \
+              | sed -E 's/[A-Za-z0-9_-]{12,}/REDACTED/g; s/[[:space:]]+/ /g' | tr -dc '[:print:]' | cut -c1-52 || true)
+            if printf '%s' "$s5_first" | grep -qE '[A-Za-z0-9_-]{16,}'; then
+              s5_first=redacted
+            fi
+            rm -f "$TMP/s5.log"
+            fail "backfill-apply-failed(problems=${n_problems},sha=${s5_sha:0:12},first=${s5_first})"
           fi
           rm -f "$TMP/s5.sql" "$TMP/s5.log"
 
@@ -710,7 +738,7 @@ jobs:
           if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
             fail "worktree-dirty-after-session"
           fi
-          if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 's5.sql' | grep -q .; then
+          if find . -name 'drive-ref-seed.sql' -o -name 'seed.sql' -o -name 'seed.apply.sql' -o -name 's5.sql' | grep -q .; then
             fail "generated-sql-left-in-tree"
           fi
 
