@@ -5,6 +5,10 @@ name: CRM Drive Migration Session — 0010 anchor bootstrap and ledger verificat
 # integrity) run here because this runner is the only place that can reach Cloudflare: the agent sandbox has
 # no route to api.cloudflare.com by design.
 #
+# Status (3 Nov 2026): the bootstrap executed -- 99 anchors and 99 version rows on nasr-crm-test-db, read
+# back as anchored=99, needs_bootstrap=0, svv=0, ctr=0, dang=0, gaps=0, orphans=0 with digest_match=yes, and
+# 0011 was promoted afterwards. The seed is sent without its `BEGIN;`/`COMMIT;` transport lines because D1
+# refuses SQL transaction statements on this channel; the reviewed file and its sha pin are unchanged.
 # Why the seed is applied in CI even though it inlines real Drive ids: `wrangler d1 execute --file` echoes the
 # statements it runs, and an error path would put customer-owned identifiers in a log that outlives the job.
 # So every write log is redirected to a file that is only ever *counted* (never printed), nothing is uploaded
