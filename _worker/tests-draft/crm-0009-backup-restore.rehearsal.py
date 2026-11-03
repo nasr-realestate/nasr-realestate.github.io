@@ -71,9 +71,11 @@ CREATE TABLE crm_sessions (
   expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
   revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
 );
+-- seconds, the unit the Worker writes and migration 0014 compares: this session must be live for the
+-- same reason a real operator's session is live, not because of a milliseconds-vs-seconds accident.
 INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
-  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000,
-   CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL);
+  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER) - 60,
+   CAST(strftime('%s','now') AS INTEGER) + 3600, NULL);
 """.format(live=LIVE)
 
 SEED = """

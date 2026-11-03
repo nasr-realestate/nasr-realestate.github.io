@@ -248,13 +248,18 @@ const REVOKED_TOKEN = sha('session-revoked');
 const msNow = Date.now();          // session liveness is checked against wall-clock now()
 // node:sqlite binds JS numbers as REAL; the session columns CHECK for typeof = 'integer'
 const int = v => (v === null || v === undefined ? null : BigInt(Math.trunc(v)));
+// Sessions are seeded in epoch *seconds* — the unit the Worker writes `crm_sessions.expires_at` in, and
+// (since migration 0014) the unit 0009 §5.9 compares against. Before 0014 this harness fed milliseconds
+// because the trigger did, which meant its "expired" session was only expired in a unit no real session
+// is stored in. The expectations below did not change; the fixture now matches production.
+const secNow = Math.floor(msNow / 1000);
 function openSession(tokenHash, ageSeconds, ttlSeconds, revokedAfter) {
-  const created = Date.now() - ageSeconds * 1000;
+  const created = secNow - ageSeconds;
   db.prepare(`INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at, revoked_at)
       VALUES (?,?,?,?,?,?,?)`)
     .run(`sess-${tokenHash.slice(0, 8)}`, tokenHash, sha('csrf'), int(created),
-      int(created + ttlSeconds * 1000), int(created),
-      revokedAfter === null ? null : int(created + revokedAfter * 1000));
+      int(created + ttlSeconds), int(created),
+      revokedAfter === null ? null : int(created + revokedAfter));
 }
 // a live session, an expired one, a revoked one, and a second live one for binding tests
 openSession(LIVE_TOKEN, 60, 3600, null);

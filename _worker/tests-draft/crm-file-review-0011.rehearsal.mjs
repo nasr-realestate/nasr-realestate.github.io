@@ -110,13 +110,16 @@ function openCase(file, { disposition = 'register_new_file', seq = 1 } = {}) {
 const LIVE = sha('session-live');
 const EXPIRED = sha('session-expired');
 const REVOKED = sha('session-revoked');
+// epoch seconds, the unit the Worker stores and the unit migration 0014 made the 0011 §3.7 guard compare
+// against — so an "expired" session here is expired the way it is expired in the deployed database.
+const secNow = Math.floor(Date.now() / 1000);
 function openSession(tokenHash, ageSeconds, ttlSeconds, revokedAfter) {
-  const created = Date.now() - ageSeconds * 1000;
+  const created = secNow - ageSeconds;
   db.prepare(`INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at, revoked_at)
       VALUES (?,?,?,?,?,?,?)`)
     .run(`s-${tokenHash.slice(0, 8)}`, tokenHash, sha('csrf'), int(created),
-      int(created + ttlSeconds * 1000), int(created),
-      revokedAfter === null ? null : int(created + revokedAfter * 1000));
+      int(created + ttlSeconds), int(created),
+      revokedAfter === null ? null : int(created + revokedAfter));
 }
 openSession(LIVE, 60, 3600, null);
 openSession(EXPIRED, 7200, 3600, null);

@@ -278,18 +278,21 @@ allowed('advance the 99 rows to processed as the live database has them',
 check('99 file rows and 99 bootstrap versions are in place before 0011 is even offered',
       counts("SELECT COUNT(*) AS n FROM crm_drive_file_registry WHERE id LIKE 'reg-%'")['n'] == 99
       and counts('SELECT COUNT(*) AS n FROM crm_drive_file_version')['n'] == 99)
-NOWMS = "CAST(strftime('%s','now') AS INTEGER)*1000"
+# `crm_sessions` stores epoch seconds (that is what crm-worker.js writes), and migration 0014 made the
+# 0011 §3.7 guard compare in that unit — so the fixtures are seeded in seconds too, and a session this
+# rehearsal calls live or revoked is live or revoked in exactly the sense the deployed database means.
+NOWSEC = "CAST(strftime('%s','now') AS INTEGER)"
 allowed('a live session row exists for the decision rules to read',
         "INSERT INTO crm_sessions (id, token_hash, csrf_hash, created_at, expires_at, last_seen_at)"
-        " VALUES ('s-live','" + SHASH + "','" + SNAP + "'," + NOWMS + "," + NOWMS + "+3600000,"
-        + NOWMS + ")", 'sess.sql')
+        " VALUES ('s-live','" + SHASH + "','" + SNAP + "'," + NOWSEC + " - 60," + NOWSEC
+        + " + 3600," + NOWSEC + " - 60)", 'sess.sql')
 allowed('and a revoked one, which must not count as live',
         "INSERT INTO crm_sessions (id, token_hash, csrf_hash, created_at, expires_at, last_seen_at,"
-        " revoked_at) VALUES ('s-dead','" + DEAD + "','" + SNAP + "'," + NOWMS + "," + NOWMS
-        + "+3600000," + NOWMS + ",1)", 'sess2.sql')
+        " revoked_at) VALUES ('s-dead','" + DEAD + "','" + SNAP + "'," + NOWSEC + " - 60," + NOWSEC
+        + " + 3600," + NOWSEC + " - 60,1)", 'sess2.sql')
 check('the two session rows differ only in revoked_at (so the barrier cannot pass by accident)',
       counts("SELECT COUNT(*) AS live FROM crm_sessions WHERE revoked_at IS NULL"
-             " AND expires_at > CAST(strftime('%s','now') AS INTEGER)*1000")['live'] == 1)
+             " AND expires_at > CAST(strftime('%s','now') AS INTEGER)")['live'] == 1)
 
 # ---------------------------------------------------------------- 1) apply 0011, purely additive?
 print('=== 1) apply 0011 with the real migration runner ===')

@@ -70,11 +70,13 @@ CREATE TABLE crm_sessions (
   expires_at INTEGER NOT NULL CHECK (typeof(expires_at) = 'integer' AND expires_at > created_at),
   revoked_at INTEGER CHECK (revoked_at IS NULL OR typeof(revoked_at) = 'integer')
 );
+-- epoch seconds, exactly as crm-worker.js writes them and as migration 0014 makes the guard compare:
+-- 60s old with a 1h TTL (live), 2h old with a 1h TTL (expired), live but revoked_at set (revoked).
 INSERT INTO crm_sessions(id, token_hash, created_at, expires_at, revoked_at) VALUES
-  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
-  ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, NULL),
-  ('expired', '{expired}', CAST(strftime('%s','now') AS INTEGER)*1000 - 7200000, CAST(strftime('%s','now') AS INTEGER)*1000 - 3600000, NULL),
-  ('revoked', '{revoked}', CAST(strftime('%s','now') AS INTEGER)*1000 - 60000, CAST(strftime('%s','now') AS INTEGER)*1000 + 3600000, CAST(strftime('%s','now') AS INTEGER)*1000 - 1000);
+  ('live', '{live}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, NULL),
+  ('live2', '{live2}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, NULL),
+  ('expired', '{expired}', CAST(strftime('%s','now') AS INTEGER) - 7200, CAST(strftime('%s','now') AS INTEGER) - 3600, NULL),
+  ('revoked', '{revoked}', CAST(strftime('%s','now') AS INTEGER) - 60, CAST(strftime('%s','now') AS INTEGER) + 3600, CAST(strftime('%s','now') AS INTEGER) - 1);
 """
 LIVE = "1" * 64
 LIVE2 = "2" * 64
