@@ -86,16 +86,21 @@ async function buildEnv() {
     const row = sqlite.prepare('SELECT token_hash AS h FROM crm_sessions LIMIT 1').get();
     return row.h;
   })();
-  /* A5-BLOCKER (found by this suite, not invented for it): 0009 §5.9 and 0011 §… both require
-     `s.expires_at > strftime('%s','now') * 1000`, i.e. epoch *milliseconds*, while the Worker writes
-     `crm_sessions.expires_at` in epoch *seconds* (0002 does not declare a unit). So a live session as the
-     deployed login produces can never satisfy them, and every review decision except `noted` is refused by
-     the database. `alignSessionUnits()` honors the unit the ledger expects so the *rest* of the ledger can be
-     tested; A5R-2b pins the mismatch itself, and the report presents the two ways out instead of choosing one. */
-  function alignSessionUnits() {
-    sqlite.prepare('UPDATE crm_sessions SET expires_at = expires_at * 1000').run();
+  /* 0014 recreated the two session-liveness triggers so they compare `crm_sessions.expires_at` in the unit the
+     Worker writes it in (epoch seconds). The suite therefore uses the real login session, with no unit
+     adjustment anywhere — and A5R-2b pins both directions: a live session decides, a dead one does not. */
+  function sessionRow() {
+    const row = sqlite.prepare('SELECT token_hash AS tokenHash, created_at, expires_at, revoked_at FROM crm_sessions LIMIT 1').get();
+    return row;
   }
-  return { sqlite, db, env, call, tokenHash, alignSessionUnits };
+  function expireSession() {
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare('UPDATE crm_sessions SET created_at = ?, expires_at = ?').run(now - 7200, now - 60);
+  }
+  function revokeSession() {
+    sqlite.prepare('UPDATE crm_sessions SET revoked_at = ?').run(Math.floor(Date.now() / 1000));
+  }
+  return { sqlite, db, env, call, tokenHash, sessionRow, expireSession, revokeSession };
 }
 
 test('A5R-1 قائمة الحالات تُقرأ عبر API موثَّق، ومغلقة في وجه المجهول', async () => {
@@ -120,8 +125,7 @@ test('A5R-1 قائمة الحالات تُقرأ عبر API موثَّق، وم�
 });
 
 test('A5R-2 القرار يُسجَّل في السلسلة، والحالة تتحرك بواسطة 0011 نفسها لا بتراخيص الخدمة', async () => {
-  const { sqlite, call, alignSessionUnits } = await buildEnv();
-  alignSessionUnits();
+  const { sqlite, call } = await buildEnv();
   const { caseRef } = seedReviewCase(sqlite, { tag: 'DEC' });
   const noted = await call('/api/reviews/drive/decision', {
     method: 'POST',
@@ -151,18 +155,66 @@ test('A5R-2 القرار يُسجَّل في السلسلة، والحالة ت�
   assert.equal(chain.body.decisions[1].prev_decision_sha256, chain.body.decisions[0].decision_sha256, 'seq 2 chains from seq 1');
 });
 
-test('A5R-2b الحاجز كما هو اليوم: جلسة العامِل بالثواني لا تُقبل في الدفتر، والرفض مسمّى لا مكتوم', async () => {
-  const { sqlite, call } = await buildEnv();
+test('A5R-2b 0014: جلسة العامل الحيّة تقرّر، والمنتهية والمسحوبة تُرفض — لا تخفيض لأي حاجز', async () => {
+  const { sqlite, db, call, expireSession, revokeSession, sessionRow } = await buildEnv();
+  const live = sessionRow();
+  const now = Math.floor(Date.now() / 1000);
+  assert.equal(live.tokenHash.length, 64);
+  assert.ok(live.expires_at > now, 'the harness session is live in the unit the ledger now uses (seconds)');
+  // (1) a permitted state-changing decision through the real HTTP path — impossible before 0014
   const { caseRef } = seedReviewCase(sqlite, { tag: 'UNITS' });
-  const noted = await call('/api/reviews/drive/decision', { method: 'POST', body: { case_ref: caseRef, decision: 'noted', reason: 'قيد ملاحظة ينجح لأن 0011 يعفيه من شرط الجلسة' } });
-  assert.ok(noted.status < 400, JSON.stringify(noted.body));
-  const escalate = await call('/api/reviews/drive/decision', { method: 'POST', body: { case_ref: caseRef, decision: 'close_no_action', reason: 'إغلاق بلا إجراء على ملف صناعي للاختبار' } });
-  assert.equal(escalate.status, 403, JSON.stringify(escalate.body));
-  assert.equal(escalate.body.error, 'session_not_live');
-  assert.equal(escalate.body.barrier, 'file_review_decision_session_not_live');
-  const secs = sqlite.prepare('SELECT expires_at, CAST(strftime(\'%s\',\'now\') AS INTEGER) * 1000 AS needs FROM crm_sessions LIMIT 1').get();
-  assert.ok(secs.expires_at < secs.needs, 'the unit mismatch is the cause: seconds stored against milliseconds required');
-  assert.equal(sqlite.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_review_decision').get().c, 1, 'the refused decision wrote nothing');
+  const closed = await call('/api/reviews/drive/decision', {
+    method: 'POST',
+    body: { case_ref: caseRef, decision: 'close_no_action', reason: 'إغلاق بلا إجراء على ملف صناعي بعد إصلاح الوحدة' },
+  });
+  assert.ok(closed.status < 400, JSON.stringify(closed.body));
+  assert.equal(closed.body.decision.decision_seq, 1);
+  assert.equal(sqlite.prepare('SELECT status AS s FROM crm_drive_file_review_case WHERE case_ref = ?').get(caseRef).s,
+    'closed_no_action', 'the ledger still moves the case status itself, not the service');
+  // (2) the recreated triggers are the same guards with one thing changed: the unit of the expiry comparison
+  const guards = sqlite.prepare(`SELECT name, sql FROM sqlite_master WHERE type = 'trigger'
+      AND name IN ('trg_file_review_decision_session_live','trg_review_event_session_live')`).all();
+  assert.equal(guards.length, 2, 'both affected triggers exist exactly once after the recreation');
+  for (const guard of guards) {
+    assert.equal(/\*\s*1000/.test(guard.sql), false, `${guard.name} still compares in milliseconds`);
+    assert.match(guard.sql, /expires_at > CAST\(strftime\('%s', 'now'\) AS INTEGER\)\)/, `${guard.name} compares in seconds`);
+    assert.match(guard.sql, /revoked_at IS NULL/, `${guard.name} must still refuse a revoked session`);
+    assert.match(guard.sql, /token_hash = NEW\.session_hash/, `${guard.name} must still bind the row to its session`);
+  }
+  assert.match(guards.find(g => g.name === 'trg_file_review_decision_session_live').sql, /decision <> 'noted'/,
+    "0011's `noted` exemption is preserved verbatim — its behaviour did not change");
+  // (3) an expired session is still refused, by the database (service-level call, so the DB answer is what shows)
+  expireSession();
+  const expiredHash = sessionRow().tokenHash;
+  const staleCase = seedReviewCase(sqlite, { tag: 'EXPIRE' });
+  const deadDecision = await recordReviewDecisionPayload(db, {
+    case_ref: staleCase.caseRef, decision: 'schedule_rehash', reason: 'قرار بجلسة منتهية يجب أن يُرفض',
+  }, { actor: 'منى', sessionHash: expiredHash });
+  assert.deepEqual({ error: deadDecision.error, status: deadDecision.status, barrier: deadDecision.barrier },
+    { error: 'session_not_live', status: 403, barrier: 'file_review_decision_session_not_live' });
+  // (4) a revoked session is refused too
+  const revokedCase = seedReviewCase(sqlite, { tag: 'REVOKE' });
+  revokeSession();
+  const revokedDecision = await recordReviewDecisionPayload(db, {
+    case_ref: revokedCase.caseRef, decision: 'reject_duplicate_claim', reason: 'قرار بجلسة مسحوبة يجب أن يُرفض',
+  }, { actor: 'منى', sessionHash: expiredHash });
+  assert.equal(revokedDecision.error, 'session_not_live');
+  // (5) `noted` keeps its 0011 exemption even on a dead session — the fix did not "improve" that away
+  const noteAnyway = await recordReviewDecisionPayload(db, {
+    case_ref: revokedCase.caseRef, decision: 'noted', reason: 'ملاحظة تُقبل حتى بجلسة ميتة كما في 0011',
+  }, { actor: 'منى', sessionHash: expiredHash });
+  assert.ok(noteAnyway.decision, JSON.stringify(noteAnyway));
+  // (6) and the HTTP path refuses a session the worker itself no longer accepts
+  const afterExpiry = await call('/api/reviews/drive/decision', {
+    method: 'POST', body: { case_ref: staleCase.caseRef, decision: 'noted', reason: 'لازم تُرفض قبل أن تصل للخدمة' },
+  });
+  assert.equal(afterExpiry.status, 401, JSON.stringify(afterExpiry.body));
+  assert.equal(afterExpiry.body.error, 'authentication_required');
+  assert.equal(
+    sqlite.prepare('SELECT COUNT(*) AS c FROM crm_drive_file_review_decision WHERE case_ref = ? AND decision <> ?')
+      .get(revokedCase.caseRef, 'noted').c, 0,
+    'the refusals wrote nothing to the ledger');
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS c FROM crm_contacts').get().c, 0, 'no customer row was touched');
 });
 
 test('A5R-3 المدخلات المرفوضة: سبب قصير، أو رقم هاتف داخل السبب، أو قرار غير موجود', async () => {
@@ -188,8 +240,7 @@ test('A5R-3 المدخلات المرفوضة: سبب قصير، أو رقم ه�
 });
 
 test('A5R-4 السجل لا يُعاد كتابته: append-only، ومنقّح خارج السلسلة مرفوض، وقرار بلا جلسة حيّة مرفوض', async () => {
-  const { sqlite, db, tokenHash, call, alignSessionUnits } = await buildEnv();
-  alignSessionUnits();
+  const { sqlite, db, tokenHash, call } = await buildEnv();
   const { caseRef } = seedReviewCase(sqlite, { tag: 'CHAIN' });
   await call('/api/reviews/drive/decision', { method: 'POST', body: { case_ref: caseRef, decision: 'noted', reason: 'قيد أول في سلسلة الاختبار', reviewer: 'منى' } });
   assert.throws(() => sqlite.prepare(`UPDATE crm_drive_file_review_decision SET reason = 'عُدِّلت' WHERE case_ref = '${caseRef}'`).run(),
@@ -250,8 +301,7 @@ test('A5R-5 لا قرار لحالة بلا سجل إصدار موثَّق — �
 });
 
 test('A5R-6 الصدأ يُرى: ملف ظهر إصدار أحدث يجعل إغلاق الحالة مرفوضًا', async () => {
-  const { sqlite, call, alignSessionUnits } = await buildEnv();
-  alignSessionUnits();
+  const { sqlite, call } = await buildEnv();
   const { caseRef, ref, digest } = seedReviewCase(sqlite, { tag: 'STALE' });
   sqlite.prepare(`INSERT INTO crm_drive_file_version
       (version_ref, drive_ref, version_seq, content_sha256, evidence_class, size_bytes, drive_modified_at,
@@ -271,8 +321,7 @@ test('A5R-6 الصدأ يُرى: ملف ظهر إصدار أحدث يجعل إغ
 });
 
 test('A5R-7 الربط اقتراحٌ بعد قرار، ولا يلمس جدول عميل واحدًا', async () => {
-  const { sqlite, db, tokenHash, call, alignSessionUnits } = await buildEnv();
-  alignSessionUnits();
+  const { sqlite, db, tokenHash, call } = await buildEnv();
   const { caseRef } = seedReviewCase(sqlite, { tag: 'LINK' });
   sqlite.prepare(`INSERT INTO crm_contacts (id, name, communication_consent, created_at, updated_at)
       VALUES ('synth-contact-l1', 'عميل صناعي للربط', 'request_only', '2026-11-01T09:00:00.000Z', '2026-11-01T09:00:00.000Z')`).run();
@@ -318,8 +367,7 @@ test('A5R-8 لا Drive API، ولا تعديل لملف أصلي: الحظر م�
 });
 
 test('A5R-9 audit: كل قرار يترك أثرًا مبصَمًا في سجل التشغيل', async () => {
-  const { sqlite, call, alignSessionUnits } = await buildEnv();
-  alignSessionUnits();
+  const { sqlite, call } = await buildEnv();
   const { caseRef } = seedReviewCase(sqlite, { tag: 'AUD' });
   await call('/api/reviews/drive/decision', { method: 'POST', body: { case_ref: caseRef, decision: 'schedule_rehash', reason: 'يلزم إعادة حساب البصمة بعد تعديل الوصف', reviewer: 'منى' } });
   const row = sqlite.prepare(`SELECT entity, entity_id, action, actor, detail_sha256 FROM crm_operational_audit_log

@@ -29,7 +29,7 @@ const REVIEW_DECISION_LABELS = {
   close_no_action: 'إغلاق بلا إجراء',
   recommend_registration: 'توصية بتسجيل الملف في الفهرس',
   schedule_rehash: 'جدولة إعادة حساب البصمة',
-  flag_description_mismatch: 'رصد اختلاف بين الوصف والبيانات',
+  reject_duplicate_claim: 'رفض ادّعاء تكرار — لا دمج ولا إلغاء سجل بقرار من الواجهة',
   link_proposed: 'اقتراح ربط بعميل (بلا تطبيق)',
   unlink_recorded: 'توثيق فك الربط',
   escalate_to_contact_review: 'تصعيد إلى مراجعة جهة اتصال',

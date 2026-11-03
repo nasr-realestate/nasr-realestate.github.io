@@ -7,9 +7,10 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { CRMClient, CRMApiError } from '../crm-ui/crm-client.js';
+import { REVIEW_DECISIONS } from '../crm-drive-file-review.js';
 import {
   createCrmA5Controller, refusalMessage, renderCustomerFile, renderQueues, renderRequestCard,
-  renderRequestDetail, renderReviewCase, renderTimeline,
+  renderRequestDetail, renderReviewCase, renderTimeline, REVIEW_DECISION_LABELS,
 } from '../crm-ui/crm-assets/crm-a5-ui.js';
 
 /* ── DOM stub صغير: يكفي العرض، وinnerHTML نص لا HTML (نفس قاعدة بقية الاختبارات) ───────── */
@@ -315,4 +316,18 @@ test('A5-UI-10 اللوحة لا تطلب بيانات قبل الجلسة، و�
   assert.deepEqual(calls, ['listRequests', 'operationalQueues', 'listDriveReviews']);
   await controller.unlock();
   assert.deepEqual(calls.slice(3), ['listRequests', 'listDriveReviews'], 'unlock refreshes the two read surfaces, no writes');
+});
+
+test('A5-UI-11 مفردات القرار في اللوحة هي مفردات الدفتر نفسها — لا قرار مُخترع ولا خيار زائد', async () => {
+  const html = await readFile(new URL('../crm-ui/crm.html', import.meta.url), 'utf8');
+  const block = html.slice(html.indexOf('id="a5-review-decision"'));
+  const options = [...block.slice(0, block.indexOf('</select>')).matchAll(/value="([a-z_]+)"/g)].map(m => m[1]);
+  assert.ok(options.length >= 6, 'the decision picker must offer the real state-changing decisions');
+  for (const value of options) {
+    assert.equal(REVIEW_DECISIONS.has(value), true, `${value} is not a decision the 0011 ledger accepts`);
+  }
+  assert.deepEqual([...REVIEW_DECISIONS].sort(), Object.keys(REVIEW_DECISION_LABELS).sort(),
+    'the label map covers the ledger vocabulary exactly — a missing label means an unreachable decision');
+  assert.equal(/merge_contacts|auto_match|apply_link|flag_description_mismatch/.test(html), false,
+    'the internal screen never offers a merge or an auto-link verb');
 });
