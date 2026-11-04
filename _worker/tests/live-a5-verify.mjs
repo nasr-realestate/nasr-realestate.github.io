@@ -25,6 +25,8 @@ import crypto from 'node:crypto';
 import { readFileSync, writeFileSync, chmodSync, existsSync } from 'node:fs';
 
 import { CRMClient } from '../crm-ui/crm-client.js';
+import { a5RunIdentity, apiPhone, appendPendingEvent, derivedPhone, submissionKey, tagOf } from '../../scripts/a5-l2.mjs';
+import { execFileSync } from 'node:child_process';
 
 const SYNTH_PREFIX = 'TEST ONLY';
 const SESSION_COOKIE = '__Host-crm_session';
@@ -111,23 +113,41 @@ const iso = (offsetMs = 0) => new Date(Date.now() + offsetMs).toISOString().repl
  * فارغ ولا «skipped» صامت: كل تجاوز مسمّى بسبب محدد.
  */
 export async function runA5LiveChecks(transport, options = {}) {
-  const runId = crypto.randomBytes(4).toString('hex');
-  const { tag = `${SYNTH_PREFIX} A5 ${runId}`, expireHook = null, stateFile = '',
-    writeDecision = 'none', accessTicket = '' } = options;
-  // مفاتيح idempotency لها شكل صارم (لا مسافات): تُبنى من معرّف التشغيل وحده، والاسم العربي يبقى للوسم.
-  const key = suffix => `a5live-${runId}-${suffix}`;
+  // A5 L2: identity is run-scoped. `tag` goes into real DB tag columns (review_note/actor/reviewer),
+  // displayName is ONLY a human-facing label and is NEVER used for classification or isolation.
+  // L1 (tag + derived keys) is NOT an ownership proof; it is only a namespace marker. Ownership
+  // comes exclusively from the hash-chained L2 result ledger written by scripts/a5-l2.mjs.
+  const identity = options.identity || a5RunIdentity(process.env);
+  const runTag = identity.run_tag;
+  const { expireHook = null, stateFile = '', writeDecision = 'none', accessTicket = '' } = options;
+  const tag = tagOf(runTag);
+  const displayName = `${SYNTH_PREFIX} A5 ${runTag}`;
+  const key = suffix => submissionKey(runTag, suffix);
+  const l2Pending = String(options.l2Pending || process.env.A5_L2_PENDING || '').trim();
+  let pendingWrites = 0;
+  const l2 = (event) => { if (appendPendingEvent(l2Pending, { ...event, run_id: identity.run_id,
+    run_attempt: identity.run_attempt, run_tag: runTag })) pendingWrites += 1; };
+  // A5 L2: after each successful step that created rows, publish an already-resolved ledger.
+  // If this command fails the step fails too — evidence publication is never a best-effort bypass.
+  const checkpointCmd = String(options.l2CheckpointCmd || process.env.A5_L2_CHECKPOINT_CMD || '').trim();
+  const checkpoint = checkpointCmd
+    ? () => execFileSync('/bin/sh', ['-c', checkpointCmd], { stdio: 'inherit', env: process.env })
+    : null;
   const accessCode = String(options.accessCode || '').trim();
   if (!accessTicket && accessCode.length < 8) {
     throw new Error('one of accessTicket, CRM_A5_ACCESS_CODE or CRM_LIVE_ACCESS_CODE_FILE is required');
   }
   const { client, raw, jar } = transport;
   const checks = [];
-  const created = { contact_id: '', request_ids: [], interaction_ids: [], followup_ids: [], review_case_ref: '' };
+  const created = { contact_id: '', request_ids: [], interaction_ids: [], followup_ids: [],
+    review_case_ref: '', decision_sha256: '' };
   const notes = [];
   const run = async (id, name, fn) => {
+    const before = pendingWrites;
     try {
       const evidence = await fn();
       checks.push({ id, name, status: 'pass', evidence: evidence || '' });
+      if (checkpoint && pendingWrites > before) checkpoint();
     } catch (error) {
       if (error instanceof StepError) checks.push({ id, name, status: 'fail', evidence: `${error.code}${error.detail ? `:${error.detail}` : ''}` });
       else checks.push({ id, name, status: 'fail', evidence: `${error?.name || 'error'}:${String(error?.message || '').slice(0, 140)}` });
@@ -185,21 +205,35 @@ export async function runA5LiveChecks(transport, options = {}) {
   });
 
   // ── 4) عميل صناعي برقمين + البحث برقم الهاتف عبر نفس مسار العميل ────────────────────────────────
-  const phoneA = '01000000011';
-  const phoneB = '01000000012';
+  // L2: full keys are derived from run_tag, never shared constants. The display name stays
+  // `TEST ONLY` for humans only; `review_note` carries the DB tag. Strict 201 is preserved.
+  const phoneA = apiPhone(runTag, 'contact-primary');
+  const phoneB = apiPhone(runTag, 'contact-secondary');
+  const negativePhone = derivedPhone(runTag, 'negative');
   await run('A5-L4', 'عميل صناعي برقمين، والبحث برقم الهاتف يجده (والرقم غير المسجّل لا يجد أحدًا)', async () => {
-    const made = await client.createContact({ name: `${tag}`, phones: [{ phone: phoneA, is_primary: true }] }, key('c1'));
+    const made = await client.createContact({ name: displayName,
+      review_note: tag, phones: [{ phone: phoneA, is_primary: true }] }, key('c1'));
     created.contact_id = made.contact_id;
     must(created.contact_id, 'contact-not-created');
-    const second = await client.addPhone(created.contact_id, { phone: phoneB, label: 'ثانٍ' });
+    // IDs come from the Worker's 201 response; never from a count or a display name.
+    l2({ table: 'crm_contacts', lookup_value: created.contact_id, observed_id: created.contact_id,
+      id_source: 'http-201-body', step: 'A5-L4' });
+    const second = await client.addPhone(created.contact_id, { phone: phoneB, label: 'ثانٍ', source_ref: tag });
     must(second?.ok !== false, 'second-phone-refused');
+    l2({ table: 'crm_contact_phones', lookup_value: derivedPhone(runTag, 'contact-primary'),
+      id_source: 'http-201-body+exact-key', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L4' });
+    l2({ table: 'crm_contact_phones', lookup_value: derivedPhone(runTag, 'contact-secondary'),
+      observed_id: second?.phone_id || '', id_source: 'http-response+exact-key',
+      parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L4' });
+    l2({ table: 'crm_idempotency_receipts', lookup_value: key('c1'),
+      id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'resource_id' }, step: 'A5-L4' });
     const byA = await client.searchContacts(phoneA.slice(-8));
     const byB = await client.searchContacts(phoneB.slice(-8));
     const hitA = (byA?.contacts || []).some(c => c.id === created.contact_id);
     const hitB = (byB?.contacts || []).some(c => c.id === created.contact_id);
     must(hitA, 'phone-search-missed-primary');
     must(hitB, 'phone-search-missed-secondary');
-    const none = await client.searchContacts('01099999998');
+    const none = await client.searchContacts(negativePhone);
     must((none?.contacts || []).length === 0, 'phone-search-false-positive');
     return `phones=2,found_by_both=yes,negative=0`;
   });
@@ -211,11 +245,15 @@ export async function runA5LiveChecks(transport, options = {}) {
     const buy = await client.createRequest({ ...requestBody, contact_id: created.contact_id, actor: tag }, key('r1'));
     must(buy?.request?.id, 'request-not-created', JSON.stringify(buy).slice(0, 120));
     created.request_ids.push(buy.request.id);
+    l2({ table: 'crm_customer_requests', lookup_value: buy.request.id, observed_id: buy.request.id,
+      id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L5' });
     must(buy.request.status === 'new' && buy.request.city === 'مدينة نصر', 'request-shape', JSON.stringify(buy.request).slice(0, 140));
     const rent = await client.createRequest({ ...requestBody, kind: 'rent', budget_min: 12000, budget_max: 18000,
       contact_id: created.contact_id, actor: tag }, key('r2'));
     must(rent?.request?.id && rent.request.id !== buy.request.id, 'rent-not-independent');
     created.request_ids.push(rent.request.id);
+    l2({ table: 'crm_customer_requests', lookup_value: rent.request.id, observed_id: rent.request.id,
+      id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L5' });
     let dupCode = '';
     try { await client.createRequest({ ...requestBody, contact_id: created.contact_id, actor: tag }, key('r1b')); }
     catch (error) { dupCode = `${error.status}:${error.code}`; }
@@ -240,6 +278,8 @@ export async function runA5LiveChecks(transport, options = {}) {
       next_step: 'إرسال وحدات', next_followup_at: iso(2 * 3600_000), source: 'phone', actor: tag }, key('i1'));
     must(call?.interaction?.id, 'interaction-not-created', JSON.stringify(call).slice(0, 120));
     created.interaction_ids.push(call.interaction.id);
+    l2({ table: 'crm_interactions', lookup_value: call.interaction.id, observed_id: call.interaction.id,
+      id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L6' });
     let replay = '';
     try { await client.recordInteraction({ contact_id: created.contact_id, request_id: created.request_ids[0],
       kind: 'call', occurred_at: iso(-3600_000), summary: `${SYNTH_PREFIX} A5 — مكالمة صناعية لتحديد الميزانية`, source: 'phone', actor: tag }); }
@@ -255,6 +295,8 @@ export async function runA5LiveChecks(transport, options = {}) {
       due_at: iso(2 * 3600_000), actor: tag });
     must(fu?.followup?.id, 'followup-not-created', JSON.stringify(fu).slice(0, 120));
     created.followup_ids.push(fu.followup.id);
+    l2({ table: 'crm_followups', lookup_value: fu.followup.id, observed_id: fu.followup.id,
+      id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L6' });
     // السندتان تُقسمان بمهلة ساعتين (0013): «مستحقة» أبعد من الآن+ساعتان، و«متأخرة» داخلها.
     const soon = await client.operationalQueues({ now: iso(-12 * 3600_000), limit: 500 });
     const later = await client.operationalQueues({ now: iso(24 * 3600_000), limit: 500 });
@@ -313,6 +355,9 @@ export async function runA5LiveChecks(transport, options = {}) {
     } catch (error) { writeErr = `${error?.status || 0}:${error?.code || error?.name || 'error'}`; }
     must(made?.decision?.decision_seq >= 1, 'decision-not-recorded',
       writeErr || `${made?.error || ''}:${JSON.stringify(made).slice(0, 120)}`);
+    created.decision_sha256 = made.decision.decision_sha256;
+    l2({ table: 'crm_drive_file_review_decision', lookup_value: made.decision.decision_sha256,
+      id_source: 'http-201-body', parent: { table: 'crm_drive_file_review_case', column: 'case_ref' }, step: 'A5-L8' });
     created.review_case_ref = probeCaseRef;
     const detail = await client.getDriveReview(probeCaseRef);
     must((detail?.decisions || []).some(d => d.decision_seq === made.decision.decision_seq), 'decision-not-in-chain');
@@ -387,7 +432,10 @@ export async function main() {
     accessTicket, accessCode: accessTicket ? '' : readAccessCode(), expireHook, stateFile,
     writeDecision: ['none', 'noted', 'state-changing'].includes(process.env.CRM_A5_WRITE_DECISION || '')
       ? process.env.CRM_A5_WRITE_DECISION.trim() : 'none',
-    tag: `${SYNTH_PREFIX} A5 ${process.env.CRM_A5_RUN_TAG || crypto.randomBytes(3).toString('hex')}`,
+    // A5_L2_NONCE is fixed once per workflow run, so every step (job, verifier, seed, finalize)
+    // derives the SAME run_tag. It is NOT a secret and is NOT used as an ownership proof.
+    identity: a5RunIdentity(process.env),
+    l2Pending: String(process.env.A5_L2_PENDING || '').trim(),
   });
   const passed = summary.checks.filter(c => c.status === 'pass').length;
   const failedCount = summary.checks.filter(c => c.status === 'fail').length;

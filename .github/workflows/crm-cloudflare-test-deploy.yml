@@ -181,6 +181,11 @@ jobs:
     needs: env-protection-audit
     runs-on: ubuntu-latest
     environment: crm-test-deploy
+    # A5 L2: `actions: read` is a READ-ONLY addition needed to fetch the previous run's published
+    # result ledger for A→B re-verification. No write permission, no protection/approval change.
+    permissions:
+      contents: read
+      actions: read
     if: >-
       github.repository == 'nasr-realestate/nasr-realestate.github.io'
       && inputs.authorize_deploy == 'DEPLOY-TEST-DB-and-WORKER'
@@ -516,6 +521,65 @@ jobs:
           console.log(`schema-guard-ok:migrations=${expected.length};tables=${requiredTables.length};views=${requiredViews.length};triggers=${requiredTriggers.length}`);
           NODE
 
+      # ── A5 L2: the ONLY accepted ownership proof ──────────────────────────────────────────
+      # L0 (pre-write intent) and L1 (tag + derived keys) are NOT proofs: every field they use is
+      # client-controlled through an ordinary CRM session, and run_tag is public. This step loads
+      # the previous runs' hash-chained result ledgers, takes a read-only baseline, and STOPS the
+      # run (before any write) if any synthetic row in scope is `unknown`. No deletion, no bypass.
+      - name: A5 L2 — prior ledgers, read-only baseline, ownership preflight
+        id: a5_l2
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          L2_ROOT="$RUNNER_TEMP/a5-l2"
+          L2_DIR="$L2_ROOT/current"
+          L2_PRIOR="$L2_ROOT/prior"
+          mkdir -p "$L2_DIR" "$L2_PRIOR"
+          nonce=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(4).toString("hex"));')
+          tag="a5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${nonce}"
+          {
+            echo "A5_L2_DIR=$L2_DIR"
+            echo "A5_L2_PRIOR_DIR=$L2_PRIOR"
+            echo "A5_L2_PENDING=$L2_DIR/pending.jsonl"
+            echo "A5_L2_NONCE=$nonce"
+            echo "A5_L2_RUN_TAG=$tag"
+            echo "A5_L2_CHECKPOINT_CMD=node scripts/a5-l2.mjs checkpoint --dir $L2_DIR --ledgers $L2_PRIOR"
+          } >> "$GITHUB_ENV"
+
+          # Prior ledgers are pipeline artifacts, never DB rows. A missing artifact is reported,
+          # not swallowed: if unproven synthetic rows exist, preflight below stops the run.
+          if run_ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/crm-cloudflare-test-deploy.yml/runs?per_page=10&status=completed" \
+                       --jq '.workflow_runs[].id' 2>/dev/null); then
+            for rid in $run_ids; do
+              dl="$L2_ROOT/dl-$rid"
+              mkdir -p "$dl"
+              if gh run download "$rid" --repo "$GITHUB_REPOSITORY" --name a5-l2-ledger --dir "$dl" >/dev/null 2>&1; then
+                for f in "$dl"/*.json; do
+                  if [ -f "$f" ]; then cp "$f" "$L2_PRIOR/dl-$rid-$(basename "$f")"; fi
+                done
+              else
+                echo "a5-l2: no published ledger artifact for run $rid"
+              fi
+            done
+          else
+            echo "a5-l2: prior workflow-run inventory unreadable; treating prior ledgers as absent"
+          fi
+
+          node scripts/a5-l2.mjs begin --dir "$L2_DIR"
+          if ! node scripts/a5-l2.mjs preflight --dir "$L2_DIR" --ledgers "$L2_PRIOR" \
+                 > "$L2_ROOT/preflight.json"; then
+            echo "::error::A5 L2 preflight stopped the run (unknown synthetic-row ownership). No write, no deletion, no bypass."
+            jq -c '{ok, reason, ledgers, rows, verdicts: [.verdicts[] | select(.verdict != "previous-a5-proven" and .verdict != "baseline-origin")]}' \
+              "$L2_ROOT/preflight.json"
+            exit 1
+          fi
+          jq -c '{ok, reason, ledgers, rows, proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
+            "$L2_ROOT/preflight.json"
+          echo "a5-l2: ownership preflight OK for run_tag=$tag"
+
       - name: Deploy nasr-crm-api-test and run live A5 E2E
         id: e2e
         shell: bash
@@ -596,7 +660,7 @@ jobs:
           # verifier's one-line JSON stays parseable. With a5_write_decision=none (the default) the
           # read-only path is unchanged: nine checks plus logout-then-401, no decision row, no expiry.
           run_a5_live() {
-            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_residue a5_code_env=''
+            local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_code_env=''
             : > "$a5_state"
             chmod 600 "$a5_state"
             rm -f "$a5_state.csrf"
@@ -628,7 +692,7 @@ jobs:
               unset CRM_A5_EXPIRE_CMD || true
             fi
             if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_A5_ORIGIN="$BASE_URL" CRM_A5_STATE_FILE="$a5_state" \
-                 CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="${a5_n1:-}" \
+                 CRM_A5_TICKET="${a5_n1:-}" \
                  CRM_LIVE_ACCESS_CODE_FILE="${a5_code_env:-}" \
                  CRM_A5_WRITE_DECISION="${A5_WRITE_DECISION_INPUT:-none}" \
                  node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
@@ -638,11 +702,10 @@ jobs:
             a5_live=$(jq -r 'if ([.checks[] | select(.status == "fail")] | length) == 0 then "all-\(.checks | length)-pass" else "fail:" + ([.checks[] | select(.status == "fail") | .id] | join(",")) end' "$TMP/live_a5.json" 2>/dev/null || echo 'unparsable')
             jq -r '.checks[] | "  \(.status) \(.id) \(.evidence // "")"' "$TMP/live_a5.json" 2>/dev/null \
               | sed -E 's/[0-9]{9,}/<digits>/g' | head -14 || true
-            A5_CLEAN_SQL="DELETE FROM crm_request_listing_link WHERE request_id IN (SELECT id FROM crm_customer_requests WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%')); UPDATE crm_followups SET status = 'done', outcome = 'TEST ONLY A5 - cleanup', completed_at = datetime('now') WHERE status = 'pending' AND contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_followups WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); UPDATE crm_customer_requests SET status = 'closed' WHERE status NOT IN ('closed','cancelled') AND contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_customer_requests WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%'); DELETE FROM crm_contact_phones WHERE contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY A5%');"
-            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$A5_CLEAN_SQL" >/dev/null 2>&1 \
-              || echo "A5 cleanup: append-only rows are kept by design"
-            a5_residue=$(npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "SELECT (SELECT COUNT(*) FROM crm_interactions WHERE summary LIKE 'TEST ONLY A5%' OR created_by LIKE 'TEST ONLY A5%') AS inter, (SELECT COUNT(*) FROM crm_request_status_history WHERE reason LIKE 'TEST ONLY A5%' OR actor LIKE 'TEST ONLY A5%') AS hist, (SELECT COUNT(*) FROM crm_operational_audit_log WHERE actor LIKE 'TEST ONLY A5%') AS audit, (SELECT COUNT(*) FROM crm_drive_file_review_decision WHERE reviewer LIKE 'TEST ONLY A5%') AS review;" 2>/dev/null | jq -r '.results[0] | "inter=\(.inter) hist=\(.hist) audit=\(.audit) review=\(.review)"' || echo 'unknown')
-            echo "::notice::A5 synthetic residue left in nasr-crm-test-db (append-only by design): ${a5_residue}"
+            # A5 L2: NO cleanup. Every successfully written row is retained together with its
+            # hash-chained L2 event so the next run can re-verify it. Deleting synthetic rows —
+            # or a broad DELETE that could reach non-synthetic rows — is forbidden.
+            echo "::notice::A5 L2: synthetic rows retained with result evidence in $A5_L2_DIR (no cleanup, no deletion)"
             if [ "${a5_live#fail}" != "$a5_live" ]; then return 1; fi
             return 0
           }
@@ -658,8 +721,10 @@ jobs:
             -o "$TMP/enable_sub.json" "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/subdomain" >/dev/null 2>&1 || true
           deployed='yes'
 
-          SYNTH_CLEAN_SQL="DELETE FROM crm_conversation_messages WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_smart_alerts WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversation_insights WHERE conversation_id IN (SELECT id FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'); DELETE FROM crm_conversations WHERE source_ref='post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%'; DELETE FROM crm_contact_phones WHERE phone_key='201099990077' OR contact_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_idempotency_receipts WHERE submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%' OR resource_id IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%'); DELETE FROM crm_contacts WHERE name LIKE 'TEST ONLY%'; DELETE FROM crm_sessions WHERE revoked_at IS NOT NULL; DELETE FROM crm_auth_attempts;"
-          d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/pre_synth_clean.log" 2>&1 || true
+          # A5 L2: pre-run cleanup REMOVED. The old SQL deleted every revoked session and every
+          # crm_auth_attempts row (non-synthetic too), deleted by display-name prefixes, and was
+          # the reason a failed run left an unprovable contact that made the next run return 200.
+          # Isolation now comes from run-scoped full keys + per-row L2 evidence, not deletion.
 
           ci_n1='' ci_n2='' ci_n3='' ci_h1='' ci_h2='' ci_h3=''
           if [ -s "$TMP/access_code" ]; then
@@ -683,7 +748,8 @@ jobs:
 
           phase='live-10-checks-http-and-ui'
           if ! env CRM_TEST_BASE_URL="$BASE_URL" $live10_env node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
-            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
+            # A5 L2: nothing is deleted on failure. The `if: always()` L2 step publishes the
+            # ledger for the rows that WERE proven, so the next run can re-verify them.
             result="live10-$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live10.err" | tail -c 52 || echo unknown)"
             finish
             exit 1
@@ -695,7 +761,6 @@ jobs:
           a5_rc=0
           run_a5_live || a5_rc=$?
           if [ "$a5_rc" != '0' ]; then
-            d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" >/dev/null 2>&1 || true
             result='live-a5-operational-checks-failed'
             finish
             exit 1
@@ -717,12 +782,10 @@ jobs:
             fi
           fi
 
-          phase='post-verify-cleanup-and-invariance'
-          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$SYNTH_CLEAN_SQL" > "$TMP/post_synth_clean.log" 2>&1; then
-            result='post-verify-synth-cleanup-failed'
-            finish
-            exit 1
-          fi
+          phase='post-verify-non-interference-invariance'
+          # Thresholds UNCHANGED. The counts below already exclude `TEST ONLY` display names, so
+          # keeping proven synthetic rows does not change them. They prove non-interference with
+          # the original rows without relying on `COUNT(*)` of the synthetic namespace.
           FINAL_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
           if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
             result='post-verify-counts-query-failed'
@@ -745,6 +808,37 @@ jobs:
           phase='completed'
           result='deployed-a5-verified'
           finish
+
+      # A5 L2: publish the final, hash-chained result ledger even when the run failed part-way.
+      # This is the partial-failure guarantee: every row that was successfully written and proven
+      # carries its own event. A hard cancellation BEFORE any event leaves no ledger, so the next
+      # run classifies those rows `unknown` and stops — there is NO `no-ledger(hard-cancel)` path.
+      - name: A5 L2 — publish final result ledger (always, incl. partial failure)
+        if: always()
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
+          A5_L2_E2E_OUTCOME: ${{ steps.e2e.outcome }}
+          A5_L2_E2E_PHASE: ${{ steps.e2e.outputs.phase }}
+        run: |
+          set -euo pipefail
+          if [ -z "${A5_L2_DIR:-}" ] || [ -z "${A5_L2_PRIOR_DIR:-}" ]; then
+            echo "::error::A5 L2: run identity was never established; NO ledger published. The next run must stop on unknown ownership."
+            exit 1
+          fi
+          conclusion='failure'
+          if [ "$A5_L2_E2E_OUTCOME" = 'success' ]; then conclusion='success'; fi
+          node scripts/a5-l2.mjs finalize --dir "$A5_L2_DIR" --ledgers "$A5_L2_PRIOR_DIR" \
+            --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME}:${A5_L2_E2E_PHASE:-unknown}"
+
+      - name: Publish A5 L2 result ledger artifact (digests only, no customer data)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a5-l2-ledger
+          path: ${{ runner.temp }}/a5-l2/current/a5-l2-*.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Verify nasr-market-db invariance (read-only)
         id: invariance

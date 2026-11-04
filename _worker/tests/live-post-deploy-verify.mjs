@@ -4,7 +4,9 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
+import { a5RunIdentity, apiPhone, appendPendingEvent, derivedPhone, submissionKey, tagOf, conversationUid } from '../../scripts/a5-l2.mjs';
 
 const baseUrl = String(process.env.CRM_TEST_BASE_URL || '').trim().replace(/\/+$/, '');
 const codeFile = String(process.env.CRM_LIVE_ACCESS_CODE_FILE || '').trim();
@@ -203,13 +205,27 @@ async function verifyLiveConversationsAndAlerts(auth) {
 
 async function verifySyntheticManualLink(auth) {
   activeStep = 'check7b-manual-link';
+  // A5 L2: every key in this step is derived from this run's tag. No constant phone, no random
+  // display-name-only identity, no reuse of a previous run's conversation_uid or receipt key.
+  // The strict 201 assertion below is UNCHANGED — a duplicate/200 must still fail the run.
+  const identity = a5RunIdentity(process.env);
+  const runTag = identity.run_tag;
+  const tag = tagOf(runTag);
+  const uid = conversationUid(runTag);
+  const synthPhone = apiPhone(runTag, 'live10-manual-link');
+  const synthKey = submissionKey(runTag, 'live10-contact');
+  const l2Pending = String(process.env.A5_L2_PENDING || '').trim();
+  const l2 = (event) => appendPendingEvent(l2Pending, { ...event, run_id: identity.run_id,
+    run_attempt: identity.run_attempt, run_tag: runTag });
+
   const imp = await apiCall('/api/conversations/import', {
     method: 'POST',
     cookie: auth.cookiePair,
     csrf: auth.csrf,
     body: {
       chat_title: 'TEST ONLY — محادثة فحص ما بعد النشر',
-      source_ref: 'post_deploy_e2e_synthetic',
+      conversation_uid: uid,
+      source_ref: tag,
       raw_text: '30/10/2026, 2:00 م - عميل فحص: تجربة ربط يدوي آمن بعد النشر',
     },
   });
@@ -217,20 +233,31 @@ async function verifySyntheticManualLink(auth) {
   const convId = String(imp.data.conversation_id || '');
   assert.ok(convId.length >= 8, 'synth-conv-id');
   assert.equal(imp.data.match_status, 'unmatched_review', 'synth-imp-match');
+  l2({ table: 'crm_conversations', lookup_value: uid, observed_id: convId,
+    id_source: 'http-response', step: 'check7b-manual-link' });
 
   const cRes = await apiCall('/api/contacts', {
     method: 'POST',
     cookie: auth.cookiePair,
     csrf: auth.csrf,
-    key: `post-deploy-synth-${crypto.randomUUID()}`,
+    key: synthKey,
     body: {
       name: 'TEST ONLY — عميل فحص الربط',
-      phones: [{ phone: '01099990077', label: 'فحص', is_primary: true }],
+      review_note: tag,
+      phones: [{ phone: synthPhone, label: 'فحص', is_primary: true }],
     },
   });
   assert.equal(cRes.status, 201, `synth-contact-${cRes.status}`);
   const contactId = String(cRes.data.contact_id || '');
   assert.ok(contactId.length >= 8, 'synth-contact-id');
+  l2({ table: 'crm_contacts', lookup_value: contactId, observed_id: contactId,
+    id_source: 'http-201-body', step: 'check7b-manual-link' });
+  l2({ table: 'crm_contact_phones', lookup_value: derivedPhone(runTag, 'live10-manual-link'),
+    id_source: 'http-201-body+exact-key', parent: { table: 'crm_contacts', column: 'contact_id' },
+    step: 'check7b-manual-link' });
+  l2({ table: 'crm_idempotency_receipts', lookup_value: synthKey,
+    id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'resource_id' },
+    step: 'check7b-manual-link' });
 
   const linkRes = await apiCall(`/api/conversations/${convId}/link-contact`, {
     method: 'POST',
@@ -254,6 +281,11 @@ async function verifySyntheticManualLink(auth) {
     cookie: auth.cookiePair,
     csrf: auth.csrf,
   });
+
+  // A5 L2: publish the resolved ledger for this step before the run moves on. Failure here fails
+  // the whole verification — no silent best-effort evidence path.
+  const checkpointCmd = String(process.env.A5_L2_CHECKPOINT_CMD || '').trim();
+  if (checkpointCmd) execFileSync('/bin/sh', ['-c', checkpointCmd], { stdio: 'inherit', env: process.env });
 
   return { synthetic_conversation_id: convId, synthetic_contact_id: contactId };
 }
