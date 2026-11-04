@@ -31,6 +31,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, openSy
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { d1Query, assertTestOnlyConfig } from './a5-live-support.mjs';
+import { verifyOutboxSync } from './l2-verify-outbox.mjs';
 
 /* ─────────────────────────────── documented LEGACY namespace ───────────────────────────────
  * An absent ledger does NOT mean "no rows". Before L2 existed the A5 verifiers wrote rows under
@@ -606,8 +607,15 @@ export function loadLedgers(dir, currentRunTag = '') {
  * L0 and L1 are NEVER consulted: a matching tag or a derived key proves nothing here.
  */
 export function classifyRows({ query, ledgers, currentRunTag }) {
-  // Legacy L2 artifacts are not a transactional outbox. Until an outbox verifier is
-  // integrated, no row may be classified as proven solely from these artifacts.
+  // Artifacts, baselines and read-back are not ownership proof. Read the outbox before
+  // classifying rows, and fail closed if it is unavailable or its result has an invalid shape.
+  let outbox = [];
+  let outboxReadable = false;
+  try {
+    outbox = query('SELECT run_id,table_name,row_id,result,event_seq,entry_hash FROM l2_outbox');
+    outboxReadable = Array.isArray(outbox) && outbox.every(e => e && typeof e.run_id === 'string' &&
+      typeof e.table_name === 'string' && typeof e.row_id === 'string' && typeof e.result === 'string');
+  } catch { /* no live access, missing schema, or unreadable outbox is never clean */ }
   const loaded = ledgers.filter(x => x.error === 'ok');
   const bad = ledgers.find(x => x.error !== 'ok');
   if (bad) return { ok: false, reason: `untrusted-result-ledger:${bad.error}`,
@@ -624,6 +632,39 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     }
   }
 
+  const verificationByRun = new Map();
+  // LIMITATION: This verifier proves row↔outbox binding and chain integrity.
+  // It does NOT prove temporal contemporaneity. A future migration must add
+  // created_at NOT NULL and an INSERT-time trigger to close this gap before A5.
+  const outboxVerdict = (entry, ev) => {
+    if (!outboxReadable) return 'unknown:outbox-verification-failed';
+    const matches = outbox.filter(x => x.table_name === entry.table && x.row_id === entry.a5_id &&
+      x.run_id === ev.run_tag && x.result === 'proven');
+    if (!matches.length) return 'unknown:outbox-evidence-required';
+    if (matches.length !== 1) return 'unknown:outbox-verification-failed';
+    if (!verificationByRun.has(ev.run_tag)) {
+      // The L2 query adapter accepts SQL only; escape literal parameters and preserve the
+      // existing read-only boundary. Identifiers come from the verifier's table allowlist.
+      const boundQuery = (sql, params) => {
+        let i = 0;
+        const bound = sql.replace(/\?/g, () => {
+          if (i >= params.length) throw new Error('a5-l2-outbox-parameter-count');
+          return `'${String(params[i++]).replace(/'/g, "''")}'`;
+        });
+        if (i !== params.length) throw new Error('a5-l2-outbox-parameter-count');
+        assertReadOnlySql(bound);
+        return query(bound);
+      };
+      verificationByRun.set(ev.run_tag, verifyOutboxSync({ query: boundQuery, runId: ev.run_tag }));
+    }
+    const checked = verificationByRun.get(ev.run_tag);
+    if (!checked.ok || !checked.proven.some(x => x.table === entry.table && x.row_id === entry.a5_id &&
+        x.run_id === ev.run_tag && x.event_seq === matches[0].event_seq && x.entry_hash === matches[0].entry_hash)) {
+      return 'unknown:outbox-verification-failed';
+    }
+    return 'previous-a5-proven';
+  };
+
   const rows = enumerateRows(query);
   const verdicts = [];
   for (const entry of rows) {
@@ -631,7 +672,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     const ev = eventByKey.get(`${table}|${a5_key}`);
     let verdict;
     if (!ev) {
-      verdict = 'unknown';
+      verdict = outboxReadable ? 'unknown:outbox-evidence-required' : 'unknown';
     } else if (ev.run_tag === currentRunTag) {
       verdict = 'current-run';
     } else {
@@ -647,7 +688,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
         if (!parentEv) reason = 'parent-event-missing';
         else if (!parentColumn || String(row[parentColumn] ?? '') !== ev.parent.observed_id) reason = 'parent-link-mismatch';
       }
-      verdict = reason ? `unknown:${reason}` : 'unknown:outbox-evidence-required';
+      verdict = reason ? `unknown:${reason}` : outboxVerdict(entry, ev);
     }
     verdicts.push({ table, a5_key, a5_id, verdict });
   }
@@ -662,7 +703,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     const ev = eventByKey.get(`${s.table}|${s.a5_key}`);
     let verdict;
     if (!ev) {
-      verdict = 'unknown:legacy-unproven';
+      verdict = outboxReadable ? 'unknown:outbox-evidence-required' : 'unknown:legacy-unproven';
     } else if (ev.run_tag === currentRunTag) {
       verdict = 'current-run';
     } else {
@@ -678,7 +719,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
         if (!parentEv) reason = 'parent-event-missing';
         else if (!parentColumn || String(s.row[parentColumn] ?? '') !== ev.parent.observed_id) reason = 'parent-link-mismatch';
       }
-      verdict = reason ? `unknown:legacy-${reason}` : 'unknown:outbox-evidence-required';
+      verdict = reason ? `unknown:legacy-${reason}` : outboxVerdict(s, ev);
     }
     verdicts.push({ table: s.table, a5_key: s.a5_key, a5_id: s.a5_id, verdict });
     if ((verdict.startsWith('unknown') || verdict === 'current-run') && !legacyStop) {
@@ -705,6 +746,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     return { ok: false, reason: `unknown-ownership:${unknowns[0].table}:${unknowns[0].verdict}`,
       verdicts, legacy_suspects: legacySuspects.length };
   }
+  if (!outboxReadable) return { ok: false, reason: 'outbox-verification-failed:unreadable', verdicts, legacy_suspects: legacySuspects.length };
   return { ok: true, reason: 'clean', verdicts, legacy_suspects: legacySuspects.length };
 }
 

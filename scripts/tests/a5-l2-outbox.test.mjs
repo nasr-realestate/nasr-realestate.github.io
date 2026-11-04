@@ -94,3 +94,36 @@ test('outbox: same isolated input reproduces the hash chain and verifier result'
   }
   const first=await once(), second=await once(); assert.equal(first.ok,true); assert.deepEqual(first,second);
 });
+
+test('classifyRows requires matching verified outbox evidence, and rejects corrupt evidence', async () => {
+  const { buildRegistry } = await import('../../_worker/tests/_registry-fixture.mjs');
+  const { a5RunIdentity, assertReadOnlySql, baselineFrom, buildLedger, classifyRows, tagOf } = await import('../a5-l2.mjs');
+  const identity = a5RunIdentity({ GITHUB_RUN_ID: '555', GITHUB_RUN_ATTEMPT: '1', A5_L2_NONCE: 'aaaaaaaa' });
+  const current = a5RunIdentity({ GITHUB_RUN_ID: '556', GITHUB_RUN_ATTEMPT: '1', A5_L2_NONCE: 'bbbbbbbb' });
+  async function setup(withOutbox) {
+    const { sqlite, db } = buildRegistry({ ledger: true });
+    sqlite.exec(readFileSync('_worker/migrations-proposed/0015_l2_outbox.sql', 'utf8'));
+    const query = sql => { assertReadOnlySql(sql); return sqlite.prepare(sql).all(); };
+    const baseline = baselineFrom(query);
+    const row = { id: 'contact-fixture', name: 'synthetic fixture', communication_consent: 'request_only', review_note: tagOf(identity.run_tag) };
+    if (withOutbox) await writeIndustrialRow(db, {runId:identity.run_tag, table:'crm_contacts', row});
+    else sqlite.prepare('INSERT INTO crm_contacts(id,name,communication_consent,review_note) VALUES(?,?,?,?)').run(row.id,row.name,row.communication_consent,row.review_note);
+    const pending = [{ table:'crm_contacts', lookup_value:row.id, observed_id:row.id, id_source:'http-201-body', run_tag:identity.run_tag }];
+    const ledger = buildLedger({identity,baseline,pending,query});
+    const classify = () => classifyRows({query,ledgers:[{error:'ok',ledger}],currentRunTag:current.run_tag});
+    const classifyWithoutLedger = () => classifyRows({query,ledgers:[],currentRunTag:current.run_tag});
+    return { sqlite, classify, classifyWithoutLedger };
+  }
+  const missing = await setup(false);
+  assert.equal(missing.classify().verdicts[0].verdict, 'unknown:outbox-evidence-required');
+  assert.equal(missing.classifyWithoutLedger().verdicts[0].verdict, 'unknown:outbox-evidence-required');
+  assert.equal(missing.classify().ok, false); missing.sqlite.close();
+
+  const valid = await setup(true);
+  assert.equal(valid.classify().verdicts[0].verdict, 'previous-a5-proven');
+  assert.equal(valid.classify().ok, true);
+  valid.sqlite.exec('DROP TRIGGER l2_outbox_no_update');
+  valid.sqlite.prepare('UPDATE l2_outbox SET entry_hash=?').run('f'.repeat(64));
+  assert.equal(valid.classify().verdicts[0].verdict, 'unknown:outbox-verification-failed');
+  assert.equal(valid.classify().ok, false); valid.sqlite.close();
+});
