@@ -1,9 +1,9 @@
-// Proposed isolated-test building block; NOT wired to any existing live writer.
+// Proposed outbox writer; currently wired only to the CI-ticket session path.
 // D1 batch executes these two prepared statements transactionally within one database.
 // D1 does not guarantee atomicity across external systems: HTTP, artifact uploads,
 // and other databases are outside this transaction. For HTTP callers, the Worker must
 // commit each row and its evidence in the same D1 batch and return the outbox identity.
-// This helper does not make an HTTP request and is not yet integrated with any route.
+// This helper does not make an HTTP request; the CI-ticket Worker route returns its event identity.
 // Concurrent writers race on the same sequence; the loser rolls back and MUST retry from
 // a fresh head. This helper does not retry implicitly and does not handle trigger-created rows.
 export const OUTBOX_TABLES = Object.freeze({
@@ -33,7 +33,7 @@ export async function outboxHash(value) {
   return [...new Uint8Array(bytes)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
-export async function writeIndustrialRow(db, { runId, table, row }) {
+export async function writeIndustrialRow(db, { runId, table, row, hashColumns }) {
   const idColumn = Object.hasOwn(OUTBOX_TABLES, table) ? OUTBOX_TABLES[table] : undefined;
   if (!idColumn || !/^[a-zA-Z0-9_-]{1,128}$/.test(runId || '') || !row || typeof row !== 'object' || Array.isArray(row)) {
     throw new Error('l2-outbox-invalid-input');
@@ -50,9 +50,15 @@ export async function writeIndustrialRow(db, { runId, table, row }) {
   const relations = Object.entries(OUTBOX_RELATIONS[table] || {})
     .filter(([column]) => row[column] != null)
     .map(([column, target]) => ({ column, table: target, row_id: String(row[column]) }));
-  const columns_json = outboxCanonical(columns);
+  if (hashColumns !== undefined && !Array.isArray(hashColumns)) throw new Error('l2-outbox-invalid-hash-columns');
+  const evidenceColumns = hashColumns === undefined ? columns : [...hashColumns].sort();
+  if (!Array.isArray(evidenceColumns) || !evidenceColumns.includes(idColumn) ||
+      new Set(evidenceColumns).size !== evidenceColumns.length ||
+      evidenceColumns.some(column => !columns.includes(column))) throw new Error('l2-outbox-invalid-hash-columns');
+  const evidenceRow = Object.fromEntries(evidenceColumns.map(column => [column, row[column]]));
+  const columns_json = outboxCanonical(evidenceColumns);
   const relations_json = outboxCanonical(relations);
-  const rowHash = await outboxHash({ table, row });
+  const rowHash = await outboxHash({ table, row: evidenceRow });
   const event = { run_id: runId, event_seq: eventSeq, table_name: table, row_id: row[idColumn], row_hash: rowHash, prev_hash: prevHash, result: 'proven', columns_json, relations_json };
   const entryHash = await outboxHash(event);
   const insert = db.prepare(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`).bind(...columns.map(k => row[k]));

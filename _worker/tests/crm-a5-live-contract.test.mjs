@@ -20,6 +20,8 @@ import path from 'node:path';
 import test from 'node:test';
 
 import worker from '../crm-worker.js';
+import { writeIndustrialRow } from '../l2-outbox.js';
+import { wrapD1 } from './_registry-fixture.mjs';
 import { buildRegistry, sha } from './_registry-fixture.mjs';
 import { driveRefFor } from '../../scripts/crm/seed-drive-file-refs.mjs';
 import { createTransport, runA5LiveChecks } from './live-a5-verify.mjs';
@@ -232,9 +234,10 @@ test('LIVE-5 دخول تذكرة CI يمرّر كل فحوص A5 ويكتب مل�
   try {
     const nonce = crypto.randomBytes(36).toString('base64url');
     const key = `ci-e2e-ticket:${crypto.createHash('sha256').update(nonce).digest('hex')}`;
-    harness.sqlite.prepare(`INSERT INTO crm_idempotency_receipts (submission_key, resource_type, resource_id, received_at)
-      VALUES (?, 'contact', 'authorized_pending', ?)`)
-      .run(key, new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'));
+    harness.sqlite.exec(readFileSync(new URL('../migrations-proposed/0015_l2_outbox.sql', import.meta.url), 'utf8'));
+    await writeIndustrialRow(wrapD1(harness.sqlite), { runId: 'a5-102-1-bbbbbbbb', table: 'crm_idempotency_receipts',
+      row: { submission_key: key, resource_type: 'contact', resource_id: 'authorized_pending', received_at: new Date().toISOString() },
+      hashColumns: ['submission_key', 'resource_type', 'received_at'] });
     const summary = await harness.run({ accessTicket: nonce, accessCode: '', stateFile });
     assert.equal(summary.ok, true, JSON.stringify(summary.checks.filter(c => c.status === 'fail')));
     const evidence = Object.fromEntries(summary.checks.map(c => [c.id, c.evidence]));

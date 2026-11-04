@@ -10,6 +10,7 @@ import worker, {
   sealIngestPayload,
 } from '../crm-worker.js';
 import { runScheduledCrmNotifications } from '../crm-push.js';
+import { writeIndustrialRow } from '../l2-outbox.js';
 
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
@@ -1040,9 +1041,10 @@ test('POST /api/auth/ci-ticket mints single-use session from received_at and rej
   const { env, sqlite } = await createEnv();
   const nonce = randomToken(36);
   const hashHex = nodeCrypto.createHash('sha256').update(nonce).digest('hex');
-  sqlite.prepare(
-    "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,'contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
-  ).run(`ci-e2e-ticket:${hashHex}`);
+  sqlite.exec(await readFile(new URL('../migrations-proposed/0015_l2_outbox.sql', import.meta.url), 'utf8'));
+  await writeIndustrialRow(env.DB, { runId: 'a5-101-1-aaaaaaaa', table: 'crm_idempotency_receipts',
+    row: { submission_key: `ci-e2e-ticket:${hashHex}`, resource_type: 'contact', resource_id: 'authorized_pending', received_at: new Date().toISOString() },
+    hashColumns: ['submission_key', 'resource_type', 'received_at'] });
 
   const loginRes = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`, {
     method: 'POST',
@@ -1052,6 +1054,13 @@ test('POST /api/auth/ci-ticket mints single-use session from received_at and rej
   assert.equal(loginRes.status, 200);
   const loginBody = await loginRes.json();
   assert.equal(loginBody.authenticated, true);
+  assert.equal(loginBody.l2_run_id, 'a5-101-1-aaaaaaaa');
+  assert.equal(loginBody.l2_outbox_id, 'a5-101-1-aaaaaaaa:2');
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM l2_outbox WHERE table_name='crm_sessions' AND row_id=?").get(loginBody.session_id).n, 1);
+  const { verifyOutbox } = await import('../../scripts/l2-verify-outbox.mjs');
+  const verification = await verifyOutbox({ query: (sql, params) => sqlite.prepare(sql).all(...params), runId: loginBody.l2_run_id });
+  assert.equal(verification.ok, true, verification.reason);
+  assert.equal(verification.checked, 2);
   assert.ok(String(loginBody.csrf_token || '').length >= 20);
   const cookiePair = String(loginRes.headers.get('set-cookie') || '').split(';')[0];
 
@@ -1070,3 +1079,41 @@ test('POST /api/auth/ci-ticket mints single-use session from received_at and rej
   sqlite.close();
 });
 
+
+
+test('CI ticket rejects a receipt lacking contemporaneous outbox before consuming it', async () => {
+  const {env,sqlite}=await createEnv();
+  sqlite.exec(await readFile(new URL('../migrations-proposed/0015_l2_outbox.sql', import.meta.url),'utf8'));
+  const nonce=randomToken(36), key=`ci-e2e-ticket:${nodeCrypto.createHash('sha256').update(nonce).digest('hex')}`;
+  sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,'contact','authorized_pending',?)").run(key,new Date().toISOString());
+  const res=await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`,{method:'POST',headers:{origin:ALLOWED_ORIGIN,'content-type':'application/json'},body:JSON.stringify({ticket_nonce:nonce})}),env);
+  assert.equal(res.status,503); assert.equal((await res.json()).error,'ci_ticket_outbox_unverified');
+  assert.equal(sqlite.prepare('SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key=?').get(key).resource_id,'authorized_pending');
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM crm_sessions').get().n,0); sqlite.close();
+});
+
+test('CI ticket session and outbox roll back together when evidence insert fails', async () => {
+  const {env,sqlite}=await createEnv();
+  sqlite.exec(await readFile(new URL('../migrations-proposed/0015_l2_outbox.sql', import.meta.url),'utf8'));
+  const nonce=randomToken(36), key=`ci-e2e-ticket:${nodeCrypto.createHash('sha256').update(nonce).digest('hex')}`;
+  await writeIndustrialRow(env.DB,{runId:'a5-103-1-cccccccc',table:'crm_idempotency_receipts',row:{submission_key:key,resource_type:'contact',resource_id:'authorized_pending',received_at:new Date().toISOString()},hashColumns:['submission_key','resource_type','received_at']});
+  sqlite.exec("CREATE TRIGGER fail_session_outbox BEFORE INSERT ON l2_outbox WHEN NEW.table_name='crm_sessions' BEGIN SELECT RAISE(ABORT,'simulated-outbox-failure'); END");
+  const res=await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`,{method:'POST',headers:{origin:ALLOWED_ORIGIN,'content-type':'application/json'},body:JSON.stringify({ticket_nonce:nonce})}),env);
+  assert.equal(res.status,500);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM crm_sessions').get().n,0);
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM l2_outbox WHERE table_name='crm_sessions'").get().n,0);
+  assert.equal(sqlite.prepare('SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key=?').get(key).resource_id,'consumed'); sqlite.close();
+});
+
+
+test('CI ticket does not append session evidence if session INSERT fails', async () => {
+  const {env,sqlite}=await createEnv();
+  sqlite.exec(await readFile(new URL('../migrations-proposed/0015_l2_outbox.sql', import.meta.url),'utf8'));
+  const nonce=randomToken(36), key=`ci-e2e-ticket:${nodeCrypto.createHash('sha256').update(nonce).digest('hex')}`;
+  await writeIndustrialRow(env.DB,{runId:'a5-104-1-dddddddd',table:'crm_idempotency_receipts',row:{submission_key:key,resource_type:'contact',resource_id:'authorized_pending',received_at:new Date().toISOString()},hashColumns:['submission_key','resource_type','received_at']});
+  sqlite.exec("CREATE TRIGGER fail_session BEFORE INSERT ON crm_sessions BEGIN SELECT RAISE(ABORT,'simulated-session-failure'); END");
+  const res=await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/auth/ci-ticket`,{method:'POST',headers:{origin:ALLOWED_ORIGIN,'content-type':'application/json'},body:JSON.stringify({ticket_nonce:nonce})}),env);
+  assert.equal(res.status,500);
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM crm_sessions').get().n,0);
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM l2_outbox WHERE table_name='crm_sessions'").get().n,0); sqlite.close();
+});
