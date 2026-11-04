@@ -40,3 +40,18 @@ test('T7 deploy path fails closed while live writes lack contemporary evidence',
   assert.ok(wf.indexOf('Stop until complete contemporaneous L2 coverage') < wf.indexOf('Deploy nasr-crm-api-test and run live A5 E2E'));
   assert.match(wf,/Stop until complete contemporaneous L2 coverage[\s\S]*?exit 1/);
 });
+test('T11 zero-event failure evidence does not grant ownership', () => {
+  const ledger=createLedger(identity,{...baseline,ids:{}}); ledger.evidence_class='failure-no-ownership-claims';
+  finalizeLedger(ledger,'failure','preflight-not-cleared');
+  const result=classifyRows({query:queryContact,ledgers:[{error:'ok',ledger}],currentRunTag:'other'});
+  assert.equal(result.ok,false); assert.ok(result.verdicts.every(v=>v.verdict!=='previous-a5-proven'));
+});
+test('artifact evidence alone never yields proven without transactional outbox verification', async () => {
+  const { appendEvent, rowColumnsSha256, rowHash } = await import('../a5-l2.mjs');
+  const spec=TABLE_SPECS.crm_contacts, ledger=createLedger(identity,baseline);
+  appendEvent(ledger,{table:'crm_contacts',unique_key:'example',observed_id:'example',id_source:'http-201-body',row_columns_sha256:rowColumnsSha256(spec,contact),row_hash:rowHash(spec,contact)});
+  finalizeLedger(ledger,'success');
+  const result=classifyRows({query:queryContact,ledgers:[{error:'ok',ledger}],currentRunTag:'other'});
+  assert.equal(result.ok,false);
+  assert.ok(result.verdicts.some(v=>v.verdict==='unknown:outbox-evidence-required'));
+});

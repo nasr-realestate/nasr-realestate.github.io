@@ -397,8 +397,9 @@ test('F5 partial failure of A publishes evidence for the rows it DID create; B v
   assert.equal(pre.ok, true, pre.reason);
   assert.ok(pre.verdicts.filter(v => v.verdict === 'previous-a5-proven').length >= 4);
   // B proceeds with its own baseline and keeps A's rows intact (no delete, no re-attestation).
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b', ['contact', 'phones']);
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.ok(ledgerB.events.every(e => e.run_tag === ID_B.run_tag));
@@ -409,8 +410,9 @@ test('F5 partial failure of A publishes evidence for the rows it DID create; B v
 
 test('F6 B re-reads rows and verifies row_hash, parent relations and A run identity', () => {
   const w = world();
+  const baselineA = baselineFrom(w.query);
   const g = writeGroup(w, ID_A, 'a');
-  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineFrom(w.query),
+  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: g.pending, query: w.query, conclusion: 'success' });
   assert.equal(preflightFor(w, [ledgerA], ID_B.run_tag).ok, true);
 
@@ -472,11 +474,13 @@ test('F7 A and B do not interfere; absence of evidence is NEVER success', () => 
   assert.equal(assertKeysFree(w.query, ID_B.run_tag), true);
 
   // A writes FIRST and gets its own ledger; B then writes into the SAME database.
+  const baselineA = baselineFrom(w.query);
   const gA = writeGroup(w, ID_A, 'a');
-  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineFrom(w.query),
+  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: gA.pending, query: w.query, conclusion: 'success' });
   assert.equal(preflightFor(w, [ledgerA], ID_B.run_tag).ok, true,
     'B verifies all A rows; A data stays intact');
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
   assert.notEqual(gA.cid, gB.cid);
 
@@ -503,7 +507,7 @@ test('F7 A and B do not interfere; absence of evidence is NEVER success', () => 
   } finally { rmSync(dir, { recursive: true, force: true }); }
 
   // B's ledger keeps A's run identity for A rows (no re-attestation), and a third run verifies both.
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.ok(ledgerB.events.every(e => e.run_tag === ID_B.run_tag));

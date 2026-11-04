@@ -523,6 +523,14 @@ export function buildLedger({ identity, baseline, pending, query, priorLedgers =
   // Rows already proven by a previous run keep THEIR OWN run identity. This run must not
   // re-attest them: the previous ledger is the proof, and preflight re-verifies its row_hash.
   const alreadyProven = new Set();
+  if (priorLedgers.length) {
+    const priorCheck = classifyRows({ query, ledgers: priorLedgers.map(p => ({ error: 'ok', ledger: p.ledger || p })), currentRunTag: identity.run_tag });
+    // A current run may already have created new rows. Verify the exact prior claims below,
+    // but do not use priorCheck.ok (which also rejects those newly created rows).
+    const badPrior = priorCheck.verdicts.find(v => v.verdict.startsWith('unknown') &&
+      priorLedgers.some(p => (p.ledger || p).events.some(e => e.table === v.table && e.unique_key === v.a5_key)));
+    if (badPrior || priorCheck.reason.startsWith('l2-row-vanished')) throw new Error('a5-l2-untrusted-prior-row');
+  }
   for (const prior of priorLedgers) {
     if (verifyLedgerIntegrity(prior.ledger || prior) !== 'ok') throw new Error('a5-l2-untrusted-prior-ledger');
     const l = prior.ledger || prior;
@@ -555,7 +563,7 @@ export function buildLedger({ identity, baseline, pending, query, priorLedgers =
   // hash-chained ledger with ZERO ownership claims — so the run is not a "completed run with no
   // evidence", while nothing is retroactively proven or laundered.
   for (const s of enumerateLegacySuspects(query)) {
-    if (!eventByKey.has(`${s.table}|${s.a5_key}`) && !eventByKey.has(`${s.table}|observed:${s.a5_id}`)) {
+    if (!eventByKey.has(`${s.table}|${s.a5_key}`) && !eventByKey.has(`${s.table}|observed:${s.a5_id}`) && !alreadyProven.has(`${s.table}|${s.a5_key}`)) {
       throw new Error(`a5-l2-unproven-legacy-row:${s.table}:${s.label}`);
     }
   }
@@ -598,6 +606,8 @@ export function loadLedgers(dir, currentRunTag = '') {
  * L0 and L1 are NEVER consulted: a matching tag or a derived key proves nothing here.
  */
 export function classifyRows({ query, ledgers, currentRunTag }) {
+  // Legacy L2 artifacts are not a transactional outbox. Until an outbox verifier is
+  // integrated, no row may be classified as proven solely from these artifacts.
   const loaded = ledgers.filter(x => x.error === 'ok');
   const bad = ledgers.find(x => x.error !== 'ok');
   if (bad) return { ok: false, reason: `untrusted-result-ledger:${bad.error}`,
@@ -637,7 +647,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
         if (!parentEv) reason = 'parent-event-missing';
         else if (!parentColumn || String(row[parentColumn] ?? '') !== ev.parent.observed_id) reason = 'parent-link-mismatch';
       }
-      verdict = reason ? `unknown:${reason}` : 'previous-a5-proven';
+      verdict = reason ? `unknown:${reason}` : 'unknown:outbox-evidence-required';
     }
     verdicts.push({ table, a5_key, a5_id, verdict });
   }
@@ -668,7 +678,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
         if (!parentEv) reason = 'parent-event-missing';
         else if (!parentColumn || String(s.row[parentColumn] ?? '') !== ev.parent.observed_id) reason = 'parent-link-mismatch';
       }
-      verdict = reason ? `unknown:legacy-${reason}` : 'previous-a5-proven';
+      verdict = reason ? `unknown:legacy-${reason}` : 'unknown:outbox-evidence-required';
     }
     verdicts.push({ table: s.table, a5_key: s.a5_key, a5_id: s.a5_id, verdict });
     if ((verdict.startsWith('unknown') || verdict === 'current-run') && !legacyStop) {

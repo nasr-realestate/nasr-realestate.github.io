@@ -201,10 +201,11 @@ test('L2-4 B after A success: re-verifies row_hash / ID / relation / previous-ru
   assert.equal(assertKeysFree(w.query, ID_B.run_tag), true);
 
   // B writes its own group with DIFFERENT full keys. A's rows must remain byte-identical.
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
   assert.notEqual(gB.cid, gA.cid);
   assert.notEqual(gB.pA, gA.pA);
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   // B must NOT re-attest A's rows under B's identity.
@@ -230,8 +231,9 @@ test('L2-5 A partial failure (some rows written): B continues only because EVERY
   assert.equal(pre.ok, true, pre.reason);
   assert.ok(pre.verdicts.every(v => v.verdict !== 'unknown'));
   const before = namespaceDigest(w);
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.equal(w.sqlite.prepare('SELECT review_note FROM crm_contacts WHERE id = ?').get(gA.cid).review_note,
@@ -480,8 +482,9 @@ test('L2-18 a pre-existing unproven row cannot be blessed as a read-back side ef
     conclusion: 'failure' }), /a5-l2-unproven-preexisting-row:crm_contacts/);
   // Once a trusted prior ledger proves it, the same row is skipped (no re-attestation).
   const w2 = world();
+  const baselineA = baselineFrom(w2.query);
   const g = writeGroup(w2, ID_A, 'a', ['contact']);
-  const prior = buildLedger({ identity: ID_A, baseline: baselineFrom(w2.query),
+  const prior = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: g.pending, query: w2.query, conclusion: 'success' });
   const b2 = baselineFrom(w2.query);
   assert.doesNotThrow(() => buildLedger({ identity: ID_B, baseline: b2, pending: [],
