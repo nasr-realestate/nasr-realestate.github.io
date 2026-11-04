@@ -526,9 +526,11 @@ jobs:
       # ── A5 L2: the ONLY accepted ownership proof ──────────────────────────────────────────
       # L0 (pre-write intent) and L1 (tag + derived keys) are NOT proofs: every field they use is
       # client-controlled through an ordinary CRM session, and run_tag is public. This step loads
-      # ALL previous runs' hash-chained result ledgers (paginated, retention-scoped), takes a
-      # read-only baseline, and STOPS the run (before any write) if any synthetic row in scope is
-      # `unknown` OR any prior run/ledger cannot be retrieved. No deletion, no bypass.
+      # the hash-chained result ledgers of EVERY ELIGIBLE prior run (exhaustive pagination; no
+      # date/count cutoff), takes a read-only baseline, and STOPS the run (before any write) if any
+      # synthetic row in scope — including the documented legacy namespace — is `unknown`, OR if a
+      # prior run's eligibility evidence is unreadable, OR if an eligible run's ledger cannot be
+      # retrieved. No deletion, no bypass, no "absence of ledger means absence of rows".
       - name: A5 L2 — prior ledgers, read-only baseline, ownership preflight
         id: a5_l2
         shell: bash
@@ -543,6 +545,12 @@ jobs:
           mkdir -p "$L2_DIR" "$L2_PRIOR"
           nonce=$(node -e 'process.stdout.write(require("node:crypto").randomBytes(4).toString("hex"));')
           tag="a5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${nonce}"
+          # GITHUB_ENV is visible ONLY to LATER steps, not to this one. Without this export,
+          # `begin` / `preflight` (here) and `checkpoint` / `finalize` (later) would derive TWO
+          # DIFFERENT run_tags, and `preflightCleared()` would fail forever with
+          # `a5-l2-preflight-run-tag-mismatch` — an unbreakable stop loop with real, unproven rows.
+          export A5_L2_NONCE="$nonce"
+          export A5_L2_RUN_TAG="$tag"
           {
             echo "A5_L2_DIR=$L2_DIR"
             echo "A5_L2_PRIOR_DIR=$L2_PRIOR"
@@ -553,10 +561,20 @@ jobs:
           } >> "$GITHUB_ENV"
 
           # Prior ledgers are pipeline artifacts, never DB rows. `a5-l2-prior-runs.mjs` paginates
-          # the run history with per_page=100 until exhaustion, restricted to the artifact
-          # retention window (`created=>=<cutoff>`), and requires a readable L2 artifact for
-          # EVERY run returned. An unreadable page, an incomplete listing, a missing/expired
-          # artifact or a corrupt ledger is a HARD STOP here — never "no prior rows".
+          # EVERY completed run of this workflow (per_page=100 until exhaustion) with NO date
+          # cutoff and NO count cap (no-date-or-count-cutoff). Eligibility for an L2 ledger is
+          # decided from the ACTUAL workflow file at each run's head_sha PLUS that run's own job
+          # steps — never from a date, a display name, a conclusion or an arbitrary N runs. If
+          # either source is unreadable or the two contradict each other, this is a HARD STOP.
+          #   * ELIGIBLE (mechanism present AND the L2 preflight step actually ran), including
+          #     old / failed / cancelled runs, MUST supply a readable L2 artifact; missing,
+          #     expired, unreadable, corrupt or non-L2 => HARD STOP before any write.
+          #   * INELIGIBLE (pre-L2 workflow version, or the L2 step was never reached) owes NO
+          #     impossible artifact. Its rows are NOT assumed absent: `a5-l2.mjs preflight`
+          #     re-reads the documented legacy synthetic namespace row-by-row (`TEST ONLY A5 ci-*`,
+          #     the known synthetic phones, `ci-e2e-ticket:%`, post-deploy synthetic conversations)
+          #     and stops on ANY row without per-row L2 evidence. Absence of ledger != absence of data.
+          # --retention-days is ONLY the artifact-retention pin, NEVER a filter on run history.
           if ! node scripts/a5-l2-prior-runs.mjs \
                  --prior-dir "$L2_PRIOR" --work-dir "$L2_ROOT/downloads" \
                  --retention-days "${A5_L2_RETENTION_DAYS:-90}" \
@@ -564,18 +582,22 @@ jobs:
             echo "::error::A5 L2: prior run/ledger retrieval failed; run stopped before any write, no deletion, no bypass."
             exit 1
           fi
-          jq -c '{ok, pages_fetched, total_count, runs_fetched, ledgers, retention_days, cutoff}' "$L2_ROOT/prior-runs.json"
-          echo "::notice::A5 L2: fetched $(jq -r '.pages_fetched' "$L2_ROOT/prior-runs.json") page(s) of prior runs, $(jq -r '.ledgers' "$L2_ROOT/prior-runs.json") ledger(s) within the $(jq -r '.retention_days' "$L2_ROOT/prior-runs.json")-day artifact retention window"
+          jq -c '{ok, pages_fetched, total_count, runs_fetched, eligible_runs, ineligible_runs, ledgers, retention_days, cutoff_is_filter}' "$L2_ROOT/prior-runs.json"
+          echo "::notice::A5 L2: fetched $(jq -r '.pages_fetched' "$L2_ROOT/prior-runs.json") page(s) / $(jq -r '.runs_fetched' "$L2_ROOT/prior-runs.json") run(s); eligible=$(jq -r '.eligible_runs' "$L2_ROOT/prior-runs.json"), ineligible=$(jq -r '.ineligible_runs' "$L2_ROOT/prior-runs.json"), ledgers=$(jq -r '.ledgers' "$L2_ROOT/prior-runs.json"). Ineligible runs are NOT assumed to have written no rows; the legacy namespace is verified row-by-row in preflight."
 
           node scripts/a5-l2.mjs begin --dir "$L2_DIR"
+          # Seed a genuine, zero-claim failure ledger BEFORE any write. If this run is hard-killed
+          # before any checkpoint/finalize, the always()-upload still publishes evidence. It claims
+          # NOTHING about rows (0 events, empty baseline), so it cannot launder ownership.
+          node scripts/a5-l2.mjs failure-evidence --dir "$L2_DIR" --reason "run-in-progress-not-finalized"
           if ! node scripts/a5-l2.mjs preflight --dir "$L2_DIR" --ledgers "$L2_PRIOR" \
                  > "$L2_ROOT/preflight.json"; then
-            echo "::error::A5 L2 preflight stopped the run (unknown synthetic-row ownership). No write, no deletion, no bypass."
-            jq -c '{ok, reason, ledgers, rows, verdicts: [.verdicts[] | select(.verdict != "previous-a5-proven" and .verdict != "baseline-origin")]}' \
+            echo "::error::A5 L2 preflight stopped the run (unknown synthetic-row ownership, incl. legacy rows). No write, no deletion, no bypass."
+            jq -c '{ok, reason, ledgers, rows, legacy_suspects, verdicts: [.verdicts[] | select(.verdict != "previous-a5-proven" and .verdict != "baseline-origin")]}' \
               "$L2_ROOT/preflight.json"
             exit 1
           fi
-          jq -c '{ok, reason, ledgers, rows, proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
+          jq -c '{ok, reason, ledgers, rows, legacy_suspects, proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
             "$L2_ROOT/preflight.json"
           echo "a5-l2: ownership preflight OK for run_tag=$tag"
 
@@ -809,9 +831,18 @@ jobs:
           finish
 
       # A5 L2: publish the final, hash-chained result ledger even when the run failed part-way.
-      # This is the partial-failure guarantee: every row that was successfully written and proven
-      # carries its own event. A hard cancellation BEFORE any event leaves no ledger, so the next
-      # run classifies those rows `unknown` and stops — there is NO `no-ledger(hard-cancel)` path.
+      # The partial-failure guarantee is incremental: each completed write batch calls
+      # `checkpoint`, so every successfully created row already carries its OWN independent event
+      # (row_hash / observed_id / parent / run identity / hash chain). `finalize` closes that
+      # ledger; it NEVER claims success when the E2E step failed.
+      #
+      # Deadlock fix: a `preflight` failure, a missing output, or a `finalize` throw must NOT turn
+      # the run into "completed run with no evidence" (which used to stop every later run forever).
+      # In those cases `failure-evidence` publishes a genuine, hash-chained, run-identified ledger
+      # with conclusion `failure`, ZERO events and an EMPTY baseline: it proves nothing about any
+      # row, cannot launder ownership, and contains no retroactive proof. The next eligible run
+      # finds a readable artifact and still verifies EVERY row (including the legacy namespace)
+      # row-by-row; any `unknown` still stops. There is NO `no-ledger(hard-cancel)` acceptance path.
       - name: A5 L2 — publish final result ledger (always, incl. partial failure)
         if: always()
         shell: bash
@@ -821,14 +852,27 @@ jobs:
           A5_L2_E2E_PHASE: ${{ steps.e2e.outputs.phase }}
         run: |
           set -euo pipefail
-          if [ -z "${A5_L2_DIR:-}" ] || [ -z "${A5_L2_PRIOR_DIR:-}" ]; then
-            echo "::error::A5 L2: run identity was never established; NO ledger published. The next run must stop on unknown ownership."
-            exit 1
+          L2_DIR="${A5_L2_DIR:-$RUNNER_TEMP/a5-l2/current}"
+          L2_PRIOR="${A5_L2_PRIOR_DIR:-$RUNNER_TEMP/a5-l2/prior}"
+          mkdir -p "$L2_DIR" "$L2_PRIOR"
+          cleared='no'
+          if [ -f "$L2_DIR/preflight.json" ] && jq -e '.ok == true' "$L2_DIR/preflight.json" > /dev/null; then
+            cleared='yes'
           fi
           conclusion='failure'
-          if [ "$A5_L2_E2E_OUTCOME" = 'success' ]; then conclusion='success'; fi
-          node scripts/a5-l2.mjs finalize --dir "$A5_L2_DIR" --ledgers "$A5_L2_PRIOR_DIR" \
-            --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME}:${A5_L2_E2E_PHASE:-unknown}"
+          if [ "${A5_L2_E2E_OUTCOME:-}" = 'success' ]; then conclusion='success'; fi
+          if [ "$cleared" = 'yes' ]; then
+            if ! node scripts/a5-l2.mjs finalize --dir "$L2_DIR" --ledgers "$L2_PRIOR" \
+                   --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME:-unknown}:${A5_L2_E2E_PHASE:-unknown}"; then
+              echo "::error::A5 L2: finalize failed; publishing zero-claim failure evidence instead of a success claim."
+              node scripts/a5-l2.mjs failure-evidence --dir "$L2_DIR" --reason "finalize-failed"
+              exit 1
+            fi
+          else
+            node scripts/a5-l2.mjs failure-evidence --dir "$L2_DIR" --reason "preflight-not-cleared"
+            echo "::error::A5 L2: ownership preflight did not clear (unknown or legacy unproven row). Zero-claim failure evidence published; NO write, NO success claim, NO bypass. The next run still verifies every row."
+            exit 1
+          fi
 
       - name: Publish A5 L2 result ledger artifact (digests only, no customer data)
         if: always()
@@ -836,7 +880,9 @@ jobs:
         with:
           name: a5-l2-ledger
           path: ${{ runner.temp }}/a5-l2/current/a5-l2-*.json
-          if-no-files-found: warn
+          # A run with NO ledger file is a hard failure, never a silent "warn" and never
+          # "treat prior ledgers as absent".
+          if-no-files-found: error
           # Kept equal to the job env A5_L2_RETENTION_DAYS (pinned by scripts/tests/a5-l2-result-ledger.test.mjs).
           retention-days: 90
 

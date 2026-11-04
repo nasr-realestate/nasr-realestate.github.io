@@ -33,6 +33,77 @@ import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { d1Query, assertTestOnlyConfig } from './a5-live-support.mjs';
 
+/* ─────────────────────────────── documented LEGACY namespace ───────────────────────────────
+ * An absent ledger does NOT mean "no rows". Before L2 existed the A5 verifiers wrote rows under
+ * a DIFFERENT, documented namespace: `TEST ONLY A5 ci-*` contact names (CRM_A5_RUN_TAG),
+ * the fixed synthetic phones, `ci-e2e-ticket:%` / `post-deploy-synth-*` receipts, and
+ * `post_deploy_e2e_synthetic` conversations. Those runs can never produce an L2 artifact.
+ *
+ * These predicates use ONLY the project's own exact documented literals, and explicitly EXCLUDE
+ * rows carrying the new `A5-RUN:%` / `a5:%` / `999*` L2 markers, so real customer data is never
+ * classified as synthetic. A hit is a SUSPECT, never an ownership claim: it can ONLY stop the run.
+ * Legacy rows are deliberately NOT added to TABLE_SPECS (buildLedger can therefore NEVER attest
+ * one) and NOT added to the baseline (a ledger can therefore NEVER launder one). No retroactive
+ * ledger, ownership link or hash is ever created for them; they are never deleted or modified.
+ * ─────────────────────────────────────────────────────────────────────────────────────── */
+const LEGACY_CONTACT_IDS = `SELECT id FROM crm_contacts
+  WHERE name LIKE 'TEST ONLY%' AND review_note NOT LIKE 'A5-RUN:%'`;
+const LEGACY_CONVERSATION_IDS = `SELECT id FROM crm_conversations
+  WHERE (source_ref = 'post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%')
+  AND source_ref NOT LIKE 'A5-RUN:%' AND conversation_uid NOT LIKE 'a5:%'`;
+
+export const LEGACY_PROBES = Object.freeze([
+  { table: 'crm_contacts', label: 'legacy-contact-name',
+    where: `name LIKE 'TEST ONLY%' AND review_note NOT LIKE 'A5-RUN:%'` },
+  { table: 'crm_contact_phones', label: 'legacy-known-synthetic-phone',
+    where: `phone_key IN ('201000000011','201000000012','201099990077')` },
+  { table: 'crm_idempotency_receipts', label: 'legacy-ci-ticket',
+    where: `submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%'` },
+  { table: 'crm_conversations', label: 'legacy-conversation',
+    where: `(source_ref = 'post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%')
+  AND source_ref NOT LIKE 'A5-RUN:%' AND conversation_uid NOT LIKE 'a5:%'` },
+  { table: 'crm_customer_requests', label: 'legacy-request',
+    where: `contact_id IN (${LEGACY_CONTACT_IDS})` },
+  { table: 'crm_request_status_history', label: 'legacy-request-history',
+    where: `request_id IN (SELECT id FROM crm_customer_requests WHERE contact_id IN (${LEGACY_CONTACT_IDS}))
+  OR actor LIKE 'TEST ONLY A5 %'` },
+  { table: 'crm_interactions', label: 'legacy-interaction',
+    where: `contact_id IN (${LEGACY_CONTACT_IDS}) OR summary LIKE 'TEST ONLY A5 %'
+  OR created_by LIKE 'TEST ONLY A5 %'` },
+  { table: 'crm_followups', label: 'legacy-followup',
+    where: `contact_id IN (${LEGACY_CONTACT_IDS}) OR created_by LIKE 'TEST ONLY A5 %'` },
+  { table: 'crm_operational_audit_log', label: 'legacy-operational-audit',
+    where: `actor LIKE 'TEST ONLY A5 %' OR contact_id IN (${LEGACY_CONTACT_IDS})` },
+  { table: 'crm_contact_audit_log', label: 'legacy-contact-audit',
+    where: `contact_id IN (${LEGACY_CONTACT_IDS}) OR actor LIKE 'TEST ONLY A5 %'` },
+  { table: 'crm_conversation_messages', label: 'legacy-message',
+    where: `conversation_id IN (${LEGACY_CONVERSATION_IDS})` },
+  { table: 'crm_conversation_insights', label: 'legacy-insight',
+    where: `conversation_id IN (${LEGACY_CONVERSATION_IDS})` },
+  { table: 'crm_drive_file_review_decision', label: 'legacy-review-decision',
+    where: `reviewer LIKE 'TEST ONLY A5 %'` },
+  { table: 'crm_drive_file_review_case', label: 'legacy-review-case',
+    where: `opened_by LIKE 'TEST ONLY A5 %'` },
+]);
+
+/** Read-only enumeration of the documented legacy synthetic namespace. STOP-ONLY evidence. */
+export function enumerateLegacySuspects(query) {
+  const out = [];
+  for (const probe of LEGACY_PROBES) {
+    let rows;
+    try { rows = query(`SELECT * FROM ${probe.table} WHERE ${probe.where}`); }
+    catch { throw new Error(`a5-l2-legacy-probe-unreadable:${probe.label}`); }
+    if (!Array.isArray(rows)) throw new Error(`a5-l2-legacy-probe-unreadable:${probe.label}`);
+    const spec = TABLE_SPECS[probe.table];
+    if (!spec) throw new Error(`a5-l2-legacy-probe-unmapped-table:${probe.table}`);
+    for (const row of rows) {
+      out.push({ table: probe.table, label: probe.label, spec, row,
+        a5_key: String(row[spec.uniqueKey] ?? ''), a5_id: String(row[spec.idColumn] ?? '') });
+    }
+  }
+  return out;
+}
+
 export const L2_SCHEMA = 'a5-l2-v1';
 export const BASELINE_SCHEMA = 'a5-l2-baseline-v1';
 export const TAG_PREFIX = 'A5-RUN:';
@@ -484,6 +555,15 @@ export function buildLedger({ identity, baseline, pending, query, priorLedgers =
     });
     index(ev);
   }
+  // Publishing ANY ledger while a legacy row is unproven would implicitly declare the namespace
+  // clean. Refuse (fail-closed). The CLI then publishes `failure-evidence` instead: a genuine,
+  // hash-chained ledger with ZERO ownership claims — so the run is not a "completed run with no
+  // evidence", while nothing is retroactively proven or laundered.
+  for (const s of enumerateLegacySuspects(query)) {
+    if (!eventByKey.has(`${s.table}|${s.a5_key}`) && !eventByKey.has(`${s.table}|observed:${s.a5_id}`)) {
+      throw new Error(`a5-l2-unproven-legacy-row:${s.table}:${s.label}`);
+    }
+  }
   return finalizeLedger(ledger, conclusion, stopped_at);
 }
 
@@ -525,7 +605,8 @@ export function loadLedgers(dir, currentRunTag = '') {
 export function classifyRows({ query, ledgers, currentRunTag }) {
   const loaded = ledgers.filter(x => x.error === 'ok');
   const bad = ledgers.find(x => x.error !== 'ok');
-  if (bad) return { ok: false, reason: `untrusted-result-ledger:${bad.error}`, verdicts: [] };
+  if (bad) return { ok: false, reason: `untrusted-result-ledger:${bad.error}`,
+    verdicts: [], legacy_suspects: 0 };
 
   const eventByKey = new Map();
   const baselineKeys = new Set();
@@ -564,21 +645,60 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     verdicts.push({ table, a5_key, a5_id, verdict });
   }
 
+  // LEGACY namespace: an ineligible (pre-L2) run's rows are inspected here row-by-row. These rows
+  // were NEVER in a baseline and can NEVER receive retroactive evidence, so a missing L2 event is
+  // `unknown` => STOP. `baseline-origin` is deliberately NOT an option for a legacy suspect:
+  // absence of a ledger artifact is not proof that no row was written.
+  const legacySuspects = enumerateLegacySuspects(query);
+  let legacyStop = '';
+  for (const s of legacySuspects) {
+    const ev = eventByKey.get(`${s.table}|${s.a5_key}`);
+    let verdict;
+    if (!ev) {
+      verdict = 'unknown:legacy-unproven';
+    } else if (ev.run_tag === currentRunTag) {
+      verdict = 'current-run';
+    } else {
+      const freshHash = rowHash(s.spec, s.row);
+      const freshCols = canonical(rowColumnsSha256(s.spec, s.row));
+      let reason = '';
+      if (ev.observed_id !== s.a5_id) reason = 'observed-id-mismatch';
+      else if (ev.row_hash !== freshHash) reason = 'row-hash-mismatch';
+      else if (canonical(ev.row_columns_sha256) !== freshCols) reason = 'row-columns-mismatch';
+      else if (ev.parent) {
+        const parentEv = eventByKey.get(`${ev.parent.table}|${ev.parent.key}`);
+        const parentColumn = s.spec.parent?.column;
+        if (!parentEv) reason = 'parent-event-missing';
+        else if (!parentColumn || String(s.row[parentColumn] ?? '') !== ev.parent.observed_id) reason = 'parent-link-mismatch';
+      }
+      verdict = reason ? `unknown:legacy-${reason}` : 'previous-a5-proven';
+    }
+    verdicts.push({ table: s.table, a5_key: s.a5_key, a5_id: s.a5_id, verdict });
+    if ((verdict.startsWith('unknown') || verdict === 'current-run') && !legacyStop) {
+      legacyStop = `unknown-ownership:${s.table}:${verdict}:${s.label}`;
+    }
+  }
+
   // EVERY published event (success, partial failure, checkpoint or cancellation) must still
   // describe a row that exists. A vanished row is a deletion we never perform and must stop B.
   for (const { ledger } of loaded) {
     for (const e of ledger.events) {
       if (!rows.some(r => r.table === e.table && r.a5_key === e.unique_key)) {
-        return { ok: false, reason: `l2-row-vanished:${e.table}`, verdicts };
+        return { ok: false, reason: `l2-row-vanished:${e.table}`, verdicts,
+          legacy_suspects: legacySuspects.length };
       }
     }
   }
 
+  if (legacyStop) {
+    return { ok: false, reason: legacyStop, verdicts, legacy_suspects: legacySuspects.length };
+  }
   const unknowns = verdicts.filter(v => v.verdict.startsWith('unknown') || v.verdict === 'current-run');
   if (unknowns.length) {
-    return { ok: false, reason: `unknown-ownership:${unknowns[0].table}:${unknowns[0].verdict}`, verdicts };
+    return { ok: false, reason: `unknown-ownership:${unknowns[0].table}:${unknowns[0].verdict}`,
+      verdicts, legacy_suspects: legacySuspects.length };
   }
-  return { ok: true, reason: 'clean', verdicts };
+  return { ok: true, reason: 'clean', verdicts, legacy_suspects: legacySuspects.length };
 }
 
 /** Per-key collision guard for the CURRENT run: full key only, never a namespace-wide empty check. */
@@ -627,6 +747,29 @@ function cli() {
     appendPendingEvent(join(dir, 'pending.jsonl'), event);
     return;
   }
+  /**
+   * `if: always()` publication for a run that could NOT clear preflight (or whose finalize threw).
+   * It breaks the deadlock "completed run with no evidence" WITHOUT laundering anything:
+   *   - zero events, empty baseline => ZERO ownership claims, nothing can become
+   *     `baseline-origin` / `previous-a5-proven` for the next run;
+   *   - a real, hash-chained, run-identified ledger with conclusion `failure` and an explicit
+   *     stopped_at reason, so the next eligible run finds a readable artifact;
+   *   - NO database query at all (no enumeration, no attestation), and NO success is claimed.
+   * `preflightCleared()` is deliberately NOT consulted here: it is a gate for CLAIM-MAKING
+   * ledgers only. Every row, including the legacy namespace, is still verified by `preflight`
+   * on the next run, and any `unknown` still stops.
+   */
+  if (cmd === 'failure-evidence') {
+    const baseline = { schema: BASELINE_SCHEMA, ids: {}, digest: sha256Hex(canonical({})) };
+    const ledger = createLedger(identity, baseline);
+    ledger.evidence_class = 'failure-no-ownership-claims';
+    const reason = String(opt('reason') || process.env.A5_L2_FAILURE_REASON || 'preflight-not-cleared')
+      .slice(0, 160);
+    finalizeLedger(ledger, 'failure', reason);
+    writeFileSync(join(dir, `a5-l2-${identity.run_tag}.json`), `${JSON.stringify(ledger)}\n`);
+    process.stderr.write(`a5-l2: failure-evidence published (0 ownership claims) run_tag=${identity.run_tag} reason=${reason}\n`);
+    return;
+  }
   // A checkpoint publishes a REAL (already row_hash-resolved) ledger while the run is still going.
   // This is the incremental-publication requirement: a crash after step N leaves N proven rows,
   // and no `no-ledger(hard-cancel)` acceptance path is introduced.
@@ -656,7 +799,7 @@ function cli() {
     const result = classifyRows({ query, ledgers, currentRunTag: identity.run_tag });
     const payload = { ok: result.ok && keysFree, reason: keyError || result.reason,
       run_tag: identity.run_tag, ledgers: ledgers.length, rows: result.verdicts.length,
-      verdicts: result.verdicts };
+      legacy_suspects: result.legacy_suspects, verdicts: result.verdicts };
     process.stdout.write(`${JSON.stringify(payload)}\n`);
     writeFileSync(join(dir, 'preflight.json'), `${JSON.stringify(payload)}\n`);
     if (!payload.ok) process.exitCode = 1;

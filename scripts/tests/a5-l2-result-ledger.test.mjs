@@ -516,7 +516,8 @@ const mkApi = (lengths, total, { failPage = 0, badJsonPage = 0, badShapePage = 0
     if (badShapePage === page) return JSON.stringify({ total_count: total });
     const n = lengths[page - 1] ?? 0;
     const start = lengths.slice(0, page - 1).reduce((a, b) => a + b, 0);
-    const runs = Array.from({ length: n }, (_, i) => ({ id: 1_000_000 + start + i + (duplicate ? 0 : 0) }));
+    const runs = Array.from({ length: n }, (_, i) => ({ id: 1_000_000 + start + i + (duplicate ? 0 : 0),
+      head_sha: 'a'.repeat(40), conclusion: 'failure' }));
     if (duplicate && page === 2) runs[0].id = 1_000_000;
     return JSON.stringify({ total_count: total, workflow_runs: runs });
   };
@@ -541,7 +542,11 @@ test('L2-19 pagination fetches ALL pages until a short page (3 pages / 217 runs)
     assert.ok(args.includes(`page=${i + 1}`), `page ${i + 1} requested`);
     assert.ok(args.includes(`per_page=${PER_PAGE}`), 'max page size, not 10');
     assert.ok(args.includes('status=completed'));
-    assert.ok(args.some(a => a.startsWith(`created=>=${r.cutoff}`)), 'retention-scoped query');
+    // NO date-based skipping of prior runs. `cutoff` remains an informational artifact-retention
+    // pin only; a run's age is never a reason to omit it from eligibility checking.
+    assert.ok(!args.some(a => String(a).startsWith('created=')),
+      'a time filter must never be used to skip historical runs');
+    assert.equal(r.cutoffIsFilter, false);
   }
 });
 
@@ -607,14 +612,22 @@ test('L2-23 CLI end-to-end with a stub gh: 3 pages fetched, then STOP on page/ar
   const dir = mkdtempSync(path.join(tmpdir(), 'a5-l2-cli-'));
   const stub = path.join(dir, 'gh-stub.mjs');
   try {
+    // The stub now also serves the two TECHNICAL eligibility sources: the workflow file at
+    // head_sha (contents API) and the exact steps the run executed (jobs API). Runs are declared
+    // ELIGIBLE so downloads still have to happen; a missing artifact must still STOP.
     writeFileSync(stub, `#!/usr/bin/env node
 import fs from 'node:fs';
 const a = process.argv.slice(2);
+const ep = String(a.find(x => String(x).startsWith('repos/')) || '');
 const f = {};
 for (let i = 0; i < a.length; i += 1) if (a[i] === '-f' && a[i + 1]) {
   const eq = a[i + 1].indexOf('='); f[a[i + 1].slice(0, eq)] = a[i + 1].slice(eq + 1);
 }
-if (a[0] === 'api') {
+const WF = [
+  'a5-l2-prior-runs.mjs', 'a5-l2.mjs begin', 'a5-l2.mjs preflight',
+  'a5-l2.mjs finalize', 'name: a5-l2-ledger'
+].join('\\n');
+if (a[0] === 'api' && ep.includes('/actions/workflows/')) {
   const page = Number(f.page);
   if (String(process.env.A5_STUB_FAIL_PAGE || '') === String(page)) process.exit(3);
   const sizes = String(process.env.A5_STUB_PAGES || '100,100,17').split(',').map(Number);
@@ -622,7 +635,15 @@ if (a[0] === 'api') {
   const n = sizes[page - 1] ?? 0;
   const start = sizes.slice(0, page - 1).reduce((x, y) => x + y, 0);
   process.stdout.write(JSON.stringify({ total_count: total,
-    workflow_runs: Array.from({ length: n }, (_, i) => ({ id: 1000000 + start + i })) }));
+    workflow_runs: Array.from({ length: n }, (_, i) => ({
+      id: 1000000 + start + i, head_sha: 'a'.repeat(40), conclusion: 'failure' })) }));
+} else if (a[0] === 'api' && ep.includes('/contents/')) {
+  process.stdout.write(Buffer.from(WF, 'utf8').toString('base64'));
+} else if (a[0] === 'api' && ep.includes('/jobs')) {
+  process.stdout.write(JSON.stringify({ jobs: [{ steps: [
+    { name: 'A5 L2 — prior ledgers, read-only baseline, ownership preflight', conclusion: 'success' },
+    { name: 'Deploy nasr-crm-api-test and run live A5 E2E', conclusion: 'success' }
+  ] }] }));
 } else if (a[0] === 'run' && a[1] === 'download') {
   const rid = a[2];
   if (String(process.env.A5_STUB_FAIL_ARTIFACT || '') === String(rid)) process.exit(4);
@@ -645,8 +666,11 @@ if (a[0] === 'api') {
     assert.equal(out.pages_fetched, 3, 'exactly 3 pages were fetched by the CLI harness');
     assert.equal(out.total_count, 217);
     assert.equal(out.runs_fetched, 217);
+    assert.equal(out.eligible_runs, 217, 'every stubbed L2-enabled run owes a ledger');
+    assert.equal(out.ineligible_runs, 0);
     assert.equal(out.ledgers, 217);
     assert.equal(out.retention_days, 90);
+    assert.equal(out.cutoff_is_filter, false, 'retention is a pin, not a run filter');
 
     const badPage = runCli({ A5_STUB_FAIL_PAGE: '2' }, 'badpage');
     assert.notEqual(badPage.status, 0);
@@ -674,7 +698,17 @@ test('L2-24 workflow pins retention, full pagination, hard stop, and keeps L2 pr
   assert.match(wf, /a5-l2-prior-runs\.mjs/);
   assert.match(wf, /pages_fetched/);
   assert.match(wf, /--retention-days/);
-  assert.match(wf, /retention-scoped|created=>=/);
+  assert.match(wf, /eligible_runs/);
+  // NO date/count cutoff may be used to skip prior runs: eligibility comes from the workflow
+  // version at head_sha + the run's own job steps, and the legacy namespace is probed per row.
+  assert.ok(!/created=>=/.test(wf), 'a time filter must never skip historical runs');
+  assert.match(wf, /no-date-or-count-cutoff/);
+  assert.match(wf, /legacy synthetic namespace/);
+  assert.match(wf, /failure-evidence/);
+  // The nonce MUST be exported inside the L2 step itself: GITHUB_ENV is only visible to LATER
+  // steps, so begin/preflight and checkpoint/finalize must derive the SAME run_tag.
+  assert.match(wf, /export A5_L2_NONCE="\$nonce"/);
+  assert.match(wf, /export A5_L2_RUN_TAG="\$tag"/);
   // No truncated first-page-only retrieval, no "treat missing as absent" fallback.
   assert.ok(!/per_page=10\b/.test(wf), 'no first-page-only per_page=10 retrieval');
   for (const forbidden of ["treating prior ledgers as absent",
