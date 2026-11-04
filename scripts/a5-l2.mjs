@@ -15,8 +15,7 @@
  * WHAT THIS MODULE DOES
  *   begin      — read-only baseline snapshot + empty pending journal, BEFORE any write.
  *   record     — append one pending event per successfully created row (incremental, fsync'd).
- *   finalize   — resolve each pending event with a read-only SELECT, compute row_hash, add derived
- *                events for FK side-effect rows, close the hash chain, publish the ledger.
+ *   finalize   — resolve pending events with a read-only SELECT; unrecorded rows stop finalization.
  *   preflight  — load prior ledgers, verify chain/identity, re-read every row in the A5 synthetic
  *                scope, verify row_hash / observed_id / parent links; ANY unproven row => STOP.
  *
@@ -39,29 +38,28 @@ import { d1Query, assertTestOnlyConfig } from './a5-live-support.mjs';
  * the fixed synthetic phones, `ci-e2e-ticket:%` / `post-deploy-synth-*` receipts, and
  * `post_deploy_e2e_synthetic` conversations. Those runs can never produce an L2 artifact.
  *
- * These predicates use ONLY the project's own exact documented literals, and explicitly EXCLUDE
- * rows carrying the new `A5-RUN:%` / `a5:%` / `999*` L2 markers, so real customer data is never
- * classified as synthetic. A hit is a SUSPECT, never an ownership claim: it can ONLY stop the run.
- * Legacy rows are deliberately NOT added to TABLE_SPECS (buildLedger can therefore NEVER attest
- * one) and NOT added to the baseline (a ledger can therefore NEVER launder one). No retroactive
- * ledger, ownership link or hash is ever created for them; they are never deleted or modified.
+ * These broad indicators are only STOP-ONLY suspects, not proof of synthetic ownership.
+ * They may match real customer data. SQL NULL must never suppress a suspect. No row is
+ * modified, and historical markers cannot justify creating new ownership evidence.
  * ─────────────────────────────────────────────────────────────────────────────────────── */
 const LEGACY_CONTACT_IDS = `SELECT id FROM crm_contacts
-  WHERE name LIKE 'TEST ONLY%' AND review_note NOT LIKE 'A5-RUN:%'`;
+  WHERE name LIKE 'TEST ONLY%'`;
 const LEGACY_CONVERSATION_IDS = `SELECT id FROM crm_conversations
   WHERE (source_ref = 'post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%')
-  AND source_ref NOT LIKE 'A5-RUN:%' AND conversation_uid NOT LIKE 'a5:%'`;
+`;
 
 export const LEGACY_PROBES = Object.freeze([
   { table: 'crm_contacts', label: 'legacy-contact-name',
-    where: `name LIKE 'TEST ONLY%' AND review_note NOT LIKE 'A5-RUN:%'` },
+    where: `name LIKE 'TEST ONLY%'` },
   { table: 'crm_contact_phones', label: 'legacy-known-synthetic-phone',
     where: `phone_key IN ('201000000011','201000000012','201099990077')` },
   { table: 'crm_idempotency_receipts', label: 'legacy-ci-ticket',
     where: `submission_key LIKE 'ci-e2e-ticket:%' OR submission_key LIKE 'post-deploy-synth-%'` },
   { table: 'crm_conversations', label: 'legacy-conversation',
     where: `(source_ref = 'post_deploy_e2e_synthetic' OR chat_title LIKE 'TEST ONLY%')
-  AND source_ref NOT LIKE 'A5-RUN:%' AND conversation_uid NOT LIKE 'a5:%'` },
+` },
+  { table: 'crm_opportunities', label: 'legacy-opportunity',
+    where: `contact_id IN (${LEGACY_CONTACT_IDS}) OR notes LIKE 'TEST ONLY%'` },
   { table: 'crm_customer_requests', label: 'legacy-request',
     where: `contact_id IN (${LEGACY_CONTACT_IDS})` },
   { table: 'crm_request_status_history', label: 'legacy-request-history',
@@ -192,6 +190,12 @@ export const TABLE_SPECS = {
     hashColumns: ['submission_key', 'resource_type', 'resource_id'],
     parent: { table: 'crm_contacts', column: 'resource_id' },
     scope: `submission_key LIKE 'a5-%' OR resource_id IN (${CONTACT_IDS})`,
+  },
+  crm_opportunities: {
+    idColumn: 'id', uniqueKey: 'id', lookup: 'id',
+    hashColumns: ['id', 'contact_id', 'created_at'],
+    parent: { table: 'crm_contacts', column: 'contact_id' },
+    scope: `contact_id IN (${CONTACT_IDS}) OR notes LIKE 'TEST ONLY%'`,
   },
   crm_customer_requests: {
     idColumn: 'id', uniqueKey: 'dedupe_key', lookup: 'id',
@@ -522,38 +526,29 @@ export function buildLedger({ identity, baseline, pending, query, priorLedgers =
   for (const prior of priorLedgers) {
     if (verifyLedgerIntegrity(prior.ledger || prior) !== 'ok') throw new Error('a5-l2-untrusted-prior-ledger');
     const l = prior.ledger || prior;
-    for (const e of l.events) alreadyProven.add(`${e.table}|${e.unique_key}`);
-    for (const [table, keys] of Object.entries(l.baseline?.ids || {})) {
-      for (const key of keys) alreadyProven.add(`${table}|${key}`);
+    for (const e of l.events) {
+      if (!(l.baseline?.ids?.[e.table] || []).includes(e.unique_key)
+          && e.id_source !== 'read-back' && e.step !== 'derived-read-back') {
+        alreadyProven.add(`${e.table}|${e.unique_key}`);
+      }
     }
   }
-  for (const p of pending) index(resolveEvent(ledger, p, query, eventByKey));
-
   const baselineKeys = new Set();
   for (const [table, keys] of Object.entries(baseline?.ids || {})) {
     for (const key of keys) baselineKeys.add(`${table}|${key}`);
   }
-  for (const entry of enumerateRows(query)) {
-    if (eventByKey.has(`${entry.table}|${entry.a5_key}`) || eventByKey.has(`${entry.table}|observed:${entry.a5_id}`)) continue;
-    if (alreadyProven.has(`${entry.table}|${entry.a5_key}`)) continue;
-    // A row that ALREADY existed at `begin`, has no prior trusted L2 event and no explicit
-    // pending event from this run must NOT be blessed as a "read-back" side effect. This is the
-    // barrier that stops an `if: always()` finalize from laundering unknown rows after a failed
-    // preflight: finalize fails, no ledger is published, and the next run still stops.
-    if (baselineKeys.has(`${entry.table}|${entry.a5_key}`)) {
-      throw new Error(`a5-l2-unproven-preexisting-row:${entry.table}`);
+  for (const p of pending) {
+    const spec = TABLE_SPECS[p.table];
+    const row = rowFor(p.table, p.lookup_value, query, p.lookup_column);
+    const key = String(row[spec.uniqueKey] ?? '');
+    if (baselineKeys.has(`${p.table}|${key}`) || alreadyProven.has(`${p.table}|${key}`)) {
+      throw new Error(`a5-l2-unproven-preexisting-row:${p.table}`);
     }
-    const ev = appendEvent(ledger, {
-      table: entry.table,
-      unique_key: entry.a5_key,
-      observed_id: entry.a5_id,
-      id_source: 'read-back',
-      row_columns_sha256: rowColumnsSha256(entry.spec, entry.row),
-      row_hash: rowHash(entry.spec, entry.row),
-      parent: resolveParent(entry.spec, entry.row, eventByKey),
-      step: 'derived-read-back',
-    });
-    index(ev);
+    index(resolveEvent(ledger, p, query, eventByKey));
+  }
+  for (const entry of enumerateRows(query)) {
+    if (eventByKey.has(`${entry.table}|${entry.a5_key}`) || alreadyProven.has(`${entry.table}|${entry.a5_key}`)) continue;
+    throw new Error(`a5-l2-${baselineKeys.has(`${entry.table}|${entry.a5_key}`) ? 'unproven-preexisting-row' : 'unproven-row'}:${entry.table}`);
   }
   // Publishing ANY ledger while a legacy row is unproven would implicitly declare the namespace
   // clean. Refuse (fail-closed). The CLI then publishes `failure-evidence` instead: a genuine,
@@ -609,11 +604,14 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     verdicts: [], legacy_suspects: 0 };
 
   const eventByKey = new Map();
-  const baselineKeys = new Set();
   for (const { ledger } of loaded) {
-    for (const e of ledger.events) eventByKey.set(`${e.table}|${e.unique_key}`, e);
-    const ids = ledger.baseline?.ids || {};
-    for (const [table, keys] of Object.entries(ids)) for (const key of keys) baselineKeys.add(`${table}|${key}`);
+    for (const e of ledger.events) {
+      // Old read-back and baseline claims were not contemporaneous ownership evidence.
+      const preexisting = (ledger.baseline?.ids?.[e.table] || []).includes(e.unique_key);
+      if (!preexisting && e.id_source !== 'read-back' && e.step !== 'derived-read-back') {
+        eventByKey.set(`${e.table}|${e.unique_key}`, e);
+      }
+    }
   }
 
   const rows = enumerateRows(query);
@@ -623,8 +621,7 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
     const ev = eventByKey.get(`${table}|${a5_key}`);
     let verdict;
     if (!ev) {
-      verdict = baselineKeys.has(`${table}|${a5_key}`) || baselineKeys.has(`${table}|${a5_id}`)
-        ? 'baseline-origin' : 'unknown';
+      verdict = 'unknown';
     } else if (ev.run_tag === currentRunTag) {
       verdict = 'current-run';
     } else {

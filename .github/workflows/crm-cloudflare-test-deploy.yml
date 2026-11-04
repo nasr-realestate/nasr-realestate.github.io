@@ -601,6 +601,13 @@ jobs:
             "$L2_ROOT/preflight.json"
           echo "a5-l2: ownership preflight OK for run_tag=$tag"
 
+      # Fail closed: the live runner and ticket/session side effects do not yet record
+      # contemporaneous per-row evidence. Do not deploy or write until they do.
+      - name: Stop until complete contemporaneous L2 coverage
+        run: |
+          echo "::error::A5 disabled: L2 coverage for all live write paths is incomplete."
+          exit 1
+
       - name: Deploy nasr-crm-api-test and run live A5 E2E
         id: e2e
         shell: bash
