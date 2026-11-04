@@ -9,6 +9,8 @@ CREATE TABLE l2_outbox (
   prev_hash TEXT NOT NULL CHECK (length(prev_hash) = 64 AND prev_hash NOT GLOB '*[^0-9a-f]*'),
   entry_hash TEXT NOT NULL CHECK (length(entry_hash) = 64 AND entry_hash NOT GLOB '*[^0-9a-f]*'),
   result TEXT NOT NULL CHECK (result IN ('proven','unknown','failed')),
+  columns_json TEXT NOT NULL CHECK (json_valid(columns_json) AND json_type(columns_json) = 'array'),
+  relations_json TEXT NOT NULL CHECK (json_valid(relations_json) AND json_type(relations_json) = 'array'),
   PRIMARY KEY (run_id, event_seq),
   UNIQUE (run_id, table_name, row_id)
 );
