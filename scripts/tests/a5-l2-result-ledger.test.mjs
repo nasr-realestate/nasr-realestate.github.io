@@ -487,3 +487,208 @@ test('L2-18 a pre-existing unproven row cannot be blessed as a read-back side ef
   assert.doesNotThrow(() => buildLedger({ identity: ID_B, baseline: b2, pending: [],
     query: w2.query, priorLedgers: [prior], conclusion: 'success' }));
 });
+
+/* ──────────────── prior-run pagination / retrieval (PR #138 follow-up) ──────────────── */
+
+import { spawnSync } from 'node:child_process';
+import { chmodSync } from 'node:fs';
+import yaml from 'js-yaml';
+import {
+  DEFAULT_RETENTION_DAYS, PER_PAGE, WORKFLOW_FILE, ARTIFACT_NAME,
+  fetchAllRunIds, collectPriorLedgers, retentionCutoff,
+} from '../a5-l2-prior-runs.mjs';
+
+const PAGINATION_NOW = new Date('2026-11-04T00:00:00Z');
+const mkApi = (lengths, total, { failPage = 0, badJsonPage = 0, badShapePage = 0, duplicate = false } = {}) => {
+  const calls = [];
+  const execGh = args => {
+    calls.push(args);
+    const flag = name => {
+      const i = args.indexOf('-f');
+      void i;
+      const all = args.filter((_, idx) => idx > 0 && args[idx - 1] === '-f');
+      const hit = all.find(a => a.startsWith(`${name}=`));
+      return hit ? hit.slice(name.length + 1) : '';
+    };
+    const page = Number(flag('page'));
+    if (failPage === page) throw new Error('stub http 503');
+    if (badJsonPage === page) return 'not-json';
+    if (badShapePage === page) return JSON.stringify({ total_count: total });
+    const n = lengths[page - 1] ?? 0;
+    const start = lengths.slice(0, page - 1).reduce((a, b) => a + b, 0);
+    const runs = Array.from({ length: n }, (_, i) => ({ id: 1_000_000 + start + i + (duplicate ? 0 : 0) }));
+    if (duplicate && page === 2) runs[0].id = 1_000_000;
+    return JSON.stringify({ total_count: total, workflow_runs: runs });
+  };
+  return { execGh, calls };
+};
+
+test('L2-19 pagination fetches ALL pages until a short page (3 pages / 217 runs)', () => {
+  const { execGh, calls } = mkApi([100, 100, 17], 217);
+  const r = fetchAllRunIds({ execGh, repo: 'nasr-realestate/nasr-realestate.github.io',
+    now: PAGINATION_NOW, retentionDays: 90 });
+  assert.equal(r.pagesFetched, 3, 'three pages must be fetched, not just the first');
+  assert.equal(r.runIds.length, 217);
+  assert.equal(r.totalCount, 217);
+  assert.equal(r.cutoff, retentionCutoff(PAGINATION_NOW, 90));
+  assert.equal(r.cutoff, '2026-08-06T00:00:00Z');
+  assert.equal(r.retentionDays, 90);
+  assert.equal(calls.length, 3);
+  for (const [i, args] of calls.entries()) {
+    assert.equal(args[0], 'api');
+    assert.ok(args[3].includes(`/actions/workflows/${WORKFLOW_FILE}/runs`), 'workflow path');
+    assert.ok(args.includes('-f'));
+    assert.ok(args.includes(`page=${i + 1}`), `page ${i + 1} requested`);
+    assert.ok(args.includes(`per_page=${PER_PAGE}`), 'max page size, not 10');
+    assert.ok(args.includes('status=completed'));
+    assert.ok(args.some(a => a.startsWith(`created=>=${r.cutoff}`)), 'retention-scoped query');
+  }
+});
+
+test('L2-20 short/empty first page still yields a complete, single-page listing', () => {
+  const short = mkApi([4], 4);
+  const r = fetchAllRunIds({ execGh: short.execGh, repo: 'o/r', now: PAGINATION_NOW });
+  assert.equal(r.pagesFetched, 1);
+  assert.equal(r.runIds.length, 4);
+  const empty = mkApi([0], 0);
+  const e = fetchAllRunIds({ execGh: empty.execGh, repo: 'o/r', now: PAGINATION_NOW });
+  assert.equal(e.pagesFetched, 1);
+  assert.deepEqual(e.runIds, [], 'genuinely empty history is allowed; an UNREADABLE one is not');
+});
+
+test('L2-21 any unreadable/incomplete page is a HARD STOP, never "assume no prior rows"', () => {
+  const opts = { repo: 'o/r', now: PAGINATION_NOW };
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: mkApi([100, 100, 17], 217, { failPage: 2 }).execGh }),
+    /a5-l2-runs-page-unreadable:page=2/);
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: mkApi([100, 100, 17], 217, { badJsonPage: 2 }).execGh }),
+    /a5-l2-runs-page-unparsable:page=2/);
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: mkApi([100, 100, 17], 217, { badShapePage: 1 }).execGh }),
+    /a5-l2-runs-page-shape:page=1/);
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: mkApi([100, 100, 17], 500).execGh }),
+    /a5-l2-runs-incomplete:217\/500/);
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: mkApi([100, 100, 17], 217, { duplicate: true }).execGh }),
+    /a5-l2-runs-duplicate-ids/);
+  assert.throws(() => fetchAllRunIds({ ...opts, maxPages: 3, execGh: mkApi([100, 100, 100], 300).execGh }),
+    /a5-l2-runs-pagination-not-exhausted/);
+  assert.throws(() => fetchAllRunIds({ ...opts, execGh: () => { throw new Error('x'); } }),
+    /a5-l2-runs-page-unreadable:page=1/);
+  assert.throws(() => retentionCutoff(PAGINATION_NOW, 0), /a5-l2-bad-retention-days/);
+});
+
+test('L2-22 every run MUST have a readable, parseable L2 artifact; missing/corrupt = STOP', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'a5-l2-prior-'));
+  try {
+    const prior = path.join(dir, 'prior');
+    const work = path.join(dir, 'work');
+    const good = rid => dl => writeFileSync(path.join(dl, `a5-l2-${rid}.json`),
+      JSON.stringify({ schema: L2_SCHEMA, run_tag: `a5-${rid}-1-aaaaaaaa`, events: [] }));
+    const three = collectPriorLedgers({ runIds: ['1', '2', '3'], priorDir: prior, workDir: work,
+      download: (rid, dl) => good(rid)(dl) });
+    assert.equal(three.runs, 3);
+    assert.equal(three.ledgers, 3);
+    for (const f of three.files) assert.equal(JSON.parse(readFileSync(f, 'utf8')).schema, L2_SCHEMA);
+
+    assert.throws(() => collectPriorLedgers({ runIds: ['9'], priorDir: path.join(dir, 'p2'),
+      workDir: path.join(dir, 'w2'), download: () => { throw new Error('404'); } }),
+      /a5-l2-ledger-artifact-unreadable:run=9/);
+    assert.throws(() => collectPriorLedgers({ runIds: ['9'], priorDir: path.join(dir, 'p3'),
+      workDir: path.join(dir, 'w3'), download: () => {} }),
+      /a5-l2-ledger-artifact-missing:run=9/);
+    assert.throws(() => collectPriorLedgers({ runIds: ['9'], priorDir: path.join(dir, 'p4'),
+      workDir: path.join(dir, 'w4'), download: (_r, dl) => writeFileSync(path.join(dl, 'x.json'), 'oops') }),
+      /a5-l2-ledger-artifact-corrupt:run=9/);
+    assert.throws(() => collectPriorLedgers({ runIds: ['9'], priorDir: path.join(dir, 'p5'),
+      workDir: path.join(dir, 'w5'), download: (_r, dl) => writeFileSync(path.join(dl, 'x.json'), '{"schema":"other"}') }),
+      /a5-l2-ledger-artifact-not-l2:run=9/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('L2-23 CLI end-to-end with a stub gh: 3 pages fetched, then STOP on page/artifact failure', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'a5-l2-cli-'));
+  const stub = path.join(dir, 'gh-stub.mjs');
+  try {
+    writeFileSync(stub, `#!/usr/bin/env node
+import fs from 'node:fs';
+const a = process.argv.slice(2);
+const f = {};
+for (let i = 0; i < a.length; i += 1) if (a[i] === '-f' && a[i + 1]) {
+  const eq = a[i + 1].indexOf('='); f[a[i + 1].slice(0, eq)] = a[i + 1].slice(eq + 1);
+}
+if (a[0] === 'api') {
+  const page = Number(f.page);
+  if (String(process.env.A5_STUB_FAIL_PAGE || '') === String(page)) process.exit(3);
+  const sizes = String(process.env.A5_STUB_PAGES || '100,100,17').split(',').map(Number);
+  const total = sizes.reduce((x, y) => x + y, 0);
+  const n = sizes[page - 1] ?? 0;
+  const start = sizes.slice(0, page - 1).reduce((x, y) => x + y, 0);
+  process.stdout.write(JSON.stringify({ total_count: total,
+    workflow_runs: Array.from({ length: n }, (_, i) => ({ id: 1000000 + start + i })) }));
+} else if (a[0] === 'run' && a[1] === 'download') {
+  const rid = a[2];
+  if (String(process.env.A5_STUB_FAIL_ARTIFACT || '') === String(rid)) process.exit(4);
+  const dl = a[a.indexOf('--dir') + 1];
+  fs.writeFileSync(dl + '/a5-l2-' + rid + '.json', JSON.stringify({ schema: 'a5-l2-v1', run_tag: 'a5-' + rid, events: [] }));
+} else process.exit(5);
+`);
+    chmodSync(stub, 0o755);
+    const runCli = (extra, tag) => spawnSync('node', ['scripts/a5-l2-prior-runs.mjs',
+      '--prior-dir', path.join(dir, `prior-${tag}`), '--work-dir', path.join(dir, `work-${tag}`),
+      '--retention-days', '90'], {
+      cwd: ROOT, encoding: 'utf8',
+      env: { ...process.env, A5_L2_GH_BIN: stub, GITHUB_REPOSITORY: 'o/r',
+        A5_STUB_PAGES: '100,100,17', ...extra },
+    });
+    const ok = runCli({});
+    assert.equal(ok.status, 0, `cli failed: ${ok.stderr}`);
+    const out = JSON.parse(ok.stdout.trim());
+    assert.equal(out.ok, true);
+    assert.equal(out.pages_fetched, 3, 'exactly 3 pages were fetched by the CLI harness');
+    assert.equal(out.total_count, 217);
+    assert.equal(out.runs_fetched, 217);
+    assert.equal(out.ledgers, 217);
+    assert.equal(out.retention_days, 90);
+
+    const badPage = runCli({ A5_STUB_FAIL_PAGE: '2' }, 'badpage');
+    assert.notEqual(badPage.status, 0);
+    assert.match(badPage.stderr, /a5-l2-runs-page-unreadable:page=2/);
+    assert.match(badPage.stderr, /STOPPED before any write/);
+
+    const badArtifact = runCli({ A5_STUB_FAIL_ARTIFACT: '1000000' }, 'badartifact');
+    assert.notEqual(badArtifact.status, 0);
+    assert.match(badArtifact.stderr, /a5-l2-ledger-artifact-unreadable:run=1000000/);
+    assert.match(badArtifact.stderr, /STOPPED before any write/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('L2-24 workflow pins retention, full pagination, hard stop, and keeps L2 preflight barriers', () => {
+  const wf = read('.github/workflows/crm-cloudflare-test-deploy.yml');
+  const doc = yaml.load(wf);
+  const job = doc.jobs['deploy-and-verify'];
+  assert.equal(String(job.env.A5_L2_RETENTION_DAYS), '90');
+  assert.equal(DEFAULT_RETENTION_DAYS, 90, 'module default must equal the workflow retention');
+  const upload = job.steps.find(s => s.with?.name === 'a5-l2-ledger');
+  assert.ok(upload, 'ledger artifact upload step must exist');
+  assert.equal(Number(upload.with['retention-days']), 90,
+    'retention-days must equal the cutoff window used by the retrieval step');
+  assert.equal(ARTIFACT_NAME, 'a5-l2-ledger');
+  assert.match(wf, /a5-l2-prior-runs\.mjs/);
+  assert.match(wf, /pages_fetched/);
+  assert.match(wf, /--retention-days/);
+  assert.match(wf, /retention-scoped|created=>=/);
+  // No truncated first-page-only retrieval, no "treat missing as absent" fallback.
+  assert.ok(!/per_page=10\b/.test(wf), 'no first-page-only per_page=10 retrieval');
+  for (const forbidden of ["treating prior ledgers as absent",
+    'no published ledger artifact for run', "--jq '.workflow_runs[].id'"]) {
+    assert.ok(!wf.includes(forbidden), `unsafe retrieval remnant: ${forbidden}`);
+  }
+  assert.match(wf, /if ! node scripts\/a5-l2-prior-runs\.mjs[\s\S]{0,700}exit 1/,
+    'a failed retrieval must stop the run before any write');
+  // All original L2 barriers stay intact.
+  for (const needle of ['a5-l2.mjs begin', 'a5-l2.mjs preflight', 'a5-l2.mjs checkpoint',
+    'a5-l2.mjs finalize', 'if: always()', 'unknown synthetic-row ownership']) {
+    assert.ok(wf.includes(needle), `L2 barrier missing: ${needle}`);
+  }
+  assert.match(read('scripts/a5-l2.mjs'), /preflightCleared\(dir, identity\.run_tag\)/);
+  assert.match(read('scripts/a5-l2.mjs'), /a5-l2-unproven-preexisting-row/);
+  assert.match(read('scripts/a5-l2.mjs'), /unknown-ownership/);
+});

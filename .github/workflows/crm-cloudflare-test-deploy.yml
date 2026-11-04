@@ -194,6 +194,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       OWNER_CRM_ACCESS_CODE: ${{ secrets.CRM_ACCESS_CODE }}
       A5_WRITE_DECISION_INPUT: ${{ github.event.inputs.a5_write_decision }}
+      # Must equal `retention-days` on the a5-l2-ledger artifact below (pinned by an offline test).
+      A5_L2_RETENTION_DAYS: '90'
     outputs:
       result: ${{ steps.e2e.outputs.result }}
       phase: ${{ steps.e2e.outputs.phase }}
@@ -524,8 +526,9 @@ jobs:
       # ── A5 L2: the ONLY accepted ownership proof ──────────────────────────────────────────
       # L0 (pre-write intent) and L1 (tag + derived keys) are NOT proofs: every field they use is
       # client-controlled through an ordinary CRM session, and run_tag is public. This step loads
-      # the previous runs' hash-chained result ledgers, takes a read-only baseline, and STOPS the
-      # run (before any write) if any synthetic row in scope is `unknown`. No deletion, no bypass.
+      # ALL previous runs' hash-chained result ledgers (paginated, retention-scoped), takes a
+      # read-only baseline, and STOPS the run (before any write) if any synthetic row in scope is
+      # `unknown` OR any prior run/ledger cannot be retrieved. No deletion, no bypass.
       - name: A5 L2 — prior ledgers, read-only baseline, ownership preflight
         id: a5_l2
         shell: bash
@@ -549,24 +552,20 @@ jobs:
             echo "A5_L2_CHECKPOINT_CMD=node scripts/a5-l2.mjs checkpoint --dir $L2_DIR --ledgers $L2_PRIOR"
           } >> "$GITHUB_ENV"
 
-          # Prior ledgers are pipeline artifacts, never DB rows. A missing artifact is reported,
-          # not swallowed: if unproven synthetic rows exist, preflight below stops the run.
-          if run_ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/crm-cloudflare-test-deploy.yml/runs?per_page=10&status=completed" \
-                       --jq '.workflow_runs[].id' 2>/dev/null); then
-            for rid in $run_ids; do
-              dl="$L2_ROOT/dl-$rid"
-              mkdir -p "$dl"
-              if gh run download "$rid" --repo "$GITHUB_REPOSITORY" --name a5-l2-ledger --dir "$dl" >/dev/null 2>&1; then
-                for f in "$dl"/*.json; do
-                  if [ -f "$f" ]; then cp "$f" "$L2_PRIOR/dl-$rid-$(basename "$f")"; fi
-                done
-              else
-                echo "a5-l2: no published ledger artifact for run $rid"
-              fi
-            done
-          else
-            echo "a5-l2: prior workflow-run inventory unreadable; treating prior ledgers as absent"
+          # Prior ledgers are pipeline artifacts, never DB rows. `a5-l2-prior-runs.mjs` paginates
+          # the run history with per_page=100 until exhaustion, restricted to the artifact
+          # retention window (`created=>=<cutoff>`), and requires a readable L2 artifact for
+          # EVERY run returned. An unreadable page, an incomplete listing, a missing/expired
+          # artifact or a corrupt ledger is a HARD STOP here — never "no prior rows".
+          if ! node scripts/a5-l2-prior-runs.mjs \
+                 --prior-dir "$L2_PRIOR" --work-dir "$L2_ROOT/downloads" \
+                 --retention-days "${A5_L2_RETENTION_DAYS:-90}" \
+                 > "$L2_ROOT/prior-runs.json"; then
+            echo "::error::A5 L2: prior run/ledger retrieval failed; run stopped before any write, no deletion, no bypass."
+            exit 1
           fi
+          jq -c '{ok, pages_fetched, total_count, runs_fetched, ledgers, retention_days, cutoff}' "$L2_ROOT/prior-runs.json"
+          echo "::notice::A5 L2: fetched $(jq -r '.pages_fetched' "$L2_ROOT/prior-runs.json") page(s) of prior runs, $(jq -r '.ledgers' "$L2_ROOT/prior-runs.json") ledger(s) within the $(jq -r '.retention_days' "$L2_ROOT/prior-runs.json")-day artifact retention window"
 
           node scripts/a5-l2.mjs begin --dir "$L2_DIR"
           if ! node scripts/a5-l2.mjs preflight --dir "$L2_DIR" --ledgers "$L2_PRIOR" \
@@ -838,6 +837,7 @@ jobs:
           name: a5-l2-ledger
           path: ${{ runner.temp }}/a5-l2/current/a5-l2-*.json
           if-no-files-found: warn
+          # Kept equal to the job env A5_L2_RETENTION_DAYS (pinned by scripts/tests/a5-l2-result-ledger.test.mjs).
           retention-days: 90
 
       - name: Verify nasr-market-db invariance (read-only)
