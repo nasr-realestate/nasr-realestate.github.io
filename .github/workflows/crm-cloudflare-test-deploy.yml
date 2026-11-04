@@ -147,7 +147,10 @@ jobs:
           # 10-minute timer is measured as 600s, not refused as "10s".
           wait_seconds=$wait_timer
           if [ "$wait_seconds" -lt 600 ]; then wait_seconds=$((wait_seconds * 60)); fi
-          bypass=$(jq -r '.can_admins_bypass // "unknown"' <<< "$body")
+          # jq's `//` also replaces `false`, so it must NEVER be used on a boolean: it used to turn a
+          # correct `can_admins_bypass:false` into "unknown" and let an unmeasurable flag pass silently.
+          # Derive the diagnostic from `type`, and gate on a strict boolean comparison below.
+          bypass=$(jq -r 'if (.can_admins_bypass | type) == "boolean" then (.can_admins_bypass | tostring) else "unreadable" end' <<< "$body")
           detail="required_reviewers=${has_rev};wait_timer=${wait_timer}min(${wait_seconds}s);can_admins_bypass=${bypass}"
           echo "measured: $detail"
           if [ "$has_rev" != 'true' ]; then
@@ -163,9 +166,9 @@ jobs:
             echo "detail=${detail}" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          if [ "$bypass" = 'true' ]; then
-            echo "::error::crm-test-deploy still lets administrators bypass protection; the approval would be" \
-              "optional for exactly the people who can change it. Turn can_admins_bypass off."
+          if ! jq -e '.can_admins_bypass == false' <<< "$body" >/dev/null; then
+            echo "::error::crm-test-deploy can_admins_bypass is not measurably false (measured=${bypass}); the approval would be" \
+              "optional for exactly the people who can change it, and an unreadable flag is never assumed to be false."
             echo "protection=weak" >> "$GITHUB_OUTPUT"
             echo "detail=${detail}" >> "$GITHUB_OUTPUT"
             exit 1

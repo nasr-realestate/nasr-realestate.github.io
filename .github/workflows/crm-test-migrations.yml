@@ -63,9 +63,15 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Documented endpoint: GET /repos/{owner}/{repo}/environments/{environment_name}
+          # (https://docs.github.com/en/rest/deployments/environments). It requires the "Actions"
+          # repository permission (read) — declared on this job above — and its response schema
+          # exposes `can_admins_bypass` as a BOOLEAN. Pin the API version so the field's meaning
+          # cannot drift underneath this gate.
           raw=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
             -w '\n%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
             "${API}/repos/${REPO}/environments/crm-test-deploy")
           code=$(tail -n1 <<< "$raw")
           body=$(sed '$d' <<< "$raw")
@@ -77,6 +83,24 @@ jobs:
             echo "detail=http-${code}" >> "$GITHUB_OUTPUT"
             exit 1
           fi
+          # ROOT CAUSE of the `can_admins_bypass=unknown` stop: jq's `//` is an ALTERNATIVE
+          # operator, not a null-coalescing one — it replaces BOTH `null` and `false`. So
+          # `.can_admins_bypass // "unknown"` turned a perfectly correct JSON `false` into the
+          # string "unknown", and this gate (correctly) refused it. Never use `//` on a boolean.
+          #
+          # Reliable, documented method used instead:
+          #   * first prove the 200 body really is the documented environment object;
+          #   * `jq -e '.can_admins_bypass == false'` exits 0 ONLY for a real boolean false —
+          #     a missing field, null, true, the string "false" or a non-object body all exit 1;
+          #   * the diagnostic comes from `type`, so an unmeasurable flag is reported as
+          #     "unreadable" and is NEVER folded into false, NEVER downgraded to a warning,
+          #     and NEVER allowed past this barrier.
+          if ! jq -e 'type == "object" and .name == "crm-test-deploy" and (.protection_rules | type) == "array"' <<< "$body" >/dev/null; then
+            echo "::error::environment response is not the documented environment object; migrations stopped before any write."
+            echo "protection=unreadable" >> "$GITHUB_OUTPUT"
+            echo "detail=response-shape" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
           has_rev=$(jq -r '[.protection_rules[]? | select(.type == "required_reviewers" or .type == "reviewers")] | length > 0' <<< "$body")
           # GitHub reports the environment wait_timer in MINUTES (0..43200). Normalise to seconds so a
           # correctly configured 10-minute timer is measured as 600, not refused as "10".
@@ -84,7 +108,7 @@ jobs:
           case "$wait_timer" in ''|*[!0-9]*) wait_timer=0 ;; esac
           wait_seconds=$wait_timer
           if [ "$wait_seconds" -lt 600 ]; then wait_seconds=$((wait_seconds * 60)); fi
-          bypass=$(jq -r '.can_admins_bypass // "unknown"' <<< "$body")
+          bypass=$(jq -r 'if (.can_admins_bypass | type) == "boolean" then (.can_admins_bypass | tostring) else "unreadable" end' <<< "$body")
           detail="required_reviewers=${has_rev};wait_timer=${wait_timer}min(${wait_seconds}s);can_admins_bypass=${bypass}"
           echo "measured: $detail"
           echo "detail=${detail}" >> "$GITHUB_OUTPUT"
@@ -98,8 +122,8 @@ jobs:
             echo "protection=weak" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          if [ "$bypass" != 'false' ]; then
-            echo "::error::crm-test-deploy can_admins_bypass is not false; approval would be optional for the people who can change the rule."
+          if ! jq -e '.can_admins_bypass == false' <<< "$body" >/dev/null; then
+            echo "::error::crm-test-deploy can_admins_bypass is not measurably false (measured=${bypass}); migrations stopped. Approval must not be optional for administrators, and an unreadable flag is never assumed to be false."
             echo "protection=weak" >> "$GITHUB_OUTPUT"
             exit 1
           fi
