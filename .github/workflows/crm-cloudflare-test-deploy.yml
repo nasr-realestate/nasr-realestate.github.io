@@ -41,7 +41,7 @@ on:
         default: ''
         type: string
       a5_write_decision:
-        description: 'A5 live checks never write the append-only Drive review ledger unless this is changed. none = read-only (default). noted = record one non-state-changing noted row on the test DB.'
+        description: 'none = read-only (default, nine live checks). noted = record one non-state-changing noted row on the test DB AND enable the tenth live check: a run-local, secret-free expiry of only this run''s synthetic session (proof of 0014 on real D1).'
         required: false
         default: 'none'
         type: choice
@@ -141,8 +141,14 @@ jobs:
           # version; scan every rule and take the largest number found, so a correctly configured
           # environment is never refused because of a shape change.
           wait_timer=$(jq -r '[.protection_rules[]? | (.wait_timer // .params.wait_timer // 0)] | max // 0' <<< "$body")
+          case "$wait_timer" in ''|*[!0-9]*) wait_timer=0 ;; esac
+          # GitHub reports the environment wait_timer in MINUTES (0..43200); the attestation field and
+          # the threshold below are in SECONDS. Normalise either shape so a correctly configured
+          # 10-minute timer is measured as 600s, not refused as "10s".
+          wait_seconds=$wait_timer
+          if [ "$wait_seconds" -lt 600 ]; then wait_seconds=$((wait_seconds * 60)); fi
           bypass=$(jq -r '.can_admins_bypass // "unknown"' <<< "$body")
-          detail="required_reviewers=${has_rev};wait_timer=${wait_timer};can_admins_bypass=${bypass}"
+          detail="required_reviewers=${has_rev};wait_timer=${wait_timer}min(${wait_seconds}s);can_admins_bypass=${bypass}"
           echo "measured: $detail"
           if [ "$has_rev" != 'true' ]; then
             echo "::error::crm-test-deploy has no required reviewer: a deploy would need no human approval."
@@ -150,8 +156,8 @@ jobs:
             echo "detail=${detail}" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          if [ "$wait_timer" -lt 600 ]; then
-            echo "::error::crm-test-deploy wait timer is ${wait_timer}s; at least 600s is required so an" \
+          if [ "$wait_seconds" -lt 600 ]; then
+            echo "::error::crm-test-deploy wait timer is ${wait_seconds}s; at least 600s is required so an" \
               "approval cannot be rubber-stamped the instant a run appears."
             echo "protection=weak" >> "$GITHUB_OUTPUT"
             echo "detail=${detail}" >> "$GITHUB_OUTPUT"
@@ -579,12 +585,18 @@ jobs:
           fi
 
           # A5 live operational verification — unchanged A5 client path, now driven only by secrets
-          # that already exist. No D1 session-expiry rewrite: 0014 is proven by the schema guard and
-          # the already-passing local contract tests; logout-then-401 remains the live check.
+          # that already exist. The 10th check (row-level 0014 proof on real D1) is enabled only when
+          # the dispatch form selects a5_write_decision=noted. scripts/a5-live-support.mjs derives
+          # csrf_hash = sha256(csrf_token) — a secret-free handle on exactly this run's session — and
+          # refuses to UPDATE anything unless precisely one live crm_sessions row matches. It never
+          # reads CRM_SESSION_SECRET, never touches the prod DB, and prints to stderr only so the
+          # verifier's one-line JSON stays parseable. With a5_write_decision=none (the default) the
+          # read-only path is unchanged: nine checks plus logout-then-401, no decision row, no expiry.
           run_a5_live() {
             local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_residue a5_code_env=''
             : > "$a5_state"
             chmod 600 "$a5_state"
+            rm -f "$a5_state.csrf"
             if [ -s "$TMP/access_code" ]; then
               a5_code_env="$TMP/access_code"
             else
@@ -599,6 +611,18 @@ jobs:
                 a5_live='ticket-mint-failed'
                 return 1
               fi
+            fi
+            # The 10-check path needs one open review case and a run-local expiry hook. Both are
+            # barriers: any failure stops the A5 run with a named reason instead of a silent 9/10.
+            if [ "${A5_WRITE_DECISION_INPUT:-none}" = 'noted' ]; then
+              if ! node scripts/a5-live-support.mjs ensure-review-case > "$TMP/a5_seed.out" 2> "$TMP/a5_seed.err"; then
+                a5_live="review-case-seed-failed:$(tr -cd 'A-Za-z0-9_=-' < "$TMP/a5_seed.err" | tail -c 60 || echo unknown)"
+                return 1
+              fi
+              # The hook prints to stderr only; redirect its stdout too so the JSON stays one line.
+              export CRM_A5_EXPIRE_CMD='node scripts/a5-live-support.mjs expire-session 1>&2'
+            else
+              unset CRM_A5_EXPIRE_CMD || true
             fi
             if ! CRM_TEST_BASE_URL="$BASE_URL" CRM_A5_ORIGIN="$BASE_URL" CRM_A5_STATE_FILE="$a5_state" \
                  CRM_A5_RUN_TAG="ci-$GITHUB_RUN_ID" CRM_A5_TICKET="${a5_n1:-}" \

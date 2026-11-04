@@ -160,6 +160,14 @@ export async function runA5LiveChecks(transport, options = {}) {
     if (stateFile) {
       writeFileSync(stateFile, jar.get(SESSION_COOKIE), { mode: 0o600 });
       try { chmodSync(stateFile, 0o600); } catch { /* أفضل جهد على نظام الملفات */ }
+      // Secret-free handle on exactly THIS session: the Worker stores csrf_hash = sha256(csrf_token).
+      // CRM_A5_EXPIRE_CMD derives that hash to expire this one row in crm_sessions (proof of 0014 on
+      // real D1) without ever reading CRM_SESSION_SECRET. Nothing is written unless login succeeded.
+      if (typeof session?.csrf_token === 'string' && session.csrf_token.length >= 32) {
+        const csrfState = `${stateFile}.csrf`;
+        writeFileSync(csrfState, session.csrf_token, { mode: 0o600 });
+        try { chmodSync(csrfState, 0o600); } catch { /* أفضل جهد على نظام الملفات */ }
+      }
     }
     return `mode=${accessTicket ? 'ci_ticket' : 'access_code'},csrf=${session.csrf_token.length}ch,state=${stateFile ? 'written' : 'none'}`;
   });
