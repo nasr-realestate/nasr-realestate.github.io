@@ -502,7 +502,7 @@ jobs:
             ['crm_operational_audit_log', ['entity','entity_id','contact_id','action','actor']],
             ['crm_interactions', ['id','contact_id','kind','summary','dedupe_key','created_at']],
             ['crm_followups', ['id','contact_id','request_id','opportunity_id','due_at','status','dedupe_key']],
-            ['crm_drive_file_review_decision', ['case_ref','seq','decision','reviewer','created_at']],
+            ['crm_drive_file_review_decision', ['case_ref','decision_seq','decision','reviewer','occurred_at']],
             ['crm_sessions', ['id','token_hash','csrf_hash','created_at','expires_at','revoked_at']],
             ['crm_idempotency_receipts', ['submission_key','resource_type','resource_id','received_at']]
           ];
