@@ -3,9 +3,9 @@
  * A5 live-verification support (test database ONLY). Two modes, both silent on stdout so the
  * verifier's single-line JSON summary stays parseable:
  *
- *   ensure-review-case  — read-only count of open Drive review cases; if there is none, create ONE
- *                         synthetic file/version/case on the test DB so A5-L8/L9 can record a
- *                         `noted` decision. Mirrors seedReviewCase() in crm-a5-live-contract.test.mjs.
+ *   ensure-review-case  — exact-key pre-check + ONE run-scoped synthetic file/version/case on the
+ *                         test DB so A5-L8/L9 can record a `noted` decision. Every successful row
+ *                         is appended to the A5 L2 pending journal for later hash-chain proof.
  *   expire-session      — the CRM_A5_EXPIRE_CMD hook. Expires ONLY the session this run created.
  *
  * WHY csrf_hash AND NOT token_hash: the Worker stores
@@ -24,7 +24,7 @@
  *   - no DELETE, no backup/stage DB, no secret create/update/rotate, no production Worker deploy.
  *   - nothing is ever written to stdout (only stderr diagnostics), and no secret/token is printed.
  */
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
@@ -57,39 +57,54 @@ export function countOpenReviewCasesSql() {
   return "SELECT COUNT(*) AS n FROM crm_drive_file_review_case WHERE status <> 'closed_no_action';";
 }
 
-/** Deterministic, synthetic-only seed. No customer data, no real Drive file, one version, one open case. */
-export function seedReviewCaseStatements() {
-  const driveId = `SYNTHLIVE${SEED_TAG}`;
+/**
+ * Run-scoped, synthetic-only seed. No customer data, no real Drive file, one version, one open case.
+ *
+ * A5 L2: keys are derived from `run_tag` (not from a constant), so two consecutive runs NEVER
+ * contend for the same case_ref. Plain INSERT is used on purpose: `INSERT OR IGNORE` silently
+ * reused a previous run's row and hid a UNIQUE conflict, which broke isolation. The dead
+ * `UPDATE head_version_seq` is gone (trigger 0010 already maintains the head).
+ *
+ * `seedTag` defaults to the legacy constant ONLY so existing offline contract tests can call the
+ * function with no arguments; the workflow always passes a run-scoped tag.
+ */
+export function seedReviewCaseStatements(seedTag = SEED_TAG) {
+  const driveId = `SYNTHLIVE${seedTag}`;
   const ref = sha256Hex(driveId);
   const digest = sha256Hex(`${driveId}-bytes-v1`);
   const caseRef = `frw-${ref.slice(0, 16)}-1`;
-  // Runtime "now": /api/reviews/drive orders by opened_at DESC, so the synthetic open case is always
-  // in the first page the A5 verifier reads. The case_ref stays deterministic, so INSERT OR IGNORE
-  // makes repeated runs idempotent (one synthetic case, never a new one per run).
   const mtim = new Date().toISOString();
   const q = (s) => s.replace(/'/g, "''");
   return [
-    `INSERT OR IGNORE INTO crm_drive_file_registry
+    `INSERT INTO crm_drive_file_registry
       (id, drive_file_id, drive_parent_id, file_name, original_file_name, drive_path, mime_type, file_size,
        drive_created_at, drive_modified_at, content_sha256, content_type, processing_status, review_status,
        last_processed_at, processing_receipt_ref, extracted_records_count, processing_attempts, metadata_json,
        created_at, updated_at, drive_ref)
-      VALUES ('reg-${q(SEED_TAG)}','${q(driveId)}','SYNTH-FOLDER','synth-${q(SEED_TAG)}.zip','synth-${q(SEED_TAG)}.zip','/synth',
+      VALUES ('reg-${q(seedTag)}','${q(driveId)}','SYNTH-FOLDER','synth-${q(seedTag)}.zip','synth-${q(seedTag)}.zip','/synth',
        'application/zip',1024,'${mtim}','${mtim}','${digest}','ZIP','metadata_scanned','not_required','${mtim}',
-       'receipt-${q(SEED_TAG)}',0,1,'{}','${mtim}','${mtim}','${ref}');`,
-    `INSERT OR IGNORE INTO crm_drive_file_version
+       'receipt-${q(seedTag)}',0,1,'{}','${mtim}','${mtim}','${ref}');`,
+    `INSERT INTO crm_drive_file_version
       (version_ref, drive_ref, version_seq, content_sha256, evidence_class, size_bytes, drive_modified_at,
        observed_at, observed_by, receipt_ref)
       VALUES ('${ref}#1','${ref}',1,'${digest}','verified_local_recompute',1024,'${mtim}','${mtim}',
-       'intake_pipeline','receipt-${q(SEED_TAG)}');`,
-    `UPDATE crm_drive_file_registry SET head_version_seq = 1 WHERE drive_ref = '${ref}' AND head_version_seq IS NULL;`,
-    `INSERT OR IGNORE INTO crm_drive_file_review_case
+       'intake_pipeline','receipt-${q(seedTag)}');`,
+    `INSERT INTO crm_drive_file_review_case
       (case_ref, drive_ref, bound_version_seq, bound_content_sha256, review_disposition, status,
        case_snapshot_sha256, genesis_sha256, opened_by, opened_at)
       VALUES ('${caseRef}','${ref}',1,'${digest}','needs_governance_review','open',
        '${sha256Hex(`case-snapshot|${caseRef}|${digest}`)}','${sha256Hex(`genesis|${caseRef}`)}',
        'intake_pipeline','${mtim}');`,
   ];
+}
+
+/** Exact-key, read-only pre-check for THIS run's seed. Never a namespace-wide "empty" assertion. */
+export function seedExistsSql(seedTag) {
+  return `SELECT drive_ref FROM crm_drive_file_registry WHERE drive_file_id = 'SYNTHLIVE${String(seedTag).replace(/'/g, "''")}' LIMIT 2`;
+}
+
+export function seedTagFor(runTag) {
+  return `A5-${sha256Hex(`seed|${runTag}`).slice(0, 16)}`;
 }
 
 function parseD1Response(out) {
@@ -140,12 +155,35 @@ function countOf(rows) {
 }
 
 function ensureReviewCase(env) {
-  const before = countOf(d1Query(countOpenReviewCasesSql(), env));
-  if (before > 0) { log(`open review cases present (${before}); no seed written`); return; }
-  for (const statement of seedReviewCaseStatements()) d1Query(statement, env);
-  const after = countOf(d1Query(countOpenReviewCasesSql(), env));
-  if (after < 1) fail('review-case-seed-did-not-create-a-case');
-  log('one synthetic open review case created on the test DB');
+  // A5 L2: every run owns its own case. Checking the exact run key (not "any open case") is what
+  // stops run B from silently reusing run A's case and therefore reusing A's L1-looking evidence.
+  const runTag = String(env.A5_L2_RUN_TAG || '').trim();
+  if (!/^a5-\d+-\d+-[0-9a-f]{8}$/.test(runTag)) fail('run-tag-required-for-a5-l2-seed');
+  const seedTag = seedTagFor(runTag);
+  const existing = d1Query(seedExistsSql(seedTag), env);
+  if (existing.length > 0) { log(`this run's synthetic case already exists (${existing.length}); no second seed`); return; }
+
+  const statements = seedReviewCaseStatements(seedTag);
+  for (const statement of statements) d1Query(statement, env);
+  const after = d1Query(seedExistsSql(seedTag), env);
+  if (after.length !== 1) fail('review-case-seed-did-not-create-exactly-one-case');
+
+  // Incremental L2 evidence for the three rows this barrier actually wrote. These are D1-side
+  // writes, so they cannot come from an HTTP response; finalize resolves them by exact key.
+  const driveRef = sha256Hex(`SYNTHLIVE${seedTag}`);
+  const pending = String(env.A5_L2_PENDING || '').trim();
+  if (pending) {
+    const events = [
+      { table: 'crm_drive_file_registry', lookup_column: 'drive_ref', lookup_value: driveRef, id_source: 'd1-exact-key', step: 'ensure-review-case' },
+      { table: 'crm_drive_file_version', lookup_column: 'version_ref', lookup_value: `${driveRef}#1`, id_source: 'd1-exact-key', step: 'ensure-review-case' },
+      { table: 'crm_drive_file_review_case', lookup_column: 'case_ref', lookup_value: `frw-${driveRef.slice(0, 16)}-1`, id_source: 'd1-exact-key', step: 'ensure-review-case' },
+    ];
+    for (const event of events) {
+      appendFileSync(pending, `${JSON.stringify({ ...event, run_tag: runTag,
+        run_id: env.GITHUB_RUN_ID || '', run_attempt: env.GITHUB_RUN_ATTEMPT || '' })}\n`);
+    }
+  }
+  log('one run-scoped synthetic open review case created on the test DB (L2 evidence recorded)');
 }
 
 function expireSession(env) {
