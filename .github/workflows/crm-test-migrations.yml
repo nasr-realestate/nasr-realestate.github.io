@@ -1,0 +1,408 @@
+name: CRM test D1 migrations — protected, dispatch-only
+
+# WHY THIS FILE EXISTS
+# The Worker deploy workflow (crm-cloudflare-test-deploy.yml) deliberately NEVER applies migrations: it
+# only verifies, read-only, that nasr-crm-test-db already carries the exact expected sequence. That
+# leaves no safe, current-master channel that applies pending migrations to the real test database.
+# This workflow is that channel, and nothing else:
+#   * workflow_dispatch ONLY, on master ONLY, behind an exact typed authorisation string;
+#   * the crm-test-deploy Environment (required reviewer + 10-minute wait timer + no admin bypass) is
+#     MEASURED from the API and must be present/readable/strong — there is NO attestation fallback;
+#   * every barrier that cannot be satisfied stops BEFORE any write (no `|| true` on a barrier);
+#   * hard-coded test DB name/UUID; the production DB is only measured read-only, never written;
+#   * required secret NAMES are checked, values are never read, generated, printed, created or rotated;
+#   * the ONE write is `wrangler d1 migrations apply` against nasr-crm-test-db. No DB/backup/stage is
+#     created, imported, deleted, and no Worker is deployed by this workflow.
+# A run that waits for the required-reviewer approval is left pending: nothing here approves, bypasses,
+# or shortens that human gate.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_migrations:
+        description: 'Type APPLY-PENDING-TEST-DB-MIGRATIONS to let this run apply pending migrations to nasr-crm-test-db only. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      reason:
+        description: 'Why migrations are being applied. Free text, kept out of the job: no customer data, no names, no codes.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+# Serialised with the deploy workflow: migrations must never race a deploy/verification.
+concurrency:
+  group: crm-d1-test-mutex
+  cancel-in-progress: false
+
+jobs:
+  protection-audit:
+    name: 'Migration gate — measured crm-test-deploy protection'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Dispatch only, exact string, correct repository. Re-running a stored run replays its inputs, so
+    # the Environment (below) — not this string — is the per-run human control.
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_migrations == 'APPLY-PENDING-TEST-DB-MIGRATIONS'
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      protection: ${{ steps.audit.outputs.protection }}
+      detail: ${{ steps.audit.outputs.detail }}
+    steps:
+      - name: The environment must exist, be readable, and force a per-run approval
+        id: audit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.api_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          raw=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -w '\n%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "${API}/repos/${REPO}/environments/crm-test-deploy")
+          code=$(tail -n1 <<< "$raw")
+          body=$(sed '$d' <<< "$raw")
+          # Reject-if-unreadable/absent/weak. Unlike the deploy workflow there is deliberately NO
+          # attestation branch: an unmeasurable protection rule is a STOP, never a typed claim.
+          if [ "$code" != '200' ]; then
+            echo "::error::crm-test-deploy protection is unreadable or absent (http=${code}); migrations stopped. Create/verify the environment with >=1 required reviewer, a >=10 minute wait timer and can_admins_bypass=false, and give this job actions: read."
+            echo "protection=unreadable" >> "$GITHUB_OUTPUT"
+            echo "detail=http-${code}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          has_rev=$(jq -r '[.protection_rules[]? | select(.type == "required_reviewers" or .type == "reviewers")] | length > 0' <<< "$body")
+          # GitHub reports the environment wait_timer in MINUTES (0..43200). Normalise to seconds so a
+          # correctly configured 10-minute timer is measured as 600, not refused as "10".
+          wait_timer=$(jq -r '[.protection_rules[]? | (.wait_timer // .params.wait_timer // 0)] | max // 0' <<< "$body")
+          case "$wait_timer" in ''|*[!0-9]*) wait_timer=0 ;; esac
+          wait_seconds=$wait_timer
+          if [ "$wait_seconds" -lt 600 ]; then wait_seconds=$((wait_seconds * 60)); fi
+          bypass=$(jq -r '.can_admins_bypass // "unknown"' <<< "$body")
+          detail="required_reviewers=${has_rev};wait_timer=${wait_timer}min(${wait_seconds}s);can_admins_bypass=${bypass}"
+          echo "measured: $detail"
+          echo "detail=${detail}" >> "$GITHUB_OUTPUT"
+          if [ "$has_rev" != 'true' ]; then
+            echo "::error::crm-test-deploy has no required reviewer; a migration run would need no human approval."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "$wait_seconds" -lt 600 ]; then
+            echo "::error::crm-test-deploy wait timer is ${wait_seconds}s; at least 600s is required."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "$bypass" != 'false' ]; then
+            echo "::error::crm-test-deploy can_admins_bypass is not false; approval would be optional for the people who can change the rule."
+            echo "protection=weak" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "protection=verified" >> "$GITHUB_OUTPUT"
+
+  apply-migrations:
+    name: 'Apply pending migrations to nasr-crm-test-db only'
+    needs: protection-audit
+    runs-on: ubuntu-latest
+    environment: crm-test-deploy
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_migrations == 'APPLY-PENDING-TEST-DB-MIGRATIONS'
+      && github.ref == 'refs/heads/master'
+      && needs.protection-audit.outputs.protection == 'verified'
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      API: https://api.cloudflare.com/client/v4
+      TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+      TEST_DB_NAME: nasr-crm-test-db
+      PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+      PROD_DB_NAME: nasr-market-db
+      WORKER_NAME: nasr-crm-api-test
+      WRANGLER_CFG: _worker/wrangler.crm.toml
+      MIGRATIONS_DIR: _worker/migrations
+    steps:
+      - name: Approval gate — exact match, master ref, measured protection
+        shell: bash
+        env:
+          AUTHORIZE: ${{ inputs.authorize_migrations }}
+          REF: ${{ github.ref_name }}
+          PROTECTION: ${{ needs.protection-audit.outputs.protection }}
+        run: |
+          set -euo pipefail
+          if [ "${AUTHORIZE:-}" != 'APPLY-PENDING-TEST-DB-MIGRATIONS' ]; then
+            echo "::error::not authorised: the dispatch form must contain the exact string APPLY-PENDING-TEST-DB-MIGRATIONS."
+            exit 1
+          fi
+          if [ "${REF}" != 'master' ]; then
+            echo "::error::not authorised: migrations run from master only, not from ${REF}."
+            exit 1
+          fi
+          if [ "${PROTECTION:-}" != 'verified' ]; then
+            echo "::error::environment audit did not clear the migration (protection=${PROTECTION:-missing}); no database mutation."
+            exit 1
+          fi
+          echo "authorised; the crm-test-deploy Environment approval remains the per-run human control."
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # BARRIER 1 — read-only isolation, secret-NAME presence, production signature.
+      - name: Barrier 1 — isolation, secret names, read-only inventory
+        id: isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::missing GitHub Secret ARENA_CLOUDFLARE_TOKEN (name-only check, value never read); migrations stopped before any request."
+            exit 1
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq "$PROD_DB_NAME" "$WRANGLER_CFG"; then
+            echo "::error::forbidden production DB in $WRANGLER_CFG; migrations stopped."
+            exit 1
+          fi
+          if ! grep -Fq "name = \"$WORKER_NAME\"" "$WRANGLER_CFG" \
+             || ! grep -Fq "database_name = \"$TEST_DB_NAME\"" "$WRANGLER_CFG" \
+             || ! grep -Fq "database_id = \"$TEST_DB_UUID\"" "$WRANGLER_CFG"; then
+            echo "::error::wrangler config test-target mismatch; migrations stopped."
+            exit 1
+          fi
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/accounts.json" -w '%{http_code}' "$API/accounts?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ] || [ "$(jq -r '.result | length' "$TMP/accounts.json" 2>/dev/null)" != 1 ]; then
+            echo "::error::Cloudflare account inventory unreadable (http=$status); migrations stopped."
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            echo "::error::D1 inventory unreadable (http=$status); migrations stopped."
+            exit 1
+          fi
+          if ! jq -e --arg id "$TEST_DB_UUID" --arg n "$TEST_DB_NAME" \
+                '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1.json" >/dev/null; then
+            echo "::error::authorised test D1 $TEST_DB_NAME / $TEST_DB_UUID not verified; migrations stopped."
+            exit 1
+          fi
+          market_pre_sig=$(jq -r --arg id "$PROD_DB_UUID" \
+            '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1.json" | head -n1)
+          if [ -z "$market_pre_sig" ]; then
+            echo "::error::production DB signature unreadable; migrations stopped (production is never written)."
+            exit 1
+          fi
+          # Worker secret NAMES only. A missing name stops the run; no value is read, generated, printed,
+          # created or rotated. Migrations need the same Worker config the deploy preflight requires.
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/secrets.json" -w '%{http_code}' \
+            "$API/accounts/$account_id/workers/scripts/$WORKER_NAME/secrets" 2>/dev/null || true)
+          if [ "$status" != 200 ]; then
+            echo "::error::Worker secret NAME inventory unreadable (http=$status); migrations stopped. No secret value was requested."
+            exit 1
+          fi
+          has_name() { jq -e --arg s "$1" '[.result[]?.name] | index($s) != null' "$TMP/secrets.json" >/dev/null; }
+          missing=()
+          for s in CRM_SESSION_SECRET CRM_INGEST_PRIVATE_KEY CRM_VAPID_PRIVATE_KEY CRM_VAPID_PUBLIC_KEY; do
+            has_name "$s" || missing+=("$s")
+          done
+          if [ "$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/secrets.json")" != 'true' ] \
+             && [ "$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/secrets.json")" != 'true' ]; then
+            missing+=("AUTH: CRM_ACCESS_CODE OR CRM_ACCESS_CODE_VERIFIER")
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::required Worker secret NAMES missing: ${missing[*]}. Migrations stopped; no secret was created, updated, rotated or displayed."
+            exit 1
+          fi
+          {
+            echo "account_id=$account_id"
+            echo "market_pre_sig=$market_pre_sig"
+          } >> "$GITHUB_OUTPUT"
+          echo "barrier-1-ok: config=test-only; secrets=names-present; prod-db=measured-read-only"
+
+      # BARRIER 2 — the local manifest must be exactly the expected 14-file sequence, latest = 0014.
+      - name: Barrier 2 — expected migration manifest (local, read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdirSync } from 'node:fs';
+          const dir = process.env.MIGRATIONS_DIR;
+          const expected = readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+          if (expected.length !== 14) throw new Error(`manifest-count-mismatch:${expected.length}`);
+          if (expected.at(-1) !== '0014_fix_drive_review_session_expiry_units.sql') {
+            throw new Error(`manifest-latest-mismatch:${expected.at(-1)}`);
+          }
+          console.log(`manifest-ok:migrations=${expected.length};latest=${expected.at(-1)}`);
+          NODE
+
+      # THE ONE WRITE. `migrations apply` is idempotent: it applies only files not yet in d1_migrations.
+      - name: Apply pending migrations to nasr-crm-test-db (test DB only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          if ! npx --yes wrangler@4 d1 migrations apply "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" \
+               > "$TMP/apply.log" 2>&1; then
+            echo "::error::d1 migrations apply failed; no further action. Non-secret log tail follows."
+            sed -E 's/[0-9]{9,}/<digits>/g' "$TMP/apply.log" | tail -30 || true
+            exit 1
+          fi
+          echo "migrations-apply-ok: pending files applied to $TEST_DB_NAME only"
+
+      # BARRIER 3 — read-only proof that the chain, tables, constraints, indexes, triggers and views
+      # are present, and that 0014's two liveness triggers use epoch SECONDS (no millisecond OR escape).
+      - name: Barrier 3 — verify applied chain + A5 schema (read-only)
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.isolation.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          node --input-type=module <<'NODE'
+          import { readdirSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const { API, CLOUDFLARE_ACCOUNT_ID: account, TEST_DB_UUID: testDb,
+                  CLOUDFLARE_API_TOKEN: token, MIGRATIONS_DIR: dir } = process.env;
+          if (!API || !account || !testDb || !token || !dir) throw new Error('verify-env-missing');
+          if (testDb !== '65bfcb14-4b48-423b-916f-00eefdb9ae1e') throw new Error('verify-wrong-test-db');
+          const d1 = (sql) => {
+            const out = execFileSync('curl', [
+              '--silent', '--show-error', '--fail-with-body', '--connect-timeout', '10', '--max-time', '30',
+              '-X', 'POST', '-H', `Authorization: Bearer ${token}`, '-H', 'Content-Type: application/json',
+              '--data', JSON.stringify({ sql }),
+              `${API}/accounts/${account}/d1/database/${testDb}/query`,
+            ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+            const rows = JSON.parse(out)?.result?.[0]?.results;
+            if (!Array.isArray(rows)) throw new Error('unexpected-d1-query-response');
+            return rows;
+          };
+          const expected = readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+          const applied = d1('SELECT name FROM d1_migrations ORDER BY id ASC;').map(r => String(r.name));
+          const missing = expected.filter(n => !applied.includes(n));
+          const extra = applied.filter(n => !expected.includes(n));
+          const ordered = applied.length === expected.length && expected.every((n, i) => applied[i] === n);
+          if (missing.length || extra.length || !ordered) {
+            throw new Error(`migration-chain-failed:missing=${missing.join(',') || '-'};extra=${extra.join(',') || '-'};ordered=${ordered}`);
+          }
+
+          const objects = d1("SELECT type, name, sql FROM sqlite_schema WHERE type IN ('table','view','trigger','index') AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%';");
+          const byType = { table: new Set(), view: new Set(), trigger: new Set(), index: new Set() };
+          const sqlByName = new Map();
+          for (const r of objects) {
+            if (byType[r.type]) byType[r.type].add(String(r.name));
+            if (r.sql) sqlByName.set(String(r.name), String(r.sql));
+          }
+          const requiredTables = [
+            'd1_migrations', 'crm_contacts', 'crm_contact_phones', 'crm_sessions',
+            'crm_idempotency_receipts', 'listings', 'crm_opportunities',
+            'crm_customer_requests', 'crm_request_status_history', 'crm_request_listing_link',
+            'crm_operational_audit_log', 'crm_interactions', 'crm_followups',
+            'crm_drive_file_review_case', 'crm_drive_file_review_decision', 'crm_drive_file_review_anchor'
+          ];
+          const requiredViews = [
+            'crm_drive_file_review_state', 'crm_drive_file_review_chain_integrity',
+            'crm_drive_file_review_ci_summary', 'crm_drive_file_review_isolation',
+            'crm_followups_queue_v', 'crm_requests_unmatched_v',
+            'crm_opportunity_stages_v', 'crm_stale_opportunities_v'
+          ];
+          const requiredTriggers = [
+            'trg_review_event_session_live', 'trg_file_review_decision_session_live',
+            'trg_file_review_decision_no_delete', 'trg_file_review_decision_no_update',
+            'trg_crm_operational_audit_no_delete', 'trg_crm_operational_audit_no_update',
+            'trg_crm_request_history_no_delete', 'trg_crm_request_history_no_update',
+            'trg_crm_interaction_append_only', 'trg_crm_interaction_no_delete',
+            'trg_crm_followup_done_records_interaction', 'trg_crm_followup_no_delete'
+          ];
+          // Indexes introduced by 0012/0013 — the A5 read paths the live checks actually exercise.
+          const requiredIndexes = [
+            'idx_crm_request_contact_status', 'idx_crm_request_queue', 'idx_crm_request_history_request',
+            'idx_crm_operational_audit_entity', 'idx_crm_operational_audit_contact',
+            'idx_crm_interaction_timeline', 'idx_crm_interaction_request',
+            'idx_crm_interaction_opportunity', 'idx_crm_followup_due'
+          ];
+          const absent = [];
+          for (const [type, names] of Object.entries({ table: requiredTables, view: requiredViews,
+                                                       trigger: requiredTriggers, index: requiredIndexes })) {
+            for (const n of names) if (!byType[type].has(n)) absent.push(`${type}:${n}`);
+          }
+          const fkRules = [
+            ['crm_customer_requests', 'REFERENCES crm_contacts'],
+            ['crm_request_status_history', 'REFERENCES crm_customer_requests'],
+            ['crm_request_listing_link', 'REFERENCES crm_customer_requests'],
+            ['crm_request_listing_link', 'REFERENCES listings'],
+            ['crm_operational_audit_log', 'REFERENCES crm_contacts'],
+            ['crm_interactions', 'REFERENCES crm_contacts'],
+            ['crm_followups', 'REFERENCES crm_contacts'],
+            ['crm_followups', 'REFERENCES crm_customer_requests'],
+            ['crm_followups', 'REFERENCES crm_opportunities'],
+            ['crm_drive_file_review_decision', 'REFERENCES crm_drive_file_review_case']
+          ];
+          for (const [name, needle] of fkRules) {
+            if (!sqlByName.get(name)?.includes(needle)) absent.push(`fk:${name}:${needle}`);
+          }
+          const columnChecks = [
+            ['crm_customer_requests', ['id','contact_id','dedupe_key','status','created_at','updated_at']],
+            ['crm_request_status_history', ['request_id','from_status','to_status','actor','changed_at']],
+            ['crm_interactions', ['id','contact_id','kind','summary','dedupe_key','created_at']],
+            ['crm_followups', ['id','contact_id','request_id','opportunity_id','due_at','status','dedupe_key']],
+            ['crm_sessions', ['id','token_hash','csrf_hash','created_at','expires_at','revoked_at']]
+          ];
+          for (const [table, cols] of columnChecks) {
+            const present = new Set(d1(`SELECT name FROM pragma_table_info('${table}');`).map(r => String(r.name)));
+            for (const c of cols) if (!present.has(c)) absent.push(`column:${table}.${c}`);
+          }
+          // 0014 must be applied in the deployed unit: epoch SECONDS, no millisecond OR escape hatch.
+          for (const t of ['trg_review_event_session_live', 'trg_file_review_decision_session_live']) {
+            const body = sqlByName.get(t) || '';
+            if (!body.includes("strftime('%s', 'now')")) absent.push(`0014-seconds:${t}`);
+            if (body.includes('* 1000')) absent.push(`0014-millisecond-weakening:${t}`);
+          }
+          if (absent.length) throw new Error(`a5-schema-verify-failed:${absent.join(',')}`);
+          console.log(`schema-verify-ok:migrations=${applied.length};tables=${requiredTables.length};views=${requiredViews.length};triggers=${requiredTriggers.length};indexes=${requiredIndexes.length};fk=${fkRules.length}`);
+          NODE
+
+      # BARRIER 4 — production DB signature must be byte-for-byte what barrier 1 measured. Read-only.
+      - name: Barrier 4 — production DB invariance (read-only)
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.isolation.outputs.account_id }}
+          EXPECTED_SIG: ${{ steps.isolation.outputs.market_pre_sig }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" \
+            -o "$TMP/d1_post.json" -w '%{http_code}' \
+            "$API/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" 2>/dev/null || true)
+          market_post_sig=$(jq -r --arg id "$PROD_DB_UUID" \
+            '.result[] | select(.uuid == $id) | "\(.name):\(.file_size // 0):\(.num_tables // 0)"' "$TMP/d1_post.json" 2>/dev/null | head -n1)
+          if [ "$status" != '200' ] || [ -z "$EXPECTED_SIG" ] || [ "$EXPECTED_SIG" != "$market_post_sig" ]; then
+            echo "::error::nasr-market-db invariance check failed (http=$status, before=${EXPECTED_SIG:-missing}, after=${market_post_sig:-missing}); no further action."
+            exit 1
+          fi
+          echo "market-db-invariance-ok: production signature unchanged"
+
+  report:
+    name: 'CRM test migrations — ${{ needs.apply-migrations.result }}'
+    needs: apply-migrations
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Non-secret migration result is encoded in this check name.'
