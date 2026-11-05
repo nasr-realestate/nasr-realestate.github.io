@@ -1,244 +1,244 @@
 === Properties Sync Worker — deploy + verify ===
 ref:      master
-commit:   a5b7e672e682f0fde5df1aa8fe272f7347af3c6e
-run:      41149250309
-when:     2026-10-31T00:16:33Z
+commit:   1d7a45d941f27ac1978440b94656642f8ad37203
+run:      42112215370
+when:     2026-11-05T21:23:42Z
 credential: PRESENT
 
 TAP version 13
-# (node:2441) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/properties-sync-worker.js is not specified and it doesn't parse as CommonJS.
+# (node:2380) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/properties-sync-worker.js is not specified and it doesn't parse as CommonJS.
 # Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 # To eliminate this warning, add "type": "module" to /home/runner/work/nasr-realestate.github.io/nasr-realestate.github.io/_worker/package.json.
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
 ok 1 - parseFrontMatter: يقرأ الـfront matter المسطّح ويتجاهل التعليقات
   ---
-  duration_ms: 2.117114
+  duration_ms: 2.104255
   ...
 # Subtest: toNumber: أرقام عربية/فواصل/نصوص
 ok 2 - toNumber: أرقام عربية/فواصل/نصوص
   ---
-  duration_ms: 0.375383
+  duration_ms: 0.349806
   ...
 # Subtest: تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
 ok 3 - تصنيف نوع المعاملة: إشارات صريحة ثم الافتراضي sale موثّق
   ---
-  duration_ms: 3.313705
+  duration_ms: 3.270521
   ...
 # Subtest: تصنيف نوع العقار من category
 ok 4 - تصنيف نوع العقار من category
   ---
-  duration_ms: 0.166382
+  duration_ms: 0.19205
   ...
 # Subtest: مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
 ok 5 - مطابقة المنطقة: الأطول يفوز، والمجهول ⇒ لا area_id (لا fallback لمدينة نصر)
   ---
-  duration_ms: 0.859369
+  duration_ms: 0.839314
   ...
 # Subtest: الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
 ok 6 - الملفات الحقيقية في _properties: valid / out-of-scope / invalid — بلا أي تصنيف صامت
   ---
-  duration_ms: 185.530665
+  duration_ms: 193.892988
   ...
 # Subtest: التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
 ok 7 - التشغيل الأول يُدخل، والثاني لا يغيّر شيئًا (idempotent، صفر duplicates)
   ---
-  duration_ms: 50.196432
+  duration_ms: 48.670699
   ...
 # Subtest: feed بلا source_sha256: الميزانية تتقدّم عبر تشغيلات متتالية بلا تجويع ملفات
 ok 8 - feed بلا source_sha256: الميزانية تتقدّم عبر تشغيلات متتالية بلا تجويع ملفات
   ---
-  duration_ms: 57.623108
+  duration_ms: 45.509431
   ...
 # Subtest: تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
 ok 9 - تعديل ملف موجود ⇒ UPDATE لنفس السطر (بدون إدخال جديد)
   ---
-  duration_ms: 16.376122
+  duration_ms: 14.728032
   ...
 # Subtest: ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
 ok 10 - ملف غير صالح (بدون مساحة/سعر) لا يُكتب ولا يفسد السجلات الصالحة
   ---
-  duration_ms: 14.3451
+  duration_ms: 14.519391
   ...
 # Subtest: ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
 ok 11 - ملفان بنفس external_id ⇒ الثاني يُرفض كـduplicate ولا يُنشئ سطرًا ثانيًا
   ---
-  duration_ms: 9.113996
+  duration_ms: 5.638661
   ...
 # Subtest: لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
 ok 12 - لا يلمس سجلات مصدر آخر ولا price_snapshots ولا ينفذ أي DELETE
   ---
-  duration_ms: 6.304696
+  duration_ms: 3.689998
   ...
 # Subtest: ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
 ok 13 - ملف اختفى من GitHub ⇒ لا حذف، فقط missing_from_github
   ---
-  duration_ms: 9.256523
+  duration_ms: 10.040984
   ...
 # Subtest: schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
 ok 14 - schema ناقص (مفيش عمود السعر) ⇒ صفر كتابة + schema_mismatch
   ---
-  duration_ms: 2.30191
+  duration_ms: 1.277856
   ...
 # Subtest: schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
 ok 15 - schema بأسماء أعمدة مختلفة: الخريطة تتكيّف (area_sqm / asking_price / ref_id)
   ---
-  duration_ms: 5.751069
+  duration_ms: 4.908191
   ...
 # Subtest: GET /sync افتراضيًا dry run: لا يكتب أي شيء
 ok 16 - GET /sync افتراضيًا dry run: لا يكتب أي شيء
   ---
-  duration_ms: 4.32545
+  duration_ms: 6.676407
   ...
 # Subtest: SYNC_TOKEN: يحمي التشغيل اليدوي
 ok 17 - SYNC_TOKEN: يحمي التشغيل اليدوي
   ---
-  duration_ms: 4.117911
+  duration_ms: 5.269409
   ...
 # Subtest: budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
 ok 18 - budget: لا يتجاوز حد قراءة الملفات في التشغيل الواحد
   ---
-  duration_ms: 16.256454
+  duration_ms: 21.454553
   ...
 # Subtest: scheduled: يشغّل المزامنة عبر ctx.waitUntil
 ok 19 - scheduled: يشغّل المزامنة عبر ctx.waitUntil
   ---
-  duration_ms: 3.123799
+  duration_ms: 3.195131
   ...
 # Subtest: GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
 ok 20 - GET / و GET /schema: معلومات الخدمة والـschema بدون أي كتابة
   ---
-  duration_ms: 1.685717
+  duration_ms: 1.408163
   ...
 # Subtest: wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
 ok 21 - wrangler.sync.toml: اسم الـWorker + D1 binding + Cron Trigger
   ---
-  duration_ms: 0.356788
+  duration_ms: 0.315652
   ...
 # Subtest: الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
 ok 22 - الـWorker لا يكتب إلا في listings / ingestion_runs / جدول الحالة — وبدون DELETE
   ---
-  duration_ms: 1.06267
+  duration_ms: 1.012899
   ...
 # Subtest: budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
 ok 23 - budget: التشغيل الجزئي يعلّم complete=false ولا يبلّغ عن ملفات مختفية بالخطأ
   ---
-  duration_ms: 13.714147
+  duration_ms: 11.817446
   ...
 # Subtest: تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
 ok 24 - تكرارات موجودة مسبقًا في D1 لمصدر 9: تُبلَّغ ولا تُلمس
   ---
-  duration_ms: 3.191476
+  duration_ms: 3.436523
   ...
 # Subtest: throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
 ok 25 - throttle: التشغيل اليدوي المتكرر فورًا يُرفض 429 (والـcron مستثنى)
   ---
-  duration_ms: 4.577081
+  duration_ms: 5.960284
   ...
 # Subtest: فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
 ok 26 - فشل كتابة سطر واحد لا يوقف بقية الملفات ولا يكتب حالة الملف الفاشل
   ---
-  duration_ms: 6.605809
+  duration_ms: 6.419826
   ...
 # Subtest: إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
 ok 27 - إحداثيات: تُكتب فقط لو موجودة في الملف (بدون أي تخمين)
   ---
-  duration_ms: 0.893894
+  duration_ms: 0.869039
   ...
 # Subtest: تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
 ok 28 - تكامل: كل ملفات _properties الحقيقية → insert بلا duplicates، ثم تشغيل ثانٍ بلا أي كتابة
   ---
-  duration_ms: 262.295138
+  duration_ms: 250.869708
   ...
 # Subtest: R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
 ok 29 - R1: العقاران بالحي الأول/الثاني خارج مدينة نصر لا يأخذان area_id من مناطق مدينة نصر
   ---
-  duration_ms: 2.978207
+  duration_ms: 3.00309
   ...
 # Subtest: R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
 ok 30 - R2: أي ملف خارج النطاق لا يُكتب أبدًا — تُسجَّل أسماؤه وأسبابه فقط
   ---
-  duration_ms: 5.410351
+  duration_ms: 7.860216
   ...
 # Subtest: R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
 ok 31 - R2: ملف في D1 لقائمة خارج النطاق لا يُحذف ولا يُعدَّل ولا يُبلَّغ كـ«مختفي»
   ---
-  duration_ms: 2.924656
+  duration_ms: 3.207944
   ...
 # Subtest: scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
 ok 32 - scope: مؤشرات خارج النطاق آمنة — بلا إيجابيات خاطئة في نصوص مدينة نصر
   ---
-  duration_ms: 4.974454
+  duration_ms: 4.877023
   ...
 # Subtest: R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
 ok 33 - R3: المنطقة الفرعية تتغلب على «مدينة نصر» (الواحة وغيرها)
   ---
-  duration_ms: 1.931697
+  duration_ms: 1.86687
   ...
 # Subtest: R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
 ok 34 - R3: aliases الممرات — «شارع مكرم عبيد» / «عباس العقاد» تُطابق مناطق D1
   ---
-  duration_ms: 3.776191
+  duration_ms: 3.625527
   ...
 # Subtest: R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
 ok 35 - R3: aliases مشتقة من اسم المنطقة نفسه فقط (بدون تخمين)
   ---
-  duration_ms: 0.161833
+  duration_ms: 0.195477
   ...
 # Subtest: R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
 ok 36 - R2+R3: لا يبقى أي ملف خارج النطاق بمنطقة من مناطق مدينة نصر (فحص كل ملفات _properties)
   ---
-  duration_ms: 176.212627
+  duration_ms: 175.165799
   ...
 # Subtest: containsToken: الكلمة الكاملة مع الحروف الملتصقة
 ok 37 - containsToken: الكلمة الكاملة مع الحروف الملتصقة
   ---
-  duration_ms: 0.228097
+  duration_ms: 0.218811
   ...
 # Subtest: GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
 ok 38 - GET /verify: تقرير قراءة فقط (counts/duplicates/integrity) بدون أي كتابة
   ---
-  duration_ms: 11.285161
+  duration_ms: 10.45473
   ...
 # Subtest: R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
 ok 39 - R1: area_id افتراضي قديم يُصفَّر إلى NULL لملف داخل النطاق بلا مطابقة منطقة
   ---
-  duration_ms: 5.415781
+  duration_ms: 5.299365
   ...
 # Subtest: نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
 ok 40 - نسخة جديدة من الـWorker تُبطل المسار السريع مرة واحدة وتُعيد تطبيق R1 على الصفوف القديمة
   ---
-  duration_ms: 3.339092
+  duration_ms: 3.194319
   ...
 # Subtest: budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
 ok 41 - budget: إعادة المعالجة تستمر عبر التشغيلات الجزئية لحد ما تخلص كل الملفات
   ---
-  duration_ms: 10.497947
+  duration_ms: 9.904268
   ...
 # Subtest: قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
 ok 42 - قائمة الملفات تُقرأ من ai-feed.json في طلب واحد ولا تلمس Tree API
   ---
-  duration_ms: 4.732009
+  duration_ms: 4.238636
   ...
 # Subtest: فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
 ok 43 - فشل مؤقت في الـfeed يُعاد المحاولة مع احترام Retry-After ويُبلَّغ عنه
   ---
-  duration_ms: 1504.311537
+  duration_ms: 1505.048118
   ...
 # Subtest: feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
 ok 44 - feed بلا source_path يُرفض بوضوح — لا تخمين لأسماء الملفات
   ---
-  duration_ms: 0.953822
+  duration_ms: 0.897723
   ...
 # Subtest: feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
 ok 45 - feed بمسار مصدر مكرر يُرفض بدل كتابة صفوف مكررة
   ---
-  duration_ms: 0.780348
+  duration_ms: 0.818444
   ...
 # Subtest: GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
 ok 46 - GET /verify: خطأ الـfeed يظهر نشطًا في run_health ويُمسح بعد نجاح لاحق
   ---
-  duration_ms: 3507.030399
+  duration_ms: 3508.569619
   ...
 1..46
 # tests 46
@@ -248,12 +248,12 @@ ok 46 - GET /verify: خطأ الـfeed يظهر نشطًا في run_health وي�
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 6003.998249
+# duration_ms 5985.875725
 === preflight ===
-token verify (/user/tokens/verify): {"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}
+token scope: measured by the accounts lookup below
 accounts lookup: {"success":true,"errors":[],"accounts":[{"id":"717c46b0d78a6f06589b8367a1a3cc5b","name":"Footcai.555@gmail.com's Account"}]}
 account id resolved from the token: 717c46b0d78a6f06589b8367a1a3cc5b
-d1 probe: {"success":true,"errors":[],"count":3}
+d1 probe: {"success":true,"errors":[],"count":5}
 
 
 --- wrangler whoami ---
@@ -272,21 +272,21 @@ Getting User settings...
 
 --- wrangler deploy (account 717c46b0d78a6f06589b8367a1a3cc5b) ---
 
- ⛅️ wrangler 4.86.0 (update available 4.156.0)
+ ⛅️ wrangler 4.86.0 (update available 4.158.0)
 ──────────────────────────────────────────────
 
 Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 Total Upload: 55.90 KiB / gzip: 14.81 KiB
-Worker Startup Time: 2 ms
+Worker Startup Time: 5 ms
 Your Worker has access to the following bindings:
 Binding                      Resource         
 env.DB (nasr-market-db)      D1 Database      
 
-Uploaded nasr-properties-sync (5.49 sec)
-Deployed nasr-properties-sync triggers (3.78 sec)
+Uploaded nasr-properties-sync (2.99 sec)
+Deployed nasr-properties-sync triggers (0.93 sec)
   https://nasr-properties-sync.footcai-555.workers.dev
   schedule: 17 * * * *
-Current Version ID: 0db5a4bd-7845-4fe8-8cf5-4c017e065d21
+Current Version ID: 0460da45-32d5-4d63-9570-e3845de99d14
 wrangler deploy exit code: 0
 deployed URL from wrangler: https://nasr-properties-sync.footcai-555.workers.dev
 account: 717c46b0d78a6f06589b8367a1a3cc5b
@@ -322,7 +322,9 @@ nasr-properties-sync
 noisy-bush-fd84
 royal-snow-ea32
 --- raw D1 database list ---
-{"result":[{"uuid":"b8f1e723-e6f8-4007-a3b7-08011dcb7624","name":"nasr-crm-test-db-backup-20261030","created_at":"2026-10-30T19:51:13.940Z","version":"production","num_tables":0,"file_size":589824,"jurisdiction":null},{"uuid":"65bfcb14-4b48-423b-916f-00eefdb9ae1e","name":"nasr-crm-test-db","created_at":"2026-10-27T22:34:48.591Z","version":"production","num_tables":0,"file_size":3293184,"jurisdiction":null},{"uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf","name":"nasr-market-db","created_at":"2026-09-28T20:59:17.492Z","version":"production","num_tables":0,"file_size":888832,"jurisdiction":null}],"errors":[],"messages":[],"success":true,"result_info":{"count":3,"page":1,"per_page":100,"total_count":3}}
+{"result":[{"uuid":"5007799b-89ad-4db6-8123-768faa3d8df4","name":"nasr-crm-test-db-backup-20261102","created_at":"2026-11-02T20:34:42.145Z","version":"production","num_tables":0,"file_size":4214784,"jurisdiction":null},{"uuid":"a7681217-32a3-48fd-b8f5-8a54ac7b35e7","name":"nasr-crm-test-db-backup-20261101","created_at":"2026-10-31T23:17:51.521Z","version":"production","num_tables":0,"file_size":3256320,"jurisdiction":null},{"uuid":"b8f1e723-e6f8-4007-a3b7-08011dcb7624","name":"nasr-crm-test-db-backup-20261030","created_at":"2026-10-30T19:51:13.940Z","version":"production","num_tables":0,"file_size":589824,"jurisdiction":null},{"uuid":"65bfcb14-4b48-423b-916f-00eefdb9ae1e","name":"nasr-crm-test-db","created_at":"2026-10-27T22:34:48.591Z","version":"production","num_tables":0,"file_size":473
+{"name":"nasr-crm-test-db-backup-20261102","uuid":"5007799b-89ad-4db6-8123-768faa3d8df4"}
+{"name":"nasr-crm-test-db-backup-20261101","uuid":"a7681217-32a3-48fd-b8f5-8a54ac7b35e7"}
 {"name":"nasr-crm-test-db-backup-20261030","uuid":"b8f1e723-e6f8-4007-a3b7-08011dcb7624"}
 {"name":"nasr-crm-test-db","uuid":"65bfcb14-4b48-423b-916f-00eefdb9ae1e"}
 {"name":"nasr-market-db","uuid":"ace5c9a2-c6b1-47b3-adf1-77e84ac50abf"}
@@ -339,21 +341,21 @@ columns: external_id=external_id source_id=source_id missing_required=[]
 PASS  schema_required_columns: []
 
 === 2) read-only D1 report BEFORE (GET /verify) ===
-{"counts":{"listings_total":111,"source9_total":111,"source9_null_area":4,"areas_total":31,"price_snapshots_total":39},"duplicates":{"count":0,"sample":[]},"lists":{"in_scope":{"checked":88,"present":87},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":9,"present":2},"null_area":{"checked":5,"present":4},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
+{"counts":{"listings_total":112,"source9_total":112,"source9_null_area":4,"areas_total":31,"price_snapshots_total":39},"duplicates":{"count":0,"sample":[]},"lists":{"in_scope":{"checked":88,"present":88},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":9,"present":2},"null_area":{"checked":5,"present":4},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
 
 wrangler d1 execute usable: false (informational; the checklist uses the Worker binding report)
 
 === 3) dry run (GET /sync?dryRun=1) — must not write anything ===
   http 200 (attempt 1)
-{"status":"success","dry_run":true,"source":"ai-feed.json","feed_total":109,"files":109,"inserted":1,"updated":0,"out_of_scope":0,"invalid":0,"fetched":1,"complete":true,"errors":[]}
+{"status":"success","dry_run":true,"source":"ai-feed.json","feed_total":109,"files":109,"inserted":0,"updated":0,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true,"errors":[]}
 PASS  dryrun_flag: true
 PASS  dryrun_read_the_feed: 109
-PASS  dryrun_wrote_nothing: 111/111
+PASS  dryrun_wrote_nothing: 112/112
 
 === 4) real runs until the pass is complete (fetch budget 40/run, 60s manual throttle) ===
 --- run attempt 1 (successful runs so far: 0) ---
   http 200 (attempt 1)
-{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":109,"files":109,"inserted":1,"updated":0,"unchanged":87,"out_of_scope":0,"invalid":0,"fetched":1,"budget_skipped":0,"complete":true,"missing":24,"errors":[]}
+{"status":"success","dry_run":false,"source":"ai-feed.json","feed_total":109,"files":109,"inserted":0,"updated":0,"unchanged":88,"out_of_scope":0,"invalid":0,"fetched":0,"budget_skipped":0,"complete":true,"missing":24,"errors":[]}
 PASS  run1_no_write_failures: 0
 PASS  final_pass_complete: true
 PASS  file_list_source: ai-feed.json
@@ -392,14 +394,13 @@ _properties/showroom-ahmed-fakhry-600m.md
 PASS  out_of_scope_files_listed: 12
 PASS  invalid_files_listed: 9
 durable reasons from the last ingestion_runs row:
-  started: 2026-10-31 00:17:23 status: success
-{"version":"v1.1.0","trigger":"manual","dry_run":false,"fetched":1,"missing":24,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":[],"area_unmatched":[],"duration_ms":1555}
+  started: 2026-11-05 21:24:22 status: success
+{"version":"v1.1.0","trigger":"manual","dry_run":false,"fetched":0,"missing":24,"duplicates":0,"out_of_scope":0,"out_of_scope_files":[],"invalid_files":[],"errors":[],"area_unmatched":[],"duration_ms":1105}
 
 --- reasons sample (from the runs of this job) ---
 
 === 5) idempotency: one more run with no source change ===
-  http 429 (attempt 1)
-  http 200 (attempt 2)
+  http 200 (attempt 1)
 {"status":"success","inserted":0,"updated":0,"unchanged":88,"out_of_scope":0,"invalid":0,"fetched":0,"complete":true}
 PASS  no_change_run_inserted: 0
 PASS  no_change_run_updated: 0
@@ -407,8 +408,8 @@ PASS  no_change_run_duplicates: 0
 
 === 6) checklist AFTER (GET /verify) ===
 {"counts":{"listings_total":112,"source9_total":112,"source9_null_area":4,"areas_total":31,"price_snapshots_total":39},"duplicates":0,"lists":{"in_scope":{"checked":88,"present":88},"out_of_scope":{"checked":12,"present":10},"invalid":{"checked":9,"present":2},"null_area":{"checked":5,"present":4},"null_area_checked":true},"integrity":{"foreign_key_check":0,"integrity_check":{"error":"D1_ERROR: not authorized: SQLITE_AUTH"},"quick_check":"ok"}}
-source9 rows: before=111 after=112 | listings: 111 -> 112 | snapshots: 39 -> 39 | areas: 31 -> 31
-source 9 rows pre-existing in D1 before this sync: 111 (legacy ingestion — this Worker never deletes)
+source9 rows: before=112 after=112 | listings: 112 -> 112 | snapshots: 39 -> 39 | areas: 31 -> 31
+source 9 rows pre-existing in D1 before this sync: 112 (legacy ingestion — this Worker never deletes)
 per-id reconciliation: in-scope 88/88 present · out-of-scope 10/12 still in listings from a legacy ingestion · invalid 2/8 legacy
 PASS  in_scope_present: 88/88
 null-area rows before/after: 4 -> 4 (النقص = مطابقة منطقة جديدة، وليس مسحًا)
@@ -436,7 +437,7 @@ NOTE: PRAGMA integrity_check is refused by D1 (SQLITE_AUTH) for user queries; th
 
 === 8) run summaries ===
 --- /tmp/dryrun.json ---
-{"status":"success","dry_run":true,"inserted":1,"updated":0,"unchanged":87,"out_of_scope":0,"invalid":0,"files":109,"fetched":1,"complete":true,"duplicates":0,"errors":[]}
+{"status":"success","dry_run":true,"inserted":0,"updated":0,"unchanged":88,"out_of_scope":0,"invalid":0,"files":109,"fetched":0,"complete":true,"duplicates":0,"errors":[]}
 --- /tmp/run_last.json ---
 {"status":"success","dry_run":false,"inserted":0,"updated":0,"unchanged":88,"out_of_scope":0,"invalid":0,"files":109,"fetched":0,"complete":true,"duplicates":0,"errors":[]}
 
