@@ -49,9 +49,12 @@ test("كل عقار من الثمانية: وصف /api منشور كامل ول�
 
 test("كل طلب منشور: description في المصدر + JSON-LD لا يسقط إلى العنوان", () => {
   const files = frontMatterFiles('_requests');
-  // كان العدد مثبتًا على 1 (طلب واحد). أي طلب جديد يُنشر يوسّع الفحص بدل أن
-  // يكسر الاختبار — نفس الدرس المطبق على العقارات أعلاه.
-  assert.ok(files.length >= 1, `لا توجد طلبات في _requests (${files.length})`);
+  // 2026-11-05 — سبب الإصلاح: كان الشرط `files.length >= 1`، والحذف الآلي المجدول
+  // (`cleanup-requests.yml`، قاعدة 7 أيام من الـfront matter) يُفرغ المجلد شرعًا،
+  // فسقطت البوابة الحاجزة على `master` برسالة «لا توجد طلبات (0)» — أي أن الاختبار
+  // كان يخالف سلوكًا مقصودًا في المستودع، لا عيبًا في المحتوى.
+  // ما لم يُخفَّف: كل طلب موجود يُفحص كما كان (وصف لازم + طول + مطابقة القالب)،
+  // وفحص قالب JSON-LD أدناه إلزامي دائمًا ولو كان المجلد فارغًا.
   for (const { file, data } of files) {
     assert.ok(String(data.description || '').trim(), `${file}: description مفقود`);
     assert.ok(norm(data.description).length > 40, `${file}: description قصير جدًا`);

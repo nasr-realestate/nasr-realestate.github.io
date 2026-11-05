@@ -21,7 +21,12 @@ Never commit or paste secrets into git or chat. To set your own persistent brows
 
 ## Local testing
 ```bash
-npm test
-npm run lint
-npm run lint:sonar
+npm test          # الحاجز الفعلي: 834 اختبارًا بلا skip (2026-11-05)
+npm run lint      # فحص صياغة server.js
+npm run lint:sonar  # استشاري فقط: يفشل اليوم بـ412 رائحة كود (تعقيد/ternaries)، ولا يشغّله CI
 ```
+
+**الحاجز الفعلي لقواعد SonarJS** ليس `lint:sonar` (تشغيله كحاجز يُسقط كل بناء بلا مقابل
+وظيفي)، بل `scripts/tests/sonar-barrier-budget.test.mjs`: يمنع أن يزيد
+`sonarjs/super-linear-regex` (S5852 — أمان ReDoS) أو الصافي الإجمالي عن سقفهما المقيس،
+فيُسقط أي كود جديد يخالفهما. الأرقام في `eslint.config.mjs` معلنة ومقيّدة بذلك الاختبار.
