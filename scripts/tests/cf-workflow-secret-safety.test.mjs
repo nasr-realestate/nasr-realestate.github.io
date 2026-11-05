@@ -93,7 +93,9 @@ for (const file of [READONLY, WRITE_PROOF]) {
       if (!line.includes('CLOUDFLARE_API_TOKEN')) continue;
       const allowed =
         line.includes('::add-mask::')
-        || line.includes('auth_header="Authorization: Bearer')
+        // The ONLY legitimate place for the raw token is a request header held in a local variable —
+        // whatever the variable is called — plus the secret binding and the emptiness guard.
+        || /^\s*(auth_header|AUTH)="Authorization: Bearer \$\{?CLOUDFLARE_API_TOKEN\}?"$/.test(line)
         || line.includes('secrets.ARENA_CLOUDFLARE_TOKEN')
         || line.includes('CLOUDFLARE_API_TOKEN:')
         || line.trimStart().startsWith('#')

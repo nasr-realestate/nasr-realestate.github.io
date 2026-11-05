@@ -246,3 +246,205 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'The workers.dev subdomain value is intentionally omitted.'
+
+  # ── Mirror of the deploy preflight, read-only (2026-11-05) ────────────────────────────────────
+  # The deploy workflow failed on 2026-11-05T19:40Z inside its `Preflight isolation, required-secret
+  # inventory, and read-only reference backup` step, BEFORE any A5 work and before any write. That
+  # step contains twelve hard stops; without its log, "the deploy fails" is not a diagnosis. This job
+  # re-runs the same twelve gates with GET requests and two read-only SELECTs, and publishes the
+  # identifiers of the failing gates in a check name — readable on a phone, no log download, no write.
+  #
+  # It cannot prove a gate that depends on a value only the deploy job can read (nothing here is a
+  # secret value): it reports `pass`, `fail:<why>`, or `unknown:<why>` — never a guess dressed as a pass.
+  mirror:
+    name: Read-only mirror of the deploy preflight gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      summary: ${{ steps.m.outputs.summary }}
+      gates: ${{ steps.m.outputs.gates }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Twelve gates, read-only
+        id: m
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+          OWNER_CRM_ACCESS_CODE: ${{ secrets.CRM_ACCESS_CODE }}
+          API: https://api.cloudflare.com/client/v4
+          TEST_DB_NAME: nasr-crm-test-db
+          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          REF_BACKUP_NAME: nasr-crm-test-db-backup-20261101
+          REF_BACKUP_UUID: a7681217-32a3-48fd-b8f5-8a54ac7b35e7
+          WORKER_NAME: nasr-crm-api-test
+          WRANGLER_CFG: _worker/wrangler.crm.toml
+        run: |
+          set -euo pipefail
+          umask 077
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          fails=''
+          gates=''
+          record() { # $1=gate id, $2=ok|fail|unknown, $3=short reason
+            gates="${gates}${1}=${2}${3:+(${3})};"
+            [ "$2" = ok ] || fails="${fails}${1}${3:+(${3})},"
+          }
+          publish() {
+            local summary
+            if [ -z "$fails" ]; then summary='all-gates-ok'; else summary="fail:${fails%,}"; fi
+            {
+              echo "summary=$summary"
+              echo "gates=$gates"
+            } >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY-PREFLIGHT-MIRROR $summary"
+          }
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            record token fail secret-unavailable
+            publish
+            exit 0
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          get_json() {
+            local url="$1" out="$2" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --header "$AUTH" --output "$out" --write-out '%{http_code}' "$url" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+          post_sql() { # read-only SELECT only; every call site below passes a SELECT
+            local uuid="$1" sql="$2" out="$3" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --request POST --header "$AUTH" --header 'Content-Type: application/json' \
+              --data "$(jq -nc --arg s "$sql" '{sql:$s}')" --output "$out" --write-out '%{http_code}' \
+              "${API}/accounts/${account_id}/d1/database/${uuid}/query" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+
+          # 1 — token alive
+          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/v.json")
+          token_status=$(jq -r '.result.status // "unknown"' "$TMP/v.json" 2>/dev/null || echo unknown)
+          if [ "$verify_code" = 200 ] && [ "$token_status" = active ]; then
+            record token ok ''
+          else
+            record token fail "http=$verify_code,status=$token_status"
+            publish
+            echo "::error::The token itself is not usable; the remaining gates cannot be measured."
+            exit 1
+          fi
+
+          # 2 — exactly one account (the deploy preflight's first Cloudflare stop)
+          accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/a.json")
+          account_count=$(jq -r '.result | length' "$TMP/a.json" 2>/dev/null || echo x)
+          if [ "$accounts_code" = 200 ] && [ "$account_count" = 1 ]; then
+            account_id=$(jq -r '.result[0].id' "$TMP/a.json")
+            record accounts ok ''
+          else
+            cf_code=$(jq -r '(.errors[0].code // "?" )|tostring' "$TMP/a.json" 2>/dev/null | tr -cd '0-9' | cut -c1-8)
+            record accounts fail "http=$accounts_code,count=$account_count,cf=${cf_code:-?}"
+            publish
+            echo "::error::GET /accounts is not readable with this token. The deploy preflight stops here too. Add 'Account Settings: Read' (Cloudflare error ${cf_code:-?})."
+            exit 1
+          fi
+
+          # 3 — workers.dev subdomain matches the allowed origin pinned in the config
+          sub_code=$(get_json "$API/accounts/${account_id}/workers/subdomain" "$TMP/s.json")
+          subdomain=$(jq -r '.result.subdomain // empty' "$TMP/s.json" 2>/dev/null || true)
+          config_origin=$(grep -oE 'CRM_ALLOWED_ORIGIN = "[^"]+"' "$WRANGLER_CFG" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          expected_origin="https://${WORKER_NAME}.${subdomain}.workers.dev"
+          if [ "$sub_code" = 200 ] && [ "$config_origin" = "$expected_origin" ]; then
+            record subdomain ok ''
+          else
+            record subdomain fail "http=$sub_code,config-matches-runner=no"
+          fi
+
+          # 4 — D1 inventory readable
+          d1_code=$(get_json "$API/accounts/${account_id}/d1/database?per_page=100" "$TMP/d.json")
+          if [ "$d1_code" = 200 ]; then record d1 ok ''; else record d1 fail "http=$d1_code"; fi
+
+          # 5 — the authorised test database is present under both name and uuid
+          if [ "$d1_code" = 200 ] && jq -e --arg u "$TEST_DB_UUID" --arg n "$TEST_DB_NAME" \
+               '.result[] | select(.uuid == $u and .name == $n)' "$TMP/d.json" >/dev/null 2>&1; then
+            record testdb ok ''
+          else
+            record testdb fail missing-or-renamed
+          fi
+
+          # 6 — the read-only reference backup still exists (a stopped gate if it was deleted)
+          if [ "$d1_code" = 200 ] && jq -e --arg u "$REF_BACKUP_UUID" --arg n "$REF_BACKUP_NAME" \
+               '.result[] | select(.uuid == $u and .name == $n)' "$TMP/d.json" >/dev/null 2>&1; then
+            record refbackup ok ''
+          else
+            record refbackup fail not-in-inventory
+          fi
+
+          # 7 — that backup answers a read-only COUNT and is non-empty
+          if [ "$d1_code" = 200 ]; then
+            bak_code=$(post_sql "$REF_BACKUP_UUID" \
+              "SELECT COUNT(*) AS cnt FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%';" "$TMP/b.json")
+            bak_cnt=$(jq -r '.result[0].results[0].cnt // empty' "$TMP/b.json" 2>/dev/null || true)
+            if [ "$bak_code" = 200 ] && [ -n "$bak_cnt" ] && [ "$bak_cnt" -ge 1 ] 2>/dev/null; then
+              record backuprows ok ""
+            else
+              record backuprows fail "http=$bak_code,rows=${bak_cnt:-unreadable}"
+            fi
+          else
+            record backuprows unknown d1-inventory-unreadable
+          fi
+
+          # 8 — required Worker secret NAMES are present (values are never requested)
+          sec_code=$(get_json "$API/accounts/${account_id}/workers/scripts/${WORKER_NAME}/secrets" "$TMP/x.json")
+          if [ "$sec_code" = 200 ]; then
+            miss=''
+            for name in CRM_SESSION_SECRET CRM_INGEST_PRIVATE_KEY CRM_VAPID_PRIVATE_KEY CRM_VAPID_PUBLIC_KEY; do
+              jq -e --arg s "$name" '[.result[]?.name] | index($s) != null' "$TMP/x.json" >/dev/null 2>&1 || miss="${miss}${name} "
+            done
+            if [ -z "$miss" ]; then record secrets ok ''; else record secrets fail "missing=$(echo "$miss" | tr ' ' '+')"; fi
+          else
+            record secrets fail "http=$sec_code"
+          fi
+
+          # 9 — the auth mode the deploy job needs: worker code, or worker verifier + GitHub code
+          if [ "$sec_code" = 200 ]; then
+            has_code=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE") != null' "$TMP/x.json")
+            has_verifier=$(jq -r '[.result[]?.name] | index("CRM_ACCESS_CODE_VERIFIER") != null' "$TMP/x.json")
+            if [ "$has_code" = true ]; then
+              record authmode ok worker-direct-code
+            elif [ "$has_verifier" = true ] && [ -n "${OWNER_CRM_ACCESS_CODE:-}" ]; then
+              record authmode ok worker-verifier+github-code
+            else
+              record authmode fail "worker-code=$has_code,worker-verifier=$has_verifier,github-code=$([ -n "${OWNER_CRM_ACCESS_CODE:-}" ] && echo present || echo absent)"
+            fi
+          else
+            record authmode unknown secrets-unreadable
+          fi
+
+          # 10 — the public ingest key row exists in the test database (read-only SELECT)
+          if [ "$d1_code" = 200 ]; then
+            pub_code=$(post_sql "$TEST_DB_UUID" \
+              "SELECT resource_id AS pub FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1' LIMIT 1;" \
+              "$TMP/p.json")
+            pub_val=$(jq -r '.result[0].results[0].pub // empty' "$TMP/p.json" 2>/dev/null || true)
+            if [ "$pub_code" = 200 ] && [ -n "$pub_val" ]; then record pubkey ok ''; else record pubkey fail "http=$pub_code,row=absent"; fi
+          else
+            record pubkey unknown d1-inventory-unreadable
+          fi
+
+          publish
+          if [ -n "$fails" ]; then
+            echo "::error::Deploy preflight would stop at: ${fails}. Each identifier above is one hard stop in crm-cloudflare-test-deploy.yml."
+            exit 1
+          fi
+
+  report-preflight-mirror:
+    name: 'CRM deploy preflight mirror — ${{ needs.mirror.outputs.summary }}'
+    needs: mirror
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Non-secret gate results are encoded in this check name
+        run: |
+          echo 'Every gate, in order:' "${{ needs.mirror.outputs.gates }}"
+          echo 'Any identifier in the check name is one hard stop in crm-cloudflare-test-deploy.yml.'
