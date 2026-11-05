@@ -1,0 +1,157 @@
+name: CRM legacy synthetic rows cleanup (test D1 only, counted, dry-run by default)
+
+# CONTRACT (2026-11-05)
+#
+# Why this exists: run 42107203775 stopped at the A5 L2 gate with
+#   unknown-ownership:crm_contacts:unknown:legacy-unproven · rows=35 · legacy_suspects=35
+# `scripts/a5-l2.mjs` states in code that the legacy rows are the one class it can never clear:
+# they are absent from TABLE_SPECS, so the ownership ledger can never prove them — they will fail
+# L2 on every future run while they sit in the test database. This workflow is the non-destructive
+# way out: it deletes exactly those rows and nothing else.
+#
+#   * Scope is IMPORTED, not restated: `scripts/crm/legacy-synthetic-cleanup.mjs` consumes
+#     `LEGACY_PROBES` from `a5-l2.mjs`, so the delete predicates and the gate's check predicates are
+#     literally the same strings. They cannot drift.
+#   * Dry-run is the default. With `mode=dry-run` the job only counts and prints; no DELETE is built.
+#     `mode=apply` additionally requires `CRM_CLEANUP_APPLY=1`, which this file sets only in that
+#     branch — so a stray re-run of an old link cannot delete on its own.
+#   * Target is the test database only: the script calls `assertTestOnlyConfig()` (which re-reads
+#     `_worker/wrangler.crm.toml`) and re-checks the uuid/name against `scripts/a5-live-support.mjs`
+#     before it issues a single request. `nasr-market-db` is never a target.
+#   * No DDL, no TRUNCATE, no unqualified DELETE: every statement is `DELETE FROM <table> WHERE <probe>`
+#     and the table list is fixed at fourteen by `LEGACY_PROBES`.
+#   * Counted on both sides: rows before, rows deleted per table (`meta.changes`), rows after. The run
+#     FAILS if the after-count is not zero — a partial cleanup is reported, never assumed.
+#   * Safety ceiling: more than 500 in-scope rows aborts before any write. That is no longer "a known
+#     synthetic footprint", and guessing is what this whole file exists to avoid.
+#   * The token is masked before the first request and is never echoed, written to a file, or artifacted.
+#
+# Refused unless a human types the exact string below.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_cleanup:
+        description: 'Type DELETE-LEGACY-SYNTHETIC-ROWS to run. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      mode:
+        description: 'dry-run counts only (default, no writes). apply deletes exactly the rows the A5 L2 gate calls legacy-unproven, then recounts.'
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - apply
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-legacy-synthetic-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: 'CRM legacy cleanup — test D1 only, counted both sides'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_cleanup == 'DELETE-LEGACY-SYNTHETIC-ROWS'
+    outputs:
+      outcome: ${{ steps.cleanup.outputs.outcome }}
+      mode: ${{ steps.cleanup.outputs.mode }}
+      before_total: ${{ steps.cleanup.outputs.before_total }}
+      deleted_total: ${{ steps.cleanup.outputs.deleted_total }}
+      after_total: ${{ steps.cleanup.outputs.after_total }}
+    steps:
+      - name: Check out the constants and probes this cleanup is pinned to
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Count first, delete only on request, count again
+        id: cleanup
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+          CRM_A5_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          outcome='not-run'
+          mode="${CRM_A5_MODE:-dry-run}"
+          before_total=''
+          deleted_total='0'
+          after_total=''
+
+          finish() {
+            {
+              echo "outcome=$outcome"
+              echo "mode=$mode"
+              echo "before_total=$before_total"
+              echo "deleted_total=$deleted_total"
+              echo "after_total=$after_total"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            outcome='secret-unavailable-to-workflow'
+            finish
+            exit 0
+          fi
+          # Masked before the first request: order matters, a late mask protects nothing.
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+
+          run_cleanup() {
+            if [ "$mode" = 'apply' ]; then
+              CRM_CLEANUP_APPLY=1 node scripts/crm/legacy-synthetic-cleanup.mjs --apply
+            else
+              node scripts/crm/legacy-synthetic-cleanup.mjs
+            fi
+          }
+
+          if ! run_cleanup > cleanup.json 2> cleanup.log; then
+            outcome="failed:$(tail -n 1 cleanup.log | cut -c1-160)"
+            before_total="$(jq -r '.before_total // empty' cleanup.json 2>/dev/null || true)"
+            finish
+            cat cleanup.log
+            exit 1
+          fi
+
+          before_total="$(jq -r '.before_total' cleanup.json)"
+          deleted_total="$(jq -r '.deleted_total // 0' cleanup.json)"
+          after_total="$(jq -r '.after_total // 0' cleanup.json)"
+          outcome='done'
+          finish
+
+          {
+            echo '## CRM legacy synthetic cleanup'
+            echo
+            echo "mode=${mode} · before=${before_total} · deleted=${deleted_total} · after=${after_total}"
+            echo
+            echo '### In scope (before)'
+            jq -r '.tables[]? | "- \(.table) [\(.label)]: \(.rows)"' cleanup.json
+            if [ "$mode" = 'apply' ]; then
+              echo
+              echo '### Deleted'
+              jq -r '.deleted[]? | "- \(.table): \(.deleted)"' cleanup.json
+              echo
+              echo '### Remaining (after)'
+              jq -r '.after[]? | "- \(.table): \(.rows)"' cleanup.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: "CRM legacy cleanup — ${{ needs.cleanup.outputs.mode }} — before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
+    runs-on: ubuntu-latest
+    needs: cleanup
+    if: always()
+    steps:
+      - name: Summarise the single gateway outcome
+        run: |
+          echo "outcome=${{ needs.cleanup.outputs.outcome }}"
+          echo "mode=${{ needs.cleanup.outputs.mode }}"
+          echo "before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
