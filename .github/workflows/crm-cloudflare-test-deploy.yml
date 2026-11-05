@@ -680,6 +680,18 @@ jobs:
           # reads CRM_SESSION_SECRET, never touches the prod DB, and prints to stderr only so the
           # verifier's one-line JSON stays parseable. With a5_write_decision=none (the default) the
           # read-only path is unchanged: nine checks plus logout-then-401, no decision row, no expiry.
+          # ── Redaction barrier for anything that can reach a PUBLIC check name ────────────────────
+          # On 2026-11-04 this step published a fragment of a Cloudflare API token inside a public
+          # check name: `a5=error:onBearer cfat_…`. Cause: Node's execFileSync puts the whole command
+          # — including `-H Authorization: Bearer <token>` — into the thrown error message, and the
+          # step took the last 40 characters of raw stderr into a name. `::add-mask::` protects the
+          # LOG only; it does nothing for a value injected into a run/check name. So: redact first,
+          # then shorten. Nothing derived from stderr may reach a name without passing through here.
+          redact_err() {
+            sed -E 's/[Bb]earer[[:space:]]*[A-Za-z0-9_.=_-]*/Bearer<redacted>/g; s/[A-Za-z0-9_=-]{32,}/<redacted>/g' \
+              | tr -cd 'A-Za-z0-9_=<>-'
+          }
+
           run_a5_live() {
             local a5_state="$TMP/a5_session_token" a5_n1 a5_n2 a5_h1 a5_h2 a5_code_env=''
             : > "$a5_state"
@@ -704,7 +716,7 @@ jobs:
             # barriers: any failure stops the A5 run with a named reason instead of a silent 9/10.
             if [ "${A5_WRITE_DECISION_INPUT:-none}" = 'noted' ]; then
               if ! node scripts/a5-live-support.mjs ensure-review-case > "$TMP/a5_seed.out" 2> "$TMP/a5_seed.err"; then
-                a5_live="review-case-seed-failed:$(tr -cd 'A-Za-z0-9_=-' < "$TMP/a5_seed.err" | tail -c 60 || echo unknown)"
+                a5_live="review-case-seed-failed:$(redact_err < "$TMP/a5_seed.err" | tail -c 60 || echo unknown)"
                 return 1
               fi
               # The hook prints to stderr only; redirect its stdout too so the JSON stays one line.
@@ -717,7 +729,7 @@ jobs:
                  CRM_LIVE_ACCESS_CODE_FILE="${a5_code_env:-}" \
                  CRM_A5_WRITE_DECISION="${A5_WRITE_DECISION_INPUT:-none}" \
                  node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
-              a5_live="error:$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live_a5.err" | tail -c 40 || echo unknown)"
+              a5_live="error:$(redact_err < "$TMP/live_a5.err" | tail -c 40 || echo unknown)"
               return 1
             fi
             a5_live=$(jq -r 'if ([.checks[] | select(.status == "fail")] | length) == 0 then "all-\(.checks | length)-pass" else "fail:" + ([.checks[] | select(.status == "fail") | .id] | join(",")) end' "$TMP/live_a5.json" 2>/dev/null || echo 'unparsable')
@@ -771,7 +783,7 @@ jobs:
           if ! env CRM_TEST_BASE_URL="$BASE_URL" $live10_env node _worker/tests/live-post-deploy-verify.mjs > "$TMP/live10.json" 2> "$TMP/live10.err"; then
             # A5 L2: nothing is deleted on failure. The `if: always()` L2 step publishes the
             # ledger for the rows that WERE proven, so the next run can re-verify them.
-            result="live10-$(tr -cd 'A-Za-z0-9_=-' < "$TMP/live10.err" | tail -c 52 || echo unknown)"
+            result="live10-$(redact_err < "$TMP/live10.err" | tail -c 52 || echo unknown)"
             finish
             exit 1
           fi
