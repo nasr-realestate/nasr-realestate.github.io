@@ -19,6 +19,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const READONLY = '.github/workflows/crm-cloudflare-readonly-preflight.yml';
@@ -225,4 +226,65 @@ test(`${WRITE_PROOF}: the gate is a DML write that is deleted and proven gone`, 
   assert.ok(key, 'the probe key must be defined in one place');
   assert.ok(!/ci-e2e-ticket:|TEST ONLY/.test(key[1]),
     'the probe key must sit outside every L2 legacy namespace, or it becomes an unprovable row later');
+});
+
+// The cleanup trap was broken in a way no static check caught: its SQL was built inside a single-quoted
+// jq program that also contained single quotes, so bash dropped out of the quoting, `$k` expanded in
+// the shell, and `set -u` killed the trap with "k: unbound variable" — after the run had already
+// failed. Syntax checks pass on that; only running it does not. So this test RUNS the function.
+test(`${WRITE_PROOF}: the cleanup trap survives set -u and still builds valid SQL`, () => {
+  const all = lines(read(WRITE_PROOF));
+  const start = all.findIndex((line) => line.includes('delete_probe_row() {'));
+  assert.notEqual(start, -1, 'the trap helper must exist');
+  let end = start + 1;
+  while (end < all.length && !/^\s{10}\}\s*$/.test(all[end])) end += 1;
+  const body = all.slice(start, end + 1).map((line) => line.replace(/^ {10}/, '')).join('\n');
+
+  const script = [
+    'set -u',
+    'API=https://example.invalid',
+    'account_id=acct-123',
+    'TEST_DB_UUID=db-uuid',
+    'probe_key="probe:write-proof:runit"',
+    'auth_header="Authorization: Bearer stub"',
+    'curl() { printf "%s\\n" "$@"; }',
+    body,
+    'delete_probe_row',
+    'echo "trap=ok"',
+  ].join('\n');
+
+  const res = spawnSync('bash', ['-c', script], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `the trap must not die under set -u: ${res.stderr}`);
+  assert.match(res.stdout, /trap=ok/);
+  assert.ok(
+    res.stdout.includes("DELETE FROM crm_idempotency_receipts WHERE submission_key = 'probe:write-proof:runit'"),
+    `the DELETE must carry the exact quoted key, got: ${res.stdout.slice(0, 300)}`,
+  );
+});
+
+test(`${WRITE_PROOF}: no single quote hides inside a single-quoted jq program`, () => {
+  for (const line of lines(read(WRITE_PROOF))) {
+    if (!line.includes('jq -nc')) continue;
+    const first = line.indexOf("'");
+    const last = line.lastIndexOf("'");
+    if (first === -1 || last === first) continue;
+    assert.ok(!line.slice(first + 1, last).includes("'"),
+      `a quote inside the jq program breaks the shell quoting around it: ${line.trim()}`);
+  }
+});
+
+// The probe row must satisfy the schema it is written into, read from the migration rather than
+// remembered: `resource_type` was written as 'probe' and D1 rejected it with a CHECK constraint.
+test(`${WRITE_PROOF}: the probe row satisfies the real schema CHECK on resource_type`, () => {
+  const migration = fs.readFileSync(path.join(ROOT, '_worker/migrations/0001_crm_opportunities.sql'), 'utf8');
+  const check = migration.match(/CHECK \(resource_type IN \(([^)]*)\)\)/);
+  assert.ok(check, 'the migration must still pin the resource_type CHECK');
+  const allowed = [...check[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  const text = read(WRITE_PROOF);
+  const insert = text.match(
+    /INSERT INTO crm_idempotency_receipts \(submission_key, resource_type, resource_id, received_at\) VALUES \('[^']*', '([^']+)'/,
+  );
+  assert.ok(insert, 'the probe INSERT must be present in the form this test can read');
+  assert.ok(allowed.includes(insert[1]),
+    `resource_type '${insert[1]}' violates the schema CHECK (${allowed.join(', ')})`);
 });

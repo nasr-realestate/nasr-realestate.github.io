@@ -138,7 +138,7 @@ jobs:
             [ -n "${probe_key:-}" ] && [ -n "${account_id:-}" ] && [ -n "${TEST_DB_UUID:-}" ] || return 0
             curl --silent --show-error --connect-timeout 10 --max-time 30 \
               --request POST --header "$auth_header" --header 'Content-Type: application/json' \
-              --data "$(jq -nc --arg k "$probe_key" '{sql:("DELETE FROM crm_idempotency_receipts WHERE submission_key = '" + $k + "'")}')" \
+              --data "$(jq -nc --arg k "$probe_key" '{sql:("DELETE FROM crm_idempotency_receipts WHERE submission_key = " + ($k|@sh))}')" \
               --output /dev/null \
               "${API}/accounts/${account_id}/d1/database/${TEST_DB_UUID}/query" 2>/dev/null || true
           }
@@ -257,7 +257,13 @@ jobs:
           # every namespace the A5 L2 ownership audit scans (`ci-e2e-ticket:%`, `TEST ONLY%`, the known
           # synthetic phones), so this probe can never become an unprovable legacy row later.
           probe_key="probe:write-proof:${RUN_ID}"
-          insert_code=$(d1_query "INSERT INTO crm_idempotency_receipts (submission_key, resource_type, resource_id, received_at) VALUES ('${probe_key}', 'probe', 'authorized_pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))" "$TMP/insert.json")
+          # `resource_type` is constrained by the schema itself: 0001_crm_opportunities.sql pins
+          # CHECK (resource_type IN ('contact','opportunity')). A first attempt wrote 'probe' and D1
+          # answered `CHECK constraint failed … SQLITE_CONSTRAINT_CHECK` — a rejection that proved the
+          # write path works (a permission failure is 403/SQLITE_AUTH, never a constraint) while still
+          # failing the run. The row below mirrors exactly what the deploy writes: contact +
+          # authorized_pending.
+          insert_code=$(d1_query "INSERT INTO crm_idempotency_receipts (submission_key, resource_type, resource_id, received_at) VALUES ('${probe_key}', 'contact', 'authorized_pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))" "$TMP/insert.json")
           if [ "$insert_code" != 200 ]; then
             cf_msg=$(d1_message "$TMP/insert.json")
             case "$insert_code" in
