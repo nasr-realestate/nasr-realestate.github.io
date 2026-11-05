@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const READONLY = '.github/workflows/crm-cloudflare-readonly-preflight.yml';
 const WRITE_PROOF = '.github/workflows/crm-cloudflare-write-proof.yml';
+const DEPLOY = '.github/workflows/crm-cloudflare-test-deploy.yml';
 
 const TEST_DB_UUID = '65bfcb14-4b48-423b-916f-00eefdb9ae1e';
 const PROD_DB_UUID = 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf';
@@ -173,5 +174,55 @@ test(`${WRITE_PROOF}: every write cleans up, including on failure`, () => {
   assert.ok(text.includes('DROP TABLE IF EXISTS _cf_probe_write_proof'), 'and the trap must drop it again');
   assert.match(text, /trap '[^']*drop_probe_table[^']*' EXIT/, 'the EXIT trap must attempt the drop');
   assert.ok(text.includes('verified-absent'), 'the run must prove the table is gone, not assume it');
-  assert.ok(!/DELETE FROM|DROP TABLE crm_/.test(text), 'the probe must never delete CRM rows or tables');
+  // A blanket "no DELETE at all" rule no longer fits: the gate is now a DML row that must be removed.
+  // The precise rule is that every DELETE is scoped to the exact probe key — never a broad delete that
+  // could reach a non-synthetic row — and that no CRM TABLE is ever dropped.
+  for (const line of lines(text)) {
+    if (!/DELETE FROM/.test(line)) continue;
+    assert.ok(line.includes('submission_key'),
+      `every DELETE must be scoped by submission_key: ${line.trim()}`);
+  }
+  assert.ok(!/DROP TABLE (`|")?crm_/.test(text), 'the probe must never drop a CRM table');
+  assert.ok(!/DELETE FROM crm_contacts|DELETE FROM crm_conversations/.test(text),
+    'the probe touches no CRM entity table');
+});
+
+// 2026-11-04: a public check name carried a fragment of a Cloudflare API token, because a step took
+// the last 40 characters of raw stderr into the name. `::add-mask::` protects the LOG, not a value
+// injected into a check name. Node's execFileSync puts the whole command — header included — into the
+// error message, so every name-capture path must be redacted before it is shortened.
+test(`${DEPLOY}: nothing reaches a public check name without redaction`, () => {
+  const text = read(DEPLOY);
+  assert.ok(text.includes('redact_err()'), 'the redaction helper must exist in the deploy step');
+  const rawTails = lines(text).filter((line) => /tr -cd 'A-Za-z0-9_=-' < .*tail -c/.test(line));
+  assert.deepEqual(rawTails, [], `raw stderr tail into a name: ${rawTails.join(' | ')}`);
+  const redactedTails = lines(text).filter((line) => line.includes('tail -c') && line.includes('redact_err'));
+  assert.ok(redactedTails.length >= 3, `all three name-capture paths must redact (found ${redactedTails.length})`);
+  assert.ok(/s\/\(\?i\)|\[Bb\]earer/.test(text), 'the redaction must neutralise a Bearer header regardless of case');
+});
+
+// A D1 400/7500 says nothing by itself: the MESSAGE is the discriminator (SQLITE_AUTH for DDL on one
+// database, free-tier daily row limit, DB size wall, incomplete input). On 2026-11-05 the run printed
+// `DENIED … 400/7500` and discarded the message, turning one afternoon into guesswork.
+test(`${WRITE_PROOF}: a D1 rejection is published by message, and 403 is separated from 400`, () => {
+  const text = read(WRITE_PROOF);
+  assert.ok(text.includes('d1_message()'), 'the message must be captured, not only the numeric code');
+  assert.ok(text.includes('.errors[0].message'), 'the message comes from the API errors array');
+  assert.ok(text.includes('denied-permission:'), '403 must be named as a permission answer');
+  assert.ok(text.includes('request-rejected:'), '400 must not be reported as a denial');
+  assert.ok(!/D1 write is DENIED for this token/.test(text), 'the old misleading wording must be gone');
+});
+
+// The deploy writes DML (idempotency tickets), so a DDL probe cannot be the gate. The gate writes one
+// row, deletes exactly that row, and proves it is gone.
+test(`${WRITE_PROOF}: the gate is a DML write that is deleted and proven gone`, () => {
+  const text = read(WRITE_PROOF);
+  assert.ok(text.includes('INSERT INTO crm_idempotency_receipts'), 'the deploy writes DML, so the proof must too');
+  assert.ok(text.includes("DELETE FROM crm_idempotency_receipts WHERE submission_key"), 'and delete exactly its own row');
+  assert.ok(text.includes('verified-absent'), 'and prove the row is gone');
+  assert.ok(text.includes('delete_probe_row'), 'an EXIT trap must remove the row on any failure path');
+  const key = text.match(/probe_key="([^"]+)"/);
+  assert.ok(key, 'the probe key must be defined in one place');
+  assert.ok(!/ci-e2e-ticket:|TEST ONLY/.test(key[1]),
+    'the probe key must sit outside every L2 legacy namespace, or it becomes an unprovable row later');
 });
