@@ -85,15 +85,11 @@ jobs:
               --header "$auth_header" --output "$destination" --write-out '%{http_code}' "$url" 2>/dev/null || true)
             printf '%s' "${code:-000}"
           }
-          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
-          token_status=$(jq -r '.result.status // "unknown"' "$TMP/verify.json" 2>/dev/null || echo unknown)
-          verify_error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/verify.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
-          verify="http=$verify_code;active=$([ "$token_status" = active ] && echo yes || echo no);error=${verify_error_code:-none}"
-          if [ "$verify_code" = 200 ] && [ "$token_status" = active ]; then
-            outcome='token-verify-endpoint-accepted'
-          else
-            outcome='token-verify-endpoint-rejected;testing-account-read'
-          fi
+          # No call to the user-scoped token endpoint: it answers 401 to this account-owned token, and
+          # reporting that as the run's "auth result" told a reader the opposite of the truth on
+          # 2026-11-05. Scope is measured against the account instead, below.
+          verify='scope=account-owned;measured-by=account-read'
+          outcome='account-read-pending'
           accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/accounts.json")
           if [ "$accounts_code" != 200 ]; then
             accounts="http=$accounts_code;inventory=denied-or-unavailable"
@@ -328,12 +324,10 @@ jobs:
             printf '%s' "${code:-000}"
           }
 
-          # 0 — INFORMATIONAL, never a gate: `/user/tokens/verify` only accepts USER-owned tokens.
-          # ARENA_CLOUDFLARE_TOKEN is account-owned, so 401 with Cloudflare error 1000 is the correct
-          # answer for it, not a defect. Measured, labelled, and allowed to fail — because a probe that
-          # treats a non-gate as a gate reports a problem that does not exist and hides the ones that do.
-          utok_code=$(get_json "$API/user/tokens/verify" "$TMP/uv.json")
-          record userTokenEndpoint info "http=$utok_code,not-a-gate-for-account-owned-tokens"
+          # 0 — the user-scoped token endpoint is NOT called, not even as "info". It answers 401 to an
+          # account-owned token, and publishing that 401 in a check name told a reader the opposite of
+          # the truth (2026-11-05). Scope is measured by the account read below, which is the call the
+          # deploy preflight actually depends on.
 
           # 1 — exactly one account. This IS the deploy preflight's first Cloudflare stop, and the
           # first point at which a run can legitimately end.
