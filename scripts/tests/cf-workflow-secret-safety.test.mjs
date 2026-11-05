@@ -105,6 +105,29 @@ for (const file of [READONLY, WRITE_PROOF]) {
   });
 }
 
+test(`${READONLY}: /user/tokens/verify is measured as info, never as a gate`, () => {
+  const text = read(READONLY);
+  // 2026-11-05: the mirror marked that endpoint as gate 1, it answered 401 (correct for an
+  // account-owned token), and the run ended there having measured nothing else. A probe that fails
+  // on a non-gate reports a problem that does not exist — and hides the twelve that might.
+  assert.match(text, /record userTokenEndpoint info/, 'the user-token endpoint must be recorded as info');
+  assert.ok(!/record token fail "http=\$verify_code/.test(text), 'a 401 there must never be a hard stop');
+  assert.ok(text.includes('record token ok'), 'the real first gate is the account read');
+  assert.ok(text.includes('record token fail "accounts-http='), 'and it fails only when /accounts fails');
+});
+
+test(`${READONLY}: the production database is read for presence only, never queried`, () => {
+  const text = read(READONLY);
+  assert.ok(text.includes('record proddb'), 'the deploy asserts a production-DB signature, so invisibility is a gate');
+  for (const line of lines(text)) {
+    if (!line.includes('PROD_DB_UUID')) continue;
+    assert.ok(
+      !/(post_sql|\/query|--data|crm_contacts)/.test(line),
+      `the production database must never be a query target in a read-only probe: ${line.trim()}`,
+    );
+  }
+});
+
 test(`${WRITE_PROOF}: write mode needs a typed human string and pins the test database`, () => {
   const text = read(WRITE_PROOF);
   assert.ok(text.includes("== 'PROVE-CLOUDFLARE-WRITE'"), 'the job must be gated on the typed string');

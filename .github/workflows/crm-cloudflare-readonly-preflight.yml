@@ -287,9 +287,15 @@ jobs:
           trap 'rm -rf "$TMP"' EXIT
           fails=''
           gates=''
-          record() { # $1=gate id, $2=ok|fail|unknown, $3=short reason
+          record() { # $1=gate id, $2=ok|info|fail|unknown, $3=short reason
             gates="${gates}${1}=${2}${3:+(${3})};"
-            [ "$2" = ok ] || fails="${fails}${1}${3:+(${3})},"
+            # `info` is a measurement that cannot fail a run: it records what happened without
+            # pretending it is a deploy gate. Added 2026-11-05 after a gate marked `fail` on a
+            # non-gate stopped the mirror at its first line and measured nothing else.
+            case "$2" in
+              ok|info) ;;
+              *) fails="${fails}${1}${3:+(${3})}," ;;
+            esac
           }
           publish() {
             local summary
@@ -322,27 +328,23 @@ jobs:
             printf '%s' "${code:-000}"
           }
 
-          # 1 — token alive
-          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/v.json")
-          token_status=$(jq -r '.result.status // "unknown"' "$TMP/v.json" 2>/dev/null || echo unknown)
-          if [ "$verify_code" = 200 ] && [ "$token_status" = active ]; then
-            record token ok ''
-          else
-            record token fail "http=$verify_code,status=$token_status"
-            publish
-            echo "::error::The token itself is not usable; the remaining gates cannot be measured."
-            exit 1
-          fi
+          # 0 — INFORMATIONAL, never a gate: `/user/tokens/verify` only accepts USER-owned tokens.
+          # ARENA_CLOUDFLARE_TOKEN is account-owned, so 401 with Cloudflare error 1000 is the correct
+          # answer for it, not a defect. Measured, labelled, and allowed to fail — because a probe that
+          # treats a non-gate as a gate reports a problem that does not exist and hides the ones that do.
+          utok_code=$(get_json "$API/user/tokens/verify" "$TMP/uv.json")
+          record userTokenEndpoint info "http=$utok_code,not-a-gate-for-account-owned-tokens"
 
-          # 2 — exactly one account (the deploy preflight's first Cloudflare stop)
+          # 1 — exactly one account. This IS the deploy preflight's first Cloudflare stop, and the
+          # first point at which a run can legitimately end.
           accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/a.json")
           account_count=$(jq -r '.result | length' "$TMP/a.json" 2>/dev/null || echo x)
           if [ "$accounts_code" = 200 ] && [ "$account_count" = 1 ]; then
             account_id=$(jq -r '.result[0].id' "$TMP/a.json")
-            record accounts ok ''
+            record token ok ''
           else
             cf_code=$(jq -r '(.errors[0].code // "?" )|tostring' "$TMP/a.json" 2>/dev/null | tr -cd '0-9' | cut -c1-8)
-            record accounts fail "http=$accounts_code,count=$account_count,cf=${cf_code:-?}"
+            record token fail "accounts-http=$accounts_code,count=$account_count,cf=${cf_code:-?}"
             publish
             echo "::error::GET /accounts is not readable with this token. The deploy preflight stops here too. Add 'Account Settings: Read' (Cloudflare error ${cf_code:-?})."
             exit 1
@@ -369,6 +371,19 @@ jobs:
             record testdb ok ''
           else
             record testdb fail missing-or-renamed
+          fi
+
+          # 5b — the production database must be visible in the inventory. The deploy preflight does not
+          # read its rows: it takes a name/size/tables signature and re-checks it after the run. If the
+          # token cannot even see the row, the deploy stops with
+          # `production DB nasr-market-db signature unreadable` before any A5 work. This gate reads
+          # presence only — never a query against the production database.
+          PROD_DB_UUID=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          if [ "$d1_code" = 200 ] && jq -e --arg u "$PROD_DB_UUID" \
+               '.result[] | select(.uuid == $u)' "$TMP/d.json" >/dev/null 2>&1; then
+            record proddb ok visible-not-queried
+          else
+            record proddb fail not-visible-to-this-token
           fi
 
           # 6 — the read-only reference backup still exists (a stopped gate if it was deleted)
