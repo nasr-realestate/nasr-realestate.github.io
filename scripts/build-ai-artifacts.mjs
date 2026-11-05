@@ -57,12 +57,35 @@ const flag = (name, fallback = null) => {
   return value === undefined ? true : value;
 };
 
-const OUT_DIR = path.resolve(ROOT, String(flag('out', '_site')));
+/**
+ * أعلام تتطلب قيمة صريحة (`--name=value`).
+ * السبب (2026-11-05، مقيس): كان `--out` بلا `=value` يُقرأ `true` منطقية، ثم
+ * `String(...)` تحوّلها إلى اسم مجلد، فيكتب المولّد الطبقة كاملة داخل مجلد اسمه
+ * حرفيًا `true/` — وقد حدث فعلًا (223 ملفًا) ونُشر على الموقع العام بنسخة قديمة.
+ * الحرس هنا: رفض فوري بدل الكتابة في مجلد بالاسم.
+ */
+const valueFlag = (name) => {
+  const hit = args.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
+  if (!hit) return null;
+  const raw = hit === `--${name}` ? '' : hit.slice(name.length + 3);
+  if (!raw.trim()) {
+    console.error(`[ai-artifacts] --${name} يتطلب قيمة صريحة بالصيغة --${name}=<value>`);
+    console.error(`[ai-artifacts] مثال: --${name}=.   (والافتراضي بلا هذا العلم: _site)`);
+    process.exit(2);
+  }
+  if (/^(true|false)$/i.test(raw.trim())) {
+    console.error(`[ai-artifacts] --${name}=${raw} قيمة منطقية لا مسارًا — هذه بصمة الخطأ القديم (مجلد اسمه "true").`);
+    process.exit(2);
+  }
+  return raw;
+};
+
+const OUT_DIR = path.resolve(ROOT, valueFlag('out') ?? '_site');
 const CHECK_ONLY = Boolean(flag('check', false));
 // ملفات لا يُلمسها المولّد في وضع النشر إلى الجذر: `--skip=ai-feed.json`
 // (المصدر الجذري لـ ai-feed.json قالبه Liquid يبنيه Jekyll، فلا يُستبدل بمخرج ثابت).
 const SKIP = new Set(
-  String(flag('skip', ''))
+  String(valueFlag('skip') ?? '')
     .split(',')
     .map((name) => name.trim())
     .filter(Boolean),
