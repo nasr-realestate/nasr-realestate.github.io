@@ -1,11 +1,11 @@
 name: CRM Cloudflare read-only preflight
 
+# Dispatch only (2026-11-05). This file used to carry a `push` trigger pinned to the single arena
+# branch `arena/fc5d95ec-...`: a leftover from the session that wrote it, not a control. It meant a
+# push to one stale working branch could run a job that is handed ARENA_CLOUDFLARE_TOKEN with nobody
+# deciding anything — the exact failure mode the deploy workflow removed its own push trigger for.
+# A read-only probe is still a token-holding job: it must be started by a human, every time.
 on:
-  push:
-    branches:
-      - arena/fc5d95ec-nasr-realestate-github-io
-    paths:
-      - .github/workflows/crm-cloudflare-readonly-preflight.yml
   workflow_dispatch:
 
 permissions:
