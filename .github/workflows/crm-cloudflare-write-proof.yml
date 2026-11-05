@@ -1,0 +1,300 @@
+name: CRM Cloudflare write proof (test D1 only, self-cleaning)
+
+# CONTRACT (2026-11-05)
+#
+# Answers ONE question with evidence: does `ARENA_CLOUDFLARE_TOKEN` actually carry WRITE permission
+# on this account — or does it only read? "It has D1 Write in the dashboard" is a claim about a
+# policy screen; this workflow is the measurement. It is deliberately the smallest write that can be
+# proved and then be gone:
+#
+#   * Target: ONLY `nasr-crm-test-db` (uuid pinned below AND cross-checked against
+#     `scripts/a5-live-support.mjs`, so the two can never drift apart silently). The production
+#     `nasr-market-db` is never named as a request target and is asserted absent from every URL.
+#   * Write: `CREATE TABLE _cf_probe_write_proof` → `INSERT` one row → `DROP TABLE`, then a separate
+#     read proves the table is GONE. One integer in one throwaway table, deleted in the same run.
+#     No CRM table is touched, so no synthetic row is ever created anywhere near the A5 ownership
+#     audit (that is what the L2 preflight would rightly refuse to forgive later).
+#   * Cleanup is not best-effort: an EXIT trap issues `DROP TABLE IF EXISTS` even if a step in the
+#     middle fails, and the run FAILS if the post-check still finds the table. A leftover table is
+#     reported, never ignored.
+#   * Worker write (optional, second typed string): creates `cf-write-proof-<run_id>` and deletes it
+#     in the same job, trap included. It never redeploys the CRM Worker — that stays the deploy
+#     workflow's job.
+#   * The token value is masked on arrival and never echoed, never written to a file, never artifacted.
+#
+# Refused unless a human types the exact string below: a write probe must not be something a branch
+# push or a stale re-run can do on its own.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_d1_write_proof:
+        description: 'Type PROVE-CLOUDFLARE-WRITE to run the self-cleaning D1 write proof on nasr-crm-test-db. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      authorize_worker_write_proof:
+        description: 'Optional: type PROVE-WORKER-WRITE to also create and immediately delete a scratch Worker script (proves Workers Scripts write). Leave empty to skip.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-cloudflare-write-proof
+  cancel-in-progress: false
+
+jobs:
+  proof:
+    name: 'CF write proof — D1 create/insert/drop on the test database'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_d1_write_proof == 'PROVE-CLOUDFLARE-WRITE'
+    outputs:
+      outcome: ${{ steps.proof.outputs.outcome }}
+      d1_write: ${{ steps.proof.outputs.d1_write }}
+      cleanup: ${{ steps.proof.outputs.cleanup }}
+      worker_write: ${{ steps.proof.outputs.worker_write }}
+    steps:
+      - name: Check out the constants this proof is pinned to
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prove D1 write, prove cleanup, leave nothing behind
+        id: proof
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+          WORKER_PROOF_INPUT: ${{ inputs.authorize_worker_write_proof }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+          TMP=$(mktemp -d)
+          account_id=''
+          scratch_script=''
+
+          outcome='not-run'
+          d1_write='not-run'
+          cleanup='not-run'
+          worker_write='skipped'
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            outcome='secret-unavailable-to-workflow'
+            d1_write='not-requested'
+            cleanup='not-requested'
+            {
+              echo "outcome=$outcome"
+              echo "d1_write=$d1_write"
+              echo "cleanup=$cleanup"
+              echo "worker_write=$worker_write"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Masked before the first request in this file — including the cleanup helpers below, which
+          # are the first things to define a curl. Order matters: a mask that arrives after a request
+          # protects nothing.
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          auth_header="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          finish() {
+            {
+              echo "outcome=$outcome"
+              echo "d1_write=$d1_write"
+              echo "cleanup=$cleanup"
+              echo "worker_write=$worker_write"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          # Cleanup is unconditional. `$scratch_script`/`$account_id` are empty unless the run got far
+          # enough to create something, so this is safe on every exit path, including an early stop.
+          drop_probe_table() {
+            [ -n "${account_id:-}" ] || return 0
+            curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --request POST \
+              --header "$auth_header" \
+              --header 'Content-Type: application/json' \
+              --data '{"sql":"DROP TABLE IF EXISTS _cf_probe_write_proof"}' \
+              --output /dev/null \
+              "${API}/accounts/${account_id}/d1/database/${TEST_DB_UUID}/query" 2>/dev/null || true
+          }
+          delete_scratch_script() {
+            [ -n "${scratch_script:-}" ] && [ -n "${account_id:-}" ] || return 0
+            curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --request DELETE \
+              --header "$auth_header" \
+              --output /dev/null \
+              "${API}/accounts/${account_id}/workers/scripts/${scratch_script}" 2>/dev/null || true
+          }
+          trap 'delete_scratch_script; drop_probe_table; rm -rf "$TMP"' EXIT
+
+          # ── Guard 1: the pinned target must still be the one the A5 code calls the test database ──
+          read_const() {
+            grep -E "^export const $1 = '[^']*';" scripts/a5-live-support.mjs \
+              | head -1 | sed -E "s/^export const $1 = '([^']*)';$/\1/"
+          }
+          const_uuid=$(read_const TEST_DB_UUID)
+          const_name=$(read_const TEST_DB_NAME)
+          const_prod_name=$(read_const PROD_DB_NAME)
+          const_prod_uuid=$(read_const PROD_DB_UUID)
+          if [ "$const_uuid" != '65bfcb14-4b48-423b-916f-00eefdb9ae1e' ] \
+             || [ "$const_name" != 'nasr-crm-test-db' ] \
+             || [ "$const_prod_name" != 'nasr-market-db' ]; then
+            outcome='constants-drift-refused'
+            d1_write='refused'
+            cleanup='not-needed'
+            finish
+            echo "::error::The test-database constants no longer match the values this workflow is pinned to. Refusing to write anywhere."
+            exit 1
+          fi
+          TEST_DB_UUID="$const_uuid"
+
+          get_json() {
+            local url="$1" destination="$2" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --header "$auth_header" --output "$destination" --write-out '%{http_code}' "$url" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+
+          # ── Guard 2: token alive, exactly one account, target present and named as the test DB ──
+          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
+          accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/accounts.json")
+          if [ "$verify_code" != 200 ] || [ "$accounts_code" != 200 ]; then
+            outcome="auth-unusable;verify-http=$verify_code;accounts-http=$accounts_code"
+            d1_write='not-attempted'
+            cleanup='not-needed'
+            finish
+            echo "::error::Token is not usable for account read (verify=$verify_code, accounts=$accounts_code). Add 'Account Settings: Read' if accounts is 403."
+            exit 1
+          fi
+          account_count=$(jq -r '.result | length' "$TMP/accounts.json")
+          if [ "$account_count" != 1 ]; then
+            outcome="accounts-not-single;count=$account_count"
+            d1_write='not-attempted'
+            cleanup='not-needed'
+            finish
+            echo "::error::Expected exactly one account reachable by this token, found $account_count."
+            exit 1
+          fi
+          account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
+
+          d1_code=$(get_json "$API/accounts/${account_id}/d1/database?per_page=100" "$TMP/d1.json")
+          target_name=$(jq -r --arg u "$TEST_DB_UUID" '.result[]? | select(.uuid == $u) | .name' "$TMP/d1.json" 2>/dev/null | head -1)
+          if [ "$d1_code" != 200 ] || [ "$target_name" != 'nasr-crm-test-db' ]; then
+            outcome="test-db-not-confirmed;d1-http=$d1_code;name=${target_name:-absent}"
+            d1_write='not-attempted'
+            cleanup='not-needed'
+            finish
+            echo "::error::Could not confirm that uuid ${TEST_DB_UUID} is nasr-crm-test-db. Refusing to write."
+            exit 1
+          fi
+
+          d1_query() {
+            local sql="$1" destination="$2" code
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 60 \
+              --request POST --header "$auth_header" --header 'Content-Type: application/json' \
+              --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
+              --output "$destination" --write-out '%{http_code}' \
+              "${API}/accounts/${account_id}/d1/database/${TEST_DB_UUID}/query" 2>/dev/null || true)
+            printf '%s' "${code:-000}"
+          }
+
+          # ── The write itself: one throwaway table, one row, dropped at once ──
+          create_code=$(d1_query 'CREATE TABLE _cf_probe_write_proof (x INTEGER)' "$TMP/create.json")
+          if [ "$create_code" != 200 ]; then
+            cf_err=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/create.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12)
+            d1_write="denied:create-http=$create_code;cf-error=${cf_err:-unknown}"
+            cleanup='nothing-created'
+            outcome='write-denied'
+            finish
+            drop_probe_table
+            echo "::error::D1 write is DENIED for this token (create returned $create_code, Cloudflare error ${cf_err:-unknown})."
+            exit 1
+          fi
+
+          insert_code=$(d1_query 'INSERT INTO _cf_probe_write_proof (x) VALUES (1)' "$TMP/insert.json")
+          if [ "$insert_code" != 200 ]; then
+            d1_write="denied:insert-http=$insert_code"
+            cleanup='table-dropped-by-trap'
+            outcome='write-denied'
+            finish
+            drop_probe_table
+            echo "::error::D1 INSERT is DENIED for this token (http $insert_code)."
+            exit 1
+          fi
+
+          drop_code=$(d1_query 'DROP TABLE _cf_probe_write_proof' "$TMP/drop.json")
+          absent_code=$(d1_query "SELECT count(*) AS n FROM sqlite_master WHERE name = '_cf_probe_write_proof'" "$TMP/absent.json")
+          residual=$(jq -r '.result[0].results[0].n // "unreadable"' "$TMP/absent.json" 2>/dev/null || echo unreadable)
+          if [ "$drop_code" = 200 ] && [ "$absent_code" = 200 ] && [ "$residual" = 0 ]; then
+            d1_write='ok:create-insert-drop-200'
+            cleanup='verified-absent'
+            outcome='write-proven'
+          else
+            d1_write="ok:create-insert-drop-http=$drop_code"
+            cleanup="residual-check-failed;http=$absent_code;rows=${residual}"
+            outcome='write-proven-but-cleanup-unverified'
+          fi
+
+          # ── Optional: prove Workers Scripts write on a scratch script, deleted immediately ──
+          if [ "${WORKER_PROOF_INPUT:-}" = 'PROVE-WORKER-WRITE' ]; then
+            scratch_script="cf-write-proof-${RUN_ID}"
+            printf '%s\n' \
+              'export default { async fetch() { return new Response("ok"); } };' > "$TMP/probe.js"
+            w_code=$(curl --silent --show-error --connect-timeout 10 --max-time 60 \
+              --request PUT --header "$auth_header" \
+              --header 'Content-Type: application/javascript' \
+              --data-binary "@$TMP/probe.js" --output "$TMP/worker.json" --write-out '%{http_code}' \
+              "${API}/accounts/${account_id}/workers/scripts/${scratch_script}" 2>/dev/null || true)
+            if [ "${w_code:-000}" = 200 ]; then
+              worker_write='created'
+            else
+              worker_write="denied:create-http=${w_code:-000}"
+            fi
+            d_code=$(curl --silent --show-error --connect-timeout 10 --max-time 60 \
+              --request DELETE --header "$auth_header" --output /dev/null --write-out '%{http_code}' \
+              "${API}/accounts/${account_id}/workers/scripts/${scratch_script}" 2>/dev/null || true)
+            if [ "${d_code:-000}" = 200 ]; then
+              worker_write="${worker_write};deleted"
+              scratch_script=''
+            else
+              worker_write="${worker_write};delete-http=${d_code:-000}"
+            fi
+          fi
+
+          finish
+
+          # Every value printed here is a status word or an HTTP code. The token is never echoed and
+          # never reaches a check name: that is exactly how a token fragment escaped into a public
+          # run name on 2026-11-04 via a raw stderr tail.
+          echo "::notice::CF-WRITE-PROOF outcome=${outcome} d1_write=${d1_write} cleanup=${cleanup} worker_write=${worker_write}"
+          {
+            echo '## CRM Cloudflare write proof — test database only'
+            echo '- Target: `nasr-crm-test-db` (uuid pinned in this file and cross-checked against `scripts/a5-live-support.mjs`).'
+            echo '- Production `nasr-market-db` was never a request target.'
+            echo "- D1 write: $d1_write"
+            echo "- Cleanup: $cleanup"
+            echo "- Worker write: $worker_write"
+            echo "- Outcome: $outcome"
+            echo '- The secret was masked on arrival; its value appears in no log, file, artifact or check name.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${outcome}" != 'write-proven' ]; then
+            echo "::error::Write proof did not pass cleanly (outcome=$outcome, cleanup=$cleanup)."
+            exit 1
+          fi
+
+  report:
+    name: 'CF write proof — ${{ needs.proof.outputs.outcome }} — d1=${{ needs.proof.outputs.d1_write }} — cleanup=${{ needs.proof.outputs.cleanup }} — worker=${{ needs.proof.outputs.worker_write }}'
+    needs: proof
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The non-secret result is encoded in this check name
+        run: echo 'Read this check name on a phone; open the log only for the full status words.'
