@@ -105,15 +105,32 @@ for (const file of [READONLY, WRITE_PROOF]) {
   });
 }
 
-test(`${READONLY}: /user/tokens/verify is measured as info, never as a gate`, () => {
+test(`${READONLY}: the first measured gate is the account read`, () => {
   const text = read(READONLY);
-  // 2026-11-05: the mirror marked that endpoint as gate 1, it answered 401 (correct for an
-  // account-owned token), and the run ended there having measured nothing else. A probe that fails
-  // on a non-gate reports a problem that does not exist — and hides the twelve that might.
-  assert.match(text, /record userTokenEndpoint info/, 'the user-token endpoint must be recorded as info');
-  assert.ok(!/record token fail "http=\$verify_code/.test(text), 'a 401 there must never be a hard stop');
   assert.ok(text.includes('record token ok'), 'the real first gate is the account read');
   assert.ok(text.includes('record token fail "accounts-http='), 'and it fails only when /accounts fails');
+  assert.ok(!/record token fail "http=\$verify_code/.test(text), 'a 401 there must never be a hard stop');
+});
+
+// The class, not the instance. On 2026-11-05 the same false gate was written into two workflows:
+// `/user/tokens/verify` answers 401 to an account-owned token (ARENA_CLOUDFLARE_TOKEN is one), and
+// each copy of the mistake stopped a run before it measured or wrote anything. Fixing one file left
+// the other armed, so the rule is now global: no workflow may CALL that endpoint at all — not as a
+// gate, not as "info", not as a log line that reads like an auth failure which does not exist.
+test('no workflow may call /user/tokens/verify (account-owned tokens get a false 401)', () => {
+  const dir = path.join(ROOT, '.github', 'workflows');
+  const files = fs.readdirSync(dir).filter((name) => /\.ya?ml$/.test(name));
+  assert.ok(files.length > 10, 'expected the real workflow directory');
+  const offenders = [];
+  for (const name of files) {
+    const relative = `.github/workflows/${name}`;
+    for (const line of lines(read(relative))) {
+      if (!line.includes('user/tokens/verify')) continue;
+      if (line.trimStart().startsWith('#')) continue; // explaining the ban is allowed
+      offenders.push(`${relative}: ${line.trim()}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `these lines call an endpoint that lies about this token: ${offenders.join(' | ')}`);
 });
 
 test(`${READONLY}: the production database is read for presence only, never queried`, () => {

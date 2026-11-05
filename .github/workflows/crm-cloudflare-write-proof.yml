@@ -161,15 +161,20 @@ jobs:
             printf '%s' "${code:-000}"
           }
 
-          # ── Guard 2: token alive, exactly one account, target present and named as the test DB ──
-          verify_code=$(get_json "$API/user/tokens/verify" "$TMP/verify.json")
+          # ── Guard 2: the token can read the account, and there is exactly one account ────────────
+          # `/user/tokens/verify` is NOT called here. It accepts only USER-owned tokens and answers
+          # 401 to an account-owned token — which is this one. On 2026-11-05 this guard therefore
+          # reported `verify=401, accounts=200` (unusable AND working in the same line) and stopped
+          # the run before it wrote anything: a false negative that cost a run and hid the real
+          # question. The account read below IS the auth check: it is the same first call the deploy
+          # preflight makes, and 403 here is the only answer that means "missing Account Settings: Read".
           accounts_code=$(get_json "$API/accounts?per_page=100" "$TMP/accounts.json")
-          if [ "$verify_code" != 200 ] || [ "$accounts_code" != 200 ]; then
-            outcome="auth-unusable;verify-http=$verify_code;accounts-http=$accounts_code"
+          if [ "$accounts_code" != 200 ]; then
+            outcome="account-read-failed;accounts-http=$accounts_code"
             d1_write='not-attempted'
             cleanup='not-needed'
             finish
-            echo "::error::Token is not usable for account read (verify=$verify_code, accounts=$accounts_code). Add 'Account Settings: Read' if accounts is 403."
+            echo "::error::GET /accounts returned $accounts_code; the token cannot read this account (403 here means 'Account Settings: Read' is missing)."
             exit 1
           fi
           account_count=$(jq -r '.result | length' "$TMP/accounts.json")

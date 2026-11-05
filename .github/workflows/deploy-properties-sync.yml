@@ -103,7 +103,10 @@ jobs:
           API=https://api.cloudflare.com/client/v4
           AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
           echo "=== preflight ==="
-          echo "token verify (/user/tokens/verify): $(curl -sS -m 20 -H "$AUTH" "$API/user/tokens/verify" | jq -c '{success, errors}' 2>/dev/null)"
+          # The user-scoped token endpoint is deliberately not called: it rejects account-owned tokens
+          # with 401 and the line reads like an auth failure that does not exist. The accounts lookup
+          # below is the real scope measurement.
+          echo "token scope: measured by the accounts lookup below"
           ACC="${CLOUDFLARE_ACCOUNT_ID:-$(curl -sS -m 20 -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty' 2>/dev/null)}"
           if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
             echo "account id from secrets: ${CLOUDFLARE_ACCOUNT_ID}"
