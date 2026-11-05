@@ -3,6 +3,8 @@
 // __Host- HttpOnly/Secure/SameSite=Strict cookies, strict Origin + CSRF checks,
 // and D1 brute-force rate limiting) with zero dependency on Cloudflare Zero Trust.
 
+import { writeIndustrialRow, outboxCanonical, outboxHash, OUTBOX_ZERO } from './l2-outbox.js';
+
 import {
   generateVapidKeyPair,
   getPushStatusResponse,
@@ -531,6 +533,36 @@ async function handleLogout(request, env, config) {
   return json({ ok: true, authenticated: false }, 200, { 'set-cookie': clearSessionCookieHeader() });
 }
 
+// CI tickets have no client-trustworthy run tag. Bind their session to the ticket's
+// own outbox entry and reject legacy direct-SQL tickets; ordinary access-code login is
+// deliberately unchanged. Hash chains are integrity checks, not external authentication.
+async function ciTicketOutboxRun(db, ticketKey, ticketRow) {
+  try {
+    const matches = await db.prepare("SELECT run_id,event_seq FROM l2_outbox WHERE table_name='crm_idempotency_receipts' AND row_id=? AND result='proven' LIMIT 2").bind(ticketKey).all();
+    if (!Array.isArray(matches?.results) || matches.results.length !== 1) return '';
+    const { run_id: runId, event_seq: targetSeq } = matches.results[0];
+    if (!/^a5-\d+-\d+-[a-f0-9]{8}$/.test(runId || '')) return '';
+    const output = await db.prepare('SELECT run_id,event_seq,table_name,row_id,row_hash,prev_hash,entry_hash,result,columns_json,relations_json FROM l2_outbox WHERE run_id=? AND event_seq<=? ORDER BY event_seq').bind(runId, targetSeq).all();
+    const entries = output?.results;
+    if (!Array.isArray(entries) || entries.length !== targetSeq) return '';
+    let previous = OUTBOX_ZERO;
+    for (let i = 0; i < entries.length; i += 1) {
+      const e = entries[i];
+      if (e.run_id !== runId || e.event_seq !== i + 1 || e.prev_hash !== previous) return '';
+      const event = {run_id:e.run_id,event_seq:e.event_seq,table_name:e.table_name,row_id:e.row_id,row_hash:e.row_hash,prev_hash:e.prev_hash,result:e.result,columns_json:e.columns_json,relations_json:e.relations_json};
+      if (await outboxHash(event) !== e.entry_hash) return '';
+      previous = e.entry_hash;
+    }
+    const e = entries.at(-1);
+    const columns = ['received_at', 'resource_type', 'submission_key'];
+    if (e.table_name !== 'crm_idempotency_receipts' || e.row_id !== ticketKey || e.result !== 'proven' ||
+        e.columns_json !== outboxCanonical(columns) || e.relations_json !== '[]') return '';
+    const row = { submission_key: ticketKey, resource_type: ticketRow.resource_type, received_at: ticketRow.received_at };
+    if (await outboxHash({table:'crm_idempotency_receipts', row}) !== e.row_hash) return '';
+    return runId;
+  } catch { return ''; } // missing migration or unreadable chain: never mint an unproven CI session
+}
+
 async function handleCiTicketLogin(request, env, config) {
   const body = await readJson(request, 2048);
   const nonce = typeof body.ticket_nonce === 'string' ? body.ticket_nonce.trim() : '';
@@ -539,11 +571,13 @@ async function handleCiTicketLogin(request, env, config) {
   }
   const ticketKey = `ci-e2e-ticket:${await sha256Hex(nonce)}`;
   const row = await env.DB.prepare(
-    'SELECT resource_id, received_at FROM crm_idempotency_receipts WHERE submission_key = ? LIMIT 1',
+    'SELECT resource_type, resource_id, received_at FROM crm_idempotency_receipts WHERE submission_key = ? LIMIT 1',
   ).bind(ticketKey).first();
   if (!row || row.resource_id !== 'authorized_pending') {
     return json({ error: 'unauthorized_ci_ticket' }, 403);
   }
+  const l2RunId = await ciTicketOutboxRun(env.DB, ticketKey, row);
+  if (!l2RunId) return json({ error: 'ci_ticket_outbox_unverified' }, 503);
   const receivedRaw = String(row.received_at || '');
   const createdMs = Date.parse(receivedRaw.includes('T') ? receivedRaw : `${receivedRaw.replace(' ', 'T')}Z`);
   if (!Number.isFinite(createdMs) || Math.abs(Date.now() - createdMs) > 90_000) {
@@ -565,14 +599,19 @@ async function handleCiTicketLogin(request, env, config) {
   const csrfToken = await deriveCsrfToken(config.sessionSecret, sessionId, sessionToken);
   const csrfHash = await sha256Hex(csrfToken);
   const expiresAt = now + ttl;
-  await env.DB.prepare(
-    'INSERT INTO crm_sessions(id, token_hash, csrf_hash, created_at, expires_at, last_seen_at) VALUES(?, ?, ?, ?, ?, ?)',
-  ).bind(sessionId, tokenHash, csrfHash, now, expiresAt, now).run();
+  // Consumption is a separate guarded UPDATE; if the batch fails, the consumed ticket
+  // cannot be reused. The session INSERT and its outbox event commit or roll back together.
+  const l2 = await writeIndustrialRow(env.DB, { runId: l2RunId, table: 'crm_sessions', row: {
+    id: sessionId, token_hash: tokenHash, csrf_hash: csrfHash,
+    created_at: now, expires_at: expiresAt, last_seen_at: now,
+  }, hashColumns: ['id', 'token_hash', 'csrf_hash', 'created_at'] });
 
   return json(
     {
       ok: true,
       authenticated: true,
+      l2_outbox_id: `${l2.run_id}:${l2.event_seq}`,
+      l2_run_id: l2.run_id,
       session_id: sessionId,
       csrf_token: csrfToken,
       expires_at: new Date(expiresAt * 1000).toISOString(),

@@ -52,6 +52,9 @@ jobs:
       - name: AI artifacts committed at the root must match the generator
         run: node scripts/check-ai-artifacts-in-sync.mjs
 
+      - name: Verify proposed L2 outbox on in-memory SQLite
+        run: node scripts/l2-verify-outbox.mjs --self-test
+
       - name: Blocking suite — every test, no skips
         # نفس الأمر ونفس الدلالة: كل ملفات الاختبار، ولا skip مقبول، وقيمة خروج node هي نتيجة الخطوة.
         # المُضاف طباعةُ الفحص الساقط نفسه في السجل فقط عند السقوط. السبب مقيس في 2026-11-03: هذه الخطوة

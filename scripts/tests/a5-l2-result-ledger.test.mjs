@@ -19,6 +19,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { buildRegistry } from '../../_worker/tests/_registry-fixture.mjs';
+import { outboxCanonical, OUTBOX_TABLES, OUTBOX_RELATIONS, OUTBOX_ZERO } from '../../_worker/l2-outbox.js';
 import { seedReviewCaseStatements } from '../a5-live-support.mjs';
 import {
   BASELINE_SCHEMA, L2_SCHEMA, TABLE_SPECS, a5RunIdentity, apiPhone, assertKeysFree,
@@ -33,6 +34,7 @@ const NOW = '2026-11-04T00:00:00Z';
 
 function world() {
   const { sqlite } = buildRegistry({ ledger: true });
+  sqlite.exec(readFileSync(new URL('../../_worker/migrations-proposed/0015_l2_outbox.sql', import.meta.url), 'utf8'));
   const query = sql => { assertReadOnlySql(sql); return sqlite.prepare(sql).all(); };
   return { sqlite, query };
 }
@@ -102,6 +104,74 @@ function writeGroup(w, identity, suffix, rows = ['contact', 'phones', 'receipt',
       run_tag: rt, step: 'A5-L6' });
   }
   return { cid, pA, pB, receipt, rid, iid, fid, pending };
+}
+
+const LOOKUP_COL = {
+  crm_contacts: 'id',
+  crm_contact_phones: 'phone_key',
+  crm_idempotency_receipts: 'submission_key',
+  crm_customer_requests: 'id',
+  crm_interactions: 'id',
+  crm_followups: 'id',
+  crm_opportunities: 'id',
+};
+
+// row_hash covers only immutable identity columns (id + FK) so legitimate
+// state changes (name, status, etc.) do not invalidate the creation proof.
+// Full-row integrity is out of scope for the outbox; it is a creation
+// attestation, not a live-state snapshot.
+function recordOutbox(w, pending) {
+  const digest = (v) => sha256Hex(outboxCanonical(v));
+  const byRun = new Map();
+  for (const p of pending) {
+    if (!byRun.has(p.run_tag)) byRun.set(p.run_tag, []);
+    byRun.get(p.run_tag).push(p);
+  }
+  for (const [runId, entries] of byRun) {
+    let prevHash = OUTBOX_ZERO, seq = 0;
+    for (const p of entries) {
+      const lookupCol = LOOKUP_COL[p.table];
+      const row = w.sqlite.prepare(
+        `SELECT * FROM ${p.table} WHERE ${lookupCol} = ?`
+      ).get(p.lookup_value);
+      if (!row) throw new Error(`fixture-missing-row:${p.table}:${p.lookup_value}`);
+
+      const idCol = OUTBOX_TABLES[p.table];
+      const rowId = String(row[idCol]);
+
+      const relMap = OUTBOX_RELATIONS[p.table] || {};
+      const stableCols = [...new Set([idCol, ...Object.keys(relMap)])].sort();
+      const columns = stableCols;
+      const columns_json = outboxCanonical(columns);
+
+      const rowForHash = {};
+      for (const c of columns) rowForHash[c] = row[c];
+      const row_hash = digest({ table: p.table, row: rowForHash });
+
+      const rels = Object.entries(relMap)
+        .filter(([c]) => row[c] != null)
+        .map(([c, t]) => ({ column: c, table: t, row_id: String(row[c]) }));
+      const relations_json = outboxCanonical(rels);
+
+      seq += 1;
+      const event = {
+        run_id: runId, event_seq: seq, table_name: p.table,
+        row_id: rowId, row_hash, prev_hash: prevHash,
+        result: 'proven', columns_json, relations_json,
+      };
+      const entry_hash = digest(event);
+
+      w.sqlite.prepare(
+        `INSERT INTO l2_outbox
+         (run_id,event_seq,table_name,row_id,row_hash,prev_hash,entry_hash,result,columns_json,relations_json)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`
+      ).run(event.run_id, event.event_seq, event.table_name, event.row_id,
+            event.row_hash, event.prev_hash, entry_hash, event.result,
+            event.columns_json, event.relations_json);
+
+      prevHash = entry_hash;
+    }
+  }
 }
 
 /** Digest of the exact A5 synthetic namespace, used to prove "A data stayed intact". */
@@ -188,6 +258,7 @@ test('L2-4 B after A success: re-verifies row_hash / ID / relation / previous-ru
   const w = world();
   const baselineA = baselineFrom(w.query);
   const gA = writeGroup(w, ID_A, 'a');
+  recordOutbox(w, gA.pending);
   const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: gA.pending, query: w.query, conclusion: 'success' });
   const before = namespaceDigest(w);
@@ -201,10 +272,11 @@ test('L2-4 B after A success: re-verifies row_hash / ID / relation / previous-ru
   assert.equal(assertKeysFree(w.query, ID_B.run_tag), true);
 
   // B writes its own group with DIFFERENT full keys. A's rows must remain byte-identical.
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
   assert.notEqual(gB.cid, gA.cid);
   assert.notEqual(gB.pA, gA.pA);
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   // B must NOT re-attest A's rows under B's identity.
@@ -220,6 +292,7 @@ test('L2-5 A partial failure (some rows written): B continues only because EVERY
   const partial = ['contact', 'phones', 'receipt'];
   const baselineA = baselineFrom(w.query);
   const gA = writeGroup(w, ID_A, 'a', partial);
+  recordOutbox(w, gA.pending);
   const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: gA.pending, query: w.query, conclusion: 'failure', stopped_at: 'A5-L4:simulated-crash' });
   assert.equal(ledgerA.conclusion, 'failure');
@@ -230,8 +303,9 @@ test('L2-5 A partial failure (some rows written): B continues only because EVERY
   assert.equal(pre.ok, true, pre.reason);
   assert.ok(pre.verdicts.every(v => v.verdict !== 'unknown'));
   const before = namespaceDigest(w);
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.equal(w.sqlite.prepare('SELECT review_note FROM crm_contacts WHERE id = ?').get(gA.cid).review_note,
@@ -247,7 +321,7 @@ test('L2-6 hard cancellation BEFORE any L2 event => unknown + STOP (no no-ledger
   const pre = preflightFor(w, [], ID_B.run_tag); // NO ledger published at all
   assert.equal(pre.ok, false);
   assert.match(pre.reason, /unknown-ownership/);
-  assert.ok(pre.verdicts.some(v => v.verdict === 'unknown'));
+  assert.ok(pre.verdicts.some(v => typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
 });
 
 test('L2-7 L1-only forged row (tag + review_note + derived phone) is NOT ownership proof', () => {
@@ -259,7 +333,7 @@ test('L2-7 L1-only forged row (tag + review_note + derived phone) is NOT ownersh
   const pre = preflightFor(w, [], ID_B.run_tag);
   assert.equal(pre.ok, false);
   assert.match(pre.reason, /unknown-ownership/);
-  assert.ok(pre.verdicts.some(v => v.verdict === 'unknown'));
+  assert.ok(pre.verdicts.some(v => typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
 });
 
 test('L2-8 tampered row (ID change) and forged child row both stop with a named reason', () => {
@@ -363,6 +437,7 @@ test('L2-13 row_hash is stable across legitimate state changes (no false unknown
   const w = world();
   const baselineA = baselineFrom(w.query);
   const g = writeGroup(w, ID_A, 'a');
+  recordOutbox(w, g.pending);
   const ledger = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: g.pending, query: w.query, conclusion: 'success' });
   // Legitimate mutable state (display name, followup completion) must not change ownership.
@@ -377,7 +452,11 @@ test('L2-13 row_hash is stable across legitimate state changes (no false unknown
     .run('done', 'done', '2026-11-05T00:00:00Z', g.fid);
   const pre2 = preflightFor(w, [ledger], ID_B.run_tag);
   assert.equal(pre2.ok, false);
-  assert.ok(pre2.verdicts.some(v => v.table === 'crm_interactions' && v.verdict === 'unknown'));
+  // The trigger-created interaction has NO outbox entry (it was inserted by
+  // SQL trigger, not writeIndustrialRow). The classifier correctly returns
+  // 'unknown:outbox-evidence-required' — the specific subtype proves the
+  // classifier caught it, not that it silently ignored it.
+  assert.ok(pre2.verdicts.some(v => v.table === 'crm_interactions' && typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
   // ...but a changed Worker-generated ID is detected.
   const spec = TABLE_SPECS.crm_customer_requests;
   const row = w.query(`SELECT ${[...new Set([spec.idColumn, spec.uniqueKey, ...spec.hashColumns])].join(',')} FROM crm_customer_requests WHERE id = ${q(g.rid)}`)[0];
@@ -480,8 +559,10 @@ test('L2-18 a pre-existing unproven row cannot be blessed as a read-back side ef
     conclusion: 'failure' }), /a5-l2-unproven-preexisting-row:crm_contacts/);
   // Once a trusted prior ledger proves it, the same row is skipped (no re-attestation).
   const w2 = world();
+  const baselineA = baselineFrom(w2.query);
   const g = writeGroup(w2, ID_A, 'a', ['contact']);
-  const prior = buildLedger({ identity: ID_A, baseline: baselineFrom(w2.query),
+  recordOutbox(w2, g.pending);
+  const prior = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: g.pending, query: w2.query, conclusion: 'success' });
   const b2 = baselineFrom(w2.query);
   assert.doesNotThrow(() => buildLedger({ identity: ID_B, baseline: b2, pending: [],

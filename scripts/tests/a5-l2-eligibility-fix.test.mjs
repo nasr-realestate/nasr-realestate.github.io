@@ -20,12 +20,13 @@
  */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import { buildRegistry } from '../../_worker/tests/_registry-fixture.mjs';
+import { outboxCanonical, OUTBOX_TABLES, OUTBOX_RELATIONS, OUTBOX_ZERO } from '../../_worker/l2-outbox.js';
 import {
   BASELINE_SCHEMA, L2_SCHEMA, a5RunIdentity, assertKeysFree, assertReadOnlySql,
   baselineFrom, buildLedger, classifyRows, createLedger, derivedPhone, enumerateLegacySuspects,
@@ -61,6 +62,7 @@ const l2Steps = [{ name: L2_PREFLIGHT_STEP, conclusion: 'success' }, ...writeSte
 
 function world() {
   const { sqlite } = buildRegistry({ ledger: true });
+  sqlite.exec(readFileSync(new URL('../../_worker/migrations-proposed/0015_l2_outbox.sql', import.meta.url), 'utf8'));
   const query = sql => { assertReadOnlySql(sql); return sqlite.prepare(sql).all(); };
   return { sqlite, query };
 }
@@ -128,6 +130,74 @@ function writeGroup(w, identity, suffix,
       run_tag: rt, step: 'A5-L6' });
   }
   return { cid, pA, pB, receipt, rid, iid, fid, pending };
+}
+
+const LOOKUP_COL = {
+  crm_contacts: 'id',
+  crm_contact_phones: 'phone_key',
+  crm_idempotency_receipts: 'submission_key',
+  crm_customer_requests: 'id',
+  crm_interactions: 'id',
+  crm_followups: 'id',
+  crm_opportunities: 'id',
+};
+
+// row_hash covers only immutable identity columns (id + FK) so legitimate
+// state changes (name, status, etc.) do not invalidate the creation proof.
+// Full-row integrity is out of scope for the outbox; it is a creation
+// attestation, not a live-state snapshot.
+function recordOutbox(w, pending) {
+  const digest = (v) => sha256Hex(outboxCanonical(v));
+  const byRun = new Map();
+  for (const p of pending) {
+    if (!byRun.has(p.run_tag)) byRun.set(p.run_tag, []);
+    byRun.get(p.run_tag).push(p);
+  }
+  for (const [runId, entries] of byRun) {
+    let prevHash = OUTBOX_ZERO, seq = 0;
+    for (const p of entries) {
+      const lookupCol = LOOKUP_COL[p.table];
+      const row = w.sqlite.prepare(
+        `SELECT * FROM ${p.table} WHERE ${lookupCol} = ?`
+      ).get(p.lookup_value);
+      if (!row) throw new Error(`fixture-missing-row:${p.table}:${p.lookup_value}`);
+
+      const idCol = OUTBOX_TABLES[p.table];
+      const rowId = String(row[idCol]);
+
+      const relMap = OUTBOX_RELATIONS[p.table] || {};
+      const stableCols = [...new Set([idCol, ...Object.keys(relMap)])].sort();
+      const columns = stableCols;
+      const columns_json = outboxCanonical(columns);
+
+      const rowForHash = {};
+      for (const c of columns) rowForHash[c] = row[c];
+      const row_hash = digest({ table: p.table, row: rowForHash });
+
+      const rels = Object.entries(relMap)
+        .filter(([c]) => row[c] != null)
+        .map(([c, t]) => ({ column: c, table: t, row_id: String(row[c]) }));
+      const relations_json = outboxCanonical(rels);
+
+      seq += 1;
+      const event = {
+        run_id: runId, event_seq: seq, table_name: p.table,
+        row_id: rowId, row_hash, prev_hash: prevHash,
+        result: 'proven', columns_json, relations_json,
+      };
+      const entry_hash = digest(event);
+
+      w.sqlite.prepare(
+        `INSERT INTO l2_outbox
+         (run_id,event_seq,table_name,row_id,row_hash,prev_hash,entry_hash,result,columns_json,relations_json)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`
+      ).run(event.run_id, event.event_seq, event.table_name, event.row_id,
+            event.row_hash, event.prev_hash, entry_hash, event.result,
+            event.columns_json, event.relations_json);
+
+      prevHash = entry_hash;
+    }
+  }
 }
 
 const preflightFor = (w, ledgers, currentRunTag) =>
@@ -309,9 +379,9 @@ test('F3 unproven legacy synthetic row => unknown + STOP; real rows untouched; n
   // Absence of a ledger artifact is NOT proof that no row was written.
   const none = classifyRows({ query: w.query, ledgers: [], currentRunTag: ID_B.run_tag });
   assert.equal(none.ok, false);
-  assert.match(none.reason, /unknown-ownership:.*legacy-unproven/);
+  assert.match(none.reason, /unknown-ownership:.*(legacy-unproven|outbox-evidence-required)/);
   assert.ok(none.legacy_suspects >= 6);
-  assert.ok(none.verdicts.some(v => v.verdict === 'unknown:legacy-unproven'));
+  assert.ok(none.verdicts.some(v => typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
 
   // buildLedger must NOT be able to publish a ledger that implicitly declares this namespace clean.
   assert.throws(() => buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
@@ -328,7 +398,7 @@ test('F3 unproven legacy synthetic row => unknown + STOP; real rows untouched; n
   assert.equal(failure.conclusion, 'failure');
   const after = preflightFor(w, [failure], ID_B.run_tag);
   assert.equal(after.ok, false, 'a zero-claim ledger must not clear ownership');
-  assert.match(after.reason, /legacy-unproven/);
+  assert.match(after.reason, /(legacy-unproven|outbox-evidence-required)/);
   assert.ok(!after.verdicts.some(v => v.verdict === 'baseline-origin'),
     'no retroactive baseline/ownership proof for legacy rows');
 });
@@ -340,6 +410,7 @@ test('F4 success: EVERY new synthetic row gets its own independent, hash-chained
   const baseline = baselineFrom(w.query);
   assert.equal(assertKeysFree(w.query, ID_A.run_tag), true);
   const g = writeGroup(w, ID_A, 'a');
+  recordOutbox(w, g.pending);
   const ledger = buildLedger({ identity: ID_A, baseline, pending: g.pending,
     query: w.query, conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledger), 'ok');
@@ -374,6 +445,7 @@ test('F5 partial failure of A publishes evidence for the rows it DID create; B v
   const w = world();
   const baselineA = baselineFrom(w.query);
   const g = writeGroup(w, ID_A, 'a', ['contact', 'phones', 'receipt']);
+  recordOutbox(w, g.pending);
   const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA, pending: g.pending,
     query: w.query, conclusion: 'failure', stopped_at: 'A5-L4:simulated-crash' });
   assert.equal(ledgerA.conclusion, 'failure', 'partial failure NEVER claims success');
@@ -397,8 +469,9 @@ test('F5 partial failure of A publishes evidence for the rows it DID create; B v
   assert.equal(pre.ok, true, pre.reason);
   assert.ok(pre.verdicts.filter(v => v.verdict === 'previous-a5-proven').length >= 4);
   // B proceeds with its own baseline and keeps A's rows intact (no delete, no re-attestation).
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b', ['contact', 'phones']);
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.ok(ledgerB.events.every(e => e.run_tag === ID_B.run_tag));
@@ -409,8 +482,10 @@ test('F5 partial failure of A publishes evidence for the rows it DID create; B v
 
 test('F6 B re-reads rows and verifies row_hash, parent relations and A run identity', () => {
   const w = world();
+  const baselineA = baselineFrom(w.query);
   const g = writeGroup(w, ID_A, 'a');
-  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineFrom(w.query),
+  recordOutbox(w, g.pending);
+  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: g.pending, query: w.query, conclusion: 'success' });
   assert.equal(preflightFor(w, [ledgerA], ID_B.run_tag).ok, true);
 
@@ -472,23 +547,27 @@ test('F7 A and B do not interfere; absence of evidence is NEVER success', () => 
   assert.equal(assertKeysFree(w.query, ID_B.run_tag), true);
 
   // A writes FIRST and gets its own ledger; B then writes into the SAME database.
+  const baselineA = baselineFrom(w.query);
   const gA = writeGroup(w, ID_A, 'a');
-  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineFrom(w.query),
+  recordOutbox(w, gA.pending);
+  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA,
     pending: gA.pending, query: w.query, conclusion: 'success' });
   assert.equal(preflightFor(w, [ledgerA], ID_B.run_tag).ok, true,
     'B verifies all A rows; A data stays intact');
+  const baselineB = baselineFrom(w.query);
   const gB = writeGroup(w, ID_B, 'b');
+  recordOutbox(w, gB.pending);
   assert.notEqual(gA.cid, gB.cid);
 
   // No artifact at all + rows present => unknown, never "clean".
   const absent = classifyRows({ query: w.query, ledgers: [], currentRunTag: ID_C.run_tag });
   assert.equal(absent.ok, false);
   assert.match(absent.reason, /unknown-ownership/);
-  assert.ok(absent.verdicts.some(v => v.verdict === 'unknown'));
+  assert.ok(absent.verdicts.some(v => typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
   // A's ledger alone cannot bless B's brand-new rows: absence of evidence is not success.
   const bOnly = preflightFor(w, [ledgerA], ID_C.run_tag);
   assert.equal(bOnly.ok, false);
-  assert.ok(bOnly.verdicts.some(v => v.a5_id === gB.cid && v.verdict === 'unknown'));
+  assert.ok(bOnly.verdicts.some(v => v.a5_id === gB.cid && typeof v.verdict === 'string' && v.verdict.startsWith('unknown')));
 
   // Only an explicit, cleared, run-scoped preflight may let claim-making ledgers be published.
   const dir = mkdtempSync(path.join(tmpdir(), 'a5-f7-'));
@@ -503,7 +582,7 @@ test('F7 A and B do not interfere; absence of evidence is NEVER success', () => 
   } finally { rmSync(dir, { recursive: true, force: true }); }
 
   // B's ledger keeps A's run identity for A rows (no re-attestation), and a third run verifies both.
-  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
+  const ledgerB = buildLedger({ identity: ID_B, baseline: baselineB,
     pending: gB.pending, query: w.query, priorLedgers: [ledgerA], conclusion: 'success' });
   assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
   assert.ok(ledgerB.events.every(e => e.run_tag === ID_B.run_tag));
