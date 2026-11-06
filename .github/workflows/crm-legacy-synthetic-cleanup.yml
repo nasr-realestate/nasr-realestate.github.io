@@ -85,7 +85,10 @@ jobs:
           mode="${CRM_A5_MODE:-dry-run}"
           before_total=''
           deleted_total='0'
-          after_total=''
+          # In dry-run nothing is deleted and nothing is recounted, so `after` is not zero — it is
+          # unmeasured. Reporting 0 there would read as "the table is already empty", which is the
+          # opposite of the truth (35 rows are sitting in it).
+          after_total='n/a'
 
           finish() {
             {
@@ -122,8 +125,10 @@ jobs:
           fi
 
           before_total="$(jq -r '.before_total' cleanup.json)"
-          deleted_total="$(jq -r '.deleted_total // 0' cleanup.json)"
-          after_total="$(jq -r '.after_total // 0' cleanup.json)"
+          if [ "$mode" = 'apply' ]; then
+            deleted_total="$(jq -r '.deleted_total // 0' cleanup.json)"
+            after_total="$(jq -r '.after_total // 0' cleanup.json)"
+          fi
           outcome='done'
           finish
 
