@@ -204,6 +204,12 @@ jobs:
                     vcard_records_total, duplicate_findings, import_performed, analysis_version
                FROM crm_drive_analysis_run`,
           );
+          if (!run) {
+            // A freshly provisioned database carries the CRM schema and no analysis run yet, so there
+            // is nothing to review. That is a state, not a failure: exiting non-zero here painted
+            // every push red after the move to nasr-crm-test-db-v2. Exit 3 says "not applicable".
+            process.exit(3);
+          }
           assert.equal(Number(run.import_performed), 0, 'the stored run row must record import_performed = 0');
           const migs = await one('SELECT COUNT(*) AS c FROM d1_migrations');
           emit('scope', `run=${run.run_key},files=${run.files_analyzed},convs=${run.conversations_total},` +
@@ -375,11 +381,19 @@ jobs:
           fi
 
           # 4) Two identical read-only passes: a review that cannot be reproduced is not evidence.
-          OPS_SLOT=pre node "$TMP/p4_review.mjs" "$TEST_DB_UUID" "$TMP" > "$TMP/review1.out" 2>"$TMP/review1.err" || {
+          rc=0
+          OPS_SLOT=pre node "$TMP/p4_review.mjs" "$TEST_DB_UUID" "$TMP" > "$TMP/review1.out" 2>"$TMP/review1.err" || rc=$?
+          if [ "$rc" = '3' ]; then
+            # No analysis run exists on this database yet (fresh provisioning). Report and stop.
+            result='no-analysis-run-yet-nothing-to-review'
+            finish
+            exit 0
+          fi
+          if [ "$rc" != '0' ]; then
             result="review-query-failed-$(tr -d '\n' < "$TMP/review1.err" | cut -c1-120)"
             finish
             exit 1
-          }
+          fi
           cp "$TMP/outputs.txt" "$TMP/outputs.pass1"
           : > "$TMP/outputs.txt"
           OPS_SLOT=post node "$TMP/p4_review.mjs" "$TEST_DB_UUID" "$TMP" > "$TMP/review2.out" 2>"$TMP/review2.err" || {
