@@ -104,6 +104,56 @@ export function enumerateLegacySuspects(query) {
   return out;
 }
 
+/**
+ * AUDITED residue scope for ONE named failed run. Derived from the same key conventions the gate
+ * uses (tag, conversation uid, run-scoped submission keys), never from display names or dates.
+ *
+ * Why it exists: run 42292458694 created its synthetic rows and then could not publish a ledger for
+ * them, so it left rows that no ledger can ever prove. They are not in the legacy namespace either,
+ * so `LEGACY_PROBES` cannot reach them. Deleting them by hand would be an unaudited DELETE; this
+ * returns exact predicates so the existing counted cleanup tool can do it, with the same dry-run
+ * default and the same before/after accounting.
+ */
+export function residueProbes(runTag) {
+  const tagValue = String(runTag || '').trim();
+  if (!RUN_TAG_RE.test(tagValue)) throw new Error('a5-l2-residue-bad-run-tag');
+  const tag = tagOf(tagValue);
+  const uid = conversationUid(tagValue);
+  const contacts = `SELECT id FROM crm_contacts WHERE review_note = '${tag}'`;
+  const convs = `SELECT id FROM crm_conversations WHERE source_ref = '${tag}' OR conversation_uid = '${uid}'`;
+  const requests = `SELECT id FROM crm_customer_requests WHERE contact_id IN (${contacts})`;
+  return [
+    { table: 'crm_conversation_messages', label: 'residue-message',
+      where: `conversation_id IN (${convs})` },
+    { table: 'crm_conversation_insights', label: 'residue-insight',
+      where: `conversation_id IN (${convs})` },
+    { table: 'crm_request_listing_link', label: 'residue-request-link',
+      where: `request_id IN (${requests})` },
+    { table: 'crm_request_status_history', label: 'residue-request-history',
+      where: `request_id IN (${requests})` },
+    { table: 'crm_interactions', label: 'residue-interaction',
+      where: `contact_id IN (${contacts}) OR request_id IN (${requests})` },
+    { table: 'crm_followups', label: 'residue-followup',
+      where: `contact_id IN (${contacts}) OR request_id IN (${requests})` },
+    { table: 'crm_opportunities', label: 'residue-opportunity',
+      where: `contact_id IN (${contacts})` },
+    { table: 'crm_customer_requests', label: 'residue-request',
+      where: `contact_id IN (${contacts})` },
+    { table: 'crm_contact_audit_log', label: 'residue-contact-audit',
+      where: `contact_id IN (${contacts}) OR source_ref = '${tag}'` },
+    { table: 'crm_operational_audit_log', label: 'residue-operational-audit',
+      where: `contact_id IN (${contacts}) OR actor = '${tag}'` },
+    { table: 'crm_idempotency_receipts', label: 'residue-receipt',
+      where: `resource_id IN (${contacts}) OR submission_key LIKE '${tagValue}:%'` },
+    { table: 'crm_contact_phones', label: 'residue-phone',
+      where: `contact_id IN (${contacts})` },
+    { table: 'crm_conversations', label: 'residue-conversation',
+      where: `source_ref = '${tag}' OR conversation_uid = '${uid}'` },
+    { table: 'crm_contacts', label: 'residue-contact',
+      where: `review_note = '${tag}'` },
+  ];
+}
+
 export const L2_SCHEMA = 'a5-l2-v1';
 export const BASELINE_SCHEMA = 'a5-l2-baseline-v1';
 export const TAG_PREFIX = 'A5-RUN:';
@@ -548,7 +598,21 @@ export function buildLedger({ identity, baseline, pending, query, priorLedgers =
   for (const prior of priorLedgers) {
     if (verifyLedgerIntegrity(prior.ledger || prior) !== 'ok') throw new Error('a5-l2-untrusted-prior-ledger');
     const l = prior.ledger || prior;
-    for (const e of l.events) alreadyProven.add(`${e.table}|${e.unique_key}`);
+    for (const e of l.events) {
+      alreadyProven.add(`${e.table}|${e.unique_key}`);
+      // Prior evidence must also be VISIBLE, not just remembered as a key. Two lookups in this
+      // function consult `eventByKey` — parent resolution and the legacy-namespace check — and
+      // neither could see a previous run's events, because they only ever went into
+      // `alreadyProven`. Consequence: a ticket that run A minted and PROVED still threw
+      // `a5-l2-unproven-legacy-row:crm_idempotency_receipts:legacy-ci-ticket` in run B's
+      // checkpoint, which is exactly how run 42292458694 failed at check7b while its own
+      // preflight (which does index prior events) had passed. This run's own events are indexed
+      // after this loop, so they still take precedence.
+      if (!eventByKey.has(`${e.table}|${e.unique_key}`)) eventByKey.set(`${e.table}|${e.unique_key}`, e);
+      if (e.observed_id && !eventByKey.has(`${e.table}|observed:${e.observed_id}`)) {
+        eventByKey.set(`${e.table}|observed:${e.observed_id}`, e);
+      }
+    }
     for (const [table, keys] of Object.entries(l.baseline?.ids || {})) {
       for (const key of keys) alreadyProven.add(`${table}|${key}`);
     }

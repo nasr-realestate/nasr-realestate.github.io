@@ -22,6 +22,7 @@
 //     بعد الحذف يُفشل التشغيل في أسوأ لحظة. الملخّص المطبوع + artefact الجلسة كافيان.
 import {
   LEGACY_PROBES,
+  residueProbes,
 } from '../a5-l2.mjs';
 import {
   TEST_DB_UUID,
@@ -35,6 +36,23 @@ const API = process.env.CRM_A5_CF_API || 'https://api.cloudflare.com/client/v4';
 const APPLY_ENV = 'CRM_CLEANUP_APPLY';
 const APPLY_VALUE = '1';
 const MAX_ROWS_SAFETY = 500;
+
+// Optional second scope: the residue of ONE named failed run (2026-11-07). Run 42292458694 wrote
+// its synthetic rows and then could not publish a ledger, so nothing can ever prove them and they
+// are outside the legacy namespace. The scope is still IMPORTED (a5-l2.mjs owns the key
+// conventions), still counted on both sides, still dry-run by default, and still capped.
+// An exact run tag is required: no wildcards, no prefixes, no dates.
+function scopedProbes() {
+  const tag = String(process.env.CRM_CLEANUP_RUN_TAG || '').trim();
+  if (!tag) return { probes: LEGACY_PROBES, scope: 'legacy' };
+  const current = process.env.GITHUB_RUN_ID
+    ? `a5-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT || '1'}`
+    : '';
+  if (current && tag.startsWith(current)) {
+    throw new Error('refused:residue-scope-targets-this-very-run');
+  }
+  return { probes: residueProbes(tag), scope: `residue:${tag}` };
+}
 
 const apply = process.argv.slice(2).includes('--apply');
 const emit = (payload) => process.stdout.write(`${JSON.stringify(payload)}\n`);
@@ -90,10 +108,10 @@ async function countWhere(account, probe) {
 
 const MAX_PASSES = 6;
 
-async function countAll(account) {
+async function countAll(account, probes) {
   const rows = [];
   let total = 0;
-  for (const probe of LEGACY_PROBES) {
+  for (const probe of probes) {
     const n = await countWhere(account, probe);
     rows.push({ table: probe.table, label: probe.label, rows: n });
     total += n;
@@ -107,8 +125,8 @@ async function countAll(account) {
 // BEFORE the case — so reversing the list deleted the parent first. Dependency is a fact of the
 // schema, not of an array, so this stops guessing: it retries, and a row that cannot go yet is
 // simply picked up by the next pass. It ends when a whole pass makes no progress.
-async function deleteAll(account) {
-  let pending = [...LEGACY_PROBES].reverse().map((probe) => ({ probe, error: null }));
+async function deleteAll(account, probes) {
+  let pending = [...probes].reverse().map((probe) => ({ probe, error: null }));
   const deleted = [];
   for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass += 1) {
     const attempt = await deletePass(account, pending, pass, deleted);
@@ -146,8 +164,9 @@ async function main() {
   }
 
   const account = await accountId();
+  const { probes, scope } = scopedProbes();
 
-  const before = await countAll(account);
+  const before = await countAll(account, probes);
   const beforeTotal = before.total;
 
   if (beforeTotal > MAX_ROWS_SAFETY) {
@@ -155,14 +174,14 @@ async function main() {
   }
 
   if (!apply) {
-    emit({ mode: 'dry-run', target: TEST_DB_NAME, before_total: beforeTotal, tables: before.rows });
+    emit({ mode: 'dry-run', scope, target: TEST_DB_NAME, before_total: beforeTotal, tables: before.rows });
     log(`dry-run: ${beforeTotal} row(s) in scope on ${TEST_DB_NAME}; nothing deleted`);
     return 0;
   }
 
-  const { deleted, pending } = await deleteAll(account);
+  const { deleted, pending } = await deleteAll(account, probes);
 
-  const after = await countAll(account);
+  const after = await countAll(account, probes);
   const afterTotal = after.total;
 
   const deletedTotal = deleted.reduce((sum, item) => sum + item.deleted, 0);
@@ -171,6 +190,7 @@ async function main() {
   // readable from the run list without downloading logs (which are not always reachable).
   emit({
     mode: 'apply',
+    scope,
     target: TEST_DB_NAME,
     before_total: beforeTotal,
     deleted_total: deletedTotal,
