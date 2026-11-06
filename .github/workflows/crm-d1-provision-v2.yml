@@ -1,0 +1,176 @@
+name: CRM test D1 v2 — create, migrate, seed the ingest key row (dispatch-only)
+
+# WHY THIS FILE EXISTS (2026-11-06)
+#
+# The current test database cannot ever pass the A5 L2 ownership gate: it holds 17 rows in
+# crm_drive_file_review_decision that were written before L2 existed, and that table is append-only by
+# a deliberate trigger —
+#   trg_file_review_decision_no_delete: BEFORE DELETE → RAISE(ABORT, 'file_review_decisions_are_append_only')
+# Legacy rows can never receive retroactive evidence (see scripts/a5-l2.mjs), and they cannot be
+# deleted. So the only way forward that does not drop a safety barrier is a clean database.
+#
+# What this workflow owns, and nothing else:
+#   1. create `nasr-crm-test-db-v2` if it does not exist (idempotent: an existing one is reused, never
+#      recreated, so a re-run cannot wipe data);
+#   2. apply `_worker/migrations/*.sql` to it, in order, through wrangler's own migrations ledger;
+#   3. copy the single `system:ingest-public-key-v1` row from the OLD test database — the deploy
+#      workflow reads that value from the database, so a fresh database without it would stop there.
+#
+# What it deliberately does NOT do:
+#   * it never writes to the old test database or to production (the old one is read once, SELECT only);
+#   * it never drops a trigger, never deletes a row, never touches a Worker;
+#   * it does not edit the repo's pinned constants — switching those stays a reviewed commit;
+#   * it runs inside the same `crm-test-deploy` Environment as the migrations channel, so a human
+#     approval is still required before anything is created or written.
+#
+# Refused unless a human types the exact string below.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_provision:
+        description: 'Type PROVISION-CRM-TEST-DB-V2 to create/migrate/seed nasr-crm-test-db-v2. Anything else stops before any secret is read.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Same mutex as the migrations channel: provisioning must never race a deploy or a migration.
+concurrency:
+  group: crm-d1-test-mutex
+  cancel-in-progress: false
+
+env:
+  NEW_DB_NAME: nasr-crm-test-db-v2
+  OLD_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+  PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+
+jobs:
+  provision:
+    name: 'D1 v2 provision — create, migrate, seed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: crm-test-deploy
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_provision == 'PROVISION-CRM-TEST-DB-V2'
+    outputs:
+      outcome: ${{ steps.provision.outputs.outcome }}
+      uuid: ${{ steps.provision.outputs.uuid }}
+      created: ${{ steps.provision.outputs.created }}
+      migrations: ${{ steps.provision.outputs.migrations }}
+      seed: ${{ steps.provision.outputs.seed }}
+      tables: ${{ steps.provision.outputs.tables }}
+    steps:
+      - name: Check out the migrations and the pinned config
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create if absent, migrate, seed one row
+        id: provision
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          API='https://api.cloudflare.com/client/v4'
+
+          outcome='not-run'; uuid=''; created='no'; migrations='0'; seed='no'; tables='0'
+          finish() {
+            { echo "outcome=$outcome"; echo "uuid=$uuid"; echo "created=$created"
+              echo "migrations=$migrations"; echo "seed=$seed"; echo "tables=$tables"; } >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            outcome='secret-unavailable-to-workflow'; finish; exit 0
+          fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          # Exactly one account, or stop: guessing an account is how a write lands in the wrong place.
+          accounts=$(curl -sS "$API/accounts?per_page=100" -H "$auth")
+          account_id=$(echo "$accounts" | jq -r 'if (.result|length)==1 then .result[0].id else "" end')
+          if [ -z "$account_id" ]; then outcome='accounts-not-unique'; finish; exit 1; fi
+
+          # 1) create, idempotently.
+          db_json=$(curl -sS "$API/accounts/$account_id/d1/database?per_page=100" -H "$auth")
+          uuid=$(echo "$db_json" | jq -r --arg n "$NEW_DB_NAME" '.result[] | select(.name==$n) | .uuid' | head -1)
+          if [ -n "$uuid" ]; then
+            created='no-reused'
+          else
+            created_json=$(curl -sS -X POST "$API/accounts/$account_id/d1/database" \
+              -H "$auth" -H 'content-type: application/json' \
+              -d "{\"name\":\"${NEW_DB_NAME}\"}")
+            uuid=$(echo "$created_json" | jq -r '.result.uuid // empty')
+            created='yes'
+            if [ -z "$uuid" ]; then
+              outcome="create-failed:$(echo "$created_json" | jq -r '[.errors[].message]|join(";")' | cut -c1-120)"
+              finish; exit 1
+            fi
+          fi
+          if [ "$uuid" = "${PROD_DB_UUID}" ] || [ "$uuid" = "${OLD_DB_UUID}" ]; then
+            outcome='refused:target-is-not-new'; finish; exit 1
+          fi
+
+          # 2) migrate. The generated config is derived from the pinned one, so the migration list,
+          #    binding name and everything else stay identical — only name/uuid are substituted.
+          sed -e "s/^database_name = .*/database_name = \"${NEW_DB_NAME}\"/" \
+              -e "s/^database_id = .*/database_id = \"${uuid}\"/" \
+              _worker/wrangler.crm.toml > _worker/wrangler.v2.toml
+          if ! grep -q "database_id = \"${uuid}\"" _worker/wrangler.v2.toml; then
+            outcome='config-rewrite-failed'; finish; exit 1
+          fi
+          export CLOUDFLARE_ACCOUNT_ID="$account_id"
+          if ! (cd _worker && npx --yes wrangler@4 d1 migrations apply "$NEW_DB_NAME" --remote \
+                  --config wrangler.v2.toml > /tmp/migrations.log 2>&1); then
+            outcome="migrations-failed:$(tail -n 2 /tmp/migrations.log | tr '\n' ' ' | sed 's/::[a-z]*:://g' | cut -c1-140)"
+            finish; exit 1
+          fi
+          migrations=$(cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote --json \
+            --config wrangler.v2.toml --command "SELECT COUNT(*) AS n FROM d1_migrations;" 2>/dev/null \
+            | jq -r '.[0].results[0].n // 0' 2>/dev/null || echo 0)
+
+          # 3) seed the ingest key row, copied from the OLD database (SELECT only, never written).
+          pub_sql="SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1' LIMIT 1;"
+          pub_json=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${OLD_DB_UUID}/query" \
+            -H "$auth" -H 'content-type: application/json' \
+            -d "$(jq -nc --arg sql "$pub_sql" '{sql:$sql}')")
+          pub=$(echo "$pub_json" | jq -r '.result[0].results[0].resource_id // empty')
+          if [ -z "$pub" ]; then outcome='seed:source-row-missing'; finish; exit 1; fi
+          echo "::add-mask::${pub}"
+          pub_sql_escaped=$(printf '%s' "$pub" | sed "s/'/''/g")
+          insert_sql="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('system:ingest-public-key-v1','contact','${pub_sql_escaped}',strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(submission_key) DO NOTHING;"
+          if ! (cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote \
+                  --config wrangler.v2.toml --command "$insert_sql" > /tmp/seed.log 2>&1); then
+            outcome="seed-failed:$(tail -n 2 /tmp/seed.log | tr '\n' ' ' | sed 's/::[a-z]*:://g' | cut -c1-120)"
+            finish; exit 1
+          fi
+          seed='yes'
+
+          # read-only confirmation: the row is readable and is the only ingest key.
+          check_sql="SELECT COUNT(*) AS n FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1';"
+          check=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
+            -H "$auth" -H 'content-type: application/json' \
+            -d "$(jq -nc --arg sql "$check_sql" '{sql:$sql}')")
+          tables=$(echo "$check" | jq -r '.result[0].results[0].n // 0')
+          if [ "$tables" != '1' ]; then outcome="seed-verify:count=${tables}"; finish; exit 1; fi
+
+          outcome='provisioned'
+          finish
+          echo "### D1 v2 provisioned" >> "$GITHUB_STEP_SUMMARY"
+          echo "uuid=${uuid} created=${created} migrations=${migrations} seed=${seed}" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: "D1 v2 — ${{ needs.provision.outputs.outcome }} — uuid=${{ needs.provision.outputs.uuid }} created=${{ needs.provision.outputs.created }} migrations=${{ needs.provision.outputs.migrations }} seed=${{ needs.provision.outputs.seed }}"
+    runs-on: ubuntu-latest
+    needs: provision
+    if: always()
+    steps:
+      - name: State the outcome in one place
+        run: |
+          echo "outcome=${{ needs.provision.outputs.outcome }}"
+          echo "uuid=${{ needs.provision.outputs.uuid }}"
+          echo "created=${{ needs.provision.outputs.created }} migrations=${{ needs.provision.outputs.migrations }}"
