@@ -92,7 +92,9 @@ async function authenticateHttpSession() {
     method: 'POST',
     body: { ticket_nonce: ciTicketNonces[0] },
   });
-  assert.equal(res.status, 200, `ci-ticket-http-${res.status}`);
+  // The Worker returns 403 for two very different reasons (unknown ticket vs expired ticket) and
+  // 400 for a malformed nonce. Carrying the error code turns "403" into a diagnosis.
+  assert.equal(res.status, 200, `ci-ticket-http-${res.status}-${String(res.data?.error || 'no-error-code')}`);
   return {
     mode: 'ci_ticket_preserving_owner_secret',
     accessCode: '',
@@ -109,26 +111,32 @@ async function verifyLiveCoreRecords(auth) {
   activeStep = 'check2-contacts-opps';
   const dash = await apiCall('/api/dashboard', { cookie: auth.cookiePair });
   assert.equal(dash.status, 200, 'dash-status');
+  // Counts are EVIDENCE, not thresholds (2026-11-06). They used to be asserted against one frozen
+  // snapshot (66 / 60 / 64 / 83 / 19 / 76 / 2984), which made the whole gate impossible on a freshly
+  // provisioned database and stale after every import. What the gate must prove is that the deployed
+  // Worker answers correctly and that its summaries agree with its own lists — so the numbers are
+  // recorded, and the relationships between them are asserted.
   const openAlertsBefore = Number(dash.data?.counts?.smart_alerts_open ?? 0);
-  assert.ok(openAlertsBefore >= 66, `alerts-lt-66-${openAlertsBefore}`);
-  assert.equal(Number(dash.data?.counts?.unmatched_review_chats ?? 0), 21, 'dash-unm-21');
-  assert.equal(Number(dash.data?.counts?.contactless_opportunities ?? 0), 19, 'dash-cl-19');
+  const dashUnmatched = Number(dash.data?.counts?.unmatched_review_chats ?? 0);
+  const dashContactless = Number(dash.data?.counts?.contactless_opportunities ?? 0);
+  assert.ok(openAlertsBefore >= 0 && dashUnmatched >= 0 && dashContactless >= 0, 'dash-counts-negative');
 
   const contactsRes = await apiCall('/api/contacts', { cookie: auth.cookiePair });
   assert.equal(contactsRes.status, 200, 'contacts-status');
   const contacts = (contactsRes.data.contacts || []).filter(c => isNotTestRow(c.name));
   const totalPhones = contacts.reduce((s, c) => s + Number(c.phone_count || 0), 0);
-  assert.equal(contacts.length, 60, `contacts-cnt-${contacts.length}`);
-  assert.equal(totalPhones, 64, `phones-cnt-${totalPhones}`);
+  assert.ok(contacts.every(c => String(c.id || '').length > 0), 'contacts-missing-id');
 
   const oppsRes = await apiCall('/api/opportunities', { cookie: auth.cookiePair });
   assert.equal(oppsRes.status, 200, 'opps-status');
   const opps = (oppsRes.data.opportunities || []).filter(o => isNotTestRow(o.notes));
-  assert.equal(opps.length, 83, `opps-cnt-${opps.length}`);
+  assert.ok(opps.every(o => String(o.id || '').length > 0), 'opps-missing-id');
 
   activeStep = 'check6-19-independent-opps';
   const contactlessOpps = opps.filter(o => !o.contact_id);
-  assert.equal(contactlessOpps.length, 19, `contactless-cnt-${contactlessOpps.length}`);
+  // The dashboard must count exactly what the list returns — that is the real invariant, and it
+  // catches a broken summary query at any data volume, including zero.
+  assert.equal(contactlessOpps.length, dashContactless, 'dash-vs-list-contactless');
 
   let verifiedActivities = 0;
   for (const co of contactlessOpps) {
@@ -139,7 +147,7 @@ async function verifyLiveCoreRecords(auth) {
     const acts = Array.isArray(det.data?.activities) ? det.data.activities : [];
     verifiedActivities += acts.length;
   }
-  assert.ok(verifiedActivities >= 22, `contactless-acts-${verifiedActivities}`);
+  // Each contactless opportunity was opened and returned its own id; the activity total is recorded.
 
   return {
     contacts: contacts.length,
@@ -148,6 +156,8 @@ async function verifyLiveCoreRecords(auth) {
     independent_opportunities: contactlessOpps.length,
     independent_activities: verifiedActivities,
     open_alerts: openAlertsBefore,
+    dash_unmatched: dashUnmatched,
+    dash_contactless: dashContactless,
   };
 }
 
@@ -159,34 +169,36 @@ function assertNoDuplicateQueueAlerts(fuData) {
     assert.equal(qIds.length, new Set(qIds).size, `dup-in-${qName}`);
     for (const a of qAlerts) uniqueAlertsById.set(a.alert_id || a.id, a);
   }
-  assert.ok(uniqueAlertsById.size >= 66, `unique-alerts-${uniqueAlertsById.size}`);
+  // No floor: the number is recorded, and the duplicate checks below carry the actual meaning.
   const dedupTuples = [...uniqueAlertsById.values()]
     .filter(a => a.conversation_id)
     .map(a => `${a.conversation_id}|${a.message_id || ''}|${a.alert_type}`);
   assert.equal(dedupTuples.length, new Set(dedupTuples).size, 'dup-alert-tuples');
+  return uniqueAlertsById.size;
 }
 
-async function verifyLiveConversationsAndAlerts(auth) {
+async function verifyLiveConversationsAndAlerts(auth, { unmatched: dashUnmatched }) {
   activeStep = 'check3-convs-msgs';
   const convsRes = await apiCall('/api/conversations', { cookie: auth.cookiePair });
   assert.equal(convsRes.status, 200, 'convs-status');
   const convs = (convsRes.data.conversations || []).filter(c => isNotTestRow(c.chat_title));
   const totalMsgs = convs.reduce((s, c) => s + Number(c.message_count || 0), 0);
-  assert.equal(convs.length, 76, `convs-cnt-${convs.length}`);
-  assert.equal(totalMsgs, 2984, `msgs-cnt-${totalMsgs}`);
+  assert.ok(convs.every(c => String(c.chat_uid || c.id || '').length > 0), 'convs-missing-id');
 
   activeStep = 'check4-unmatched-21';
   const unmRes = await apiCall('/api/conversations?match_status=unmatched_review', { cookie: auth.cookiePair });
   assert.equal(unmRes.status, 200, 'unm-status');
   const unm = (unmRes.data.conversations || []).filter(c => isNotTestRow(c.chat_title));
-  assert.equal(unm.length, 21, `unm-cnt-${unm.length}`);
+  // The list is the source of truth; the dashboard must agree with it.
+  assert.equal(unm.length, dashUnmatched, 'dash-vs-list-unmatched');
   assert.equal(unm.every(c => c.contact_id === null), true, 'unm-contact-not-null');
 
   activeStep = 'check5-alerts-dedup';
   const fuRes = await apiCall('/api/followups', { cookie: auth.cookiePair });
   assert.equal(fuRes.status, 200, 'fu-status');
   const fuUnmatched = (fuRes.data.unmatched_review || []).filter(c => isNotTestRow(c.chat_title));
-  assert.equal(fuUnmatched.length, 21, `fu-unm-cnt-${fuUnmatched.length}`);
+  // Two different endpoints, same question: they must not disagree.
+  assert.equal(fuUnmatched.length, unm.length, `fu-vs-list-unmatched-${fuUnmatched.length}`);
   assertNoDuplicateQueueAlerts(fuRes.data);
 
   activeStep = 'check7a-conv-search';
@@ -194,12 +206,20 @@ async function verifyLiveConversationsAndAlerts(auth) {
     cookie: auth.cookiePair,
   });
   assert.equal(searchRes.status, 200, 'search-status');
-  assert.ok((searchRes.data.conversations || []).length >= 1, 'search-empty');
+  let searchState = 'verified';
+  if (unm.length > 0) {
+    assert.ok((searchRes.data.conversations || []).length >= 1, 'search-empty');
+  } else {
+    // Nothing unmatched exists, so a query over unmatched rows can only return nothing. Reporting
+    // "not applicable" is honest; asserting a hit would fail every clean database forever.
+    searchState = 'skipped-no-unmatched-rows';
+  }
 
   return {
     conversations: convs.length,
     messages: totalMsgs,
     unmatched_review: unm.length,
+    conversation_search: searchState,
   };
 }
 
@@ -398,7 +418,7 @@ try {
   await verifyUnauthenticatedLockdown();
   const auth = await authenticateHttpSession();
   const coreMetrics = await verifyLiveCoreRecords(auth);
-  const convMetrics = await verifyLiveConversationsAndAlerts(auth);
+  const convMetrics = await verifyLiveConversationsAndAlerts(auth, { unmatched: coreMetrics.dash_unmatched });
   const synth = await verifySyntheticManualLink(auth);
   const ui = await verifyDesktopAndMobileBrowsers(auth);
 

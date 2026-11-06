@@ -759,6 +759,18 @@ jobs:
           # the reason a failed run left an unprovable contact that made the next run return 200.
           # Isolation now comes from run-scoped full keys + per-row L2 evidence, not deletion.
 
+          # Non-interference, measured instead of remembered: the row counts are captured HERE, before
+          # any live check runs, and compared with the same query afterwards. The previous gate compared
+          # against a frozen snapshot (60/64/83/19/76/21/2984/66) which is only true for one historical
+          # database state — it made the gate fail on a clean database and would fail again after any
+          # legitimate import.
+          PRE_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
+          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$WRANGLER_CFG" --command "$PRE_CNT_SQL" > "$TMP/pre_cnt.json" 2>/dev/null; then
+            result='pre-verify-counts-query-failed'
+            finish
+            exit 1
+          fi
+
           ci_n1='' ci_n2='' ci_n3='' ci_h1='' ci_h2='' ci_h3=''
           if [ -s "$TMP/access_code" ]; then
             live10_env="CRM_LIVE_ACCESS_CODE_FILE=$TMP/access_code"
@@ -773,6 +785,21 @@ jobs:
             TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${ci_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h3}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
             if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ci_ticket.log" 2>&1; then
               result='ci-ticket-mint-failed'
+              finish
+              exit 1
+            fi
+            # Prove the precondition instead of assuming it. The live check reads the ticket the Worker
+            # resolves, so if the mint landed somewhere unexpected, the failure is HERE, named, and not
+            # a bare 403 three steps later.
+            MINT_CHECK_SQL="SELECT COUNT(*) AS n FROM crm_idempotency_receipts WHERE resource_id='authorized_pending' AND submission_key IN ('ci-e2e-ticket:${ci_h1}','ci-e2e-ticket:${ci_h2}','ci-e2e-ticket:${ci_h3}');"
+            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$WRANGLER_CFG" --command "$MINT_CHECK_SQL" > "$TMP/mint_check.json" 2>/dev/null; then
+              result='ci-ticket-mint-unreadable'
+              finish
+              exit 1
+            fi
+            mint_n=$(jq -r '.. | objects | select(has("n")) | .n' "$TMP/mint_check.json" 2>/dev/null | head -n1)
+            if [ "${mint_n:-0}" != '3' ]; then
+              result="ci-ticket-mint-verify-${mint_n:-0}-of-3"
               finish
               exit 1
             fi
@@ -816,17 +843,23 @@ jobs:
           fi
 
           phase='post-verify-non-interference-invariance'
-          # Thresholds UNCHANGED. The counts below already exclude `TEST ONLY` display names, so
-          # keeping proven synthetic rows does not change them. They prove non-interference with
-          # the original rows without relying on `COUNT(*)` of the synthetic namespace.
+          # Non-interference PROVEN by difference: these counts exclude `TEST ONLY` display names, so
+          # the synthetic rows a run creates cannot move them. Equality pre↔post is the invariant; the
+          # absolute values are recorded as evidence and never asserted.
           FINAL_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
           if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
             result='post-verify-counts-query-failed'
             finish
             exit 1
           fi
-          if ! jq -e '.. | objects | select(has("c") and has("cv")) | .c == 60 and .ph == 64 and .o == 83 and .cl == 19 and .cv == 76 and .unm == 21 and .m == 2984 and .al >= 66' "$TMP/final_cnt.json" >/dev/null; then
-            result='post-verify-counts-mismatch'
+          if ! jq -n -e --slurpfile pre "$TMP/pre_cnt.json" --slurpfile post "$TMP/final_cnt.json" '
+                def cnt($d): $d | .. | objects | select(has("c") and has("cv"));
+                (cnt($pre[0])) as $a | (cnt($post[0])) as $b
+                | ($a | type) == "object" and ($b | type) == "object"
+                and $a.c == $b.c and $a.ph == $b.ph and $a.o == $b.o and $a.cl == $b.cl
+                and $a.cv == $b.cv and $a.unm == $b.unm and $a.m == $b.m and $a.al == $b.al' \
+              >/dev/null 2>&1; then
+            result='post-verify-counts-changed'
             finish
             exit 1
           fi
@@ -837,7 +870,8 @@ jobs:
             finish
             exit 1
           fi
-          login_and_crud="60c-64ph-83o[19]-76cv[21]-2984m-${al_cnt}al-mdb0"
+          LOGIN_COUNTS=$(jq -r '.. | objects | select(has("c") and has("cv")) | "\(.c)c-\(.ph)ph-\(.o)o[\(.cl)]-\(.cv)cv[\(.unm)]-\(.m)m-\(.al)al"' "$TMP/final_cnt.json" | head -n1)
+          login_and_crud="${LOGIN_COUNTS}-mdb0"
           phase='completed'
           result='deployed-a5-verified'
           finish

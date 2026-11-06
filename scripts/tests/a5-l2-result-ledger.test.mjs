@@ -417,7 +417,12 @@ test('L2-15 security barriers, environment gates and final non-interference thre
     "inputs.authorize_deploy == 'DEPLOY-TEST-DB-and-WORKER'", "github.ref_name",
     "if [ \"${REF}\" != 'master' ]", 'environment: crm-test-deploy',
     'needs: env-protection-audit', 'can_admins_bypass',
-    '.c == 60 and .ph == 64 and .o == 83 and .cl == 19 and .cv == 76 and .unm == 21 and .m == 2984 and .al >= 66',
+    // 2026-11-06: the frozen snapshot (60/64/83/19/76/21/2984/66) was replaced by a before/after
+    // difference. The barrier is not weakened — it is made data-independent: the same query runs
+    // before and after the live checks and every count must be identical.
+    'PRE_CNT_SQL=', "post-verify-counts-changed",
+    'def cnt($d): $d | .. | objects | select(has("c") and has("cv"));',
+    'pre-verify-counts-query-failed',
   ]) assert.ok(wf.includes(needle), `unchanged barrier missing: ${needle}`);
   // `actions: read` is the only permission added, and it is read-only.
   const job = wf.slice(wf.indexOf('  deploy-and-verify:'), wf.indexOf('  report:'));
@@ -430,8 +435,17 @@ test('L2-16 strict 201 survives; no fixed synthetic phones; no OR IGNORE / dead 
   const liveA5 = read('_worker/tests/live-a5-verify.mjs');
   const support = read('scripts/a5-live-support.mjs');
   assert.match(live10, /assert\.equal\(cRes\.status, 201, `synth-contact-/);
-  // The live10 dashboard invariant is deliberately UNCHANGED (see CRM_A5_L2_RESULT_LEDGER.md §7.1).
-  assert.match(live10, /counts\?\.unmatched_review_chats \?\? 0\), 21, 'dash-unm-21'/);
+  // The live10 dashboard invariant is now relational rather than a frozen 21 (see
+  // CRM_A5_L2_RESULT_LEDGER.md §7.1, revised 2026-11-06): the dashboard must agree with the list
+  // endpoint it summarises. A broken summary query still fails, at any data volume including zero.
+  assert.match(live10, /assert\.equal\(unm\.length, dashUnmatched, 'dash-vs-list-unmatched'\)/);
+  assert.match(live10, /assert\.equal\(contactlessOpps\.length, dashContactless, 'dash-vs-list-contactless'\)/);
+  assert.match(live10, /ci-ticket-http-\$\{res\.status\}-\$\{String\(res\.data\?\.error/);
+  // The live check must PROVE its precondition: the three minted tickets have to be readable in the
+  // same D1 the Worker reads. Otherwise a mis-targeted mint shows up as an anonymous 403.
+  const workflow = read('.github/workflows/crm-cloudflare-test-deploy.yml');
+  assert.match(workflow, /ci-ticket-mint-verify-\$\{mint_n:-0\}-of-3/, 'mint self-check required');
+  assert.match(workflow, /resource_id='authorized_pending' AND submission_key IN/, 'mint self-check must target the same rows');
   for (const fixed of ['01000000011', '01000000012', '01099990077', '01099999998', '201099990077']) {
     assert.ok(!liveA5.includes(fixed) && !live10.includes(fixed), `fixed phone still present: ${fixed}`);
   }
