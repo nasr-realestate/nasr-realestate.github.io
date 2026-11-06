@@ -194,6 +194,28 @@ test('the safety ceiling aborts before any write', async () => {
   }
 });
 
+test('a dry run never claims after=0 (it did not measure "after")', () => {
+  // Live evidence that this matters: run 42122723509 was a clean dry-run over 35 rows in scope, and
+  // its check name read `before=35 deleted=0 after=0` — which reads as "already empty" to anyone who
+  // has not read the script. `after` may only be reported when a recount actually happened.
+  assert.match(workflowSource, /after_total='n\/a'/);
+
+  const assignments = workflowSource
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('after_total='));
+  assert.equal(assignments.length, 2, assignments.join(' | '));
+  assert.ok(assignments[0].startsWith("after_total='n/a'"), 'the default must be n/a');
+  assert.match(assignments[1], /\$\(jq -r '\.after_total/, 'the only real value comes from the recount');
+
+  const applyBranchAt = workflowSource.indexOf(`if [ "$mode" = 'apply' ]; then`);
+  assert.ok(applyBranchAt > -1, 'the apply branch must exist');
+  assert.ok(
+    workflowSource.indexOf("after_total=\"$(jq -r '.after_total") > applyBranchAt,
+    'the recount must be reachable only when mode=apply',
+  );
+});
+
 test('the workflow is dispatch-only, typed, dry-run by default, and masks the token', () => {
   assert.match(workflowSource, /^on:\s*$/m);
   assert.doesNotMatch(workflowSource, /^\s{2}(push|pull_request|schedule):/m);
