@@ -204,16 +204,101 @@ test('a dry run never claims after=0 (it did not measure "after")', () => {
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.startsWith('after_total='));
-  assert.equal(assignments.length, 2, assignments.join(' | '));
+  // three: the n/a default, the failure path (which must never invent a number), and the success path
+  assert.equal(assignments.length, 3, assignments.join(' | '));
   assert.ok(assignments[0].startsWith("after_total='n/a'"), 'the default must be n/a');
-  assert.match(assignments[1], /\$\(jq -r '\.after_total/, 'the only real value comes from the recount');
+  assert.equal(
+    assignments[1],
+    `after_total="$(jq -r '.after_total // empty' cleanup.json 2>/dev/null || true)"`,
+    'a failed run must report empty, not zero',
+  );
+  assert.match(assignments[2], /\$\(jq -r '\.after_total/, 'the only real value comes from the recount');
 
   const applyBranchAt = workflowSource.indexOf(`if [ "$mode" = 'apply' ]; then`);
   assert.ok(applyBranchAt > -1, 'the apply branch must exist');
   assert.ok(
-    workflowSource.indexOf("after_total=\"$(jq -r '.after_total") > applyBranchAt,
+    workflowSource.indexOf("after_total=\"$(jq -r '.after_total // 0'") > applyBranchAt,
     'the recount must be reachable only when mode=apply',
   );
+});
+
+// Run 42222015132 failed on its very FIRST delete because
+// `crm_drive_file_review_decision.case_ref` references `crm_drive_file_review_case(case_ref)`
+// ON DELETE RESTRICT. These two tests are the regression guard for that: the cleanup must survive a
+// blocked parent (retry it after its children are gone) and must report the permanent blocker.
+function scenarioServer({ blocked }) {
+  const attempts = [];
+  const server = createServer((request, response) => {
+    let body = '';
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      if (!request.url.includes('/d1/database/')) {
+        json(response, { success: true, result: [{ id: 'acct-test-1' }] });
+        return;
+      }
+      let sql = '';
+      try { sql = String(JSON.parse(body || '{}').sql || ''); } catch { sql = ''; }
+      const deleteTable = /DELETE\s+FROM\s+([A-Za-z0-9_]+)/i.exec(sql)?.[1];
+      if (!deleteTable) {
+        json(response, { success: true, result: [{ results: [{ n: 0 }] }] });
+        return;
+      }
+      attempts.push(deleteTable);
+      const denial = blocked(deleteTable, attempts.filter((t) => t === deleteTable).length);
+      if (denial) {
+        response.writeHead(400, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ success: false, errors: [{ message: denial }] }));
+        return;
+      }
+      json(response, { success: true, result: [{ meta: { changes: 1 } }] });
+    });
+  });
+  return { server, attempts };
+}
+
+test('a blocked parent is retried after its children, not abandoned', async () => {
+  const blockedTable = 'crm_drive_file_review_case';
+  const { server, attempts } = scenarioServer({
+    blocked: (table, tries) => (table === blockedTable && tries === 1 ? 'FOREIGN KEY constraint failed' : null),
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const result = await runScript(['--apply'], { CRM_A5_CF_API: base, CRM_CLEANUP_APPLY: '1' });
+    assert.equal(result.code, 0, result.stderr);
+    const payload = JSON.parse(result.stdout.trim());
+    assert.equal(payload.errors.length, 0);
+    assert.equal(payload.after_total, 0);
+    assert.equal(attempts.filter((t) => t === blockedTable).length, 2, 'the parent must be retried once');
+    // ...and the retry must come after the child that was holding it.
+    const firstParent = attempts.indexOf(blockedTable);
+    const childAfter = attempts.indexOf('crm_drive_file_review_decision');
+    assert.ok(childAfter > firstParent, 'the child must be deleted between the two parent attempts');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('a permanent block fails the run and names the table in the JSON', async () => {
+  const blockedTable = 'crm_drive_file_review_case';
+  const { server } = scenarioServer({
+    blocked: (table) => (table === blockedTable ? 'FOREIGN KEY constraint failed' : null),
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const result = await runScript(['--apply'], { CRM_A5_CF_API: base, CRM_CLEANUP_APPLY: '1' });
+    assert.equal(result.code, 1);
+    const payload = JSON.parse(result.stdout.trim());
+    assert.equal(payload.errors.length, 1);
+    assert.equal(payload.errors[0].table, blockedTable);
+    assert.match(payload.errors[0].error, /FOREIGN KEY/);
+    // The workflow reads exactly this to build the check name.
+    assert.match(workflowSource, /jq -r '\(\.errors\[0\] \/\/ empty\) \| "\\\(\.table\): \\\(\.error\)"'/);
+    assert.match(workflowSource, /outcome="failed:\$\{reason\}"/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 test('the workflow is dispatch-only, typed, dry-run by default, and masks the token', () => {
@@ -222,6 +307,8 @@ test('the workflow is dispatch-only, typed, dry-run by default, and masks the to
   assert.match(workflowSource, /inputs\.authorize_cleanup == 'DELETE-LEGACY-SYNTHETIC-ROWS'/);
   assert.match(workflowSource, /default: dry-run/);
   assert.match(workflowSource, /CRM_CLEANUP_APPLY=1 node scripts\/crm\/legacy-synthetic-cleanup\.mjs --apply/);
+  // The reason must be readable from the run list, where the check NAME lives.
+  assert.match(workflowSource, /name: "CRM legacy cleanup — \$\{\{ needs\.cleanup\.outputs\.mode \}\} — \$\{\{ needs\.cleanup\.outputs\.outcome \}\}/);
   // Mask must precede any request-bearing step in the same block.
   const maskAt = workflowSource.indexOf('::add-mask::');
   assert.ok(maskAt > -1);
