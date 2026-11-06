@@ -204,7 +204,8 @@ jobs:
                     vcard_records_total, duplicate_findings, import_performed, analysis_version
                FROM crm_drive_analysis_run`,
           );
-          if (!run) {
+          // `one()` resolves to {} when there is no row, and {} is truthy — test the key, not the object.
+          if (!run?.run_key) {
             // A freshly provisioned database carries the CRM schema and no analysis run yet, so there
             // is nothing to review. That is a state, not a failure: exiting non-zero here painted
             // every push red after the move to nasr-crm-test-db-v2. Exit 3 says "not applicable".
