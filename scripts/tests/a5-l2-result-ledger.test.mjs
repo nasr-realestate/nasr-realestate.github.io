@@ -462,6 +462,25 @@ test('L2-16 strict 201 survives; no fixed synthetic phones; no OR IGNORE / dead 
 });
 
 
+/* ──────────────────── a stop must be readable without the job log ──────────────────── */
+
+test('L2-18 a preflight stop names its reason and suspects in a check-run annotation', () => {
+  const workflow = read('.github/workflows/crm-cloudflare-test-deploy.yml');
+  // Job logs and artifacts live on blob storage that a reviewing client may not reach; check-run
+  // annotations are public API. A stop that only says "an unknown row exists" cannot be acted on.
+  assert.match(workflow, /::error::A5 L2 preflight detail: \$\{preflight_diag:0:900\}/,
+    'the stop must emit a bounded annotation');
+  assert.ok(workflow.includes('group_by(.) | map("\\(.[0])=x\\(length)")'), 'per-verdict counts required');
+  assert.ok(workflow.includes('"\\(.table):\\(.a5_key)"'), 'suspect table+key required');
+  // Synthetic keys only: never a customer column, never a whole row.
+  const diag = workflow.slice(workflow.indexOf('preflight_diag=$(jq -r'), workflow.indexOf('::error::A5 L2 preflight detail:'));
+  assert.ok(diag.length > 0, 'annotation block must exist');
+  assert.ok(!/\.row\b|\.a5_id\b|phone|chat_title|review_note/.test(diag),
+    'the annotation must not leak row content');
+  // And the annotation must never replace the stop: exit 1 stays right after it.
+  assert.match(workflow, /::error::A5 L2 preflight detail:[\s\S]{0,80}?\n\s+exit 1/, 'stop must remain a stop');
+});
+
 /* ──────────────────── barriers against laundering `unknown` rows ──────────────────── */
 
 test('L2-17 no ledger may be published unless THIS run\'s preflight cleared', () => {

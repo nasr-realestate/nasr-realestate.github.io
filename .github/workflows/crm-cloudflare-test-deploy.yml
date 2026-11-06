@@ -595,6 +595,18 @@ jobs:
             echo "::error::A5 L2 preflight stopped the run (unknown synthetic-row ownership, incl. legacy rows). No write, no deletion, no bypass."
             jq -c '{ok, reason, ledgers, rows, legacy_suspects, verdicts: [.verdicts[] | select(.verdict != "previous-a5-proven" and .verdict != "baseline-origin")]}' \
               "$L2_ROOT/preflight.json"
+            # The stop decision must be readable WITHOUT the job log: logs live on blob storage that a
+            # reviewing client may not be able to reach, while check-run annotations are public API.
+            # Emitted fields are table names, verdicts and synthetic key hashes only — no customer data.
+            # Why the extra detail exists: a stop that only says "an unknown row exists" forces a
+            # guess, and guessing is how a barrier gets weakened by accident.
+            preflight_diag=$(jq -r '
+              ([.verdicts[] | select(.verdict | startswith("unknown")) | .verdict]
+                 | group_by(.) | map("\(.[0])=x\(length)") | join(",")) as $by_verdict
+              | ([.verdicts[] | select(.verdict | startswith("unknown")) | "\(.table):\(.a5_key)"][0:4] | join(" ")) as $keys
+              | "reason=\(.reason);rows=\(.rows);ledgers=\(.ledgers);legacy=\(.legacy_suspects);unknown=\(if $by_verdict == "" then "none" else $by_verdict end);keys=\(if $keys == "" then "none" else $keys end)"
+            ' "$L2_ROOT/preflight.json" 2>/dev/null || echo "reason=unparsable")
+            echo "::error::A5 L2 preflight detail: ${preflight_diag:0:900}"
             exit 1
           fi
           jq -c '{ok, reason, ledgers, rows, legacy_suspects, proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
