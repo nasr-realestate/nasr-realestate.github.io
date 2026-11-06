@@ -88,6 +88,53 @@ async function countWhere(account, probe) {
   return value;
 }
 
+const MAX_PASSES = 6;
+
+async function countAll(account) {
+  const rows = [];
+  let total = 0;
+  for (const probe of LEGACY_PROBES) {
+    const n = await countWhere(account, probe);
+    rows.push({ table: probe.table, label: probe.label, rows: n });
+    total += n;
+  }
+  return { rows, total };
+}
+
+// The delete order is NOT inferred from the list order. Live evidence, run 42222015132: the first
+// statement died because `crm_drive_file_review_decision.case_ref` references
+// `crm_drive_file_review_case(case_ref)` ON DELETE RESTRICT, while LEGACY_PROBES lists the decision
+// BEFORE the case — so reversing the list deleted the parent first. Dependency is a fact of the
+// schema, not of an array, so this stops guessing: it retries, and a row that cannot go yet is
+// simply picked up by the next pass. It ends when a whole pass makes no progress.
+async function deleteAll(account) {
+  let pending = [...LEGACY_PROBES].reverse().map((probe) => ({ probe, error: null }));
+  const deleted = [];
+  for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass += 1) {
+    const attempt = await deletePass(account, pending, pass, deleted);
+    pending = attempt.blocked;
+    if (!attempt.progressed) break;
+  }
+  return { deleted, pending };
+}
+
+async function deletePass(account, pending, pass, deleted) {
+  const blocked = [];
+  let progressed = false;
+  for (const { probe } of pending) {
+    try {
+      const result = await query(account, `DELETE FROM ${probe.table} WHERE ${probe.where}`);
+      const changes = Number(result?.meta?.changes ?? 0);
+      if (!Number.isFinite(changes)) throw new Error('delete-meta-missing');
+      deleted.push({ table: probe.table, deleted: changes, pass });
+      progressed = true;
+    } catch (error) {
+      blocked.push({ probe, error: String(error?.message || error).slice(0, 120) });
+    }
+  }
+  return { blocked, progressed };
+}
+
 async function main() {
   // Guards first: nothing below runs if the target is not the test database.
   assertTestOnlyConfig();
@@ -100,53 +147,40 @@ async function main() {
 
   const account = await accountId();
 
-  const before = [];
-  let beforeTotal = 0;
-  for (const probe of LEGACY_PROBES) {
-    const rows = await countWhere(account, probe);
-    before.push({ table: probe.table, label: probe.label, rows });
-    beforeTotal += rows;
-  }
+  const before = await countAll(account);
+  const beforeTotal = before.total;
 
   if (beforeTotal > MAX_ROWS_SAFETY) {
     throw new Error(`refused:${beforeTotal}-rows-exceeds-safety-${MAX_ROWS_SAFETY}`);
   }
 
   if (!apply) {
-    emit({ mode: 'dry-run', target: TEST_DB_NAME, before_total: beforeTotal, tables: before });
+    emit({ mode: 'dry-run', target: TEST_DB_NAME, before_total: beforeTotal, tables: before.rows });
     log(`dry-run: ${beforeTotal} row(s) in scope on ${TEST_DB_NAME}; nothing deleted`);
     return 0;
   }
 
-  // Children before parents: LEGACY_PROBES is ordered parent → child, so delete in reverse.
-  const deleted = [];
-  for (const probe of [...LEGACY_PROBES].reverse()) {
-    const result = await query(account, `DELETE FROM ${probe.table} WHERE ${probe.where}`);
-    const changes = Number(result?.meta?.changes ?? 0);
-    if (!Number.isFinite(changes)) throw new Error(`delete-meta-missing:${probe.table}`);
-    deleted.push({ table: probe.table, deleted: changes });
-  }
+  const { deleted, pending } = await deleteAll(account);
 
-  const after = [];
-  let afterTotal = 0;
-  for (const probe of LEGACY_PROBES) {
-    const rows = await countWhere(account, probe);
-    after.push({ table: probe.table, rows });
-    afterTotal += rows;
-  }
+  const after = await countAll(account);
+  const afterTotal = after.total;
 
   const deletedTotal = deleted.reduce((sum, item) => sum + item.deleted, 0);
+  const errors = pending.map(({ probe, error }) => ({ table: probe.table, error }));
+  // Emitted even on failure: the workflow puts the first error into the check name, so the reason is
+  // readable from the run list without downloading logs (which are not always reachable).
   emit({
     mode: 'apply',
     target: TEST_DB_NAME,
     before_total: beforeTotal,
     deleted_total: deletedTotal,
     after_total: afterTotal,
+    errors,
     deleted,
-    after,
+    after: after.rows,
   });
-  log(`apply: before=${beforeTotal} deleted=${deletedTotal} after=${afterTotal}`);
-  return afterTotal === 0 ? 0 : 1;
+  log(`apply: before=${beforeTotal} deleted=${deletedTotal} after=${afterTotal} errors=${errors.length}`);
+  return afterTotal === 0 && errors.length === 0 ? 0 : 1;
 }
 
 main()

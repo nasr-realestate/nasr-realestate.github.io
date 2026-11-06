@@ -117,8 +117,17 @@ jobs:
           }
 
           if ! run_cleanup > cleanup.json 2> cleanup.log; then
-            outcome="failed:$(tail -n 1 cleanup.log | cut -c1-160)"
+            # The reason has to survive somewhere readable from the run list: job logs live on blob
+            # storage that is not always reachable, but the check NAME always is. So the script emits
+            # its first error as JSON even when it fails, and it goes into the name.
+            reason="$(jq -r '(.errors[0] // empty) | "\(.table): \(.error)"' cleanup.json 2>/dev/null || true)"
+            if [ -z "$reason" ]; then
+              reason="$(tail -n 1 cleanup.log | cut -c1-160)"
+            fi
+            outcome="failed:${reason}"
             before_total="$(jq -r '.before_total // empty' cleanup.json 2>/dev/null || true)"
+            deleted_total="$(jq -r '.deleted_total // 0' cleanup.json 2>/dev/null || true)"
+            after_total="$(jq -r '.after_total // empty' cleanup.json 2>/dev/null || true)"
             finish
             cat cleanup.log
             exit 1
@@ -150,7 +159,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   report:
-    name: "CRM legacy cleanup — ${{ needs.cleanup.outputs.mode }} — before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
+    name: "CRM legacy cleanup — ${{ needs.cleanup.outputs.mode }} — ${{ needs.cleanup.outputs.outcome }} — before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
     runs-on: ubuntu-latest
     needs: cleanup
     if: always()
