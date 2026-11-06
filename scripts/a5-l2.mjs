@@ -169,6 +169,28 @@ export function residueProbes(runTag) {
   ];
 }
 
+/**
+ * AUDITED per-key scope: exact single-use receipts, nothing else.
+ *
+ * A ticket's submission_key is `ci-e2e-ticket:<sha256(nonce)>` — it carries no run tag, so neither
+ * the legacy namespace nor a run-tag residue scope can address one specific dead ticket. The key
+ * shape is therefore checked, not assumed, and the table is fixed: this scope can never reach a
+ * contacts, conversation or business row.
+ */
+export const TICKET_KEY_RE = /^ci-e2e-ticket:[0-9a-f]{64}$/;
+export const MAX_KEY_SCOPE = 20;
+
+export function keyScopedProbes(keys) {
+  const list = String(keys || '').split(',').map(k => k.trim()).filter(Boolean);
+  if (!list.length) throw new Error('a5-l2-key-scope-empty');
+  if (list.length > MAX_KEY_SCOPE) throw new Error('a5-l2-key-scope-too-large');
+  for (const key of list) {
+    if (!TICKET_KEY_RE.test(key)) throw new Error('a5-l2-key-scope-bad-key');
+  }
+  const quoted = list.map(k => `'${k}'`).join(',');
+  return [{ table: 'crm_idempotency_receipts', label: 'ticket-key', where: `submission_key IN (${quoted})` }];
+}
+
 export const L2_SCHEMA = 'a5-l2-v1';
 export const BASELINE_SCHEMA = 'a5-l2-baseline-v1';
 export const TAG_PREFIX = 'A5-RUN:';

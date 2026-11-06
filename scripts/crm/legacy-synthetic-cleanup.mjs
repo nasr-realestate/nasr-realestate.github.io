@@ -23,6 +23,7 @@
 import {
   LEGACY_PROBES,
   residueProbes,
+  keyScopedProbes,
 } from '../a5-l2.mjs';
 import {
   TEST_DB_UUID,
@@ -43,6 +44,8 @@ const MAX_ROWS_SAFETY = 500;
 // conventions), still counted on both sides, still dry-run by default, and still capped.
 // An exact run tag is required: no wildcards, no prefixes, no dates.
 function scopedProbes() {
+  const keys = String(process.env.CRM_CLEANUP_RECEIPT_KEYS || '').trim();
+  if (keys) return { probes: keyScopedProbes(keys), scope: 'receipt-keys' };
   const tag = String(process.env.CRM_CLEANUP_RUN_TAG || '').trim();
   if (!tag) return { probes: LEGACY_PROBES, scope: 'legacy' };
   const current = process.env.GITHUB_RUN_ID
