@@ -115,12 +115,29 @@ export function enumerateLegacySuspects(query) {
  * default and the same before/after accounting.
  */
 export function residueProbes(runTag) {
-  const tagValue = String(runTag || '').trim();
-  if (!RUN_TAG_RE.test(tagValue)) throw new Error('a5-l2-residue-bad-run-tag');
-  const tag = tagOf(tagValue);
-  const uid = conversationUid(tagValue);
-  const contacts = `SELECT id FROM crm_contacts WHERE review_note = '${tag}'`;
-  const convs = `SELECT id FROM crm_conversations WHERE source_ref = '${tag}' OR conversation_uid = '${uid}'`;
+  const raw = String(runTag || '').trim();
+  const fullTag = RUN_TAG_RE.test(raw);
+  // A run's nonce is random and is not recoverable from outside, so the audited scope also accepts
+  // `<run_id>-<attempt>` and pins it as a PREFIX. That is still exact: the nonce belongs to exactly
+  // one run, so `A5-RUN:a5-<run>-<attempt>-%` can only ever match rows that run created.
+  const runOnly = /^a5-\d+-\d+$/.test(raw);
+  if (!fullTag && !runOnly) throw new Error('a5-l2-residue-bad-run-tag');
+  const tagValue = fullTag ? raw : null;
+  const tagPrefix = fullTag ? null : `A5-RUN:${raw}-`;
+  const uidPrefix = fullTag ? null : `a5:${raw}-`;
+  const tag = fullTag && tagOf(tagValue);
+  const uid = fullTag && conversationUid(tagValue);
+  const contactWhere = fullTag ? `review_note = '${tag}'` : `review_note LIKE '${tagPrefix}%'`;
+  const convWhere = fullTag
+    ? `source_ref = '${tag}' OR conversation_uid = '${uid}'`
+    : `source_ref LIKE '${tagPrefix}%' OR conversation_uid LIKE '${uidPrefix}%'`;
+  const receiptWhere = fullTag
+    ? `resource_id IN (SELECT id FROM crm_contacts WHERE ${contactWhere}) OR submission_key LIKE '${tagValue}:%'`
+    : `resource_id IN (SELECT id FROM crm_contacts WHERE ${contactWhere}) OR submission_key LIKE '${raw}:%'`;
+  const auditWhere = fullTag ? `source_ref = '${tag}'` : `source_ref LIKE '${tagPrefix}%'`;
+  const actorWhere = fullTag ? `actor = '${tag}'` : `actor LIKE '${tagPrefix}%'`;
+  const contacts = `SELECT id FROM crm_contacts WHERE ${contactWhere}`;
+  const convs = `SELECT id FROM crm_conversations WHERE ${convWhere}`;
   const requests = `SELECT id FROM crm_customer_requests WHERE contact_id IN (${contacts})`;
   return [
     { table: 'crm_conversation_messages', label: 'residue-message',
@@ -140,17 +157,15 @@ export function residueProbes(runTag) {
     { table: 'crm_customer_requests', label: 'residue-request',
       where: `contact_id IN (${contacts})` },
     { table: 'crm_contact_audit_log', label: 'residue-contact-audit',
-      where: `contact_id IN (${contacts}) OR source_ref = '${tag}'` },
+      where: `contact_id IN (${contacts}) OR ${auditWhere}` },
     { table: 'crm_operational_audit_log', label: 'residue-operational-audit',
-      where: `contact_id IN (${contacts}) OR actor = '${tag}'` },
+      where: `contact_id IN (${contacts}) OR ${actorWhere}` },
     { table: 'crm_idempotency_receipts', label: 'residue-receipt',
-      where: `resource_id IN (${contacts}) OR submission_key LIKE '${tagValue}:%'` },
+      where: receiptWhere },
     { table: 'crm_contact_phones', label: 'residue-phone',
       where: `contact_id IN (${contacts})` },
-    { table: 'crm_conversations', label: 'residue-conversation',
-      where: `source_ref = '${tag}' OR conversation_uid = '${uid}'` },
-    { table: 'crm_contacts', label: 'residue-contact',
-      where: `review_note = '${tag}'` },
+    { table: 'crm_conversations', label: 'residue-conversation', where: convWhere },
+    { table: 'crm_contacts', label: 'residue-contact', where: contactWhere },
   ];
 }
 

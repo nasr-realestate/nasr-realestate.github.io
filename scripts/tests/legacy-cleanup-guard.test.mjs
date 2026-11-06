@@ -335,6 +335,12 @@ test('R1 residue scope is exact, imported, and refuses anything that is not a ru
   assert.ok(order.indexOf('crm_conversation_messages') < order.indexOf('crm_conversations'), 'messages before their conversation');
   assert.ok(order.indexOf('crm_conversations') < order.indexOf('crm_contacts'), 'conversations before their contact');
   assert.equal(order.at(-1), 'crm_contacts', 'the contact is deleted last');
+  // `<run_id>-<attempt>` is accepted and pinned as a prefix of the tag: the nonce is random and
+  // belongs to exactly one run, so the prefix cannot match another run's rows.
+  const byRun = residueProbes('a5-42292458694-1');
+  assert.equal(byRun.length, probes.length);
+  assert.match(byRun.at(-1).where, /review_note LIKE 'A5-RUN:a5-42292458694-1-%'/);
+  assert.throws(() => residueProbes('a5-42292458694'), /bad-run-tag/, 'attempt is mandatory');
   // Anything that is not a run tag is refused outright.
   for (const bad of ['', 'a5-1', "a5-1-1-abcdef12' OR '1'='1", 'A5-RUN:a5-1-1-abcdef12', '../x']) {
     assert.throws(() => residueProbes(bad), /a5-l2-residue-bad-run-tag/, `accepted: ${bad}`);
