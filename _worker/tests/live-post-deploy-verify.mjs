@@ -326,7 +326,19 @@ async function verifySyntheticManualLink(auth) {
   // A5 L2: publish the resolved ledger for this step before the run moves on. Failure here fails
   // the whole verification — no silent best-effort evidence path.
   const checkpointCmd = String(process.env.A5_L2_CHECKPOINT_CMD || '').trim();
-  if (checkpointCmd) execFileSync('/bin/sh', ['-c', checkpointCmd], { stdio: 'inherit', env: process.env });
+  if (checkpointCmd) {
+    try {
+      execFileSync('/bin/sh', ['-c', checkpointCmd], { stdio: 'inherit', env: process.env });
+    } catch (error) {
+      // `Command failed: /bin/sh -c node scri…` was the whole diagnosis in run 42292458694: the
+      // name kept the command and threw away why it failed. a5-l2.mjs writes `a5-l2: STOP <reason>`
+      // as the last stderr line, so that line becomes the first line here and reaches the run name.
+      const stopLine = String(error?.stderr || '')
+        .split('\n').map(l => l.trim()).filter(Boolean).pop() || '';
+      const reason = (stopLine || String(error?.message || 'unknown')).slice(0, 90);
+      throw new Error(`a5-checkpoint-failed:${reason}`);
+    }
+  }
 
   return { synthetic_conversation_id: convId, synthetic_contact_id: contactId };
 }
