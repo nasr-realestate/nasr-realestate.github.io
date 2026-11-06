@@ -28,9 +28,17 @@ on:
   workflow_dispatch:
     inputs:
       authorize_provision:
-        description: 'Type PROVISION-CRM-TEST-DB-V2 to create/migrate/seed nasr-crm-test-db-v2. Anything else stops before any secret is read.'
+        description: 'Type PROVISION-CRM-TEST-DB-V2 to run. Anything else stops before any secret is read.'
         required: true
         type: string
+      mode:
+        description: 'inspect = read-only state report, no environment approval, no writes (default). provision = create/migrate/seed.'
+        required: true
+        default: inspect
+        type: choice
+        options:
+          - inspect
+          - provision
 
 permissions:
   contents: read
@@ -46,6 +54,72 @@ env:
   PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
 
 jobs:
+  # Read-only state report. Deliberately NOT inside the protected environment: it cannot write, so it
+  # needs no approval — and that is the point. Every previous round was spent guessing why the next
+  # attempt failed; this answers "what does the database actually look like right now" in one click.
+  inspect:
+    name: 'D1 v2 — inspect (read-only)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_provision == 'PROVISION-CRM-TEST-DB-V2'
+    outputs:
+      state: ${{ steps.state.outputs.state }}
+    steps:
+      - name: Read the database state, change nothing
+        id: state
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+        run: |
+          set -euo pipefail
+          API='https://api.cloudflare.com/client/v4'
+          state='not-run'
+          finish() { echo "state=$state" >> "$GITHUB_OUTPUT"; }
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then state='secret-unavailable'; finish; exit 0; fi
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          account_id=$(curl -sS "$API/accounts?per_page=100" -H "$auth" \
+            | jq -r 'if (.result|length)==1 then .result[0].id else "" end')
+          if [ -z "$account_id" ]; then state='accounts-not-unique'; finish; exit 0; fi
+
+          uuid=$(curl -sS "$API/accounts/$account_id/d1/database?per_page=100" -H "$auth" \
+            | jq -r --arg n "$NEW_DB_NAME" '.result[] | select(.name==$n) | .uuid' | head -1)
+          if [ -z "$uuid" ]; then state="absent"; finish; exit 0; fi
+
+          q() {
+            curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
+              -H "$auth" -H 'content-type: application/json' \
+              -d "$(jq -nc --arg sql "$1" '{sql:$sql}')"
+          }
+          read_one() { q "$1" | jq -r '.result[0].results[0].n // 0'; }
+
+          tables=$(read_one "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table';")
+          ledger=$(read_one "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name='d1_migrations';")
+          migrations=$(read_one "SELECT COUNT(*) AS n FROM d1_migrations;")
+          listings=$(read_one "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name='listings';")
+          synthetic=0; areas=0; key_rows=0; crm_tables=0
+          if [ "$listings" = '1' ]; then
+            synthetic=$(read_one "SELECT COUNT(*) AS n FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside');")
+            areas=$(read_one "SELECT COUNT(*) AS n FROM areas;")
+          fi
+          if [ "$ledger" = '1' ]; then
+            key_rows=$(read_one "SELECT COUNT(*) AS n FROM crm_idempotency_receipts WHERE submission_key='system:ingest-public-key-v1';")
+            crm_tables=$(read_one "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*';")
+          fi
+
+          if [ "$listings" != '1' ] && [ "$migrations" = '0' ]; then state='empty-never-migrated'
+          elif [ "$migrations" -gt 0 ] && [ "$migrations" -lt 14 ]; then state="partial-migrations-${migrations}-of-14"
+          elif [ "$migrations" -ge 14 ] && [ "$key_rows" = '1' ]; then state='ready'
+          elif [ "$migrations" -ge 14 ]; then state='migrated-awaiting-key-row'
+          else state='unrecognised'; fi
+
+          echo "uuid=$uuid tables=$tables crm_tables=$crm_tables base=$listings migrations=$migrations synthetic=$synthetic areas=$areas key_rows=$key_rows"
+          finish
+
   provision:
     name: 'D1 v2 provision — create, migrate, seed'
     runs-on: ubuntu-latest
@@ -55,6 +129,7 @@ jobs:
       github.repository == 'nasr-realestate/nasr-realestate.github.io'
       && github.event_name == 'workflow_dispatch'
       && inputs.authorize_provision == 'PROVISION-CRM-TEST-DB-V2'
+      && inputs.mode == 'provision'
     outputs:
       outcome: ${{ steps.provision.outputs.outcome }}
       uuid: ${{ steps.provision.outputs.uuid }}
@@ -131,31 +206,42 @@ jobs:
           fi
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
 
-          # 2a) Does this database already carry the migrations ledger? A reused database that is
-          #     already provisioned must not be re-seeded (CREATE TABLE would abort). A fresh one must
-          #     get the platform base first, because the CRM migrations assume listings/areas/sources
-          #     already exist — without them `d1 migrations apply` dies on 'no such table: listings'.
-          ledger=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
-            -H "$auth" -H 'content-type: application/json' \
-            -d "$(jq -nc --arg sql "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name='d1_migrations';" '{sql:$sql}')" \
+          # 2a) State, measured — never inferred. A previous run applied 0001–0004 and died on
+          #     0005 ('no such table: listings'), so "the ledger table exists" said nothing about
+          #     readiness and this step skipped both the base schema and the remaining migrations.
+          #     Now the base schema is applied whenever the table it provides is absent, and
+          #     `migrations apply` is always invoked: wrangler resumes from its own ledger, so it is
+          #     a no-op on a complete database and the correct continuation on a partial one.
+          q() {
+            curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
+              -H "$auth" -H 'content-type: application/json' \
+              -d "$(jq -nc --arg sql "$1" '{sql:$sql}')"
+          }
+
+          listings_present=$(q "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name='listings';" \
             | jq -r '.result[0].results[0].n // 0')
-          if [ "${ledger:-0}" -gt 0 ]; then
-            migrations='already-provisioned'
-          else
+          if [ "${listings_present:-0}" -eq 0 ]; then
             if ! (cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote \
                     --config wrangler.v2.toml --file base/crm-test-platform-base.sql > /tmp/base.log 2>&1); then
               outcome="base-schema-failed:$(err_line /tmp/base.log)"
               finish; exit 1
             fi
-            if ! (cd _worker && npx --yes wrangler@4 d1 migrations apply "$NEW_DB_NAME" --remote \
-                    --config wrangler.v2.toml > /tmp/migrations.log 2>&1); then
-              outcome="migrations-failed:$(err_line /tmp/migrations.log)"
-              finish; exit 1
-            fi
+            base_applied='yes'
+          else
+            base_applied='no-already-present'
           fi
-          migrations=$(cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote --json \
-            --config wrangler.v2.toml --command "SELECT COUNT(*) AS n FROM d1_migrations;" 2>/dev/null \
-            | jq -r '.[0].results[0].n // 0' 2>/dev/null || echo 0)
+
+          if ! (cd _worker && npx --yes wrangler@4 d1 migrations apply "$NEW_DB_NAME" --remote \
+                  --config wrangler.v2.toml > /tmp/migrations.log 2>&1); then
+            outcome="migrations-failed:$(err_line /tmp/migrations.log)"
+            finish; exit 1
+          fi
+          # Read the ledger back from the database: wrangler's exit code alone is not evidence.
+          migrations=$(q "SELECT COUNT(*) AS n FROM d1_migrations;" | jq -r '.result[0].results[0].n // 0')
+          if [ "$migrations" != '14' ]; then
+            outcome="migrations-incomplete:${migrations}/14 base=${base_applied}"
+            finish; exit 1
+          fi
 
           # 3) seed the ingest key row, copied from the OLD database (SELECT only, never written).
           pub_sql="SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1' LIMIT 1;"
@@ -167,15 +253,17 @@ jobs:
           echo "::add-mask::${pub}"
           pub_sql_escaped=$(printf '%s' "$pub" | sed "s/'/''/g")
           insert_sql="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('system:ingest-public-key-v1','contact','${pub_sql_escaped}',strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(submission_key) DO NOTHING;"
-          if ! (cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote \
-                  --config wrangler.v2.toml --command "$insert_sql" > /tmp/seed.log 2>&1); then
-            outcome="seed-failed:$(tail -n 2 /tmp/seed.log | tr '\n' ' ' | sed 's/::[a-z]*:://g' | cut -c1-120)"
+          # Written through the D1 API, not wrangler: a wrapper exit code cannot tell us whether the
+          # statement landed — the API's own `success` flag can, and the row is then read back.
+          insert=$(q "$insert_sql")
+          if [ "$(echo "$insert" | jq -r '.success')" != 'true' ]; then
+            outcome="seed-failed:$(echo "$insert" | jq -r '[.errors[].message]|join(";")' | cut -c1-120)"
             finish; exit 1
           fi
           seed='yes'
 
           # read-only confirmation: the row is readable and is the only ingest key.
-          verify_sql="SELECT (SELECT COUNT(*) FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1') AS key_rows, (SELECT COUNT(*) FROM d1_migrations) AS migrations, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
+          verify_sql="SELECT (SELECT COUNT(*) FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1') AS key_rows, (SELECT COUNT(*) FROM d1_migrations) AS migrations, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows, (SELECT COUNT(*) FROM areas) AS areas;"
           verify=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
             -H "$auth" -H 'content-type: application/json' \
             -d "$(jq -nc --arg sql "$verify_sql" '{sql:$sql}')")
@@ -185,6 +273,8 @@ jobs:
           if [ "$key_rows" != '1' ]; then outcome="seed-verify:key_rows=${key_rows}"; finish; exit 1; fi
           if [ "$tables" != '14' ]; then outcome="migrations-verify:count=${tables}"; finish; exit 1; fi
           if [ "$synthetic" != '2' ]; then outcome="fixture-verify:synthetic_rows=${synthetic}"; finish; exit 1; fi
+          areas=$(echo "$verify" | jq -r '.result[0].results[0].areas // 0')
+          if [ "$areas" != '2' ]; then outcome="fixture-verify:areas=${areas}"; finish; exit 1; fi
 
           outcome='provisioned'
           finish
@@ -192,13 +282,17 @@ jobs:
           echo "uuid=${uuid} created=${created} migrations=${migrations} seed=${seed}" >> "$GITHUB_STEP_SUMMARY"
 
   report:
-    name: "D1 v2 — ${{ needs.provision.outputs.outcome }} — uuid=${{ needs.provision.outputs.uuid }} created=${{ needs.provision.outputs.created }} migrations=${{ needs.provision.outputs.migrations }} seed=${{ needs.provision.outputs.seed }}"
+    name: "D1 v2 — ${{ needs.inspect.outputs.state || 'skipped' }} — ${{ needs.provision.outputs.outcome }} — uuid=${{ needs.provision.outputs.uuid }} created=${{ needs.provision.outputs.created }} migrations=${{ needs.provision.outputs.migrations }} seed=${{ needs.provision.outputs.seed }}"
     runs-on: ubuntu-latest
-    needs: provision
+    needs: [inspect, provision]
     if: always()
     steps:
       - name: State the outcome in one place
+        env:
+          INSPECT_STATE: ${{ needs.inspect.outputs.state }}
+        
         run: |
+          echo "inspect=$INSPECT_STATE"
           echo "outcome=${{ needs.provision.outputs.outcome }}"
           echo "uuid=${{ needs.provision.outputs.uuid }}"
           echo "created=${{ needs.provision.outputs.created }} migrations=${{ needs.provision.outputs.migrations }}"

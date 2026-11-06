@@ -81,7 +81,12 @@ test('the seeded key value is masked, and inserted only into the new database', 
 });
 
 test('the check name carries the outcome and the uuid', () => {
-  assert.match(src, /name: "D1 v2 — \$\{\{ needs\.provision\.outputs\.outcome \}\} — uuid=\$\{\{ needs\.provision\.outputs\.uuid \}\}/);
+  assert.match(
+    src,
+    /name: "D1 v2 — \$\{\{ needs\.inspect\.outputs\.state \|\| 'skipped' \}\} — \$\{\{ needs\.provision\.outputs\.outcome \}\}/,
+    'the check name must lead with the measured state, then the outcome',
+  );
+  assert.match(src, /uuid=\$\{\{ needs\.provision\.outputs\.uuid \}\}/);
 });
 
 test('the platform base schema exists as one file and matches the proven bootstrap verbatim', () => {
@@ -110,16 +115,34 @@ test('the platform base schema exists as one file and matches the proven bootstr
   assert.equal(base, fromWorkflow, 'the shared base file drifted from the proven bootstrap');
 });
 
-test('the base schema is applied before the migrations, and never to an already-provisioned DB', () => {
+test('the base schema is applied on measured absence, and migrations always run', () => {
   const script = provision.steps.filter((step) => step.run).map((step) => step.run).join('\n');
+  // Run 42233508617 proved that "the ledger table exists" is not readiness: 0001–0004 had been
+  // applied and the run skipped the base schema entirely. Decision is now made from the database.
+  assert.match(script, /name='listings'/, 'presence of listings must be measured');
+  assert.match(script, /listings_present/);
+  assert.match(script, /base_applied='no-already-present'/);
   const baseAt = script.indexOf('base/crm-test-platform-base.sql');
-  // Match the real command, not the comment that quotes it.
   const migrateAt = script.indexOf('d1 migrations apply "$NEW_DB_NAME" --remote');
-  assert.ok(baseAt > -1, 'the base schema must be applied at all');
-  assert.ok(migrateAt > baseAt, 'the base schema must come first');
-  // A reused database that already has the ledger must skip both, or CREATE TABLE aborts.
-  assert.match(script, /name='d1_migrations'/);
-  assert.match(script, /migrations='already-provisioned'/);
+  assert.ok(baseAt > -1 && migrateAt > baseAt, 'the base schema must come first');
+  // migrations apply is unconditional: it resumes from wrangler's ledger, so it is a no-op when
+  // complete and the correct continuation when partial.
+  assert.doesNotMatch(script, /already-provisioned/);
+});
+
+test('the migrations ledger is read back and must reach 14', () => {
+  const script = provision.steps.filter((step) => step.run).map((step) => step.run).join('\n');
+  assert.match(script, /SELECT COUNT\(\*\) AS n FROM d1_migrations;/);
+  assert.match(script, /if \[ "\$migrations" != '14' \]/);
+  assert.match(script, /outcome="migrations-incomplete:\$\{migrations\}\/14 base=\$\{base_applied\}"/);
+});
+
+test('the key row is written through the API and checked by its own success flag', () => {
+  const script = provision.steps.filter((step) => step.run).map((step) => step.run).join('\n');
+  // wrangler exited 0 while the row never landed; the API's success flag cannot lie that way.
+  assert.match(script, /insert=\$\(q "\$insert_sql"\)/);
+  assert.match(script, /jq -r '\.success'/);
+  assert.match(script, /outcome="seed-failed:/);
 });
 
 test('a failure reports the wrangler error line, not its log trailer', () => {
@@ -132,9 +155,30 @@ test('a failure reports the wrangler error line, not its log trailer', () => {
   assert.doesNotMatch(script, /tail -n 2 \/tmp\/migrations\.log/);
 });
 
-test('it verifies the three numbers that make a database usable', () => {
+test('it verifies the four numbers that make a database usable', () => {
   const script = provision.steps.filter((step) => step.run).map((step) => step.run).join('\n');
   assert.match(script, /key_rows/);
   assert.match(script, /migrations-verify:count=/);
   assert.match(script, /fixture-verify:synthetic_rows=/);
+  assert.match(script, /fixture-verify:areas=/);
+});
+
+test('the inspector is read-only, needs no environment approval, and names the state', () => {
+  const inspect = doc.jobs.inspect;
+  assert.ok(inspect, 'an inspect job must exist');
+  assert.equal(inspect.environment, undefined, 'a read-only job must not sit behind an approval');
+  const script = inspect.steps.filter((step) => step.run).map((step) => step.run).join('\n');
+  assert.doesNotMatch(script, /\b(INSERT|UPDATE|DELETE|DROP|CREATE)\b/i);
+  assert.doesNotMatch(script, /d1 migrations apply/);
+  // It must distinguish the states that actually cost us rounds.
+  for (const state of ['empty-never-migrated', 'partial-migrations-', 'migrated-awaiting-key-row', 'ready']) {
+    assert.ok(script.includes(state), `inspect must be able to report ${state}`);
+  }
+});
+
+test('provision only runs when asked for by mode; inspect is the default', () => {
+  const inputs = (doc.on ?? doc[true]).workflow_dispatch.inputs;
+  assert.equal(inputs.mode.default, 'inspect');
+  assert.deepEqual(inputs.mode.options, ['inspect', 'provision']);
+  assert.match(provision.if, /inputs\.mode == 'provision'/);
 });
