@@ -363,3 +363,25 @@ test('R2 the residue scope can never target the run that is executing it', async
   assert.ok(residueProbes(currentTag).length > 0, 'the scope itself is valid');
   assert.ok(typeof spawn2 === 'function');
 });
+
+test('R3 per-key scope is fixed to receipts, exact, and capped', async () => {
+  const { keyScopedProbes, TICKET_KEY_RE, MAX_KEY_SCOPE } = await import('../a5-l2.mjs');
+  const key = `ci-e2e-ticket:${'0123456789abcdef'.repeat(4)}`;
+  assert.ok(TICKET_KEY_RE.test(key));
+  const [probe] = keyScopedProbes(`${key},${key.replace('0', '1')}`);
+  // One table, one predicate: this scope cannot reach a contact, conversation or business row.
+  assert.equal(probe.table, 'crm_idempotency_receipts');
+  assert.match(probe.where, /^submission_key IN \('ci-e2e-ticket:[0-9a-f]{64}',/);
+  // Refusals: empty, malformed, wrong table, injection attempt, and over the cap.
+  for (const bad of ['', 'ci-e2e-ticket:', `ci-e2e-ticket:${'A'.repeat(64)}`, 'crm_contacts',
+    "ci-e2e-ticket:" + 'a'.repeat(64) + "' OR '1'='1"]) {
+    assert.throws(() => keyScopedProbes(bad), /a5-l2-key-scope-(empty|bad-key)/, `accepted: ${bad}`);
+  }
+  const many = Array.from({ length: MAX_KEY_SCOPE + 1 },
+    (_, i) => `ci-e2e-ticket:${String(i).padStart(64, '0')}`).join(',');
+  assert.throws(() => keyScopedProbes(many), /too-large/);
+  // And it is imported by the tool, never restated, and exposed as an explicit input.
+  assert.match(scriptSource, /keyScopedProbes/);
+  assert.match(workflowSource, /receipt_keys/);
+  assert.match(workflowSource, /CRM_CLEANUP_RECEIPT_KEYS: \$\{\{ inputs\.receipt_keys \}\}/);
+});

@@ -42,6 +42,11 @@ on:
         options:
           - dry-run
           - apply
+      receipt_keys:
+        description: 'Optional. Comma-separated exact ticket keys (ci-e2e-ticket:<64 hex>), max 20. Deletes only those receipts rows and nothing else.'
+        required: false
+        default: ''
+        type: string
       residue_run_tag:
         description: 'Optional. Empty = the documented legacy namespace. Otherwise the exact run tag (a5-<run>-<attempt>-<8 hex>) whose synthetic rows a failed run created and could never prove.'
         required: false
@@ -83,6 +88,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
           CRM_A5_MODE: ${{ inputs.mode }}
           CRM_CLEANUP_RUN_TAG: ${{ inputs.residue_run_tag }}
+          CRM_CLEANUP_RECEIPT_KEYS: ${{ inputs.receipt_keys }}
         run: |
           set -euo pipefail
           umask 077
