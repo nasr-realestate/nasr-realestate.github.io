@@ -90,6 +90,12 @@ jobs:
           echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
           auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
+          # wrangler ends a failed run with 'Logs were written to …', which is a trailer, not a reason.
+          # This pulls the actual ✘/ERROR line out and strips ANSI colour, so the check name says why.
+          err_line() {
+            sed -e 's/\x1b\[[0-9;]*m//g' "$1" 2>/dev/null | grep -aiE '(✘|\[ERROR\]|error:)' | head -1 | cut -c1-140
+          }
+
           # Exactly one account, or stop: guessing an account is how a write lands in the wrong place.
           accounts=$(curl -sS "$API/accounts?per_page=100" -H "$auth")
           account_id=$(echo "$accounts" | jq -r 'if (.result|length)==1 then .result[0].id else "" end')
@@ -124,10 +130,28 @@ jobs:
             outcome='config-rewrite-failed'; finish; exit 1
           fi
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
-          if ! (cd _worker && npx --yes wrangler@4 d1 migrations apply "$NEW_DB_NAME" --remote \
-                  --config wrangler.v2.toml > /tmp/migrations.log 2>&1); then
-            outcome="migrations-failed:$(tail -n 2 /tmp/migrations.log | tr '\n' ' ' | sed 's/::[a-z]*:://g' | cut -c1-140)"
-            finish; exit 1
+
+          # 2a) Does this database already carry the migrations ledger? A reused database that is
+          #     already provisioned must not be re-seeded (CREATE TABLE would abort). A fresh one must
+          #     get the platform base first, because the CRM migrations assume listings/areas/sources
+          #     already exist — without them `d1 migrations apply` dies on 'no such table: listings'.
+          ledger=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
+            -H "$auth" -H 'content-type: application/json' \
+            -d "$(jq -nc --arg sql "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name='d1_migrations';" '{sql:$sql}')" \
+            | jq -r '.result[0].results[0].n // 0')
+          if [ "${ledger:-0}" -gt 0 ]; then
+            migrations='already-provisioned'
+          else
+            if ! (cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote \
+                    --config wrangler.v2.toml --file base/crm-test-platform-base.sql > /tmp/base.log 2>&1); then
+              outcome="base-schema-failed:$(err_line /tmp/base.log)"
+              finish; exit 1
+            fi
+            if ! (cd _worker && npx --yes wrangler@4 d1 migrations apply "$NEW_DB_NAME" --remote \
+                    --config wrangler.v2.toml > /tmp/migrations.log 2>&1); then
+              outcome="migrations-failed:$(err_line /tmp/migrations.log)"
+              finish; exit 1
+            fi
           fi
           migrations=$(cd _worker && npx --yes wrangler@4 d1 execute "$NEW_DB_NAME" --remote --json \
             --config wrangler.v2.toml --command "SELECT COUNT(*) AS n FROM d1_migrations;" 2>/dev/null \
@@ -151,12 +175,16 @@ jobs:
           seed='yes'
 
           # read-only confirmation: the row is readable and is the only ingest key.
-          check_sql="SELECT COUNT(*) AS n FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1';"
-          check=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
+          verify_sql="SELECT (SELECT COUNT(*) FROM crm_idempotency_receipts WHERE submission_key = 'system:ingest-public-key-v1') AS key_rows, (SELECT COUNT(*) FROM d1_migrations) AS migrations, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
+          verify=$(curl -sS -X POST "$API/accounts/$account_id/d1/database/${uuid}/query" \
             -H "$auth" -H 'content-type: application/json' \
-            -d "$(jq -nc --arg sql "$check_sql" '{sql:$sql}')")
-          tables=$(echo "$check" | jq -r '.result[0].results[0].n // 0')
-          if [ "$tables" != '1' ]; then outcome="seed-verify:count=${tables}"; finish; exit 1; fi
+            -d "$(jq -nc --arg sql "$verify_sql" '{sql:$sql}')")
+          key_rows=$(echo "$verify" | jq -r '.result[0].results[0].key_rows // 0')
+          tables=$(echo "$verify" | jq -r '.result[0].results[0].migrations // 0')
+          synthetic=$(echo "$verify" | jq -r '.result[0].results[0].synthetic_rows // 0')
+          if [ "$key_rows" != '1' ]; then outcome="seed-verify:key_rows=${key_rows}"; finish; exit 1; fi
+          if [ "$tables" != '14' ]; then outcome="migrations-verify:count=${tables}"; finish; exit 1; fi
+          if [ "$synthetic" != '2' ]; then outcome="fixture-verify:synthetic_rows=${synthetic}"; finish; exit 1; fi
 
           outcome='provisioned'
           finish
