@@ -50,7 +50,7 @@ concurrency:
 
 jobs:
   registry-phase3:
-    name: Test 0007 in isolated D1, verify backup, migrate nasr-crm-test-db, and sync sealed metadata
+    name: Test 0007 in isolated D1, verify backup, migrate nasr-crm-test-db-v2, and sync sealed metadata
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -78,8 +78,8 @@ jobs:
           umask 077
 
           API='https://api.cloudflare.com/client/v4'
-          TEST_DB_NAME='nasr-crm-test-db'
-          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          TEST_DB_NAME='nasr-crm-test-db-v2'
+          TEST_DB_UUID='760079c6-85f9-4a30-aa19-9a66f95d421a'
           REF_BACKUP_NAME='nasr-crm-test-db-backup-20261101'
           REF_BACKUP_UUID='a7681217-32a3-48fd-b8f5-8a54ac7b35e7'
           PROD_DB_NAME='nasr-market-db'
@@ -643,14 +643,14 @@ jobs:
           fi
           backup_check="verified(${REF_BACKUP_UUID:0:8}:${bak_counts})"
 
-          # 6) Snapshot business row counts on nasr-crm-test-db BEFORE migration
+          # 6) Snapshot business row counts on nasr-crm-test-db-v2 BEFORE migration
           PRE_BIZ_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts) AS c, (SELECT COUNT(*) FROM crm_contact_phones) AS ph, (SELECT COUNT(*) FROM crm_opportunities) AS o, (SELECT COUNT(*) FROM crm_conversations) AS cv, (SELECT COUNT(*) FROM crm_conversation_messages) AS m;"
           curl --silent --show-error -X POST -H "$AUTH" -H 'Content-Type: application/json' \
             --data "{\"sql\":\"$PRE_BIZ_SQL\",\"params\":[]}" \
             -o "$TMP/biz_pre.json" "$API/accounts/$account_id/d1/database/$TEST_DB_UUID/query"
           biz_pre=$(jq -r '.result[0].results[0] | "\(.c):\(.ph):\(.o):\(.cv):\(.m)"' "$TMP/biz_pre.json")
 
-          # 7) Apply Migration 0007_crm_drive_file_registry.sql to nasr-crm-test-db (idempotent via wrangler d1 migrations apply)
+          # 7) Apply Migration 0007_crm_drive_file_registry.sql to nasr-crm-test-db-v2 (idempotent via wrangler d1 migrations apply)
           npx --yes wrangler@4 d1 migrations apply "$TEST_DB_NAME" --remote --config "$WRANGLER_CFG" > "$TMP/live_mig.log" 2>&1
 
           POST_MIG_SQL="SELECT (SELECT COUNT(*) FROM d1_migrations) AS migs, (SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1) AS latest_mig, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crm_drive_file_registry') AS reg_tbl, (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='crm_drive_file_registry' AND sql IS NOT NULL) AS reg_idx, (SELECT COUNT(*) FROM crm_drive_file_registry) AS reg_rows;"

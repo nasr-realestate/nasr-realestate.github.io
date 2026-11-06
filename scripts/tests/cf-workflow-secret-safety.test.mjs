@@ -26,7 +26,8 @@ const READONLY = '.github/workflows/crm-cloudflare-readonly-preflight.yml';
 const WRITE_PROOF = '.github/workflows/crm-cloudflare-write-proof.yml';
 const DEPLOY = '.github/workflows/crm-cloudflare-test-deploy.yml';
 
-const TEST_DB_UUID = '65bfcb14-4b48-423b-916f-00eefdb9ae1e';
+const TEST_DB_UUID = '760079c6-85f9-4a30-aa19-9a66f95d421a';
+const TEST_DB_NAME = 'nasr-crm-test-db-v2';
 const PROD_DB_UUID = 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf';
 
 function read(relative) {
@@ -153,7 +154,10 @@ test(`${WRITE_PROOF}: write mode needs a typed human string and pins the test da
   assert.ok(text.includes(TEST_DB_UUID), 'the test DB uuid must be pinned in the file itself');
   assert.ok(text.includes("read_const TEST_DB_UUID"), 'and cross-checked against the A5 constants');
   assert.ok(text.includes("constants-drift-refused"), 'a drifted constant must fail closed');
-  assert.ok(text.includes("!= 'nasr-crm-test-db'"), 'the target must be confirmed by name, not only by uuid');
+  assert.ok(
+    text.includes(`!= '${TEST_DB_NAME}'`),
+    'the target must be confirmed by name, not only by uuid',
+  );
 });
 
 test(`${WRITE_PROOF}: the production database is never a request target`, () => {

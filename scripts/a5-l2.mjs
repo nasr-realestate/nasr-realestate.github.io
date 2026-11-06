@@ -25,7 +25,7 @@
  *   - No COUNT(*) and no display names (`TEST ONLY`) are used for classification or identity.
  *   - No L0/L1 acceptance path: `no-ledger(hard-cancel)` is deliberately NOT implemented.
  *   - Any unproven row is classified `unknown`, never deleted, never reclassified by guessing.
- *   - Only `nasr-crm-test-db` is queried (assertTestOnlyConfig), never nasr-market-db / backup.
+ *   - Only `nasr-crm-test-db-v2` is queried (assertTestOnlyConfig), never nasr-market-db / backup.
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, openSync, writeSync, fsyncSync, closeSync } from 'node:fs';

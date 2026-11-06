@@ -4,7 +4,7 @@
 // envelope, and that file has read `IDLE` since the queue was drained. So the production composition —
 // queue line → ECDH open → payload-shape assertion → the real `syncDriveFolderMetadataInventory` → the real
 // boundary gate — had never been executed as one piece anywhere. Here it is, on `SYNTH-*` ids, invented sizes
-// and digests computed from the string "synthetic …", with no reference to `nasr-crm-test-db` or `nasr-market-db`.
+// and digests computed from the string "synthetic …", with no reference to `nasr-crm-test-db-v2` or `nasr-market-db`.
 //
 // "Pass" in this file is not "the sync ran". It is two things: an envelope either opens and applies or is
 // refused before a single statement is issued; and the gate evaluates what the sync actually did, so a

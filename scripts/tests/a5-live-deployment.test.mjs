@@ -24,7 +24,7 @@ const loadYaml = (name) => yaml.load(read(name));
 // js-yaml v4 keeps `on` a string (YAML 1.2), older/1.1 schemas expose it as the boolean key "true".
 const triggers = (doc) => doc.on ?? doc.true ?? {};
 
-const TEST_DB_UUID = '65bfcb14-4b48-423b-916f-00eefdb9ae1e';
+const TEST_DB_UUID = '760079c6-85f9-4a30-aa19-9a66f95d421a';
 const PROD_DB_UUID = 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf';
 
 test('1) migrations workflow: dispatch-only, exact typed gate, master ref, protected environment', () => {
@@ -45,7 +45,7 @@ test('1) migrations workflow: dispatch-only, exact typed gate, master ref, prote
 
 test('2) migrations workflow: hard-coded test DB only; no DB create/import/delete, no Worker deploy, one write', () => {
   const s = migrations();
-  assert.match(s, /TEST_DB_UUID:\s*65bfcb14-4b48-423b-916f-00eefdb9ae1e/);
+  assert.match(s, /TEST_DB_UUID:\s*760079c6-85f9-4a30-aa19-9a66f95d421a/);
   assert.match(s, /TEST_DB_NAME:\s*nasr-crm-test-db/);
   // The production identifiers may appear ONLY for read-only measurement, never as a write target.
   assert.ok(!/d1 (execute|migrations apply)[^\n]*\$PROD_DB_UUID/.test(s), 'never apply to prod by id');

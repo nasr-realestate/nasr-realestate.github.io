@@ -1,7 +1,7 @@
 name: CRM Phase 4 Drive Analysis Migration and Payload Apply
 
 # Phase 4 = analysis only. This workflow may write ONLY the Phase 4 analysis tables and the
-# drive-file-registry operational columns in `nasr-crm-test-db`. It never imports a customer,
+# drive-file-registry operational columns in `nasr-crm-test-db-v2`. It never imports a customer,
 # never links or merges a contact, never touches `nasr-market-db`, and treats the reference
 # backup as read-only. If any barrier below cannot be proven, the job fails before writing.
 on:
@@ -46,7 +46,7 @@ concurrency:
 
 jobs:
   analysis-phase4:
-    name: Test 0008 isolated, verify backup, migrate nasr-crm-test-db, apply the Phase 4 analysis payload
+    name: Test 0008 isolated, verify backup, migrate nasr-crm-test-db-v2, apply the Phase 4 analysis payload
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -74,8 +74,8 @@ jobs:
           umask 077
 
           API='https://api.cloudflare.com/client/v4'
-          TEST_DB_NAME='nasr-crm-test-db'
-          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          TEST_DB_NAME='nasr-crm-test-db-v2'
+          TEST_DB_UUID='760079c6-85f9-4a30-aa19-9a66f95d421a'
           REF_BACKUP_NAME='nasr-crm-test-db-backup-20261101'
           REF_BACKUP_UUID='a7681217-32a3-48fd-b8f5-8a54ac7b35e7'
           PROD_DB_NAME='nasr-market-db'

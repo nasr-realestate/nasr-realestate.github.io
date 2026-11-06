@@ -12,10 +12,10 @@ name: CRM isolated Worker deploy and live auth E2E
 #      makes a human approve PER RUN, because re-running a past workflow run replays its stored inputs;
 #   3. a ref of `master`, so no branch push can ever qualify.
 # Migrations are NEVER applied by this workflow. Before any deploy it verifies, read-only, that
-# `nasr-crm-test-db` already carries exactly the expected `_worker/migrations/*.sql` sequence and the
+# `nasr-crm-test-db-v2` already carries exactly the expected `_worker/migrations/*.sql` sequence and the
 # A5 schema/triggers/FKs. Applying migrations stays in the separate, already-approved CI channel.
 # Worker secrets are never created, updated, rotated, displayed, or guessed: missing required names stop
-# the deploy with a clear message. Only `nasr-crm-test-db` and the read-only reference backup
+# the deploy with a clear message. Only `nasr-crm-test-db-v2` and the read-only reference backup
 # `nasr-crm-test-db-backup-20261101` are queried; no database, backup, or stage DB is created, imported,
 # or deleted. The production `nasr-market-db` is measured as unchanged before and after, never written.
 on:
@@ -250,8 +250,8 @@ jobs:
         shell: bash
         env:
           API: https://api.cloudflare.com/client/v4
-          TEST_DB_NAME: nasr-crm-test-db
-          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          TEST_DB_NAME: nasr-crm-test-db-v2
+          TEST_DB_UUID: 760079c6-85f9-4a30-aa19-9a66f95d421a
           REF_BACKUP_NAME: nasr-crm-test-db-backup-20261101
           REF_BACKUP_UUID: a7681217-32a3-48fd-b8f5-8a54ac7b35e7
           PROD_DB_NAME: nasr-market-db
@@ -311,7 +311,7 @@ jobs:
           fi
           if ! jq -e --arg id "$TEST_DB_UUID" --arg n "$TEST_DB_NAME" \
                 '.result[] | select(.name == $n and .uuid == $id)' "$TMP/d1.json" >/dev/null; then
-            echo "::error::authorised test D1 nasr-crm-test-db / $TEST_DB_UUID not verified; deployment stopped."
+            echo "::error::authorised test D1 nasr-crm-test-db-v2 / $TEST_DB_UUID not verified; deployment stopped."
             exit 1
           fi
           ref_backup_uuid=$(jq -r --arg u "$REF_BACKUP_UUID" --arg n "$REF_BACKUP_NAME" \
@@ -402,7 +402,7 @@ jobs:
         shell: bash
         env:
           API: https://api.cloudflare.com/client/v4
-          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          TEST_DB_UUID: 760079c6-85f9-4a30-aa19-9a66f95d421a
           PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.preflight.outputs.account_id }}
           MIGRATIONS_DIR: _worker/migrations
@@ -419,7 +419,7 @@ jobs:
           const token = process.env.CLOUDFLARE_API_TOKEN;
           const dir = process.env.MIGRATIONS_DIR;
           if (!api || !account || !testDb || !token || !dir) throw new Error('schema-guard-env-missing');
-          if (testDb !== '65bfcb14-4b48-423b-916f-00eefdb9ae1e') throw new Error('schema-guard-wrong-test-db');
+          if (testDb !== '760079c6-85f9-4a30-aa19-9a66f95d421a') throw new Error('schema-guard-wrong-test-db');
 
           const expected = readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
           if (expected.length === 0) throw new Error('no-expected-migrations');
@@ -606,7 +606,7 @@ jobs:
         shell: bash
         env:
           API: https://api.cloudflare.com/client/v4
-          TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
+          TEST_DB_UUID: 760079c6-85f9-4a30-aa19-9a66f95d421a
           PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
           WORKER_NAME: nasr-crm-api-test
           WRANGLER_CFG: _worker/wrangler.crm.toml
@@ -706,7 +706,7 @@ jobs:
               echo "::add-mask::${a5_n2}"
               a5_h1=$(printf '%s' "$a5_n1" | sha256sum | awk '{print $1}')
               a5_h2=$(printf '%s' "$a5_n2" | sha256sum | awk '{print $1}')
-              if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" \
+              if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --config "$WRANGLER_CFG" \
                    --command "INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${a5_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${a5_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));" >/dev/null 2>&1; then
                 a5_live='ticket-mint-failed'
                 return 1
@@ -771,7 +771,7 @@ jobs:
             ci_h2=$(printf '%s' "$ci_n2" | sha256sum | awk '{print $1}')
             ci_h3=$(printf '%s' "$ci_n3" | sha256sum | awk '{print $1}')
             TICKET_SQL="INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES ('ci-e2e-ticket:${ci_h1}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h2}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now')), ('ci-e2e-ticket:${ci_h3}','contact','authorized_pending',strftime('%Y-%m-%dT%H:%M:%fZ','now'));"
-            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ci_ticket.log" 2>&1; then
+            if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --config "$WRANGLER_CFG" --command "$TICKET_SQL" > "$TMP/ci_ticket.log" 2>&1; then
               result='ci-ticket-mint-failed'
               finish
               exit 1
@@ -820,7 +820,7 @@ jobs:
           # keeping proven synthetic rows does not change them. They prove non-interference with
           # the original rows without relying on `COUNT(*)` of the synthetic namespace.
           FINAL_CNT_SQL="SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS c, (SELECT COUNT(*) FROM crm_contact_phones WHERE contact_id NOT IN (SELECT id FROM crm_contacts WHERE name LIKE 'TEST ONLY%')) AS ph, (SELECT COUNT(*) FROM crm_opportunities WHERE notes NOT LIKE 'TEST ONLY%') AS o, (SELECT COUNT(*) FROM crm_opportunities WHERE contact_id IS NULL AND notes NOT LIKE 'TEST ONLY%') AS cl, (SELECT COUNT(*) FROM crm_conversations WHERE chat_title NOT LIKE 'TEST ONLY%') AS cv, (SELECT COUNT(*) FROM crm_conversations WHERE match_status IN ('unmatched_review','conflict_review') AND chat_title NOT LIKE 'TEST ONLY%') AS unm, (SELECT COUNT(*) FROM crm_conversation_messages WHERE conversation_id NOT IN (SELECT id FROM crm_conversations WHERE chat_title LIKE 'TEST ONLY%')) AS m, (SELECT COUNT(*) FROM crm_smart_alerts WHERE status='open') AS al;"
-          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
+          if ! d1_exec_retry npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$WRANGLER_CFG" --command "$FINAL_CNT_SQL" > "$TMP/final_cnt.json" 2>/dev/null; then
             result='post-verify-counts-query-failed'
             finish
             exit 1

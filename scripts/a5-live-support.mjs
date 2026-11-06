@@ -28,8 +28,8 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-export const TEST_DB_UUID = '65bfcb14-4b48-423b-916f-00eefdb9ae1e';
-export const TEST_DB_NAME = 'nasr-crm-test-db';
+export const TEST_DB_UUID = '760079c6-85f9-4a30-aa19-9a66f95d421a';
+export const TEST_DB_NAME = 'nasr-crm-test-db-v2';
 export const PROD_DB_UUID = 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf';
 export const PROD_DB_NAME = 'nasr-market-db';
 export const WORKER_NAME = 'nasr-crm-api-test';

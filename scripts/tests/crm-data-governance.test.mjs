@@ -85,7 +85,11 @@ test('CRM_DATA_GOVERNANCE.md يغطي اسم المجلد التاريخي وا�
 
   // تطابق حدود البيئة مع ملف التكوين الفعلي _worker/wrangler.crm.toml
   assert.match(wranglerCrm, /name\s*=\s*"nasr-crm-api-test"/);
-  assert.match(wranglerCrm, /database_name\s*=\s*"nasr-crm-test-db"/);
+  // The name lives in the pinned config; the doc must agree with it whatever it is called. Pinning
+  // the literal here meant a renamed database failed a documentation test instead of a real one.
+  const dbName = /database_name\s*=\s*"([^"]+)"/.exec(wranglerCrm)?.[1];
+  assert.ok(dbName, 'the wrangler config must name its database');
+  assert.ok(gov.includes(dbName), `the governance doc must mention ${dbName}`);
   assert.match(gov, /nasr-crm-api-test/);
   assert.match(gov, /nasr-crm-test-db/);
   assert.match(gov, /nasr-market-db/);

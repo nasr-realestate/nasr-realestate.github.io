@@ -5,7 +5,7 @@ name: CRM Drive Migration Session — 0010 anchor bootstrap and ledger verificat
 # integrity) run here because this runner is the only place that can reach Cloudflare: the agent sandbox has
 # no route to api.cloudflare.com by design.
 #
-# Status (3 Nov 2026): the bootstrap executed -- 99 anchors and 99 version rows on nasr-crm-test-db, read
+# Status (3 Nov 2026): the bootstrap executed -- 99 anchors and 99 version rows on nasr-crm-test-db-v2, read
 # back as anchored=99, needs_bootstrap=0, svv=0, ctr=0, dang=0, gaps=0, orphans=0 with digest_match=yes, and
 # 0011 was promoted afterwards. The seed is sent without its `BEGIN;`/`COMMIT;` transport lines because D1
 # refuses SQL transaction statements on this channel; the reviewed file and its sha pin are unchanged.
@@ -58,7 +58,7 @@ permissions:
   contents: read
 
 concurrency:
-  # One group across every job that can touch nasr-crm-test-db, so nothing interleaves with a write.
+  # One group across every job that can touch nasr-crm-test-db-v2, so nothing interleaves with a write.
   # `cancel-in-progress: false` protects a run that has started; it does nothing for a run that is still
   # waiting. GitHub cancels a *waiting* request in a shared group when it decides another pending request
   # has higher priority — seen on 2026-11-02 at c3cd6c9, where this job and crm-phase4-review were both
@@ -72,7 +72,7 @@ concurrency:
 
 jobs:
   session:
-    name: Run the migration session against nasr-crm-test-db only
+    name: Run the migration session against nasr-crm-test-db-v2 only
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -115,8 +115,8 @@ jobs:
           set -euo pipefail
           umask 077
           API='https://api.cloudflare.com/client/v4'
-          TEST_DB_NAME='nasr-crm-test-db'
-          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          TEST_DB_NAME='nasr-crm-test-db-v2'
+          TEST_DB_UUID='760079c6-85f9-4a30-aa19-9a66f95d421a'
           PROD_DB_NAME='nasr-market-db'
           PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
           REF_BACKUP_NAME='nasr-crm-test-db-backup-20261101'
@@ -254,7 +254,7 @@ jobs:
           const API = 'https://api.cloudflare.com/client/v4';
           const account = process.env.CLOUDFLARE_ACCOUNT_ID;
           const token = process.env.CLOUDFLARE_API_TOKEN;
-          const dbUuid = '65bfcb14-4b48-423b-916f-00eefdb9ae1e';
+          const dbUuid = '760079c6-85f9-4a30-aa19-9a66f95d421a';
 
           const seedUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/seed-drive-file-refs.mjs')).href;
           const boundUrl = pathToFileURL(path.resolve(process.cwd(), 'scripts/crm/verify-phase3-metadata-boundary.mjs')).href;

@@ -20,7 +20,7 @@ name: CRM review 0009 — local gates (SQL barriers, D1 rehearsal, backup round-
 #
 # There are deliberately no secrets, no `--remote` wrangler calls, no Cloudflare API and no artifact
 # uploads: this workflow cannot read or write a real database, and its logs contain digests and counts
-# only. Nothing here deploys or applies anything to `nasr-crm-test-db`; applying 0009 is a separate,
+# only. Nothing here deploys or applies anything to `nasr-crm-test-db-v2`; applying 0009 is a separate,
 # human-approved act (see CRM_PHASE4_REVIEW_SQL_APPROVAL.md).
 on:
   pull_request:

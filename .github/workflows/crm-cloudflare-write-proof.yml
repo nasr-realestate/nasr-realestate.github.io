@@ -7,7 +7,7 @@ name: CRM Cloudflare write proof (test D1 only, self-cleaning)
 # policy screen; this workflow is the measurement. It is deliberately the smallest write that can be
 # proved and then be gone:
 #
-#   * Target: ONLY `nasr-crm-test-db` (uuid pinned below AND cross-checked against
+#   * Target: ONLY `nasr-crm-test-db-v2` (uuid pinned below AND cross-checked against
 #     `scripts/a5-live-support.mjs`, so the two can never drift apart silently). The production
 #     `nasr-market-db` is never named as a request target and is asserted absent from every URL.
 #   * Write: `CREATE TABLE _cf_probe_write_proof` → `INSERT` one row → `DROP TABLE`, then a separate
@@ -28,7 +28,7 @@ on:
   workflow_dispatch:
     inputs:
       authorize_d1_write_proof:
-        description: 'Type PROVE-CLOUDFLARE-WRITE to run the self-cleaning D1 write proof on nasr-crm-test-db. Anything else stops before any secret is read.'
+        description: 'Type PROVE-CLOUDFLARE-WRITE to run the self-cleaning D1 write proof on nasr-crm-test-db-v2. Anything else stops before any secret is read.'
         required: true
         type: string
       authorize_worker_write_proof:
@@ -165,8 +165,8 @@ jobs:
           const_name=$(read_const TEST_DB_NAME)
           const_prod_name=$(read_const PROD_DB_NAME)
           const_prod_uuid=$(read_const PROD_DB_UUID)
-          if [ "$const_uuid" != '65bfcb14-4b48-423b-916f-00eefdb9ae1e' ] \
-             || [ "$const_name" != 'nasr-crm-test-db' ] \
+          if [ "$const_uuid" != '760079c6-85f9-4a30-aa19-9a66f95d421a' ] \
+             || [ "$const_name" != 'nasr-crm-test-db-v2' ] \
              || [ "$const_prod_name" != 'nasr-market-db' ]; then
             outcome='constants-drift-refused'
             d1_write='refused'
@@ -213,12 +213,12 @@ jobs:
 
           d1_code=$(get_json "$API/accounts/${account_id}/d1/database?per_page=100" "$TMP/d1.json")
           target_name=$(jq -r --arg u "$TEST_DB_UUID" '.result[]? | select(.uuid == $u) | .name' "$TMP/d1.json" 2>/dev/null | head -1)
-          if [ "$d1_code" != 200 ] || [ "$target_name" != 'nasr-crm-test-db' ]; then
+          if [ "$d1_code" != 200 ] || [ "$target_name" != 'nasr-crm-test-db-v2' ]; then
             outcome="test-db-not-confirmed;d1-http=$d1_code;name=${target_name:-absent}"
             d1_write='not-attempted'
             cleanup='not-needed'
             finish
-            echo "::error::Could not confirm that uuid ${TEST_DB_UUID} is nasr-crm-test-db. Refusing to write."
+            echo "::error::Could not confirm that uuid ${TEST_DB_UUID} is nasr-crm-test-db-v2. Refusing to write."
             exit 1
           fi
 
@@ -325,7 +325,7 @@ jobs:
           echo "::notice::CF-WRITE-PROOF outcome=${outcome} d1_write=${d1_write} cleanup=${cleanup} ddl=${ddl_probe} worker_write=${worker_write}"
           {
             echo '## CRM Cloudflare write proof — test database only'
-            echo '- Target: `nasr-crm-test-db` (uuid pinned in this file and cross-checked against `scripts/a5-live-support.mjs`).'
+            echo '- Target: `nasr-crm-test-db-v2` (uuid pinned in this file and cross-checked against `scripts/a5-live-support.mjs`).'
             echo '- Production `nasr-market-db` was never a request target.'
             echo "- D1 write (DML, the gate): $d1_write"
             echo "- DDL probe (informational): $ddl_probe"

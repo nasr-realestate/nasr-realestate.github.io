@@ -2,7 +2,7 @@
 //
 // Everything here is in-memory and synthetic: `node:sqlite` in `:memory:`, the real applied migration chain
 // from `_worker/migrations/` plus the drafts under `_worker/migrations-draft/`, and files whose ids are
-// `SYNTH-*`. No network, no wrangler, no Google Drive, no reference to `nasr-crm-test-db` or
+// `SYNTH-*`. No network, no wrangler, no Google Drive, no reference to `nasr-crm-test-db-v2` or
 // `nasr-market-db`. New suites import this instead of re-typing the adapter. The two suites written before
 // it (crm-drive-file-registry, crm-drive-file-versions) keep their own local copies untouched — they are
 // green, and refactoring passing tests to share a helper is churn, not progress.

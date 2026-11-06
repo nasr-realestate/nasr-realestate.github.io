@@ -1,4 +1,4 @@
-// Central Google Drive File Registry Service Layer (Phase 3 — nasr-crm-test-db only).
+// Central Google Drive File Registry Service Layer (Phase 3 — nasr-crm-test-db-v2 only).
 // Pure Web-standard ES module (zero Node-only dependencies) compatible with both
 // Cloudflare Workers D1 (env.DB) and node:sqlite D1 adapters in automated tests.
 // Enforces idempotent metadata tracking, strict state machines, SHA-256 content
