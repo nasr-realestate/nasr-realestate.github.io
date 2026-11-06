@@ -191,7 +191,18 @@ export const TABLE_SPECS = {
     idColumn: 'submission_key', uniqueKey: 'submission_key', lookup: 'submission_key',
     hashColumns: ['submission_key', 'resource_type', 'resource_id'],
     parent: { table: 'crm_contacts', column: 'resource_id' },
-    scope: `submission_key LIKE 'a5-%' OR resource_id IN (${CONTACT_IDS})`,
+    // Single-use CI tickets live in this table and are MUTATED by the Worker that consumes them
+    // (`resource_id: authorized_pending -> consumed|expired`). Hashing a column the design then
+    // rewrites makes the row unprovable forever: the run that minted it wrote one hash, and every
+    // later run reads another one. That is not "unknown ownership", it is a hash of the wrong
+    // columns — and it blocked run 42282490367 on exactly three such rows.
+    // Ephemeral rows are therefore proven by the columns that cannot change, and carry no parent
+    // link (their `resource_id` is a state word, not a contact id). The mutation itself is not
+    // silent: the Worker only ever moves these rows forward, and any row still present must have
+    // this exact submission_key, which is the identity that matters for a single-use credential.
+    ephemeralPrefix: 'ci-e2e-ticket:',
+    ephemeralHashColumns: ['submission_key'],
+    scope: `submission_key LIKE 'a5-%' OR submission_key LIKE 'ci-e2e-ticket:%' OR resource_id IN (${CONTACT_IDS})`,
   },
   crm_customer_requests: {
     idColumn: 'id', uniqueKey: 'dedupe_key', lookup: 'id',
@@ -339,9 +350,23 @@ export function enumerateRows(query) {
 /* ─────────────────────────────── ledger core ─────────────────────────────── */
 
 /** Column values are stored as SHA-256 digests, never as raw text: no PII in Git or CI reports. */
+/** True for the single-use ticket receipts the Worker mutates after consumption. */
+export const isEphemeralRow = (spec, row) =>
+  Boolean(spec?.ephemeralPrefix) && String(row?.[spec.uniqueKey] ?? '').startsWith(spec.ephemeralPrefix);
+
+/**
+ * The spec actually used to fingerprint a row. For ephemeral rows this narrows the hash to
+ * columns that never change and drops the parent link, because their mutable state column is not
+ * a contact id. Everything else is verified exactly as before.
+ */
+export const specForRow = (spec, row) => (isEphemeralRow(spec, row)
+  ? { ...spec, hashColumns: spec.ephemeralHashColumns || [spec.uniqueKey], parent: null }
+  : spec);
+
 export function rowColumnsSha256(spec, row) {
+  const effective = specForRow(spec, row);
   const out = {};
-  for (const col of spec.hashColumns) {
+  for (const col of effective.hashColumns) {
     if (!(col in row)) throw new Error(`a5-l2-missing-hash-column:${col}`);
     out[col] = row[col] === null || row[col] === undefined ? null : sha256Hex(row[col]);
   }
@@ -470,15 +495,16 @@ export function readPendingEvents(path) {
  * never proven by a contact/phone proof alone. Both the parent's unique key and its PK are tried.
  */
 function resolveParent(spec, row, eventByKey) {
-  if (!spec.parent) return null;
-  const parentSpec = TABLE_SPECS[spec.parent.table];
+  const effective = specForRow(spec, row);
+  if (!effective.parent) return null;
+  const parentSpec = TABLE_SPECS[effective.parent.table];
   if (!parentSpec) throw new Error('a5-l2-unknown-parent-table');
-  const parentId = String(row[spec.parent.column] ?? '');
+  const parentId = String(row[effective.parent.column] ?? '');
   if (!parentId) return null; // nullable FK (e.g. conversation.contact_id before linking)
-  const parentEvent = eventByKey.get(`${spec.parent.table}|${parentId}`)
-    || eventByKey.get(`${spec.parent.table}|observed:${parentId}`);
-  if (!parentEvent) throw new Error(`a5-l2-unresolvable-parent:${spec.parent.table}:${parentId}`);
-  return { table: spec.parent.table, key: parentEvent.unique_key, observed_id: parentEvent.observed_id };
+  const parentEvent = eventByKey.get(`${effective.parent.table}|${parentId}`)
+    || eventByKey.get(`${effective.parent.table}|observed:${parentId}`);
+  if (!parentEvent) throw new Error(`a5-l2-unresolvable-parent:${effective.parent.table}:${parentId}`);
+  return { table: effective.parent.table, key: parentEvent.unique_key, observed_id: parentEvent.observed_id };
 }
 
 /** Resolve a pending event to a real DB row, using ONLY a read-only keyed SELECT. */
