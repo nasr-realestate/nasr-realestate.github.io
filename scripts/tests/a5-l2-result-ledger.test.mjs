@@ -441,6 +441,15 @@ test('L2-16 strict 201 survives; no fixed synthetic phones; no OR IGNORE / dead 
   assert.match(live10, /assert\.equal\(unm\.length, dashUnmatched, 'dash-vs-list-unmatched'\)/);
   assert.match(live10, /assert\.equal\(contactlessOpps\.length, dashContactless, 'dash-vs-list-contactless'\)/);
   assert.match(live10, /ci-ticket-http-\$\{res\.status\}-\$\{String\(res\.data\?\.error/);
+  // A UI check may never wait for a row count that only one historical database had. Run 42289641006
+  // failed at check8a by waiting 15s for a card on an empty unmatched queue.
+  assert.ok(!/deskUnmatchedCards\s*>=\s*21/.test(live10), 'frozen card count is back');
+  assert.match(live10, /desk-unm-cards-on-empty-db/, 'empty queue must be asserted, not waited for');
+  assert.match(live10, /desk-unm-cards-fabricated/, 'a list may not show more cards than exist');
+  assert.match(live10, /expectedUnmatched > 0/, 'the queue interaction must be conditional on the API count');
+  assert.match(live10, /expectedContacts > 0/, 'the record interaction must be conditional on the API count');
+  assert.match(live10, /unmatched: convMetrics\.unmatched_review/,
+    'the UI expectation must come from the list endpoint, not a literal');
   // The live check must PROVE its precondition: the three minted tickets have to be readable in the
   // same D1 the Worker reads. Otherwise a mis-targeted mint shows up as an anonymous 403.
   const workflow = read('.github/workflows/crm-cloudflare-test-deploy.yml');

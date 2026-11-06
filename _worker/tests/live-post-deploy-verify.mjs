@@ -353,7 +353,7 @@ async function loginPageSession(page, auth, ticketNonce) {
   assert.equal(await page.locator('#login-panel').isHidden(), true, 'login-panel-still-visible');
 }
 
-async function verifyDesktopBrowser(browser, auth, pageErrors) {
+async function verifyDesktopBrowser(browser, auth, pageErrors, expectedUnmatched) {
   activeStep = 'check8a-desktop-ui';
   const deskCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ar-EG' });
   const deskPage = await deskCtx.newPage();
@@ -373,17 +373,31 @@ async function verifyDesktopBrowser(browser, auth, pageErrors) {
   await deskPage.locator('#followups-panel').waitFor({ state: 'visible', timeout: 10_000 });
   await deskPage.locator('#followups-metrics .metric').first().waitFor({ state: 'visible', timeout: 15_000 });
   await deskPage.locator('[data-followup-queue="unmatched_review"]').click();
-  await deskPage.locator('#followups-list .followup-alert-card').first().waitFor({ state: 'visible', timeout: 15_000 });
-  const deskUnmatchedCards = await deskPage.locator('#followups-list .followup-alert-card').count();
-  assert.ok(deskUnmatchedCards >= 21, `desk-unm-cards-${deskUnmatchedCards}`);
-  await deskPage.locator('#followups-list .followup-alert-card button').first().click();
-  await deskPage.locator('#conversation-viewer .chat-bubble').first().waitFor({ state: 'visible', timeout: 15_000 });
+  // How many cards must render is NOT a constant. It is what the list endpoint returns for this
+  // database — which on a clean one is zero. Waiting for a card that cannot exist is a 15s timeout,
+  // not a verification, and that is exactly how run 42289641006 failed at check8a on a database
+  // whose unmatched queue was legitimately empty.
+  const deskCards = deskPage.locator('#followups-list .followup-alert-card');
+  let deskUnmatchedCards = 0;
+  if (expectedUnmatched > 0) {
+    await deskCards.first().waitFor({ state: 'visible', timeout: 15_000 });
+    deskUnmatchedCards = await deskCards.count();
+    // Never fewer than one (the queue renders), never more than exist (nothing is fabricated).
+    assert.ok(deskUnmatchedCards >= 1, `desk-unm-cards-empty-${deskUnmatchedCards}`);
+    assert.ok(deskUnmatchedCards <= expectedUnmatched,
+      `desk-unm-cards-fabricated-${deskUnmatchedCards}-of-${expectedUnmatched}`);
+    await deskPage.locator('#followups-list .followup-alert-card button').first().click();
+    await deskPage.locator('#conversation-viewer .chat-bubble').first().waitFor({ state: 'visible', timeout: 15_000 });
+  } else {
+    deskUnmatchedCards = await deskCards.count();
+    assert.equal(deskUnmatchedCards, 0, `desk-unm-cards-on-empty-db-${deskUnmatchedCards}`);
+  }
   await deskPage.locator('#logout-button').click();
   await deskPage.locator('#login-panel').waitFor({ state: 'visible', timeout: 15_000 });
   await deskCtx.close();
 }
 
-async function verifyMobileBrowser(browser, auth, pageErrors) {
+async function verifyMobileBrowser(browser, auth, pageErrors, expectedContacts) {
   activeStep = 'check8b-mobile-ui';
   const mobCtx = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -411,10 +425,13 @@ async function verifyMobileBrowser(browser, auth, pageErrors) {
 
   await mobPage.locator('.tab[data-panel="contacts-panel"]').click();
   await mobPage.locator('#contacts-panel').waitFor({ state: 'visible', timeout: 10_000 });
-  await mobPage.locator('#contact-results .record').first().waitFor({ state: 'visible', timeout: 15_000 });
-  await mobPage.locator('#contact-results .record').first().click();
-  await mobPage.locator('#record-sheet').waitFor({ state: 'visible', timeout: 10_000 });
-  await mobPage.locator('#record-sheet-close').click();
+  // Same rule as the desktop queue: interact with a record only when the API says one exists.
+  if (expectedContacts > 0) {
+    await mobPage.locator('#contact-results .record').first().waitFor({ state: 'visible', timeout: 15_000 });
+    await mobPage.locator('#contact-results .record').first().click();
+    await mobPage.locator('#record-sheet').waitFor({ state: 'visible', timeout: 10_000 });
+    await mobPage.locator('#record-sheet-close').click();
+  }
 
   await mobPage.locator('#logout-button').click();
   await mobPage.locator('#login-panel').waitFor({ state: 'visible', timeout: 15_000 });
@@ -422,17 +439,23 @@ async function verifyMobileBrowser(browser, auth, pageErrors) {
   await mobCtx.close();
 }
 
-async function verifyDesktopAndMobileBrowsers(auth) {
+async function verifyDesktopAndMobileBrowsers(auth, { unmatched, contacts }) {
   const pageErrors = [];
   const browser = await chromium.launch({ headless: true });
   try {
-    await verifyDesktopBrowser(browser, auth, pageErrors);
-    await verifyMobileBrowser(browser, auth, pageErrors);
+    await verifyDesktopBrowser(browser, auth, pageErrors, unmatched);
+    await verifyMobileBrowser(browser, auth, pageErrors, contacts);
   } finally {
     await browser.close();
   }
   assert.deepEqual(pageErrors, [], `page-errors-${pageErrors.length}`);
-  return { desktop_ui: 'verified', mobile_ui: 'verified', unauth_ui_locked: 'verified' };
+  return {
+    desktop_ui: 'verified',
+    mobile_ui: 'verified',
+    unauth_ui_locked: 'verified',
+    expected_unmatched: unmatched,
+    expected_contacts: contacts,
+  };
 }
 
 try {
@@ -441,7 +464,10 @@ try {
   const coreMetrics = await verifyLiveCoreRecords(auth);
   const convMetrics = await verifyLiveConversationsAndAlerts(auth, { unmatched: coreMetrics.dash_unmatched });
   const synth = await verifySyntheticManualLink(auth);
-  const ui = await verifyDesktopAndMobileBrowsers(auth);
+  const ui = await verifyDesktopAndMobileBrowsers(auth, {
+    unmatched: convMetrics.unmatched_review,
+    contacts: coreMetrics.contacts,
+  });
 
   process.stdout.write(`${JSON.stringify({
     ok: true,
