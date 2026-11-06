@@ -293,8 +293,13 @@ function legacyWorld() {
 test('F3 unproven legacy synthetic row => unknown + STOP; real rows untouched; no laundering', () => {
   const w = legacyWorld();
   // Without the fix these rows were INVISIBLE: the old scope only matched new L2 markers.
-  assert.equal(enumerateRows(w.query).length, 0,
-    'legacy rows are outside TABLE_SPECS scope; they would have been silently ignored');
+  // The receipts scope is widened ON PURPOSE (2026-11-06): a single-use ticket must be provable by
+  // the run that minted it, otherwise every run leaves a row no future run can ever prove. The rest
+  // of the legacy namespace stays probe-only — those rows can never receive evidence, so they must
+  // keep stopping the run.
+  assert.deepEqual(enumerateRows(w.query).map(r => `${r.table}|${r.a5_key}`),
+    ['crm_idempotency_receipts|ci-e2e-ticket:legacy1'],
+    'only the ticket receipt enters the provable scope; legacy contact rows stay probe-only');
   const suspects = enumerateLegacySuspects(w.query);
   assert.ok(suspects.length >= 6, `documented legacy rows must be inspected: ${suspects.length}`);
   const suspectKeys = new Set(suspects.map(s => `${s.table}|${s.a5_key}`));
@@ -314,8 +319,12 @@ test('F3 unproven legacy synthetic row => unknown + STOP; real rows untouched; n
   assert.ok(none.verdicts.some(v => v.verdict === 'unknown:legacy-unproven'));
 
   // buildLedger must NOT be able to publish a ledger that implicitly declares this namespace clean.
+  // Two refusals guard this, and either one is a legitimate STOP: a ticket receipt is now inside
+  // the provable scope, so a pre-existing unproven one hits `unproven-preexisting-row` first; the
+  // remaining legacy rows hit `unproven-legacy-row`. Publishing is refused in both cases.
   assert.throws(() => buildLedger({ identity: ID_B, baseline: baselineFrom(w.query),
-    pending: [], query: w.query, conclusion: 'success' }), /a5-l2-unproven-legacy-row/);
+    pending: [], query: w.query, conclusion: 'success' }),
+  /a5-l2-unproven-(legacy|preexisting)-row/);
 
   // The deadlock fix publishes a genuine zero-claim failure ledger. It must NOT launder the rows.
   const failure = createLedger(ID_A, { schema: BASELINE_SCHEMA, ids: {},

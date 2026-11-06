@@ -759,3 +759,44 @@ test('L2-24 workflow pins retention, full pagination, hard stop, and keeps L2 pr
   assert.match(read('scripts/a5-l2.mjs'), /a5-l2-unproven-preexisting-row/);
   assert.match(read('scripts/a5-l2.mjs'), /unknown-ownership/);
 });
+
+/* ─────────────── single-use tickets: mutation must not mean lost ownership ─────────────── */
+
+test('L2-20 a consumed ticket stays provable; the proof is per key, never namespace-wide', () => {
+  const { sqlite, query } = world();
+  const key = `ci-e2e-ticket:${sha256Hex('nonce-a')}`;
+  const insertTicket = (k, state) => sqlite.prepare(
+    'INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,?,?,?)',
+  ).run(k, 'contact', state, NOW);
+
+  // Run A: baseline first (the mint happens after `begin`), then the ticket exists.
+  const baselineA = baselineFrom(query);
+  insertTicket(key, 'authorized_pending');
+  const ledgerA = buildLedger({ identity: ID_A, baseline: baselineA, pending: [], query, conclusion: 'success' });
+  assert.equal(verifyLedgerIntegrity(ledgerA), 'ok');
+  const eventA = ledgerA.events.find(e => e.table === 'crm_idempotency_receipts' && e.unique_key === key);
+  assert.ok(eventA, 'the minted ticket must carry its own event');
+  assert.equal(eventA.parent, null, 'an ephemeral row has no contact parent: resource_id is a state word');
+
+  // The Worker consumes it. This is the exact mutation that made three real rows unprovable:
+  // `resource_id` used to be part of the hash, so every consumed ticket read as `row-hash-mismatch`.
+  sqlite.prepare('UPDATE crm_idempotency_receipts SET resource_id = ? WHERE submission_key = ?').run('consumed', key);
+  const afterConsume = classifyRows({
+    query,
+    ledgers: [{ name: 'a5-l2-a.json', error: 'ok', ledger: ledgerA }],
+    currentRunTag: ID_B.run_tag,
+  });
+  assert.equal(afterConsume.ok, true, `a consumed ticket must stay proven: ${afterConsume.reason}`);
+  assert.ok(afterConsume.verdicts.some(v => v.a5_key === key && v.verdict === 'previous-a5-proven'));
+
+  // Control: a different key in the same namespace is NOT covered by that proof.
+  const stranger = `ci-e2e-ticket:${sha256Hex('nonce-b')}`;
+  insertTicket(stranger, 'authorized_pending');
+  const withStranger = classifyRows({
+    query,
+    ledgers: [{ name: 'a5-l2-a.json', error: 'ok', ledger: ledgerA }],
+    currentRunTag: ID_B.run_tag,
+  });
+  assert.equal(withStranger.ok, false, 'proof must be per row, not an amnesty for the namespace');
+  assert.match(withStranger.reason, /legacy-unproven|crm_idempotency_receipts/);
+});

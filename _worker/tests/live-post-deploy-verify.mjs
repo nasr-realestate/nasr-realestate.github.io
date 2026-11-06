@@ -51,6 +51,30 @@ async function apiCall(path, { method = 'GET', cookie = '', csrf = '', key = '',
   return { status: res.status, headers: res.headers, data };
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Ticket login with a bounded retry, but ONLY for `unauthorized_ci_ticket`.
+ *
+ * That code means "the Worker did not see a row in state authorized_pending". D1 read replication
+ * can serve a read that is a few seconds behind the INSERT this very job just performed, so a
+ * single attempt turns a perfectly healthy ticket into a false 403 — which is the shape of the
+ * failure that stopped run 42254653754 before anything else could be measured.
+ *
+ * Retrying cannot double-consume anything: a retry only happens when the response was a 403, and
+ * `expired_ci_ticket` is never retried because waiting cannot make it valid again. A genuinely
+ * missing or non-pending row still fails, after the retries, with the same error code in the name.
+ */
+async function ciTicketLogin(nonce) {
+  const attempt = () => apiCall('/api/auth/ci-ticket', { method: 'POST', body: { ticket_nonce: nonce } });
+  let res = await attempt();
+  for (let i = 1; i <= 3 && res.status === 403 && res.data?.error === 'unauthorized_ci_ticket'; i += 1) {
+    await sleep(2500);
+    res = await attempt();
+  }
+  return res;
+}
+
 async function verifyUnauthenticatedLockdown() {
   activeStep = 'check9-unauth-http';
   const protectedPaths = [
@@ -88,10 +112,7 @@ async function authenticateHttpSession() {
       csrf: String(res.data.csrf_token || ''),
     };
   }
-  const res = await apiCall('/api/auth/ci-ticket', {
-    method: 'POST',
-    body: { ticket_nonce: ciTicketNonces[0] },
-  });
+  const res = await ciTicketLogin(ciTicketNonces[0]);
   // The Worker returns 403 for two very different reasons (unknown ticket vs expired ticket) and
   // 400 for a malformed nonce. Carrying the error code turns "403" into a diagnosis.
   assert.equal(res.status, 200, `ci-ticket-http-${res.status}-${String(res.data?.error || 'no-error-code')}`);
