@@ -23,7 +23,7 @@ import { seedReviewCaseStatements } from '../a5-live-support.mjs';
 import {
   BASELINE_SCHEMA, L2_SCHEMA, TABLE_SPECS, a5RunIdentity, apiPhone, assertKeysFree,
   assertReadOnlySql, baselineFrom, buildLedger, classifyRows, derivedPhone, ledgerDigest,
-  rowHash, sha256Hex, submissionKey, tagOf, verifyLedgerIntegrity, appendPendingEvent,
+  rowHash, sha256Hex, submissionKey, tagOf, verifyLedgerIntegrity, appendPendingEvent, conversationUid,
   readPendingEvents, loadLedgers, canonical, preflightCleared,
 } from '../a5-l2.mjs';
 
@@ -814,4 +814,52 @@ test('L2-20 a consumed ticket stays provable; the proof is per key, never namesp
   });
   assert.equal(withStranger.ok, false, 'proof must be per row, not an amnesty for the namespace');
   assert.match(withStranger.reason, /legacy-unproven|crm_idempotency_receipts/);
+});
+
+/* ─────── evidence from a previous run must be visible, not merely remembered ─────── */
+
+test('L2-21 run B must not re-refuse a ticket run A already proved', () => {
+  const { sqlite, query } = world();
+  const dir = mkdtempSync(path.join(tmpdir(), 'a5-l2-two-runs-'));
+  const pendingFile = path.join(dir, 'pending.jsonl');
+
+  const write = (id, contactId, phoneId) => {
+    const tag = tagOf(id.run_tag);
+    const uid = conversationUid(id.run_tag);
+    const baseline = baselineFrom(query); // taken before the run writes anything
+    const ticket = `ci-e2e-ticket:${sha256Hex(`n-${id.run_tag}`)}`;
+    sqlite.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,?,?,?)')
+      .run(ticket, 'contact', 'authorized_pending', NOW);
+    const phone = derivedPhone(id.run_tag, 'live10-manual-link');
+    const recKey = submissionKey(id.run_tag, 'live10-contact');
+    sqlite.prepare('INSERT INTO crm_contacts(id,name,review_note) VALUES(?,?,?)').run(contactId, 'TEST ONLY', tag);
+    sqlite.prepare('INSERT INTO crm_contact_phones(id,contact_id,phone_key,label,is_primary) VALUES(?,?,?,?,?)')
+      .run(phoneId, contactId, phone, 'فحص', 1);
+    sqlite.prepare('INSERT INTO crm_conversations(id,conversation_uid,chat_title,source_ref,raw_text,raw_sha256) VALUES(?,?,?,?,?,?)')
+      .run(`${contactId}-conv`, uid, 'TEST ONLY', tag, 'x', sha256Hex('x'));
+    sqlite.prepare('INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id,received_at) VALUES(?,?,?,?)')
+      .run(recKey, 'contact', contactId, NOW);
+    const l2 = e => appendPendingEvent(pendingFile, { ...e, run_id: id.run_id, run_attempt: id.run_attempt, run_tag: id.run_tag });
+    l2({ table: 'crm_conversations', lookup_value: uid, observed_id: `${contactId}-conv`, id_source: 'http-response', step: 'check7b' });
+    l2({ table: 'crm_contacts', lookup_value: contactId, observed_id: contactId, id_source: 'http-201-body', step: 'check7b' });
+    l2({ table: 'crm_contact_phones', lookup_value: phone, id_source: 'http-201-body+exact-key', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'check7b' });
+    l2({ table: 'crm_idempotency_receipts', lookup_value: recKey, id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'resource_id' }, step: 'check7b' });
+    return { baseline, pending: readPendingEvents(pendingFile) };
+  };
+
+  const a = write(ID_A, 'aaaaaaaa-0000-4000-8000-000000000001', 'ph-a');
+  const ledgerA = buildLedger({ identity: ID_A, baseline: a.baseline, pending: a.pending, query, conclusion: 'success' });
+  assert.equal(verifyLedgerIntegrity(ledgerA), 'ok');
+  assert.ok(ledgerA.events.some(e => String(e.unique_key).startsWith('ci-e2e-ticket:')),
+    'run A must publish its minted ticket');
+
+  // Run B sees A's ticket as a legacy-namespace row. Before this fix the checkpoint threw
+  // `a5-l2-unproven-legacy-row:crm_idempotency_receipts:legacy-ci-ticket` here, because prior
+  // events were recorded as keys only and never indexed for the legacy probe to consult.
+  const b = write(ID_B, 'bbbbbbbb-0000-4000-8000-000000000002', 'ph-b');
+  const ledgerB = buildLedger({ identity: ID_B, baseline: b.baseline, pending: b.pending, query,
+    conclusion: 'running', priorLedgers: [ledgerA] });
+  assert.equal(verifyLedgerIntegrity(ledgerB), 'ok');
+  assert.ok(ledgerB.events.length > 0);
+  rmSync(dir, { recursive: true, force: true });
 });

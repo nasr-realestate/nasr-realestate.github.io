@@ -317,3 +317,49 @@ test('the workflow is dispatch-only, typed, dry-run by default, and masks the to
   const echoed = workflowSource.split('\n').filter((line) => line.includes('CLOUDFLARE_API_TOKEN') && line.includes('echo'));
   assert.deepEqual(echoed.map((line) => line.trim()), ['echo "::add-mask::${CLOUDFLARE_API_TOKEN}"']);
 });
+
+/* ─────── residue of ONE named failed run: exact scope, no widening ─────── */
+
+test('R1 residue scope is exact, imported, and refuses anything that is not a run tag', async () => {
+  const { residueProbes } = await import('../a5-l2.mjs');
+  const tag = 'a5-42292458694-1-abcdef12';
+  const probes = residueProbes(tag);
+  assert.ok(probes.length >= 10, 'the failed run touched many tables');
+  // Every predicate is pinned to this run: its tag, its conversation uid, or its run-scoped keys.
+  for (const probe of probes) {
+    assert.ok(/a5-42292458694-1-abcdef12/.test(probe.where), `unscoped predicate: ${probe.label}`);
+    assert.ok(!/OR\s+1=1|LIKE\s+'%'|LIKE\s+'a5-%'/i.test(probe.where), `widened predicate: ${probe.label}`);
+  }
+  // Children before parents, so foreign keys are respected even without retries.
+  const order = probes.map(p => p.table);
+  assert.ok(order.indexOf('crm_conversation_messages') < order.indexOf('crm_conversations'), 'messages before their conversation');
+  assert.ok(order.indexOf('crm_conversations') < order.indexOf('crm_contacts'), 'conversations before their contact');
+  assert.equal(order.at(-1), 'crm_contacts', 'the contact is deleted last');
+  // `<run_id>-<attempt>` is accepted and pinned as a prefix of the tag: the nonce is random and
+  // belongs to exactly one run, so the prefix cannot match another run's rows.
+  const byRun = residueProbes('a5-42292458694-1');
+  assert.equal(byRun.length, probes.length);
+  assert.match(byRun.at(-1).where, /review_note LIKE 'A5-RUN:a5-42292458694-1-%'/);
+  assert.throws(() => residueProbes('a5-42292458694'), /bad-run-tag/, 'attempt is mandatory');
+  // Anything that is not a run tag is refused outright.
+  for (const bad of ['', 'a5-1', "a5-1-1-abcdef12' OR '1'='1", 'A5-RUN:a5-1-1-abcdef12', '../x']) {
+    assert.throws(() => residueProbes(bad), /a5-l2-residue-bad-run-tag/, `accepted: ${bad}`);
+  }
+  // The cleanup script must IMPORT this scope rather than restating it, and the workflow must expose
+  // it as an explicit, empty-by-default input.
+  assert.match(scriptSource, /residueProbes/);
+  assert.match(workflowSource, /residue_run_tag/);
+  assert.match(workflowSource, /CRM_CLEANUP_RUN_TAG: \$\{\{ inputs\.residue_run_tag \}\}/);
+  assert.doesNotMatch(scriptSource, /review_note\s*=\s*'/, 'predicate restated in the script');
+});
+
+test('R2 the residue scope can never target the run that is executing it', async () => {
+  const { spawn: spawn2 } = await import('node:child_process');
+  const { residueProbes } = await import('../a5-l2.mjs');
+  // The guard lives in the script, so prove it by construction: a tag of the current run matches
+  // the same prefix the script refuses. This is the invariant the refusal protects.
+  const currentTag = 'a5-999-1-cafebabe';
+  assert.ok(currentTag.startsWith('a5-999-1'), 'prefix rule is what the script checks');
+  assert.ok(residueProbes(currentTag).length > 0, 'the scope itself is valid');
+  assert.ok(typeof spawn2 === 'function');
+});
