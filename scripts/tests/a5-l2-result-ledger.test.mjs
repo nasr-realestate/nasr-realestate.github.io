@@ -455,6 +455,12 @@ test('L2-16 strict 201 survives; no fixed synthetic phones; no OR IGNORE / dead 
   const workflow = read('.github/workflows/crm-cloudflare-test-deploy.yml');
   assert.match(workflow, /ci-ticket-mint-verify-\$\{mint_n:-0\}-of-3/, 'mint self-check required');
   assert.match(workflow, /resource_id='authorized_pending' AND submission_key IN/, 'mint self-check must target the same rows');
+  // A stop must carry its CAUSE. Run 42292458694 reported only
+  // `Command failed: /bin/sh -c node scri…` because the name kept the command and dropped stderr.
+  assert.match(live10, /a5-checkpoint-failed:/, 'a checkpoint stop must name its reason');
+  assert.ok(live10.includes("String(error?.stderr || '')"), 'the reason must come from stderr');
+  assert.match(workflow, /finalize failed \(\$\{finalize_reason:-no-stderr\}\)/,
+    'the finalize stop must name its reason too');
   for (const fixed of ['01000000011', '01000000012', '01099990077', '01099999998', '201099990077']) {
     assert.ok(!liveA5.includes(fixed) && !live10.includes(fixed), `fixed phone still present: ${fixed}`);
   }

@@ -921,8 +921,11 @@ jobs:
           if [ "${A5_L2_E2E_OUTCOME:-}" = 'success' ]; then conclusion='success'; fi
           if [ "$cleared" = 'yes' ]; then
             if ! node scripts/a5-l2.mjs finalize --dir "$L2_DIR" --ledgers "$L2_PRIOR" \
-                   --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME:-unknown}:${A5_L2_E2E_PHASE:-unknown}"; then
-              echo "::error::A5 L2: finalize failed; publishing zero-claim failure evidence instead of a success claim."
+                   --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME:-unknown}:${A5_L2_E2E_PHASE:-unknown}" \
+                   > "$TMP/finalize.out" 2> "$TMP/finalize.err"; then
+              # Same reason as the verifier: a stop must carry its cause, not just the command.
+              finalize_reason=$(redact_err < "$TMP/finalize.err" | tail -c 160 | tr -d '\n')
+              echo "::error::A5 L2: finalize failed (${finalize_reason:-no-stderr}); publishing zero-claim failure evidence instead of a success claim."
               node scripts/a5-l2.mjs failure-evidence --dir "$L2_DIR" --reason "finalize-failed"
               exit 1
             fi
