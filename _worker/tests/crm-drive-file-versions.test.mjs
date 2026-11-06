@@ -2,7 +2,7 @@
 // for the barriers draft migration 0010/0011 must keep while the service writes through them.
 //
 // IN-MEMORY ONLY: no wrangler config is read, no network is touched, no Google Drive call is made, and
-// `nasr-crm-test-db`, `nasr-market-db` and the reference backup are never referenced. Every file in the
+// `nasr-crm-test-db-v2`, `nasr-market-db` and the reference backup are never referenced. Every file in the
 // fixtures is synthetic (`SYNTH-*` ids, fabricated bytes); the "corrupt"/"wrong" digests are deliberate
 // bad input for the validation tests. `npm test` picks this file up with the rest of `_worker/tests`.
 //

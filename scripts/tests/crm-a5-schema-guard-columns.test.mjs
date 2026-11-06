@@ -119,7 +119,7 @@ process.stdout.write(JSON.stringify({ result: [{ results: rows, success: true }]
       PATH: `${bin}:${process.env.PATH}`,
       API: 'https://api.cloudflare.com/client/v4',
       CLOUDFLARE_ACCOUNT_ID: 'stub-account',
-      TEST_DB_UUID: '65bfcb14-4b48-423b-916f-00eefdb9ae1e',
+      TEST_DB_UUID: '760079c6-85f9-4a30-aa19-9a66f95d421a',
       PROD_DB_UUID: 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf',
       CLOUDFLARE_API_TOKEN: 'stub-token',
       MIGRATIONS_DIR: MIG_DIR,

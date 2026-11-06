@@ -284,7 +284,8 @@ CREATE INDEX IF NOT EXISTS idx_crm_drive_registry_inner_sha256
 | المورد | الاسم الفعلي | المعرّف / الموقع التكوينـي | النطاق والحالة |
 | :--- | :--- | :--- | :--- |
 | **CRM Worker** | `nasr-crm-api-test` | `_worker/wrangler.crm.toml` | بيئة تشغيل CRM المعزولة الحالية |
-| **قاعدة بيانات CRM** | `nasr-crm-test-db` | `65bfcb14-4b48-423b-916f-00eefdb9ae1e` | قاعدة D1 المعزولة لبيانات واختبارات CRM |
+| **قاعدة بيانات CRM** | `nasr-crm-test-db-v2` | `760079c6-85f9-4a30-aa19-9a66f95d421a` | قاعدة D1 المعزولة لبيانات واختبارات CRM |
+| ~~قاعدة سابقة (متقاعدة)~~ | ~~`nasr-crm-test-db`~~ | ~~`65bfcb14-4b48-423b-916f-00eefdb9ae1e`~~ | تُركت كما هي للقراءة فقط: تحمل 17 صفًا في `crm_drive_file_review_decision` محميًا بـ`append-only`، ولا يمكن إثبات ملكيته رجعيًا؛ فبُنيت `-v2` نظيفة عبر `.github/workflows/crm-d1-provision-v2.yml` بدل حذف صفوف أو إسقاط حاجز. |
 | **قاعدة بيانات العقارات والسوق** | `nasr-market-db` | `ace5c9a2-c6b1-47b3-adf1-77e84ac50abf` | **إنتاج العقارات والتقييم — محظور لمسها تمامًا** |
 
 ### 6.2 الضوابط البيئية والأمنية الإلزامية

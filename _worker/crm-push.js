@@ -1,5 +1,5 @@
 // Private CRM Web Push & Scheduled Alert Engine (RFC 8291 aes128gcm + RFC 8292 VAPID ES256)
-// Zero third-party services, zero PII in push payloads, backed by nasr-crm-test-db.
+// Zero third-party services, zero PII in push payloads, backed by nasr-crm-test-db-v2.
 
 import { getCairoClock, getCairoDayBoundsUtc } from './crm-chat-intel.js';
 

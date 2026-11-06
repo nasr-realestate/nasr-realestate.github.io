@@ -25,7 +25,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 // The reference scheme is NOT a local invention: it is the one the registry and the Phase 4 payload
-// already store (governance §5.5.2). Importing it keeps discovery joinable against `nasr-crm-test-db`;
+// already store (governance §5.5.2). Importing it keeps discovery joinable against `nasr-crm-test-db-v2`;
 // a private prefix would make every registered file look new.
 import { driveRefHash } from '../../_worker/crm-wa-vcard-analysis.js';
 

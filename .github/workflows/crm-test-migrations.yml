@@ -2,7 +2,7 @@ name: CRM test D1 migrations — protected, dispatch-only
 
 # WHY THIS FILE EXISTS
 # The Worker deploy workflow (crm-cloudflare-test-deploy.yml) deliberately NEVER applies migrations: it
-# only verifies, read-only, that nasr-crm-test-db already carries the exact expected sequence. That
+# only verifies, read-only, that nasr-crm-test-db-v2 already carries the exact expected sequence. That
 # leaves no safe, current-master channel that applies pending migrations to the real test database.
 # This workflow is that channel, and nothing else:
 #   * workflow_dispatch ONLY, on master ONLY, behind an exact typed authorisation string;
@@ -11,7 +11,7 @@ name: CRM test D1 migrations — protected, dispatch-only
 #   * every barrier that cannot be satisfied stops BEFORE any write (no `|| true` on a barrier);
 #   * hard-coded test DB name/UUID; the production DB is only measured read-only, never written;
 #   * required secret NAMES are checked, values are never read, generated, printed, created or rotated;
-#   * the ONE write is `wrangler d1 migrations apply` against nasr-crm-test-db. No DB/backup/stage is
+#   * the ONE write is `wrangler d1 migrations apply` against nasr-crm-test-db-v2. No DB/backup/stage is
 #     created, imported, deleted, and no Worker is deployed by this workflow.
 # A run that waits for the required-reviewer approval is left pending: nothing here approves, bypasses,
 # or shortens that human gate.
@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       authorize_migrations:
-        description: 'Type APPLY-PENDING-TEST-DB-MIGRATIONS to let this run apply pending migrations to nasr-crm-test-db only. Anything else stops before any secret is read.'
+        description: 'Type APPLY-PENDING-TEST-DB-MIGRATIONS to let this run apply pending migrations to nasr-crm-test-db-v2 only. Anything else stops before any secret is read.'
         required: true
         type: string
       reason:
@@ -130,7 +130,7 @@ jobs:
           echo "protection=verified" >> "$GITHUB_OUTPUT"
 
   apply-migrations:
-    name: 'Apply pending migrations to nasr-crm-test-db only'
+    name: 'Apply pending migrations to nasr-crm-test-db-v2 only'
     needs: protection-audit
     runs-on: ubuntu-latest
     environment: crm-test-deploy
@@ -144,8 +144,8 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
       API: https://api.cloudflare.com/client/v4
-      TEST_DB_UUID: 65bfcb14-4b48-423b-916f-00eefdb9ae1e
-      TEST_DB_NAME: nasr-crm-test-db
+      TEST_DB_UUID: 760079c6-85f9-4a30-aa19-9a66f95d421a
+      TEST_DB_NAME: nasr-crm-test-db-v2
       PROD_DB_UUID: ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
       PROD_DB_NAME: nasr-market-db
       WORKER_NAME: nasr-crm-api-test
@@ -273,7 +273,7 @@ jobs:
           NODE
 
       # THE ONE WRITE. `migrations apply` is idempotent: it applies only files not yet in d1_migrations.
-      - name: Apply pending migrations to nasr-crm-test-db (test DB only)
+      - name: Apply pending migrations to nasr-crm-test-db-v2 (test DB only)
         shell: bash
         run: |
           set -euo pipefail
@@ -303,7 +303,7 @@ jobs:
           const { API, CLOUDFLARE_ACCOUNT_ID: account, TEST_DB_UUID: testDb,
                   CLOUDFLARE_API_TOKEN: token, MIGRATIONS_DIR: dir } = process.env;
           if (!API || !account || !testDb || !token || !dir) throw new Error('verify-env-missing');
-          if (testDb !== '65bfcb14-4b48-423b-916f-00eefdb9ae1e') throw new Error('verify-wrong-test-db');
+          if (testDb !== '760079c6-85f9-4a30-aa19-9a66f95d421a') throw new Error('verify-wrong-test-db');
           const d1 = (sql) => {
             const out = execFileSync('curl', [
               '--silent', '--show-error', '--fail-with-body', '--connect-timeout', '10', '--max-time', '30',

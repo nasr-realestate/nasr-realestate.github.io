@@ -1,5 +1,5 @@
 // Phase 3 boundary — the rule the registry CI gate enforces, proven against the real service and the real
-// schema, in memory, with synthetic ids only (no network, no Drive, no wrangler, no `nasr-crm-test-db`).
+// schema, in memory, with synthetic ids only (no network, no Drive, no wrangler, no `nasr-crm-test-db-v2`).
 //
 // Why this file exists: `crm-phase3-registry.yml` used to assert `SUM(content_sha256 IS NOT NULL) = 0`. That
 // literal became false the moment Phase 4 started recording content, and a gate that fires on a legal state

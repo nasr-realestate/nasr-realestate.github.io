@@ -12,7 +12,7 @@
 // classification only -- no seal table existed -- so no tool can rebuild revealable original bytes.
 // Sealing belongs to Phase 2 intake (see CRM_PHASE4_REVIEW_TEST_REPORT.md). The DB side of the old
 // register (which CRM contact each candidate pointed at) is not derivable here either: it needs one
-// read-only SELECT against `nasr-crm-test-db`, and `--candidates` accepts that export.
+// read-only SELECT against `nasr-crm-test-db-v2`, and `--candidates` accepts that export.
 //
 // Usage:
 //   node scripts/crm/build-review-case-register.mjs build  --payload _worker/analysis/drive-phase4-payload.json \
@@ -348,7 +348,7 @@ function build() {
       {
         id: 'crm_side_join',
         detail: 'crm_contact_id / match_class for the 191 crm_drive_match_candidate rows (119 of them '
-          + 'contact-less) are not in the payload; they need one read-only SELECT on nasr-crm-test-db.',
+          + 'contact-less) are not in the payload; they need one read-only SELECT on nasr-crm-test-db-v2.',
         recovery: 're-run with --candidates <export.json> produced by the documented read-only query',
       },
       {

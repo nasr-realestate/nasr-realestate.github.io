@@ -53,11 +53,11 @@ jobs:
           account_id=$(jq -r '.result[0].id' "$TMP/accounts.json")
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" -o "$TMP/d1.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database?per_page=100" 2>/dev/null || true)
           if [ "$status" != 200 ]; then result="d1-inventory-http-$status"; phase='preflight'; finish; exit 0; fi
-          if jq -e '[.result[]?.name] | index("nasr-crm-test-db") != null' "$TMP/d1.json" >/dev/null; then result='test-d1-name-already-exists-needs-review'; phase='preflight'; finish; exit 0; fi
+          if jq -e '[.result[]?.name] | index("nasr-crm-test-db-v2") != null' "$TMP/d1.json" >/dev/null; then result='test-d1-name-already-exists-needs-review'; phase='preflight'; finish; exit 0; fi
           if ! jq -e '[.result[]?.name] | index("nasr-market-db") != null' "$TMP/d1.json" >/dev/null; then result='production-d1-not-confirmed-stop'; phase='preflight'; finish; exit 0; fi
           phase='create-test-d1'
           status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-            --data '{"name":"nasr-crm-test-db"}' -o "$TMP/create.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
+            --data '{"name":"nasr-crm-test-db-v2"}' -o "$TMP/create.json" -w '%{http_code}' "$API/accounts/$account_id/d1/database" 2>/dev/null || true)
           if [ "$status" != 200 ]; then
             error_code=$(jq -r '(.errors[0].code // "unknown")|tostring' "$TMP/create.json" 2>/dev/null | tr -cd '0-9' | cut -c1-12 || true)
             result="d1-create-http-$status-error-${error_code:-unknown}"
@@ -72,7 +72,7 @@ jobs:
           compatibility_date = "2026-09-04"
           [[d1_databases]]
           binding = "DB"
-          database_name = "nasr-crm-test-db"
+          database_name = "nasr-crm-test-db-v2"
           database_id = "$uuid"
           migrations_dir = "./_worker/migrations"
           EOF
@@ -94,12 +94,12 @@ jobs:
           SQL
           )
           phase='seed-synthetic-dependencies'
-          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --config "$CONFIG" --command "$BASE_SCHEMA" > "$TMP/seed.log" 2>&1; then result='synthetic-fixture-seed-failed-after-test-d1-created'; phase='seed-synthetic-dependencies-failed'; finish; exit 0; fi
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --config "$CONFIG" --command "$BASE_SCHEMA" > "$TMP/seed.log" 2>&1; then result='synthetic-fixture-seed-failed-after-test-d1-created'; phase='seed-synthetic-dependencies-failed'; finish; exit 0; fi
           phase='apply-crm-migrations'
-          if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db --remote --config "$CONFIG" > "$TMP/migrations.log" 2>&1; then result='migration-failed-after-test-d1-created'; phase='apply-crm-migrations-failed'; finish; exit 0; fi
+          if ! npx --yes wrangler@4 d1 migrations apply nasr-crm-test-db-v2 --remote --config "$CONFIG" > "$TMP/migrations.log" 2>&1; then result='migration-failed-after-test-d1-created'; phase='apply-crm-migrations-failed'; finish; exit 0; fi
           phase='verify-test-d1-schema'
           VERIFY_SQL="SELECT (SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'crm_*') AS crm_tables, (SELECT COUNT(*) FROM listings WHERE external_id IN ('crm-test-only-inside','crm-test-only-outside')) AS synthetic_rows;"
-          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db --remote --json --config "$CONFIG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then result='remote-schema-verification-query-failed'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
+          if ! npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$CONFIG" --command "$VERIFY_SQL" > "$TMP/verify.json" 2> "$TMP/verify.err"; then result='remote-schema-verification-query-failed'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
           if ! jq -e '.. | objects | select(has("crm_tables") and has("synthetic_rows")) | .crm_tables == 15 and .synthetic_rows == 2' "$TMP/verify.json" >/dev/null; then result='remote-schema-or-synthetic-fixture-count-mismatch'; phase='verify-test-d1-schema-failed'; finish; exit 0; fi
           phase='completed'
           result='test-d1-created-synthetic-fixture-seeded-migration-applied-and-verified'

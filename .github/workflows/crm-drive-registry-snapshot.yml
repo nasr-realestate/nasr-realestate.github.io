@@ -1,14 +1,14 @@
 name: CRM Drive registry snapshot (read-only D1 read, published as a PR comment)
 
 # T1 needs the registry side of the reconciliation from the ORIGINAL source: the live
-# `crm_drive_file_registry` table in `nasr-crm-test-db`. This sandbox has no Cloudflare credential, so
+# `crm_drive_file_registry` table in `nasr-crm-test-db-v2`. This sandbox has no Cloudflare credential, so
 # the read is executed here instead, and the result is published as a pull-request comment that the
 # agent fetches programmatically. No human-readable transcription and no copy-paste is involved on
 # either side.
 #
 # What this workflow is allowed to do:
 #   * one SELECT, built by scripts/crm/drive-registry-snapshot.mjs (`sql` mode) and re-checked in
-#     shell, over a database resolved BY NAME (`nasr-crm-test-db`);
+#     shell, over a database resolved BY NAME (`nasr-crm-test-db-v2`);
 #   * read `drive_file_id` solely to reproduce the join key, then drop it — the emitted rows carry
 #     `sha256("crm-p4-v1\ndrive_ref\n<id>")` refs, which is what the registry and the committed
 #     payload already use;
@@ -55,7 +55,7 @@ jobs:
           umask 077
           TMP=$(mktemp -d)
           API='https://api.cloudflare.com/client/v4'
-          TEST_DB_NAME='nasr-crm-test-db'
+          TEST_DB_NAME='nasr-crm-test-db-v2'
           SNAP='scripts/crm/drive-registry-snapshot.mjs'
           AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
@@ -122,7 +122,7 @@ jobs:
           {
             echo "<!-- p2reg-v1 run=${{ github.run_id }} sha=${{ github.sha }} -->"
             echo
-            echo "Read-only snapshot of \`nasr-crm-test-db.crm_drive_file_registry\` for T1."
+            echo "Read-only snapshot of \`nasr-crm-test-db-v2.crm_drive_file_registry\` for T1."
             echo "Statement: \`$(cat "$TMP/sql.txt")\`"
             echo "Summary: $(grep '^summary=' "$GITHUB_OUTPUT" | tail -1)"
             echo

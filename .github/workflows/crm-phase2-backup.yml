@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   backup:
-    name: Full schema+data backup of nasr-crm-test-db and isolated restore test
+    name: Full schema+data backup of nasr-crm-test-db-v2 and isolated restore test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -66,8 +66,8 @@ jobs:
           set -euo pipefail
           umask 077
           API='https://api.cloudflare.com/client/v4'
-          TEST_DB_NAME='nasr-crm-test-db'
-          TEST_DB_UUID='65bfcb14-4b48-423b-916f-00eefdb9ae1e'
+          TEST_DB_NAME='nasr-crm-test-db-v2'
+          TEST_DB_UUID='760079c6-85f9-4a30-aa19-9a66f95d421a'
           PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
           OLD_BACKUP_NAME='nasr-crm-test-db-backup-20261030'
           EPHEM_RESTORE_NAME='nasr-crm-ephem-restore-chk'
@@ -158,7 +158,7 @@ jobs:
           fi
           echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
 
-          # Strict static guard: wrangler.crm.toml must point ONLY to nasr-crm-test-db
+          # Strict static guard: wrangler.crm.toml must point ONLY to nasr-crm-test-db-v2
           if grep -Fq "$PROD_DB_UUID" "$WRANGLER_CFG" || grep -Fq 'nasr-market-db' "$WRANGLER_CFG"; then
             result='forbidden-market-db-in-config'
             finish
@@ -196,7 +196,7 @@ jobs:
             finish
             exit 1
           fi
-          if ! jq -e --arg id "$TEST_DB_UUID" '.result[] | select(.name == "nasr-crm-test-db" and .uuid == $id)' "$TMP/d1_pre.json" >/dev/null; then
+          if ! jq -e --arg id "$TEST_DB_UUID" '.result[] | select(.name == "nasr-crm-test-db-v2" and .uuid == $id)' "$TMP/d1_pre.json" >/dev/null; then
             result='nasr-crm-test-db-not-verified'
             finish
             exit 1
@@ -221,13 +221,13 @@ jobs:
             --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/old_pre_cnt.json" 2>/dev/null
           old_pre_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/old_pre_cnt.json" | head -n1)
 
-          # Record Time Travel bookmark on nasr-crm-test-db (read-only)
+          # Record Time Travel bookmark on nasr-crm-test-db-v2 (read-only)
           stage='time-travel'
           npx --yes wrangler@4 d1 time-travel info "$TEST_DB_NAME" --config "$WRANGLER_CFG" --json > "$TMP/tt.json" 2>/dev/null || true
           tt_bookmark=$(jq -r '.bookmark // "available"' "$TMP/tt.json" 2>/dev/null | tr -cd 'A-Za-z0-9_:-' | cut -c1-80 || true)
           [ -z "$tt_bookmark" ] && tt_bookmark='available'
 
-          # Export full raw SQL, schema-only SQL, data-only SQL, and d1_migrations from nasr-crm-test-db (READ-ONLY)
+          # Export full raw SQL, schema-only SQL, data-only SQL, and d1_migrations from nasr-crm-test-db-v2 (READ-ONLY)
           ts_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           ts_cairo=$(TZ=Africa/Cairo date +%Y-%m-%d_%H:%M:%S_%Z)
 
@@ -709,7 +709,7 @@ jobs:
             --command "SELECT (SELECT COUNT(*) FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%') AS bc, (SELECT COUNT(*) FROM crm_opportunities) AS bo;" > "$TMP/old_post_cnt.json" 2>/dev/null
           old_post_pair=$(jq -r '.. | objects | select(has("bc")) | "\(.bc):\(.bo)"' "$TMP/old_post_cnt.json" | head -n1)
 
-          # Re-verify source nasr-crm-test-db was not mutated during backup
+          # Re-verify source nasr-crm-test-db-v2 was not mutated during backup
           npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-data --config "$WRANGLER_CFG" --output "$TMP/post-src-sch.sql" > "$TMP/ps1.log" 2>&1
           npx --yes wrangler@4 d1 export "$TEST_DB_NAME" --remote --no-schema --config "$WRANGLER_CFG" --output "$TMP/post-src-dat.sql" > "$TMP/ps2.log" 2>&1
           npx --yes wrangler@4 d1 execute "$TEST_DB_NAME" --remote --json --config "$WRANGLER_CFG" \
