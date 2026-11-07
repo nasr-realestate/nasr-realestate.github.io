@@ -155,12 +155,35 @@ test('A5-UI-4 قوائم العمل: عدّادات ومستحقات ومتأخ�
   assert.match(text, /طلبات نشطة بلا عقار مناسب/);
   assert.match(text, /فرص صامتة/);
   assert.match(text, /تأخّر/);
-  const overdueButtons = container.children[2].find(node => node._class === 'a5-actions');
+  const overdueCard = container.children.find((node) => node.tagName === 'SECTION' && node.children[0]?._text === 'متأخر');
+  const overdueButtons = overdueCard.find(node => node._class === 'a5-actions');
   const [done, missed] = overdueButtons.children;
   done.fire('click');
   assert.deepEqual(completed, ['fu-2', 'done']);
   missed.fire('click');
   assert.deepEqual(completed, ['fu-2', 'missed']);
+});
+
+test('A5-UI-4b نافذة السبعة أيام تظهر أولًا، بحالتها وبجملتها، وبعدّاد مستقل', () => {
+  const container = host();
+  renderQueues({
+    counts: { expiring: 2, due: 0, overdue: 0, unmatched: 0, stale: 0 },
+    expiring_requests: [
+      { id: 'req-1', kind: 'buy', contact_name: 'عميل صناعي', area: 'الأندلس', budget_min: 3000000, budget_max: 4000000,
+        window: { state: 'closing', days_left: 2, action: 'آخر فرصة: اعرض عليه الآن' } },
+      { id: 'req-2', kind: 'rent', contact_name: 'عميل صناعي ٢', area: 'مدينة نصر', budget_min: 0, budget_max: 0,
+        window: { state: 'expired', days_left: 0, action: 'هل ما زلت تبحث؟ ولا تعرض' } },
+    ],
+    due: [], overdue: [], unmatched_requests: [], stale_opportunities: [], opportunity_stages: [],
+  }, container);
+  const text = container.text;
+  assert.match(text, /طلبات تنتهي — اعرض أو ودّع/, 'the clock section is present');
+  assert.match(text, /آخر فرصة/);
+  assert.match(text, /بقيت 2 يومًا|بقيت ٢ يومًا/);
+  assert.match(text, /هل ما زلت تبحث/, 'an expired request asks instead of pitching');
+  const firstGroup = container.children[1];
+  assert.match(firstGroup.textContent, /طلبات تنتهي/, 'the clock is the first thing read, not the last');
+  assert.match(container.children[0].textContent, /تنتهي قريبًا/, 'its own counter sits in the strip');
 });
 
 test('A5-UI-5 ملف العميل الموحَّد: أرقام بواحد أساسي، وطلبات، وفرص، وخط زمني في صفحة واحدة', () => {
