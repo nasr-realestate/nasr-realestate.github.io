@@ -154,7 +154,7 @@ jobs:
             echo
             echo "mode=${{ steps.cleanup.outputs.mode }} · before=${{ steps.cleanup.outputs.before_total }} · deleted=${{ steps.cleanup.outputs.deleted_total }} · after=${{ steps.cleanup.outputs.after_total }}"
             echo
-            echo 'Scope is the gate\'s own `unknown` verdict — no separate predicate, no range delete.'
+            echo 'Scope is the gate own `unknown` verdict — no separate predicate, no range delete.'
           } >> "$GITHUB_STEP_SUMMARY"
 
   report:
