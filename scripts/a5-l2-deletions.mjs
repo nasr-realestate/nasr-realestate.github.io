@@ -37,6 +37,8 @@ export const MIN_REASON_LENGTH = 12;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const IDENTIFIER = /^[A-Za-z0-9._:-]+$/;
+/** Row keys are not table names: `crm_drive_file_version` keys end in `#<seq>`, so `#` is legal. */
+const ROW_KEY = /^[A-Za-z0-9._:#-]+$/;
 
 export const deletionKey = (table, key) => `${table}|${key}`;
 
@@ -54,7 +56,7 @@ function fieldErrors(entry, at) {
 function formatErrors(entry, at) {
   const errors = [];
   if (typeof entry.table === 'string' && !IDENTIFIER.test(entry.table)) errors.push(`${at}:bad-table`);
-  if (typeof entry.key === 'string' && (entry.key.includes('*') || !IDENTIFIER.test(entry.key))) errors.push(`${at}:bad-key`);
+  if (typeof entry.key === 'string' && (entry.key.includes('*') || !ROW_KEY.test(entry.key))) errors.push(`${at}:bad-key`);
   const { deleted_at: at0 } = entry;
   if (typeof at0 === 'string' && !ISO_DATE.test(at0) && !ISO_TIMESTAMP.test(at0)) errors.push(`${at}:deleted_at-not-iso`);
   if (typeof entry.reason === 'string' && entry.reason.trim().length < MIN_REASON_LENGTH) errors.push(`${at}:reason-too-short`);
