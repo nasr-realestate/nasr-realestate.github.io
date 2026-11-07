@@ -56,3 +56,22 @@ test('DAY-5 rendering lists the top N and separates demand from silent supply', 
   const tableRows = md.split('\n').filter((l) => l.startsWith('| ') && !l.includes('لماذا') && !l.includes('---'));
   assert.equal(tableRows.length, 1, 'the cap is respected');
 });
+
+test('DAY-6 a live request outranks a stalled unit; an expired one drops to the bottom', () => {
+  const withWindow = (title, days, askedDaysAgo) => ({
+    chat_title: `${title}.zip`, resolved_to: title, messages: 20,
+    last: daysAgo(days), first: daysAgo(askedDaysAgo),
+  });
+  const rows = buildRows([
+    withWindow('✈️ طلب حيّ', 2, 3),        // 4 days left: faint by day 7
+    withWindow('✈️ طلب ينتهي', 1, 6),      // 1 day left: last chance
+    withWindow('✈️ طلب مات', 30, 40),      // window shut long ago
+    withWindow('🟢 وحدة متوقفة', 45, 90),
+  ], TODAY);
+  const order = rows.map((r) => r.name);
+  assert.equal(order[0], '✈️ طلب ينتهي', 'the last chance is the first call');
+  assert.equal(order[1], '✈️ طلب حيّ', 'a live request beats everything else');
+  assert.equal(order.at(-1), '✈️ طلب مات', 'an expired request is kept and never chased');
+  assert.match(rows.find((r) => r.name === '✈️ طلب مات').reason, /هل ما زلت تبحث/);
+  assert.match(rows.find((r) => r.name === '✈️ طلب حيّ').reason, /باقٍ/);
+});

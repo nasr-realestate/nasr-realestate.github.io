@@ -14,13 +14,19 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SEGMENTS, segmentsOf } from './segments.mjs';
+import { requestState, requestAction } from './request-window.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const DAY = 86_400_000;
 
 /** Weights are the whole opinion of this file; keep them in one place. */
 const WEIGHTS = {
-  transient: 10,     // may need us later: never dropped, never chased
+  // A passer-by is ranked by his window, not by his mark: alive is urgent,
+  // expired is a name we keep and never pitch again.
+  transientFresh: 40,
+  transientClosing: 55,
+  transientMet: 45,
+  transientDead: 5,
   silentOver60: 30,  // two months of silence is not a follow-up, it is a loss
   silentOver30: 20,
   deepOver30: 10,    // a long conversation that stopped is a deal that stalled
@@ -40,11 +46,10 @@ function silenceLabel(days) {
 
 /** One sentence, in the broker's language, for why this name is on the list. */
 function reasonFor(person) {
-  const { seg, days, messages } = person;
+  const { seg, days, messages, win } = person;
   if (seg.role === 'transient') {
-    if (days !== null && days > 60) return 'عابر سكت شهرين — رسالة واحدة تكفي';
-    if (days !== null && days > 30) return 'عابر — تذكير خفيف بلا إلحاح';
-    return 'عابر جديد — قد يحتاجنا لاحقًا';
+    const left = win?.daysLeft ? ` (باقٍ ${win.daysLeft} يومًا)` : '';
+    return `عابر — ${requestAction({ state: win?.state ?? 'unknown' })}${left}`;
   }
   if (days !== null && days > 60) return 'مالك ساكت شهرين — وحدته بلا تسويق';
   if (days !== null && days > 30) return 'مالك ساكت شهرًا — تقرير سعر متأخر';
@@ -52,9 +57,16 @@ function reasonFor(person) {
   return 'متابعة عادية';
 }
 
+function transientWeight(state) {
+  if (state === 'closing') return WEIGHTS.transientClosing;
+  if (state === 'fresh') return WEIGHTS.transientFresh;
+  if (state === 'met') return WEIGHTS.transientMet;
+  return WEIGHTS.transientDead;
+}
+
 function scoreOf(person) {
   const { seg, days, messages } = person;
-  let score = seg.role === 'transient' ? WEIGHTS.transient : 0;
+  let score = seg.role === 'transient' ? transientWeight(person.win?.state) : 0;
   if (days !== null && days > 60) score += WEIGHTS.silentOver60;
   else if (days !== null && days > 30) score += WEIGHTS.silentOver30;
   if (messages >= 30) score += WEIGHTS.deepOver30;
@@ -67,12 +79,14 @@ export function buildRows(report, today) {
     .map((r) => {
       const seg = segmentsOf(`${r.chat_title || ''} ${r.resolved_to || ''}`);
       const last = r.last ? Date.parse(r.last) : null;
+      const win = r.first ? requestState({ askedAt: r.first, servedAt: r.served_at || null, now: new Date(today).toISOString() }) : null;
       return {
         name: String(r.resolved_to || r.chat_title || '').replace(/\.(zip|txt)$/i, ''),
         seg,
         messages: r.messages || 0,
         days: last ? Math.round((today - last) / DAY) : null,
         hasNumber: Boolean(r.resolved_to),
+        win,
       };
     })
     .filter((p) => p.seg.inScope)
