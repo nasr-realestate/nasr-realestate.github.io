@@ -22,6 +22,10 @@
  *   4. `--keep marked` (default) keeps only cards carrying one of the five marks;
  *      `--keep all` keeps every card that survived rule 1. Nothing is guessed
  *      about age: a vCard carries no date, so no date is invented.
+ *   5. `--include MARK` treats an extra mark (one outside the five) as in-scope;
+ *      `--only MARK` writes ONE complete group — every card carrying that mark,
+ *      and nothing else. An unknown mark keeps its own symbol as its CATEGORIES
+ *      label: this file does not invent a meaning for the owner's shorthand.
  *
  * Output is vCard 3.0, UTF-8, CRLF — read by Android and iOS alike — with the
  * number written as `+20…` and the mark repeated in `CATEGORIES` so it can be
@@ -50,7 +54,7 @@ export function cleanName(value) {
 }
 
 /** A card as this file reasons about it: one name, its numbers, its mark. */
-function toCard(contact, sourceRef) {
+function toCard(contact, sourceRef, extraMarks = []) {
   const fn = cleanName(contact?.fn);
   const phones = [];
   for (const phone of contact?.phones || []) {
@@ -58,7 +62,17 @@ function toCard(contact, sourceRef) {
     if (e164 && !phones.includes(e164)) phones.push(e164);
   }
   const segment = segmentsOf(fn);
-  return { fn, phones, marked: segment.inScope, segment: segment.primary, sourceRef };
+  const extra = extraMarks.filter((mark) => mark && fn.includes(mark));
+  const marks = [...segment.codes, ...extra];
+  return {
+    fn,
+    phones,
+    marks,
+    marked: segment.inScope || extra.length > 0,
+    // A mark outside the five has no name this file can invent, so it becomes its own label.
+    segment: segment.primary || (extra.length > 0 ? { code: extra[0], label: extra[0] } : null),
+    sourceRef,
+  };
 }
 
 /**
@@ -110,6 +124,7 @@ export function mergePeople(cards) {
     return {
       fn: display.fn,
       phones: group.phones.filter(Boolean),
+      marks: [...new Set(group.cards.flatMap((card) => card.marks))],
       marked: display.marked,
       segment: display.segment,
       mergedNames: names,
@@ -152,12 +167,14 @@ export function toVcard3(people) {
 }
 
 /** Splits the merged people into what stays and what is archived — never a deletion. */
-export function splitPeople(people, { keep = 'marked' } = {}) {
+export function splitPeople(people, { keep = 'marked', only = '' } = {}) {
   if (!KEEP_MODES.includes(keep)) throw new Error(`unknown-keep-mode:${keep}`);
   const current = [];
   const archive = [];
   for (const person of people) {
-    if (keep === 'all' || person.marked) current.push(person);
+    // `only` takes ONE complete group — every card carrying that mark, and nothing else.
+    const take = only ? person.marks.includes(only) : (keep === 'all' || person.marked);
+    if (take) current.push(person);
     else archive.push(person);
   }
   return { current, archive };
@@ -167,11 +184,13 @@ export function splitPeople(people, { keep = 'marked' } = {}) {
  * The whole decision, without a database and without a file write: input text in,
  * three artifacts out. Kept separate so the rules can be tested on synthetic cards.
  */
-export function buildPruneReport({ vcfTexts = [], keep = 'marked' } = {}) {
-  const cards = vcfTexts.flatMap(({ name, text }) => parseVcfContacts(text, name).map((c) => toCard(c, name)));
+export function buildPruneReport({ vcfTexts = [], keep = 'marked', include = [], only = '' } = {}) {
+  const extraMarks = [...new Set([...include, only].filter(Boolean))];
+  const cards = vcfTexts.flatMap(({ name, text }) =>
+    parseVcfContacts(text, name).map((c) => toCard(c, name, extraMarks)));
   const withNumber = cards.filter((card) => card.phones.length > 0);
   const people = mergePeople(withNumber).sort((a, b) => a.fn.localeCompare(b.fn, 'ar'));
-  const { current, archive } = splitPeople(people, { keep });
+  const { current, archive } = splitPeople(people, { keep, only });
   const kept = new Set(current);
   const personByPhone = new Map();
   for (const person of people) for (const phone of person.phones) personByPhone.set(phone, person);
@@ -194,6 +213,8 @@ export function buildPruneReport({ vcfTexts = [], keep = 'marked' } = {}) {
     archive,
     rows,
     stats: {
+      only: only || null,
+      include: include.join(' ') || null,
       cards: cards.length,
       with_number: withNumber.length,
       without_number: cards.length - withNumber.length,
@@ -242,8 +263,10 @@ async function main() {
   const dir = get('--dir');
   const out = get('--out');
   const keep = get('--keep', 'marked');
+  const only = get('--only', '');
+  const include = get('--include', '').split(/[\s,]+/).filter(Boolean);
   if (!dir || !out) {
-    console.error('usage: prune-phonebook.mjs --dir <folder-with-vcf> --out <folder-outside-repo> [--keep marked|all]');
+    console.error('usage: prune-phonebook.mjs --dir <dir> --out <dir-outside-repo> [--keep marked|all] [--include 🌀] [--only 🌀]');
     process.exit(2);
   }
   const outDir = assertOutDirOutsideRepo(out);
@@ -252,7 +275,7 @@ async function main() {
     console.error(`no .vcf files in ${dir}`);
     process.exit(2);
   }
-  const { current, archive, rows, stats } = buildPruneReport({ vcfTexts: inputs, keep });
+  const { current, archive, rows, stats } = buildPruneReport({ vcfTexts: inputs, keep, include, only });
   fs.mkdirSync(outDir, { recursive: true });
   const day = stamp();
   const written = {
@@ -263,7 +286,7 @@ async function main() {
   fs.writeFileSync(written.current, toVcard3(current), 'utf8');
   fs.writeFileSync(written.archive, toVcard3(archive), 'utf8');
   fs.writeFileSync(written.report, toCsv(rows), 'utf8');
-  console.log(JSON.stringify({ keep, inputs: inputs.map((f) => f.name), stats, files: written }, null, 2));
+  console.log(JSON.stringify({ keep, only: only || null, inputs: inputs.map((f) => f.name), stats, files: written }, null, 2));
 }
 
 const invokedDirectly = process.argv[1]

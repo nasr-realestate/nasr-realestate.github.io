@@ -102,6 +102,42 @@ test('PRUNE-5: the report csv quotes what needs quoting and keeps every input ro
   assert.match(csv, /"🔵 اسم ""باقتباس"""/, 'a quote is doubled, not dropped');
 });
 
+test('PRUNE-7: --only takes one complete group and leaves everything else in the archive', () => {
+  const text = [
+    card({ fn: 'بتاع الشغل', phones: ['+201000000007'], mark: '🌀 ' }),
+    card({ fn: 'بتاع الشغل 2', phones: ['+201000000008'], mark: '🌀 ' }),
+    card({ fn: 'محل تجريبي', phones: ['+201000000009'], mark: '🟠 ' }),
+    card({ fn: 'بلا علامة', phones: ['+201000000010'] }),
+  ].join('');
+  const { current, archive, stats } = buildPruneReport({
+    vcfTexts: [{ name: 'a.vcf', text }],
+    only: '🌀',
+  });
+  assert.equal(stats.only, '🌀');
+  assert.equal(current.length, 2, 'the whole group, not part of it');
+  assert.ok(current.every((p) => p.fn.includes('🌀')));
+  assert.equal(archive.length, 2, 'the marked 🟠 card is NOT dragged in by --only');
+  assert.equal(current[0].segment.label, '🌀', 'an unknown mark becomes its own label');
+
+  const vcard = toVcard3(current);
+  assert.equal(vcard.split('BEGIN:VCARD').length - 1, 2);
+  assert.ok(vcard.includes('CATEGORIES:🌀'), 'the mark travels to the phone');
+});
+
+test('PRUNE-8: --include adds an extra mark to the five instead of replacing them', () => {
+  const text = [
+    card({ fn: 'بتاع الشغل', phones: ['+201000000011'], mark: '🌀 ' }),
+    card({ fn: 'محل تجريبي', phones: ['+201000000012'], mark: '🟠 ' }),
+    card({ fn: 'بلا علامة', phones: ['+201000000013'] }),
+  ].join('');
+  const { current } = buildPruneReport({
+    vcfTexts: [{ name: 'a.vcf', text }],
+    include: ['🌀'],
+  });
+  assert.equal(current.length, 2, '🌀 joins the five; the unmarked card still stays out');
+  assert.deepEqual(current.map((p) => p.fn).sort(), ['🌀 بتاع الشغل', '🟠 محل تجريبي']);
+});
+
 test('PRUNE-6: writing inside the repository is refused before any file is created', () => {
   assert.throws(() => assertOutDirOutsideRepo(path.join(REPO_ROOT, 'imports', 'out')), /refusing-to-write-inside-repository/);
   assert.throws(() => assertOutDirOutsideRepo(REPO_ROOT), /refusing-to-write-inside-repository/);
