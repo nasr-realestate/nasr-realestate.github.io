@@ -62,6 +62,8 @@ export const STATUS_TRANSITIONS = Object.freeze({
   cancelled: [],
 });
 
+import { withWindows } from './crm-request-expiry.js';
+
 const SELECT_REQUEST = `SELECT r.*, c.name AS contact_name
   FROM crm_customer_requests r JOIN crm_contacts c ON c.id = r.contact_id`;
 
@@ -382,7 +384,11 @@ export async function listCustomerRequestsPayload(db, params = {}) {
   const rows = (await db.prepare(`${SELECT_REQUEST}${where} ORDER BY r.updated_at DESC, r.id LIMIT ? OFFSET ?`)
     .bind(...binds, limit, offset).all()).results ?? [];
   const total = await oneRow(db, `SELECT COUNT(*) AS count FROM crm_customer_requests r JOIN crm_contacts c ON c.id = r.contact_id${where}`, ...binds);
-  return { requests: rows, count: rows.length, total: Number(total?.count ?? 0), limit, offset };
+  const payload = { requests: rows, count: rows.length, total: Number(total?.count ?? 0), limit, offset };
+  // The seven-day clock is opt-in: the default payload is byte-for-byte what it was.
+  return params.with_window === '1' || params.with_window === 'true'
+    ? withWindows(payload, params.now || new Date().toISOString())
+    : payload;
 }
 
 export async function getCustomerRequestPayload(db, requestId) {
