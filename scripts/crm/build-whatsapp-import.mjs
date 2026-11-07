@@ -171,7 +171,10 @@ export function resolveChatOwner({ title, peerSenderName, peerPhoneNorm }, conta
 
   let diagnostic = { contact: null, reason: 'no-name-tokens', candidates: [] };
   for (const probe of probes) {
-    const verdict = scoreAgainstPhoneBook(probe, contacts);
+    // A one-word phone-book entry ("إستثمار") sitting inside a long descriptive
+    // title is not an identification; it is a coincidence of vocabulary. The
+    // title probe may only claim such a contact when the title itself is short.
+    const verdict = scoreAgainstPhoneBook(probe, contacts, { allowSingleToken: probe.length <= 2 });
     if (verdict.contact) return verdict;
     // An ambiguity is the most useful thing to report; never overwrite it.
     if (verdict.reason === 'ambiguous') return verdict;
@@ -214,11 +217,12 @@ function exactNameMatch(name, contacts) {
   return null;
 }
 
-function scoreAgainstPhoneBook(probe, contacts) {
+function scoreAgainstPhoneBook(probe, contacts, { allowSingleToken = true } = {}) {
   const scored = [];
   for (const c of contacts) {
     const ct = nameTokens(c.fn);
     if (ct.length === 0) continue;
+    if (ct.length === 1 && !allowSingleToken) continue;
     const shared = ct.filter((t) => probe.includes(t)).length;
     if (shared === 0) continue;
     // Either the whole phone-book name is in the probe, or the whole probe is

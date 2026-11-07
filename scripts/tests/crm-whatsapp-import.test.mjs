@@ -251,3 +251,23 @@ test('WA-19 the colour marker is the broker\'s shorthand, not part of the name',
   assert.equal(r.contact?.fn, 'عزت سلامه ش-د٣ المساحه ١٥٥م');
   assert.equal(r.method, 'name:exact-bare');
 });
+
+test('WA-20 a one-word contact cannot claim a long descriptive title', () => {
+  // Real shape from the 1,929-contact book: a title describing what a buyer wants,
+  // and a contact whose whole name is one word from that sentence.
+  const book = [
+    'BEGIN:VCARD', 'FN:محل إستثمار', 'TEL;TYPE=CELL:+201000000041', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:د، طارق مشتري استثمار جاد', 'TEL;TYPE=CELL:+201000000042', 'END:VCARD',
+  ].join('\r\n');
+  const r = resolveChatOwner({
+    title: '✈️ يشتري حاجه استثمار تنفع تتاجر للطلبه جنب الجامعه',
+    peerSenderName: '✈️ يشتري حاجه استثمار تنفع تتاجر للطلبه جنب الجامعه',
+    peerPhoneNorm: null,
+  }, parseVcfContacts(book));
+  assert.equal(r.contact, null, 'one shared word is vocabulary, not identity');
+
+  // …but a short title with that one word is the whole name, and that links.
+  const short = resolveChatOwner({ title: 'محل إستثمار', peerSenderName: '', peerPhoneNorm: null },
+    parseVcfContacts(book));
+  assert.equal(short.contact?.fn, 'محل إستثمار');
+});
