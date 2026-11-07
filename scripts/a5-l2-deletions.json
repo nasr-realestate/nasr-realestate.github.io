@@ -1,0 +1,30 @@
+{
+  "schema": "a5-l2-deletions-v1",
+  "note": "Append-only. One entry per row that a published ledger claims and that no longer exists, with who deleted it, when, and why. Entries are written by a human, never by a workflow. The gate reads an attested gap as attested-deleted and still stops on every unattested one.",
+  "deletions": [
+    {
+      "table": "crm_drive_file_review_case",
+      "key": "frw-6123bd3516a8b3af-1",
+      "run_tag": "a5-42314494090-1-80dff33a",
+      "deleted_by": "nasr-realestate (owner)",
+      "deleted_at": "2026-11-07",
+      "reason": "المالك حذف صفوف الحالة الصناعية بعد أن فشل التشغيل 42314494090 في الفحص الحيّ؛ أُقرّ الحذف صراحةً في جلسة 2026-11-07."
+    },
+    {
+      "table": "crm_drive_file_version",
+      "key": "6123bd3516a8b3afa9f8335d",
+      "run_tag": "a5-42314494090-1-80dff33a",
+      "deleted_by": "nasr-realestate (owner)",
+      "deleted_at": "2026-11-07",
+      "reason": "نسخة الملف الصناعية التابعة للحالة نفسها؛ حُذفت مع الحالة في التنظيف نفسه الذي أُقرّ في جلسة 2026-11-07."
+    },
+    {
+      "table": "crm_drive_file_registry",
+      "key": "6123bd3516a8b3afa9f8335d",
+      "run_tag": "a5-42314494090-1-80dff33a",
+      "deleted_by": "nasr-realestate (owner)",
+      "deleted_at": "2026-11-07",
+      "reason": "سجلّ الملف الصناعي التابع للحالة نفسها؛ حُذف في التنظيف نفسه، ولا نسخة ولا نسل يعتمد عليه بعدها."
+    }
+  ]
+}

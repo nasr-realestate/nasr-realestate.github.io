@@ -609,9 +609,9 @@ jobs:
             echo "::error::A5 L2 preflight detail: ${preflight_diag:0:900}"
             exit 1
           fi
-          jq -c '{ok, reason, ledgers, rows, legacy_suspects, proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
+          jq -c '{ok, reason, ledgers, rows, legacy_suspects, attested_deleted: (.attested_deleted // 0), proven: ([.verdicts[] | select(.verdict == "previous-a5-proven")] | length)}' \
             "$L2_ROOT/preflight.json"
-          echo "a5-l2: ownership preflight OK for run_tag=$tag"
+          echo "a5-l2: ownership preflight OK for run_tag=$tag (documented deletions: $(jq -r '.attested_deleted // 0' "$L2_ROOT/preflight.json"))"
 
       - name: Deploy nasr-crm-api-test and run live A5 E2E
         id: e2e
