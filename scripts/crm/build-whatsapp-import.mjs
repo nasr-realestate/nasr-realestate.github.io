@@ -79,17 +79,44 @@ export function nameTokens(value) {
     .filter((t) => t.length >= 2 && !NOISE_TOKENS.has(t) && !/^\d+$/.test(t));
 }
 
+/**
+ * vCard 2.1 predates UTF-8 in practice: Arabic names arrive as
+ * `FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=A7=D8=A8=D9=88`. Read literally
+ * that is not a name, it is its own bytes — and every contact would silently
+ * fail to match. Decode it, with the soft line breaks QP allows.
+ */
+export function decodeQuotedPrintable(value) {
+  const raw = String(value ?? '');
+  if (!/=[0-9A-Fa-f]{2}/.test(raw)) return raw;
+  const joined = raw.replaceAll(/=\r?\n/g, '');
+  const bytes = [];
+  for (let i = 0; i < joined.length; i += 1) {
+    if (joined[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(joined.slice(i + 1, i + 3))) {
+      bytes.push(parseInt(joined.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else {
+      bytes.push(...Buffer.from(joined[i], 'utf8'));
+    }
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
 /** Parse an exported vCard file into the shape `normalizeVcfSyncItem` expects. */
 export function parseVcfContacts(text, sourceRef = 'vcf') {
-  const unfolded = String(text || '').replaceAll(/\r\n[ \t]/g, '').replaceAll(/\r?\n[ \t]/g, '');
+  // Order matters. A quoted-printable value breaks with "=" + newline (no space);
+  // a vCard fold breaks with newline + space. Joining the QP break first is what
+  // keeps a UTF-8 name from being cut in the middle of a byte sequence.
+  const unfolded = String(text || '')
+    .replaceAll(/=\r?\n/g, '')
+    .replaceAll(/\r?\n[ \t]/g, '');
   const out = [];
   for (const block of unfolded.split(/END:VCARD/i)) {
     const fn = /^FN[^:]*:(.*)$/im.exec(block);
-    const name = cleanBidiControls(fn ? fn[1] : '').trim();
+    const name = cleanBidiControls(decodeQuotedPrintable(fn ? fn[1] : '')).trim();
     const phones = [];
     const seen = new Set();
     for (const m of block.matchAll(/^TEL[^:]*:(.*)$/gim)) {
-      const raw = cleanBidiControls(m[1]).trim();
+      const raw = cleanBidiControls(decodeQuotedPrintable(m[1])).trim();
       const e164 = normalizeInternationalPhone(raw);
       if (!e164 || seen.has(e164)) continue;
       seen.add(e164);
@@ -193,14 +220,18 @@ function scoreAgainstPhoneBook(probe, contacts) {
 const UNZIP_BIN = process.env.UNZIP_BIN || '/usr/bin/unzip';
 
 export function readChatTextFromZip(zipPath) {
-  const listing = execFileSync(UNZIP_BIN, ['-Z1', zipPath], { encoding: 'utf8' });
-  const chats = listing
-    .split('\n')
-    .map((s) => s.trim())
-    .filter((e) => /\.txt$/i.test(e) && !e.startsWith('__MACOSX/'));
+  const names = execFileSync(UNZIP_BIN, ['-Z1', zipPath], { encoding: 'utf8' })
+    .split('\n').map((s) => s.trim()).filter(Boolean);
+  if (names.some((n) => n.startsWith('__MACOSX/'))) {
+    throw new Error(`zip-with-macosx-junk:${path.basename(zipPath)}`);
+  }
+  const chats = names.filter((e) => /\.txt$/i.test(e));
   if (chats.length === 0) throw new Error(`zip-without-txt:${path.basename(zipPath)}`);
-  if (chats.length > 1) throw new Error(`zip-with-many-txt:${path.basename(zipPath)}:${chats.join(',')}`);
-  return { text: execFileSync(UNZIP_BIN, ['-p', zipPath, chats[0]], { encoding: 'utf8' }), entry: chats[0] };
+  if (chats.length > 1) throw new Error(`zip-with-many-txt:${path.basename(zipPath)}`);
+  // Extract by bulk, never by name: WhatsApp stores the transcript's file name in
+  // the legacy OEM code page, so passing that name back to unzip cannot match it
+  // (it comes out as question marks). The content itself is UTF-8 and intact.
+  return { text: execFileSync(UNZIP_BIN, ['-p', zipPath], { encoding: 'utf8' }), entry: chats[0] };
 }
 
 export function listInputs(dir) {

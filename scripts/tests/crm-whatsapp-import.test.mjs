@@ -135,13 +135,15 @@ test('WA-11 batches respect both the count and the dispatch byte budget', () => 
   for (const b of bySize) assert.ok(Buffer.byteLength(JSON.stringify(b.conversations)) < 20_000);
 });
 
-test('WA-12 a real zip on disk is read without unpacking', () => {
+test('WA-12 a real zip on disk is read even though its entry name is not UTF-8', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-'));
-  fs.writeFileSync(path.join(dir, '‏دردشة في واتساب مع حازم.txt'), CHAT, 'utf8');
-  execFileSync('zip', ['-q', path.join(dir, 'chat.zip'), '‏دردشة في واتساب مع حازم.txt'], { cwd: dir });
-  const { text, entry } = readChatTextFromZip(path.join(dir, 'chat.zip'));
-  assert.match(entry, /\.txt$/);
+  const name = '‏دردشة في واتساب مع حازم ✈️.txt';
+  fs.writeFileSync(path.join(dir, name), CHAT, 'utf8');
+  execFileSync('zip', ['-q', path.join(dir, 'chat.zip'), name], { cwd: dir });
+  // unzip lists this entry in the legacy OEM code page; extracting BY NAME fails.
+  const { text } = readChatTextFromZip(path.join(dir, 'chat.zip'));
   assert.ok(text.includes('بسال على الشقة'));
+  assert.ok(text.includes('حازم عبد العال'));
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -168,4 +170,18 @@ test('WA-14 a real exported vCard 2.1 (local numbers, embedded photo) is read co
   // The local form and the spaced form are one number, converted to +20.
   assert.equal(contacts[0].phones.length, 1);
   assert.equal(contacts[0].phones[0].e164, '201000000002');
+});
+
+test('WA-15 a quoted-printable Arabic name survives the fold (vCard 2.1 reality)', () => {
+  // Real exports encode the name as UTF-8 bytes in =XX form and break the line
+  // mid-sequence. Read literally it is not a name; truncated it is not a match.
+  const vcf = [
+    'BEGIN:VCARD', 'VERSION:2.1', 'N;CHARSET=UTF-8:=D8=A7',
+    'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D9=86=D9=87=D9=84=D9=87 =D8=B4',
+    ' =D9=82=D8=A9 =D9=84=D9=84=D8=A5=D9=8A=D8=AC=D8=A7=D8=B1',
+    'TEL;CELL:01000000003', 'END:VCARD',
+  ].join('\r\n');
+  const [c] = parseVcfContacts(vcf);
+  assert.equal(c.fn, 'نهله شقة للإيجار');
+  assert.equal(c.phones[0].e164, '201000000003');
 });
