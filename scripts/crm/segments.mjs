@@ -1,29 +1,39 @@
 /**
- * The five marks — the broker's own taxonomy, and the only one the CRM keeps.
+ * The marks — the broker's own taxonomy, and the only one the CRM keeps.
  *
- * He writes an emoji in front of a name in his phone so that he knows what the
- * man is before he answers the call. Those five marks are the business:
- * demand, supply, and the three ways a unit moves. Everything else in a phone
- * book of 1,931 numbers is people he does not work with.
+ * He writes an emoji in front of a name so he knows what the man is before he
+ * answers the call:
  *
- * So this file is a whitelist, not a classifier: a contact outside the five is
- * not "unclassified", it is out of scope. It stays in the database (never
- * delete a client row) but it never appears on a day list.
+ *   🟢  تمليك   — a unit that changes hands, sold
+ *   🔴  مفروش   — a furnished let
+ *   🔵  إيجار قانون جديد
+ *   🟠  محلات وإداري
+ *   ✈️  عابر    — someone who passed once and may need us later
+ *
+ * Two promises come with every folder he drops from now on, and this file is
+ * where they are written down:
+ *
+ *   1. Every contact carries a number. A card without one is not a client, it is
+ *      a note — it is counted and reported, never silently kept.
+ *   2. Every contact carries exactly one mark. Whatever is outside the five is
+ *      out of scope: it stays in the database (never delete a client row) but it
+ *      never reaches a morning list.
  *
  * The marks are matched anywhere in the label, because he writes them in front
- * of the name, after it, or twice (🟢 🔴 on a furnished unit he owns).
+ * of the name, after it, or twice (🟢 🔴 on a furnished unit he also owns). When
+ * two marks appear, the first in the order above wins as the primary.
  */
 
 /**
  * `role` is what the mark means for the conversation, which is what the date
- * engine needs: a seeker is chased, an owner is reported to.
+ * engine needs: supply is serviced, a passer-by is touched lightly and rarely.
  */
 export const SEGMENTS = [
-  { code: '✈️', key: 'seeker', label: 'باحث — يشتري أو يستأجر', role: 'demand' },
-  { code: '🟢', key: 'owner', label: 'مالك — يعرض وحدة للبيع', role: 'supply' },
+  { code: '🟢', key: 'sale', label: 'تمليك', role: 'supply' },
+  { code: '🔴', key: 'furnished', label: 'مفروش', role: 'supply' },
   { code: '🔵', key: 'rent', label: 'إيجار قانون جديد', role: 'supply' },
   { code: '🟠', key: 'commercial', label: 'محلات وإداري', role: 'supply' },
-  { code: '🔴', key: 'furnished', label: 'مفروش', role: 'supply' },
+  { code: '✈️', key: 'transient', label: 'عميل عابر', role: 'transient' },
 ];
 
 /** The order above is also the precedence: the first mark found wins. */
@@ -33,9 +43,9 @@ const CODES = SEGMENTS.map((s) => s.code);
 const VARIANTS = {
   '✈️': ['✈️', '✈'],
   '🟢': ['🟢'],
+  '🔴': ['🔴'],
   '🔵': ['🔵'],
   '🟠': ['🟠'],
-  '🔴': ['🔴'],
 };
 
 function matches(text, code) {
@@ -55,7 +65,7 @@ export function segmentsOf(label) {
     primary,
     key: primary ? primary.key : null,
     label: primary ? primary.label : null,
-    // Demand and supply are chased differently, so the role travels with the mark.
+    // Supply is serviced, a passer-by is touched lightly: the role travels with the mark.
     role: primary ? primary.role : null,
     inScope: primary !== null,
   };
@@ -72,4 +82,41 @@ export function isInScope(label) {
  */
 export function isContactInScope(name, chatTitles = []) {
   return isInScope(name) || chatTitles.some((t) => isInScope(t));
+}
+
+/**
+ * The two promises, measured instead of assumed.
+ *
+ * A folder is "clean" when every card has a number and a mark. The importer runs
+ * this before it ships anything, so a broken drop is caught at the door rather
+ * than discovered three weeks later inside a morning list.
+ */
+export function auditDirectory(contacts = []) {
+  const seen = new Map();
+  for (const c of contacts) {
+    const fn = String(c?.fn || c?.name || '').trim();
+    if (!fn) continue;
+    const phones = (c?.phones || [])
+      .map((p) => String(p?.e164 || p?.phone || '').replace(/\D/g, ''))
+      .filter(Boolean);
+    const seg = segmentsOf(fn);
+    const entry = seen.get(fn) || { fn, phones: new Set(), marks: new Set() };
+    for (const p of phones) entry.phones.add(p);
+    for (const code of seg.codes) entry.marks.add(code);
+    seen.set(fn, entry);
+  }
+  const withoutNumber = [];
+  const withoutMark = [];
+  for (const entry of seen.values()) {
+    if (entry.phones.size === 0) withoutNumber.push(entry.fn);
+    if (entry.marks.size === 0) withoutMark.push(entry.fn);
+  }
+  return {
+    contacts: seen.size,
+    with_number: seen.size - withoutNumber.length,
+    marked: seen.size - withoutMark.length,
+    without_number: withoutNumber,
+    without_mark: withoutMark,
+    clean: withoutNumber.length === 0 && withoutMark.length === 0,
+  };
 }

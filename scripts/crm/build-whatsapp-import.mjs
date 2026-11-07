@@ -35,6 +35,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { auditDirectory } from './segments.mjs';
 
 import { parseWhatsAppExport, cleanBidiControls, normalizeInternationalPhone } from '../../_worker/crm-chat-intel.js';
 import { canonSyncKey } from '../../_worker/crm-sync-and-match.js';
@@ -310,6 +311,9 @@ export function dedupeContacts(contacts) {
 
 export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'drive', contactsInBundle = 'matched', overrides = {} }) {
   const contacts = dedupeContacts(vcfTexts.flatMap(({ name, text }) => parseVcfContacts(text, name)));
+  // He promised every future drop carries a number and a mark; this measures it
+  // at the door, so a broken folder is a report today instead of a surprise later.
+  const directory = auditDirectory(contacts);
   const referenced = new Map();
 
   const conversations = [];
@@ -368,7 +372,7 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
   return {
     bundle: { vcf_contacts: shipped, conversations, dry_run: true },
     report,
-    stats: { contacts_in_phone_book: contacts.length, contacts_shipped: shipped.length },
+    stats: { contacts_in_phone_book: contacts.length, contacts_shipped: shipped.length, directory },
   };
 }
 
@@ -506,6 +510,14 @@ async function main() {
   console.log(JSON.stringify({
     ...summary,
     contacts_in_phone_book: stats.contacts_in_phone_book,
+    directory: {
+      contacts: stats.directory.contacts,
+      with_number: stats.directory.with_number,
+      marked: stats.directory.marked,
+      clean: stats.directory.clean,
+      without_number: stats.directory.without_number.length,
+      without_mark: stats.directory.without_mark.length,
+    },
     contacts_shipped: stats.contacts_shipped,
     batches: chunks.length,
     batch_sizes: chunks.map((c) => c.conversations.length),

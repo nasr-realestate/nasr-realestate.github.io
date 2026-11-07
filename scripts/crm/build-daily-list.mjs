@@ -5,10 +5,10 @@
  * one sentence of reason per name. The five marks decide who is in; silence and
  * depth decide the order.
  *
- * Why this order, and not "newest first"? Because the scarcest thing in his book
- * is demand: 59 owners against 13 seekers. A seeker who is silent is a buyer
- * someone else is showing flats to right now. An owner who is silent is a unit
- * quietly going off the market — expensive, but recoverable tomorrow.
+ * Why this order, and not "newest first"? Because a unit that stops moving costs
+ * him the whole commission, and because a passer-by is not a deal: 🟢 is تمليك,
+ * 🔴 is مفروش, ✈️ is someone who came once and may come back years later.
+ * Servicing supply is the work; touching a passer-by is a courtesy, kept cheap.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -20,7 +20,7 @@ const DAY = 86_400_000;
 
 /** Weights are the whole opinion of this file; keep them in one place. */
 const WEIGHTS = {
-  demand: 25,        // he asked to buy: scarce, so it lifts a name but never wins alone
+  transient: 10,     // may need us later: never dropped, never chased
   silentOver60: 30,  // two months of silence is not a follow-up, it is a loss
   silentOver30: 20,
   deepOver30: 10,    // a long conversation that stopped is a deal that stalled
@@ -41,9 +41,10 @@ function silenceLabel(days) {
 /** One sentence, in the broker's language, for why this name is on the list. */
 function reasonFor(person) {
   const { seg, days, messages } = person;
-  if (seg.role === 'demand') {
-    if (days !== null && days > 30) return 'باحث سكت شهرًا — صفقة ذاهبة لغيرك';
-    return 'باحث ينتظر عرضًا';
+  if (seg.role === 'transient') {
+    if (days !== null && days > 60) return 'عابر سكت شهرين — رسالة واحدة تكفي';
+    if (days !== null && days > 30) return 'عابر — تذكير خفيف بلا إلحاح';
+    return 'عابر جديد — قد يحتاجنا لاحقًا';
   }
   if (days !== null && days > 60) return 'مالك ساكت شهرين — وحدته بلا تسويق';
   if (days !== null && days > 30) return 'مالك ساكت شهرًا — تقرير سعر متأخر';
@@ -53,7 +54,7 @@ function reasonFor(person) {
 
 function scoreOf(person) {
   const { seg, days, messages } = person;
-  let score = seg.role === 'demand' ? WEIGHTS.demand : 0;
+  let score = seg.role === 'transient' ? WEIGHTS.transient : 0;
   if (days !== null && days > 60) score += WEIGHTS.silentOver60;
   else if (days !== null && days > 30) score += WEIGHTS.silentOver30;
   if (messages >= 30) score += WEIGHTS.deepOver30;
@@ -90,14 +91,14 @@ export function render(rows, todayIso, limit) {
     lines.push(`| ${i + 1} | ${r.name.slice(0, 46)} | ${r.seg.codes.join(' ')} | ${r.messages} | ${silenceLabel(r.days)} | ${r.reason} |`);
   });
   lines.push('');
-  lines.push('## الطلب — وهو الأندر عندك', '');
-  const demand = rows.filter((r) => r.seg.role === 'demand');
-  lines.push(demand.length === 0
-    ? 'لا باحث واحد في النطاق.'
-    : demand.map((r) => `- ${r.name.slice(0, 50)} — ${silenceLabel(r.days)}`).join('\n'));
+  lines.push('## العابرون — يُحفظون ولا يُلاحقون', '');
+  const transient = rows.filter((r) => r.seg.role === 'transient');
+  lines.push(transient.length === 0
+    ? 'لا عابر واحد في النطاق.'
+    : transient.map((r) => `- ${r.name.slice(0, 50)} — ${silenceLabel(r.days)}`).join('\n'));
   lines.push('');
   lines.push('## العرض الساكت', '');
-  const quiet = rows.filter((r) => r.seg.role !== 'demand' && (r.days ?? 0) > 30);
+  const quiet = rows.filter((r) => r.seg.role === 'supply' && (r.days ?? 0) > 30);
   lines.push(quiet.length === 0
     ? 'لا مالك ساكت أكثر من شهر.'
     : quiet.map((r) => `- ${r.seg.codes[0]} ${r.name.slice(0, 46)} — ${silenceLabel(r.days)}`).join('\n'));
@@ -132,7 +133,7 @@ function main() {
     in_scope: rows.length,
     with_number: rows.filter((r) => r.hasNumber).length,
     by_segment: bySegment,
-    demand: rows.filter((r) => r.seg.role === 'demand').length,
+    transient: rows.filter((r) => r.seg.role === 'transient').length,
     silent_over_30d: rows.filter((r) => (r.days ?? 0) > 30).length,
     written_to: outPath,
   }));

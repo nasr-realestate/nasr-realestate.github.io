@@ -312,3 +312,19 @@ test('WA-22 a name the owner states outranks every heuristic', async () => {
   assert.equal(pinned.bundle.conversations[0].title, 'داليا');
   assert.equal(pinned.bundle.vcf_contacts[0].phones[0].e164, '201091314878');
 });
+
+test('WA-23 every folder is audited at the door: a number and a mark per card', async () => {
+  const vcf = [
+    'BEGIN:VCARD', 'FN:🟢 عزت سلامه', 'TEL;TYPE=CELL:+201000000001', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:🔴 سامح مفروش', 'TEL;TYPE=CELL:+201000000002', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:بلا علامة', 'TEL;TYPE=CELL:+201000000003', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:🟢 بلا رقم', 'END:VCARD',
+  ].join('\r\n');
+  const { stats } = await buildBundle({ vcfTexts: [{ name: 'book.vcf', text: vcf }], chatSources: [] });
+  assert.equal(stats.directory.contacts, 4);
+  assert.equal(stats.directory.with_number, 3);
+  assert.equal(stats.directory.marked, 3);
+  assert.equal(stats.directory.clean, false);
+  assert.deepEqual(stats.directory.without_number, ['🟢 بلا رقم']);
+  assert.deepEqual(stats.directory.without_mark, ['بلا علامة']);
+});
