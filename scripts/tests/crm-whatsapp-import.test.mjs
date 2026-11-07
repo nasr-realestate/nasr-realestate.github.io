@@ -240,3 +240,14 @@ test('WA-18 a 3000-contact book does not bloat the envelope and still resolves',
   assert.equal(bundle.vcf_contacts.length, 1);
   assert.ok(elapsed < 5000, `resolution over 3000 contacts took ${elapsed}ms`);
 });
+
+test('WA-19 the colour marker is the broker\'s shorthand, not part of the name', () => {
+  const book = ['BEGIN:VCARD', 'FN:عزت سلامه ش-د٣ المساحه ١٥٥م', 'TEL;TYPE=CELL:+201000000031', 'END:VCARD'].join('\r\n');
+  const r = resolveChatOwner({
+    title: '‏دردشة في واتساب مع 🟢عزت سلامه ش-د٣، المساحه ١٥٥م',
+    peerSenderName: '🟢عزت سلامه ش-د٣، المساحه ١٥٥م',
+    peerPhoneNorm: null,
+  }, parseVcfContacts(book));
+  assert.equal(r.contact?.fn, 'عزت سلامه ش-د٣ المساحه ١٥٥م');
+  assert.equal(r.method, 'name:exact-bare');
+});

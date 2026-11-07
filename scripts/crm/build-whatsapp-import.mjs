@@ -187,11 +187,24 @@ function sameNumbers(a, b) {
   return pa !== '' && pa === pb;
 }
 
+/** Letters and digits only — the emoji a broker prefixes are decoration, not identity. */
+function bareNameKey(value) {
+  return normalizeArabicName(value).replaceAll(' ', '');
+}
+
 function exactNameMatch(name, contacts) {
   const key = canonSyncKey(name);
   if (!key) return null;
-  const hits = contacts.filter((c) => canonSyncKey(c.fn) === key);
-  if (hits.length === 1) return { contact: hits[0], method: 'name:exact' };
+  let hits = contacts.filter((c) => canonSyncKey(c.fn) === key);
+  let method = 'name:exact';
+  if (hits.length === 0) {
+    // The file may carry 🟢 and the phone book not, or the other way round. The
+    // colour is his own shorthand, not part of the man's name.
+    const bare = bareNameKey(name);
+    hits = contacts.filter((c) => bareNameKey(c.fn) === bare);
+    method = 'name:exact-bare';
+  }
+  if (hits.length === 1) return { contact: hits[0], method };
   // A 3000-contact book repeats people. Two rows with one name and one set of
   // numbers are one man saved twice, not an ambiguity to refuse — but two rows
   // with different numbers are two men, and that stays unanswered.
