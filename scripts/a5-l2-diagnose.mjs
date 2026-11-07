@@ -14,7 +14,8 @@
  *   * every statement goes through `readonlyQuery` (single SELECT, forbidden verbs refused);
  *   * the target DB is asserted to be the test DB by `assertTestOnlyConfig` before a single read;
  *   * no ledger is written, no artifact is produced, no row is touched, nothing is claimed;
- *   * output carries table names, key prefixes and run tags — synthetic identifiers only.
+ *   * output carries table names, full row keys and run tags — synthetic identifiers only,
+ *     and a full key is what a deletion entry needs (a prefix cannot be attested).
  */
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -79,7 +80,7 @@ function findVanished(loaded, present, attested) {
       seen.add(k);
       const obituary = attested.get(k);
       const record = {
-        table: e.table, key: brief(e.unique_key), run_tag: brief(e.run_tag, 40),
+        table: e.table, key: String(e.unique_key ?? ''), run_tag: brief(e.run_tag, 40),
         step: brief(e.step, 40), id_source: brief(e.id_source, 40),
       };
       if (obituary) {
@@ -98,7 +99,7 @@ function findUnknown(rows, { eventKeys, baselineKeys }) {
   for (const { table, a5_key, a5_id } of rows) {
     if (eventKeys.has(`${table}|${a5_key}`) || eventKeys.has(`${table}|observed:${a5_id}`)) continue;
     if (baselineKeys.has(`${table}|${a5_key}`) || baselineKeys.has(`${table}|${a5_id}`)) continue;
-    out.push({ table, key: brief(a5_key) });
+    out.push({ table, key: String(a5_key ?? '') });
   }
   return out;
 }
@@ -117,7 +118,7 @@ export function diagnose({ query, ledgers, deletions = [] }) {
     attested: gaps.filter((g) => g.attested_at),
     vanished: gaps.filter((g) => !g.attested_at),
     unknown: findUnknown(rows, indexEvidence(loaded)),
-    legacy: enumerateLegacySuspects(query).map((s) => ({ table: s.table, key: brief(s.a5_key), label: brief(s.label, 40) })),
+    legacy: enumerateLegacySuspects(query).map((s) => ({ table: s.table, key: String(s.a5_key ?? ''), label: brief(s.label, 40) })),
   };
   return {
     verdict: verdictOf(found), attested_count: found.attested.length,
