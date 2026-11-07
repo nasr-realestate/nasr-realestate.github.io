@@ -172,7 +172,13 @@ function checkRequestWithoutPlayer(slug, html) {
 
 // ─── الطلبات الحيّة ───────────────────────────────────────────────────────
 const collection = (await readdir('_requests')).filter((name) => name.endsWith('.md')).sort();
-assert.ok(collection.length > 0, 'the request collection is empty');
+// ⚠️ 2026-11-08: كل الطلبات مؤقتة بقاعدة السبعة أيام (cleanup-requests.yml)، فمن
+// المشروع أن يفرغ المجلد تمامًا — وعندها كان الشرط القديم (length > 0) يُسقط البناء
+// حتمًا على أي PR بلا أي علاقة به، بعد أن حُذف آخر طلب حيّ. الفراغ ليس فشلًا:
+// تُفحص الملفات الصوتية المؤرشفة أدناه كما هي، ويُعلن الفراغ صراحةً في المخرَج.
+if (collection.length === 0) {
+  console.log('ℹ️  لا توجد طلبات حيّة الآن (قاعدة السبعة أيام حذفتها كلها) — يُفحص الأرشيف الصوتي فقط.');
+}
 
 const sourceBySlug = new Map();
 for (const name of collection) {
