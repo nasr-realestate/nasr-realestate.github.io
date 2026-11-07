@@ -271,3 +271,25 @@ test('WA-20 a one-word contact cannot claim a long descriptive title', () => {
     parseVcfContacts(book));
   assert.equal(short.contact?.fn, 'محل إستثمار');
 });
+
+test('WA-21 the archive extension never reaches the chat title', async () => {
+  const vcf = ['BEGIN:VCARD', 'FN:طارق حامد', 'TEL;TYPE=CELL:+201111111111', 'END:VCARD'].join('\r\n');
+  const chat = ['10/29/26, 9:00 PM - Messages and calls are end-to-end encrypted.',
+    '10/29/26, 9:01 PM - طارق حامد: عايز شقة في الحي السابع'].join('\n');
+  // A readable transcript names itself from its own sender.
+  const named = await buildBundle({
+    vcfTexts: [{ name: 'book.vcf', text: vcf }],
+    chatSources: [{ label: 'دردشة في واتساب مع طارق حامد.zip', text: chat }],
+  });
+  assert.equal(named.report[0].chat_title, 'طارق حامد');
+
+  // A transcript with nothing to read falls back to the file name — and there
+  // the ".zip" is the transport, not part of anything the broker typed.
+  const silent = await buildBundle({
+    vcfTexts: [{ name: 'book.vcf', text: vcf }],
+    chatSources: [{ label: 'شقه عبد الحليم د اول.zip', text: '' }],
+  });
+  assert.equal(silent.report[0].chat_title, 'شقه عبد الحليم د اول');
+  assert.equal(silent.bundle?.conversations?.[0]?.title ?? silent.conversations?.[0]?.title,
+    'شقه عبد الحليم د اول');
+});

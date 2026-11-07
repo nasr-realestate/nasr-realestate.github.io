@@ -316,8 +316,11 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
   const report = [];
 
   for (const { label, text } of chatSources) {
-    const parsed = await parseWhatsAppExport(text, { chatTitle: label });
-    const title = cleanBidiControls(parsed.chatTitle) || label;
+    // The archive extension is the transport, not part of the man's name: the
+    // CRM shows this title in full, and ".zip" has no business being in it.
+    const chatLabel = label.replace(/\.(zip|txt)$/i, '');
+    const parsed = await parseWhatsAppExport(text, { chatTitle: chatLabel });
+    const title = cleanBidiControls(parsed.chatTitle) || chatLabel;
     const found = resolveChatOwner(
       { title, peerSenderName: parsed.peerSenderName, peerPhoneNorm: parsed.peerPhoneNorm },
       contacts,
@@ -383,22 +386,74 @@ export function summarize(report) {
 
 /** Split into dispatch-sized batches by real sealed byte size, not by count. */
 export function batchBundle(bundle, { batch = DEFAULT_BATCH, budgetBytes = DISPATCH_INPUT_LEDGER_BYTES } = {}) {
+  const { conversations = [], vcf_contacts: allContacts = [], ...rest } = bundle;
+  const bytes = (v) => Buffer.byteLength(JSON.stringify(v), 'utf8');
+  const staticBytes = bytes(rest);
+  // The envelope carries everything in the chunk, the static part included, so
+  // the conversations only get what is left of the budget.
+  const limit = Math.floor(budgetBytes / SEAL_OVERHEAD) - staticBytes;
+  if (limit <= 1024) throw new Error('bundle-static-too-large');
+
+  // Contacts travel once per chunk, and only the ones this chunk can use: a
+  // 2,000-card phone book repeated on every dispatch would eat the budget.
+  const contactsFor = (chunk) => {
+    if (allContacts.length === 0) return allContacts;
+    const keys = new Set(chunk.map((c) => canonSyncKey(c.title || '')));
+    const kept = allContacts.filter((c) => keys.has(canonSyncKey(c.fn || c.name || '')));
+    return kept.length > 0 ? kept : [];
+  };
+
   const chunks = [];
   let current = [];
   let used = 0;
-  const limit = Math.floor(budgetBytes / SEAL_OVERHEAD);
-  for (const conv of bundle.conversations) {
-    const size = Buffer.byteLength(JSON.stringify(conv), 'utf8');
-    if (current.length > 0 && (current.length >= batch || used + size > limit)) {
-      chunks.push(current);
-      current = [];
-      used = 0;
+  const flush = () => {
+    if (current.length === 0) return;
+    chunks.push({ ...rest, vcf_contacts: contactsFor(current), conversations: current });
+    current = [];
+    used = 0;
+  };
+
+  for (const conv of conversations) {
+    const size = bytes(conv);
+    if (size > limit) {
+      // One transcript can be bigger than a whole dispatch. WhatsApp transcripts
+      // are line-oriented, so the split is made on message boundaries and every
+      // part keeps the same conversation_uid: the worker stores messages by
+      // INSERT OR IGNORE on message_uid, so consecutive parts merge into one
+      // conversation instead of overwriting each other.
+      flush();
+      for (const part of splitConversation(conv, limit)) {
+        chunks.push({ ...rest, vcf_contacts: contactsFor([conv]), conversations: [part] });
+      }
+      continue;
     }
+    if (current.length > 0 && (current.length >= batch || used + size > limit)) flush();
     current.push(conv);
     used += size;
   }
-  if (current.length > 0) chunks.push(current);
-  return chunks.map((conversations) => ({ ...bundle, conversations }));
+  flush();
+  return chunks;
+}
+
+/** Cut an oversized transcript at line boundaries, never inside a message. */
+export function splitConversation(conv, limit) {
+  const text = String(conv.raw_txt || '');
+  const lines = text.split('\n');
+  const parts = [];
+  let buf = [];
+  let size = Buffer.byteLength(JSON.stringify({ ...conv, raw_txt: '' }), 'utf8');
+  for (const line of lines) {
+    const lineBytes = Buffer.byteLength(`${line}\n`, 'utf8');
+    if (buf.length > 0 && size + lineBytes > limit) {
+      parts.push(buf.join('\n'));
+      buf = [];
+      size = Buffer.byteLength(JSON.stringify({ ...conv, raw_txt: '' }), 'utf8');
+    }
+    buf.push(line);
+    size += lineBytes;
+  }
+  if (buf.length > 0) parts.push(buf.join('\n'));
+  return parts.map((raw_txt) => ({ ...conv, raw_txt }));
 }
 
 // ---------------------------------------------------------------------------
