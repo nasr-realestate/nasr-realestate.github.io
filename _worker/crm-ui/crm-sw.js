@@ -65,13 +65,16 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const targetUrl = resolveSafeTargetUrl(event.notification?.data?.url);
+  // Focus alone was the bug: an open CRM window was brought forward on whatever tab it happened to
+  // be showing, so a tap looked like it went nowhere. The window is focused AND sent to the target.
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
+      const sameOrigin = clientList.filter(client => client.url.startsWith(self.location.origin));
+      const usable = sameOrigin.find(client => typeof client.navigate === 'function') || sameOrigin[0];
+      if (usable && typeof usable.navigate === 'function') {
+        return usable.navigate(targetUrl).then(client => (client || usable).focus()).catch(() => self.clients.openWindow(targetUrl));
       }
+      if (usable && 'focus' in usable) return usable.focus();
       return self.clients.openWindow(targetUrl);
     }),
   );

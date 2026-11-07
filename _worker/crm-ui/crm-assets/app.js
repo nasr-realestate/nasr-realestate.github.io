@@ -2411,6 +2411,21 @@ async function handleNewOpportunitySubmit(event) {
 }
 
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => openPanel(tab.dataset.panel));
+
+/**
+ * Deep link from a notification: `#<panel>-panel` opens that panel, and the tab is clicked rather
+ * than the panel shown, so every listener a tab carries (data loading, rendering) still fires.
+ * Only an existing panel id is accepted; nothing is derived from the hash.
+ */
+function openPanelFromHash() {
+  const match = /^#([a-z0-9-]{1,48}-panel)$/.exec(window.location.hash || '');
+  if (!match) return;
+  const tab = document.querySelector(`.tab[data-panel="${match[1]}"]`);
+  if (!tab) return;
+  tab.click();
+}
+window.addEventListener('hashchange', openPanelFromHash);
+openPanelFromHash();
 for (const trigger of document.querySelectorAll('[data-open-panel]')) trigger.addEventListener('click', () => openPanel(trigger.dataset.openPanel));
 $('#record-sheet-close')?.addEventListener('click', () => closeRecordSheet());
 $('#record-sheet')?.addEventListener('click', event => {

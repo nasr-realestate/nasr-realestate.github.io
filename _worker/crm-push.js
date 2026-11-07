@@ -12,6 +12,22 @@ const PHONE_DIGIT_RUN_RE = /(?:\+|00)\d{7,15}|\b01[0125]\d{8}\b|[0-9٠-٩]{7,}/g
 const INTENT_AR = { buy: 'طلب شراء', rent: 'طلب إيجار', sell: 'عرض بيع', lease: 'عرض تأجير', other: 'فرصة عقارية' };
 const TRACK_BADGES = { sale_apt: '🟢', furnished_apt: '🔴', new_rent_apt: '🔵', admin_hq: '🟡', transient: '✈️' };
 
+/**
+ * Every notification must land on the thing it is about. `/` opened the CRM at whatever tab the
+ * browser remembered, which is why a tap looked like it did nothing.
+ */
+const QUEUES_URL = '/crm.html#a5-work-panel';
+
+/** Cairo clock text, or '' when the value is missing or unparseable (never a fake time). */
+function clockText(value) {
+  if (!value) return '';
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return '';
+  return new Intl.DateTimeFormat('ar-EG', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Cairo', numberingSystem: 'latn',
+  }).format(parsed);
+}
+
 const encoder = new TextEncoder();
 
 function toBase64Url(bytes) {
@@ -296,7 +312,7 @@ export async function sendTestPushAlert(request, env, { readJson, jsonHelper, fe
     title: '🔔 إشعارات CRM سمسار طلبك مفعّلة',
     body: 'وصلك هذا الإشعار التجريبي بنجاح — ستصلك تنبيهات المتابعات والمعاينات تلقائيًا.',
     tag: 'crm-test-alert',
-    url: '/',
+    url: QUEUES_URL,
   };
   const stats = await broadcastToSubscriptions(env.DB, subscriptions, payload, vapid, fetchImpl);
   if (stats.delivered === 0) return jsonHelper({ error: 'push_delivery_failed', ...stats }, 502);
@@ -308,17 +324,19 @@ export async function sendTestPushAlert(request, env, { readJson, jsonHelper, fe
   return jsonHelper({ ok: true, logged: true, log_key: logKey, ...stats });
 }
 
-function buildDueFollowupPayload(opp) {
+export function buildDueFollowupPayload(opp) {
   const badge = TRACK_BADGES[opp.track] || '🟢';
   const intent = INTENT_AR[opp.intent] || 'فرصة عقارية';
   const prop = sanitizePushText(opp.property_type || 'وحدة', 36);
   const area = sanitizePushText(opp.area_label || 'مدينة نصر', 48);
   const action = sanitizePushText(opp.next_action || 'متابعة مجدولة', 70);
+  const at = clockText(opp.next_followup_at);
+  const when = at ? ` · ${at}` : '';
   return {
-    title: '⏰ موعد متابعة مستحق — مدينة نصر',
-    body: `${badge} ${intent} · ${prop} (${area}) — الإجراء: ${action}`,
+    title: `⏰ متابعة مستحقة${when} — مدينة نصر`,
+    body: `${badge} ${intent} · ${prop} (${area}) — ${action}`,
     tag: `crm-due-${opp.id.slice(0, 20)}`,
-    url: '/',
+    url: QUEUES_URL,
   };
 }
 
@@ -375,7 +393,7 @@ async function dispatchUpcomingViewingAlerts(db, subscriptions, vapid, nowIso, f
       title: '🏠 تذكير بمعاينة عقار قريبة',
       body: `معاينة مجدولة قريبًا: ${unitTitle} — افتح الـCRM للتفاصيل.`,
       tag: `crm-view-${row.id.slice(0, 20)}`,
-      url: '/',
+      url: QUEUES_URL,
     };
     const stats = await broadcastToSubscriptions(db, subscriptions, payload, vapid, fetchImpl);
     if (stats.delivered > 0) {
@@ -387,12 +405,37 @@ async function dispatchUpcomingViewingAlerts(db, subscriptions, vapid, nowIso, f
   return sent;
 }
 
+const SMART_ALERT_SHORT = {
+  followup_approaching: 'متابعة تقترب',
+  followup_overdue: 'متابعة متأخرة',
+  viewing_requested_unlogged: 'معاينة غير مسجلة',
+  unanswered_question: 'سؤال بلا رد',
+};
+
 const SMART_ALERT_TITLES = {
   followup_approaching: '⏰ تنبيه متابعة ذكية تقترب — مدينة نصر',
   followup_overdue: '🚨 متابعة ذكية متأخرة — مدينة نصر',
   viewing_requested_unlogged: '🏠 طلب معاينة بمحادثة غير مسجل — مدينة نصر',
   unanswered_question: '💬 سؤال عميل بمحادثة ينتظر الرد — مدينة نصر',
 };
+
+/**
+ * One smart alert, in words that cannot be confused with the next one: the type is stated, and the
+ * alert's own time is in the title. Strictly zero PII on the lockscreen — never a name or a phone.
+ */
+export function buildSmartAlertPayload(row) {
+  const title = SMART_ALERT_TITLES[row.alert_type] || '🔔 تنبيه متابعة ذكي — سمسار طلبك';
+  const reasonText = sanitizePushText(row.alert_reason || 'متابعة مطلوبة', 90);
+  const actionText = sanitizePushText(row.suggested_action || 'افتح شاشة المتابعة الذكية', 70);
+  const at = clockText(row.due_at || row.created_at);
+  const when = at ? ` · ${at}` : '';
+  return {
+    title: `${title}${when}`,
+    body: `${SMART_ALERT_SHORT[row.alert_type] || 'تنبيه متابعة'} — ${reasonText} — ${actionText}`,
+    tag: `crm-smart-${String(row.id).slice(0, 20)}`,
+    url: QUEUES_URL,
+  };
+}
 
 async function hasSmartAlertsTable(db) {
   const row = await db.prepare("SELECT 1 AS ok FROM sqlite_schema WHERE type='table' AND name='crm_smart_alerts' LIMIT 1").first();
@@ -402,7 +445,7 @@ async function hasSmartAlertsTable(db) {
 async function dispatchSmartAlertPushes(db, subscriptions, vapid, nowIso, fetchImpl) {
   if (!(await hasSmartAlertsTable(db))) return 0;
   const rowsRes = await db.prepare(
-    `SELECT a.id, a.alert_type, a.alert_reason, a.suggested_action
+    `SELECT a.id, a.alert_type, a.alert_reason, a.suggested_action, a.due_at, a.created_at
      FROM crm_smart_alerts a
      WHERE a.status = 'open'
        AND a.alert_type IN ('followup_approaching', 'followup_overdue', 'viewing_requested_unlogged', 'unanswered_question')
@@ -418,16 +461,7 @@ async function dispatchSmartAlertPushes(db, subscriptions, vapid, nowIso, fetchI
   let sent = 0;
   for (const row of rowsRes?.results || []) {
     const dedupeKey = `smart:${row.id}`;
-    const title = SMART_ALERT_TITLES[row.alert_type] || '🔔 تنبيه متابعة ذكي — سمسار طلبك';
-    // Strictly zero PII on lockscreen: reason + action only, never customer name or phone!
-    const reasonText = sanitizePushText(row.alert_reason || 'متابعة مطلوبة', 90);
-    const actionText = sanitizePushText(row.suggested_action || 'افتح شاشة المتابعة الذكية', 70);
-    const payload = {
-      title,
-      body: `${reasonText} — ${actionText}`,
-      tag: `crm-smart-${String(row.id).slice(0, 20)}`,
-      url: '/',
-    };
+    const payload = buildSmartAlertPayload(row);
     const stats = await broadcastToSubscriptions(db, subscriptions, payload, vapid, fetchImpl);
     if (stats.delivered > 0) {
       await db.batch([
@@ -479,7 +513,7 @@ async function dispatchMorningDigestIfDue(db, subscriptions, vapid, nowDate, fet
     title: '☀️ ملخص متابعات اليوم — سمسار طلبك',
     body: `لديك اليوم ${dueToday} متابعة مستحقة و${overdue} متابعة متأخرة${smartSuffix} في مدينة نصر.`,
     tag: `crm-digest-${dayKey}`,
-    url: '/',
+    url: QUEUES_URL,
   };
   const stats = await broadcastToSubscriptions(db, digestSubs, payload, vapid, fetchImpl);
   if (stats.delivered > 0) {
