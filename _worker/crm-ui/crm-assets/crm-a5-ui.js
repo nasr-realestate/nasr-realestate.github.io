@@ -15,6 +15,8 @@ import { CRMApiError } from '../crm-client.js';
 
 const REQUEST_KIND_LABELS = { buy: 'شراء', rent: 'إيجار' };
 const REQUEST_STATUS_LABELS = { new: 'جديد', active: 'قيد العمل', paused: 'موقوف', closed: 'مغلق', cancelled: 'ملغي' };
+/** حالات نافذة السبعة أيام كما يعيدها الخادم (`window.state`) — لا حالة تُخترع هنا. */
+const WINDOW_STATE_LABELS = { fresh: 'حيّ', closing: 'آخر فرصة', expired: 'انتهت', met: 'لُبّي', unknown: 'بلا تاريخ' };
 const REQUEST_PROPERTY_LABELS = {
   apartment: 'شقة', penthouse: 'بنتهاوس', duplex: 'دوبلكس', villa: 'فيلا', office: 'مكتب', retail: 'محل', hq: 'مقر إداري',
 };
@@ -310,11 +312,18 @@ export function renderCustomerFile(file, container) {
   return container;
 }
 
+/** What is left of a request's seven days, in words — one place, so no screen invents its own. */
+function windowWhen(win) {
+  const left = win?.days_left;
+  if (typeof left !== 'number') return 'بلا تاريخ';
+  return left <= 0 ? 'انتهت مدته' : `بقيت ${number(left)} يومًا`;
+}
+
 export function renderQueues(payload, container, { onCompleteFollowup } = {}) {
   clear(container);
   const counts = payload.counts || {};
   const strip = el('div', 'a5-counts');
-  for (const [key, label] of [['due', 'مستحق'], ['overdue', 'متأخر'], ['unmatched', 'طلبات بلا مطابق'], ['stale', 'فرص صامتة']]) {
+  for (const [key, label] of [['expiring', 'تنتهي قريبًا'], ['due', 'مستحق'], ['overdue', 'متأخر'], ['unmatched', 'طلبات بلا مطابق'], ['stale', 'فرص صامتة']]) {
     const box = el('div', `a5-count a5-count-${key}`);
     box.appendChild(el('span', 'a5-count-number', String(counts[key] ?? 0)));
     box.appendChild(el('span', 'a5-count-label', label));
@@ -333,6 +342,14 @@ export function renderQueues(payload, container, { onCompleteFollowup } = {}) {
     return block;
   };
 
+  group('طلبات تنتهي — اعرض أو ودّع', payload.expiring_requests, (list, row) => {
+    const state = row.window?.state || 'unknown';
+    const item = el('li', `a5-item a5-window a5-window-${state}`);
+    item.appendChild(el('p', null, `${row.contact_name || row.contact_id} — ${REQUEST_KIND_LABELS[row.kind] || row.kind || 'طلب'} · ${areaText(row)} · ${budgetText(row)}`));
+    const action = row.window?.action ? ` · ${row.window.action}` : '';
+    item.appendChild(el('p', 'a5-meta', `${WINDOW_STATE_LABELS[state] || state} · ${windowWhen(row.window)}${action}`));
+    list.appendChild(item);
+  });
   group('مستحق اليوم', payload.due, (list, row) => {
     const item = el('li', 'a5-item');
     item.appendChild(el('p', null, `${row.contact_name || row.contact_id} — ${row.target_kind === 'opportunity' ? 'فرصة' : 'طلب'} ${row.target_label ? `· ${row.target_label}` : ''}`));
