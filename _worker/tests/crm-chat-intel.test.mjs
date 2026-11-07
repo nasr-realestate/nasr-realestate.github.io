@@ -599,6 +599,29 @@ test('Part II Test 10 (daily routine): a chat that gained a message updates the 
   sqlite.close();
 });
 
+test('Part II Test 13: messages_new counts rows the table actually gained, not rows attempted', async () => {
+  const { sqlite, db } = await createIntelEnv();
+  const now = new Date('2026-11-07T10:00:00.000Z');
+  const text = [
+    '03/11/2026, 12:00 م - عميل ثابت تجريبي: تمام كده',
+    '03/11/2026, 12:01 م - سمسار طلبك: تحت أمرك',
+  ].join('\n');
+
+  const first = await upsertConversationAndAnalyze(db, { chatTitle: 'عميل ثابت تجريبي', rawText: text, now });
+  assert.equal(first.messages_new, 2);
+
+  // Same transcript, forced past the incremental fast-path: every message is already there, so the
+  // honest answer is zero new messages — an operator reading `messages_new` must not see 2.
+  const again = await upsertConversationAndAnalyze(db, {
+    chatTitle: 'عميل ثابت تجريبي', rawText: text, now, forceAnalyze: true,
+  });
+  assert.equal(again.created, false);
+  assert.equal(again.messages_new, 0, 'nothing was inserted, so nothing is reported');
+  assert.equal(again.message_count, 2);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_conversation_messages').get().n, 2);
+  sqlite.close();
+});
+
 test('Part II Test 12: adoption is limited to legacy-hash rows — a row with its own uid is left alone', async () => {
   const { sqlite, db } = await createIntelEnv();
   const now = new Date('2026-11-07T09:00:00.000Z');
