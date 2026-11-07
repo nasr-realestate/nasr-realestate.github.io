@@ -306,6 +306,48 @@ function matchTimestampedLine(rawLine) {
   return null;
 }
 
+/**
+ * The chat's own name, reduced to something stable enough to recognise tomorrow: bidi marks gone,
+ * the export prefix and file extension gone, spaces and punctuation gone. Used for conversation
+ * IDENTITY — never for matching a customer (that stays `canonSyncKey` + VCF, and never guesses).
+ */
+export function conversationKey(title) {
+  return cleanBidiControls(String(title || ''))
+    .replace(/^دردشة(?:\s+في)?\s+واتساب\s+مع\s*/, '')
+    .replace(/\.(zip|txt)$/i, '')
+    .replace(/[\s/_؟?:]+/g, '')
+    .toLowerCase();
+}
+
+// Uids written by the previous identity schemes: a hash of the transcript, not of the chat.
+const LEGACY_CONVERSATION_UID_RE = /^(?:wadrive|conv):/;
+
+/**
+ * A conversation imported before identity became chat-based carries a content-hash uid. Rather
+ * than rewrite the identity of a real row (and orphan its messages), the same chat is adopted:
+ * exactly ONE existing WhatsApp conversation with the same key, or none. Two candidates means the
+ * name is ambiguous, and ambiguity is never resolved by guessing.
+ */
+async function adoptableConversation(db, title) {
+  const key = conversationKey(title);
+  if (!key) return null;
+  const res = await db.prepare(
+    `SELECT id, conversation_uid, contact_id, opportunity_id, match_status, raw_sha256,
+            analyzed_rule_version, chat_title
+       FROM crm_conversations
+      WHERE source_type IN ('whatsapp_export', 'whatsapp')
+      ORDER BY updated_at DESC LIMIT 500`,
+  ).all();
+  // Only rows written by the OLD identity scheme are candidates. A row already carrying a uid of
+  // its own (including a `wa:` one that is not this title's key) is a different decision, and
+  // merging it here would quietly join two chats into one record.
+  const hits = (res?.results || []).filter(
+    (row) => LEGACY_CONVERSATION_UID_RE.test(String(row.conversation_uid || ''))
+      && conversationKey(row.chat_title) === key,
+  );
+  return hits.length === 1 ? hits[0] : null;
+}
+
 export async function parseWhatsAppExport(rawInput, { chatTitle = '' } = {}) {
   const rawText = String(rawInput || '');
   const rawSha256 = await sha256HexText(rawText);
@@ -1174,11 +1216,23 @@ export async function upsertConversationAndAnalyze(db, {
 }) {
   const nowIso = (now instanceof Date ? now : new Date(now)).toISOString();
   const parsed = await parseWhatsAppExport(rawText, { chatTitle });
-  const uid = conversationUid || `conv:${await sha256HexText(`${parsed.chatTitle}\n${parsed.rawSha256}`)}`;
-
-  const existing = await db.prepare(
-    'SELECT id, contact_id, opportunity_id, match_status, raw_sha256, analyzed_rule_version FROM crm_conversations WHERE conversation_uid = ? LIMIT 1',
-  ).bind(uid).first();
+  // Identity follows the CHAT, not its current text. A chat that gains a message tomorrow is the
+  // same chat; hashing the whole transcript made every re-export a second conversation, which is
+  // the same as having no daily routine at all.
+  const stableUid = conversationUid || `wa:${conversationKey(parsed.chatTitle)}`;
+  let existing = await db.prepare(
+    `SELECT id, conversation_uid, contact_id, opportunity_id, match_status, raw_sha256, analyzed_rule_version
+       FROM crm_conversations WHERE conversation_uid = ? LIMIT 1`,
+  ).bind(stableUid).first();
+  let adoptedLegacy = false;
+  if (!existing) {
+    const legacy = await adoptableConversation(db, parsed.chatTitle);
+    if (legacy) {
+      existing = legacy;
+      adoptedLegacy = true;
+    }
+  }
+  const uid = existing?.conversation_uid || stableUid;
 
   const resolvedContactId = contactId || existing?.contact_id || null;
   let resolvedOppId = opportunityId || existing?.opportunity_id || null;
@@ -1218,7 +1272,10 @@ export async function upsertConversationAndAnalyze(db, {
       conversation_id: existing.id,
       conversation_uid: uid,
       created: false,
+      updated: false,
+      adopted_legacy: adoptedLegacy,
       incremental_skipped: true,
+      messages_new: 0,
       message_count: parsed.messages.length,
       parse_warnings: parsed.parseWarnings,
       alerts_created: 0,
@@ -1444,7 +1501,10 @@ export async function upsertConversationAndAnalyze(db, {
     conversation_id: convId,
     conversation_uid: uid,
     created: !existing,
+    updated: Boolean(existing),
+    adopted_legacy: adoptedLegacy,
     incremental_skipped: false,
+    messages_new: newMsgRows.length,
     message_count: parsed.messages.length,
     parse_warnings: parsed.parseWarnings,
     insight: {
