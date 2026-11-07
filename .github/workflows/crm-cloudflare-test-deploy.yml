@@ -742,6 +742,8 @@ jobs:
                  CRM_A5_WRITE_DECISION="${A5_WRITE_DECISION_INPUT:-none}" \
                  node _worker/tests/live-a5-verify.mjs --json > "$TMP/live_a5.json" 2> "$TMP/live_a5.err"; then
               a5_live="error:$(redact_err < "$TMP/live_a5.err" | tail -c 40 || echo unknown)"
+              # The name can only carry ~40 characters; the annotation carries the reason.
+              echo "::error::A5 live verifier failed: $(redact_err < "$TMP/live_a5.err" | tail -c 400 | tr -d '\n')"
               return 1
             fi
             a5_live=$(jq -r 'if ([.checks[] | select(.status == "fail")] | length) == 0 then "all-\(.checks | length)-pass" else "fail:" + ([.checks[] | select(.status == "fail") | .id] | join(",")) end' "$TMP/live_a5.json" 2>/dev/null || echo 'unparsable')
@@ -924,7 +926,7 @@ jobs:
                    --conclusion "$conclusion" --stopped-at "${A5_L2_E2E_OUTCOME:-unknown}:${A5_L2_E2E_PHASE:-unknown}" \
                    > "$TMP/finalize.out" 2> "$TMP/finalize.err"; then
               # Same reason as the verifier: a stop must carry its cause, not just the command.
-              finalize_reason=$(redact_err < "$TMP/finalize.err" | tail -c 160 | tr -d '\n')
+              finalize_reason=$(sed -E 's/[Bb]earer[[:space:]]*[A-Za-z0-9_.=_-]*/Bearer<redacted>/g; s/[A-Za-z0-9_=-]{32,}/<redacted>/g' "$TMP/finalize.err" | tr -d '\n' | tail -c 160)
               echo "::error::A5 L2: finalize failed (${finalize_reason:-no-stderr}); publishing zero-claim failure evidence instead of a success claim."
               node scripts/a5-l2.mjs failure-evidence --dir "$L2_DIR" --reason "finalize-failed"
               exit 1
