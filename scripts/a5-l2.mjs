@@ -30,8 +30,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, openSync, writeSync, fsyncSync, closeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { d1Query, assertTestOnlyConfig } from './a5-live-support.mjs';
+import { attestationIndex, deletionKey, loadDeletions } from './a5-l2-deletions.mjs';
+
+/** Repository root, used only to name the deletion book relative to it in reports. */
+const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /* ─────────────────────────────── documented LEGACY namespace ───────────────────────────────
  * An absent ledger does NOT mean "no rows". Before L2 existed the A5 verifiers wrote rows under
@@ -726,14 +730,19 @@ export function loadLedgers(dir, currentRunTag = '') {
 }
 
 /**
- * Preflight for run B. Returns { ok, reason, verdicts }.
+ * Preflight for run B. Returns { ok, reason, verdicts, attested_deleted }.
  * L0 and L1 are NEVER consulted: a matching tag or a derived key proves nothing here.
+ *
+ * `deletions` is the documented-deletion book (`a5-l2-deletions.json`). A gap it attests is
+ * `attested-deleted` — a fact with a witness — instead of `vanished`. Every unattested gap still
+ * stops, so the barrier keeps its full strength and gains a reviewable record.
  */
-export function classifyRows({ query, ledgers, currentRunTag }) {
+export function classifyRows({ query, ledgers, currentRunTag, deletions = [] }) {
   const loaded = ledgers.filter(x => x.error === 'ok');
   const bad = ledgers.find(x => x.error !== 'ok');
   if (bad) return { ok: false, reason: `untrusted-result-ledger:${bad.error}`,
-    verdicts: [], legacy_suspects: 0 };
+    verdicts: [], legacy_suspects: 0, attested_deleted: 0 };
+  const attested = attestationIndex(deletions);
 
   const eventByKey = new Map();
   const baselineKeys = new Set();
@@ -807,25 +816,46 @@ export function classifyRows({ query, ledgers, currentRunTag }) {
   }
 
   // EVERY published event (success, partial failure, checkpoint or cancellation) must still
-  // describe a row that exists. A vanished row is a deletion we never perform and must stop B.
+  // describe a row that exists. A gap the book attests is a documented deletion; any other gap is
+  // a deletion nobody recorded, and it stops B.
+  let attestedDeleted = 0;
+  const seenGaps = new Set();
   for (const { ledger } of loaded) {
     for (const e of ledger.events) {
-      if (!rows.some(r => r.table === e.table && r.a5_key === e.unique_key)) {
-        return { ok: false, reason: `l2-row-vanished:${e.table}`, verdicts,
-          legacy_suspects: legacySuspects.length };
+      const key = deletionKey(e.table, e.unique_key);
+      if (rows.some(r => r.table === e.table && r.a5_key === e.unique_key)) {
+        // A row that came back contradicts its own obituary. Fail closed: either the book or the
+        // database is wrong, and neither is something to guess about mid-deploy.
+        if (attested.has(key)) {
+          return { ok: false, reason: `l2-attestation-contradiction:${e.table}`, verdicts,
+            legacy_suspects: legacySuspects.length, attested_deleted: attestedDeleted };
+        }
+        continue;
       }
+      if (seenGaps.has(key)) continue;
+      seenGaps.add(key);
+      const entry = attested.get(key);
+      if (!entry) {
+        return { ok: false, reason: `l2-row-vanished:${e.table}`, verdicts,
+          legacy_suspects: legacySuspects.length, attested_deleted: attestedDeleted };
+      }
+      attestedDeleted += 1;
+      verdicts.push({ table: e.table, a5_key: e.unique_key, a5_id: String(e.observed_id ?? ''),
+        verdict: 'attested-deleted', attested_by: entry.deleted_by, attested_at: entry.deleted_at });
     }
   }
 
   if (legacyStop) {
-    return { ok: false, reason: legacyStop, verdicts, legacy_suspects: legacySuspects.length };
+    return { ok: false, reason: legacyStop, verdicts, legacy_suspects: legacySuspects.length,
+      attested_deleted: attestedDeleted };
   }
   const unknowns = verdicts.filter(v => v.verdict.startsWith('unknown') || v.verdict === 'current-run');
   if (unknowns.length) {
     return { ok: false, reason: `unknown-ownership:${unknowns[0].table}:${unknowns[0].verdict}`,
-      verdicts, legacy_suspects: legacySuspects.length };
+      verdicts, legacy_suspects: legacySuspects.length, attested_deleted: attestedDeleted };
   }
-  return { ok: true, reason: 'clean', verdicts, legacy_suspects: legacySuspects.length };
+  return { ok: true, reason: 'clean', verdicts, legacy_suspects: legacySuspects.length,
+    attested_deleted: attestedDeleted };
 }
 
 /** Per-key collision guard for the CURRENT run: full key only, never a namespace-wide empty check. */
@@ -847,6 +877,27 @@ export function baselineFrom(query) {
   for (const r of enumerateRows(query)) (ids[r.table] ||= []).push(r.a5_key);
   for (const k of Object.keys(ids)) ids[k].sort();
   return { schema: BASELINE_SCHEMA, ids, digest: sha256Hex(canonical(ids)) };
+}
+
+/**
+ * Preflight with the documented-deletion book applied. The book is read at this edge so that
+ * `classifyRows()` stays pure: entries are handed to it, never fetched inside it.
+ * A malformed book is a stop, never a warning — a gate that half-reads a book is worse than none.
+ */
+export function preflightWithDeletions({ query, ledgers, currentRunTag, bookFile }) {
+  const shown = String(bookFile || '').replace(`${ROOT_DIR}/`, '');
+  const book = loadDeletions(bookFile);
+  if (!book.ok) {
+    return {
+      result: { ok: false, reason: `untrusted-deletion-book:${book.errors[0] || 'invalid'}`,
+        verdicts: [], legacy_suspects: 0, attested_deleted: 0 },
+      book: { deletions_book: shown, deletions_errors: book.errors },
+    };
+  }
+  return {
+    result: classifyRows({ query, ledgers, currentRunTag, deletions: book.entries }),
+    book: { deletions_book: shown, deletions_errors: [] },
+  };
 }
 
 function cli() {
@@ -923,10 +974,13 @@ function cli() {
     let keyError = '';
     try { keysFree = assertKeysFree(query, identity.run_tag); }
     catch (error) { keyError = String(error?.message || error); }
-    const result = classifyRows({ query, ledgers, currentRunTag: identity.run_tag });
+    const bookFile = opt('deletions') || process.env.A5_L2_DELETIONS_FILE
+      || join(ROOT_DIR, 'scripts', 'a5-l2-deletions.json');
+    const { result, book } = preflightWithDeletions({ query, ledgers, currentRunTag: identity.run_tag, bookFile });
     const payload = { ok: result.ok && keysFree, reason: keyError || result.reason,
       run_tag: identity.run_tag, ledgers: ledgers.length, rows: result.verdicts.length,
-      legacy_suspects: result.legacy_suspects, verdicts: result.verdicts };
+      legacy_suspects: result.legacy_suspects, attested_deleted: result.attested_deleted ?? 0,
+      ...book, verdicts: result.verdicts };
     process.stdout.write(`${JSON.stringify(payload)}\n`);
     writeFileSync(join(dir, 'preflight.json'), `${JSON.stringify(payload)}\n`);
     if (!payload.ok) process.exitCode = 1;

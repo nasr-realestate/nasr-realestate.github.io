@@ -16,11 +16,14 @@
  *   * no ledger is written, no artifact is produced, no row is touched, nothing is claimed;
  *   * output carries table names, key prefixes and run tags — synthetic identifiers only.
  */
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   enumerateLegacySuspects, enumerateRows, loadLedgers, readonlyQuery,
 } from './a5-l2.mjs';
+import { attestationIndex, loadDeletions } from './a5-l2-deletions.mjs';
+
+const ROOT_DIR = resolve(dirname(new URL(import.meta.url).pathname), '..');
 
 const KEY_PREFIX = 24;
 
@@ -62,8 +65,11 @@ function indexEvidence(loaded) {
   return { eventKeys, baselineKeys };
 }
 
-/** A proven row that is no longer there: the single hardest stop, and the one worth naming. */
-function findVanished(loaded, present) {
+/**
+ * A proven row that is no longer there. A gap the book attests is reported separately: it is a
+ * documented deletion, not a mystery, and mixing the two is how a real one gets lost in a list.
+ */
+function findVanished(loaded, present, attested) {
   const out = [];
   const seen = new Set();
   for (const { ledger } of loaded) {
@@ -71,10 +77,16 @@ function findVanished(loaded, present) {
       const k = `${e.table}|${e.unique_key}`;
       if (present.has(k) || present.has(`${e.table}|observed:${e.observed_id}`) || seen.has(k)) continue;
       seen.add(k);
-      out.push({
+      const obituary = attested.get(k);
+      const record = {
         table: e.table, key: brief(e.unique_key), run_tag: brief(e.run_tag, 40),
         step: brief(e.step, 40), id_source: brief(e.id_source, 40),
-      });
+      };
+      if (obituary) {
+        record.attested_by = brief(obituary.deleted_by, 40);
+        record.attested_at = brief(obituary.deleted_at, 24);
+      }
+      out.push(record);
     }
   }
   return out;
@@ -96,17 +108,19 @@ function findUnknown(rows, { eventKeys, baselineKeys }) {
  * Returns lists, never throws for a row-level finding — a diagnosis that dies on the first
  * surprise is how people end up guessing.
  */
-export function diagnose({ query, ledgers }) {
+export function diagnose({ query, ledgers, deletions = [] }) {
   const loaded = ledgers.filter((x) => x.error === 'ok');
   const untrusted = ledgers.filter((x) => x.error !== 'ok').map((x) => ({ name: x.name, error: x.error }));
   const rows = enumerateRows(query);
+  const gaps = findVanished(loaded, indexPresent(rows), attestationIndex(deletions));
   const found = {
-    vanished: findVanished(loaded, indexPresent(rows)),
+    attested: gaps.filter((g) => g.attested_at),
+    vanished: gaps.filter((g) => !g.attested_at),
     unknown: findUnknown(rows, indexEvidence(loaded)),
     legacy: enumerateLegacySuspects(query).map((s) => ({ table: s.table, key: brief(s.a5_key), label: brief(s.label, 40) })),
   };
   return {
-    verdict: verdictOf(found),
+    verdict: verdictOf(found), attested_count: found.attested.length,
     ledgers: loaded.length, untrusted, rows: rows.length,
     ...found,
   };
@@ -119,9 +133,12 @@ export function diagnose({ query, ledgers }) {
 export function annotationLines(result, cap = { vanished: 4, unknown: 3, legacy: 2 }) {
   const lines = [
     `::error::A5 L2 DIAG verdict=${result.verdict} vanished=${result.vanished.length} `
-    + `unknown=${result.unknown.length} legacy=${result.legacy.length} `
+    + `attested=${(result.attested || []).length} unknown=${result.unknown.length} legacy=${result.legacy.length} `
     + `ledgers=${result.ledgers} untrusted=${result.untrusted.length} rows=${result.rows}`,
   ];
+  for (const a of (result.attested || []).slice(0, cap.attested ?? 2)) {
+    lines.push(`::notice::A5 L2 DIAG attested table=${a.table} key=${a.key} by=${a.attested_by} at=${a.attested_at}`);
+  }
   for (const v of result.vanished.slice(0, cap.vanished)) {
     lines.push(`::error::A5 L2 DIAG vanished table=${v.table} key=${v.key} run=${v.run_tag} step=${v.step}`);
   }
@@ -141,7 +158,16 @@ function main() {
   const ledgersDir = resolve(opt('ledgers') || process.env.A5_L2_PRIOR_DIR || '');
   if (!ledgersDir) throw new Error('a5-l2-diagnose-ledgers-dir-required');
   const ledgers = loadLedgers(ledgersDir, '');
-  const result = diagnose({ query: (sql) => readonlyQuery(sql, process.env), ledgers });
+  const bookFile = opt('deletions') || process.env.A5_L2_DELETIONS_FILE
+    || join(ROOT_DIR, 'scripts', 'a5-l2-deletions.json');
+  const book = loadDeletions(bookFile);
+  if (!book.ok) {
+    process.stdout.write(`::error::A5 L2 DIAG deletion book is not readable: ${book.errors.slice(0, 3).join(',') || 'invalid'}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const result = diagnose({ query: (sql) => readonlyQuery(sql, process.env), ledgers, deletions: book.entries });
+  result.deletions_book = brief(bookFile.replace(`${ROOT_DIR}/`, ''), 60);
   for (const line of annotationLines(result)) process.stdout.write(`${line}\n`);
   process.stdout.write(`${JSON.stringify({ ok: true, ...result })}\n`);
 }
