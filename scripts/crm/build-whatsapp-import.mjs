@@ -21,7 +21,10 @@
  *   - never guess. A name that resolves to 0 or 2+ contacts is reported as
  *     unresolved with its reason, and is imported with its original title so a
  *     human can place it. Nothing is invented, nothing is merged silently.
- *   - never leak. Output holds real client names; write it outside git.
+ *   - never leak. Output holds real client names; write it outside the
+ *     repository entirely — `imports/` is git-ignored, but the privacy canary
+ *     scans the working tree, and it is right to: a downloaded .vcf in the repo
+ *     directory is a phone book on disk whether or not git sees it.
  *   - idempotent. `conversation_uid` derives from the text hash, so re-running
  *     the same folder cannot create a second copy of the same chat.
  *
@@ -177,11 +180,25 @@ export function resolveChatOwner({ title, peerSenderName, peerPhoneNorm }, conta
   return diagnostic;
 }
 
+/** Two entries are the same man when they carry the same numbers. */
+function sameNumbers(a, b) {
+  const pa = [...new Set((a.phones || []).map((p) => p.e164))].sort().join(',');
+  const pb = [...new Set((b.phones || []).map((p) => p.e164))].sort().join(',');
+  return pa !== '' && pa === pb;
+}
+
 function exactNameMatch(name, contacts) {
   const key = canonSyncKey(name);
   if (!key) return null;
   const hits = contacts.filter((c) => canonSyncKey(c.fn) === key);
-  return hits.length === 1 ? { contact: hits[0], method: 'name:exact' } : null;
+  if (hits.length === 1) return { contact: hits[0], method: 'name:exact' };
+  // A 3000-contact book repeats people. Two rows with one name and one set of
+  // numbers are one man saved twice, not an ambiguity to refuse — but two rows
+  // with different numbers are two men, and that stays unanswered.
+  if (hits.length > 1 && hits.every((h) => sameNumbers(h, hits[0]))) {
+    return { contact: hits[0], method: 'name:exact-duplicate' };
+  }
+  return null;
 }
 
 function scoreAgainstPhoneBook(probe, contacts) {
@@ -254,9 +271,29 @@ export function conversationUidFrom(rawSha256) {
 // build
 // ---------------------------------------------------------------------------
 
-export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'drive' }) {
-  const contacts = [];
-  for (const { name, text } of vcfTexts) contacts.push(...parseVcfContacts(text, name));
+/**
+ * The same person is exported again in every vCard file the broker saves.
+ * Collapse them once, by canonical name + numbers, so the bundle carries people
+ * and not archive copies.
+ */
+export function dedupeContacts(contacts) {
+  const byKey = new Map();
+  for (const c of contacts) {
+    const numbers = [...new Set((c.phones || []).map((p) => p.e164))].sort().join(',');
+    const key = `${canonSyncKey(c.fn)}|${numbers}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.vcf_files = [...new Set([...(existing.vcf_files || []), ...(c.vcf_files || [])])];
+      continue;
+    }
+    byKey.set(key, { ...c });
+  }
+  return [...byKey.values()];
+}
+
+export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'drive', contactsInBundle = 'matched' }) {
+  const contacts = dedupeContacts(vcfTexts.flatMap(({ name, text }) => parseVcfContacts(text, name)));
+  const referenced = new Map();
 
   const conversations = [];
   const report = [];
@@ -272,6 +309,7 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
     // The worker matches on the canonical name, so a resolved chat is handed the
     // phone book's spelling; an unresolved one keeps its own and is marked.
     const wireTitle = found.contact ? found.contact.fn : title;
+    if (found.contact) referenced.set(found.contact.fn, found.contact);
 
     conversations.push({
       title: wireTitle,
@@ -298,9 +336,14 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
     });
   }
 
+  // The phone book is a dictionary, not a client list: 3000 entries exist so that
+  // ten conversations can be identified. Only the identified ones travel.
+  const shipped = contactsInBundle === 'all' ? contacts : [...referenced.values()];
+
   return {
-    bundle: { vcf_contacts: contacts, conversations, dry_run: true },
+    bundle: { vcf_contacts: shipped, conversations, dry_run: true },
     report,
+    stats: { contacts_in_phone_book: contacts.length, contacts_shipped: shipped.length },
   };
 }
 
@@ -366,7 +409,9 @@ async function main() {
     text: /\.zip$/i.test(f) ? readChatTextFromZip(f).text : fs.readFileSync(f, 'utf8'),
   }));
 
-  const { bundle, report } = await buildBundle({ vcfTexts, chatSources, sourceDirLabel: path.basename(dir) });
+  const { bundle, report, stats } = await buildBundle({
+    vcfTexts, chatSources, sourceDirLabel: path.basename(dir), contactsInBundle: get('--contacts', 'matched'),
+  });
   const summary = summarize(report);
 
   fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -380,7 +425,8 @@ async function main() {
 
   console.log(JSON.stringify({
     ...summary,
-    contacts_in_phone_book: bundle.vcf_contacts.length,
+    contacts_in_phone_book: stats.contacts_in_phone_book,
+    contacts_shipped: stats.contacts_shipped,
     batches: chunks.length,
     batch_sizes: chunks.map((c) => c.conversations.length),
   }, null, 2));

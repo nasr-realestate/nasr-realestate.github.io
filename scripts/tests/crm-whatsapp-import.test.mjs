@@ -7,7 +7,7 @@ import path from 'node:path';
 
 import {
   parseVcfContacts, resolveChatOwner, nameTokens, normalizeArabicName,
-  buildBundle, batchBundle, summarize, readChatTextFromZip, conversationUidFrom,
+  buildBundle, batchBundle, summarize, readChatTextFromZip, conversationUidFrom, dedupeContacts,
 } from '../crm/build-whatsapp-import.mjs';
 import { canonSyncKey } from '../../_worker/crm-sync-and-match.js';
 
@@ -184,4 +184,59 @@ test('WA-15 a quoted-printable Arabic name survives the fold (vCard 2.1 reality)
   const [c] = parseVcfContacts(vcf);
   assert.equal(c.fn, 'نهله شقة للإيجار');
   assert.equal(c.phones[0].e164, '201000000003');
+});
+
+test('WA-16 one man saved twice is a duplicate; two men with one name is not', () => {
+  const twice = ['BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;TYPE=CELL:+201000000021', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;CELL:01000000021', 'END:VCARD'].join('\r\n');
+  const same = resolveChatOwner({ title: 'حازم عبد العال', peerSenderName: 'حازم عبد العال', peerPhoneNorm: null },
+    dedupeContacts(parseVcfContacts(twice)));
+  assert.equal(same.contact?.fn, 'حازم عبد العال');
+
+  const twoMen = ['BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;TYPE=CELL:+201000000021', 'END:VCARD',
+    'BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;TYPE=CELL:+201000000099', 'END:VCARD'].join('\r\n');
+  const clash = resolveChatOwner({ title: 'حازم عبد العال', peerSenderName: 'حازم عبد العال', peerPhoneNorm: null },
+    parseVcfContacts(twoMen));
+  assert.equal(clash.contact, null, 'same name, different numbers — two men, so we refuse');
+});
+
+test('WA-17 the phone book stays on the phone: only referenced contacts ship', async () => {
+  const { bundle, stats } = await buildBundle({
+    vcfTexts: [{ name: 'book.vcf', text: VCF }],
+    chatSources: [{ label: '‏دردشة في واتساب مع 🔴 حازم محل 80م.txt', text: CHAT }],
+  });
+  assert.equal(stats.contacts_in_phone_book, 4);
+  assert.equal(stats.contacts_shipped, 1, 'four contacts, one conversation — one contact travels');
+  assert.equal(bundle.vcf_contacts[0].fn, 'حازم عبد العال');
+
+  const all = await buildBundle({
+    vcfTexts: [{ name: 'book.vcf', text: VCF }],
+    chatSources: [],
+    contactsInBundle: 'all',
+  });
+  assert.equal(all.stats.contacts_shipped, 4);
+});
+
+test('WA-18 a 3000-contact book does not bloat the envelope and still resolves', async () => {
+  const book = [];
+  for (let i = 0; i < 3000; i += 1) {
+    book.push(`BEGIN:VCARD\r\nFN:شخص رقم${i}\r\nTEL;TYPE=CELL:+2010000${String(i).padStart(4, '0')}\r\nEND:VCARD`);
+  }
+  book.splice(1500, 0, 'BEGIN:VCARD\r\nFN:حازم عبد العال\r\nTEL;TYPE=CELL:+201000000001\r\nEND:VCARD');
+  const started = Date.now();
+  const { bundle, stats, report } = await buildBundle({
+    vcfTexts: [{ name: 'book.vcf', text: book.join('\r\n') }],
+    chatSources: [{ label: '‏دردشة في واتساب مع 🔴 حازم محل 80م.txt', text: CHAT }],
+  });
+  const elapsed = Date.now() - started;
+
+  assert.equal(stats.contacts_in_phone_book, 3001);
+  assert.equal(report[0].resolved_to, 'حازم عبد العال');
+  assert.equal(stats.contacts_shipped, 1);
+  // The conversation is ~300 bytes of text; the book is megabytes. Neither may
+  // ride along, because the dispatch input is capped at 65,535 characters.
+  const envelopeCeiling = Math.floor(65_535 / 1.42);
+  assert.ok(JSON.stringify(bundle.conversations).length < envelopeCeiling);
+  assert.equal(bundle.vcf_contacts.length, 1);
+  assert.ok(elapsed < 5000, `resolution over 3000 contacts took ${elapsed}ms`);
 });
