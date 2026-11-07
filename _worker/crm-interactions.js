@@ -14,6 +14,7 @@
  *   * each create carries a derived `dedupe_key`, so a double-click or a retry does not double the record.
  */
 
+import { decorateRequest } from './crm-request-expiry.js';
 import {
   sha256Hex,
   newId,
@@ -234,6 +235,13 @@ export async function contactsNeedingFollowupPayload(db, { now, limit = 50 } = {
   return { contacts: rows, count: rows.length, as_of: at };
 }
 
+const EXPIRING_STATES = new Set(['closing', 'expired']);
+
+/** Last-chance rows come before already-expired ones; inside a state, the nearer deadline first. */
+function expiringRank(row) {
+  return row.window?.state === 'closing' ? 0 : 1;
+}
+
 /** The three queues A5 asks for, in one read: due/overdue follow-ups, stale opportunities, unmatched requests. */
 export async function operationalQueuesPayload(db, { now, limit = 50 } = {}) {
   const at = now ? new Date(now).toISOString() : new Date().toISOString();
@@ -248,14 +256,28 @@ export async function operationalQueuesPayload(db, { now, limit = 50 } = {}) {
     db.prepare(`SELECT * FROM crm_requests_unmatched_v ORDER BY updated_at ASC LIMIT ?`).bind(size).all(),
     db.prepare(`SELECT * FROM crm_opportunity_stages_v ORDER BY updated_at DESC LIMIT ?`).bind(size).all(),
   ]);
+  // A missing requests table (an environment where A5 was never migrated) must
+  // not take the whole queue down: the clock is an extra line, not a dependency.
+  let openRequests = { results: [] };
+  try {
+    openRequests = await db.prepare(`SELECT r.id, r.kind, r.status, r.created_at, r.area, r.budget_min, r.budget_max, c.name AS contact_name
+        FROM crm_customer_requests r JOIN crm_contacts c ON c.id = r.contact_id
+        WHERE r.status IN ('new', 'active') ORDER BY r.created_at ASC LIMIT ?`).bind(size).all();
+  } catch { openRequests = { results: [] }; }
+  const expiring = (openRequests.results ?? [])
+    .map((r) => decorateRequest(r, at))
+    .filter((r) => EXPIRING_STATES.has(r.window?.state))
+    .sort((a, b) => expiringRank(a) - expiringRank(b) || (a.window?.days_left ?? 0) - (b.window?.days_left ?? 0));
   return {
     as_of: at, timezone: 'Africa/Cairo',
     due: due.results ?? [], overdue: overdue.results ?? [],
+    expiring_requests: expiring,
     stale_opportunities: stale.results ?? [], unmatched_requests: unmatched.results ?? [],
     opportunity_stages: stages.results ?? [],
     counts: {
       due: (due.results ?? []).length, overdue: (overdue.results ?? []).length,
       stale: (stale.results ?? []).length, unmatched: (unmatched.results ?? []).length,
+      expiring: expiring.length,
     },
   };
 }

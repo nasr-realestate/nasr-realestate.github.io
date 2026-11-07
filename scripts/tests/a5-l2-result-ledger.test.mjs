@@ -863,3 +863,20 @@ test('L2-21 run B must not re-refuse a ticket run A already proved', () => {
   assert.ok(ledgerB.events.length > 0);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('L2-22 an A5/curl failure must carry curl\'s reason, not its own argv', () => {
+  const support = read('scripts/a5-live-support.mjs');
+  const workflow = read('.github/workflows/crm-cloudflare-test-deploy.yml');
+  // Node puts the whole curl argv in the thrown message and leaves the explanation in stderr. Run
+  // 42314494090 reported `a5=error:…XPOST-HAuthorizationBearer<redacted>` — the command, not why.
+  assert.ok(support.includes('d1-query-failed:'), 'a curl failure must name its reason');
+  assert.ok(/String\(error\?\.stderr \|\| ''\)/.test(support), 'the reason must come from curl stderr');
+  // The name is limited (~40 chars), so the reason must also be published as an annotation.
+  assert.match(workflow, /::error::A5 live verifier failed: /);
+  assert.match(workflow, /tail -c 400/);
+  // And the finalize annotation must not call a helper that step does not define.
+  const finalizeStep = workflow.slice(workflow.indexOf('name: A5 L2 — publish final result ledger'),
+    workflow.indexOf('name: Publish A5 L2 result ledger artifact'));
+  assert.ok(!/finalize_reason=\$\(redact_err/.test(finalizeStep),
+    'step 10 has no redact_err function; it must redact inline');
+});

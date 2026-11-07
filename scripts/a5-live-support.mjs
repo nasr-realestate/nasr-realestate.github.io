@@ -128,12 +128,24 @@ export function d1Query(sql, env = process.env) {
   const account = env.CLOUDFLARE_ACCOUNT_ID;
   if (!token || !account) throw new Error('cloudflare-env-missing');
   const payload = JSON.stringify({ sql });
-  const out = execFileSync('curl', [
-    '--silent', '--show-error', '--fail-with-body', '--connect-timeout', '10', '--max-time', '30',
-    '-X', 'POST', '-H', `Authorization: Bearer ${token}`, '-H', 'Content-Type: application/json',
-    '--data', payload,
-    `${env.CRM_A5_CF_API || CF_API}/accounts/${account}/d1/database/${TEST_DB_UUID}/query`,
-  ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+  let out;
+  try {
+    out = execFileSync('curl', [
+      '--silent', '--show-error', '--fail-with-body', '--connect-timeout', '10', '--max-time', '30',
+      '-X', 'POST', '-H', `Authorization: Bearer ${token}`, '-H', 'Content-Type: application/json',
+      '--data', payload,
+      `${env.CRM_A5_CF_API || CF_API}/accounts/${account}/d1/database/${TEST_DB_UUID}/query`,
+    ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+  } catch (error) {
+    // Node puts the whole argv — including `-X POST -H "Authorization: Bearer …"` — in the message and
+    // leaves curl's own explanation in stderr. Run 42314494090 therefore reported only
+    // `a5=error:…XPOST-HAuthorizationBearer<redacted>`: the command, never the reason. The reason is
+    // curl's stderr (with --show-error / --fail-with-body it carries the API's answer).
+    const detail = String(error?.stderr || '').split('\n').map(l => l.trim()).filter(Boolean).pop()
+      || String(error?.stdout || '').trim().slice(0, 160)
+      || 'no-curl-stderr';
+    throw new Error(`d1-query-failed:${detail.slice(0, 160)}`);
+  }
   return parseD1Response(out);
 }
 
