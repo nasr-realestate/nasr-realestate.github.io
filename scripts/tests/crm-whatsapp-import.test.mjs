@@ -115,14 +115,21 @@ test('WA-9 the transcript is parsed by the worker parser, not a second one', asy
   });
   assert.equal(report[0].messages, 3);
   assert.ok(bundle.conversations[0].first_message_at < bundle.conversations[0].last_message_at);
-  assert.match(bundle.conversations[0].conversation_uid, /^wadrive:[0-9a-f]{40}$/);
+  assert.match(bundle.conversations[0].conversation_uid, /^wa:/);
 });
 
-test('WA-10 the same transcript always yields the same uid (re-import is a no-op)', async () => {
+test('WA-10 the same CHAT yields the same uid — a new message does not create a second conversation', async () => {
   const a = await buildBundle({ vcfTexts: [{ name: 'v.vcf', text: VCF }], chatSources: [{ label: 'x.txt', text: CHAT }] });
-  const b = await buildBundle({ vcfTexts: [{ name: 'v.vcf', text: VCF }], chatSources: [{ label: 'renamed.txt', text: CHAT }] });
+  const b = await buildBundle({ vcfTexts: [{ name: 'v.vcf', text: VCF }], chatSources: [{ label: 'x.txt', text: CHAT }] });
   assert.equal(a.bundle.conversations[0].conversation_uid, b.bundle.conversations[0].conversation_uid);
-  assert.equal(conversationUidFrom('f'.repeat(64)), `wadrive:${'f'.repeat(40)}`);
+  assert.match(a.bundle.conversations[0].conversation_uid, /^wa:/);
+  // The daily case: the chat grew by one message, so its text hash changed. The identity must not.
+  const grown = await buildBundle({ vcfTexts: [{ name: 'v.vcf', text: VCF }], chatSources: [{ label: 'x.txt', text: `${CHAT}\n30/10/2026, 10:00 ص - سمسار طلبك: رسالة جديدة` }] });
+  assert.equal(grown.bundle.conversations[0].conversation_uid, a.bundle.conversations[0].conversation_uid,
+    'a re-exported chat must update the same conversation, not duplicate it');
+  assert.notEqual(grown.bundle.conversations[0].sig, a.bundle.conversations[0].sig, 'the content hash still moves');
+  assert.equal(conversationUidFrom('دردشة واتساب مع أحمد'), conversationUidFrom('أحمد'), 'the export prefix is not identity');
+  assert.match(conversationUidFrom('أحمد'), /^wa:/);
 });
 
 test('WA-11 batches respect both the count and the dispatch byte budget', () => {

@@ -281,8 +281,20 @@ export function listInputs(dir) {
 }
 
 /** Deterministic, collision-free id for a transcript. */
-export function conversationUidFrom(rawSha256) {
-  return `wadrive:${String(rawSha256).slice(0, 40)}`;
+/**
+ * Conversation identity is the CHAT, not today's transcript.
+ *
+ * It used to be `wadrive:<hash of the text>`, so re-exporting a chat that gained one message
+ * produced a second conversation with the new text and left the old one behind — a daily routine
+ * that duplicates instead of updating. The chat title is what stays the same tomorrow, and the
+ * worker keeps the content hash separately (`raw_sha256`) to know whether anything changed.
+ *
+ * `canonSyncKey` is imported from the sync module on purpose: the same normalisation decides both
+ * which chat this is and which customer it belongs to, so the two can never disagree.
+ */
+export function conversationUidFrom(chatTitle) {
+  const key = canonSyncKey(String(chatTitle || ''));
+  return key ? `wa:${key}` : '';
 }
 
 // ---------------------------------------------------------------------------
@@ -343,7 +355,7 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
     conversations.push({
       title: wireTitle,
       sig: parsed.rawSha256.slice(0, 16),
-      conversation_uid: conversationUidFrom(parsed.rawSha256),
+      conversation_uid: conversationUidFrom(title),
       raw_txt: parsed.rawText,
       source_ref: `${sourceDirLabel}:${label}`,
       first_message_at: parsed.firstMessageAt,

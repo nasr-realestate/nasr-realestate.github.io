@@ -7,6 +7,7 @@ import test from 'node:test';
 import worker from '../crm-worker.js';
 import {
   CURRENT_RULE_VERSION,
+  conversationKey,
   parseEgyptianTemporalSignal,
   upsertConversationAndAnalyze,
 } from '../crm-chat-intel.js';
@@ -566,4 +567,89 @@ test('Part II Test 9: Follow-up Screen UI controller renders queues, opens untru
   } finally {
     globalThis.document = prevDoc;
   }
+});
+
+test('Part II Test 10 (daily routine): a chat that gained a message updates the SAME conversation', async () => {
+  const { sqlite, db } = await createIntelEnv();
+  const now = new Date('2026-11-07T08:00:00.000Z');
+  const day1 = [
+    '01/11/2026, 10:00 ص - عميل يومي تجريبي: عايز شقة في مدينة نصر',
+    '01/11/2026, 10:05 ص - سمسار طلبك: تمام، هبعتلك عروض',
+  ].join('\n');
+  const day2 = `${day1}\n07/11/2026, 9:00 ص - عميل يومي تجريبي: إيه الجديد؟`;
+
+  const first = await upsertConversationAndAnalyze(db, { chatTitle: 'عميل يومي تجريبي', rawText: day1, now });
+  assert.equal(first.created, true, 'first import creates the conversation');
+  assert.equal(first.messages_new, 2);
+  assert.match(first.conversation_uid, /^wa:/, 'identity comes from the chat, not the transcript hash');
+
+  const second = await upsertConversationAndAnalyze(db, {
+    chatTitle: 'عميل يومي تجريبي', rawText: day2, now, forceAnalyze: true,
+  });
+  assert.equal(second.created, false, 'a re-export must not create a second conversation');
+  assert.equal(second.updated, true);
+  assert.equal(second.conversation_id, first.conversation_id, 'same conversation row');
+  assert.equal(second.messages_new, 1, 'only the new message is written');
+  assert.equal(second.message_count, 3);
+
+  const conversations = sqlite.prepare('SELECT COUNT(*) AS n FROM crm_conversations').get().n;
+  assert.equal(conversations, 1, 'still exactly one conversation');
+  const messages = sqlite.prepare('SELECT COUNT(*) AS n FROM crm_conversation_messages').get().n;
+  assert.equal(messages, 3, 'no duplicated messages');
+  sqlite.close();
+});
+
+test('Part II Test 12: adoption is limited to legacy-hash rows — a row with its own uid is left alone', async () => {
+  const { sqlite, db } = await createIntelEnv();
+  const now = new Date('2026-11-07T09:00:00.000Z');
+  const text = [
+    '02/11/2026, 11:00 ص - عميل موازٍ تجريبي: عايز شقة',
+    '02/11/2026, 11:02 ص - سمسار طلبك: تمام',
+  ].join('\n');
+  // Same title, but the row already has an identity of its own (`wa:`). It is NOT a legacy row, so
+  // it must never be adopted: doing so would silently fold two records into one.
+  sqlite.prepare(`INSERT INTO crm_conversations(
+      id, conversation_uid, contact_id, opportunity_id, source_type, source_ref, chat_title,
+      peer_sender_name, match_status, match_method, review_reason, raw_text, raw_sha256,
+      message_count, first_message_at, last_message_at, parse_warnings_json, analyzed_at,
+      analyzed_rule_version, created_at, updated_at)
+    VALUES ('wa-row-1', 'wa:بعضشيءآخر', NULL, NULL, 'whatsapp_export', 'drive', 'عميل موازٍ تجريبي',
+      'عميل موازٍ تجريبي', 'unmatched_review', 'none', '', ?, 'otherhash', 2,
+      '2026-11-02T09:00:00.000Z', '2026-11-02T09:02:00.000Z', '[]', ?, 1,
+      '2026-11-02T09:02:00.000Z', '2026-11-02T09:02:00.000Z')`)
+    .run(text, now.toISOString());
+
+  const res = await upsertConversationAndAnalyze(db, { chatTitle: 'عميل موازٍ تجريبي', rawText: text, now, forceAnalyze: true });
+  assert.equal(res.adopted_legacy, false, 'a non-legacy row is never adopted by name');
+  assert.notEqual(res.conversation_id, 'wa-row-1');
+  assert.equal(res.conversation_uid, `wa:${conversationKey('عميل موازٍ تجريبي')}`);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_conversations').get().n, 2);
+  sqlite.close();
+});
+
+test('Part II Test 11: a conversation imported before the identity change is adopted, not duplicated', async () => {
+  const { sqlite, db } = await createIntelEnv();
+  const now = new Date('2026-11-07T08:00:00.000Z');
+  const text = [
+    '01/11/2026, 10:00 ص - عميل قديم تجريبي: السلام عليكم',
+    '01/11/2026, 10:05 ص - سمسار طلبك: وعليكم السلام',
+  ].join('\n');
+  // A legacy row exactly as the previous identity scheme left it: uid = content hash.
+  sqlite.prepare(`INSERT INTO crm_conversations(
+      id, conversation_uid, contact_id, opportunity_id, source_type, source_ref, chat_title,
+      peer_sender_name, match_status, match_method, review_reason, raw_text, raw_sha256,
+      message_count, first_message_at, last_message_at, parse_warnings_json, analyzed_at,
+      analyzed_rule_version, created_at, updated_at)
+    VALUES ('legacy-conv-1', 'conv:legacyhash', NULL, NULL, 'whatsapp_export', 'drive', 'عميل قديم تجريبي',
+      'عميل قديم تجريبي', 'unmatched_review', 'none', '', ?, 'legacyhash', 2,
+      '2026-11-01T08:00:00.000Z', '2026-11-01T08:05:00.000Z', '[]', ?, 1,
+      '2026-11-01T08:05:00.000Z', '2026-11-01T08:05:00.000Z')`)
+    .run(text, now.toISOString());
+
+  const res = await upsertConversationAndAnalyze(db, { chatTitle: 'عميل قديم تجريبي', rawText: text, now, forceAnalyze: true });
+  assert.equal(res.adopted_legacy, true, 'the existing row is recognised as the same chat');
+  assert.equal(res.conversation_id, 'legacy-conv-1');
+  assert.equal(res.conversation_uid, 'conv:legacyhash', 'its identity is not rewritten');
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM crm_conversations').get().n, 1);
+  sqlite.close();
 });
