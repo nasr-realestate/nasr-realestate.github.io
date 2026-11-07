@@ -1,0 +1,167 @@
+name: CRM A5 orphan rows cleanup (test D1 only, counted, dry-run by default)
+
+# WHY (2026-11-07)
+#
+# The deploy gate stops on `unknown-ownership:<table>:...`: a synthetic row exists and no published
+# ledger claims it. Those rows are left over from runs that wrote and then died before publishing
+# evidence — nothing will ever claim them, and they cannot be "attested as deleted" because they are
+# still there.
+#
+# This workflow removes exactly those rows, and nothing else:
+#   * scope is imported: `scripts/crm/a5-orphan-cleanup.mjs` asks the gate's own enumerator which
+#     rows are unclaimed, minus baseline rows and minus the documented legacy namespace (which has
+#     its own tool). There is no second predicate to drift;
+#   * dry-run is the default and builds no DELETE at all; `mode=apply` additionally requires
+#     CRM_ORPHAN_APPLY=1, which this file sets only in that branch;
+#   * every delete names one row by its primary key — no TRUNCATE, no range, no LIKE;
+#   * counted on both sides, and the run FAILS if any planned row survives;
+#   * more than 20 orphans aborts before any write: that is a database state for a person, not
+#     residue;
+#   * the token is masked before the first request and never echoed, written or artifacted;
+#   * target is the test database only — `assertTestOnlyConfig()` re-reads `_worker/wrangler.crm.toml`
+#     before the first statement. `nasr-market-db` is never a target.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_cleanup:
+        description: 'Type DELETE-ORPHAN-SYNTHETIC-ROWS to run. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      mode:
+        description: 'dry-run counts and names tables (default, no writes). apply deletes exactly the rows the gate calls unknown, then recounts.'
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - apply
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-a5-orphan-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: 'CRM orphan cleanup — test D1 only, counted both sides'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_cleanup == 'DELETE-ORPHAN-SYNTHETIC-ROWS'
+    outputs:
+      outcome: ${{ steps.cleanup.outputs.outcome }}
+      mode: ${{ steps.cleanup.outputs.mode }}
+      before_total: ${{ steps.cleanup.outputs.before_total }}
+      deleted_total: ${{ steps.cleanup.outputs.deleted_total }}
+      after_total: ${{ steps.cleanup.outputs.after_total }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the gate and the tool that reads it
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve the account id (read-only GET; the token is masked first)
+        id: account
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::ARENA_CLOUDFLARE_TOKEN is not available to this workflow; nothing was read."
+            exit 1
+          fi
+          body=$(mktemp)
+          trap 'rm -f "$body"' EXIT
+          code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -o "$body" -w '%{http_code}' \
+            https://api.cloudflare.com/client/v4/accounts || echo 000)
+          account=$(jq -r '.result[0].id // empty' "$body" 2>/dev/null || true)
+          if [ "$code" != '200' ] || [ -z "$account" ]; then
+            echo "::error::GET /accounts failed (http=${code}); no query was issued."
+            exit 1
+          fi
+          echo "account_id=${account}" >> "$GITHUB_OUTPUT"
+
+      - name: Deliver the prior ledgers the gate itself reads (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/a5-orphan"
+          mkdir -p "$ROOT/prior" "$ROOT/downloads"
+          echo "A5_L2_PRIOR_DIR=$ROOT/prior" >> "$GITHUB_ENV"
+          node scripts/a5-l2-prior-runs.mjs \
+            --prior-dir "$ROOT/prior" --work-dir "$ROOT/downloads" \
+            --retention-days 90 > "$ROOT/prior-runs.json"
+          jq -c '{ok, pages_fetched, runs_fetched, eligible_runs, ineligible_runs, ledgers}' "$ROOT/prior-runs.json"
+
+      - name: Count first, delete only on request, count again
+        id: cleanup
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+          CRM_A5_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          umask 077
+          ROOT="$RUNNER_TEMP/a5-orphan"
+          mode="${CRM_A5_MODE:-dry-run}"
+          outcome='not-run'; before=''; deleted='0'; after='n/a'
+
+          finish() {
+            {
+              echo "outcome=$outcome"
+              echo "mode=$mode"
+              echo "before_total=$before"
+              echo "deleted_total=$deleted"
+              echo "after_total=$after"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if [ "$mode" = 'apply' ]; then
+            CRM_ORPHAN_APPLY=1 node scripts/crm/a5-orphan-cleanup.mjs --apply > "$ROOT/cleanup.json" 2> "$ROOT/cleanup.log" || true
+          else
+            node scripts/crm/a5-orphan-cleanup.mjs > "$ROOT/cleanup.json" 2> "$ROOT/cleanup.log" || true
+          fi
+
+          before=$(jq -r '.before_total // empty' "$ROOT/cleanup.json" 2>/dev/null || true)
+          deleted=$(jq -r '(.deleted // []) | map(.changes // 0) | add // 0' "$ROOT/cleanup.json" 2>/dev/null || echo 0)
+          after=$(jq -r '.after_total // "n/a"' "$ROOT/cleanup.json" 2>/dev/null || echo 'n/a')
+          errors=$(jq -r '(.errors // []) | join("; ")' "$ROOT/cleanup.json" 2>/dev/null || true)
+          if [ -n "$errors" ]; then
+            outcome="failed:${errors:0:120}"
+          else
+            outcome='done'
+          fi
+          finish
+          jq -c '{mode, before_total, tables, deleted, after_total, errors}' "$ROOT/cleanup.json" || cat "$ROOT/cleanup.log"
+          if [ "${outcome#failed}" != "$outcome" ]; then exit 1; fi
+
+      - name: Summarise the single gateway outcome
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## CRM orphan cleanup'
+            echo
+            echo "mode=${{ steps.cleanup.outputs.mode }} · before=${{ steps.cleanup.outputs.before_total }} · deleted=${{ steps.cleanup.outputs.deleted_total }} · after=${{ steps.cleanup.outputs.after_total }}"
+            echo
+            echo 'Scope is the gate\'s own `unknown` verdict — no separate predicate, no range delete.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: "CRM orphan cleanup — ${{ needs.cleanup.outputs.mode }} — ${{ needs.cleanup.outputs.outcome }} — before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
+    runs-on: ubuntu-latest
+    needs: cleanup
+    if: always()
+    steps:
+      - name: Report the outcome in the check name
+        run: echo "before=${{ needs.cleanup.outputs.before_total }} deleted=${{ needs.cleanup.outputs.deleted_total }} after=${{ needs.cleanup.outputs.after_total }}"
