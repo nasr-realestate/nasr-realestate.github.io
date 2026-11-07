@@ -1390,9 +1390,23 @@ export async function upsertConversationAndAnalyze(db, {
       ).bind(...slice.flat()),
     );
   }
+  // What the caller is told is what the table actually gained. `INSERT OR IGNORE` can drop a row
+  // that was already there (a re-export with an edited line, a re-run), and reporting the attempt
+  // would claim a message arrived when none did.
+  let insertedMessages = null;
   for (let i = 0; i < msgBatch.length; i += 40) {
-    await db.batch(msgBatch.slice(i, i + 40));
+    const batchResults = await db.batch(msgBatch.slice(i, i + 40));
+    if (!Array.isArray(batchResults)) continue;
+    for (const one of batchResults) {
+      // D1 puts the count under `meta.changes`; the local sqlite driver puts it at the top level.
+      const changes = Number(one?.meta?.changes ?? one?.changes);
+      if (Number.isFinite(changes)) {
+        insertedMessages ??= 0;
+        insertedMessages += changes;
+      }
+    }
   }
+  const messagesNew = insertedMessages ?? newMsgRows.length;
 
   // Load linked opportunity & recent CRM activities to avoid false-positive alerts
   let linkedOpp = null;
@@ -1504,7 +1518,7 @@ export async function upsertConversationAndAnalyze(db, {
     updated: Boolean(existing),
     adopted_legacy: adoptedLegacy,
     incremental_skipped: false,
-    messages_new: newMsgRows.length,
+    messages_new: messagesNew,
     message_count: parsed.messages.length,
     parse_warnings: parsed.parseWarnings,
     insight: {
