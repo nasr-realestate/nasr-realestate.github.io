@@ -25,8 +25,9 @@
  *     repository entirely — `imports/` is git-ignored, but the privacy canary
  *     scans the working tree, and it is right to: a downloaded .vcf in the repo
  *     directory is a phone book on disk whether or not git sees it.
- *   - idempotent. `conversation_uid` derives from the text hash, so re-running
- *     the same folder cannot create a second copy of the same chat.
+ *   - idempotent. `conversation_uid` derives from the CHAT's name, so re-exporting
+ *     a chat that gained a message updates that chat instead of creating a second
+ *     one, and re-running the same folder changes nothing.
  *
  * Usage:
  *   node scripts/crm/build-whatsapp-import.mjs --dir ./imports/drive-crm --out ./imports/bundle.json
