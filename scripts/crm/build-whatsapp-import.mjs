@@ -127,13 +127,16 @@ export function parseVcfContacts(text, sourceRef = 'vcf') {
       seen.add(e164);
       phones.push({ e164, raw, label: 'أساسي (VCF)', source_ref: sourceRef });
     }
+    // ORG is exported quoted-printable too (`=D8=AD=D8=A7=D8=B1=D8=B3` is "حارس").
+    // Reading it literally left every organisation blank-but-not-empty, which made
+    // grouping by employer impossible.
     const org = /^ORG[^:]*:(.*)$/im.exec(block);
     if (!name && phones.length === 0) continue;
     out.push({
       fn: name,
       phones,
       vcf_files: [sourceRef],
-      ...(org ? { org: cleanBidiControls(org[1]).trim() } : {}),
+      ...(org ? { org: cleanBidiControls(decodeQuotedPrintable(org[1])).trim() } : {}),
     });
   }
   return out;

@@ -193,6 +193,19 @@ test('WA-15 a quoted-printable Arabic name survives the fold (vCard 2.1 reality)
   assert.equal(c.phones[0].e164, '201000000003');
 });
 
+test('WA-24 the organisation field is quoted-printable too, and is decoded', () => {
+  // Taken from the real export: ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=AD=D8=A7=D8=B1=D8=B3
+  const vcf = [
+    'BEGIN:VCARD', 'VERSION:2.1',
+    'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=B3=D8=B9=D9=8A=D8=AF',
+    'ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=AD=D8=A7=D8=B1=D8=B3',
+    'TEL;CELL:01000000024', 'END:VCARD',
+  ].join('\r\n');
+  const [card] = parseVcfContacts(vcf);
+  assert.equal(card.fn, 'سعيد');
+  assert.equal(card.org, 'حارس', 'the employer is readable, not =D8=AD=D8=A7=D8=B1=D8=B3');
+});
+
 test('WA-16 one man saved twice is a duplicate; two men with one name is not', () => {
   const twice = ['BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;TYPE=CELL:+201000000021', 'END:VCARD',
     'BEGIN:VCARD', 'FN:حازم عبد العال', 'TEL;CELL:01000000021', 'END:VCARD'].join('\r\n');

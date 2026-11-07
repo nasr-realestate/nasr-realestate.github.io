@@ -138,6 +138,30 @@ test('PRUNE-8: --include adds an extra mark to the five instead of replacing the
   assert.deepEqual(current.map((p) => p.fn).sort(), ['🌀 بتاع الشغل', '🟠 محل تجريبي']);
 });
 
+test('PRUNE-9: --org adds a whole group by employer, on top of the marks', () => {
+  // ORG is quoted-printable in the real export, so the fixture encodes it the same way.
+  const guardOrg = 'ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=AD=D8=A7=D8=B1=D8=B3';
+  const withOrg = (name, phone, org) => [
+    'BEGIN:VCARD', 'VERSION:2.1', `FN:${name}`, org, `TEL;CELL:${phone}`, 'END:VCARD', '',
+  ].join('\r\n');
+  const text = [
+    withOrg('حارس اول', '+201000000014', guardOrg),
+    withOrg('حارس تاني', '+201000000015', guardOrg),
+    withOrg('🌀 مجموعة تانية', '+201000000016', 'ORG:عمارة'),
+    withOrg('بلا علامة', '+201000000017', 'ORG:معرفة'),
+  ].join('');
+  const guards = buildPruneReport({ vcfTexts: [{ name: 'a.vcf', text }], org: 'حارس' });
+  assert.equal(guards.stats.org, 'حارس');
+  assert.equal(guards.current.length, 2, 'the whole guard group comes in');
+  const names = guards.current.map((p) => p.fn);
+  assert.ok(names.includes('حارس اول') && names.includes('حارس تاني'), 'both guards are kept');
+  assert.equal(guards.archive.length, 2, 'the unmarked card is still held back');
+
+  const withCyclone = buildPruneReport({ vcfTexts: [{ name: 'a.vcf', text }], org: 'حارس', include: ['🌀'] });
+  assert.equal(withCyclone.current.length, 3, 'employer and marks add up, they do not replace each other');
+  assert.ok(toVcard3(guards.current).includes('ORG:حارس'), 'the employer travels to the phone');
+});
+
 test('PRUNE-6: writing inside the repository is refused before any file is created', () => {
   assert.throws(() => assertOutDirOutsideRepo(path.join(REPO_ROOT, 'imports', 'out')), /refusing-to-write-inside-repository/);
   assert.throws(() => assertOutDirOutsideRepo(REPO_ROOT), /refusing-to-write-inside-repository/);
