@@ -293,3 +293,22 @@ test('WA-21 the archive extension never reaches the chat title', async () => {
   assert.equal(silent.bundle?.conversations?.[0]?.title ?? silent.conversations?.[0]?.title,
     'شقه عبد الحليم د اول');
 });
+
+test('WA-22 a name the owner states outranks every heuristic', async () => {
+  const chat = ['10/29/26, 9:00 PM - Messages and calls are end-to-end encrypted.',
+    '10/29/26, 9:01 PM - شخص: عندي شقة في الحي السابع'].join('\n');
+  // Nothing in the phone book matches this label, so it would stay in review…
+  const plain = await buildBundle({ vcfTexts: [], chatSources: [{ label: 'شخص.zip', text: chat }] });
+  assert.equal(plain.report[0].resolved_to, null);
+
+  // …unless he says who it is, and then the conversation is his.
+  const pinned = await buildBundle({
+    vcfTexts: [],
+    chatSources: [{ label: 'شخص.zip', text: chat }],
+    overrides: { 'شخص.zip': { fn: 'داليا', phone: '201091314878' } },
+  });
+  assert.equal(pinned.report[0].resolved_to, 'داليا');
+  assert.equal(pinned.report[0].method, 'owner:pin');
+  assert.equal(pinned.bundle.conversations[0].title, 'داليا');
+  assert.equal(pinned.bundle.vcf_contacts[0].phones[0].e164, '201091314878');
+});

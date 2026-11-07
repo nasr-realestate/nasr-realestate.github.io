@@ -308,7 +308,7 @@ export function dedupeContacts(contacts) {
   return [...byKey.values()];
 }
 
-export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'drive', contactsInBundle = 'matched' }) {
+export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'drive', contactsInBundle = 'matched', overrides = {} }) {
   const contacts = dedupeContacts(vcfTexts.flatMap(({ name, text }) => parseVcfContacts(text, name)));
   const referenced = new Map();
 
@@ -321,10 +321,15 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
     const chatLabel = label.replace(/\.(zip|txt)$/i, '');
     const parsed = await parseWhatsAppExport(text, { chatTitle: chatLabel });
     const title = cleanBidiControls(parsed.chatTitle) || chatLabel;
-    const found = resolveChatOwner(
-      { title, peerSenderName: parsed.peerSenderName, peerPhoneNorm: parsed.peerPhoneNorm },
-      contacts,
-    );
+    // A name the owner states himself outranks any matching heuristic: he knows
+    // who the man is, and the phone book may simply not hold him yet.
+    const pin = overrides[chatLabel] || overrides[label];
+    const found = pin
+      ? { contact: { fn: pin.fn, phones: [{ e164: pin.phone }], vcf_files: ['owner-pin'] }, method: 'owner:pin' }
+      : resolveChatOwner(
+        { title, peerSenderName: parsed.peerSenderName, peerPhoneNorm: parsed.peerPhoneNorm },
+        contacts,
+      );
 
     // The worker matches on the canonical name, so a resolved chat is handed the
     // phone book's spelling; an unresolved one keeps its own and is marked.
@@ -473,6 +478,8 @@ async function main() {
   }
   const out = get('--out', path.join(dir, 'bundle.json'));
   const batch = Number(get('--batch', String(DEFAULT_BATCH)));
+  const overridesFile = get('--overrides');
+  const overrides = overridesFile ? JSON.parse(fs.readFileSync(overridesFile, 'utf8')) : {};
 
   const inputs = listInputs(dir);
   const vcfTexts = inputs.vcf.map((f) => ({ name: path.basename(f), text: fs.readFileSync(f, 'utf8') }));
@@ -483,6 +490,7 @@ async function main() {
 
   const { bundle, report, stats } = await buildBundle({
     vcfTexts, chatSources, sourceDirLabel: path.basename(dir), contactsInBundle: get('--contacts', 'matched'),
+    overrides,
   });
   const summary = summarize(report);
 
