@@ -1,0 +1,123 @@
+name: CRM Worker deploy only (no data writes, no E2E)
+
+# WHY (2026-11-07)
+#
+# `crm-cloudflare-test-deploy.yml` bundles two different acts: (1) deploying the Worker and (2)
+# running a live E2E that WRITES synthetic rows. Only the second act needs the A5 L2 ownership gate,
+# because only it claims ownership of rows. The two have been welded together, so a row-ownership
+# question in the test database has been able to block a pure code deploy for eight days.
+#
+# This workflow performs act (1) alone:
+#   * it writes NO row, seeds NO case, logs in NOWHERE, and publishes no ledger — so it never touches
+#     the evidence barrier and cannot launder anything;
+#   * it refuses to deploy if the test database does not already carry exactly the migrations in
+#     `_worker/migrations/` (read-only check) — code and schema never separate silently;
+#   * it keeps the repo's deploy convention: dispatch only, exact typed phrase, and the
+#     `crm-test-deploy` environment whose required reviewer is a human per run;
+#   * the token is masked before the first request and never echoed, written or artifacted;
+#   * after deploying it proves the Worker answers: unauthenticated `/api/queues` must be refused.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_deploy:
+        description: 'Type DEPLOY-WORKER-ONLY-NO-WRITES to deploy the Worker. Anything else stops before any secret is read.'
+        required: true
+        type: string
+      reason:
+        description: 'Why this deploy is happening. Free text, no customer data.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-worker-deploy-only
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 'Deploy nasr-crm-api-test (code only) and prove it answers'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: crm-test-deploy
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_deploy == 'DEPLOY-WORKER-ONLY-NO-WRITES'
+      && github.ref == 'refs/heads/master'
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      WRANGLER_CFG: _worker/wrangler.crm.toml
+    steps:
+      - name: Check out the Worker and its migrations
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve account, subdomain and database (read-only; token masked first)
+        id: pre
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::ARENA_CLOUDFLARE_TOKEN is not available to this workflow; nothing was deployed."
+            exit 1
+          fi
+          API='https://api.cloudflare.com/client/v4'
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          account=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" "$API/accounts" | jq -r '.result[0].id // empty')
+          sub=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -H "$AUTH" "$API/accounts/$account/workers/subdomain" | jq -r '.result.subdomain // empty')
+          if [ -z "$account" ] || [ -z "$sub" ]; then
+            echo "::error::could not resolve account subdomain (read-only GET); no deploy was attempted."
+            exit 1
+          fi
+          echo "account_id=$account" >> "$GITHUB_OUTPUT"
+          echo "base_url=https://nasr-crm-api-test.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the test database already carries exactly these migrations (read-only)
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.pre.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          local_last=$(ls _worker/migrations/*.sql | tail -n 1 | xargs -n1 basename)
+          out=$(mktemp)
+          curl --silent --show-error --fail-with-body -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' \
+            --data '{"sql":"SELECT name FROM d1_migrations ORDER BY id"}' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/760079c6-85f9-4a30-aa19-9a66f95d421a/query" > "$out"
+          remote_last=$(jq -r '.result[0].results | last | .name' "$out")
+          if [ "$remote_last" != "$local_last" ]; then
+            echo "::error::schema drift: local last migration is ${local_last}, test database last is ${remote_last:-missing}. No deploy."
+            exit 1
+          fi
+          echo "migrations match at ${remote_last}"
+
+      - name: Deploy the Worker (code only — no seeds, no logins, no rows)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _worker
+          npx --yes wrangler@4 deploy --config wrangler.crm.toml 2>&1 | tee "$RUNNER_TEMP/deploy.log" | grep -vE 'CLOUDFLARE_API_TOKEN' || true
+          if grep -qiE '(^| )error' "$RUNNER_TEMP/deploy.log"; then
+            echo "::error::wrangler reported an error; see the log above."
+            exit 1
+          fi
+
+      - name: Prove the Worker answers, and refuses an unauthenticated queue read
+        shell: bash
+        env:
+          BASE_URL: ${{ steps.pre.outputs.base_url }}
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 -o /dev/null -w '%{http_code}' "$BASE_URL/api/queues")
+          echo "GET /api/queues without a session -> ${code}"
+          if [ "$code" != '401' ]; then
+            echo "::error::expected 401 for an unauthenticated queue read, got ${code}. The deploy did not take effect."
+            exit 1
+          fi
+          echo "::notice::Worker deployed and answering at ${BASE_URL}; no row was written by this run."
