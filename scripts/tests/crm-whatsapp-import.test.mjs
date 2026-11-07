@@ -153,3 +153,19 @@ test('WA-13 a zip with no transcript or several transcripts fails loudly', () =>
   assert.throws(() => readChatTextFromZip(path.join(dir, 'two.zip')), /zip-with-many-txt/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('WA-14 a real exported vCard 2.1 (local numbers, embedded photo) is read correctly', () => {
+  // Shape taken from the phone book actually exported to Drive: vCard 2.1,
+  // `TEL;CELL:` with a local 01x number, and a base64 PHOTO block that must not
+  // be mistaken for a phone or a name.
+  const vcf21 = [
+    'BEGIN:VCARD', 'VERSION:2.1', 'N:;Alaa2;;;', 'FN:Alaa2', 'TEL;CELL:01000000002',
+    'TEL;CELL;PREF:0100 000 0002', 'PHOTO;ENCODING=BASE64;JPEG:/9j/4AAQSkZJRgABAQ', ' AAQEAAAHIAAAAAAQwAABtbnRyUkdC', 'END:VCARD',
+  ].join('\r\n');
+  const contacts = parseVcfContacts(vcf21, 'vcards_test.vcf');
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].fn, 'Alaa2');
+  // The local form and the spaced form are one number, converted to +20.
+  assert.equal(contacts[0].phones.length, 1);
+  assert.equal(contacts[0].phones[0].e164, '201000000002');
+});
