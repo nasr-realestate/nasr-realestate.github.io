@@ -1,0 +1,116 @@
+name: CRM A5 L2 read-only diagnosis (which row stops the deploy)
+
+# WHY (2026-11-07)
+#
+# The deploy gate in `crm-cloudflare-test-deploy.yml` stops for one of three row-level reasons —
+# `l2-row-vanished`, `unknown-ownership`, or an unprovable legacy row — and the sentence that names
+# the exact row only exists in the job log. Those logs are served from blob storage that a reviewing
+# client may not be able to reach; check-run annotations are public API. The deploy workflow already
+# emits a short annotation, but it truncates to four keys and stops at the first finding.
+#
+# This workflow answers the question completely and costs nothing: it reads the same prior ledgers,
+# enumerates the same synthetic namespace through the same `readonlyQuery` barrier, and emits one
+# annotation per finding (table + key prefix + run tag). It deploys nothing, writes nothing, deletes
+# nothing, and publishes no ledger — so it cannot launder ownership or consume a deploy approval.
+#
+# Guardrails, same five rules as every token-holding tool in this repo:
+#   1. manual dispatch only — no push, no pull_request, no schedule;
+#   2. the token is masked before the first request, and xtrace is never enabled;
+#   3. the token is never echoed, written to a file, or put in a name or artifact;
+#   4. the only database is the test DB, asserted by `assertTestOnlyConfig()` inside `readonlyQuery`;
+#   5. read-only by construction: `assertReadOnlySql()` refuses anything but a single SELECT.
+on:
+  workflow_dispatch:
+    inputs:
+      authorize_diagnose:
+        description: 'Type DIAGNOSE-A5-L2-READ-ONLY to run. Anything else stops before any secret is read.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-a5-l2-diagnose
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: 'A5 L2 diagnosis — read only, no deploy, no write'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: >-
+      github.repository == 'nasr-realestate/nasr-realestate.github.io'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.authorize_diagnose == 'DIAGNOSE-A5-L2-READ-ONLY'
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the gate and the diagnosis that reads it
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve the account id (read-only GET; the token is masked first)
+        id: account
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "::add-mask::${CLOUDFLARE_API_TOKEN}"
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::ARENA_CLOUDFLARE_TOKEN is not available to this workflow; nothing was read."
+            exit 1
+          fi
+          body=$(mktemp)
+          trap 'rm -f "$body"' EXIT
+          code=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -o "$body" -w '%{http_code}' \
+            https://api.cloudflare.com/client/v4/accounts || echo 000)
+          account=$(jq -r '.result[0].id // empty' "$body" 2>/dev/null || true)
+          if [ "$code" != '200' ] || [ -z "$account" ]; then
+            echo "::error::GET /accounts failed (http=${code}); the diagnosis cannot name a row without a DB, and it will not guess."
+            exit 1
+          fi
+          echo "account_id=${account}" >> "$GITHUB_OUTPUT"
+          echo "account resolved (http=200)"
+
+      - name: Deliver the prior ledgers the gate itself reads (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          L2_ROOT="$RUNNER_TEMP/a5-l2-diagnose"
+          mkdir -p "$L2_ROOT/prior" "$L2_ROOT/downloads"
+          echo "A5_L2_PRIOR_DIR=$L2_ROOT/prior" >> "$GITHUB_ENV"
+          node scripts/a5-l2-prior-runs.mjs \
+            --prior-dir "$L2_ROOT/prior" --work-dir "$L2_ROOT/downloads" \
+            --retention-days 90 > "$L2_ROOT/prior-runs.json"
+          jq -c '{ok, pages_fetched, runs_fetched, eligible_runs, ineligible_runs, ledgers}' "$L2_ROOT/prior-runs.json"
+
+      - name: Name the row that stops the deploy (annotations, no writes)
+        id: diagnose
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          # `::error::` lines from the script become check-run annotations, which is the whole point:
+          # the answer must be readable by a client that cannot open the job log.
+          node scripts/a5-l2-diagnose.mjs --ledgers "$A5_L2_PRIOR_DIR" | tee "$RUNNER_TEMP/a5-l2-diagnose/diagnosis.txt"
+
+      - name: Summarise the diagnosis
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## A5 L2 diagnosis — read only'
+            echo
+            echo '```'
+            grep -E '^\{' "$RUNNER_TEMP/a5-l2-diagnose/diagnosis.txt" 2>/dev/null | head -n 1 \
+              || echo 'no diagnosis line was produced'
+            echo '```'
+            echo
+            echo 'Nothing was deployed, written, deleted or claimed by this run.'
+          } >> "$GITHUB_STEP_SUMMARY"
