@@ -55,6 +55,8 @@ export function segmentsOf(label) {
     primary,
     key: primary ? primary.key : null,
     label: primary ? primary.label : null,
+    // Demand and supply are chased differently, so the role travels with the mark.
+    role: primary ? primary.role : null,
     inScope: primary !== null,
   };
 }

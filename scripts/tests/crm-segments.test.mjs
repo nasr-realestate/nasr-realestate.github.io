@@ -32,6 +32,12 @@ test('SEG-5 the plain airplane glyph counts as the airplane mark', () => {
   assert.equal(segmentsOf('✈ باحث عن شقة').key, 'seeker');
 });
 
+test('SEG-5b the role travels with the mark', () => {
+  assert.equal(segmentsOf('✈️ باحث').role, 'demand');
+  assert.equal(segmentsOf('🟢 مالك').role, 'supply');
+  assert.equal(segmentsOf('محمد').role, null);
+});
+
 test('SEG-6 a contact is in scope if the name or any of its chats carries a mark', () => {
   assert.equal(isContactInScope('محمد سمير', ['🟢 محمد سمير،شقه 200 م']), true);
   assert.equal(isContactInScope('محمد سمير', ['محادثة بلا علامة']), false);
