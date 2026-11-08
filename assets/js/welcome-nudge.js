@@ -298,12 +298,18 @@
 
   /* مسار اللمس: رجوع لأعلى الصفحة + ثبات 2.5 ثانية، وبعد ما S1 تكون اتعرضت وانقفلت.
      دايمًا مش وقت ما الفقاعة ظاهرة (current)، ومش أكتر من عدّاد واحد للهدوء الحالي. */
+  function topOffset() { return (window.scrollY || 0) + (document.documentElement.scrollTop || 0); }
+
+  /* المسار ده معناه «رجع لفوق وقف» — فلو لفّ لنزول في النص ما تكملش:
+     إعادة القياس في وقت المؤقّت لازم تكون لسه في الأعلى، وإلا الفقاعة
+     تبقى مقابل قراءة مش مقابل خروج. */
   function watchTopStillness() {
     if (off || dismissed || exitFired || current || !fired.S1) return;
-    if (((window.scrollY || 0) + (document.documentElement.scrollTop || 0)) > TOP_Y) return;
+    if (topOffset() > TOP_Y) return;
     if (topStillTimer) return;
     topStillTimer = window.setTimeout(function () {
       topStillTimer = null;
+      if (topOffset() > TOP_Y) return;
       maybeExitIntent(TOP_STILL);
     }, TOP_STILL);
   }

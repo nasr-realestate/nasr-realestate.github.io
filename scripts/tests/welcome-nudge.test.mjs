@@ -152,6 +152,12 @@ test('التوقيتات: 1.2ث للتعريف، 20ث للهدوء، 25ث قبل
     'الظهور نفسه يسجّل seen ⇒ مفيش إلحاح متكرر');
   assert.match(JS, /window\.addEventListener\('scroll', function \(\) \{ mark\(\); watchTopStillness\(\); \}, \{ passive: true \}\)/,
     'متابعة النشاط passive (بلا preventDefault) وبتشغّل عدّاد الثبات');
+  // «وقف في الأعلى» لازم يُقاس مرتين: عند التسليح وعند انتهاء المؤقّت —
+  // لو الزائر لفّ لنزول في النص المسار يتلغى (الفقاعة مش مقابل قراءة).
+  assert.match(JS, /function topOffset\(\) \{ return \(window\.scrollY \|\| 0\)/);
+  assert.equal((JS.match(/topOffset\(\) > TOP_Y/g) || []).length, 2, 'قياسين للموضع: التسليح ووقت المؤقّت');
+  assert.match(JS, /if \(topOffset\(\) > TOP_Y\) return;\n\s*if \(topStillTimer\) return;/);
+  assert.match(JS, /topStillTimer = window\.setTimeout\(function \(\) \{[\s\S]{0,140}if \(topOffset\(\) > TOP_Y\) return;/);
   assert.doesNotMatch(JS, /clearTimeout\(timers/, 'قفل الفقاعة ما يُلغيش السلَّم — كل مؤقّت له نطاقه');
   assert.match(JS, /e\.key === 'Escape'/, 'Esc يقفلها');
 });
