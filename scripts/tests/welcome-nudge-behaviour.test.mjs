@@ -297,3 +297,18 @@ test('لو الزائر مش في الأعلى، مسار الثبات ما يش
   env.advance(4000);
   assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'مش في أعلى الصفحة ⇒ لا ترشيح إجباري');
 });
+
+test('سكن في الأعلى ثم لفّ لنزول ⇒ الس3 تتلغى (الفقاعة مش مقابل قراءة)', () => {
+  const env = makeEnv({});
+  env.advance(26200);                        // S0 ثم S1 (20ث هدوء)
+  env.advance(9200);                         // ttl بتاع S1 (9ث) ⇒ الفقاعة اتقفلت
+  env.win.scrollY = 0;
+  env.fire('win:scroll');                    // سُلّح عدّاد الثبات وهو فوق
+  env.win.scrollY = 600;                     // ثم لفّ لنزول في النص
+  env.advance(3000);
+  assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'ساب الأعلى ⇒ العدّاد ما يطلّعش حاجة');
+  env.win.scrollY = 0;                       // رجع فوق وقف فعلًا
+  env.fire('win:scroll');
+  env.advance(2600);
+  assert.match(texts(env.root), /قولي 3 حاجات/, 'الباب مش معطّل — الثبات الحقيقي لسه بيشتغل');
+});
