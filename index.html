@@ -117,6 +117,26 @@ welcome_nudge: true
              target="_blank" rel="noopener noreferrer">كلّم طارق على واتساب</a></span>
       </p>
 
+      {%- comment -%}
+      قياس سطر الخلاص بنفس الحدث المستعمل في صفحات العقارات (whatsapp_inquiry) — مقارنة مباشرة
+      بلا وسم/محرّك جديد في GTM، وبلا طلب شبكة إضافي (سكريبت مضمَّن، لا ملف جديد).
+      {%- endcomment -%}
+      <script>
+        (function () {
+          var esc = document.querySelector('.hp-hero-escape-link');
+          if (!esc) return;
+          esc.addEventListener('click', function () {
+            if (typeof dataLayer === 'undefined') return;
+            dataLayer.push({
+              event: 'whatsapp_inquiry',
+              event_category: 'Home Escape',
+              event_label: document.title,
+              call_source: 'home_hero_escape'
+            });
+          });
+        })();
+      </script>
+
       <div class="hp-hero-actions">
         <a href="{{ '/properties/' | relative_url }}" class="hp-btn primary">
           <i class="fas fa-building" aria-hidden="true"></i>

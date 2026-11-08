@@ -201,3 +201,13 @@ test('الصفحة الأولى تربط الشخص بالكيان، والمح�
   assert.match(read('assets/css/route-home.min.css'), /\.hp-hero-escape/,
     'القاعدة مبنية في حزمة الرئيسية — وإلا npm run css:check سيسقط');
 });
+
+// ─── 12) سطر الخلاص مقياس بنفس الحدث الموجود (مقارنة مش اختراع) ──────────────
+test('خلاص الهيرو يُقاس بـ whatsapp_inquiry القائم، وبلا ملف أو وسم جديد', () => {
+  const hero = HOME.slice(HOME.indexOf('<section class="hp-hero">'), HOME.indexOf('hp-trust-strip'));
+  assert.match(hero, /event: 'whatsapp_inquiry'/, 'نفس اسم الحدث المستعمل في _layouts/property_page.html');
+  assert.match(hero, /call_source: 'home_hero_escape'/, 'المصدر مميز ⇒ نقارن بالرابط القديم بلا لبس');
+  assert.match(hero, /typeof dataLayer === 'undefined'/, 'بلا GTM شغّال ⇒ سكربت صامت، مفيش خطأ');
+  assert.match(hero, /\{%-\s*comment\s*-?%\}[\s\S]*?\{%-\s*endcomment\s*-?%\}/, 'التعليق موثَّق في المصدر ولا يتسرّب للمخرجات');
+  assert.doesNotMatch(hero, /<script src=/, 'بلا طلب شبكة إضافي في أول شاشة');
+});
