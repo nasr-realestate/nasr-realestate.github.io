@@ -4,6 +4,7 @@ title: "شقق ومحلات ومكاتب للبيع والإيجار في مدي
 description: "سمسار طلبك مع طارق طنطاوي — عقارات مدينة نصر فقط منذ 2014: شقق للبيع والإيجار ومحلات ومكاتب، بالسعر والمساحة كما أعلنها المالك. تواصل مباشرة: 01147758857"
 image: "/assets/img/social-home.png"
 body_class: "homepage"
+welcome_nudge: true
 ---
 
 <script type="application/ld+json">
@@ -104,22 +105,47 @@ body_class: "homepage"
 
       <p class="hp-hero-subtitle">
         <strong>بيع، شراء، إيجار، وتأجير</strong><br>
-        عروض حقيقية ببياناتها المعلنة، ومساعدة من طارق في كل خطوة.
+        عروض حقيقية ببياناتها المعلنة، ومساعدة من طارق طنطاوي في كل خطوة.
       </p>
 
       <p class="hp-hero-contact">
-        <span>طارق طنطاوي — متخصص في عقارات مدينة نصر</span>
+        <span><strong>سمسار طلبك</strong> هو طارق طنطاوي — عقارات مدينة نصر فقط، منذ 2014</span>
         <span>للتواصل: <a href="tel:+201147758857" dir="ltr">01147758857</a></span>
+        <!-- «طارق هو الخلاص»: طريق الخروج يُعرض عند الوقوف، مش كبداية. البداية تعريف وشخص/كيان. -->
+        <span class="hp-hero-escape">وقفت في أي خطوة؟ <a class="hp-hero-escape-link"
+             href="https://wa.me/201147758857?text={{ 'السلام عليكم أ. طارق طنطاوي، أنا من موقع سمسار طلبك ووقفت في خطوة محتاج فيها ترشيح.' | url_encode }}"
+             target="_blank" rel="noopener noreferrer">كلّم طارق على واتساب</a></span>
       </p>
+
+      {%- comment -%}
+      قياس سطر الخلاص بنفس الحدث المستعمل في صفحات العقارات (whatsapp_inquiry) — مقارنة مباشرة
+      بلا وسم/محرّك جديد في GTM، وبلا طلب شبكة إضافي (سكريبت مضمَّن، لا ملف جديد).
+      {%- endcomment -%}
+      <script>
+        (function () {
+          var esc = document.querySelector('.hp-hero-escape-link');
+          if (!esc) return;
+          esc.addEventListener('click', function () {
+            if (typeof dataLayer === 'undefined') return;
+            dataLayer.push({
+              event: 'whatsapp_inquiry',
+              event_category: 'Home Escape',
+              event_label: document.title,
+              call_source: 'home_hero_escape'
+            });
+          });
+        })();
+      </script>
 
       <div class="hp-hero-actions">
         <a href="{{ '/properties/' | relative_url }}" class="hp-btn primary">
           <i class="fas fa-building" aria-hidden="true"></i>
           تصفّح العروض
         </a>
-        <a href="{{ '/agent.html' | relative_url }}" class="hp-btn secondary">
-          <i class="fas fa-comments" aria-hidden="true"></i>
-          احكِ للوكيل طلبك
+        <a href="{{ '/tools/valuation.html' | relative_url }}" class="hp-btn secondary"
+           title="قيّم عقارك بأرقام اللقطات المنشورة — بلا تسجيل">
+          <i class="fas fa-gem" aria-hidden="true"></i>
+          قيّم عقارك بالمجان
         </a>
       </div>
     </div>
