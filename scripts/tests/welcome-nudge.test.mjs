@@ -132,13 +132,26 @@ test('البوابات: reduced-motion، saveData، شبكة بطيئة، PWA م
 test('التوقيتات: 1.2ث للتعريف، 20ث للهدوء، 25ث قبل نية الخروج، ودرجة واحدة في الجلسة', () => {
   assert.match(JS, /show\('S0'\);\s*\}, 1200\)/, 'S0 بعد أول رسم بثانية ونص');
   assert.match(JS, /\}, 20000\);/, 'S1 عند عتبة العشرين ثانية');
-  assert.match(JS, /elapsedSinceLoad\(25000\)/, 'S3 ما يسبقش 25 ثانية');
+  assert.match(JS, /var EXIT_AFTER = 25000, IDLE_MS = 3000, EXIT_RETRY = 800;/,
+    'التوقيتات مرقّمة في ثوابت، مش أرقام سحرية مبعثرة');
+  assert.match(JS, /if \(!elapsedSinceLoad\(EXIT_AFTER\)\) return;/, 'S3 ما يسبقش 25 ثانية');
+  assert.match(JS, /function maybeExitIntent\(minIdle\) \{\n    if \(off \|\| dismissed \|\| exitFired\) return;\n    if \(!elapsedSinceLoad\(EXIT_AFTER\)\) return;/,
+    'بوابة العمر جوه الباب الوحيد ⇒ كل المسارات محكومة بيها (visibilitychange كان فلاتها)');
+  assert.equal((JS.match(/elapsedSinceLoad\(/g) || []).length, 2,
+    'استعمال واحد للبوابة + تعريفها — مفيش بوابات متكرّرة تتناقض');
+  assert.match(JS, /maybeExitIntent\(EXIT_RETRY\)/, 'التفويت مش صامت: إعادة قياس بعد 800 مللي');
+  assert.match(JS, /if \(off \|\| dismissed \|\| exitFired \|\| current \|\| !fired\.S1\) return;/,
+    'مسار أعلى الصفحة: بعد S1 بس، ومفيش فقاعة ظاهرة حالّيًا');
+  assert.match(JS, /> TOP_Y\) return;/, '«أعلى الصفحة» = 8 بكسل أو أقل، مش تقدير');
+  assert.doesNotMatch(JS, /'(pointermove|mousemove|wheel)'/,
+    'ممنوع مستمعات على حركة الماوس/العجلة — الأداء وأول شاشة');
   assert.match(JS, /if \(off \|\| dismissed \|\| fired\[stage\]\) return;/, 'فقاعة واحدة، وكل درجة مرة');
   assert.match(JS, /if \(current !== stage\) return;/, 'مفيش استبدال لدرجة سابقة بغلط');
   assert.match(JS, /if \(how === 'dismiss' \|\| how === 'x'\) dismissed = true;/, 'رفض صريح يوقف السلَّم');
   assert.match(JS, /writeFlag\(\{ seen: 1, stage: STAGES\[stage\] \|\| 0 \}\);\n    track\('nudge_shown'/,
     'الظهور نفسه يسجّل seen ⇒ مفيش إلحاح متكرر');
-  assert.match(JS, /window\.addEventListener\('scroll', mark, \{ passive: true \}\)/, 'متابعة النشاط passive');
+  assert.match(JS, /window\.addEventListener\('scroll', function \(\) \{ mark\(\); watchTopStillness\(\); \}, \{ passive: true \}\)/,
+    'متابعة النشاط passive (بلا preventDefault) وبتشغّل عدّاد الثبات');
   assert.doesNotMatch(JS, /clearTimeout\(timers/, 'قفل الفقاعة ما يُلغيش السلَّم — كل مؤقّت له نطاقه');
   assert.match(JS, /e\.key === 'Escape'/, 'Esc يقفلها');
 });

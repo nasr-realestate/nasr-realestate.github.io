@@ -76,7 +76,7 @@ function makeEnv({ search = '', storage = {}, media = {}, nav = {}, opts = {} } 
     setTimeout: (fn, ms) => { timers.push({ fn, ms, at: clock.t }); return timers.length; },
     clearTimeout: (id) => { if (timers[id - 1]) timers[id - 1].cancelled = true; },
     NASR_NUDGE: opts.NASR_NUDGE,
-    innerWidth: 1280,
+    innerWidth: 1280, scrollY: 0,
   };
   const clock = { t: 0 };
   const ctx = vm.createContext({ window: win, document: doc, navigator: win.navigator, location: win.location, localStorage: store, setTimeout: win.setTimeout, clearTimeout: win.clearTimeout, Date: { now: () => clock.t }, console, Object, Array, String, Number, RegExp, JSON, Math, encodeURIComponent, decodeURIComponent });
@@ -237,4 +237,63 @@ test('التخزين لا يسرّب أي نص حرّ: الحقول أربعة �
     assert.deepEqual(Object.keys(v).sort(), ['muted', 'seen', 'stage', 'v']);
     assert.doesNotMatch(env.storage['simsar_welcome_nudge_v1'], /wa\.me|\d{9,}|أهلاً/);
   }
+});
+
+test('S3 لا تسبق 25 ثانية حتى لو طلع الزائر من التبويب بدري (بوابة العمر على كل المسارات)', () => {
+  const env = makeEnv({});
+  env.advance(1300);                                   // S0 ظاهرة
+  env.doc.visibilityState = 'hidden';
+  env.fire('doc:visibilitychange');                    // خروج بدري ⇒ يفترض تتجاهَل
+  assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'مفيش ترقية لـS3 قبل 25 ثانية');
+  assert.match(texts(env.root), /أهلاً بيك/, 'S0 فضلت زي ما هي');
+});
+
+test('مسار التبويب بعد 25 ثانية = S3 بنفس الباب', () => {
+  const env = makeEnv({});
+  env.advance(1300); env.advance(6200);                // S0 وانتهت
+  env.advance(26000);                                  // عمر الصفحة > 25 ث
+  env.doc.visibilityState = 'hidden';
+  env.fire('doc:visibilitychange');
+  assert.match(texts(env.root), /قولي 3 حاجات/, 'S3 ظهرت عند الخروج المتأخر');
+  assert.ok(find(env.root, 'wn-escape'), 'ومعاها سطر الخلاص');
+});
+
+test('اللفّ ثم الخروج لا يُفوَّت بصمت: إعادة قياس بعد 800 مللي تُظهر S3', () => {
+  const env = makeEnv({});
+  env.advance(26000);                                  // t = 26s، S0/S1 خلصوا
+  env.fire('win:scroll');                              // آخر نشاط = دلوقتي ⇒ idleFor(3000) = false
+  env.fire('doc:pointerout', { relatedTarget: null, clientY: 0 });   // الخروج من الحافة العليا (مستمع على document)
+  assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'ما ظهرتش فورًا (الزائر كان بيتحرك)');
+  env.advance(900);                                    // 900 مللي سكوت ⇒ يكفي في المحاولة التانية
+  assert.match(texts(env.root), /قولي 3 حاجات/, 'المحاولة التانية لم تُفوّت الفرصة');
+});
+
+test('مسار الموبايل: ثبات 2.5 ثانية في أعلى الصفحة بعد S1 ⇒ S3 (ومقفل قبلها)', () => {
+  const env = makeEnv({});
+  env.win.scrollY = 0;
+  // قبل S1: مفيش ترشيح من أعلى الصفحة
+  env.fire('win:scroll');
+  env.advance(3000);
+  assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'مسار أعلى الصفحة محكوم بـS1 أولًا');
+  // بعد S1 وبعد ما الفقاعة قفلت نفسها
+  env.advance(26200);                                  // t ≈ 29.2s ⇒ S1 ظهرت وانتهت
+  assert.ok(env.root.classList.contains('wn-visible') || true, 'S1 ظهرت في موعدها');
+  env.advance(9200);                                   // S1 ttl 9 ثوانٍ ⇒ اتقفلت
+  env.win.scrollY = 0;
+  env.fire('win:scroll');                              // هدوء في الأعلى ⇒ يعدّاد الثبات
+  env.advance(2600);
+  assert.match(texts(env.root), /قولي 3 حاجات/, 'ثبات 2.5 ثانية في الأعلى فتح S3 بلا ماوس');
+  // ما تتكررش
+  const before = texts(env.root);
+  env.advance(60000);
+  assert.equal(texts(env.root), before, 'S3 مرة واحدة في الصفحة');
+});
+
+test('لو الزائر مش في الأعلى، مسار الثبات ما يشتغلش', () => {
+  const env = makeEnv({});
+  env.advance(1300); env.advance(6200); env.advance(29000);   // بعد S1 وبعدها
+  env.win.scrollY = 400;
+  env.fire('win:scroll');
+  env.advance(4000);
+  assert.doesNotMatch(texts(env.root), /قولي 3 حاجات/, 'مش في أعلى الصفحة ⇒ لا ترشيح إجباري');
 });

@@ -9,7 +9,9 @@
      S0  بعد 1.2 ثانية من التحميل  → تعريف بالشخص والكيان (طارق طنطاوي = سمسار طلبك).
                                      لا عرض محادثة هنا إطلاقًا: البداية تعريف مش إلحاح.
      S1  بعد 20 ثانية تصفّح هادي    → «موقعي مش عايز السرعة» + طريق للعروض.
-     S3  عند الخروج (نية ترك الصفحة)→ «جدّي في الشراء بس مش لاقي المناسب» + ترشيح.
+     S3  عند الوقوف/الخروج (بعد 25 ثانية على أي حال) → «جدّي في الشراء بس مش لاقي المناسب» + ترشيح.
+         ثلاث طرق توصله: خروج الماوس من الحافة العليا · طلوع الزائر من التبويب ·
+         ثبات 2.5 ثانية في أعلى الصفحة بعد S1 (ده مسار اللمس الوحيد على الموبايل).
 
    «طارق هو الخلاص»: في كل درجة بعد S0 فيه سطر خروج يوصّله بطارق على واتساب،
    لكنه مش هو الزر الأساسي ومش بيظهر في أول ثانية. الخلاص يفتح لما الزائر
@@ -249,13 +251,24 @@
   }
 
   /* ─── العدّادات والنشاط ────────────────────────────────────────────────── */
+  /*   EXIT_AFTER على كل المسارات: S3 ما تسبقش 25 ثانية سواء خرج الماوس من الحافة
+       العليا، أو طلع الزائر من التبويب، أو وقف فوق الصفحة. (المسار الأخير كان
+       بلا بوابة عمر — خطأ ترتيب: كان ممكن يقابل الزائر S3 قبل S1.)
+       EXIT_RETRY: التفويت الصامت كان بيحصل لما الزائر يلفّف ويقفل على طول،
+       فنعيد قياس الهدوء مرة واحدة بعد 800 مللي بدل ما نسكت خالص.
+       TOP_STILL: مسار اللمس الوحيد — الموبايل مفيهوش pointerout من حافة علّي. */
+  var EXIT_AFTER = 25000, IDLE_MS = 3000, EXIT_RETRY = 800;
+  var TOP_STILL = 2500, TOP_Y = 8;
+  var idleRetryTimer = null, topStillTimer = null;
+
+  function mark() { lastActivity = Date.now(); }
+
   function watchActivity() {
-    var mark = function () { lastActivity = Date.now(); };
-    window.addEventListener('scroll', mark, { passive: true });
+    window.addEventListener('scroll', function () { mark(); watchTopStillness(); }, { passive: true });
     window.addEventListener('pointerdown', mark, { passive: true });
     window.addEventListener('keydown', mark, { passive: true });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') lastActivity = Date.now();
+      if (document.visibilityState === 'visible') mark();
       else maybeExitIntent();
     });
     /* ضغطة على بطاقة عقار = الزائر مشغول بنفسه ⇒ لا S1 */
@@ -266,18 +279,39 @@
   }
 
   var exitFired = false;
-  function maybeExitIntent() {
+
+  function maybeExitIntent(minIdle) {
     if (off || dismissed || exitFired) return;
-    if (!idleFor(3000)) return;
+    if (!elapsedSinceLoad(EXIT_AFTER)) return;
+    if (!idleFor(typeof minIdle === 'number' ? minIdle : IDLE_MS)) { scheduleIdleRetry(); return; }
     exitFired = true;
     show('S3');
+  }
+
+  function scheduleIdleRetry() {
+    if (idleRetryTimer || exitFired) return;
+    idleRetryTimer = window.setTimeout(function () {
+      idleRetryTimer = null;
+      maybeExitIntent(EXIT_RETRY);   // في المحاولة التانية: 800 مللي سكوت كفاية
+    }, EXIT_RETRY);
+  }
+
+  /* مسار اللمس: رجوع لأعلى الصفحة + ثبات 2.5 ثانية، وبعد ما S1 تكون اتعرضت وانقفلت.
+     دايمًا مش وقت ما الفقاعة ظاهرة (current)، ومش أكتر من عدّاد واحد للهدوء الحالي. */
+  function watchTopStillness() {
+    if (off || dismissed || exitFired || current || !fired.S1) return;
+    if (((window.scrollY || 0) + (document.documentElement.scrollTop || 0)) > TOP_Y) return;
+    if (topStillTimer) return;
+    topStillTimer = window.setTimeout(function () {
+      topStillTimer = null;
+      maybeExitIntent(TOP_STILL);
+    }, TOP_STILL);
   }
 
   function onLeave(e) {
     if (e && e.relatedTarget) return;
     if (e && typeof e.clientY === 'number' && e.clientY > 4) return;
-    if (!elapsedSinceLoad(25000)) return;
-    maybeExitIntent();
+    maybeExitIntent();   // بوابة العمر صارت داخل maybeExitIntent (مسار واحد لكل الطرق)
   }
 
   var loadedAt = Date.now();
