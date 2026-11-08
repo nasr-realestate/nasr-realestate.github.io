@@ -9,6 +9,7 @@ category: apartments
 id: "al-hayaa-al-arabia-110m"
 slug: "apartment-sale-al-hayaa-al-arabia-110m"
 image_file: "al-hayaa-al-arabia-110m.webp"
+image: "/assets/img/properties/og/al-hayaa-al-arabia-110m.jpg"
 area: "110 متر مربع"
 areaNumeric: 110
 floor: "الدور الثامن — العمارة بمصعد"

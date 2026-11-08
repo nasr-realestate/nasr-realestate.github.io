@@ -17,6 +17,7 @@
 
 - **صفحة الوحدة**: https://nasr-realestate.github.io/properties/apartment-sale-al-hayaa-al-arabia-110m/
 - **نسخة JSON**: https://nasr-realestate.github.io/api/properties/apartment-sale-al-hayaa-al-arabia-110m.json
+- **الصورة**: https://nasr-realestate.github.io/assets/img/properties/al-hayaa-al-arabia-110m.webp
 
 ## التواصل
 
