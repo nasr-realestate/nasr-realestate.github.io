@@ -8188,3 +8188,34 @@ body.layout-property_page .pp-availability-status {
   overflow-wrap: anywhere;
 }
 body.layout-property_page .pp-availability-status strong { color: #f5f5f5; }
+
+/* 2026-11-08 — تثبيت عرض صفحة العقار أفقيًا ومنع تصادم زر واتساب مع زر الوكيل العائم:
+   1) منع تمدد main أو حاوية العقار أفقيًا على شاشات الجوال في الاتجاه RTL (الذي كان يزيح
+      زر الوكيل الثابت .agent-float-btn خارج الشاشة يسارًا).
+   2) رفع .pp-floating-wa و .rq-floating-wa فوق .agent-float-btn بنفس نمط .pg-top (104px/92px)
+      حتى يظهر كلٌّ من زر الوكيل طارق وزر واتساب بوضوح دون تراكب.
+   3) تدرج معماري هادئ لخلفية الصور الطولية في معرض صفحة العقار. */
+html { overflow-x: clip; }
+main,
+body.layout-property_page .pp-container,
+body.layout-property_page .pp-description,
+.property-detail-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+.features-list li > i { flex-shrink: 0; }
+.features-list li > span { min-width: 0; flex: 1; }
+body.layout-property_page .pp-gallery-main--natural {
+  background: radial-gradient(circle at center, #1b221b 0%, #0d100d 72%, #080a08 100%);
+}
+body.layout-property_page .pp-floating-wa,
+body.layout-request_page .rq-floating-wa {
+  bottom: 104px;
+}
+@media (max-width: 640px) {
+  body.layout-property_page .pp-floating-wa,
+  body.layout-request_page .rq-floating-wa {
+    bottom: 92px;
+    left: 16px;
+  }
+}

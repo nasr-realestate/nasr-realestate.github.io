@@ -21,12 +21,12 @@
   {%- if css_pair[0] == css_key -%}
     {%- assign css_found = true -%}
     {%- for css_file in css_pair[1] -%}
-  <link rel="stylesheet" href="{{ '/assets/css/' | append: css_file | relative_url }}?v=20261024-perf">
+  <link rel="stylesheet" href="{{ '/assets/css/' | append: css_file | relative_url }}?v=20261108-perf">
     {%- endfor -%}
   {%- endif -%}
 {%- endfor -%}
 {%- unless css_found -%}
   {%- comment -%} احتياط: تركيبة (body_class|layout) جديدة غير مسجّلة في
      scripts/build-css.mjs — نحمّل الملف الكامل حتى لا تفقد الصفحة تنسيقها. {%- endcomment -%}
-  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261024-perf' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261108-perf' | relative_url }}">
 {%- endunless -%}

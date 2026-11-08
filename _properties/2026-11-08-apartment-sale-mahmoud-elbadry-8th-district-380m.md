@@ -12,8 +12,10 @@ image_file: "mahmoud-elbadry-8th-district-380m.webp"
 image: "/assets/img/properties/og/mahmoud-elbadry-8th-district-380m.jpg"
 area: "380 متر مربع"
 areaNumeric: 380
-floor: "الدور الثاني بالكامل — العمارة بـ 2 مصعد"
-finish: "ألترا سوبر لوكس — مستويان وأرضيات رخام وحمامات فندقية"
+rooms: "مساحة واسعة على مستويين"
+bathrooms: "تشطيب فندقي فاخر"
+floor: "الدور الثاني بالكامل (2 أسانسير)"
+finish: "ألترا سوبر لوكس — أرضيات رخام"
 status: available
 meta_title: "شقة 380م مستويين للبيع بشارع محمود البدري المنطقة الثامنة مدينة نصر — 13 مليون جنيه"
 meta_description: "شقة تمليك بمساحة 380 متر مربع على مستويين للبيع في شارع محمود البدري بالمنطقة الثامنة، مدينة نصر، تشغل الدور الثاني بالكامل في عمارة مزودة بـ 2 مصعد. تشطيب ألترا سوبر لوكس بأرضيات رخام وحمامات فندقية وشتر على جميع الشبابيك و7 مكيفات سبليت. السعر المطلوب 13,000,000 ج.م."
@@ -31,76 +33,79 @@ audio_script: "بتفكر في شقة تلتمية وتمانين متر على 
 
 <div class="property-detail-wrapper">
 
-  <div class="highlight-box">
-    <h3><i class="fas fa-info-circle"></i> ملخص الوحدة وشروط العرض</h3>
-    <p>شقة تمليك بمساحة <strong>380 مترًا مربعًا</strong> مصممة على <strong>مستويين</strong> في <strong>شارع محمود البدري — المنطقة الثامنة — مدينة نصر</strong>، تشغل <strong>الدور الثاني بالكامل</strong> بخصوصية مستقلة داخل عمارة مزودة بـ <strong>2 أسانسير</strong>. الوحدة بتشطيب <strong>ألترا سوبر لوكس</strong> مع أرضيات رخام وحمامات فندقية، ومجهزة بـ <strong>شتر على جميع الشبابيك</strong> و<strong>7 مكيفات سبليت</strong>. السعر المطلوب للبيع <strong>13,000,000 ج.م</strong>، والمعاينة بالتنسيق المسبق عبر واتساب سمسار طلبك.</p>
-  </div>
+    <!-- 2. الصورة الرئيسية للعقار -->
+    <div class="property-main-hero">
+        <img src="{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"
+             alt="شقة 380 متر على مستويين للبيع بشارع محمود البدري المنطقة الثامنة مدينة نصر"
+             title="{{ page.title }}">
+        <div class="hero-overlay-tag elite-tag"><i class="fas fa-crown"></i> 380م مستويان — الدور الثاني بالكامل</div>
+    </div>
 
-  <div class="specs-grid">
-    <div class="spec-item">
-      <i class="fas fa-ruler-combined"></i>
-      <span>المساحة</span>
-      <strong>380 متر مربع</strong>
+    <!-- 3. البطاقة السريعة الذكية -->
+    <div class="main-stats-card">
+        <div class="stat-box">
+            <span class="stat-label">السعر المطلوب</span>
+            <span class="stat-value gold-text">{{ page.price }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">المساحة الكلية</span>
+            <span class="stat-value">{{ page.area }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">الطابق والخصوصية</span>
+            <span class="stat-value">الدور الثاني بالكامل</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">التكييفات والشبابيك</span>
+            <span class="stat-value">7 مكيفات سبليت + شتر كامل</span>
+        </div>
     </div>
-    <div class="spec-item">
-      <i class="fas fa-layer-group"></i>
-      <span>التصميم الداخلي</span>
-      <strong>شقة على مستويين</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-building"></i>
-      <span>الطابق والخصوصية</span>
-      <strong>الدور الثاني بالكامل</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-elevator"></i>
-      <span>المصاعد</span>
-      <strong>2 أسانسير بالعمارة</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-gem"></i>
-      <span>التشطيب والأرضيات</span>
-      <strong>ألترا سوبر لوكس — رخام</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-bath"></i>
-      <span>الحمامات والشبابيك</span>
-      <strong>حمامات فندقية + شتر كامل</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-snowflake"></i>
-      <span>التكييفات</span>
-      <strong>7 مكيفات سبليت</strong>
-    </div>
-    <div class="spec-item">
-      <i class="fas fa-tag"></i>
-      <span>السعر المطلوب</span>
-      <strong>13,000,000 ج.م</strong>
-    </div>
-  </div>
 
-  <div class="features-section">
-    <h3><i class="fas fa-gem"></i> التشطيبات والتجهيزات الداخلية</h3>
-    <ul class="features-list">
-      <li><strong>خصوصية الدور الكامل:</strong> تنفرد الوحدة بشغل <strong>الدور الثاني بالكامل</strong> دون وحدات مجاورة في نفس الطابق، مع وجود <strong>2 أسانسير</strong> يخدم العمارة.</li>
-      <li><strong>تصميم على مستويين:</strong> توزيع معماري راقٍ على مستويين بدرجات رخام طبيعي يمنح فصلًا مريحًا بين مساحات الاستقبال وجناح المعيشة والغرف.</li>
-      <li><strong>مستوى التشطيب:</strong> تشطيب <strong>ألترا سوبر لوكس</strong> بأرضيات رخام وحمامات بتشطيبات فندقية.</li>
-      <li><strong>تجهيزات جاهزة:</strong> الوحدة مزودة بـ <strong>7 مكيفات سبليت</strong>، و<strong>شتر مركّب على جميع الشبابيك</strong> للعزل والخصوصية والأمان.</li>
-    </ul>
-  </div>
+    <!-- 4. وصف العقار والموقع -->
+    <section class="detail-section">
+        <h2 class="detail-title"><i class="fas fa-gem"></i> خصوصية الدور الكامل وتصميم المستويين في المنطقة الثامنة</h2>
+        <div class="detail-text">
+            <p>شقة تمليك استثنائية بمساحة <strong>380 مترًا مربعًا</strong> مصممة معماريًا على <strong>مستويين</strong> في <strong>شارع محمود البدري بالمنطقة الثامنة — مدينة نصر</strong>، تجمع بين اتساع المساحات العائلية النادرة وخصوصية السكن المستقل.</p>
+            <p>تنفرد الوحدة بشغل <strong>الدور الثاني بالكامل</strong> دون وحدات مجاورة في نفس الطابق داخل عمارة مزودة بـ <strong>2 أسانسير</strong>، مع فصل معماري أنيق بين المستويين بدرجات رخام دائرية ودرابزين فيرفورجيه مشغول، وتشطيب <strong>ألترا سوبر لوكس</strong> يشمل أرضيات رخام وحمامات بتجهيز فندقي وشتر على جميع الشبابيك و<strong>7 مكيفات سبليت</strong>.</p>
+        </div>
+    </section>
 
-  <div class="features-section">
-    <h3><i class="fas fa-map-marked-alt"></i> الموقع وشروط البيع</h3>
-    <ul class="features-list">
-      <li><strong>الموقع:</strong> شارع محمود البدري — المنطقة الثامنة — مدينة نصر.</li>
-      <li><strong>السعر المطلوب:</strong> <strong>13,000,000 ج.م</strong>.</li>
-      <li><strong>الشفافية:</strong> العدد التفصيلي لغرف النوم والحمامات يُستكمل ميدانيًا عند المعاينة التزامًا بعدم ذكر أعداد غير مؤكدة من المالك.</li>
-    </ul>
-  </div>
+    <!-- 5. المواصفات الفنية والتجهيزات -->
+    <section class="detail-section">
+        <h2 class="detail-title"><i class="fas fa-list-check"></i> المواصفات الفنية والتجهيزات</h2>
+        <div class="technical-specs">
+            <div class="spec-item"><span><i class="fas fa-vector-square gold-text"></i> المساحة:</span> <strong>380 متر مربع</strong></div>
+            <div class="spec-item"><span><i class="fas fa-layer-group gold-text"></i> التصميم الداخلي:</span> <strong>شقة على مستويين</strong></div>
+            <div class="spec-item"><span><i class="fas fa-building gold-text"></i> الطابق والخصوصية:</span> <strong>الدور الثاني بالكامل</strong></div>
+            <div class="spec-item"><span><i class="fas fa-elevator gold-text"></i> المصاعد:</span> <strong>2 أسانسير بالعمارة</strong></div>
+            <div class="spec-item"><span><i class="fas fa-paint-roller gold-text"></i> التشطيب والأرضيات:</span> <strong>ألترا سوبر لوكس — رخام</strong></div>
+            <div class="spec-item"><span><i class="fas fa-bath gold-text"></i> الحمامات والشبابيك:</span> <strong>حمامات فندقية + شتر كامل</strong></div>
+            <div class="spec-item"><span><i class="fas fa-snowflake gold-text"></i> التكييفات:</span> <strong>7 مكيفات سبليت</strong></div>
+            <div class="spec-item"><span><i class="fas fa-tag gold-text"></i> السعر المطلوب:</span> <strong>13,000,000 ج.م</strong></div>
+        </div>
+    </section>
 
-  <div class="location-info">
-    <h3><i class="fas fa-phone-alt"></i> التواصل وتحديد موعد المعاينة</h3>
-    <p>للاستفسار أو تنسيق موعد معاينة للوحدة في شارع محمود البدري بالمنطقة الثامنة، تواصل مباشرة عبر زر واتساب أو الاتصال بالمكتب.</p>
-  </div>
+    <!-- 6. المميزات -->
+    <section class="detail-section">
+        <h2 class="detail-title"><i class="fas fa-star"></i> أبرز مميزات الوحدة والموقع</h2>
+        <div class="features-columns">
+            <ul class="features-list">
+                <li><i class="fas fa-check-circle gold-text"></i> <span>مساحة عائلية نادرة (380 م²) بتصميم مستويين بدرجات رخام طبيعي يفصل بين الاستقبال وجناح الغرف.</span></li>
+                <li><i class="fas fa-check-circle gold-text"></i> <span>خصوصية تامة بشغل الدور الثاني بالكامل في عمارة مخدومة بـ 2 أسانسير.</span></li>
+                <li><i class="fas fa-check-circle gold-text"></i> <span>تشطيب ألترا سوبر لوكس بأرضيات رخام فاخر وحمامات بتشطيبات فندقية.</span></li>
+            </ul>
+            <ul class="features-list">
+                <li><i class="fas fa-check-circle gold-text"></i> <span>مجهزة بـ 7 مكيفات سبليت وشتر مركّب على جميع الشبابيك للعزل والخصوصية والأمان.</span></li>
+                <li><i class="fas fa-check-circle gold-text"></i> <span>موقع مميز في شارع محمود البدري بالمنطقة الثامنة في مدينة نصر.</span></li>
+                <li><i class="fas fa-check-circle gold-text"></i> <span>العدد التفصيلي لغرف النوم والحمامات يُستكمل ميدانيًا عند المعاينة التزامًا بعدم ذكر أعداد غير مؤكدة.</span></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 7. تنبيه السعر والمعاينة -->
+    <div class="final-payment-alert">
+        <i class="fas fa-handshake gold-text"></i>
+        <span>السعر المطلوب للبيع <strong>{{ page.price }}</strong>. للاستفسار أو تنسيق موعد المعاينة الميدانية للوحدة في شارع محمود البدري بالمنطقة الثامنة، تواصل عبر واتساب أو الاتصال المباشر أو الوكيل الذكي.</span>
+    </div>
 
 </div>
