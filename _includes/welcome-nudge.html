@@ -1,70 +1,210 @@
 {%- comment -%}
   ═══════════════════════════════════════════════════════════════════════
-  تحية سمسار طلبك (Welcome Nudge) — V1 نصّية، بلا صوت
+  المُضيف الذكي لسمسار طلبك (Welcome Nudge — V2 نصّي بلا صوت)
   ═══════════════════════════════════════════════════════════════════════
-  تُدرَج من _layouts/default.html فقط عندما يكون page.welcome_nudge == true
-  (اليوم: index.html وحدها) — نفس أسلوب تجربة الإعلان الصوتي: صفحة واحدة أولًا،
-  والقياس يقرّر التعميم.
+  يُدرَج من _layouts/default.html لصفحات رحلة التصفح العقارية فقط
+  (الرئيسية، المعرض، صفحات المناطق، تفاصيل العقار، والطلبات).
 
-  القواعد اللي يفرضها هذا الملف ويطابقها scripts/tests/welcome-nudge.test.mjs:
-    • V1 بلا صوت إطلاقًا: لا <audio>، لا autoplay، ولا speechSynthesis — والصوت
-      المستقبلي لازم يُنتَج تحت spec الهوية الصوتية (scripts/audio) لا TTS الجهاز.
-    • لا نافذة معطِّلة: فقاعة صغيرة fixed، بلا overlay وبلا التقاط focus.
-    • ظهور واحد للجهاز للأبد (simsar_welcome_nudge_v1)، وبانر التنبيهات أولّى.
-    • الأسلوب محصور بكلاس .wn- حتى لا يمسّ أي صفحة أخرى.
-    • السكربت defer — لا يؤثّر على أول رسم ولا على LCP.
+  القواعد المعمارية المفحوصة في scripts/tests/welcome-nudge.test.mjs:
+    • بلا صوت إطلاقًا: لا <audio>، لا autoplay، ولا speechSynthesis.
+    • لا نافذة معطِّلة: بطاقة عائمة هادئة في الزاوية، بلا overlay ولا قفل تمرير.
+    • توقيت مريح للقراءة مع إيقاف المؤقّت تلقائيًا عند مرور الماوس أو اللمس.
+    • ذاكرة رحلة محدودة (simsar_welcome_nudge_v1) بأرقام فقط بلا أي بيانات شخصية.
+    • جميع الأنماط محصورة ببادئة .wn- حتى لا تتسرّب لأي مكوّن آخر.
+    • السكربت محمَّل بـ defer فلا يؤثّر على أول رسم ولا على LCP.
 {%- endcomment -%}
 <style>
-  /* ─── فقاعة التحية — أنماط محصورة بـ .wn- فقط ─── */
+  /* ─── بطاقة المُضيف الذكي — أنماط محصورة بـ .wn- فقط ─── */
   .wn { display: none; }
   .wn-visible {
     display: block;
     position: fixed;
-    inset-inline-start: 16px;          /* في RTL: جهة اليمين — بعيدًا عن زر طارق (يسار) */
-    bottom: 20px;
+    inset-inline-start: 20px;          /* في RTL: أسفل اليمين — بعيدًا عن زر الوكيل (يسار) */
+    bottom: 22px;
     z-index: 945;                      /* فوق بانر التنبيهات (940)، تحت القائمة (99999) */
-    width: min(360px, calc(100vw - 116px));
-    background: #0a3d2e;
-    color: #fff;
-    border: 1px solid rgba(66, 197, 65, 0.34);
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
-    padding: 14px 16px 12px;
+    width: min(372px, calc(100vw - 116px));
+    background: linear-gradient(155deg, #0d3526 0%, #071e16 100%);
+    color: #f4fbf6;
+    border: 1px solid rgba(92, 214, 108, 0.38);
+    border-radius: 18px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.46);
+    padding: 15px 16px 14px;
     font-family: 'Cairo', sans-serif;
-    animation: wn-in .26s ease-out both;
+    overflow: hidden;
+    animation: wn-in .32s cubic-bezier(.22, 1, .36, 1) both;
   }
-  @keyframes wn-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  .wn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .wn-brand { font-size: 12.5px; font-weight: 800; color: #7fe08a; letter-spacing: .01em; }
+  @keyframes wn-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes wn-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
+  .wn-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .wn-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #52d869;
+    box-shadow: 0 0 8px rgba(82, 216, 105, 0.75);
+    flex-shrink: 0;
+  }
+  .wn-brand {
+    font-size: 12px;
+    font-weight: 800;
+    color: #8ee89b;
+    letter-spacing: .01em;
+  }
+  .wn-step {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
   .wn-close {
-    margin-inline-start: auto; background: transparent; border: 0; color: rgba(255,255,255,.7);
-    font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 8px;
+    margin-inline-start: auto;
+    background: transparent;
+    border: 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 8px;
   }
-  .wn-close:hover { color: #fff; background: rgba(255,255,255,.12); }
-  .wn-text { font-size: 13.5px; line-height: 1.75; margin: 0 0 10px; opacity: .95; }
-  .wn-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wn-close:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+  .wn-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 5px;
+    line-height: 1.5;
+  }
+  .wn-text {
+    font-size: 13.5px;
+    line-height: 1.82;
+    margin: 0 0 12px;
+    color: rgba(244, 251, 246, 0.94);
+  }
+  .wn-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin: 0 0 6px;
+  }
+  .wn-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: start;
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    border: 1px solid rgba(142, 232, 155, 0.3);
+    border-radius: 11px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .wn-chip:hover {
+    background: rgba(46, 160, 67, 0.28);
+    border-color: rgba(142, 232, 155, 0.7);
+  }
+  .wn-chip-arrow { color: #8ee89b; font-size: 14px; font-weight: 800; }
+  .wn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .wn-btn {
-    border: 0; border-radius: 10px; padding: 8px 14px; font-family: inherit;
-    font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block;
+    border: 0;
+    border-radius: 11px;
+    padding: 9px 15px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background .18s ease;
   }
-  .wn-btn-primary { background: #1f7a2e; color: #062b16; }
-  .wn-btn-primary:hover { background: #239138; }
-  .wn-btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
-  .wn-escape { margin: 9px 0 0; font-size: 12px; line-height: 1.7; opacity: .86; }
-  .wn-escape-link { color: #9ff0a8; text-decoration: underline; text-underline-offset: 3px; }
-  .wn-escape-link:hover { color: #c8ffd0; }
-  .wn-link:focus-visible, .wn-btn:focus-visible, .wn-close:focus-visible {
-    outline: 2px solid #7fe08a; outline-offset: 2px;
+  .wn-btn-primary { background: #238636; color: #ffffff; }
+  .wn-btn-primary:hover { background: #2ea043; color: #ffffff; }
+  .wn-btn-ghost {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e8f5eb;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    font-weight: 700;
   }
-  @media (prefers-reduced-motion: reduce) { .wn-visible { animation: none; } }
-  @media (max-width: 600px) {
-    .wn-visible { inset-inline: 12px; width: auto; bottom: 96px; }  /* فوق زر طارق في الموبايل */
+  .wn-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
+  .wn-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+  }
+  .wn-escape { margin: 0; font-size: 12px; line-height: 1.65; color: rgba(255, 255, 255, 0.88); }
+  .wn-escape-link { color: #9ff0a8; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .wn-escape-link:hover { color: #d0ffd6; }
+  .wn-mute {
+    margin-inline-start: auto;
+    background: transparent;
+    border: 0;
+    color: rgba(255, 255, 255, 0.56);
+    font-family: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+    padding: 2px 4px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .wn-mute:hover { color: rgba(255, 255, 255, 0.9); }
+  .wn-bar {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .wn-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #3fb950, #8ee89b);
+    transform-origin: right center;
+    animation-name: wn-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  .wn-paused .wn-bar-fill { animation-play-state: paused; }
+  .wn-link:focus-visible, .wn-btn:focus-visible, .wn-chip:focus-visible, .wn-close:focus-visible, .wn-mute:focus-visible {
+    outline: 2px solid #8ee89b;
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wn-visible { animation: none; }
+    .wn-bar { display: none; }
+  }
+  @media (max-width: 640px) {
+    .wn-visible { inset-inline: 12px; width: auto; bottom: 92px; }
+    .wn-high { bottom: 158px; }
   }
   @media print { .wn-visible { display: none !important; } }
 </style>
 
-<div class="wn" id="wnNudge" role="region" aria-live="polite" aria-label="تحية من سمسار طلبك"
+<div class="wn" id="wnNudge" role="region" aria-live="polite" aria-label="المُضيف الذكي من سمسار طلبك"
      data-wn-base="{{ '/' | relative_url }}"
+     data-wn-page="{{ page.layout | default: page.body_class | default: 'default' }}"
      data-wn-wa="{{ site.contact.whatsapp_url | default: 'https://wa.me/201147758857' }}"></div>
 
-<script src="{{ '/assets/js/welcome-nudge.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/js/welcome-nudge.js?v=20261108-smart-host' | relative_url }}" defer></script>

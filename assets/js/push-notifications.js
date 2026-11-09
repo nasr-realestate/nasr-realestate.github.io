@@ -430,7 +430,10 @@
 
   function dismissPrompt() {
     try { localStorage.setItem(PROMPT_DISMISS_KEY, '1'); } catch (e) { /* ignore */ }
-    $all('.push-banner').forEach(function (el) { el.classList.add('push-banner-hidden'); });
+    $all('.push-banner').forEach(function (el) {
+      el.classList.remove('push-banner-visible');
+      el.classList.add('push-banner-hidden');
+    });
   }
 
   function maybeShowBanner() {
@@ -447,7 +450,10 @@
         e.preventDefault();
         btn.disabled = true;
         enablePush().then(function () {
-          $all('.push-banner').forEach(function (el) { el.classList.add('push-banner-hidden'); });
+          $all('.push-banner').forEach(function (el) {
+            el.classList.remove('push-banner-visible');
+            el.classList.add('push-banner-hidden');
+          });
         });
       });
     });

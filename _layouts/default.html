@@ -121,12 +121,14 @@
        المحادثة. إذن المتصفح يُطلب عند الضغط فقط وليس عند التحميل. ═══ -->
   {% include push-notifications.html %}
 
-  <!-- ═══ تحية سمسار طلبك (Welcome Nudge — V1 نصّية بلا صوت)
-       تُدرَج فقط لصفحات تحمل page.welcome_nudge (اليوم: index.html وحدها).
-       لا صوت، لا autoplay، لا نافذة معطِّلة، ظهور واحد للجهاز للأبد، وبعيدًا عن
-       بانر التنبيهات وزر طارق. التفاصيل والحراسات: assets/js/welcome-nudge.js
-       وscripts/tests/welcome-nudge.test.mjs. للإطفاء الفوري: ?nudge=off ═══ -->
-  {%- if page.welcome_nudge %}{% include welcome-nudge.html %}{% endif %}
+  <!-- ═══ المُضيف الذكي لسمسار طلبك (Welcome Nudge — V2 نصّي بلا صوت)
+       يواكب الزائر عبر رحلة التصفح (الرئيسية، معرض العقارات، صفحات المناطق،
+       تفاصيل العقار، والطلبات) بأربع خطوات مرتبة: مداعبة وترحيب ← فهم النية ←
+       رسم الطريق ← تحفيز هادئ عند المقارنة. لا يُدرَج في لوحة CRM أو النماذج
+       أو الوكيل الذكي. للإطفاء الفوري: ?nudge=off · وللمعاينة: ?nudge=preview ═══ -->
+  {%- if page.welcome_nudge or page.layout == "property_page" or page.layout == "landing" or page.layout == "request_page" or page.body_class contains "page-properties" or page.body_class contains "page-requests" -%}
+    {% include welcome-nudge.html %}
+  {%- endif %}
 
   <!-- ═══════════════════════════════════════════════
        زر الوكيل الذكي — يظهر في كل الصفحات
