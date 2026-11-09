@@ -1,17 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════
-// حراسات «تحية سمسار طلبك» (Welcome Nudge — V1)
+// حراسات «المُضيف الذكي لسمسار طلبك» (Welcome Nudge — V2)
 // ─────────────────────────────────────────────────────────────────────
-// سبب وجود هذا الملف: الفكرة دي كلها «لطف»، لكن اللطف بلا قواعد يتحوّل إزعاجًا،
-// وأي خطأ هنا يمسّ الصفحة الأولى لكل زائر. الاختبارات دي تقفل الانحرافات اللي
-// عرفناها من تاريخ المستودع:
-//   • لا صوت تلقائي (نفس قاعدة _includes/property-audio.html) ولا TTS من الجهاز —
-//     الهوية الصوتية لها مسار إنتاج مُلزِم في scripts/audio، والتحايل عليه ممنوع.
-//   • لا نافذة معطِّلة، ولا التقاط focus، ولا overlay يبلع الصفحة.
-//   • التخزين: مفتاح واحد بحقول معدودة، وكل عملية داخل try/catch (تصفح خاص).
-//   • لا أرقام هواتف مكتوبة في الكود، ولا نص حرّ للزائر يُخزَّن.
-//   • الأسلوب محصور بـ .wn- حتى لا يلمس أي صفحة أخرى (لا يُبنى في route-*.min.css).
-//   • طارق هو «الخلاص»: رابط التواصل يظهر في درجات ما بعد التعريف فقط، لا في الأولى.
-//   • الدرجة تُعرض مرة واحدة للجهاز، وموافةق مع بانر التنبيهات (لا فقاعتان معًا).
+// هذه الحراسات تضمن تحقيق رؤية «المُضيف الذكي» بلا إزعاج ولا مساس بالخصوصية:
+//   • شمول رحلة تصفح العقارات (الرئيسية، المعرض، الهبوط، صفحات العقارات، الطلبات)
+//     مع استثناء صفحات المحادثة والـCRM والأدوات والسياسات.
+//   • لا صوت تلقائي ولا TTS من المتصفح (الهوية الصوتية لها مسار إنتاج مستقل).
+//   • بطاقة عائمة صغيرة في الزاوية: بلا modal ولا قفل تمرير ولا خلفية معتمة.
+//   • تخزين محدود وموثّق في privacy-policy.html داخل try/catch، بلا بيانات شخصية.
+//   • ٤ خطوات مرتبة بروح مصرية دافئة: مداعبة ← فهم نية ← رسم طريق ← تحفيز وخلاص.
+//   • طارق هو «الخلاص»: لا دعوة للمحادثة في S1 أو S2، وواتساب ليس الزر الأساسي أبدًا.
+//   • قراءة مريحة (16–20 ثانية) مع إيقاف المؤقّت عند اللمس أو الماوس أو إخفاء التبويب.
+//   • توافق كامل مع بانر التنبيهات والقائمة العائمة واللايتبوكس وأزرار واتساب العائمة.
 //
 // التشغيل: node --test scripts/tests/welcome-nudge.test.mjs
 // ═══════════════════════════════════════════════════════════════════════
@@ -26,56 +25,75 @@ const ROOT = path.resolve(HERE, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const stripComments = (src) => src
-  .replace(/\{%-?\s*comment\s*-?%}[\s\S]*?\{%-?\s*endcomment\s*-?%\}/g, '')   // تعليقات Liquid
-  .replace(/\/\*[\s\S]*?\*\//g, '')                                             /* كتل JS */
-  .replace(/^\s*\/\/.*$/gm, '');                                                 // أسطر JS معلقة
+  .replace(/\{%-?\s*comment\s*-?%}[\s\S]*?\{%-?\s*endcomment\s*-?%\}/g, '')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
+
 const JS = read('assets/js/welcome-nudge.js');
 const INC = read('_includes/welcome-nudge.html');
 const LAYOUT = read('_layouts/default.html');
 const HOME = read('index.html');
+const PUSH_JS = read('assets/js/push-notifications.js');
 const both = stripComments(JS) + '\n' + stripComments(INC);
 
-// ─── 1) الإضافة مضبوطة بعلم، وعلى صفحة واحدة ─────────────────────────────
-test('التحية مقيدة بصفحة واحدة عبر page.welcome_nudge ولا تُفرض على كل الموقع', () => {
-  assert.match(LAYOUT, /\{%-?\s*if page\.welcome_nudge\s*%\}\s*\{%\s*include welcome-nudge\.html\s*%\}\s*\{%-?\s*endif\s*-?%\}/,
-    'لازم يكون الإدراج مشروطًا بـ page.welcome_nudge في _layouts/default.html');
-  const flagged = fs.readdirSync(ROOT, { recursive: true })
-    .filter((f) => f.endsWith('.html'))
-    .filter((f) => /^\s*welcome_nudge:\s*true\s*$/m.test(read(f)));
-  assert.deepEqual(flagged, ['index.html'],
-    'اليوم: index.html وحدها (تجربة على صفحة واحدة) — أي إضافة لصفحة أخرى لازم تكون بقرار');
+// ─── 1) التغطية الذكية لرحلة التصفح واستثناء الصفحات الخدمية ──────────────
+test('المُضيف الذكي يغطي رحلة تصفح العقارات ويستثني الوكيل والـCRM والسياسات', () => {
+  assert.match(
+    LAYOUT,
+    /if page\.welcome_nudge or page\.layout == "property_page" or page\.layout == "landing" or page\.layout == "request_page" or page\.body_class contains "page-properties" or page\.body_class contains "page-requests"/,
+    'لازم _layouts/default.html يفعّل المُضيف الذكي عبر رحلة التصفح العقاري'
+  );
+  assert.match(HOME, /^welcome_nudge: true$/m, 'الصفحة الرئيسية ترفع العلم صراحة');
+
+  // التأكد من عدم رفع welcome_nudge على الصفحات الخدمية المستثناة
+  for (const excluded of [
+    'agent.html',
+    'crm.html',
+    'tools/valuation.html',
+    'add-your-property.html',
+    'notifications.html',
+    'privacy-policy.html',
+    '404.html'
+  ]) {
+    const content = read(excluded);
+    assert.doesNotMatch(content, /^\s*welcome_nudge:\s*true\s*$/m, `لا يُفعَّل المُضيف الذكي في ${excluded}`);
+  }
 });
 
-// ─── 2) لا صوت إطلاقًا في V1 ──────────────────────────────────────────────
-test('V1 بلا صوت: لا <audio>، لا autoplay، ولا speechSynthesis', () => {
+// ─── 2) لا صوت إطلاقًا في المُضيف النصّي ───────────────────────────────────
+test('بلا صوت تلقائي: لا <audio>، لا autoplay، ولا speechSynthesis', () => {
   for (const banned of ['<audio', 'autoplay', 'speechSynthesis', 'SpeechSynthesisUtterance', 'new Audio(', '.play()']) {
-    assert.ok(!both.includes(banned), `ممنوع في V1: ${banned}`);
+    assert.ok(!both.includes(banned), `ممنوع في المُضيف الذكي: ${banned}`);
   }
-  assert.ok(!/assets\/audio\//.test(both), 'لا ملف صوتي من إنتاج الهوية الصوتية يُحمَّل هنا');
+  assert.ok(!/assets\/audio\//.test(both), 'لا ملف صوتي يُحمَّل في بطاقة الترحيب');
 });
 
 // ─── 3) لا حاجز فوق الصفحة ────────────────────────────────────────────────
-test('فقاعة صغيرة فقط: لا modal ولا alert ولا قفل للتمرير', () => {
+test('بطاقة عائمة غير معطِّلة: لا modal ولا alert ولا قفل للتمرير', () => {
   for (const banned of ['alert(', 'confirm(', 'prompt(', '<dialog', 'role="dialog"', 'inset: 0', 'position: fixed;\n    inset: 0']) {
-    assert.ok(!both.includes(banned), `ممنوع: ${banned} — الإزعاج مش حاجز`);
+    assert.ok(!both.includes(banned), `ممنوع: ${banned} — التوجيه تحفيز لا حاجز`);
   }
   assert.doesNotMatch(JS, /document\.body\.style\.overflow/, 'لا قفل لتمرير الصفحة');
   assert.doesNotMatch(INC, /\.wn(-|\b)[^{}]*\{[^}]*\btop:\s*0[^}]*\}/, 'لا تغطية كاملة للشاشة');
   assert.ok(!/\.wn-overlay|\.wn-backdrop/.test(INC), 'لا خلفية معتمة');
 });
 
-// ─── 4) التخزين: مفتاح واحد بحقول معدودة، كله داخل try/catch ─────────────
-test('المخزون: simsar_welcome_nudge_v1 بحقول v/seen/muted/stage فقط، وكل كتابة محمية', () => {
-  assert.match(JS, /var KEY = 'simsar_welcome_nudge_v1';/, 'اسم المفتاح ثابت (نفس نمط simsar_gemini_consent_v1)');
-  const writes = JS.match(/window\.localStorage\.setItem\([\s\S]*?\}\);/);
-  assert.ok(writes, 'لازم الكتابة تمرّ عبر دالة واحدة تحصر الحقول');
-  const fields = [...writes[0].matchAll(/^\s{8}([a-z]+):/gm)].map((m) => m[1]);
-  assert.deepEqual(fields.sort(), ['muted', 'seen', 'stage', 'v'],
-    'أي حقل جديد في التخزين لازم يوثَّق في privacy-policy.html أولًا');
+// ─── 4) التخزين: حقول رقمية محدودة داخل try/catch وترقية V1 تلقائيًا ──────
+test('المخزون: simsar_welcome_nudge_v1 بحقول v/seen/muted/stage/intent فقط، وكل عملية محمية', () => {
+  assert.match(JS, /var KEY = 'simsar_welcome_nudge_v1';/, 'اسم المفتاح الدائم ثابت وموثّق');
+  assert.match(JS, /var SKEY = 'simsar_welcome_session_v2';/, 'عداد الجلسة المؤقت منفصل في sessionStorage');
+  assert.match(JS, /if \(parsed\.v !== 2\)/, 'ترقية سجلات V1 تلقائيًا حتى لا يُحرم الزوار القدامى من السلسلة');
+
+  const flagBlock = JS.slice(JS.indexOf('function writeFlag'), JS.indexOf('var memSess'));
+  const fields = [...flagBlock.matchAll(/^\s{6}([a-z]+):/gm)].map((m) => m[1]);
+  assert.deepEqual(fields.sort(), ['intent', 'muted', 'seen', 'stage', 'v'],
+    'حقول localStorage الخمسة المحدودة فقط');
+
   const storageCalls = JS.match(/window\.localStorage\.\w+/g) || [];
   assert.deepEqual(storageCalls, ['window.localStorage.getItem', 'window.localStorage.setItem'],
-    `التخزين محصور في قراءة وكتابة واحدات: ${storageCalls.join(', ')}`);
-  assert.doesNotMatch(JS, /removeItem/, 'ممنوع مسح العلامة تلقائيًا — «مرة واحدة» تعني مرة واحدة');
+    `التخزين الدائم محصور في قراءة وكتابة واحدة: ${storageCalls.join(', ')}`);
+  assert.doesNotMatch(JS, /removeItem/, 'لا مسح عشوائي للتخزين');
+
   for (const m of storageCalls) {
     const at = JS.indexOf(m);
     const before = JS.slice(Math.max(0, at - 240), at);
@@ -85,8 +103,8 @@ test('المخزون: simsar_welcome_nudge_v1 بحقول v/seen/muted/stage فق
     'ممنوع تخزين أي نص كتبه الزائر');
 });
 
-// ─── 5) لا أرقام ولا بيانات في الكود ──────────────────────────────────────
-test('لا أرقام هواتف مكتوبة في السكربت، والوصلة تجي من الإعدادات', () => {
+// ─── 5) لا أرقام هواتف مكتوبة في الكود ────────────────────────────────────
+test('لا أرقام هواتف مكتوبة في السكربت، والوصلة تُقرأ من إعدادات الموقع', () => {
   assert.doesNotMatch(JS, /\b\d{9,}\b/, 'لا رقم طويل في الكود (الوصلة من data-wn-wa)');
   assert.match(INC, /data-wn-wa="\{\{ site\.contact\.whatsapp_url/,
     'رابط واتساب يُقرأ من إعدادات الموقع في القالب، لا من السكربت');
@@ -94,81 +112,77 @@ test('لا أرقام هواتف مكتوبة في السكربت، والوصل
   assert.match(JS, /if \(copy\.escape && waHref\) \{/, 'بلا رابط ⇒ بلا سطر خلاص، ومفيش كسر');
 });
 
-// ─── 6) طارق = الخلاص، مش الافتتاحية ─────────────────────────────────────
-test('درجة التعريف S0 بلا عرض محادثة، والخلاص يظهر بعدها فقط', () => {
-  const s0 = JS.slice(JS.indexOf('S0: {'), JS.indexOf('S1: {'));
-  const s1 = JS.slice(JS.indexOf('S1: {'), JS.indexOf('S3: {'));
-  const s3 = JS.slice(JS.indexOf('S3: {'), JS.indexOf('};', JS.indexOf('S3: {')));
-  assert.match(s0, /escape: false/, 'S0 تعريف بالشخص والكيان — لا «كلّم طارق» في أول ثانية');
-  assert.doesNotMatch(s0, /wa|whatsapp|واتساب/i, 'ممنوع أي دعوة للمحادثة في S0');
-  assert.match(s1, /escape: true/);
-  assert.match(s3, /escape: true/);
-  assert.match(s0, /طارق طنطاوي/, 'S0 لازم تربط الشخص بالكيان');
-  assert.match(s0, /سمسار طلبك/, 'S0 لازم تذكر اسم الكيان');
-  assert.match(s3, /مش لاقي|المناسب/, 'S3 تخاطب «جدّي بس مش لاقي»');
-  assert.ok(s3.includes('ترشيح'), 'S3 تدعو لترشيح، مش لبيع');
-  // الخلاص مش الزر الأساسي في أي درجة
-  assert.doesNotMatch(s1 + s3, /primary:[^}]*wa/, 'واتساب يبقى سطر الخلاص، مش الزر الأساسي');
+// ─── 6) روح الخطوات الأربع المرتبة وطارق كخلاص ───────────────────────────
+test('الخطوات الأربع بالترتيب (S1 مداعبة → S2 نية → S3 طريق → S4 تحفيز)، وطارق خلاص لا افتتاحية', () => {
+  assert.match(JS, /var ORDER = \['S1', 'S2', 'S3', 'S4'\];/, 'ترتيب السلسلة ثابت من 4 خطوات');
+
+  const s1 = JS.slice(JS.indexOf('function copyS1'), JS.indexOf('function copyS2'));
+  const s2 = JS.slice(JS.indexOf('function copyS2'), JS.indexOf('var S3_BY_INTENT'));
+  const s3 = JS.slice(JS.indexOf('var S3_BY_INTENT'), JS.indexOf('function copyS4'));
+  const s4 = JS.slice(JS.indexOf('function copyS4'), JS.indexOf('function stepCopy'));
+
+  assert.match(s1, /escape: false/, 'S1 مداعبة وترحيب بلا دعوة محادثة');
+  assert.doesNotMatch(s1, /wa|whatsapp|واتساب/i, 'ممنوع أي دعوة للمحادثة في S1');
+  assert.match(s1, /طارق طنطاوي/, 'S1 تربط الشخص بالكيان');
+  assert.match(s1, /سمسار طلبك/, 'S1 تذكر اسم الكيان');
+
+  assert.match(s2, /escape: false/, 'S2 لفهم النية بنقرة هادئة بلا ضغط محادثة');
+  assert.match(s2, /INTENTS\.BUY[\s\S]*INTENTS\.RENT[\s\S]*INTENTS\.SELL/, 'S2 تغطي النوايا الثلاث');
+
+  assert.match(s3, /escape: true/, 'S3 تتيح سطر خلاص هادئ لمن يرغب في الاختصار');
+  assert.match(s4, /escape: true/, 'S4 تتيح سطر خلاص هادئ مع طارق');
+  assert.match(s4, /مش لاقي|المناسب/, 'S4 تخاطب المحتار أو من لم يجد مقاس طلبه');
+  assert.ok(s4.includes('ترشيح'), 'S4 تدعو للترشيح الذكي لا للإلحاح البيعي');
+
+  assert.doesNotMatch(s3 + s4, /primary:[^}]*wa/i, 'واتساب يبقى سطر الخلاص في التذييل وليس الزر الأساسي');
 });
 
-// ─── 7) البوابات: إمتى تظهرش خالص ─────────────────────────────────────────
-test('البوابات: reduced-motion، saveData، شبكة بطيئة، PWA مثبّت، بانر التنبيهات، والكتابة', () => {
-  const gates = JS.slice(JS.indexOf('function disabled()'), JS.indexOf('function busy()'));
-  assert.match(gates, /prefers-reduced-motion: reduce/);
-  assert.match(gates, /display-mode: standalone/);
-  assert.match(gates, /saveData === true/);
-  assert.match(gates, /effectiveType/, 'الشبكة البطيئة (2g) معفاة من التحية');
+// ─── 7) البوابات وعدم التعارض مع بانر التنبيهات والعناصر العائمة ─────────
+test('البوابات وحالة الانشغال وإصلاح تعارض بانر التنبيهات', () => {
+  const gates = JS.slice(JS.indexOf('function isPreviewMode'), JS.indexOf('function busy()'));
+  assert.match(gates, /saveData === true/, 'إعفاء وضع توفير البيانات');
+  assert.match(gates, /effectiveType/, 'الشبكة البطيئة (2g) معفاة');
   assert.match(gates, /nudge=off/, 'إطفاء فوري بالرابط');
+  assert.match(gates, /nudge=preview/, 'وضع معاينة فوري للاختبار الحي');
   assert.match(gates, /window\.NASR_NUDGE === false/, 'إطفاء فوري من الكود');
-  assert.match(gates, /flag\.seen === 1 \|\| flag\.muted === 1/, 'مرة واحدة للجهاز للأبد');
-  const busy = JS.slice(JS.indexOf('function busy()'), JS.indexOf('function idleFor'));
-  assert.match(busy, /INPUT/, 'مفيش مقاطعة لكتابة');
-  assert.match(busy, /\[aria-modal="true"\]/, 'مفيش مقاطعة لمودال مفتوح');
-  assert.match(busy, /\.push-banner-visible/, 'بانر التنبيهات أولّى — لا فقاعتان معًا');
-  assert.match(JS, /clickedCard = true/, 'دوس على بطاقة عقار = لا تحية');
+  assert.match(gates, /st\.muted === 1 \|\| st\.seen === 1/, 'احترام الكتم واكتمال الجولة');
+  // مهم: لا نكتم الإشعارات النصية بسبب prefers-reduced-motion في JS (تُعالج حركيًا في CSS فقط)
+  assert.doesNotMatch(gates, /prefers-reduced-motion/, 'تقليل الحركة يعطّل الأنيميشن في CSS ولا يكتم النص');
+
+  const busy = JS.slice(JS.indexOf('function busy()'), JS.indexOf('function track('));
+  assert.match(busy, /INPUT/, 'لا مقاطعة أثناء الكتابة');
+  assert.match(busy, /\[aria-modal="true"\]/, 'لا مقاطعة لمودال مفتوح');
+  assert.match(busy, /\.push-banner-visible:not\(\.push-banner-hidden\)/, 'انتظار بانر التنبيهات الفعلي فقط');
+  assert.match(busy, /\.pp-lightbox\.show/, 'لا ظهور فوق معرض الصور المكبّر');
+
+  // ضمان إزالة push-banner-visible عند إخفاء بانر الإشعارات حتى لا يحجب المُضيف الذكي للأبد
+  assert.match(PUSH_JS, /el\.classList\.remove\('push-banner-visible'\)/,
+    'push-notifications.js يزيل push-banner-visible عند الإغلاق أو التفعيل');
 });
 
-// ─── 8) السلَّم نفسه ──────────────────────────────────────────────────────
-test('التوقيتات: 1.2ث للتعريف، 20ث للهدوء، 25ث قبل نية الخروج، ودرجة واحدة في الجلسة', () => {
-  assert.match(JS, /show\('S0'\);\s*\}, 1200\)/, 'S0 بعد أول رسم بثانية ونص');
-  assert.match(JS, /\}, 20000\);/, 'S1 عند عتبة العشرين ثانية');
-  assert.match(JS, /var EXIT_AFTER = 25000, IDLE_MS = 3000, EXIT_RETRY = 800;/,
-    'التوقيتات مرقّمة في ثوابت، مش أرقام سحرية مبعثرة');
-  assert.match(JS, /if \(!elapsedSinceLoad\(EXIT_AFTER\)\) return;/, 'S3 ما يسبقش 25 ثانية');
-  assert.match(JS, /function maybeExitIntent\(minIdle\) \{\n    if \(off \|\| dismissed \|\| exitFired\) return;\n    if \(!elapsedSinceLoad\(EXIT_AFTER\)\) return;/,
-    'بوابة العمر جوه الباب الوحيد ⇒ كل المسارات محكومة بيها (visibilitychange كان فلاتها)');
-  assert.equal((JS.match(/elapsedSinceLoad\(/g) || []).length, 2,
-    'استعمال واحد للبوابة + تعريفها — مفيش بوابات متكرّرة تتناقض');
-  assert.match(JS, /maybeExitIntent\(EXIT_RETRY\)/, 'التفويت مش صامت: إعادة قياس بعد 800 مللي');
-  assert.match(JS, /if \(off \|\| dismissed \|\| exitFired \|\| current \|\| !fired\.S1\) return;/,
-    'مسار أعلى الصفحة: بعد S1 بس، ومفيش فقاعة ظاهرة حالّيًا');
-  assert.match(JS, /> TOP_Y\) return;/, '«أعلى الصفحة» = 8 بكسل أو أقل، مش تقدير');
-  assert.doesNotMatch(JS, /'(pointermove|mousemove|wheel)'/,
-    'ممنوع مستمعات على حركة الماوس/العجلة — الأداء وأول شاشة');
-  assert.match(JS, /if \(off \|\| dismissed \|\| fired\[stage\]\) return;/, 'فقاعة واحدة، وكل درجة مرة');
-  assert.match(JS, /if \(current !== stage\) return;/, 'مفيش استبدال لدرجة سابقة بغلط');
-  assert.match(JS, /if \(how === 'dismiss' \|\| how === 'x'\) dismissed = true;/, 'رفض صريح يوقف السلَّم');
-  assert.match(JS, /writeFlag\(\{ seen: 1, stage: STAGES\[stage\] \|\| 0 \}\);\n    track\('nudge_shown'/,
-    'الظهور نفسه يسجّل seen ⇒ مفيش إلحاح متكرر');
-  assert.match(JS, /window\.addEventListener\('scroll', function \(\) \{ mark\(\); watchTopStillness\(\); \}, \{ passive: true \}\)/,
-    'متابعة النشاط passive (بلا preventDefault) وبتشغّل عدّاد الثبات');
-  // «وقف في الأعلى» لازم يُقاس مرتين: عند التسليح وعند انتهاء المؤقّت —
-  // لو الزائر لفّ لنزول في النص المسار يتلغى (الفقاعة مش مقابل قراءة).
-  assert.match(JS, /function topOffset\(\) \{ return \(window\.scrollY \|\| 0\)/);
-  assert.equal((JS.match(/topOffset\(\) > TOP_Y/g) || []).length, 2, 'قياسين للموضع: التسليح ووقت المؤقّت');
-  assert.match(JS, /if \(topOffset\(\) > TOP_Y\) return;\n\s*if \(topStillTimer\) return;/);
-  assert.match(JS, /topStillTimer = window\.setTimeout\(function \(\) \{[\s\S]{0,140}if \(topOffset\(\) > TOP_Y\) return;/);
-  assert.doesNotMatch(JS, /clearTimeout\(timers/, 'قفل الفقاعة ما يُلغيش السلَّم — كل مؤقّت له نطاقه');
-  assert.match(JS, /e\.key === 'Escape'/, 'Esc يقفلها');
+// ─── 8) أزمنة قراءة إنسانية وإيقاف المؤقّت عند التفاعل ────────────────────
+test('وقت قراءة مريح (16–20 ثانية) وإيقاف كامل للمؤقّت عند اللمس أو الماوس', () => {
+  for (const ttl of ['ttl: 16000', 'ttl: 20000', 'ttl: 18000']) {
+    assert.ok(JS.includes(ttl), `مدة القراءة المريحة موجودة: ${ttl}`);
+  }
+  assert.doesNotMatch(JS, /ttl:\s*[1-9]\d{0,3}\b/, 'ممنوع أي مدة قراءة أقل من 10 ثوانٍ تخطف الرسالة');
+  assert.match(JS, /var RESUME_MIN_TTL = 9000;/, 'مهلة مريحة لا تقل عن 9 ثوانٍ بعد رفع الماوس أو اليد');
+  assert.match(JS, /function pauseCountdown\(\)/, 'دالة إيقاف العد التنازلي أثناء القراءة');
+  assert.match(JS, /function resumeCountdown\(\)/, 'دالة استئناف العد التنازلي بعد القراءة');
+  assert.match(JS, /root\.addEventListener\('pointerenter', pauseCountdown\)/);
+  assert.match(JS, /root\.addEventListener\('touchstart', pauseCountdown/);
+  assert.doesNotMatch(JS, /'(pointermove|mousemove|wheel)'/, 'لا مستمعات ثقيلة على حركة الماوس أو العجلة');
+  assert.match(JS, /e\.key === 'Escape'/, 'زر Escape يغلق الرسالة الحالية بهدوء');
 });
 
-// ─── 9) لا إزعاج للأداء ولا تسريب للأنماط ──────────────────────────────────
+// ─── 9) الحجم والتقييد والتباين البصري وعدم تسريب الأنماط ─────────────────
 test('الحجم والتحميل والتقييد: defer، بلا inline handler، وأنماط محصورة بـ .wn-', () => {
-  assert.ok(JS.length < 20000, `حجم السكربت كبر: ${JS.length}`);
-  assert.ok(INC.length < 8000, `حجم القالب كبر: ${INC.length}`);
-  assert.match(INC, /<script src="\{\{ '\/assets\/js\/welcome-nudge\.js'/, 'سكربت منفصل');
-  assert.match(INC, /welcome-nudge\.js' \| relative_url \}\}" defer><\/script>/, 'defer — لا يحجب الرسم');
+  assert.ok(JS.length < 25000, `حجم السكربت تجاوز السقف: ${JS.length}`);
+  assert.ok(INC.length < 8000, `حجم القالب تجاوز السقف: ${INC.length}`);
+  assert.match(INC, /<script src="\{\{ '\/assets\/js\/welcome-nudge\.js(\?v=[a-z0-9-]+)?'/, 'سكربت منفصل');
+  assert.match(INC, /welcome-nudge\.js(\?v=[a-z0-9-]+)?' \| relative_url \}\}" defer><\/script>/, 'defer — لا يحجب الرسم');
   assert.doesNotMatch(INC, /onclick=|onload=/, 'ممنوع معالج مضمَّن في HTML');
+
   const style = INC.slice(INC.indexOf('<style>') + 7, INC.indexOf('</style>'));
   const selectors = style.split('\n')
     .map((l) => l.trim())
@@ -179,54 +193,55 @@ test('الحجم والتحميل والتقييد: defer، بلا inline handle
     const parts = sel.split(/[\s>+,]+/).filter(Boolean);
     return !parts.every((p) => /^\.wn([-a-z0-9]|$)/i.test(p) || /^from$/i.test(p) || /^to$/i.test(p));
   });
-  assert.deepEqual(leaked, [], `أنماط خارج نطاق .wn- هتلمس صفحات تانية: ${leaked.join(', ')}`);
+  assert.deepEqual(leaked, [], `أنماط خارج نطاق .wn- قد تؤثر على صفحات أخرى: ${leaked.join(', ')}`);
+
   const z = style.match(/z-index:\s*(\d+)/);
   assert.ok(z && Number(z[1]) > 900 && Number(z[1]) < 1000,
-    'z-index لازم فوق بانر التنبيهات (940) وتحت القائمة (99999)');
-  assert.match(style, /prefers-reduced-motion: reduce/, 'الحركة تُطفأ لو الزائر طلب ذلك');
-  assert.match(style, /@media print/, 'الطباعة تتخلص من الفقاعة');
+    'z-index فوق بانر التنبيهات (940) وتحت القائمة العائمة (99999)');
+  assert.match(style, /\.wn-btn-primary\s*\{\s*background:\s*#238636;\s*color:\s*#ffffff;/,
+    'تباين نص أبيض ناصع مقروء على الزر الأساسي');
+  assert.match(style, /\.wn-high/, 'إزاحة ذكية فوق أزرار واتساب العائمة في صفحات العقارات والطلبات');
+  assert.match(style, /prefers-reduced-motion: reduce/, 'إيقاف الأنيميشن لمن يفضل تقليل الحركة');
+  assert.match(style, /@media print/, 'إخفاء البطاقة عند الطباعة');
 });
 
-// ─── 10) القياس بدون تتبّع جديد، والوثائق متسقة ───────────────────────────
-test('القياس في dataLayer الموجود فقط، وprivacy-policy.html يصرّح بالمفتاح', () => {
+// ─── 10) القياس في dataLayer الموجود وتوثيق الخصوصية ──────────────────────
+test('القياس في dataLayer الموجود فقط، وprivacy-policy.html يوثّق التخزين بدقة', () => {
   assert.match(JS, /window\.dataLayer = window\.dataLayer \|\| \[\];/, 'بلا مكتبة تحليلات جديدة');
-  assert.doesNotMatch(both, /gtag\(|analytics\.js|plausible|fathom|cookie/i, 'لا cookie ولا محلل جديد');
+  assert.doesNotMatch(both, /gtag\(|analytics\.js|plausible|fathom|cookie/i, 'لا كوكيز ولا محلل جديد');
   const evts = [...JS.matchAll(/track\('([a-z_]+)'/g)].map((m) => m[1]);
   assert.deepEqual([...new Set(evts)].sort(), ['nudge_close', 'nudge_shown', 'nudge_tap']);
+
   const pp = read('privacy-policy.html');
-  assert.match(pp, /simsar_welcome_nudge_v1/, 'لازم المفتاح موثَّق في سياسة الخصوصية');
-  assert.match(pp, /<code>localStorage<\/code> علامة واحدة/, 'تعداد ما يُخزَّن مش ادعاء عام');
-  assert.match(pp, /لا صوت في هذه النسخة/, 'سياسة الخصوصية تقول صراحة: V1 بلا صوت');
-  assert.match(HOME, /^welcome_nudge: true$/m, 'الصفحة الرئيسية ترفع العلم');
-  assert.match(HOME, /<strong>سمسار طلبك<\/strong> هو طارق طنطاوي/,
-    'البداية تربط الشخص بالكيان — مطلوب صراحة في الفروضة');
+  assert.match(pp, /simsar_welcome_nudge_v1/, 'المفتاح الدائم موثَّق في سياسة الخصوصية');
+  assert.match(pp, /simsar_welcome_session_v2/, 'عداد الجلسة المؤقت موثَّق في سياسة الخصوصية');
+  assert.match(pp, /لا صوت في هذه الرسائل/, 'سياسة الخصوصية تؤكد غياب الصوت وأذونات الميكروفون');
 });
 
 // ─── 11) «طارق هو الخلاص» في الهيرو: خلاص نصّي هادي، مش افتتاحية محادثة ─────
 test('الصفحة الأولى تربط الشخص بالكيان، والمحادثة طريق خروج لا زر افتتاحي', () => {
   const hero = HOME.slice(HOME.indexOf('<section class="hp-hero">'), HOME.indexOf('hp-trust-strip'));
   assert.match(hero, /<strong>سمسار طلبك<\/strong> هو طارق طنطاوي/,
-    'البداية تذكر اسم الشخص مع الكيان (طلب صريح في الفروضة)');
+    'البداية تذكر اسم الشخص مع الكيان');
   assert.match(hero, /hp-hero-escape/, 'سطر الخلاص موجود في بلوك التواصل');
   assert.match(hero, /class="hp-btn primary"[\s\S]*تصفّح العروض/, 'الزر الأساسي خدمة ذاتية');
   assert.doesNotMatch(hero, /hp-btn[^"]*"[^>]*agent\.html/, 'ممنوع زر محادثة في صف أزرار الهيرو');
   assert.doesNotMatch(hero, /احكِ للوكيل|تحدث مع طارق|ابدأ المحادثة/, 'ولا صيغة «افتح محادثة» في أول شاشة');
   assert.match(hero, /rel="noopener noreferrer"/, 'رابط الخلاص الخارجي محمي');
-  // الرابط نفسه يبقى موجودًا في العالم (القائمة + الزر العائم) — إحنا نقلّص الإلحاح مش النافذة
   assert.match(LAYOUT, /agent-float-btn[\s\S]{0,400}طارق طنطاوي/, 'زر طارق العائم يفضل كما هو');
   assert.match(read('_includes/floating-menu.html'), /agent\.html/, 'القائمة تحتفظ بطريق الوكيل');
   const css = read('assets/css/style.css');
-  assert.match(css, /body\.homepage \.hp-hero-escape/, 'سطر الخلاص له قاعدة في style.css (لا أنماط مبعثرة)');
+  assert.match(css, /body\.homepage \.hp-hero-escape/, 'سطر الخلاص له قاعدة في style.css');
   assert.match(read('assets/css/route-home.min.css'), /\.hp-hero-escape/,
-    'القاعدة مبنية في حزمة الرئيسية — وإلا npm run css:check سيسقط');
+    'القاعدة مبنية في حزمة الرئيسية');
 });
 
-// ─── 12) سطر الخلاص مقياس بنفس الحدث الموجود (مقارنة مش اختراع) ──────────────
+// ─── 12) سطر الخلاص مقياس بنفس الحدث الموجود ──────────────────────────────
 test('خلاص الهيرو يُقاس بـ whatsapp_inquiry القائم، وبلا ملف أو وسم جديد', () => {
   const hero = HOME.slice(HOME.indexOf('<section class="hp-hero">'), HOME.indexOf('hp-trust-strip'));
   assert.match(hero, /event: 'whatsapp_inquiry'/, 'نفس اسم الحدث المستعمل في _layouts/property_page.html');
-  assert.match(hero, /call_source: 'home_hero_escape'/, 'المصدر مميز ⇒ نقارن بالرابط القديم بلا لبس');
-  assert.match(hero, /typeof dataLayer === 'undefined'/, 'بلا GTM شغّال ⇒ سكربت صامت، مفيش خطأ');
-  assert.match(hero, /\{%-\s*comment\s*-?%\}[\s\S]*?\{%-\s*endcomment\s*-?%\}/, 'التعليق موثَّق في المصدر ولا يتسرّب للمخرجات');
+  assert.match(hero, /call_source: 'home_hero_escape'/, 'المصدر مميز للمقارنة');
+  assert.match(hero, /typeof dataLayer === 'undefined'/, 'بلا GTM شغّال ⇒ سكربت صامت');
+  assert.match(hero, /\{%-\s*comment\s*-?%\}[\s\S]*?\{%-\s*endcomment\s*-?%\}/, 'التعليق موثَّق في المصدر');
   assert.doesNotMatch(hero, /<script src=/, 'بلا طلب شبكة إضافي في أول شاشة');
 });
