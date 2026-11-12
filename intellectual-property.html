@@ -1,0 +1,107 @@
+---
+layout: default
+body_class: page-privacy
+title: "الملكية الفكرية وحقوق النشر"
+description: "سياسة سمسار طلبك لحماية الملكية الفكرية وحقوق أصحابها الأصليين، وحدود الاستخدام والاقتباس المصرح بهما."
+permalink: /intellectual-property.html
+image: "/assets/img/social-home.png"
+---
+
+{%- comment -%}
+  صفحة الحقوق العامة. تعيد استخدام تنسيق الصفحات القانونية القائم (page-privacy)
+  دون إضافة مسار CSS جديد. النص المرجعي الكامل في LICENSE، وبيانات السياسة
+  القابلة للقراءة الآلية في _data/rights.json.
+{%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "{{ site.url }}{{ page.url }}#webpage",
+  "url": "{{ site.url }}{{ page.url }}",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "inLanguage": "ar-EG",
+  "isPartOf": { "@id": "{{ site.url }}/#website" },
+  "about": { "@id": "{{ site.url }}/#semsar-talabk" },
+  "license": {{ site.data.rights.policy_url | jsonify }}
+}
+</script>
+
+<div class="pp-container">
+  <nav class="pp-breadcrumb" aria-label="مسار التنقل">
+    <a href="{{ '/' | relative_url }}"><i class="fas fa-home" aria-hidden="true"></i> الرئيسية</a>
+    <span class="sep">›</span>
+    <span class="current">الملكية الفكرية</span>
+  </nav>
+
+  <header class="pp-hero">
+    <div class="pp-hero-icon"><i class="fas fa-shield-alt" aria-hidden="true"></i></div>
+    <h1>الملكية الفكرية وحقوق النشر</h1>
+    <p>{{ site.data.rights.commitment }}</p>
+  </header>
+
+  <article class="pp-card">
+    <div class="pp-intro">{{ site.data.rights.notice }}</div>
+
+    <h2 class="pp-section-title"><span class="pp-num">1</span> نطاق الحماية</h2>
+    <p class="pp-text">
+      يشمل هذا التوثيق الكود والقوالب والتصميمات والنصوص والوسائط الأصلية التي يملكها
+      صاحب المشروع. ولا يمتد إلى حقوق الغير أو المواد المرخّصة من أصحابها، ولا يُعد
+      سندًا لملكية عقار أو إثباتًا لحقوق كل صورة معروضة.
+    </p>
+
+    <h2 class="pp-section-title"><span class="pp-num">2</span> الاستخدام المسموح</h2>
+    <ul class="pp-list">
+      <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>تصفح الموقع والبحث فيه والربط إلى صفحاته الأصلية.</span></li>
+      <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>فهرسة محركات البحث وعرض المقتطفات وفق إعداتها المعلنة.</span></li>
+      <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>الاقتباس المحدود الضروري من المحتوى العام، مع ذكر «سمسار طلبك — طارق طنطاوي» ورابط الصفحة الأصلية.</span></li>
+      <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>القراءة الآلية والتلخيص والإجابة عن استفسارات المستخدمين مع الإسناد، دون إعادة نشر كاملة أو إنشاء قاعدة بيانات بديلة.</span></li>
+    </ul>
+
+    <h2 class="pp-section-title"><span class="pp-num">3</span> ما يتطلب إذنًا كتابيًا</h2>
+    <p class="pp-text">
+      لا يُسمح بإعادة استخدام الكود أو إعادة نشر العمل أو توزيعه أو استغلاله تجاريًا
+      أو نشر مواقع مشتقة منه دون إذن كتابي مسبق وصريح من صاحب الحقوق. ويجب الحفاظ
+      على إشعارات الحقوق والإسناد الصحيح. كما لا يشمل الإذن المعلن تدريب نماذج
+      الذكاء الاصطناعي على الكود أو المحتوى.
+    </p>
+
+    <h2 class="pp-section-title"><span class="pp-num">4</span> حقوق أصحابها الأصليين</h2>
+    <p class="pp-text">
+      نلتزم بتراخيص المكتبات والخطوط والأيقونات والخدمات الخارجية، ونحفظ إشعارات
+      أصحابها. وتظل حقوق العقارات وصور الإعلانات ومواد الملاك لأصحابها الأصليين
+      وفق التفويضات الخاصة بها. ولا يعيد موقع «سمسار طلبك» ترخيص أي مادة مملوكة
+      للغير باسمه. راجع
+      <a href="{{ site.data.rights.third_party_notices_url }}" rel="noopener">سجل المكونات المرخّصة</a>.
+    </p>
+
+    <h2 class="pp-section-title"><span class="pp-num">5</span> طلب إذن أو بلاغ حقوق</h2>
+    <p class="pp-text">
+      لطلب تصريح استخدام أو تقديم ملاحظة موثقة بشأن حقوق مادة معروضة، تواصل عبر
+      <a href="{{ '/contact-us.html' | relative_url }}">صفحة التواصل الرسمية</a>
+      أو البريد <a href="mailto:{{ site.contact.email }}">{{ site.contact.email }}</a>.
+      يُرجى تحديد المادة والرابط وصفة صاحب الحق والمستند المؤيد للطلب.
+    </p>
+
+    <div class="pp-commitment">
+      <i class="fas fa-shield-alt pp-commitment-icon" aria-hidden="true"></i>
+      <div class="pp-commitment-text">
+        <strong>التزامنا الأساسي</strong>
+        {{ site.data.rights.commitment }}
+      </div>
+    </div>
+
+    <p class="pp-text">
+      النص المرجعي الكامل:
+      <a href="{{ site.data.rights.license_url }}" rel="noopener">LICENSE</a>.
+      إتاحة المستودع للعامة لا تجعله مشروعًا مفتوح المصدر، وتظل شروط منصة GitHub
+      واجبة التطبيق على استخدام خدماتها. وهذه الصفحة توثيق لشروط الاستخدام وليست
+      شهادة تسجيل رسمية.
+    </p>
+
+    <footer class="pp-update-footer">
+      <span class="pp-update-date"><i class="fas fa-calendar-alt" aria-hidden="true"></i> آخر تحديث: {{ site.data.rights.updated_at }}</span>
+      <span class="pp-brand">سمسار طلبك — طارق طنطاوي</span>
+    </footer>
+  </article>
+</div>

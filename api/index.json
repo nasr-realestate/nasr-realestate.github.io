@@ -1,8 +1,34 @@
 {
   "schema_version": "3.0",
   "name": "سمسار طلبك — واجهة العقارات",
+  "rights": {
+    "policy_version": "1.0",
+    "updated_at": "2026-11-12",
+    "project_name": "سمسار طلبك",
+    "original_rights_holder": "طارق طنطاوي",
+    "commitment": "نلتزم بحماية الملكية الفكرية وحقوق أصحابها الأصليين، ونلزم جميع المستخدمين والمساهمين باحترامها.",
+    "notice": "© 2026 سمسار طلبك — طارق طنطاوي. جميع الحقوق محفوظة في الأعمال الأصلية المملوكة لصاحب المشروع.",
+    "policy_url": "https://nasr-realestate.github.io/intellectual-property.html",
+    "license_url": "https://github.com/nasr-realestate/nasr-realestate.github.io/blob/HEAD/LICENSE",
+    "third_party_notices_url": "https://github.com/nasr-realestate/nasr-realestate.github.io/blob/HEAD/THIRD_PARTY_NOTICES.md",
+    "repository_url": "https://github.com/nasr-realestate/nasr-realestate.github.io",
+    "permissions": {
+      "browse": true,
+      "search_indexing": true,
+      "summarize_with_attribution": true,
+      "agent_use_with_attribution": true,
+      "limited_quotation_with_attribution": true,
+      "ai_training": false,
+      "code_reuse": false,
+      "redistribution": false,
+      "commercial_reuse": false,
+      "remove_rights_notices": false
+    },
+    "scope_note": "تسري هذه السياسة على الأعمال الأصلية التي يملكها صاحب المشروع فقط. وتظل حقوق المكتبات والخطوط والأيقونات والمواد المرخّصة والوقائع العقارية وأصول العقارات وصورها لأصحابها الأصليين، ولا ينشئ هذا التوثيق ملكية لحقوق الغير أو سندًا لملكية عقار.",
+    "citation": "سمسار طلبك — طارق طنطاوي، مع رابط الصفحة الأصلية"
+  },
   "description": "واجهة قراءة فقط بلا مصادقة للوحدات المنشورة على موقع سمسار طلبك. النطاق المعلن للخدمة هو مدينة نصر: كل وحدة تحمل scope=\"city\" (داخل المدينة، قابلة للترشيح) أو scope=\"archive\" (خارج المدينة — مصر الجديدة/القاهرة الجديدة/الرحاب/التجمع — أرشفة ورابط مباشر فقط، ولا يجوز ترشيحها كبديل لطلب داخل مدينة نصر؛ وللتوافق يبقى in_nasr_city=false). كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.",
-  "generated_at": "2026-11-11T23:04:03.735Z",
+  "generated_at": "2026-11-12T16:45:00.593Z",
   "total_count": 112,
   "scope": {
     "name": "مدينة نصر",
@@ -62,6 +88,12 @@
       "method": "GET",
       "format": "application/json",
       "description": "فهرس بحث خفيف"
+    },
+    {
+      "path": "/intellectual-property.html",
+      "method": "GET",
+      "format": "text/html",
+      "description": "سياسة الملكية الفكرية وحقوق أصحابها الأصليين"
     },
     {
       "path": "/.well-known/ai.txt",
