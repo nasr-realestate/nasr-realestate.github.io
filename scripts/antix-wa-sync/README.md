@@ -95,6 +95,8 @@ rclone config
 - scope: `drive` مع تقييد `root_folder_id` بمجلد CRM. إن اخترت `drive.file` فلن يرى rclone الملفات القديمة، وتبقى الحالة المحلية هي مرجع منع التكرار.
 - root_folder_id: معرّف مجلد «قاعده العملاء نظام CRM» من رابط Drive.
 - على جهاز بلا متصفح: اختر manual/headless config وأكمل التفويض من جهاز آخر.
+- انشر تطبيق OAuth (Audience → PUBLISH APP): في وضع Testing تنتهي صلاحية التفويض بعد أسبوع.
+  إعادة التفويض عند الحاجة: `rclone config reconnect nasr-wa:`.
 
 تحقّق قراءة فقط:
 

@@ -445,9 +445,27 @@ Setup complete. Test: .../sync.sh --dry-run
 1. ادخل إلى Google Cloud Console بحساب Google الذي يملك مجلد Drive.
 2. أنشئ مشروعًا جديدًا باسم مناسب، مثل `nasr-wa-sync`.
 3. فعّل **Google Drive API** داخل المشروع.
-4. جهّز شاشة موافقة OAuth، وأضف بريدك كمستخدم اختبار إذا كانت في وضع الاختبار.
-5. أنشئ **OAuth client ID** من نوع **Desktop app**.
+4. في **Google Auth Platform → Audience** اختر **External** وأضف بريدك ضمن **Test users**.
+5. من **Overview → Create OAuth client** اختر نوع **Desktop app** وأنشئه.
 6. احتفظ بـ `client_id` و`client_secret` لاستخدامهما في rclone. لا ترسلهما لي.
+7. من **Audience** اضغط **PUBLISH APP** وأكّد.
+
+**لماذا النشر مهم هنا:** بينما التطبيق في وضع **Testing** تنتهي صلاحية التفويض بعد **أسبوع**،
+فتتوقف المزامنة المتكررة كل سبعة أيام حتى تعيد التفويض. النشر يجعل التفويض مستمرًا.
+ظهور شاشة «لم تتحقق Google من هذا التطبيق» أثناء الربط متوقع لتطبيق شخصي؛ تتجاوزها من
+**Advanced → Go to … (unsafe)** لأن التطبيق تطبيقك أنت. الاستخدام الشخصي معفى من التحقق الرسمي.
+
+لو كان زر **PUBLISH APP** رماديًا، تطلب Google رابط صفحة رئيسية ورابط سياسة خصوصية.
+موقعك المنشور يفي بالغرض: ضع في **Branding** الصفحة الرئيسية
+`https://nasr-realestate.github.io/` وسياسة الخصوصية
+`https://nasr-realestate.github.io/privacy-policy.html`، وأضف النطاق `nasr-realestate.github.io`
+ ضمن النطاقات المصرّح بها، ثم احفظ وارجع إلى **Audience** وانشر.
+
+لو تعذّر النشر لأي سبب، وضع Testing يكفي للبدء، وتعيد التفويض أسبوعيًا بأمر واحد:
+
+```sh
+"$HOME/nasr-wa-sync/bin/rclone" config reconnect nasr-wa:
+```
 
 ### ب) اعرف معرّف مجلد CRM
 
