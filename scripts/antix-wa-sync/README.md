@@ -55,7 +55,7 @@ build-whatsapp-import.mjs → sealed sync bundle
 /sdcard/WhatsApp Business/Databases/msgstore.db.crypt15
 ```
 
-لا تستخدم ملفات `msgstore-increment-*.crypt15`؛ الأمر يرفضها ويطلب النسخة الكاملة.
+لا تستخدم ملفات `msgstore-increment-*`؛ الأمر يرفضها ويطلب النسخة الكاملة. ويرفض الأمر أيضًا `crypt14`: فعّل النسخ الاحتياطي المشفر طرفًا لطرف بمفتاح 64 خانة حتى تحصل على `msgstore.db.crypt15`.
 
 ## 2) جهّز rclone مرة واحدة
 

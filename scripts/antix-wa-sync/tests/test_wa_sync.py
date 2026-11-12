@@ -170,13 +170,16 @@ class PrepareTests(unittest.TestCase):
             self.assertEqual(wa_sync.file_sha(backup), hashlib.sha256(b"encrypted-synthetic").hexdigest())
             self.assertFalse((state_dir / "state.json").exists(), "prepare alone must not commit state")
 
-    def test_prepare_rejects_incremental_and_bad_key_perms(self):
+    def test_prepare_rejects_incremental_crypt14_and_bad_key_perms(self):
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)
             backup = home / "msgstore-increment.db.crypt15"; backup.write_bytes(b"x")
             key = home / "key"; key.write_bytes(b"x"); key.chmod(0o600)
             with self.assertRaises(wa_sync.SyncError):
                 wa_sync.prepare({"backup_path": str(backup), "key_path": str(key)}, home / "state")
+            crypt14 = home / "msgstore.db.crypt14"; crypt14.write_bytes(b"x")
+            with self.assertRaisesRegex(wa_sync.SyncError, "crypt15"):
+                wa_sync.prepare({"backup_path": str(crypt14), "key_path": str(key)}, home / "state")
             backup2 = home / "msgstore.db.crypt15"; backup2.write_bytes(b"x")
             key.chmod(0o644)
             with self.assertRaises(wa_sync.SyncError):

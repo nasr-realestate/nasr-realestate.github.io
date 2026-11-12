@@ -295,6 +295,8 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         raise SyncError("مسار النسخة الاحتياطية أو المفتاح غير موجود")
     if "increment" in backup.name.lower():
         raise SyncError("هذه نسخة Incremental وليست كاملة؛ انسخ msgstore.db.crypt15 بعد Back up")
+    if backup.suffix.lower() != ".crypt15":
+        raise SyncError("صيغة النسخة ليست crypt15؛ فعّل النسخ الاحتياطي المشفر طرفًا لطرف بمفتاح 64 خانة ثم انسخ msgstore.db.crypt15. لا تستخدم crypt14 أو increment")
     if key.stat().st_mode & 0o077:
         raise SyncError("ملف المفتاح يجب أن يكون بصلاحية 600")
     before = file_sha(backup)
