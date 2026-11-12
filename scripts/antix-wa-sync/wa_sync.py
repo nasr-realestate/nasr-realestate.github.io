@@ -368,6 +368,38 @@ def upload(remote: str, outbox: Path, pending: list[dict], rclone: str, config_p
             raise SyncError("ملف مرفوع لم يجتز تحقق الحجم/البصمة؛ لا تُعدّل الأصل وأعد المحاولة")
 
 
+def verify_manual_upload(manifest: Path, outbox: Path, pending: list[dict]) -> None:
+    """Verify a browser upload against a Drive listing, without any network call.
+
+    The manifest carries names, sizes and MD5 only (rclone `lsjson` shape or the
+    simple {"files":[{"name","size","md5"}]} shape). Nothing is committed unless
+    every pending ZIP matches a unique remote row byte-for-byte by size and MD5.
+    """
+    if not pending:
+        return
+    data = load_json(manifest, None)
+    rows = data.get("files") if isinstance(data, dict) else data
+    if not isinstance(rows, list):
+        raise SyncError("بيان الرفع اليدوي غير صالح؛ المتوقع قائمة ملفات Drive")
+    listing = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SyncError("صف غير صالح في بيان الرفع اليدوي")
+        name = row.get("Name") or row.get("name")
+        if not isinstance(name, str) or not name:
+            raise SyncError("صف بلا اسم في بيان الرفع اليدوي")
+        if name in listing:
+            raise SyncError("اسم مكرر في بيان Drive؛ أوقف النقل للمراجعة")
+        hashes = row.get("Hashes") if isinstance(row.get("Hashes"), dict) else {}
+        digest = row.get("md5") or hashes.get("MD5") or ""
+        listing[name] = (row.get("Size", row.get("size")), str(digest).lower())
+    for item in pending:
+        local = outbox / item["filename"]
+        row = listing.get(item["filename"])
+        if not row or row[0] != local.stat().st_size or row[1] != md5(local):
+            raise SyncError(f"لم يُتحقق من هذا الملف في Drive: {item['filename']}؛ لم تُحدَّث الحالة")
+
+
 def commit_state(state_dir: Path, chats: list[dict], uploaded: bool) -> None:
     state = validate_state(load_json(state_dir / "state.json", empty_state()))
     now = datetime.now(timezone.utc).isoformat()
@@ -389,6 +421,8 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="جهّز واعرض العدادات فقط، بلا رفع ولا تغيير الحالة")
     mode.add_argument("--prepare-only", action="store_true", help="جهّز الملفات الخاصة محليًا بلا رفع")
+    mode.add_argument("--confirm-uploaded", type=Path, metavar="MANIFEST",
+                      help="تحقّق من رفع يدوي عبر بيان Drive ثم اعتمد الحالة بلا رفع")
     args = parser.parse_args()
     try:
         config = load_json(args.config, None)
@@ -402,17 +436,25 @@ def main() -> int:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             chats, counts, outbox = prepare(config, state_dir)
             pending = [x for x in chats if x["status"] in PENDING_STATUSES]
-            do_upload = not (args.dry_run or args.prepare_only)
+            manual = config.get("transport") == "manual"
+            confirmed = args.confirm_uploaded is not None
+            if manual and not (args.dry_run or args.prepare_only or confirmed):
+                raise SyncError("وضع النقل اليدوي: شغّل --prepare-only ثم ارفع الملفات من المتصفح ثم --confirm-uploaded MANIFEST")
+            do_upload = not (args.dry_run or args.prepare_only or confirmed)
             if do_upload:
                 upload(config["rclone_remote"], outbox, pending, config.get("rclone_bin", "rclone"),
                        Path(config["rclone_config"]).expanduser() if config.get("rclone_config") else None)
+            if confirmed:
+                verify_manual_upload(args.confirm_uploaded, outbox, pending)
+            settled = do_upload or confirmed
             if not args.dry_run:
-                commit_state(state_dir, chats, do_upload)
-            if do_upload or args.dry_run:
+                commit_state(state_dir, chats, settled)
+            if settled or args.dry_run:
                 for item in pending:
                     (outbox / item["filename"]).unlink(missing_ok=True)
             report = {"schema": VERSION, "at": datetime.now(timezone.utc).isoformat(),
-                      "uploaded": len(pending) if do_upload else 0, "prepared": len(pending), "counts": counts}
+                      "transport": "manual" if manual else "rclone",
+                      "uploaded": len(pending) if settled else 0, "prepared": len(pending), "counts": counts}
             atomic_json(state_dir / "last-run.json", report)
             print(json.dumps(report, ensure_ascii=False, sort_keys=True))
             if any(k.startswith("hold_") for k in counts):

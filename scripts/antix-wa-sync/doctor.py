@@ -105,6 +105,7 @@ def check_env(rep: Report, home: Path) -> Path | None:
 
 
 def check_rclone(rep: Report, home: Path, config: dict | None) -> tuple[str, Path] | None:
+    manual = (config or {}).get("transport") == "manual"
     configured = (config or {}).get("rclone_bin")
     local = home / "bin" / "rclone"
     candidate = None
@@ -113,7 +114,10 @@ def check_rclone(rep: Report, home: Path, config: dict | None) -> tuple[str, Pat
             candidate = Path(value)
             break
     if candidate is None:
-        rep.fail("rclone غير مثبت؛ شغّل setup.sh أو install_rclone.py")
+        if manual:
+            rep.ok("وضع النقل اليدوي: لا حاجة إلى rclone ولا OAuth")
+        else:
+            rep.fail("rclone غير مثبت؛ شغّل setup.sh أو install_rclone.py")
         return None
     result = run([str(candidate), "version"], timeout=30)
     first = (result.stdout.splitlines() or [""])[0] if result and result.returncode == 0 else ""
@@ -242,9 +246,12 @@ def main() -> int:
             check_paths(rep, config, repo)
         elif isinstance(loaded, dict):
             rep.fail("ملف الإعدادات لا يحتوي المفاتيح المطلوبة؛ شغّل setup.sh")
-    resolved = check_rclone(rep, home, config)
-    if resolved and config:
-        check_remote(rep, resolved[0], resolved[1], str(config.get("rclone_remote", "")))
+    if config and config.get("transport") == "manual":
+        rep.ok("النقل يدوي: --prepare-only ثم رفع من المتصفح ثم --confirm-uploaded")
+    else:
+        resolved = check_rclone(rep, home, config)
+        if resolved and config:
+            check_remote(rep, resolved[0], resolved[1], str(config.get("rclone_remote", "")))
     failures = rep.failures
     warnings = sum(1 for status, _ in rep.rows if status == "WARN")
     print(f"\n{'DOCTOR_FAIL' if failures else 'DOCTOR_OK'} failures={failures} warnings={warnings}")

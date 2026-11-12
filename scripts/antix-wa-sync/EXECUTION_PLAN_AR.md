@@ -22,7 +22,8 @@
 - **كتلة USB**: نسخ `msgstore.db.crypt15` من الهاتف إلى المسار الخاص والتحقق من التطابق بايت ببايت.
 - **كتلة B1**: ربط Drive بأمر واحد والتحقق قراءة فقط. لا يحتاج النسخة الاحتياطية، فيمكن تنفيذه بالتوازي مع تجهيز الهاتف.
 - **كتلة B2**: الإعداد الآمن + فحص الجاهزية + تجربة جافة + تجهيز محلي. بلا رفع.
-- **كتلة C**: أول رفع حقيقي ثم إعادة التشغيل لإثبات عدم التكرار. لا تُنفَّذ إلا بعد مراجعة ناتج B2.
+- **المسار M**: بديل بلا Google Cloud: تجهيز محلي، رفع من المتصفح، ثم تحقق آلي واعتماد الحالة.
+- **كتلة C**: أول رفع حقيقي ثم إعادة التشغيل لإثبات عدم التكرار (لمسار rclone). لا تُنفَّذ إلا بعد مراجعة ناتج B2.
 
 أداة الفحص `doctor.py` قراءة فقط: لا تفك تشفيرًا، لا تقرأ المفتاح، لا ترفع شيئًا،
 ولا تطبع أي سر. تطبع `PASS/WARN/FAIL` ثم `DOCTOR_OK` أو `DOCTOR_FAIL`.
@@ -185,6 +186,52 @@ sh scripts/antix-wa-sync/pull_backup.sh --source "/media/only/USB/msgstore.db.cr
 الكتلة قابلة للإعادة: لو أُُنشئت الإعدادات سابقًا تتخطّى الأسئلة ولا تستبدل شيئًا.
 
 النجاح: `DOCTOR_OK failures=0`، ثم سطر JSON فيه `"uploaded": 0`، ثم `BLOCK_B2_OK`.
+
+### المسار اليدوي M — بلا Google Cloud ولا OAuth
+
+اخترته عندما لا تريد إنشاء عميل OAuth. الجهاز يجهّز الملفات، وأنت ترفعها من المتصفح،
+ ثم يُتحقق من الرفع آليًا قبل اعتماد الحالة. نفس ضمانات منع التكرار: لا تُحدَّث الحالة
+إلا بعد مطابقة الاسم والحجم وبصمة MD5 لكل ملف، ولا يُقبل اسم مكرر.
+
+**M1 — الإعداد والتجربة الجافة والتجهيز:**
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  git pull --ff-only
+  test -s "$HOME/nasr-wa-sync/inbox/msgstore.db.crypt15" || { echo NO_CRYPT15; exit 1; }
+  if [ -f "$HOME/nasr-wa-sync/config.json" ]; then echo CONFIG_EXISTS; else sh scripts/antix-wa-sync/setup.sh --manual; fi
+  python3 scripts/antix-wa-sync/doctor.py --require-config
+  sh scripts/antix-wa-sync/sync.sh --dry-run
+  sh scripts/antix-wa-sync/sync.sh --prepare-only
+  ls -1 "$HOME/nasr-wa-sync/state/outbox" | head -20
+  ls -1 "$HOME/nasr-wa-sync/state/outbox" | wc -l
+  echo BLOCK_M1_OK
+) || echo BLOCK_M1_FAILED
+```
+
+يسألك الإعداد سؤالين فقط: مسار النسخة، ثم المفتاح 64 hex في شاشة مخفية (لا سؤال عن remote).
+النجاح: `DOCTOR_OK`، ثم JSON فيه `"uploaded": 0` و`"transport": "manual"`، ثم قائمة أسماء ZIP وعددها.
+
+**M2 — الرفع من المتصفح:** افتح مجلد CRM في Drive واسحب إليه **كل** ملفات
+`WA-SYNC__*.zip` من `~/nasr-wa-sync/state/outbox`. لا تُعِد تسمية أي ملف ولا ترفع أي ملف آخر.
+لو انقطع الرفع، أعد سحب الملفات الناقصة فقط؛ الأسماء الفريدة تمنع الالتباس.
+
+**M3 — اعتماد الحالة بعد تحقق آلي:** أرسل لي عدد الملفات، وأتحقق أنا من Drive قراءة فقط
+وأعطيك ملف البيان `drive-manifest.json` (أسماء وأحجام وبصمات فقط، بلا أي محتوى محادثة).
+ضعه في `~/nasr-wa-sync/` ثم نفّذ:
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  sh scripts/antix-wa-sync/sync.sh --confirm-uploaded "$HOME/nasr-wa-sync/drive-manifest.json"
+  sh scripts/antix-wa-sync/sync.sh --prepare-only
+  echo BLOCK_M3_OK
+) || echo BLOCK_M3_FAILED
+```
+
+النجاح: الأول يطبع `"uploaded": N` ويحذف ملفات outbox المعتمدة، والثاني يطبع `unchanged: N`
+و`prepared: 0` — أي لا تكرار. لو لم يُتحقق ملف واحد يتوقف بلا تحديث الحالة.
 
 ### كتلة C — أول رفع ثم إثبات عدم التكرار
 

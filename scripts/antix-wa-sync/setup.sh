@@ -3,10 +3,12 @@
 set -eu
 umask 077
 DEPS_ONLY=0
+TRANSPORT=rclone
 for arg in "$@"; do
   case "$arg" in
     --deps-only) DEPS_ONLY=1 ;;
-    -h|--help) printf 'usage: setup.sh [--deps-only]\n  --deps-only: install tools only, skip the interactive configuration\n'; exit 0 ;;
+    --manual) TRANSPORT=manual ;;
+    -h|--help) printf 'usage: setup.sh [--deps-only] [--manual]\n  --deps-only: install tools only, skip the interactive configuration\n  --manual: browser upload transport, no rclone remote and no OAuth\n'; exit 0 ;;
     *) printf 'unknown option: %s\n' "$arg" >&2; exit 2 ;;
   esac
 done
@@ -28,20 +30,22 @@ VPY="$HOME_DIR/venv/bin/python"
 "$VPY" -m pip install --disable-pip-version-check --require-hashes --no-deps --no-build-isolation -r "$HERE/requirements.txt"
 # A distro rclone (Debian 12 ships 1.60.1-DEV) is not the reviewed build; install the
 # hash-pinned one locally and only fall back to the system binary if that is impossible.
-if [ ! -x "$HOME_DIR/bin/rclone" ]; then
-  if ! "$PYTHON" "$HERE/install_rclone.py" --home "$HOME_DIR"; then
-    printf 'WARN: could not install the pinned rclone; falling back to the system rclone if present\n' >&2
+if [ "$TRANSPORT" = rclone ]; then
+  if [ ! -x "$HOME_DIR/bin/rclone" ]; then
+    if ! "$PYTHON" "$HERE/install_rclone.py" --home "$HOME_DIR"; then
+      printf 'WARN: could not install the pinned rclone; falling back to the system rclone if present\n' >&2
+    fi
   fi
-fi
-if [ ! -x "$HOME_DIR/bin/rclone" ] && ! command -v rclone >/dev/null 2>&1; then
-  printf 'rclone is unavailable; re-run setup.sh with working network access\n' >&2
-  exit 1
+  if [ ! -x "$HOME_DIR/bin/rclone" ] && ! command -v rclone >/dev/null 2>&1; then
+    printf 'rclone is unavailable; re-run setup.sh with working network access\n' >&2
+    exit 1
+  fi
 fi
 if [ "$DEPS_ONLY" = 1 ]; then
   "$PYTHON" "$HERE/doctor.py" --home "$HOME_DIR" || true
   printf '\nTools installed. Configuration is still pending. Next: %s/doctor.py then setup.sh\n' "$HERE"
   exit 0
 fi
-"$VPY" "$HERE/configure.py" --home "$HOME_DIR" --venv "$HOME_DIR/venv"
+"$VPY" "$HERE/configure.py" --home "$HOME_DIR" --venv "$HOME_DIR/venv" --transport "$TRANSPORT"
 "$PYTHON" "$HERE/doctor.py" --home "$HOME_DIR" || true
 printf '\nSetup complete. Test: %s/sync.sh --dry-run\n' "$HERE"

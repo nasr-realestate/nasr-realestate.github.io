@@ -69,7 +69,39 @@ sh scripts/antix-wa-sync/pull_backup.sh --source /media/USB/msgstore.db.crypt15
 الملف بصلاحية 600 داخل `~/nasr-wa-sync/inbox/`. لا يرفع شيئًا ولا يكتب على الهاتف.
 مسار واتساب يحتوي مسافة، لذلك يُقتبس المسار البعيد داخل `adb shell`؛ الاختبارات تغطي هذه الحالة.
 
-## 2) جهّز rclone مرة واحدة
+## مسار بلا Google Cloud: النقل اليدوي المتحقَّق
+
+لو لم ترغب في إنشاء عميل OAuth، يعمل المسار كاملًا برفع من المتصفح:
+
+```sh
+sh scripts/antix-wa-sync/setup.sh --manual
+sh scripts/antix-wa-sync/sync.sh --dry-run
+sh scripts/antix-wa-sync/sync.sh --prepare-only
+ls ~/nasr-wa-sync/state/outbox
+```
+
+ارفع كل ملفات `WA-SYNC__*.zip` من `outbox` إلى مجلد CRM في Drive بالسحب في المتصفح،
+ثم ضع بيان Drive (أسماء وأحجام وبصمات MD5 فقط) في ملف واعتمد الحالة:
+
+```sh
+sh scripts/antix-wa-sync/sync.sh --confirm-uploaded ~/nasr-wa-sync/drive-manifest.json
+```
+
+شكل البيان يقبل القائمتين:
+
+```json
+{"files": [{"name": "WA-SYNC__…zip", "size": 1234, "md5": "…"}]}
+```
+
+```json
+[{"Name": "WA-SYNC__…zip", "Size": 1234, "Hashes": {"MD5": "…"}}]
+```
+
+لا تُحدَّث الحالة ولا تُحذف الملفات المحلية إلا إذا طابق **كل** ملف معلّق اسمًا وحجمًا وبصمة،
+ولا يُقبل اسم مكرر في البيان. تشغيل `sync.sh` بلا وسيط في هذا الوضع يتوقف ويشرح الخطوات بدل محاولة رفع.
+يبقى `rclone` اختياريًا للأتمتة الكاملة لاحقًا، ويمكن التحويل بحذف `config.json` وإعادة `setup.sh`.
+
+## 2) جهّز rclone مرة واحدة (اختياري: للأتمتة الكاملة)
 
 يثبّت `setup.sh` نسخة rclone مثبتة البصمة (`v1.76.0`) داخل `~/nasr-wa-sync/bin` ويُفضّلها على
 نسخة النظام حتى لو كانت موجودة (Debian 12 يوفّر `1.60.1-DEV` القديمة). بعد التنزيل يتحقق أن

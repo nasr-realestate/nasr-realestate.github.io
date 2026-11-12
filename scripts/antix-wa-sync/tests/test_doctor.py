@@ -169,6 +169,14 @@ class DoctorTests(unittest.TestCase):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
             self.assertEqual(result.returncode, 0, f"block {index}: {result.stderr}")
 
+    def test_manual_transport_needs_no_rclone(self):
+        write_config(self.home, self.backup, self.key, transport="manual")
+        result = run_doctor(self.home, "--require-config")
+        self.assertIn("النقل يدوي", result.stdout)
+        self.assertNotIn("FAIL  rclone", result.stdout)
+        self.assertNotIn("root_folder_id", result.stdout)
+        self.assertIn("DOCTOR_FAIL failures=1", result.stdout)  # only the absent venv
+
     def test_setup_deps_only_is_documented_and_skips_configure(self):
         setup = (DOCTOR.parent / "setup.sh").read_text(encoding="utf-8")
         self.assertIn("--deps-only", setup)
