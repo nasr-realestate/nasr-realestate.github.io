@@ -105,8 +105,8 @@ Debian 12 يوفّر `rclone v1.60.1-DEV`. النسخة المراجعة هي `v
 ### كتلة USB2 — لو لم يُركَّب الهاتف تلقائيًا (antiX بلا gvfs)
 
 antiX خفيف ولا يركّب هواتف MTP تلقائيًا، لذلك `NO_PHONE_FILE_FOUND` لا يعني أن الملف غير موجود.
-الكتلة تثبّت `adb` و`jmtpfs` عند الحاجة، تجرّب السحب عبر ADB أولًا (بلا تركيب)، ثم MTP،
-وتتحقق من البصمة في الحالتين قبل اعتماد الملف.
+النسخ من الهاتف صار أمرًا واحدًا مرفقًا: `pull_backup.sh` يجرّب ADB أولًا (بلا تركيب)،
+ثم MTP/الفلاشة، ويتحقق من البصمة قبل اعتماد الملف، ويضبط الصلاحية 600.
 
 قبلها على الهاتف: **الإعدادات → حول الهاتف → انقر على إصدار MIUI سبع مرات** لتفعيل خيارات المطوّر،
 ثم **الإعدادات الإضافية → خيارات المطوّر → تصحيح أخطاء USB**، ووصّل الكابل واختر **نقل الملفات**،
@@ -115,53 +115,26 @@ antiX خفيف ولا يركّب هواتف MTP تلقائيًا، لذلك `NO_
 ```sh
 ( set -eu
   cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  git pull --ff-only
   as_root() { if [ "$(id -u)" = 0 ]; then "$@"; elif command -v sudo >/dev/null 2>&1; then sudo "$@"; else su -c "$*"; fi; }
   need=""
   command -v adb >/dev/null 2>&1 || need="$need adb"
   command -v jmtpfs >/dev/null 2>&1 || need="$need jmtpfs"
   if [ -n "$need" ]; then as_root apt-get update; as_root apt-get install -y $need; fi
-  DEST="$HOME/nasr-wa-sync/inbox"
-  mkdir -p "$DEST"
-  chmod 700 "$HOME/nasr-wa-sync" "$DEST"
-  REL='Android/media/com.whatsapp.w4b/WhatsApp Business/Databases/msgstore.db.crypt15'
-  VIA=""
-  adb start-server >/dev/null 2>&1 || true
-  adb devices
-  if adb devices | grep -qw device; then
-    if adb pull "/sdcard/$REL" "$DEST/.msgstore.copy"; then
-      RHash=$(adb shell sha256sum "/sdcard/$REL" | tr -d '\r' | cut -d' ' -f1)
-      LHash=$(sha256sum "$DEST/.msgstore.copy" | cut -d' ' -f1)
-      [ "$RHash" = "$LHash" ] || { rm -f "$DEST/.msgstore.copy"; echo COPY_MISMATCH; exit 1; }
-      VIA=adb
-    fi
-  fi
-  if [ -z "$VIA" ]; then
-    mkdir -p "$HOME/phone"
-    mountpoint -q "$HOME/phone" || jmtpfs "$HOME/phone" || true
-    FOUND=$(find "$HOME/phone" /media /mnt -maxdepth 12 -type f -name 'msgstore.db.crypt15' 2>/dev/null | head -1)
-    if [ -n "$FOUND" ]; then
-      install -m 600 "$FOUND" "$DEST/.msgstore.copy"
-      cmp -s "$FOUND" "$DEST/.msgstore.copy" || { rm -f "$DEST/.msgstore.copy"; echo COPY_MISMATCH; exit 1; }
-      VIA="$FOUND"
-    fi
-  fi
-  [ -n "$VIA" ] || { echo NO_PHONE_FILE_FOUND; echo 'افحص: وضع نقل الملفات + السماح بتصحيح USB ثم أعد الكتلة'; exit 1; }
-  chmod 600 "$DEST/.msgstore.copy"
-  test -s "$DEST/.msgstore.copy" || { rm -f "$DEST/.msgstore.copy"; echo EMPTY_COPY; exit 1; }
-  mv -f "$DEST/.msgstore.copy" "$DEST/msgstore.db.crypt15"
-  printf 'نُقل عبر: %s\n' "$VIA"
-  ls -l "$DEST/msgstore.db.crypt15"
-  sha256sum "$DEST/msgstore.db.crypt15" | cut -c1-16
-  echo BLOCK_USB2_OK
+  sh scripts/antix-wa-sync/pull_backup.sh
 ) || echo BLOCK_USB2_FAILED
 ```
 
-النجاح: `نُقل عبر: adb` أو مسار MTP، ثم الملف بحجمه الحقيقي، ثم `BLOCK_USB2_OK`.
+النجاح: `نُقل عبر: adb` ثم الملف بحجمه الحقيقي وبصمته، ثم `PULL_BACKUP_OK`.
 لو ظهر `unauthorized` في `adb devices` فالهاتف ينتظر موافقتك على نافذة السماح.
-بعد الانتهاء يمكن فك تركيب MTP بأمر `fusermount -u "$HOME/phone"`.
+لو نسخْتَ الملف إلى فلاشة أو ركّبت الهاتف يدويًا، مرّر مساره مباشرة:
 
-بديل بلا أي برامج: انسخ الملف من مدير ملفات الهاتف إلى فلاشة USB‑OTG أو بطاقة ذاكرة،
-ثم ركّبها على antiX وأعد كتلة USB الأولى.
+```sh
+sh scripts/antix-wa-sync/pull_backup.sh --source "/media/only/USB/msgstore.db.crypt15"
+```
+
+هذه هي الطريقة نفسها التي ستستخدمها في كل مرة تنقل فيها نسخة جديدة لاحقًا.
+بعد الانتهاء يمكن فك تركيب MTP بأمر `fusermount -u "$HOME/phone"`.
 
 ### كتلة B1 — ربط Drive (لا يحتاج النسخة الاحتياطية)
 
@@ -588,7 +561,7 @@ ls -lh "$HOME/nasr-wa-sync/state/outbox" | head
 يمكنك فحص أسماء الملفات فقط. لا تفتح محتوى المحادثات ولا ترسله.
 
 **الناتج المتوقع:**  
-ملفات ZIP именаها يبدأ بـ:
+ملفات ZIP أسماؤها تبدأ بـ:
 
 ```text
 WA-SYNC__

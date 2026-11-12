@@ -57,6 +57,18 @@ build-whatsapp-import.mjs → sealed sync bundle
 
 لا تستخدم ملفات `msgstore-increment-*`؛ الأمر يرفضها ويطلب النسخة الكاملة. ويرفض الأمر أيضًا `crypt14`: فعّل النسخ الاحتياطي المشفر طرفًا لطرف بمفتاح 64 خانة حتى تحصل على `msgstore.db.crypt15`.
 
+### نسخ النسخة من الهاتف بأمر واحد
+
+```sh
+sh scripts/antix-wa-sync/pull_backup.sh
+sh scripts/antix-wa-sync/pull_backup.sh --source /media/USB/msgstore.db.crypt15
+```
+
+يجرّب `adb pull` أولًا (يعمل على antiX بلا تركيب MTP)، ثم يبحث في نقاط الترك المعتادة.
+يتحقق من بصمة SHA-256 بين الهاتف والنسخة (أو مقارنة بايت ببايت مع `--source`)، ثم يعتمد
+الملف بصلاحية 600 داخل `~/nasr-wa-sync/inbox/`. لا يرفع شيئًا ولا يكتب على الهاتف.
+مسار واتساب يحتوي مسافة، لذلك يُقتبس المسار البعيد داخل `adb shell`؛ الاختبارات تغطي هذه الحالة.
+
 ## 2) جهّز rclone مرة واحدة
 
 يثبّت `setup.sh` نسخة rclone مثبتة البصمة (`v1.76.0`) داخل `~/nasr-wa-sync/bin` ويُفضّلها على
