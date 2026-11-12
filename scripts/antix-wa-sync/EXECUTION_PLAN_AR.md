@@ -12,6 +12,95 @@
 
 ---
 
+## المسار المدمج — 3 كتل أوامر بدل 11 خطوة
+
+نفس أوامر الخطوات بالأسفل، مجمّعة في كتل تُنفَّذ بلصقة واحدة. كل كتلة تعمل بـ `set -eu`:
+**تتوقف عند أول خطأ** ولا تكمل فوقه، وتطبع في النهاية علامة نجاح أو فشل.
+
+- **كتلة A**: فحص النظام + تثبيت الناقص + جلب الكود + تثبيت الأدوات + اختبارات السلامة. بلا مفاتيح وبلا Drive.
+- **كتلة B**: ربط Drive بأمر واحد + الإعداد الآمن + فحص الجاهزية + تجربة جافة + تجهيز محلي. بلا رفع.
+- **كتلة C**: أول رفع حقيقي ثم إعادة التشغيل لإثبات عدم التكرار. لا تُنفَّذ إلا بعد مراجعة ناتج B.
+
+أداة الفحص `doctor.py` قراءة فقط: لا تفك تشفيرًا، لا تقرأ المفتاح، لا ترفع شيئًا،
+ولا تطبع أي سر. تطبع `PASS/WARN/FAIL` ثم `DOCTOR_OK` أو `DOCTOR_FAIL`.
+
+### كتلة A — البيئة والأدوات (بلا أي سر)
+
+```sh
+( set -eu
+  as_root() { if [ "$(id -u)" = 0 ]; then "$@"; elif command -v sudo >/dev/null 2>&1; then sudo "$@"; else su -c "$*"; fi; }
+  need=""
+  command -v git >/dev/null 2>&1 || need="$need git"
+  python3 -c 'import venv, ensurepip, ssl' >/dev/null 2>&1 || need="$need python3-venv"
+  [ -d /etc/ssl/certs ] || need="$need ca-certificates"
+  if [ -n "$need" ]; then as_root apt-get update; as_root apt-get install -y $need; fi
+  python3 -c 'import sys; sys.exit(0 if sys.version_info[:2] == (3, 11) else 1)' || { echo PYTHON_NOT_3_11; exit 1; }
+  mkdir -p "$HOME/nasr-crm"
+  cd "$HOME/nasr-crm"
+  if [ -d nasr-realestate.github.io/.git ]; then
+    git -C nasr-realestate.github.io pull --ff-only
+  else
+    git clone --branch arena/610d583d-nasr-realestate-github-io --single-branch https://github.com/nasr-realestate/nasr-realestate.github.io.git
+  fi
+  cd nasr-realestate.github.io
+  sh scripts/antix-wa-sync/setup.sh --deps-only
+  mkdir -p "$HOME/nasr-wa-sync/inbox"
+  chmod 700 "$HOME/nasr-wa-sync" "$HOME/nasr-wa-sync/inbox"
+  "$HOME/nasr-wa-sync/venv/bin/python" -m unittest discover -s scripts/antix-wa-sync/tests
+  echo BLOCK_A_OK
+) || echo BLOCK_A_FAILED
+```
+
+النجاح: `OK` من الاختبارات ثم `DOCTOR_OK` ثم `BLOCK_A_OK`.
+تحذير واحد متوقع هنا: «الإعدادات غير منشأة بعد» — طبيعي لأن المفتاح لم يُدخل بعد.
+
+### كتلة B — الربط والإعداد والتجربة (بلا رفع)
+
+شرطها: ملف `~/nasr-wa-sync/inbox/msgstore.db.crypt15` موجود (الخطوتان 2 و3)،
+وعميل OAuth من نوع Desktop جاهز (الخطوة 5أ).
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  RC="$HOME/nasr-wa-sync/bin/rclone"
+  [ -x "$RC" ] || RC=rclone
+  test -s "$HOME/nasr-wa-sync/inbox/msgstore.db.crypt15" || { echo NO_CRYPT15; exit 1; }
+  printf 'OAuth client_id: '; read -r CID
+  printf 'OAuth client_secret (مخفي): '; stty -echo; read -r CS; stty echo; printf '\n'
+  printf 'معرّف مجلد CRM: '; read -r FOLDER
+  "$RC" config create nasr-wa drive client_id="$CID" client_secret="$CS" scope=drive root_folder_id="$FOLDER" config_is_local=true --obscure
+  unset CID CS
+  "$RC" lsf nasr-wa: --max-depth 1 | head -5
+  sh scripts/antix-wa-sync/setup.sh
+  python3 scripts/antix-wa-sync/doctor.py --require-config
+  sh scripts/antix-wa-sync/sync.sh --dry-run
+  sh scripts/antix-wa-sync/sync.sh --prepare-only
+  echo BLOCK_B_OK
+) || echo BLOCK_B_FAILED
+```
+
+`setup.sh` هنا يسأل 3 أسئلة فقط: مسار النسخة، ثم `nasr-wa:`، ثم مفتاح الـ64 hex في شاشة مخفية.
+لو الجهاز بلا متصفح، استبدل `config_is_local=true` بـ `config_is_local=false` ونفّذ أمر
+`rclone authorize` الذي يطبعه على جهاز فيه متصفح، ثم الصق النتيجة.
+
+النجاح: `DOCTOR_OK failures=0`، ثم سطر JSON فيه `"uploaded": 0`، ثم `BLOCK_B_OK`.
+
+### كتلة C — أول رفع ثم إثبات عدم التكرار
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  sh scripts/antix-wa-sync/sync.sh
+  sh scripts/antix-wa-sync/sync.sh
+  echo BLOCK_C_OK
+) || echo BLOCK_C_FAILED
+```
+
+النجاح: التشغيل الأول `"uploaded": N`، والتشغيل الثاني مباشرة `"uploaded": 0` مع `unchanged: N`.
+لو ظهر `hold_history_changed` أو أي `hold_` فتوقّف وأرسل لي سطر JSON فقط.
+
+---
+
 ## الخطوة 0 — أرسل لي 3 معلومات فقط من جهاز antiX
 
 **الفائدة:**  
@@ -178,11 +267,18 @@ ls -lh "$HOME/nasr-wa-sync/inbox/msgstore.db.crypt15"
 ينشئ بيئة Python معزولة وبصمات مثبتة، ويحفظ المفتاح بصلاحية 600 خارج Git.
 
 **كيف تنفذها صح:**  
-من جذر المستودع الذي جلبته في الخطوة 1:
+من جذر المستودع الذي جلبته في الخطوة 1، ثبّت الأدوات أولًا بلا أسئلة:
 
 ```sh
 cd "$HOME/nasr-crm/nasr-realestate.github.io"
+sh scripts/antix-wa-sync/setup.sh --deps-only
+```
+
+ثم الإعداد الكامل بعد جهوزية النسخة والمفتاح وremote:
+
+```sh
 sh scripts/antix-wa-sync/setup.sh
+python3 scripts/antix-wa-sync/doctor.py --require-config
 ```
 
 سيسألك بالترتيب:

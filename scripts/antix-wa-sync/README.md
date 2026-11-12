@@ -84,7 +84,13 @@ rclone lsf nasr-wa: --max-depth 1
 
 ## 3) الإعداد المحلي الآمن
 
-من جذر المستودع:
+لتثبيت الأدوات فقط، بلا أي سؤال وبلا مفتاح (مناسب للتجهيز المسبق):
+
+```sh
+sh scripts/antix-wa-sync/setup.sh --deps-only
+```
+
+وللإعداد الكامل، من جذر المستودع:
 
 ```sh
 sh scripts/antix-wa-sync/setup.sh
@@ -97,6 +103,21 @@ sh scripts/antix-wa-sync/setup.sh
 3. المفتاح 64 hex عبر إدخال مخفي (`getpass`)، ويُحفظ في `~/nasr-wa-sync/encrypted_backup.key` بصلاحية 600.
 
 كل شيء خاص يعيش خارج Git في `~/nasr-wa-sync` (أو `NASR_WA_HOME`).
+
+### فحص الجاهزية (قراءة فقط)
+
+```sh
+python3 scripts/antix-wa-sync/doctor.py
+python3 scripts/antix-wa-sync/doctor.py --require-config
+```
+
+يفحص: نسخة Python والمعمارية، صلاحيات المجلد الخاص، الحزم المثبتة داخل البيئة الافتراضية،
+وجود `wadecrypt` و`rclone`، صيغة النسخة `crypt15` وحجمها وتاريخها، صلاحية المفتاح 600،
+أن مجلد الحالة خارج Git، وأن remote معرّف ومربوط بـ OAuth ومضبوط على `root_folder_id`.
+لا يفك تشفيرًا ولا يقرأ محتوى المفتاح ولا يطبع أي سر، وينتهي بـ `DOCTOR_OK` أو `DOCTOR_FAIL`.
+رمز الخروج `1` عند وجود أي `FAIL`.
+
+الأوامر المدمجة خطوة بخطوة موجودة في `EXECUTION_PLAN_AR.md` (كتل A ثم B ثم C).
 
 ## 4) الأمر المتكرر
 
