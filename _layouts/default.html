@@ -50,7 +50,7 @@
     {%- if _facet and _facet.in_area == false -%}{%- assign _robots = "noindex, follow" -%}{%- endif -%}
   {%- endif %}
   <meta name="robots" content="{{ _robots | default: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' }}">
-  <meta name="ai-content-policy" content="allow-indexing, allow-summarization, allow-agent-use; attribution-required">
+  {% include rights-meta.html %}
 
   <link rel="alternate" type="application/json" href="{{ '/ai-feed.json' | absolute_url }}" title="AI Feed — بيانات كل العقارات (JSON)">
   <link rel="alternate" type="text/markdown" href="{{ '/llms-full.txt' | absolute_url }}" title="الكتالوج الكامل (Markdown)">

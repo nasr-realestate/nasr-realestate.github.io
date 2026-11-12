@@ -76,4 +76,4 @@ node scripts/check-ai-artifacts-in-sync.mjs
 - `_requests` قد تكون فارغة (`.gitkeep` فقط) — هذا طبيعي ولا يُعاد شرط `length > 0`.
 
 > هذا الملف مرجع داخلي: مستبعد من النشر العلني عبر `exclude` في `_config.yml`،
-> ومُشار إليه من [`AGENTS.md`](./AGENTS.md) §2.
+> ومُشار إليه من [`AGENTS.md`](./AGENTS.md) §3.

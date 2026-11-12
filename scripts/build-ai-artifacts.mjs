@@ -33,6 +33,7 @@ import { fileURLToPath } from 'node:url';
 import { loadProperties, buildFacets } from './lib/properties.mjs';
 import {
   SITE,
+  RIGHTS,
   renderLlmsFull,
   renderPropertyMarkdown,
   renderAiTxt,
@@ -114,6 +115,7 @@ export function buildFeed(properties, generatedAt) {
   return {
     schema_version: SCHEMA_VERSION,
     brand: 'سمسار طلبك',
+    rights: RIGHTS,
     generated_at: generatedAt,
     total_count: properties.length,
     last_updated: generatedAt.slice(0, 10),
@@ -176,11 +178,13 @@ export function buildPropertyDocument(p, generatedAt) {
     generated_at: generatedAt,
     type: 'RealEstateListing',
     source: SITE,
+    rights: RIGHTS,
     citation: {
       required: true,
       text: 'سمسار طلبك — طارق طنطاوي (مدينة نصر، القاهرة)',
       url: p.url,
       note: 'السعر المعروض سعر طلب، وليس سعر إتمام؛ لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً.',
+      policy_url: RIGHTS.policy_url,
     },
     broker: {
       name: 'طارق طنطاوي',
@@ -207,6 +211,7 @@ export function buildApiIndex(properties, generatedAt) {
   return {
     schema_version: SCHEMA_VERSION,
     name: 'سمسار طلبك — واجهة العقارات',
+    rights: RIGHTS,
     description:
       'واجهة قراءة فقط بلا مصادقة للوحدات المنشورة على موقع سمسار طلبك. النطاق المعلن للخدمة هو مدينة نصر: كل وحدة تحمل scope="city" (داخل المدينة، قابلة للترشيح) أو scope="archive" (خارج المدينة — مصر الجديدة/القاهرة الجديدة/الرحاب/التجمع — أرشفة ورابط مباشر فقط، ولا يجوز ترشيحها كبديل لطلب داخل مدينة نصر؛ وللتوافق يبقى in_nasr_city=false). كل الاستجابات JSON ثابتة وقابلة للتخزين المؤقت.',
     generated_at: generatedAt,
@@ -223,6 +228,7 @@ export function buildApiIndex(properties, generatedAt) {
       { path: '/api/properties/{slug}.md', method: 'GET', format: 'text/markdown', description: 'وحدة واحدة بصيغة Markdown' },
       { path: '/api/openapi.json', method: 'GET', format: 'application/json', description: 'مواصفة OpenAPI 3.1' },
       { path: '/search-data.json', method: 'GET', format: 'application/json', description: 'فهرس بحث خفيف' },
+      { path: '/intellectual-property.html', method: 'GET', format: 'text/html', description: 'سياسة الملكية الفكرية وحقوق أصحابها الأصليين' },
       { path: '/.well-known/ai.txt', method: 'GET', format: 'text/plain', description: 'سياسة استخدام المحتوى بواسطة AI' },
       { path: '/.well-known/mcp.json', method: 'GET', format: 'application/json', description: 'بطاقة خادم MCP' },
       { path: '/.well-known/ai-catalog.json', method: 'GET', format: 'application/json', description: 'كتالوج ARD للاكتشاف الوكيل' },
@@ -285,6 +291,7 @@ function main() {
   written.push(write('api/properties.json', {
     schema_version: SCHEMA_VERSION,
     generated_at: generatedAt,
+    rights: RIGHTS,
     total_count: properties.length,
     scope: { name: 'مدينة نصر', in_nasr_city: properties.length - scopeOut, out_of_nasr_city: scopeOut },
     base_url: SITE,

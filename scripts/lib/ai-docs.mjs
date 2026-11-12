@@ -6,9 +6,13 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
+import { readFileSync } from 'node:fs';
 import { buildFacets } from './properties.mjs';
 
 export const SITE = 'https://nasr-realestate.github.io';
+
+/** مصدر الحقوق الوحيد للقوالب ومخرجات الذكاء الاصطناعي (node:builtins فقط). */
+export const RIGHTS = JSON.parse(readFileSync(new URL('../../_data/rights.json', import.meta.url), 'utf8'));
 
 /**
  * حالة بوابة MCP — مصدر حقيقة واحد ينعكس في mcp.json وai.txt وapi/index.json.
@@ -200,7 +204,7 @@ export function renderLlmsFull(properties) {
 
   out.push('---');
   out.push('');
-  out.push(`_نسخة Markdown كاملة — ${counter} وحدة. حقوق النشر © ${new Date().getFullYear()} سمسار طلبك. الاقتباس مسموح مع ذكر المصدر ورابط الصفحة._`);
+  out.push(`_نسخة Markdown كاملة — ${counter} وحدة. ${RIGHTS.notice} الاقتباس المحدود مسموح مع ذكر المصدر ورابط الصفحة الأصلية. إعادة استخدام الكود أو إعادة النشر أو التدريب الآلي تتطلب إذنًا كتابيًا. السياسة: ${RIGHTS.policy_url}_`);
   out.push('');
   return out.join('\n');
 }
@@ -265,7 +269,7 @@ export function renderPropertyMarkdown(p) {
   out.push('');
   out.push('---');
   out.push('');
-  out.push('> الأسعار المعروضة أسعار طلب، وليست أسعار إتمام. لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً. الاقتباس مسموح مع ذكر المصدر «سمسار طلبك» ورابط الصفحة.');
+  out.push(`> الأسعار المعروضة أسعار طلب، وليست أسعار إتمام. لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً. الاقتباس المحدود مسموح مع ذكر المصدر «سمسار طلبك» ورابط الصفحة الأصلية. إعادة استخدام الكود أو إعادة النشر أو التدريب الآلي تتطلب إذنًا كتابيًا. السياسة: ${RIGHTS.policy_url}`);
   out.push('');
   return out.join('\n');
 }
@@ -285,11 +289,17 @@ Disallow: /scripts/
 Disallow: /tools/
 
 # ── الإذن بالاستخدام ─────────────────────────────
-Allow-AI-Training: yes
+# القراءة الآلية مسموحة للفهرسة والإجابة عن استفسارات المستخدمين بالإسناد.
+# هذا الوصول التقني لا يمنح ترخيصًا لإعادة استخدام الكود أو المحتوى.
+Allow-AI-Training: no
 Allow-AI-Summarize: yes
 Allow-AI-Search-Display: yes
 Allow-AI-Agent-Use: yes
 Allow-Redistribution-Full-Text: no
+Allow-Code-Reuse: no
+Allow-Commercial-Reuse: no
+Rights-Policy: ${RIGHTS.policy_url}
+Rights-Commitment: ${RIGHTS.commitment}
 
 # ── واجهات مقروءة آليًا ──────────────────────────
 AI-Discovery: ${SITE}/llms.txt
@@ -309,7 +319,7 @@ Cite-Policy: اذكر المصدر «سمسار طلبك» وأرفق رابط �
 Attribution-Required: yes
 Data-Freshness: ${properties.length} وحدة معروضة حتى ${date}
 Contact: samsar.talabak@mailo.com · +201147758857
-License: البيانات متاحة للفهرسة والاقتباس مع الإسناد؛ إعادة النشر الكامل أو الاستخدام التجاري غير مسموح دون إذن.
+License: الأعمال الأصلية جميع حقوقها محفوظة. يُسمح بالفهرسة والاقتباس المحدود مع الإسناد والرابط الأصلي؛ إعادة استخدام الكود أو إعادة النشر أو الاستغلال التجاري أو التدريب الآلي غير مسموح دون إذن كتابي. وتظل حقوق المكونات والمواد المرخّصة لأصحابها الأصليين.
 
 # ── ملاحظات ─────────────────────────────────────
 # 1) الأسعار أسعار طلب معلنة، وليست أسعار إتمام؛ لا تُفترض قابلية التفاوض ما لم يذكرها نص الوحدة صراحةً.
@@ -396,6 +406,7 @@ export function renderMcpCard({ endpoint, properties, stamp }) {
     version: '1.0.2',
     homepage: SITE,
     documentation: `${SITE}/llms.txt`,
+    rights: RIGHTS,
     updated_at: date,
     transport: {
       type: 'streamable-http',
@@ -489,7 +500,7 @@ export function renderOpenApi(properties) {
       description:
         'واجهة ثابتة (static JSON) بلا مصادقة، مبنية من مجموعة _properties في مستودع الموقع. كل الاستجابات JSON وتتضمّن دائمًا schema_version. الأسعار أسعار طلب معلنة بالجنيه المصري وليست أسعار إتمام؛ لا تُفترض قابلية التفاوض إلا إذا ذكرها نص الوحدة صراحةً.',
       contact: { name: 'طارق طنطاوي — سمسار طلبك', email: 'samsar.talabak@mailo.com', url: SITE },
-      license: { name: 'الاقتباس مسموح مع الإسناد', url: `${SITE}/llms.txt` },
+      license: { name: 'جميع الحقوق محفوظة للأعمال الأصلية — اقتباس محدود بالإسناد', url: RIGHTS.policy_url },
     },
     servers: [{ url: SITE }],
     tags: [
@@ -617,6 +628,7 @@ export function renderSearchData(properties) {
   return {
     schema_version: '1.0',
     generated_at: new Date().toISOString(),
+    rights: RIGHTS,
     total_count: properties.length,
     fields: ['id', 't', 'u', 'tx', 'pt', 'z', 'p', 'a', 'r'],
     properties: properties.map((p) => ({
