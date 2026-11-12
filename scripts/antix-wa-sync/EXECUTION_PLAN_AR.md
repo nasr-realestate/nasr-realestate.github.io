@@ -12,14 +12,17 @@
 
 ---
 
-## المسار المدمج — 3 كتل أوامر بدل 11 خطوة
+## المسار المدمج — كتل متسلسلة بدل 11 خطوة
 
 نفس أوامر الخطوات بالأسفل، مجمّعة في كتل تُنفَّذ بلصقة واحدة. كل كتلة تعمل بـ `set -eu`:
 **تتوقف عند أول خطأ** ولا تكمل فوقه، وتطبع في النهاية علامة نجاح أو فشل.
 
 - **كتلة A**: فحص النظام + تثبيت الناقص + جلب الكود + تثبيت الأدوات + اختبارات السلامة. بلا مفاتيح وبلا Drive.
-- **كتلة B**: ربط Drive بأمر واحد + الإعداد الآمن + فحص الجاهزية + تجربة جافة + تجهيز محلي. بلا رفع.
-- **كتلة C**: أول رفع حقيقي ثم إعادة التشغيل لإثبات عدم التكرار. لا تُنفَّذ إلا بعد مراجعة ناتج B.
+- **كتلة A2**: تثبيت rclone بالمراجعة `v1.76.0` إن كان النظام يوفّر إصدارًا أقدم.
+- **كتلة USB**: نسخ `msgstore.db.crypt15` من الهاتف إلى المسار الخاص والتحقق من التطابق بايت ببايت.
+- **كتلة B1**: ربط Drive بأمر واحد والتحقق قراءة فقط. لا يحتاج النسخة الاحتياطية، فيمكن تنفيذه بالتوازي مع تجهيز الهاتف.
+- **كتلة B2**: الإعداد الآمن + فحص الجاهزية + تجربة جافة + تجهيز محلي. بلا رفع.
+- **كتلة C**: أول رفع حقيقي ثم إعادة التشغيل لإثبات عدم التكرار. لا تُنفَّذ إلا بعد مراجعة ناتج B2.
 
 أداة الفحص `doctor.py` قراءة فقط: لا تفك تشفيرًا، لا تقرأ المفتاح، لا ترفع شيئًا،
 ولا تطبع أي سر. تطبع `PASS/WARN/FAIL` ثم `DOCTOR_OK` أو `DOCTOR_FAIL`.
@@ -74,36 +77,80 @@ Debian 12 يوفّر `rclone v1.60.1-DEV`. النسخة المراجعة هي `v
 يتحقق الأمر أن الثنائي يعمل على معالجك فعلًا؛ لو رفض المعالج النسخة الرسمية حُذف الملف
 وبقي rclone النظام كما هو، وتظهر ملاحظة تحذير لا خطأ.
 
-### كتلة B — الربط والإعداد والتجربة (بلا رفع)
+### كتلة USB — انسخ النسخة من الهاتف وتحقّق منها
 
-شرطها: ملف `~/nasr-wa-sync/inbox/msgstore.db.crypt15` موجود (الخطوتان 2 و3)،
-وعميل OAuth من نوع Desktop جاهز (الخطوة 5أ).
+اختر على الهاتف وضع **نقل الملفات (MTP)** لا «الشحن فقط»، ثم وصّل الكابل.
+الكتلة تبحث عن `msgstore.db.crypt15` في نقاط الترك المعتادة، وتنسخه، ثم تقارن البايتات:
+
+```sh
+( set -eu
+  DEST="$HOME/nasr-wa-sync/inbox"
+  mkdir -p "$DEST"
+  chmod 700 "$HOME/nasr-wa-sync" "$DEST"
+  SRC=$(find /media /mnt "/run/user/$(id -u)/gvfs" -maxdepth 12 -type f -name 'msgstore.db.crypt15' 2>/dev/null | head -1)
+  [ -n "$SRC" ] || { echo NO_PHONE_FILE_FOUND; exit 1; }
+  printf 'المصدر: %s\n' "$SRC"
+  install -m 600 "$SRC" "$DEST/.msgstore.copy"
+  cmp -s "$SRC" "$DEST/.msgstore.copy" || { rm -f "$DEST/.msgstore.copy"; echo COPY_MISMATCH; exit 1; }
+  mv -f "$DEST/.msgstore.copy" "$DEST/msgstore.db.crypt15"
+  ls -l "$DEST/msgstore.db.crypt15"
+  sha256sum "$DEST/msgstore.db.crypt15" | cut -c1-16
+  echo BLOCK_USB_OK
+) || echo BLOCK_USB_FAILED
+```
+
+`NO_PHONE_FILE_FOUND` يعني أن الهاتف لم يُركَّب أو أن الملف ما زال `crypt14`؛ لا تُعِد تسمية أي ملف.
+لو لم يُركَّب الهاتف تلقائيًا، انسخ الملف بمدير الملفات إلى `~/nasr-wa-sync/inbox/` ثم أعد الكتلة.
+
+### كتلة B1 — ربط Drive (لا يحتاج النسخة الاحتياطية)
+
+شرطها: عميل OAuth من نوع Desktop جاهز (الخطوة 5أ). تُنفَّذ الآن أو بعد تجهيز الهاتف، لا فرق.
 
 ```sh
 ( set -eu
   cd "$HOME/nasr-crm/nasr-realestate.github.io"
   RC="$HOME/nasr-wa-sync/bin/rclone"
   [ -x "$RC" ] || RC=rclone
-  test -s "$HOME/nasr-wa-sync/inbox/msgstore.db.crypt15" || { echo NO_CRYPT15; exit 1; }
   printf 'OAuth client_id: '; read -r CID
   printf 'OAuth client_secret (مخفي): '; stty -echo; read -r CS; stty echo; printf '\n'
   printf 'معرّف مجلد CRM: '; read -r FOLDER
   "$RC" config create nasr-wa drive client_id="$CID" client_secret="$CS" scope=drive root_folder_id="$FOLDER" config_is_local=true --obscure
   unset CID CS
   "$RC" lsf nasr-wa: --max-depth 1 | head -5
-  sh scripts/antix-wa-sync/setup.sh
-  python3 scripts/antix-wa-sync/doctor.py --require-config
-  sh scripts/antix-wa-sync/sync.sh --dry-run
-  sh scripts/antix-wa-sync/sync.sh --prepare-only
-  echo BLOCK_B_OK
-) || echo BLOCK_B_FAILED
+  "$RC" lsf nasr-wa: --max-depth 1 | grep -c '^WA-SYNC__' || true
+  echo BLOCK_B1_OK
+) || echo BLOCK_B1_FAILED
 ```
 
-`setup.sh` هنا يسأل 3 أسئلة فقط: مسار النسخة، ثم `nasr-wa:`، ثم مفتاح الـ64 hex في شاشة مخفية.
 لو الجهاز بلا متصفح، استبدل `config_is_local=true` بـ `config_is_local=false` ونفّذ أمر
 `rclone authorize` الذي يطبعه على جهاز فيه متصفح، ثم الصق النتيجة.
 
-النجاح: `DOCTOR_OK failures=0`، ثم سطر JSON فيه `"uploaded": 0`، ثم `BLOCK_B_OK`.
+النجاح: أسماء ملفات مجلد CRM، ثم `0` (لا ملفات `WA-SYNC` بعد)، ثم `BLOCK_B1_OK`.
+
+### كتلة B2 — الإعداد والتجربة الجافة (بلا رفع)
+
+شرطها: نجاح B1 ووجود `~/nasr-wa-sync/inbox/msgstore.db.crypt15`.
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  test -s "$HOME/nasr-wa-sync/inbox/msgstore.db.crypt15" || { echo NO_CRYPT15; exit 1; }
+  if [ -f "$HOME/nasr-wa-sync/config.json" ]; then
+    echo CONFIG_EXISTS
+  else
+    sh scripts/antix-wa-sync/setup.sh
+  fi
+  python3 scripts/antix-wa-sync/doctor.py --require-config
+  sh scripts/antix-wa-sync/sync.sh --dry-run
+  sh scripts/antix-wa-sync/sync.sh --prepare-only
+  echo BLOCK_B2_OK
+) || echo BLOCK_B2_FAILED
+```
+
+`setup.sh` يسأل 3 أسئلة فقط: مسار النسخة، ثم `nasr-wa:`، ثم مفتاح الـ64 hex في شاشة مخفية.
+الكتلة قابلة للإعادة: لو أُُنشئت الإعدادات سابقًا تتخطّى الأسئلة ولا تستبدل شيئًا.
+
+النجاح: `DOCTOR_OK failures=0`، ثم سطر JSON فيه `"uploaded": 0`، ثم `BLOCK_B2_OK`.
 
 ### كتلة C — أول رفع ثم إثبات عدم التكرار
 

@@ -150,6 +150,25 @@ class DoctorTests(unittest.TestCase):
         self.assertIn('"version"', installer)
         self.assertIn("target.unlink(missing_ok=True)", installer)
 
+    def test_arabic_plan_shell_blocks_parse(self):
+        """Every ```sh block in the Arabic plan must be valid POSIX shell."""
+        plan = (DOCTOR.parent / "EXECUTION_PLAN_AR.md").read_text(encoding="utf-8")
+        blocks, current = [], None
+        for line in plan.splitlines():
+            if line.startswith("```sh"):
+                current = []
+            elif line.startswith("```") and current is not None:
+                blocks.append("\n".join(current) + "\n")
+                current = None
+            elif current is not None:
+                current.append(line)
+        self.assertIsNone(current, "unterminated shell block in the plan")
+        self.assertGreaterEqual(len(blocks), 10)
+        for index, block in enumerate(blocks, 1):
+            result = subprocess.run(["sh", "-n"], input=block, text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            self.assertEqual(result.returncode, 0, f"block {index}: {result.stderr}")
+
     def test_setup_deps_only_is_documented_and_skips_configure(self):
         setup = (DOCTOR.parent / "setup.sh").read_text(encoding="utf-8")
         self.assertIn("--deps-only", setup)

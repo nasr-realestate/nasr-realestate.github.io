@@ -127,7 +127,7 @@ python3 scripts/antix-wa-sync/doctor.py --require-config
 لا يفك تشفيرًا ولا يقرأ محتوى المفتاح ولا يطبع أي سر، وينتهي بـ `DOCTOR_OK` أو `DOCTOR_FAIL`.
 رمز الخروج `1` عند وجود أي `FAIL`.
 
-الأوامر المدمجة خطوة بخطوة موجودة في `EXECUTION_PLAN_AR.md` (كتل A ثم B ثم C).
+الأوامر المدمجة خطوة بخطوة موجودة في `EXECUTION_PLAN_AR.md` (كتل A ثم A2 ثم USB ثم B1 ثم B2 ثم C).
 
 ## 4) الأمر المتكرر
 
