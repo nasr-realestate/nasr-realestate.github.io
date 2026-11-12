@@ -267,10 +267,22 @@ export function readChatTextFromZip(zipPath) {
   const chats = names.filter((e) => /\.txt$/i.test(e));
   if (chats.length === 0) throw new Error(`zip-without-txt:${path.basename(zipPath)}`);
   if (chats.length > 1) throw new Error(`zip-with-many-txt:${path.basename(zipPath)}`);
-  // Extract by bulk, never by name: WhatsApp stores the transcript's file name in
-  // the legacy OEM code page, so passing that name back to unzip cannot match it
-  // (it comes out as question marks). The content itself is UTF-8 and intact.
-  return { text: execFileSync(UNZIP_BIN, ['-p', zipPath], { encoding: 'utf8' }), entry: chats[0] };
+  // Extract the single validated transcript by extension, never by its OEM-encoded
+  // name and never by dumping every entry: antiX intake also carries crm-sync.json.
+  const text = execFileSync(UNZIP_BIN, ['-p', zipPath, '*.txt'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  let sync = null;
+  if (names.filter(n => n === 'crm-sync.json').length > 1) throw new Error('zip-sync-metadata-duplicate');
+  if (names.includes('crm-sync.json')) {
+    const raw = execFileSync(UNZIP_BIN, ['-p', zipPath, 'crm-sync.json'], { encoding: 'utf8', maxBuffer: 16 * 1024 });
+    sync = JSON.parse(raw);
+    if (!sync || sync.schema !== 'antix-wa-sync-v1'
+      || typeof sync.conversation_uid !== 'string' || !/^wa:[^\s]{1,240}$/.test(sync.conversation_uid)
+      || typeof sync.chat_title !== 'string' || !sync.chat_title.trim()
+      || typeof sync.text_sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sync.text_sha256)) {
+      throw new Error('zip-sync-metadata-invalid');
+    }
+  }
+  return { text, entry: chats[0], sync };
 }
 
 export function listInputs(dir) {
@@ -335,12 +347,14 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
   const conversations = [];
   const report = [];
 
-  for (const { label, text } of chatSources) {
+  for (const { label, text, sync = null } of chatSources) {
     // The archive extension is the transport, not part of the man's name: the
     // CRM shows this title in full, and ".zip" has no business being in it.
     const chatLabel = label.replace(/\.(zip|txt)$/i, '');
-    const parsed = await parseWhatsAppExport(text, { chatTitle: chatLabel });
-    const title = cleanBidiControls(parsed.chatTitle) || chatLabel;
+    const sourceTitle = sync?.chat_title || chatLabel;
+    const parsed = await parseWhatsAppExport(text, { chatTitle: sourceTitle });
+    if (sync && parsed.rawSha256 !== sync.text_sha256) throw new Error(`zip-sync-text-hash-mismatch:${label}`);
+    const title = cleanBidiControls(parsed.chatTitle) || sourceTitle;
     // A name the owner states himself outranks any matching heuristic: he knows
     // who the man is, and the phone book may simply not hold him yet.
     const pin = overrides[chatLabel] || overrides[label];
@@ -359,7 +373,9 @@ export async function buildBundle({ vcfTexts, chatSources, sourceDirLabel = 'dri
     conversations.push({
       title: wireTitle,
       sig: parsed.rawSha256.slice(0, 16),
-      conversation_uid: conversationUidFrom(title),
+      // A device-side JID mapping survives contact renames; legacy manual exports
+      // without metadata retain the existing title-based identity.
+      conversation_uid: sync?.conversation_uid || conversationUidFrom(title),
       raw_txt: parsed.rawText,
       source_ref: `${sourceDirLabel}:${label}`,
       first_message_at: parsed.firstMessageAt,
@@ -503,10 +519,13 @@ async function main() {
 
   const inputs = listInputs(dir);
   const vcfTexts = inputs.vcf.map((f) => ({ name: path.basename(f), text: fs.readFileSync(f, 'utf8') }));
-  const chatSources = inputs.chats.map((f) => ({
-    label: path.basename(f),
-    text: /\.zip$/i.test(f) ? readChatTextFromZip(f).text : fs.readFileSync(f, 'utf8'),
-  }));
+  const chatSources = inputs.chats.map((f) => {
+    if (/\.zip$/i.test(f)) {
+      const { text, sync } = readChatTextFromZip(f);
+      return { label: path.basename(f), text, sync };
+    }
+    return { label: path.basename(f), text: fs.readFileSync(f, 'utf8') };
+  });
 
   const { bundle, report, stats } = await buildBundle({
     vcfTexts, chatSources, sourceDirLabel: path.basename(dir), contactsInBundle: get('--contacts', 'matched'),

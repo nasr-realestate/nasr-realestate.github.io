@@ -24,6 +24,24 @@
 - خدمات الاستضافة والتحليلات والذكاء الاصطناعي الخارجية تخضع لشروط أصحابها؛
   ولا ينشئ استخدامها نقلًا لملكية حقوقهم إلى هذا المشروع.
 
+## أدوات نقل WhatsApp المحلية (Python / rclone)
+
+أدوات يعملها المالك على جهازه خارج المستودع؛ لا تُوزَّع ملفاتها التنفيذية مع الموقع. الإصدارات وبصمات SHA-256 مثبتة في `scripts/antix-wa-sync/requirements*.txt`، وتظل المكونات تحت تراخيصها الأصلية:
+
+| المكون | الإصدار المثبت | الترخيص المعلن |
+| --- | --- | --- |
+| wa-crypt-tools | commit `b6f67453` (0.2.0) | GPL-3.0-or-later |
+| whatsapp-chat-exporter | 0.13.1 | MIT |
+| rclone | 1.76.0 | MIT |
+| protobuf | 7.36.2 | BSD-3-Clause |
+| pycryptodomex | 3.23.0 | BSD-2-Clause / Public Domain |
+| javaobj-py3 | 0.6.1 | Apache-2.0 |
+| Jinja2 / MarkupSafe / webencodings | 3.1.6 / 3.0.2 / 0.5.1 | BSD-3-Clause |
+| bleach | 6.2.0 | Apache-2.0 |
+| tqdm | 4.67.1 | MIT AND MPL-2.0 |
+
+أدوات البناء (setuptools/wheel/setuptools-scm/packaging) مثبتة ببصماتها أيضًا وتبقى تحت تراخيصها المسجلة في الحزم.
+
 ## تبعيات npm المباشرة
 
 الإصدارات مثبتة في `package-lock.json` و`_worker/package-lock.json`. وتبقى
