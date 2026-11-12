@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import platform
 import shutil
+import subprocess
 import tempfile
 import urllib.request
 import zipfile
@@ -56,7 +57,17 @@ def main() -> int:
             with z.open(members[0]) as src, target.open("wb") as out:
                 shutil.copyfileobj(src, out)
     target.chmod(0o700)
-    print(f"تم التثبيت محليًا: {target}")
+    # Old 32-bit CPUs may lack the instruction set the official build needs.
+    try:
+        probe = subprocess.run([str(target), "version"], stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True, timeout=30)
+        first = (probe.stdout.splitlines() or [""])[0]
+    except (OSError, subprocess.TimeoutExpired):
+        probe, first = None, ""
+    if probe is None or probe.returncode or VERSION not in first:
+        target.unlink(missing_ok=True)
+        raise SystemExit("النسخة المثبتة من rclone لا تعمل على هذا الجهاز؛ لم يُترك ملف معطوب")
+    print(f"تم التثبيت محليًا: {target} ({first})")
     return 0
 
 

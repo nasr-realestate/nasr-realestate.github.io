@@ -26,8 +26,16 @@ fi
 VPY="$HOME_DIR/venv/bin/python"
 "$VPY" -m pip install --disable-pip-version-check --require-hashes -r "$HERE/requirements-build.txt"
 "$VPY" -m pip install --disable-pip-version-check --require-hashes --no-deps --no-build-isolation -r "$HERE/requirements.txt"
-if ! command -v rclone >/dev/null 2>&1 && [ ! -x "$HOME_DIR/bin/rclone" ]; then
-  "$PYTHON" "$HERE/install_rclone.py" --home "$HOME_DIR"
+# A distro rclone (Debian 12 ships 1.60.1-DEV) is not the reviewed build; install the
+# hash-pinned one locally and only fall back to the system binary if that is impossible.
+if [ ! -x "$HOME_DIR/bin/rclone" ]; then
+  if ! "$PYTHON" "$HERE/install_rclone.py" --home "$HOME_DIR"; then
+    printf 'WARN: could not install the pinned rclone; falling back to the system rclone if present\n' >&2
+  fi
+fi
+if [ ! -x "$HOME_DIR/bin/rclone" ] && ! command -v rclone >/dev/null 2>&1; then
+  printf 'rclone is unavailable; re-run setup.sh with working network access\n' >&2
+  exit 1
 fi
 if [ "$DEPS_ONLY" = 1 ]; then
   "$PYTHON" "$HERE/doctor.py" --home "$HOME_DIR" || true

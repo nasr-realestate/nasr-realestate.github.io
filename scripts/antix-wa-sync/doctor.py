@@ -20,6 +20,7 @@ import subprocess
 import sys
 from datetime import datetime
 
+PINNED_RCLONE = "v1.76.0"
 REMOTE_RE = re.compile(r"^[A-Za-z0-9_-]+:$")
 MODULES = ("wa_crypt_tools", "Cryptodome", "Whatsapp_Chat_Exporter", "jinja2",
            "bleach", "google.protobuf", "javaobj")
@@ -116,8 +117,11 @@ def check_rclone(rep: Report, home: Path, config: dict | None) -> tuple[str, Pat
         return None
     result = run([str(candidate), "version"], timeout=30)
     first = (result.stdout.splitlines() or [""])[0] if result and result.returncode == 0 else ""
-    if first:
-        rep.ok(f"rclone جاهز: {first}")
+    if first and PINNED_RCLONE in first:
+        rep.ok(f"rclone بالنسخة المراجعة: {first}")
+    elif first:
+        rep.warn(f"rclone ليس النسخة المراجعة {PINNED_RCLONE}: {first} ({candidate})؛ "
+                 "شغّل install_rclone.py --home '$HOME/nasr-wa-sync'")
     else:
         rep.warn(f"rclone موجود لكن تعذّر قراءة نسخته: {candidate}")
     raw = (config or {}).get("rclone_config") or "~/.config/rclone/rclone.conf"

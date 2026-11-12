@@ -125,6 +125,31 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("root_folder_id فارغ", result.stdout)
         self.assertNotIn(SECRET, result.stdout + result.stderr)
 
+    def test_distro_rclone_is_a_warning_not_a_pass(self):
+        # Debian 12 ships rclone 1.60.1-DEV; the reviewed build is pinned to 1.76.0.
+        self.fake_rclone({"type": "drive", "scope": "drive", "root_folder_id": "FOLDER123",
+                          "client_id": "cid", "client_secret": SECRET,
+                          "token": json.dumps({"refresh_token": SECRET})})
+        fake = self.home / "bin" / "rclone"
+        fake.write_text(fake.read_text(encoding="utf-8").replace("rclone v1.76.0", "rclone v1.60.1-DEV"),
+                        encoding="utf-8")
+        write_config(self.home, self.backup, self.key)
+        result = run_doctor(self.home, "--require-config")
+        self.assertIn("ليس النسخة المراجعة", result.stdout)
+        self.assertIn("install_rclone.py", result.stdout)
+        self.assertNotIn(SECRET, result.stdout + result.stderr)
+        # Only the deliberately absent venv fails in this synthetic home.
+        self.assertNotIn("FAIL  rclone", result.stdout)
+        self.assertIn("DOCTOR_FAIL failures=1", result.stdout)
+
+    def test_setup_installs_pinned_rclone_even_when_system_rclone_exists(self):
+        setup = (DOCTOR.parent / "setup.sh").read_text(encoding="utf-8")
+        self.assertNotIn("if ! command -v rclone", setup)
+        self.assertIn('if [ ! -x "$HOME_DIR/bin/rclone" ]; then', setup)
+        installer = (DOCTOR.parent / "install_rclone.py").read_text(encoding="utf-8")
+        self.assertIn('"version"', installer)
+        self.assertIn("target.unlink(missing_ok=True)", installer)
+
     def test_setup_deps_only_is_documented_and_skips_configure(self):
         setup = (DOCTOR.parent / "setup.sh").read_text(encoding="utf-8")
         self.assertIn("--deps-only", setup)

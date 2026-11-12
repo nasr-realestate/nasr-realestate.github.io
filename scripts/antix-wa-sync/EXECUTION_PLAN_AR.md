@@ -54,6 +54,26 @@
 النجاح: `OK` من الاختبارات ثم `DOCTOR_OK` ثم `BLOCK_A_OK`.
 تحذير واحد متوقع هنا: «الإعدادات غير منشأة بعد» — طبيعي لأن المفتاح لم يُدخل بعد.
 
+### كتلة A2 — لو ظهر rclone بإصدار قديم
+
+Debian 12 يوفّر `rclone v1.60.1-DEV`. النسخة المراجعة هي `v1.76.0` المثبتة بالبصمة.
+لو قال `doctor.py` إن rclone «ليس النسخة المراجعة»، نفّذ:
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  git pull --ff-only
+  python3 scripts/antix-wa-sync/install_rclone.py --home "$HOME/nasr-wa-sync"
+  "$HOME/nasr-wa-sync/bin/rclone" version
+  python3 scripts/antix-wa-sync/doctor.py
+  ls -l "$HOME/nasr-wa-sync/inbox"
+  echo BLOCK_A2_OK
+) || echo BLOCK_A2_FAILED
+```
+
+يتحقق الأمر أن الثنائي يعمل على معالجك فعلًا؛ لو رفض المعالج النسخة الرسمية حُذف الملف
+وبقي rclone النظام كما هو، وتظهر ملاحظة تحذير لا خطأ.
+
 ### كتلة B — الربط والإعداد والتجربة (بلا رفع)
 
 شرطها: ملف `~/nasr-wa-sync/inbox/msgstore.db.crypt15` موجود (الخطوتان 2 و3)،

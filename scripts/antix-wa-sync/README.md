@@ -59,7 +59,17 @@ build-whatsapp-import.mjs → sealed sync bundle
 
 ## 2) جهّز rclone مرة واحدة
 
-ثبّت rclone (يقوم `setup.sh` بتنزيل نسخة مثبتة البصمة داخل `~/nasr-wa-sync/bin` إن لم يجده)، ثم أنشئ remote:
+يثبّت `setup.sh` نسخة rclone مثبتة البصمة (`v1.76.0`) داخل `~/nasr-wa-sync/bin` ويُفضّلها على
+نسخة النظام حتى لو كانت موجودة (Debian 12 يوفّر `1.60.1-DEV` القديمة). بعد التنزيل يتحقق أن
+الثنائي يعمل فعلًا على المعالج؛ لو لم يعمل حُذف الملف واستُخدم rclone النظام مع تحذير في `doctor.py`.
+لو ظهر عندك إصدار غير المراجعة، ثبّت النسخة المراجعة يدويًا:
+
+```sh
+python3 scripts/antix-wa-sync/install_rclone.py --home "$HOME/nasr-wa-sync"
+"$HOME/nasr-wa-sync/bin/rclone" version
+```
+
+ثم أنشئ remote:
 
 ```sh
 rclone config
