@@ -18,7 +18,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 const load = p => import(pathToFileURL(path.resolve(p)).href);
 const { extractMetadata, sealMetadataBatches, MAX_RAW_BYTES } = await load('scripts/antix-wa-sync/sealed-batch-plan.mjs');
-const { validateAntixMetadata } = await load('_worker/crm-antix-metadata-write.js');
+const { validateAntixMetadata, MAX_ANTIX_TITLE_LENGTH } = await load('_worker/crm-antix-metadata-write.js');
 const { normalizeInternationalPhone, cleanBidiControls } = await load('_worker/crm-chat-intel.js');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const counts = {};
@@ -26,7 +26,7 @@ const inc = k => { counts[k] = (counts[k] || 0) + 1; };
 const seen = new Set();
 for (const c of input.conversations) {
   if (Buffer.byteLength(c.raw_txt || '', 'utf8') > MAX_RAW_BYTES) { inc('text_over_4mib'); continue; }
-  if (typeof c.title !== 'string' || !c.title.trim() || c.title.length > 100) { inc('title_invalid_or_over_100'); continue; }
+  if (typeof c.title !== 'string' || !c.title.trim() || c.title.length > MAX_ANTIX_TITLE_LENGTH) { inc('title_invalid_or_over_limit'); continue; }
   if (typeof c.selected_phone !== 'string' || !/^\+\d{8,15}$/.test(c.selected_phone) ||
       normalizeInternationalPhone(c.selected_phone) !== c.selected_phone.slice(1)) { inc('phone_invalid'); continue; }
   if (seen.has(c.selected_phone)) { inc('duplicate_phone'); continue; }

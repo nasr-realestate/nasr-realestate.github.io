@@ -1497,10 +1497,10 @@ async function updateContact(request, env, contactId) {
   const existing = await env.DB.prepare('SELECT id,name,communication_consent,consent_captured_at FROM crm_contacts WHERE id=?').bind(contactId).first();
   if (!existing) return json({ error: 'contact_not_found' }, 404);
 
-  const newName = body.name === undefined ? null : boundedText(body.name, 100);
+  if (typeof body.name === 'string' && body.name.length > 4096) return json({ error: 'invalid_contact' }, 400);
+  const newName = body.name === undefined ? null : boundedText(body.name, 4096);
   const hasConsentField = body.communication_consent !== undefined;
-  if (newName === '' && !body.phone && !hasConsentField) return json({ error: 'invalid_contact' }, 400);
-  if (newName === null && !body.phone && !hasConsentField) return json({ error: 'invalid_contact' }, 400);
+  if ((newName === '' || newName === null) && !body.phone && !hasConsentField) return json({ error: 'invalid_contact' }, 400);
 
   const consentPatch = parseConsentPatch(body, existing);
   if (!consentPatch.ok) return json({ error: 'invalid_consent' }, 400);

@@ -29,7 +29,7 @@ class DiagnosticTests(unittest.TestCase):
             decisions.chmod(0o600)
             (work / 'public-key.txt').write_text('not-used')
             (work / 'backup-ref.txt').write_text('not-used')
-            item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': 'ز' * 101,
+            item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': 'ز' * 4097,
                     'uid': 'wa:synthetic', 'text': '13/11/2025, 04:13 - عميل: PRIVATE-SYNTHETIC-MESSAGE'}
             out = io.StringIO()
             with mock.patch.dict('os.environ', {'HOME': str(root)}), \
@@ -38,7 +38,7 @@ class DiagnosticTests(unittest.TestCase):
                  contextlib.redirect_stdout(out):
                 self.assertEqual(diagnostic.main(), 0)
             value = out.getvalue()
-            self.assertIn('title_invalid_or_over_100', value)
+            self.assertIn('title_invalid_or_over_limit', value)
             self.assertIn('BLOCK_DIAGNOSTIC_OK_NO_UPLOAD', value)
             self.assertNotIn('PRIVATE-SYNTHETIC-MESSAGE', value)
             self.assertNotIn('201111111111', value)

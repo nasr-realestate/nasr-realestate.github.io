@@ -90,3 +90,11 @@ test('explicit write envelope includes trusted reference and only structured met
   const dry = await sealDryRunBatches(bundle(items), pubkey, { writeBackupRef: 'ignore-this' });
   assert.equal((await decrypt(dry[0].envelope)).dry_run, true);
 });
+
+test('preserves full long names in encrypted metadata and rejects names beyond safe limit', async () => {
+  const title = '🟢 ' + 'اسم طويل '.repeat(45);
+  const batch = await sealMetadataBatches(bundle([{ ...conv(1), title }]), pubkey, { writeBackupRef: 'synthetic-backup-01' });
+  const decoded = await decrypt(batch[0].envelope);
+  assert.equal(decoded.sync_bundle.conversations[0].title, title);
+  await assert.rejects(sealDryRunBatches(bundle([{ ...conv(1), title: 'س'.repeat(4097) }]), pubkey), /invalid-source-metadata/);
+});
