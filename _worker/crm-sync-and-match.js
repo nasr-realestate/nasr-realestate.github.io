@@ -12,6 +12,8 @@ import {
   upsertConversationAndAnalyze,
 } from './crm-chat-intel.js';
 
+import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
+
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 
 export function inferTrackFromText(propertyType = '', intent = '', notes = '') {
@@ -1001,6 +1003,18 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
      JOIN crm_contacts c ON c.id = p.contact_id
      WHERE c.name NOT LIKE 'TEST ONLY%'`,
   ).all();
+
+  if (conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'))) {
+    // Read-only preview: do not run name matching, legacy adoption or analysis.
+    // Limit query size and require every conversation to carry explicit evidence.
+    if (conversations.length > 10 || conversations.some(c => !Object.hasOwn(c || {}, 'selected_phone'))) {
+      return { ok: false, error: 'antix_invalid_preview_batch' };
+    }
+    const uids = conversations.map(c => typeof c?.conversation_uid === 'string' ? c.conversation_uid : '');
+    const placeholders = uids.map(() => '?').join(',');
+    const previous = await db.prepare(`SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid IN (${placeholders})`).bind(...uids).all();
+    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || []) };
+  }
 
   const contactsById = new Map();
   for (const c of existingContactsRes?.results || []) {
