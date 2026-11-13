@@ -529,6 +529,10 @@ def main() -> int:
             if manual and not (args.dry_run or args.prepare_only or confirmed):
                 raise SyncError("وضع النقل اليدوي: شغّل --prepare-only ثم ارفع الملفات من المتصفح ثم --confirm-uploaded MANIFEST")
             do_upload = not (args.dry_run or args.prepare_only or confirmed)
+            # A hold used to be reported only after uploading or committing state.
+            # Stop before either operation; users must resolve the hold first.
+            if (do_upload or confirmed) and any(k.startswith("hold_") and v for k, v in counts.items()):
+                raise SyncError("توجد حالات معلّقة؛ لم يُنفّذ رفع آلي ولم تُعتمد الحالة")
             if do_upload:
                 upload(config["rclone_remote"], outbox, pending, config.get("rclone_bin", "rclone"),
                        Path(config["rclone_config"]).expanduser() if config.get("rclone_config") else None)

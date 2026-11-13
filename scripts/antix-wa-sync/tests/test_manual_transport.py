@@ -144,6 +144,37 @@ class ManualFlowTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(printed)["counts"].get("unchanged"), 1)
 
+    def test_hold_blocks_confirmation_before_state_is_committed(self):
+        code, _ = self.run_main("--prepare-only")
+        self.assertEqual(code, 0)
+        original = (self.state / "state.json").read_bytes()
+        zips = list((self.state / "outbox").glob("WA-SYNC__*.zip"))
+        manifest = self.home / "manifest.json"
+        manifest.write_text(json.dumps(manifest_for(zips)), encoding="utf-8")
+        real_prepare = wa_sync.prepare
+        def with_hold(config, state_dir):
+            chats, counts, outbox = real_prepare(config, state_dir)
+            return chats, {**counts, "hold_unknown_recent": 1}, outbox
+        with mock.patch.object(wa_sync, "prepare", side_effect=with_hold):
+            code, _ = self.run_main("--confirm-uploaded", str(manifest))
+        self.assertEqual(code, 1)
+        self.assertEqual((self.state / "state.json").read_bytes(), original)
+        self.assertTrue(list((self.state / "outbox").glob("WA-SYNC__*.zip")))
+
+    def test_hold_blocks_automatic_upload(self):
+        self.config["transport"] = "rclone"
+        self.config_path.write_text(json.dumps(self.config), encoding="utf-8")
+        real_prepare = wa_sync.prepare
+        def with_hold(config, state_dir):
+            chats, counts, outbox = real_prepare(config, state_dir)
+            return chats, {**counts, "hold_unresolved_jid": 1}, outbox
+        with mock.patch.object(wa_sync, "prepare", side_effect=with_hold), \
+             mock.patch.object(wa_sync, "upload") as upload:
+            code, _ = self.run_main()
+        self.assertEqual(code, 1)
+        upload.assert_not_called()
+        self.assertFalse((self.state / "state.json").exists())
+
     def test_plain_sync_in_manual_mode_stops_with_guidance(self):
         with mock.patch.object(sys, "argv", ["wa_sync.py", "--config", str(self.config_path)]), \
                 mock.patch("sys.stderr") as err:
