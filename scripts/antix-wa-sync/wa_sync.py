@@ -348,7 +348,7 @@ def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     if not path.is_file() or file_sha(path) != expected:
         raise SyncError("دفتر العناوين مفقود أو تغيرت بصمته؛ لم تُجهز دفعة جديدة")
     output = work / "contacts-index.json"
-    run_tool([config.get("node_bin", "node"), str(Path(__file__).with_name("selection.mjs")), str(path), str(output)], work)
+    run_tool([config.get("node_bin", "node"), "--experimental-default-type=module", str(Path(__file__).with_name("selection.mjs")), str(path), str(output)], work)
     if file_sha(path) != expected:
         raise SyncError("تغير دفتر العناوين أثناء قراءته")
     result = load_json(output, None)

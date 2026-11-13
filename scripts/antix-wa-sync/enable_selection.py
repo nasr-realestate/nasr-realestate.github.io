@@ -36,7 +36,7 @@ def main():
     checksum = file_sha(vcf)
     with tempfile.TemporaryDirectory(prefix='selection-check-', dir=state_dir) as td:
         index = Path(td) / 'index.json'
-        result = subprocess.run([config.get('node_bin', 'node'), str(Path(__file__).with_name('selection.mjs')),
+        result = subprocess.run([config.get('node_bin', 'node'), '--experimental-default-type=module', str(Path(__file__).with_name('selection.mjs')),
                                  str(vcf), str(index)], stdout=subprocess.DEVNULL,
                                 stderr=subprocess.DEVNULL, timeout=180)
         if result.returncode:
