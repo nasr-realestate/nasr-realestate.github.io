@@ -16,7 +16,7 @@ export function buildIndex(text) {
   }
   for (const block of unfolded.split(/END:VCARD/i)) {
     const parsed = parseVcfContacts(block + '\nEND:VCARD');
-    if (parsed.length && parsed[0].fn.trimStart().startsWith('🌀')) {
+    if (parsed.length && parsed[0].fn.includes('🌀')) {
       const lines = [...block.matchAll(/^TEL[^:]*:(.*)$/gim)];
       if (!lines.length || lines.some(m => !normalizeInternationalPhone(decodeQuotedPrintable(m[1])))) {
         throw new Error('unusable excluded phone');
@@ -29,7 +29,7 @@ export function buildIndex(text) {
   const marked = ['🟢', '🔴', '🔵', '🟡', '✈'];
   const hasPrefix = (name, prefix) => String(name || '').trimStart().startsWith(prefix);
   for (const [i, c] of cards.entries()) {
-    if (hasPrefix(c.fn, '🌀')) excluded.add(i);
+    if (String(c.fn || '').includes('🌀')) excluded.add(i);
     for (const p of c.phones) {
       const n = p.e164.replace(/\D/g, '');
       if (!numbers.has(n)) numbers.set(n, []);

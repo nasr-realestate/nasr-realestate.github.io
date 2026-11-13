@@ -22,7 +22,7 @@ def build_dry_bundle(chats, counts):
         if not re.fullmatch(r'[0-9]{8,15}@(s\.whatsapp\.net|c\.us)', jid):
             raise wa_sync.SyncError('unverified direct phone')
         title = item.get('title', '')
-        if not title or title.lstrip().startswith('🌀'):
+        if not title or '🌀' in wa_sync.clean(title):
             raise wa_sync.SyncError('invalid selected title')
         conversations.append({
             'conversation_uid': item['uid'], 'title': title,

@@ -46,6 +46,16 @@ class SealedBridgeTests(unittest.TestCase):
         with self.assertRaises(wa_sync.SyncError):
             bridge.build_dry_bundle([{**base, 'jid': '201111111111@s.whatsapp.net', 'title': '🌀 test'}], {})
 
+    def test_embedded_spiral_is_never_selected_or_bundled(self):
+        chat = next(iter(synthetic_chat().values()))
+        jid = '201111111111@s.whatsapp.net'
+        selected, counts = wa_sync.select_chats({jid: {**chat, 'name': 'اسم 🌀 مستبعد'}},
+            {jid.split('@')[0]: {'name': 'اسم عادي', 'marked': True}}, datetime(2025, 11, 14, tzinfo=timezone.utc))
+        self.assertFalse(selected)
+        self.assertEqual(counts['excluded_spiral'], 1)
+        with self.assertRaises(wa_sync.SyncError):
+            bridge.build_dry_bundle([{'status': 'new', 'jid': jid, 'title': 'اسم 🌀 مستبعد', 'uid': 'wa:test', 'text': 'fake'}], {})
+
     def test_bridge_main_seals_selected_data_without_state_write(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
