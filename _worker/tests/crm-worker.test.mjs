@@ -10,7 +10,7 @@ import worker, {
   sealIngestPayload,
 } from '../crm-worker.js';
 import { runScheduledCrmNotifications } from '../crm-push.js';
-import { sealDryRunBatches } from '../../scripts/antix-wa-sync/sealed-batch-plan.mjs';
+import { sealDryRunBatches, sealMetadataBatches } from '../../scripts/antix-wa-sync/sealed-batch-plan.mjs';
 import { writeAntixMetadataPrototype } from '../crm-antix-metadata-write.js';
 
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
@@ -1164,5 +1164,29 @@ test('guarded synthetic antiX write requires independent server gates and consum
     assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_contacts').get().n, 1);
     assert.equal(sqlite.prepare('SELECT length(raw_text) n FROM crm_conversations').get().n, 0);
     assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversation_messages').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+
+test('locally prepared encrypted metadata write reaches the guarded worker without transcript text', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u,
+    CRM_ANTIX_METADATA_WRITE_ENABLED: 'true', CRM_ANTIX_VERIFIED_BACKUP_REF: 'synthetic-backup-01' } });
+  try {
+    const input = { vcf_contacts: [], conversations: [{ conversation_uid: 'wa:from-local-batcher',
+      title: '🟢 عميل اصطناعي', selected_phone: '+201111111111',
+      raw_txt: '13/11/2025, 04:13 - عميل: رسالة اختبار حساسة' }] };
+    const [batch] = await sealMetadataBatches(input, keys.publicKeySpkiB64u, { writeBackupRef: 'synthetic-backup-01' });
+    const digest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(batch.envelope))).toString('hex');
+    sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${digest}`);
+    const response = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, { method: 'POST',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: batch.envelope }) }), env);
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.equal(result.antix_metadata.created_contacts, 1);
+    assert.equal(result.antix_metadata.inserted, 1);
+    assert.equal(sqlite.prepare('SELECT length(raw_text) n FROM crm_conversations').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversation_messages').get().n, 0);
+    assert.doesNotMatch(JSON.stringify(result), /حساسة|201111111111/);
   } finally { sqlite.close(); }
 });

@@ -273,8 +273,11 @@ export async function runA5LiveChecks(transport, options = {}) {
 
   // ── 6) تفاعل في الخط الزمني + replay مرفوض + متابعة تُكمل وتظهر ─────────────────────────────────
   await run('A5-L6', 'تفاعُل في الخط الزمني الموحَّد، ومتابعة مُستحقة ثم متأخرة ثم مُكمَلة تظهر في الخط الزمني', async () => {
+    // A replay must use exactly the original timestamp; recomputing the clock
+    // makes the duplicate key differ whenever the first request crosses a millisecond.
+    const interactionAt = iso(-3600_000);
     const call = await client.recordInteraction({ contact_id: created.contact_id, request_id: created.request_ids[0],
-      kind: 'call', occurred_at: iso(-3600_000), summary: `${SYNTH_PREFIX} A5 — مكالمة صناعية لتحديد الميزانية`, outcome: 'تأكيد الميزانية',
+      kind: 'call', occurred_at: interactionAt, summary: `${SYNTH_PREFIX} A5 — مكالمة صناعية لتحديد الميزانية`, outcome: 'تأكيد الميزانية',
       next_step: 'إرسال وحدات', next_followup_at: iso(2 * 3600_000), source: 'phone', actor: tag }, key('i1'));
     must(call?.interaction?.id, 'interaction-not-created', JSON.stringify(call).slice(0, 120));
     created.interaction_ids.push(call.interaction.id);
@@ -282,7 +285,7 @@ export async function runA5LiveChecks(transport, options = {}) {
       id_source: 'http-201-body', parent: { table: 'crm_contacts', column: 'contact_id' }, step: 'A5-L6' });
     let replay = '';
     try { await client.recordInteraction({ contact_id: created.contact_id, request_id: created.request_ids[0],
-      kind: 'call', occurred_at: iso(-3600_000), summary: `${SYNTH_PREFIX} A5 — مكالمة صناعية لتحديد الميزانية`, source: 'phone', actor: tag }); }
+      kind: 'call', occurred_at: interactionAt, summary: `${SYNTH_PREFIX} A5 — مكالمة صناعية لتحديد الميزانية`, source: 'phone', actor: tag }); }
     catch (error) { replay = `${error.status}:${error.code}`; }
     must(replay.startsWith('409'), 'interaction-replay-accepted', replay || 'no-error');
     const timeline = await client.listInteractions({ contact_id: created.contact_id });

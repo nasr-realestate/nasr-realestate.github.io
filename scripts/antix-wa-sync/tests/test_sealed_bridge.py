@@ -71,6 +71,41 @@ class SealedBridgeTests(unittest.TestCase):
             js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(!x.dry_run||x.sync_bundle.vcf_contacts.length||x.sync_bundle.conversations[0].selected_phone!=='+201111111111'||JSON.stringify(x).includes('رسالة اصطناعية')||x.sync_bundle.conversations[0].raw_txt)process.exit(1);"""
             subprocess.run(['node', '-e', js, str(keys), str(envelope)], check=True)
 
+    def test_explicit_write_batch_stays_local_and_is_encrypted(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            state, out = root / 'state', root / 'sealed'
+            state.mkdir(mode=0o700)
+            out.mkdir(mode=0o700)
+            keys = root / 'keys.json'
+            subprocess.run(['node', '-e',
+                "const c=require('crypto');const {publicKey,privateKey}=c.generateKeyPairSync('rsa',{modulusLength:2048});require('fs').writeFileSync(process.argv[1],JSON.stringify({pub:publicKey.export({type:'spki',format:'der'}).toString('base64url'),priv:privateKey.export({type:'pkcs8',format:'pem'})}));", str(keys)], check=True)
+            key = root / 'public.txt'
+            key.write_text(json.loads(keys.read_text())['pub'])
+            ref = root / 'backup.txt'
+            ref.write_text('synthetic-backup-01')
+            ref.chmod(0o600)
+            config = root / 'config.json'
+            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
+                    'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: محتوى اصطناعي'}
+            argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out),
+                    '--prepare-write-batches', '--backup-ref-file', str(ref), '--confirm-metadata-only']
+            with mock.patch.object(sys, 'argv', argv), mock.patch.object(wa_sync, 'prepare', return_value=([item], {'selected_marked': 1}, None)):
+                bridge.main()
+            envelope = next(out.iterdir())
+            self.assertTrue(envelope.name.startswith('write-'))
+            self.assertEqual(envelope.stat().st_mode & 0o777, 0o600)
+            self.assertFalse((state / 'state.json').exists())
+            js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(x.dry_run||x.sync_bundle.antix_mode!=='metadata_only_v1'||x.sync_bundle.backup_verified_ref!=='synthetic-backup-01'||JSON.stringify(x).includes('محتوى اصطناعي'))process.exit(1);"""
+            subprocess.run(['node', '-e', js, str(keys), str(envelope)], check=True)
+
+    def test_ref_or_confirmation_without_write_flag_is_rejected_before_config(self):
+        for flags in (['--confirm-metadata-only'], ['--backup-ref-file', 'anything'], ['--prepare-write-batches']):
+            with self.subTest(flags=flags), mock.patch.object(sys, 'argv', ['bridge', '--pubkey-file', 'x', '--out-dir', 'y', *flags]):
+                with self.assertRaises(wa_sync.SyncError):
+                    bridge.main()
+
     def test_no_outbox_cleanup_for_non_zip_preparation(self):
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)

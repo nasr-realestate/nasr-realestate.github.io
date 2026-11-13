@@ -6,11 +6,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { b64u, fromB64u } from '../../crm/seal-ingest-bundle.mjs';
-import { sealDryRunBatches } from '../sealed-batch-plan.mjs';
+import { sealDryRunBatches, sealMetadataBatches } from '../sealed-batch-plan.mjs';
 
 const keys = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['encrypt', 'decrypt']);
 const pubkey = b64u(await crypto.subtle.exportKey('spki', keys.publicKey));
-const conv = i => ({ conversation_uid: `wa:test-${i}`, title: `اختبار ${i}`, selected_phone: '+201111111111', raw_txt: `13/11/2025, 04:13 - عميل: رسالة اصطناعية ${i}` });
+const conv = i => ({ conversation_uid: `wa:test-${i}`, title: `اختبار ${i}`, selected_phone: `+2010${String(i).padStart(8, '0')}`, raw_txt: `13/11/2025, 04:13 - عميل: رسالة اصطناعية ${i}` });
 const bundle = conversations => ({ conversations, vcf_contacts: [], dry_run: false });
 
 async function decrypt(envelope) {
@@ -74,4 +74,19 @@ test('CLI writes only private ciphertext and does not overwrite existing output'
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+
+test('explicit write envelope includes trusted reference and only structured metadata', async () => {
+  const items = [conv(1), conv(2)];
+  const batches = await sealMetadataBatches(bundle(items), pubkey, { writeBackupRef: 'synthetic-backup-01' });
+  const decoded = await decrypt(batches[0].envelope);
+  assert.equal(decoded.dry_run, false);
+  assert.equal(decoded.sync_bundle.antix_mode, 'metadata_only_v1');
+  assert.equal(decoded.sync_bundle.backup_verified_ref, 'synthetic-backup-01');
+  assert.ok(!JSON.stringify(decoded).includes('رسالة اصطناعية'));
+  await assert.rejects(sealMetadataBatches(bundle(items), pubkey, { writeBackupRef: '' }), /invalid-backup-reference/);
+  await assert.rejects(sealMetadataBatches(bundle([items[0], { ...items[1], selected_phone: items[0].selected_phone }]), pubkey), /duplicate-phone/);
+  const dry = await sealDryRunBatches(bundle(items), pubkey, { writeBackupRef: 'ignore-this' });
+  assert.equal((await decrypt(dry[0].envelope)).dry_run, true);
 });
