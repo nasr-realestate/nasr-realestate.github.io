@@ -83,3 +83,10 @@ test('the backup verifier keeps the deferred shape and the post-load check', () 
   assert.doesNotMatch(builder, /localRestoreDb\.exec\('PRAGMA foreign_keys = ON;'\);\s*\n\s*localRestoreDb\.exec\(bundleText\)/,
     'the naive load-then-hope shape is what failed on valid data; it must not come back by accident');
 });
+
+test('backup restore uses a unique scratch name and never deletes a pre-existing database', () => {
+  const workflow = readFileSync(new URL('../../.github/workflows/crm-phase2-backup.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /EPHEM_RESTORE_NAME="nasr-crm-restore-\$backup_suffix"/);
+  assert.match(workflow, /scratch-db-name-exists-refusing-delete/);
+  assert.doesNotMatch(workflow, /database\/\$old_ephem/);
+});

@@ -70,7 +70,6 @@ jobs:
           TEST_DB_UUID='760079c6-85f9-4a30-aa19-9a66f95d421a'
           PROD_DB_UUID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
           OLD_BACKUP_NAME='nasr-crm-test-db-backup-20261030'
-          EPHEM_RESTORE_NAME='nasr-crm-ephem-restore-chk'
           WRANGLER_CFG='_worker/wrangler.crm.toml'
           TMP=$(mktemp -d)
           # The suffix is an input so a migration session can take its OWN dated copy. The name is never
@@ -90,6 +89,8 @@ jobs:
             exit 1
           fi
           NEW_BACKUP_NAME="nasr-crm-test-db-backup-$backup_suffix"
+          # A unique scratch name avoids touching another run's database.
+          EPHEM_RESTORE_NAME="nasr-crm-restore-$backup_suffix"
           BUNDLE_SQL="$TMP/$NEW_BACKUP_NAME.sql"
           ephem_uuid=''
           account_id=''
@@ -644,8 +645,9 @@ jobs:
           # Isolated Remote Cloudflare D1 Restore Test (into separate ephemeral D1 DB, never touching source or backup)
           old_ephem=$(jq -r --arg en "$EPHEM_RESTORE_NAME" '.result[] | select(.name == $en) | .uuid // empty' "$TMP/d1_pre.json" | head -n1)
           if [ -n "$old_ephem" ]; then
-            curl --silent --connect-timeout 10 --max-time 30 -X DELETE -H "$AUTH" \
-              "$API/accounts/$account_id/d1/database/$old_ephem" >/dev/null 2>&1 || true
+            result='scratch-db-name-exists-refusing-delete'
+            finish
+            exit 1
           fi
 
           e_status=$(curl --silent --show-error --connect-timeout 10 --max-time 60 -X POST -H "$AUTH" \
