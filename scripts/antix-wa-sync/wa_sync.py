@@ -305,7 +305,7 @@ def select_chats(exported: dict, index: dict, as_of: datetime,
                            "title": clean(chat.get("name") or ""),
                            "candidates": (card or {}).get("candidates", [])})
     for jid, chat in exported.items():
-        if clean(chat.get("name") or "").lstrip().startswith("🌀"):
+        if "🌀" in clean(chat.get("name") or ""):
             count("excluded_spiral")
             continue
         local, _, domain = jid.partition("@")

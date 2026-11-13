@@ -100,3 +100,17 @@ test('hidden bidi controls cannot bypass excluded marker check', () => {
   const hidden = { ...item('wa:one', '+201111111111'), title: '\u200f🌀 مستبعد' };
   assert.throws(() => validateAntixMetadata([hidden]));
 });
+
+test('stores a long synthetic customer name without truncation and still enforces limits', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    const title = ('🟢 ' + 'اسم طويل '.repeat(45)).trim();
+    const record = { ...item('wa:long-name', '+201111111111'), title };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [record], { createMissing: true }),
+      { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1 });
+    assert.equal(sqlite.prepare('SELECT name FROM crm_contacts').get().name, title);
+    assert.equal(sqlite.prepare('SELECT chat_title FROM crm_conversations').get().chat_title, title);
+    assert.throws(() => validateAntixMetadata([{ ...record, title: 'س'.repeat(4097) }]));
+    assert.throws(() => validateAntixMetadata([{ ...record, title: title + ' 🌀' }]));
+  } finally { sqlite.close(); }
+});

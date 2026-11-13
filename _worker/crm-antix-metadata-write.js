@@ -2,6 +2,8 @@
 // This deliberately stores no transcript, message bodies, insights, or alerts.
 import { normalizeInternationalPhone, cleanBidiControls } from './crm-chat-intel.js';
 
+export const MAX_ANTIX_TITLE_LENGTH = 4096;
+
 const ALLOWED = new Set(['conversation_uid', 'selected_phone', 'title', 'message_count',
   'first_message_at', 'last_message_at', 'raw_sha256']);
 
@@ -21,7 +23,7 @@ export function validateAntixMetadata(items) {
         typeof item.conversation_uid !== 'string' || !/^wa:\S{1,240}$/u.test(item.conversation_uid) ||
         typeof item.selected_phone !== 'string' || !/^\+\d{8,15}$/.test(item.selected_phone) ||
         normalizeInternationalPhone(item.selected_phone) !== item.selected_phone.slice(1) ||
-        typeof item.title !== 'string' || !item.title.trim() || item.title.length > 100 ||
+        typeof item.title !== 'string' || !item.title.trim() || item.title.length > MAX_ANTIX_TITLE_LENGTH ||
         (cleanBidiControls(item.title).includes('🌀') || /^TEST ONLY/i.test(cleanBidiControls(item.title).trimStart())) || !Number.isSafeInteger(item.message_count) || item.message_count < 1 ||
         !validDate(item.first_message_at) || !validDate(item.last_message_at) ||
         (item.first_message_at && item.last_message_at && item.first_message_at > item.last_message_at) ||

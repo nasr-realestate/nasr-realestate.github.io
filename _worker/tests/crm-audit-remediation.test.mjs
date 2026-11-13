@@ -729,3 +729,17 @@ test('Clean Foundation Policy (strict_complete_contacts_only): enforces backup r
   sqlite.close();
 });
 
+
+test('contact edits preserve long names and reject over-limit names without modifying data', async () => {
+  const { sqlite, call } = await createIsolatedCrmEnv();
+  try {
+    sqlite.prepare('INSERT INTO crm_contacts(id,name) VALUES (?,?)').run('long-synthetic', 'اسم تجريبي');
+    const name = ('🟢 ' + 'اسم صناعي طويل '.repeat(30)).trim();
+    const response = await call('/api/contacts/long-synthetic', { method: 'POST', body: { name } });
+    assert.equal(response.status, 200);
+    assert.equal(sqlite.prepare('SELECT name FROM crm_contacts WHERE id=?').get('long-synthetic').name, name);
+    const rejected = await call('/api/contacts/long-synthetic', { method: 'POST', body: { name: 'س'.repeat(4097) } });
+    assert.equal(rejected.status, 400);
+    assert.equal(sqlite.prepare('SELECT name FROM crm_contacts WHERE id=?').get('long-synthetic').name, name);
+  } finally { sqlite.close(); }
+});

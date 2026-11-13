@@ -8,7 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { sealPayload, toPayload } from '../crm/seal-ingest-bundle.mjs';
 import { parseWhatsAppExport, normalizeInternationalPhone } from '../../_worker/crm-chat-intel.js';
-import { validateAntixMetadata } from '../../_worker/crm-antix-metadata-write.js';
+import { validateAntixMetadata, MAX_ANTIX_TITLE_LENGTH } from '../../_worker/crm-antix-metadata-write.js';
 
 export const MAX_DISPATCH_CHARS = 65535;
 export const MAX_CONVERSATIONS = 10;
@@ -38,7 +38,7 @@ export async function extractMetadata(conv) {
   const title = conv.title;
   if (typeof phone !== 'string' || !/^\+\d{8,15}$/.test(phone) ||
       normalizeInternationalPhone(phone) !== phone.slice(1) || typeof title !== 'string' ||
-      !title.trim() || title.trimStart().startsWith('🌀') || title.length > 200 ||
+      !title.trim() || title.trimStart().startsWith('🌀') || title.length > MAX_ANTIX_TITLE_LENGTH ||
       Buffer.byteLength(conv.raw_txt, 'utf8') > MAX_RAW_BYTES) {
     throw new Error('invalid-source-metadata');
   }

@@ -22,3 +22,10 @@ test('ambiguous names are held', () => {
     + card('واحد', ['+201000000002']) + card('اثنان', ['+201000000002']));
   assert.equal(i.index['201000000002'].ambiguous, true);
 });
+
+test('excludes embedded spiral marker and its aliases', () => {
+  const i = buildIndex(card('اسم 🌀 مستبعد', ['+201000000001'])
+    + card('اسم آخر', ['+201000000001', '+201000000002']));
+  assert.equal(i.index['201000000001'].excluded, true);
+  assert.equal(i.index['201000000002'].excluded, true);
+});
