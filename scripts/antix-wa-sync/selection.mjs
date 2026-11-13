@@ -57,6 +57,7 @@ export function buildIndex(text) {
       ambiguous: names.length !== 1,
       marked: indices.some(i => marked.some(m => hasPrefix(cards[i].fn, m))),
       name: names.length === 1 ? names[0] : null,
+      candidates: names.length > 1 ? names : [],
     };
   }
   return { index, card_count: cards.length, excluded_cards: excluded.size, excluded_marker_cards: markerCount };

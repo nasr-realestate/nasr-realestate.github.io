@@ -288,7 +288,8 @@ def open_message_db(decrypted: Path, work: Path) -> Path:
     return db
 
 
-def select_chats(exported: dict, index: dict, as_of: datetime) -> tuple[dict, dict]:
+def select_chats(exported: dict, index: dict, as_of: datetime,
+                 review: list | None = None) -> tuple[dict, dict]:
     """Apply the user's scope. Unknown JID types are held, never guessed."""
     if as_of.tzinfo is None:
         raise SyncError("تاريخ التصفية يجب أن يتضمن المنطقة الزمنية")
@@ -297,20 +298,29 @@ def select_chats(exported: dict, index: dict, as_of: datetime) -> tuple[dict, di
     selected, counts = {}, {}
     def count(reason):
         counts[reason] = counts.get(reason, 0) + 1
+    def hold(reason, jid, chat, card=None):
+        count(reason)
+        if review is not None:
+            review.append({"ref": sha(jid.encode()), "reason": reason, "jid": jid,
+                           "title": clean(chat.get("name") or ""),
+                           "candidates": (card or {}).get("candidates", [])})
     for jid, chat in exported.items():
+        if clean(chat.get("name") or "").lstrip().startswith("🌀"):
+            count("excluded_spiral")
+            continue
         local, _, domain = jid.partition("@")
         if domain in {"g.us", "newsletter", "broadcast"}:
             count("excluded_non_direct")
             continue
         if domain not in {"s.whatsapp.net", "c.us"} or not re.fullmatch(r"[0-9]{8,15}", local):
-            count("hold_unresolved_jid")
+            hold("hold_unresolved_jid", jid, chat)
             continue
         card = index.get(local)
         if card and card.get("excluded"):
             count("excluded_spiral")
             continue
         if card and card.get("ambiguous"):
-            count("hold_contact_ambiguous")
+            hold("hold_contact_ambiguous", jid, chat, card)
             continue
         # Only actual message records count, not system events.
         recent = any(not msg.get("meta") and cutoff <= epoch_seconds(msg.get("timestamp")) <= until
@@ -318,7 +328,7 @@ def select_chats(exported: dict, index: dict, as_of: datetime) -> tuple[dict, di
         if not card and recent:
             # A phone absent from the snapshot might be an excluded person under
             # another number. Do not export it until separately reviewed.
-            count("hold_unknown_recent")
+            hold("hold_unknown_recent", jid, chat)
             continue
         if card and card.get("marked"):
             count("selected_marked")
