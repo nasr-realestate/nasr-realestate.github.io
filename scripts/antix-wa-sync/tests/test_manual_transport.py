@@ -166,7 +166,7 @@ class ConfigureManualTests(unittest.TestCase):
             stub.chmod(0o700)
             backup = root / "msgstore.db.crypt15"
             backup.write_bytes(b"synthetic")
-            answers = f"{backup}\n\n" + "a" * 64 + "\n"
+            answers = f"{backup}\n" + "a" * 64 + "\n"
             result = subprocess.run([sys.executable, str(HERE / "configure.py"), "--home", str(home),
                                      "--venv", str(venv), "--transport", "manual"],
                                     input=answers, text=True, stdout=subprocess.PIPE,

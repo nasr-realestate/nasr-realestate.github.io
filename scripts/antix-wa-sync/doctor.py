@@ -178,24 +178,6 @@ def check_remote(rep: Report, rclone: str, config_path: Path, remote: str) -> No
         rep.fail("client_id/client_secret خاصان بك غير مضبوطين؛ العميل المشترك لم يعد مدعومًا")
 
 
-def check_contacts(rep: Report, config: dict) -> None:
-    raw = config.get("contacts_vcf")
-    if not raw:
-        rep.warn("لا يوجد دفتر عناوين؛ ستكون العناوين أرقامًا وقد لا يطابقها CRM")
-        return
-    path = Path(str(raw)).expanduser()
-    if not path.is_file():
-        rep.fail(f"دفتر العناوين غير موجود: {path}")
-        return
-    from contacts import parse_vcf
-    mapping, stats = parse_vcf(path, str(config.get("country_code", "20")))
-    if not mapping:
-        rep.fail("دفتر العناوين بلا أسماء وأرقام صالحة")
-        return
-    mode = "جهات الاتصال فقط" if config.get("only_contacts", True) else "كل المحادثات"
-    rep.ok(f"دفتر العناوين: {len(mapping)} جهة اتصال، التصفية: {mode} (لم تُطبع أسماء)")
-
-
 def check_paths(rep: Report, config: dict, repo: Path) -> None:
     backup = Path(str(config.get("backup_path", ""))).expanduser()
     key = Path(str(config.get("key_path", ""))).expanduser()
@@ -262,7 +244,6 @@ def main() -> int:
             config = loaded
             rep.ok("ملف الإعدادات صالح")
             check_paths(rep, config, repo)
-            check_contacts(rep, config)
         elif isinstance(loaded, dict):
             rep.fail("ملف الإعدادات لا يحتوي المفاتيح المطلوبة؛ شغّل setup.sh")
     if config and config.get("transport") == "manual":
