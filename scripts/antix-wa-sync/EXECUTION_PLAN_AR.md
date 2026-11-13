@@ -187,6 +187,31 @@ sh scripts/antix-wa-sync/pull_backup.sh --source "/media/only/USB/msgstore.db.cr
 
 النجاح: `DOCTOR_OK failures=0`، ثم سطر JSON فيه `"uploaded": 0`، ثم `BLOCK_B2_OK`.
 
+### كتلة جهات الاتصال — قبل أي رفع
+
+ظهور عناوين مثل `2010…` يعني أن النسخة لا تحمل الأسماء، وأن CRM لن يطابقها. صدّر دفتر
+العناوين من الهاتف (تطبيق جهات الاتصال → إعدادات → تصدير → ملف `.vcf`) واحفظه في مجلد
+**Download** على الهاتف، ثم:
+
+```sh
+( set -eu
+  cd "$HOME/nasr-crm/nasr-realestate.github.io"
+  git pull --ff-only
+  VCF=$(adb shell 'ls /sdcard/Download/*.vcf /sdcard/*.vcf 2>/dev/null' | tr -d '\r' | head -1)
+  [ -n "$VCF" ] || { echo NO_VCF_ON_PHONE; exit 1; }
+  adb pull "$VCF" "$HOME/nasr-wa-sync/contacts.vcf"
+  chmod 600 "$HOME/nasr-wa-sync/contacts.vcf"
+  python3 scripts/antix-wa-sync/use_contacts.py --vcf "$HOME/nasr-wa-sync/contacts.vcf"
+  sh scripts/antix-wa-sync/sync.sh --dry-run
+  sh scripts/antix-wa-sync/sync.sh --prepare-only
+  ls -1 "$HOME/nasr-wa-sync/state/outbox" | wc -l
+  echo BLOCK_CONTACTS_OK
+) || echo BLOCK_CONTACTS_FAILED
+```
+
+النجاح: عدد جهات الاتصال، ثم عدادات فيها `skipped_non_direct` و`skipped_not_contact`،
+وعدد ملفات ZIP **أقل بكثير** من عدد كل المحادثات. هذا العدد هو ما سترفعه فعلًا.
+
 ### المسار اليدوي M — بلا Google Cloud ولا OAuth
 
 اخترته عندما لا تريد إنشاء عميل OAuth. الجهاز يجهّز الملفات، وأنت ترفعها من المتصفح،

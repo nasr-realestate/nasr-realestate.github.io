@@ -26,6 +26,9 @@ else:
     remote = input("اسم rclone remote الخاص (ينتهي بنقطتين، مثل nasr-wa:): ").strip()
     if not re.fullmatch(r"[A-Za-z0-9_-]+:", remote):
         raise SystemExit("اسم remote غير صالح؛ استخدم أحرفًا/أرقامًا/شرطة وينتهي بنقطتين مثل nasr-wa:")
+vcf = input("مسار دفتر العناوين .vcf (اتركه فارغًا لتخطيه، ويُنصح به ليعرف CRM الأسماء): ").strip()
+if vcf and not Path(vcf).expanduser().is_file():
+    raise SystemExit("ملف دفتر العناوين غير موجود؛ لم يُحفظ شيء")
 key_path = home / "encrypted_backup.key"
 if not key_path.exists():
     key = getpass.getpass("مفتاح واتساب الـ64 خانة hex (لن يظهر ولن يُحفظ في السجل): ").strip()
@@ -43,6 +46,8 @@ config = {"backup_path": str(Path(backup).expanduser()), "key_path": str(key_pat
           "python_bin": str(a.venv / "bin/python"),
           "rclone_bin": str(local_rclone) if local_rclone.exists() else "rclone",
           "rclone_config": str(Path("~/.config/rclone/rclone.conf").expanduser())}
+if vcf:
+    config.update(contacts_vcf=str(Path(vcf).expanduser().resolve()), only_contacts=True, country_code="20")
 fd = os.open(config_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(fd, "w", encoding="utf-8") as f:
     json.dump(config, f, ensure_ascii=False, indent=2)

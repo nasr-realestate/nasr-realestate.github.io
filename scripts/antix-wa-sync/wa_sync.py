@@ -22,6 +22,8 @@ import tempfile
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from contacts import domain_of, normalize_number, number_of, parse_vcf
+
 VERSION = "antix-wa-sync-v1"
 BROKER = "طارق طنطاوي"
 CAIRO = ZoneInfo("Africa/Cairo")
@@ -182,23 +184,45 @@ def validate_state(state: dict) -> dict:
 def assign_uid(jid: str, title: str, state: dict) -> str:
     ref = sha(jid.encode())
     existing = state["chats"].get(ref)
-    if existing:
-        return existing["conversation_uid"]
     key = title_key(title)
+    if existing:
+        old_uid = existing["conversation_uid"]
+        # Before the first verified upload an identity may still be corrected: a
+        # number-only title gains the address-book name. After upload it is frozen,
+        # because the CRM already knows that conversation under the old uid.
+        if (not existing.get("uploaded") and key and len(key) <= 240
+                and old_uid.startswith("wa:") and old_uid[3:].isdigit()):
+            return f"wa:{key}"
+        return old_uid
     if key and len(key) <= 240:
         return f"wa:{key}"
     return f"wa:antix:{ref}"
 
 
-def plan_chats(exported: dict, state: dict) -> tuple[list[dict], dict]:
+def plan_chats(exported: dict, state: dict, contacts: dict | None = None,
+               only_contacts: bool = False, country_code: str = "20") -> tuple[list[dict], dict]:
     prepared, used_keys, used_uids = [], {}, {}
     for ref, row in state["chats"].items():
         used_uids[row["conversation_uid"]] = ref
         if row.get("title_key"):
             used_keys[row["title_key"]] = ref
     for jid, chat in sorted(exported.items()):
-        title, text, messages = render_chat(jid, chat)
         ref = sha(jid.encode())
+        domain = domain_of(jid)
+        if contacts is not None:
+            # Groups, channels, broadcasts and status are not CRM clients.
+            if domain != "s.whatsapp.net":
+                if only_contacts:
+                    prepared.append({"ref": ref, "status": "skipped_non_direct"})
+                    continue
+            else:
+                name = contacts.get(normalize_number(number_of(jid), country_code))
+                if name:
+                    chat = {**chat, "name": name}
+                elif only_contacts:
+                    prepared.append({"ref": ref, "status": "skipped_not_contact"})
+                    continue
+        title, text, messages = render_chat(jid, chat)
         uid = assign_uid(jid, title, state)
         key = title_key(title)
         if key and key in used_keys and used_keys[key] != ref:
@@ -316,7 +340,18 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         if config.get("wa_db_path"):
             argv += ["--wa", str(Path(config["wa_db_path"]).expanduser().resolve())]
         run_tool(argv, work)
-        chats, counts = plan_chats(read_export(exported), state)
+        contacts_map = None
+        only_contacts = False
+        country_code = str(config.get("country_code", "20"))
+        if config.get("contacts_vcf"):
+            vcf_path = Path(config["contacts_vcf"]).expanduser()
+            if not vcf_path.is_file():
+                raise SyncError("دفتر العناوين .vcf غير موجود؛ صدّره من الهاتف أو احذف contacts_vcf من الإعدادات")
+            contacts_map, _ = parse_vcf(vcf_path, country_code)
+            if not contacts_map:
+                raise SyncError("دفتر العناوين لا يحتوي أسماءً وأرقامًا صالحة")
+            only_contacts = bool(config.get("only_contacts", True))
+        chats, counts = plan_chats(read_export(exported), state, contacts_map, only_contacts, country_code)
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")
         for item in chats:
