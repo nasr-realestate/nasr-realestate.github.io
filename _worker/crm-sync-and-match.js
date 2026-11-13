@@ -13,7 +13,7 @@ import {
 } from './crm-chat-intel.js';
 
 import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
-import { validateAntixMetadata } from './crm-antix-metadata-write.js';
+import { validateAntixMetadata, writeAntixMetadataPrototype } from './crm-antix-metadata-write.js';
 
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 
@@ -986,19 +986,25 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     ? bundle.restore_opportunities
     : [];
 
-  // Locally filtered antiX batches include direct-JID evidence, but the legacy
-  // sync path resolves by name and may adopt a legacy conversation by title.
-  // Refuse all writes until phone-based identity and raw-text retention are
-  // implemented end-to-end. Dry-runs must not carry contacts for name matching.
-  if (conversations.some(c => Object.hasOwn(c || {}, 'selected_phone')) &&
-      (!dryRun || vcfContacts.length || restoreOpportunities.length)) {
-    return { ok: false, error: 'antix_phone_verified_write_not_available' };
-  }
-
   const isAntixPreview = conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'));
   if (isAntixPreview) {
+    if (vcfContacts.length || restoreOpportunities.length || cleanPolicy) {
+      return { ok: false, error: 'antix_phone_verified_write_not_available' };
+    }
+    if (!dryRun) {
+      // Two trusted server-side gates; an envelope cannot authorize its own backup.
+      const approvedRef = normalizedOpts.antixVerifiedBackupRef;
+      if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_v1' ||
+          typeof approvedRef !== 'string' || !approvedRef.trim() || backupRef !== approvedRef) {
+        return { ok: false, error: 'antix_phone_verified_write_not_available' };
+      }
+    }
     try { validateAntixMetadata(conversations); }
     catch { return { ok: false, error: 'antix_invalid_preview_batch' }; }
+    if (!dryRun) {
+      const result = await writeAntixMetadataPrototype(db, conversations, { now, createMissing: true });
+      return { ok: true, dry_run: false, antix_metadata: result };
+    }
   }
 
   const existingContactsRes = await db.prepare(

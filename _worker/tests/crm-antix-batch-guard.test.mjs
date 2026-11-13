@@ -59,3 +59,17 @@ test('preview rejects raw transcript before querying the database', async () => 
   }] });
   assert.deepEqual(result, { ok: false, error: 'antix_invalid_preview_batch' });
 });
+
+test('a caller-supplied backup reference cannot enable writes without both trusted gates', async () => {
+  const db = { prepare() { throw new Error('must reject before database access'); } };
+  const item = { conversation_uid: 'wa:synthetic', selected_phone: '+201111111111', title: 'اختبار',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  const bundle = { conversations: [item], antix_mode: 'metadata_only_v1', backup_verified_ref: 'fake-backup' };
+  for (const opts of [{}, { allowAntixMetadataWrite: true }, { antixVerifiedBackupRef: 'fake-backup' },
+    { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'different-backup' }]) {
+    assert.deepEqual(await runSourceSyncBundle(db, bundle, opts), { ok: false, error: 'antix_phone_verified_write_not_available' });
+  }
+  const unsafe = { ...item, raw_txt: 'سري' };
+  assert.deepEqual(await runSourceSyncBundle(db, { ...bundle, conversations: [unsafe] },
+    { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'fake-backup' }), { ok: false, error: 'antix_invalid_preview_batch' });
+});

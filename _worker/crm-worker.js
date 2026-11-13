@@ -1866,19 +1866,23 @@ async function handleSealedIngest(request, env, config) {
     if (cleanPol === 'strict_complete_contacts_only' && !unsealed.dryRun && !String(unsealed.syncBundle?.backup_verified_ref || '').trim()) {
       return json({ ok: false, error: 'backup_verified_ref_required_before_foundation_cleanup' }, 400);
     }
-    await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending'")
-      .bind(ticketKey)
-      .run();
-    const syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, { dryRun: unsealed.dryRun });
+    const consumed = await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending' RETURNING submission_key")
+      .bind(ticketKey).first();
+    if (!consumed) return json({ error: 'unauthorized_sealed_ingest' }, 403);
+    const syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, {
+      dryRun: unsealed.dryRun,
+      allowAntixMetadataWrite: env.CRM_ANTIX_METADATA_WRITE_ENABLED === 'true',
+      antixVerifiedBackupRef: env.CRM_ANTIX_VERIFIED_BACKUP_REF,
+    });
     return json(syncResult, syncResult?.ok === false ? 400 : 200);
   }
   if (!Array.isArray(unsealed.entries) || unsealed.entries.length === 0 || unsealed.entries.length > 250) {
     return json({ error: 'invalid_sealed_payload' }, 400);
   }
 
-  await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending'")
-    .bind(ticketKey)
-    .run();
+  const consumed = await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending' RETURNING submission_key")
+    .bind(ticketKey).first();
+  if (!consumed) return json({ error: 'unauthorized_sealed_ingest' }, 403);
 
   const totals = {
     wiped_existing: false,

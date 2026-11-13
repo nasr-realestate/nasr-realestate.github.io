@@ -1131,3 +1131,38 @@ test('synthetic antiX sealed metadata preview is read-only and cannot be promote
     assert.deepEqual(detail.messages, []);
   } finally { sqlite.close(); }
 });
+
+test('guarded synthetic antiX write requires independent server gates and consumes one ticket atomically', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u } });
+  const contact = { conversation_uid: 'wa:synthetic-new', selected_phone: '+201111111111', title: '🟢 عميل اصطناعي',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  const payload = { dry_run: false, sync_bundle: { antix_mode: 'metadata_only_v1', backup_verified_ref: 'synthetic-backup',
+    vcf_contacts: [], conversations: [contact] } };
+  const sealAndAuthorize = async () => {
+    const envelope = await sealIngestPayload(payload, keys.publicKeySpkiB64u);
+    const digest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(envelope))).toString('hex');
+    sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${digest}`);
+    return envelope;
+  };
+  const post = envelope => worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, { method: 'POST',
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: envelope }) }), env);
+  try {
+    let envelope = await sealAndAuthorize();
+    assert.equal((await post(envelope)).status, 400, 'default gate must be off');
+    env.CRM_ANTIX_METADATA_WRITE_ENABLED = 'true';
+    env.CRM_ANTIX_VERIFIED_BACKUP_REF = 'other-backup';
+    envelope = await sealAndAuthorize();
+    assert.equal((await post(envelope)).status, 400, 'wrong backup reference must block');
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_contacts').get().n, 0);
+    env.CRM_ANTIX_VERIFIED_BACKUP_REF = 'synthetic-backup';
+    envelope = await sealAndAuthorize();
+    const responses = await Promise.all([post(envelope), post(envelope)]);
+    assert.deepEqual(responses.map(r => r.status).sort(), [200, 403]);
+    const success = await responses.find(r => r.status === 200).json();
+    assert.deepEqual(success.antix_metadata, { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1 });
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_contacts').get().n, 1);
+    assert.equal(sqlite.prepare('SELECT length(raw_text) n FROM crm_conversations').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversation_messages').get().n, 0);
+  } finally { sqlite.close(); }
+});

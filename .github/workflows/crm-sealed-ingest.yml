@@ -375,8 +375,16 @@ jobs:
             fi
             batch_idx=$((batch_idx + 1))
             deliver_envelope "$item_env" "b${batch_idx}" "$TMP/resp_${batch_idx}.json"
-            b_stat=$(jq -r 'if has("diff") then "B'"${batch_idx}"'[dry=\(.dry_run),mV=\(.diff.conversations_matched // 0),uV=\(.diff.conversations_unmatched_review // 0),cC=\(.intelligence.conversations_created // 0),iS=\(.intelligence.conversations_incremental_skipped // 0),msg=\(.intelligence.messages_stored // 0)]" else "B'"${batch_idx}"'[proc=\(.processed // 0)]" end' "$TMP/resp_${batch_idx}.json")
+            b_stat=$(jq -r 'if has("antix_metadata") then "B'"${batch_idx}"'[dry=false,attempt=\(.antix_metadata.attempted),inserted=\(.antix_metadata.inserted),new_contacts=\(.antix_metadata.created_contacts),skipped=\(.antix_metadata.not_inserted)]" elif has("antix_phone_preview") then "B'"${batch_idx}"'[dry=true,matched=\(.antix_phone_preview.exact_unique_phone),missing=\(.antix_phone_preview.phone_not_found),conflict=\(.antix_phone_preview.phone_conflict + .antix_phone_preview.conversation_conflict),invalid=\(.antix_phone_preview.invalid)]" elif has("diff") then "B'"${batch_idx}"'[dry=\(.dry_run),mV=\(.diff.conversations_matched // 0),uV=\(.diff.conversations_unmatched_review // 0),cC=\(.intelligence.conversations_created // 0),iS=\(.intelligence.conversations_incremental_skipped // 0),msg=\(.intelligence.messages_stored // 0)]" else "B'"${batch_idx}"'[proc=\(.processed // 0)]" end' "$TMP/resp_${batch_idx}.json")
             stats_parts+=("$b_stat")
+            # A partially inserted batch must stop here for human review; never
+            # report it as fully imported or advance to the next batch.
+            if [ "$(jq -r '.antix_metadata.not_inserted // 0' "$TMP/resp_${batch_idx}.json")" != '0' ]; then
+              sync_stats=$(IFS=';'; echo "${stats_parts[*]}")
+              result="antix-partial-review-required-b${batch_idx}"
+              finish
+              exit 1
+            fi
             processed=$(jq -r '(.processed // .diff.conversations_unmatched_review // .diff.conversations_matched // 0) | tostring' "$TMP/resp_${batch_idx}.json")
             updated=$(jq -r '(.updated_contacts // .diff.existing_contacts_with_valid_phones // 0) | tostring' "$TMP/resp_${batch_idx}.json")
           done 3< "$TMP/queue.txt"
