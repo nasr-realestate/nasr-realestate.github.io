@@ -53,8 +53,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--review', action='store_true', help='review locally, one item at a time')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--review', action='store_true', help='review locally, one item at a time')
+    mode.add_argument('--defer-all', action='store_true', help='exclude every currently held case from this batch only')
+    parser.add_argument('--confirm-defer-all', action='store_true')
     args = parser.parse_args()
+    if args.defer_all != args.confirm_defer_all:
+        raise ValueError('explicit defer-all confirmation required')
     repo = Path(__file__).resolve().parents[2]
     report_path = args.report.expanduser().resolve(strict=True)
     output = args.out.expanduser().absolute()
@@ -69,6 +74,9 @@ def main():
         if not sys.stdin.isatty() or not sys.stdout.isatty():
             raise ValueError('interactive review requires a local terminal')
         review_each(report['rows'], template['rows'])
+    if args.defer_all:
+        for row in template['rows']:
+            row['action'] = 'exclude'
     fd = os.open(parent / output.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as handle:
@@ -78,7 +86,10 @@ def main():
         raise
     print(json.dumps({'pending': sum(row['action'] == 'pending' for row in template['rows']),
                       'excluded': sum(row['action'] == 'exclude' for row in template['rows'])}))
-    print('BLOCK_HOLD_REVIEW_OK_NO_UPLOAD' if args.review else 'BLOCK_HOLD_TEMPLATE_OK_NO_DECISIONS')
+    if args.defer_all:
+        print('BLOCK_HOLDS_DEFERRED_NO_UPLOAD')
+    else:
+        print('BLOCK_HOLD_REVIEW_OK_NO_UPLOAD' if args.review else 'BLOCK_HOLD_TEMPLATE_OK_NO_DECISIONS')
 
 
 if __name__ == '__main__':

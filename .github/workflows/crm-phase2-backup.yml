@@ -295,6 +295,7 @@ jobs:
             const tables = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name ASC").all();
             const expIndexes = db.prepare("SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL AND name NOT LIKE '_cf_%' ORDER BY name ASC").all();
             const autoIndexes = db.prepare("SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND sql IS NULL AND name NOT LIKE 'sqlite_autoindex__cf_%' ORDER BY name ASC").all();
+            const schemaObjects = db.prepare("SELECT type, name, sql FROM sqlite_master WHERE type IN ('view','trigger') AND sql IS NOT NULL AND name NOT LIKE '_cf_%' ORDER BY rowid").all();
 
             const tableStats = {};
             let fkTotal = 0;
@@ -317,6 +318,7 @@ jobs:
               tableCount: tables.length,
               tables: tables.map(t => ({ name: t.name, sql: t.sql })),
               expIndexes: expIndexes.map(i => ({ name: i.name, tbl_name: i.tbl_name, sql: i.sql })),
+              schemaObjects: schemaObjects.map(o => ({ type: o.type, name: o.name, sql: o.sql })),
               autoIndexCount: autoIndexes.length,
               fkTotal,
               checkTables,
@@ -329,7 +331,13 @@ jobs:
           const migRows = extractMigs(JSON.parse(fs.readFileSync(migsJsonPath, 'utf8')));
 
           const srcDb = new DatabaseSync(':memory:');
-          srcDb.exec('PRAGMA foreign_keys = OFF;\n' + cleanSchema + '\n' + cleanData);
+          srcDb.exec('PRAGMA foreign_keys = OFF;\n' + cleanSchema);
+          // Exported historical rows must not run application triggers again.
+          // Restore their exact definitions immediately after loading the snapshot.
+          const sourceTriggers = srcDb.prepare("SELECT name, sql FROM sqlite_master WHERE type='trigger' AND sql IS NOT NULL ORDER BY rowid").all();
+          for (const t of sourceTriggers) srcDb.exec('DROP TRIGGER "' + t.name.replaceAll('"', '""') + '"');
+          srcDb.exec(cleanData);
+          for (const t of sourceTriggers) srcDb.exec(t.sql);
           srcDb.exec('CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);');
           const insMig = srcDb.prepare('INSERT OR IGNORE INTO d1_migrations(id, name, applied_at) VALUES (?, ?, ?)');
           for (const m of migRows) insMig.run(m.id, m.name, m.applied_at);
@@ -434,6 +442,9 @@ jobs:
             }
           }
           if (deferredConvUpdates.length > 0) outLines.push(...deferredConvUpdates);
+          // Install views and triggers only after historical data is loaded: this
+          // preserves enforcement without re-running side effects during restore.
+          for (const object of srcSnap.schemaObjects) outLines.push(object.sql.trim().replace(/;$/, '') + ';');
 
           const bundleText = outLines.join('\n') + '\n';
           fs.writeFileSync(outSqlPath, bundleText, { mode: 0o600 });
@@ -466,6 +477,10 @@ jobs:
             throw new Error('Restored database failed integrity_check');
           }
           const restoreSnap = computeDbSnapshot(localRestoreDb);
+          const objectDigest = objects => crypto.createHash('sha256').update(JSON.stringify(objects)).digest('hex');
+          if (objectDigest(srcSnap.schemaObjects) !== objectDigest(restoreSnap.schemaObjects)) {
+            throw new Error('Restored views or triggers mismatch');
+          }
 
           for (const tName of orderedNames) {
             const a = srcSnap.tableStats[tName];
@@ -480,6 +495,9 @@ jobs:
             if (exp.tableCount !== restoreSnap.tableCount || exp.expIndexes.length !== restoreSnap.expIndexes.length) {
               throw new Error('Roundtrip table/index count mismatch against source');
             }
+            if (exp.schemaObjectsDigest !== objectDigest(restoreSnap.schemaObjects)) {
+              throw new Error('Roundtrip views or triggers mismatch against source');
+            }
             for (const [tName, st] of Object.entries(exp.tableStats)) {
               const cur = restoreSnap.tableStats[tName];
               if (!cur || cur.count !== st.count || cur.digest !== st.digest) {
@@ -493,6 +511,7 @@ jobs:
             tableCount: srcSnap.tableCount,
             crmTableCount: orderedNames.filter(n => n.startsWith('crm_')).length,
             expIndexes: srcSnap.expIndexes.map(i => i.name),
+            schemaObjectsDigest: objectDigest(srcSnap.schemaObjects),
             autoIndexCount: srcSnap.autoIndexCount,
             fkTotal: srcSnap.fkTotal,
             checkTables: srcSnap.checkTables,

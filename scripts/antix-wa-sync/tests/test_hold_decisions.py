@@ -1,5 +1,8 @@
 """Private human exclusions only; no held identities can be approved by this path."""
 import copy
+import json
+import subprocess
+import tempfile
 from pathlib import Path
 import sys
 import unittest
@@ -54,6 +57,31 @@ class HoldDecisionsTests(unittest.TestCase):
         review_each(self.report['rows'], self.decisions['rows'], ask=lambda _: next(answers), display=messages.append)
         self.assertEqual([r['action'] for r in self.decisions['rows']], ['exclude', 'pending'])
         self.assertTrue(any('e أو p' in msg for msg in messages))
+
+    def test_explicit_defer_all_excludes_only_reported_holds(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            report = root / 'report.json'
+            report.write_text(json.dumps(self.report), encoding='utf-8')
+            report.chmod(0o600)
+            output = root / 'decisions.json'
+            script = Path(__file__).resolve().parents[1] / 'hold_decisions.py'
+            cmd = [sys.executable, str(script), '--report', str(report), '--out', str(output)]
+            failed = subprocess.run(cmd + ['--defer-all'], capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertFalse(output.exists())
+            result = subprocess.run(cmd + ['--defer-all', '--confirm-defer-all'], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('BLOCK_HOLDS_DEFERRED_NO_UPLOAD', result.stdout)
+            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            decisions = json.loads(output.read_text(encoding='utf-8'))
+            counts = self.apply(decisions)
+            self.assertEqual(counts['excluded_human_review'], 2)
+            self.assertEqual(counts['hold_unknown_recent'], 0)
+            self.assertEqual(counts['hold_contact_ambiguous'], 0)
+            self.assertEqual(counts['selected_marked'], 5)
+            self.assertNotIn('private', output.read_text(encoding='utf-8'))
+            self.assertNotEqual(subprocess.run(cmd + ['--defer-all', '--confirm-defer-all'], capture_output=True).returncode, 0)
 
     def test_old_report_without_vcf_fingerprint_is_rejected(self):
         del self.report['vcf_sha256']

@@ -14,7 +14,10 @@
 // data proves nothing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 // A parent whose name sorts AFTER its child: the shape a per-table export produces.
@@ -89,4 +92,31 @@ test('backup restore uses a unique scratch name and never deletes a pre-existing
   assert.match(workflow, /EPHEM_RESTORE_NAME="nasr-crm-restore-\$backup_suffix"/);
   assert.match(workflow, /scratch-db-name-exists-refusing-delete/);
   assert.doesNotMatch(workflow, /database\/\$old_ephem/);
+});
+
+
+test('backup loads historical data without firing guards, and restores trigger and view definitions', () => {
+  const yaml = readFileSync(new URL('../../.github/workflows/crm-phase2-backup.yml', import.meta.url), 'utf8');
+  const captured = yaml.match(/cat << 'EOF_NODE' > "\$TMP\/build_and_verify\.mjs"\n([\s\S]*?)\n          EOF_NODE/);
+  assert.ok(captured, 'expected backup builder');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'crm-backup-trigger-test-'));
+  try {
+    const file = name => path.join(dir, name);
+    writeFileSync(file('builder.mjs'), captured[1].replace(/^          /gm, ''));
+    writeFileSync(file('schema.sql'), `CREATE TABLE sample(id INTEGER PRIMARY KEY, value TEXT NOT NULL);
+CREATE TRIGGER sample_guard BEFORE INSERT ON sample BEGIN SELECT RAISE(ABORT, 'ledger_guard'); END;
+CREATE VIEW sample_view AS SELECT id FROM sample;`);
+    writeFileSync(file('data.sql'), "INSERT INTO sample(id,value) VALUES(1,'synthetic');");
+    writeFileSync(file('migrations.json'), '[]');
+    const run = spawnSync(process.execPath, [file('builder.mjs'), 'synthetic', file('schema.sql'), file('data.sql'),
+      file('migrations.json'), file('bundle.sql'), file('meta.json'), ''], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    const db = new DatabaseSync(':memory:');
+    try {
+      db.exec(readFileSync(file('bundle.sql'), 'utf8'));
+      assert.equal(db.prepare('SELECT count(*) AS n FROM sample_view').get().n, 1);
+      assert.throws(() => db.exec("INSERT INTO sample(id,value) VALUES(2,'must fail')"), /ledger_guard/);
+      assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='trigger' AND name='sample_guard'").get().n, 1);
+    } finally { db.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
