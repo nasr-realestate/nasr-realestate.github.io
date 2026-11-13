@@ -1,0 +1,81 @@
+name: CRM antiX read-only deployment diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-d1-test-mutex
+  cancel-in-progress: false
+
+jobs:
+  diagnostic:
+    if: github.repository == 'nasr-realestate/nasr-realestate.github.io' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+    outputs:
+      result: ${{ steps.probe.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: probe
+        name: Check binding and query compatibility without customer data
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          API='https://api.cloudflare.com/client/v4'
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          result=unknown
+          finish() { echo "result=$result" >> "$GITHUB_OUTPUT"; }
+          if ! curl -fsS -H "$AUTH" "$API/accounts?per_page=100" > "$tmp/accounts" 2>/dev/null; then
+            result=accounts_query_failed; finish; exit 1
+          fi
+          account=$(jq -r '.result[0].id // empty' "$tmp/accounts")
+          if [ -z "$account" ]; then result=account_missing; finish; exit 1; fi
+          export CLOUDFLARE_ACCOUNT_ID="$account"
+          if ! curl -fsS -H "$AUTH" "$API/accounts/$account/workers/scripts/nasr-crm-api-test/settings" > "$tmp/settings" 2>/dev/null; then
+            result=worker_settings_failed; finish; exit 1
+          fi
+          if ! jq -e '.result.bindings | any(.name == "DB" and .type == "d1" and .id == "760079c6-85f9-4a30-aa19-9a66f95d421a")' "$tmp/settings" >/dev/null; then
+            result=active_binding_unverified; finish; exit 1
+          fi
+          cfg=_worker/wrangler.crm.toml
+          if ! grep -Fq 'database_id = "760079c6-85f9-4a30-aa19-9a66f95d421a"' "$cfg" || grep -Fq 'ace5c9a2-c6b1-47b3-adf1-77e84ac50abf' "$cfg"; then
+            result=config_binding_mismatch; finish; exit 1
+          fi
+          check() {
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$cfg" --command "$1" > "$tmp/query" 2>/dev/null
+          }
+          if ! check "SELECT COUNT(*) n FROM (SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%')"; then
+            result=contacts_query_failed; finish; exit 1
+          fi
+          if ! check "SELECT COUNT(*) n FROM (SELECT p.id, p.contact_id, p.phone_key, p.label, p.is_primary, p.source_type, p.source_ref FROM crm_contact_phones p JOIN crm_contacts c ON c.id=p.contact_id WHERE c.name NOT LIKE 'TEST ONLY%')"; then
+            result=phones_query_failed; finish; exit 1
+          fi
+          if ! check "SELECT COUNT(*) n FROM (SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid='wa:synthetic-diagnostic')"; then
+            result=conversations_query_failed; finish; exit 1
+          fi
+          if ! check "SELECT COUNT(*) n FROM (SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key='not-a-real-ticket')"; then
+            result=ticket_query_failed; finish; exit 1
+          fi
+          result=binding_and_read_queries_ok
+          finish
+  summary:
+    needs: diagnostic
+    if: always()
+    name: 'Read-only diagnostic: ${{ needs.diagnostic.outputs.result }}'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Fixed status code only; no customer data'
