@@ -19,7 +19,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 VERSION = "antix-wa-sync-v1"
@@ -288,6 +288,75 @@ def open_message_db(decrypted: Path, work: Path) -> Path:
     return db
 
 
+def select_chats(exported: dict, index: dict, as_of: datetime) -> tuple[dict, dict]:
+    """Apply the user's scope. Unknown JID types are held, never guessed."""
+    if as_of.tzinfo is None:
+        raise SyncError("تاريخ التصفية يجب أن يتضمن المنطقة الزمنية")
+    cutoff = (as_of - timedelta(days=15)).timestamp()
+    until = as_of.timestamp()
+    selected, counts = {}, {}
+    def count(reason):
+        counts[reason] = counts.get(reason, 0) + 1
+    for jid, chat in exported.items():
+        local, _, domain = jid.partition("@")
+        if domain in {"g.us", "newsletter", "broadcast"}:
+            count("excluded_non_direct")
+            continue
+        if domain not in {"s.whatsapp.net", "c.us"} or not re.fullmatch(r"[0-9]{8,15}", local):
+            count("hold_unresolved_jid")
+            continue
+        card = index.get(local)
+        if card and card.get("excluded"):
+            count("excluded_spiral")
+            continue
+        if card and card.get("ambiguous"):
+            count("hold_contact_ambiguous")
+            continue
+        # Only actual message records count, not system events.
+        recent = any(not msg.get("meta") and cutoff <= epoch_seconds(msg.get("timestamp")) <= until
+                     for msg in chat.get("messages", {}).values())
+        if not card and recent:
+            # A phone absent from the snapshot might be an excluded person under
+            # another number. Do not export it until separately reviewed.
+            count("hold_unknown_recent")
+            continue
+        if card and card.get("marked"):
+            count("selected_marked")
+        elif recent:
+            count("selected_recent")
+        else:
+            count("excluded_old_unmarked")
+            continue
+        if card and card.get("name"):
+            chat = {**chat, "name": card["name"]}
+        selected[jid] = chat
+    return selected, counts
+
+
+def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
+    policy = config.get("selection")
+    if not isinstance(policy, dict) or policy.get("policy") != "marked-or-recent-v1":
+        raise SyncError("إعداد سياسة التصفية غير صالح")
+    try:
+        path = Path(policy["vcf_path"]).expanduser().resolve()
+        expected = policy["vcf_sha256"]
+        when = datetime.fromisoformat(policy["as_of"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SyncError("إعدادات دفتر العناوين أو تاريخ التصفية غير صالحة") from exc
+    if when.tzinfo is None or not isinstance(expected, str) or not SHA_RE.fullmatch(expected):
+        raise SyncError("تاريخ التصفية أو بصمة الدفتر غير صالحين")
+    if not path.is_file() or file_sha(path) != expected:
+        raise SyncError("دفتر العناوين مفقود أو تغيرت بصمته؛ لم تُجهز دفعة جديدة")
+    output = work / "contacts-index.json"
+    run_tool([config.get("node_bin", "node"), str(Path(__file__).with_name("selection.mjs")), str(path), str(output)], work)
+    if file_sha(path) != expected:
+        raise SyncError("تغير دفتر العناوين أثناء قراءته")
+    result = load_json(output, None)
+    if not isinstance(result, dict) or not isinstance(result.get("index"), dict):
+        raise SyncError("فهرس دفتر العناوين غير صالح")
+    return result["index"], when
+
+
 def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
     backup = Path(config["backup_path"]).expanduser().resolve()
     key = Path(config["key_path"]).expanduser().resolve()
@@ -316,7 +385,16 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         if config.get("wa_db_path"):
             argv += ["--wa", str(Path(config["wa_db_path"]).expanduser().resolve())]
         run_tool(argv, work)
-        chats, counts = plan_chats(read_export(exported), state)
+        exported_data = read_export(exported)
+        scope_counts = {}
+        if config.get("selection") is not None:
+            index, as_of = selection_index(config, work)
+            exported_data, scope_counts = select_chats(exported_data, index, as_of)
+            # Unverified preparations carry no committed remote identity. Re-plan them
+            # with the selected address-book names; uploaded identities stay frozen.
+            state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
+        chats, counts = plan_chats(exported_data, state)
+        counts.update(scope_counts)
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")
         for item in chats:

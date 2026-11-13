@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { audit } from '../audit-address-book.mjs';
 
-const card = (name, phones) => `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\n${phones.map(p => `TEL:${p}`).join('\n')}\nEND:VCARD\n`;
+const card = (name, phones) => `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\n${phones.map(p => 'TEL:' + p).join('\n')}\nEND:VCARD\n`;
 
 test('exclusion takes priority and spreads over shared numbers, no PII in output', () => {
   const text = card('🌀 جهة اصطناعية', ['+201000000001'])

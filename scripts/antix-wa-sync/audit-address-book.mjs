@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { parseVcfContacts } from '../crm/build-whatsapp-import.mjs';
 
+// Traverses the contact-number graph so exclusions propagate across aliases.
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export function audit(text) {
   const cards = parseVcfContacts(text);
   const excluded = [];
@@ -48,6 +50,8 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const text = new TextDecoder('utf-8', { fatal: true }).decode(file);
     const result = audit(text);
     if (!result.cards) throw new Error('no readable cards');
+    // MD5 is used only to compare the file with Google Drive's checksum, not for security.
+    // eslint-disable-next-line sonarjs/hashing
     console.log(JSON.stringify({ bytes: file.length, md5: crypto.createHash('md5').update(file).digest('hex'), ...result }));
   } catch {
     console.error('ADDRESS_BOOK_AUDIT_FAILED: تعذّرت قراءة الدفتر بصيغة UTF-8 أو لم يُعثر على بطاقات صالحة');
