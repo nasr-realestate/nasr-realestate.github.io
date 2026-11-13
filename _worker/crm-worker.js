@@ -1849,7 +1849,10 @@ async function handleSealedIngest(request, env, config) {
   if (!SEALED_ENVELOPE_RE.test(envelope)) return json({ error: 'invalid_sealed_envelope' }, 400);
 
   const ticketKey = `sealed-ticket:${await sha256Hex(envelope)}`;
-  const ticket = await env.DB.prepare('SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key=?').bind(ticketKey).first();
+  let ticket;
+  try {
+    ticket = await env.DB.prepare('SELECT resource_id FROM crm_idempotency_receipts WHERE submission_key=?').bind(ticketKey).first();
+  } catch { return json({ error: 'sealed_ticket_read_failed' }, 500); }
   if (!ticket || ticket.resource_id !== 'authorized_pending') {
     return json({ error: 'unauthorized_sealed_ingest' }, 403);
   }
@@ -1866,14 +1869,20 @@ async function handleSealedIngest(request, env, config) {
     if (cleanPol === 'strict_complete_contacts_only' && !unsealed.dryRun && !String(unsealed.syncBundle?.backup_verified_ref || '').trim()) {
       return json({ ok: false, error: 'backup_verified_ref_required_before_foundation_cleanup' }, 400);
     }
-    const consumed = await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending' RETURNING submission_key")
-      .bind(ticketKey).first();
+    let consumed;
+    try {
+      consumed = await env.DB.prepare("UPDATE crm_idempotency_receipts SET resource_id='consumed' WHERE submission_key=? AND resource_id='authorized_pending' RETURNING submission_key")
+        .bind(ticketKey).first();
+    } catch { return json({ error: 'sealed_ticket_consume_failed' }, 500); }
     if (!consumed) return json({ error: 'unauthorized_sealed_ingest' }, 403);
-    const syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, {
-      dryRun: unsealed.dryRun,
-      allowAntixMetadataWrite: env.CRM_ANTIX_METADATA_WRITE_ENABLED === 'true',
-      antixVerifiedBackupRef: env.CRM_ANTIX_VERIFIED_BACKUP_REF,
-    });
+    let syncResult;
+    try {
+      syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, {
+        dryRun: unsealed.dryRun,
+        allowAntixMetadataWrite: env.CRM_ANTIX_METADATA_WRITE_ENABLED === 'true',
+        antixVerifiedBackupRef: env.CRM_ANTIX_VERIFIED_BACKUP_REF,
+      });
+    } catch { return json({ error: 'sealed_sync_failed' }, 500); }
     return json(syncResult, syncResult?.ok === false ? 400 : 200);
   }
   if (!Array.isArray(unsealed.entries) || unsealed.entries.length === 0 || unsealed.entries.length > 250) {

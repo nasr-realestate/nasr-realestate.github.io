@@ -1190,3 +1190,32 @@ test('locally prepared encrypted metadata write reaches the guarded worker witho
     assert.doesNotMatch(JSON.stringify(result), /حساسة|201111111111/);
   } finally { sqlite.close(); }
 });
+
+test('sealed preview failures return fixed stage codes without exposing error data', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u } });
+  const item = { conversation_uid: 'wa:synthetic-diag', selected_phone: '+201111111111', title: 'اصطناعي',
+    raw_txt: '13/11/2025, 04:13 - عميل: محتوى اصطناعي' };
+  const original = env.DB;
+  try {
+    for (const [prefix, code] of [
+      ['SELECT resource_id FROM crm_idempotency_receipts', 'sealed_ticket_read_failed'],
+      ['UPDATE crm_idempotency_receipts', 'sealed_ticket_consume_failed'],
+      ['SELECT id, name, communication_consent FROM crm_contacts', 'sealed_sync_failed'],
+    ]) {
+      const envelope = (await sealDryRunBatches({ conversations: [item], vcf_contacts: [] }, keys.publicKeySpkiB64u))[0].envelope;
+      const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(envelope))).toString('hex');
+      sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${hash}`);
+      env.DB = { ...original, prepare(sql) {
+        if (sql.startsWith(prefix)) throw new Error('PRIVATE SYNTHETIC DETAIL');
+        return original.prepare(sql);
+      } };
+      const response = await worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: envelope }),
+      }), env);
+      assert.equal(response.status, 500);
+      assert.deepEqual(await response.json(), { error: code });
+      env.DB = original;
+    }
+  } finally { env.DB = original; sqlite.close(); }
+});
