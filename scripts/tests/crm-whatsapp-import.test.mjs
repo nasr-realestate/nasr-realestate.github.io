@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -347,4 +348,79 @@ test('WA-23 every folder is audited at the door: a number and a mark per card', 
   assert.equal(stats.directory.clean, false);
   assert.deepEqual(stats.directory.without_number, ['🟢 بلا رقم']);
   assert.deepEqual(stats.directory.without_mark, ['بلا علامة']);
+});
+
+// ── antiX intake ZIP metadata (WA-SYNC) ─────────────────────────────────────
+function writeSyncZip(dir, { meta = null, text = CHAT, duplicateMeta = false } = {}) {
+  fs.writeFileSync(path.join(dir, 'chat.txt'), text, 'utf8');
+  const entries = ['chat.txt'];
+  if (meta) {
+    fs.writeFileSync(path.join(dir, 'crm-sync.json'), JSON.stringify(meta), 'utf8');
+    entries.push('crm-sync.json');
+    if (duplicateMeta) {
+      fs.mkdirSync(path.join(dir, 'dup'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'dup', 'crm-sync.json'), JSON.stringify(meta), 'utf8');
+      const zipPath = path.join(dir, 'chat.zip');
+      execFileSync('zip', ['-q', zipPath, ...entries], { cwd: dir });
+      // Info-ZIP updates an existing name; append a true duplicate entry with Python's zipfile.
+      execFileSync('python3', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"a"); z.writestr("crm-sync.json", open(sys.argv[2],"rb").read()); z.close()', zipPath, path.join(dir, 'dup', 'crm-sync.json')]);
+      return zipPath;
+    }
+  }
+  const zip = path.join(dir, 'chat.zip');
+  execFileSync('zip', ['-q', zip, ...entries], { cwd: dir });
+  return zip;
+}
+
+const SYNC_META = {
+  schema: 'antix-wa-sync-v1',
+  conversation_uid: 'wa:antix:0123456789abcdef',
+  chat_title: 'عميل اصطناعي',
+  text_sha256: crypto.createHash('sha256').update(CHAT).digest('hex'),
+};
+
+test('WA-25 a WA-SYNC zip carries a frozen uid and the real chat title', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-sync-'));
+  const zip = writeSyncZip(dir, { meta: SYNC_META });
+  const { text, sync } = readChatTextFromZip(zip);
+  assert.equal(text, CHAT);
+  assert.equal(sync.conversation_uid, SYNC_META.conversation_uid);
+  const { bundle, report } = await buildBundle({ vcfTexts: [], chatSources: [{ label: path.basename(zip), text, sync }] });
+  assert.equal(bundle.conversations[0].conversation_uid, SYNC_META.conversation_uid);
+  assert.equal(report[0].chat_title, 'عميل اصطناعي');
+  assert.equal(report[0].messages, 3);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('WA-26 legacy zips without metadata keep the old title identity', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-sync-'));
+  const zip = writeSyncZip(dir);
+  const { text, sync } = readChatTextFromZip(zip);
+  assert.equal(sync, null);
+  const { bundle } = await buildBundle({ vcfTexts: [], chatSources: [{ label: 'دردشة في واتساب مع عميل اصطناعي.zip', text, sync }] });
+  assert.equal(bundle.conversations[0].conversation_uid, conversationUidFrom('عميل اصطناعي'));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('WA-27 invalid or duplicate sync metadata is rejected', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-sync-'));
+  const bad = writeSyncZip(dir, { meta: { ...SYNC_META, schema: 'other' } });
+  assert.throws(() => readChatTextFromZip(bad), /zip-sync-metadata-invalid/);
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-sync-'));
+  const dup = writeSyncZip(dir2, { meta: SYNC_META, duplicateMeta: true });
+  assert.throws(() => readChatTextFromZip(dup), /zip-sync-metadata-duplicate/);
+  fs.rmSync(dir2, { recursive: true, force: true });
+});
+
+test('WA-28 a transcript edited after hashing fails the sync hash gate', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-sync-'));
+  const zip = writeSyncZip(dir, { meta: SYNC_META, text: `${CHAT}\nسطر إضافي` });
+  const { text, sync } = readChatTextFromZip(zip);
+  await assert.rejects(
+    buildBundle({ vcfTexts: [], chatSources: [{ label: path.basename(zip), text, sync }] }),
+    /zip-sync-text-hash-mismatch/,
+  );
+  fs.rmSync(dir, { recursive: true, force: true });
 });

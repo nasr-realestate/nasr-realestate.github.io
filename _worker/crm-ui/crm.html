@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="/crm-assets/icon-192.png">
   <link rel="apple-touch-icon" href="/crm-assets/icon-192.png">
   <title>إدارة العملاء والفرص — CRM</title>
-  <link rel="stylesheet" href="/crm-assets/app.css?v=20261107">
+  <link rel="stylesheet" href="/crm-assets/app.css?v=20261113-mobile">
   <script type="module" src="/crm-assets/app.js"></script>
 </head>
 <body>
@@ -66,20 +66,17 @@
 
       <section class="panel" id="dashboard-panel" aria-labelledby="dashboard-title">
         <div class="section-heading"><div><p class="eyebrow">متابعتك اليوم</p><h1 id="dashboard-title">نظرة عامة</h1></div><div class="top-actions"><button class="button primary" type="button" data-open-panel="quick-entry-panel">⚡ عميل + فرصة بـ3 نقرات</button><label class="compact-label">التاريخ <input id="dashboard-day" type="date"></label></div></div>
-        <section class="card push-card" id="push-card" aria-labelledby="push-card-title">
-          <div class="card-heading">
-            <h2 id="push-card-title">🔔 إشعارات المواعيد والمتابعات على هذا الجهاز</h2>
-            <span class="pill" id="push-status-pill">جارٍ الفحص…</span>
-          </div>
-          <p class="muted" id="push-status-text">فحص جاهزية تنبيهات الموبايل…</p>
-          <div class="form-actions">
-            <button class="button primary" type="button" id="push-enable-btn" hidden>🔔 تفعيل الإشعارات على هذا الجهاز</button>
-            <button class="button" type="button" id="push-test-btn" hidden>📨 إرسال إشعار تجريبي الآن</button>
-            <button class="button quiet" type="button" id="push-check-btn" hidden>⚡ فحص المواعيد المستحقة الآن</button>
-            <button class="button danger small" type="button" id="push-disable-btn" hidden>إيقاف الإشعارات</button>
-            <span id="push-feedback" class="muted" aria-live="polite"></span>
-          </div>
+        <section class="today-hero" aria-labelledby="today-hero-title">
+          <div class="today-hero-copy"><p class="today-kicker">مساحة عملك اليومية</p><h2 id="today-hero-title">كل شغلك، من مكان واحد.</h2><p>ابدأ بالمتابعات، ثم راجع العملاء والفرص والطلبات من هاتفك.</p></div>
+          <div class="today-hero-mark" aria-hidden="true">ن<span>✦</span></div>
         </section>
+        <div class="daily-actions" aria-label="اختصارات العمل">
+          <button class="daily-action daily-action-primary" type="button" data-open-panel="followups-panel"><span class="daily-icon">↗</span><span><strong>المتابعة والمحادثات</strong><small>مستحق، متأخر، وبانتظار الرد</small></span><span aria-hidden="true">←</span></button>
+          <button class="daily-action" type="button" data-open-panel="contacts-panel"><span class="daily-icon">◎</span><span><strong>العملاء</strong><small>ابحث وافتح ملف العميل</small></span><span aria-hidden="true">←</span></button>
+          <button class="daily-action" type="button" data-open-panel="a5-requests-panel"><span class="daily-icon">⌂</span><span><strong>طلبات العملاء</strong><small>تابع الطلبات الحالية</small></span><span aria-hidden="true">←</span></button>
+          <button class="daily-action" type="button" data-open-panel="quick-entry-panel"><span class="daily-icon">＋</span><span><strong>تسجيل سريع</strong><small>عميل وفرصة جديدة</small></span><span aria-hidden="true">←</span></button>
+        </div>
+        <div class="section-label"><span>ملخص العمل</span><small>بحسب بيانات CRM المحمّلة</small></div>
         <div class="metrics" id="dashboard-metrics" aria-live="polite"></div>
         <section class="card track-hub-card" id="track-hub" aria-labelledby="track-hub-title">
           <div class="card-heading">
@@ -94,6 +91,20 @@
           <section class="card"><div class="card-heading"><h2>مستحق اليوم</h2><span class="count" id="due-count">0</span></div><div id="due-list" class="stack muted">جارٍ التحميل…</div></section>
           <section class="card"><div class="card-heading"><h2>متأخر</h2><span class="count danger-count" id="overdue-count">0</span></div><div id="overdue-list" class="stack muted">جارٍ التحميل…</div></section>
         </div>
+        <section class="card push-card" id="push-card" aria-labelledby="push-card-title">
+          <div class="card-heading">
+            <h2 id="push-card-title">🔔 إشعارات المواعيد والمتابعات على هذا الجهاز</h2>
+            <span class="pill" id="push-status-pill">جارٍ الفحص…</span>
+          </div>
+          <p class="muted" id="push-status-text">فحص جاهزية تنبيهات الموبايل…</p>
+          <div class="form-actions">
+            <button class="button primary" type="button" id="push-enable-btn" hidden>🔔 تفعيل الإشعارات على هذا الجهاز</button>
+            <button class="button" type="button" id="push-test-btn" hidden>📨 إرسال إشعار تجريبي الآن</button>
+            <button class="button quiet" type="button" id="push-check-btn" hidden>⚡ فحص المواعيد المستحقة الآن</button>
+            <button class="button danger small" type="button" id="push-disable-btn" hidden>إيقاف الإشعارات</button>
+            <span id="push-feedback" class="muted" aria-live="polite"></span>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="followups-panel" hidden aria-labelledby="followups-title">
@@ -352,6 +363,14 @@
           <div class="full form-actions"><button class="button" type="submit">تسجيل الاقتراح</button><span class="muted">يتطلب قرار link_proposed أولًا، ولا يلمس سجل العميل.</span></div>
         </form>
       </section>
+
+      <nav class="mobile-dock" aria-label="التنقل السريع">
+        <button type="button" class="dock-link active" data-mobile-panel="dashboard-panel" aria-current="page"><span aria-hidden="true">⌂</span><small>الرئيسية</small></button>
+        <button type="button" class="dock-link" data-mobile-panel="followups-panel"><span aria-hidden="true">◷</span><small>المتابعات</small></button>
+        <button type="button" class="dock-link dock-add" data-mobile-panel="quick-entry-panel"><span aria-hidden="true">＋</span><small>تسجيل</small></button>
+        <button type="button" class="dock-link" data-mobile-panel="contacts-panel"><span aria-hidden="true">◎</span><small>العملاء</small></button>
+        <button type="button" class="dock-link" data-mobile-panel="opportunities-panel"><span aria-hidden="true">◇</span><small>الفرص</small></button>
+      </nav>
 
       <div class="sheet-backdrop" id="record-sheet" hidden role="dialog" aria-labelledby="record-sheet-title">
         <div class="sheet-panel" id="record-sheet-panel">

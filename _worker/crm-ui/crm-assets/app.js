@@ -304,6 +304,12 @@ function openPanel(panelId, { preserveScroll = false, keepSheet = false } = {}) 
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', String(active));
   });
+  document.querySelectorAll('[data-mobile-panel]').forEach(item => {
+    const active = item.dataset.mobilePanel === panelId;
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
   if (!preserveScroll && !wasAlreadyOpen) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -2411,6 +2417,7 @@ async function handleNewOpportunitySubmit(event) {
 }
 
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => openPanel(tab.dataset.panel));
+for (const item of document.querySelectorAll('[data-mobile-panel]')) item.addEventListener('click', () => openPanel(item.dataset.mobilePanel));
 
 /**
  * Deep link from a notification: `#<panel>-panel` opens that panel, and the tab is clicked rather
