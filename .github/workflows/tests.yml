@@ -39,6 +39,13 @@ jobs:
         with:
           node-version: "22"
 
+      # The antiX toolchain and doctor explicitly require Python 3.11. Ubuntu
+      # runner defaults can change independently of Node and break those tests.
+      - name: Setup Python for antiX safety tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       # التبعيات هنا للتطوير/الاختبار فقط (server.js واختبار تكافؤ قارئ
       #    front matter) — وخطوة نشر الموقع (deploy.yml) لا تحتاج npm إطلاقًا.
       #    `npm ci` يثبّت الإصدارات من package-lock.json المحفوظ (2026-10-16)
