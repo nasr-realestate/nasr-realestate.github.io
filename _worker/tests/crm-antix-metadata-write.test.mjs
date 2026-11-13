@@ -49,3 +49,54 @@ test('rejects body text, duplicates and malformed inputs before any database acc
     await assert.rejects(writeAntixMetadataPrototype(db, batch), /invalid/);
   }
 });
+
+test('new phone creates customer, provenance and metadata atomically without assigning by name', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('existing','🟢 اصطناعي')");
+    const conflict = item('wa:conflict', '+201111111111');
+    const unique = { ...item('wa:new', '+201222222222'), title: '🟡 آخر تجريبي' };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [conflict, unique], { createMissing: true }),
+      { attempted: 2, inserted: 1, not_inserted: 1, created_contacts: 1 });
+    const row = sqlite.prepare(`SELECT c.name,c.communication_consent,p.phone_key,cv.raw_text,cv.match_method
+      FROM crm_conversations cv JOIN crm_contacts c ON c.id=cv.contact_id
+      JOIN crm_contact_phones p ON p.contact_id=c.id WHERE cv.conversation_uid='wa:new'`).get();
+    assert.deepEqual({ ...row }, { name: '🟡 آخر تجريبي', communication_consent: 'request_only',
+      phone_key: '201222222222', raw_text: '', match_method: 'exact_phone' });
+    assert.equal(sqlite.prepare("SELECT count(*) n FROM crm_contact_audit_log WHERE field_name='contact_created'").get().n, 1);
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversation_messages').get().n, 0);
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [conflict, unique], { createMissing: true }),
+      { attempted: 2, inserted: 0, not_inserted: 2, created_contacts: 0 });
+  } finally { sqlite.close(); }
+});
+
+test('existing conversation UID prevents creation of orphan contacts for another phone', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('original','اسم آخر')");
+    sqlite.exec("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('phone','original','201111111111')");
+    const old = { ...item('wa:existing', '+201111111111'), title: 'اسم آخر' };
+    await writeAntixMetadataPrototype(db, [old]);
+    const collision = { ...item('wa:existing', '+201222222222'), title: 'اسم جديد' };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [collision], { createMissing: true }),
+      { attempted: 1, inserted: 0, not_inserted: 1, created_contacts: 0 });
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_contacts').get().n, 1);
+    assert.equal(sqlite.prepare("SELECT contact_id FROM crm_conversations WHERE conversation_uid='wa:existing'").get().contact_id, 'original');
+  } finally { sqlite.close(); }
+});
+
+test('any insert failure rolls back all contacts, phones, audit and conversations in the batch', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("CREATE TRIGGER synthetic_block BEFORE INSERT ON crm_conversations BEGIN SELECT RAISE(ABORT,'synthetic failure'); END");
+    await assert.rejects(writeAntixMetadataPrototype(db, [item('wa:one', '+201111111111')], { createMissing: true }));
+    for (const table of ['crm_contacts', 'crm_contact_phones', 'crm_contact_audit_log', 'crm_conversations']) {
+      assert.equal(sqlite.prepare(`SELECT count(*) n FROM ${table}`).get().n, 0);
+    }
+  } finally { sqlite.close(); }
+});
+
+test('hidden bidi controls cannot bypass excluded marker check', () => {
+  const hidden = { ...item('wa:one', '+201111111111'), title: '\u200f🌀 مستبعد' };
+  assert.throws(() => validateAntixMetadata([hidden]));
+});
