@@ -367,7 +367,7 @@ def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     return result["index"], when
 
 
-def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
+def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True) -> tuple[list[dict], dict, Path]:
     backup = Path(config["backup_path"]).expanduser().resolve()
     key = Path(config["key_path"]).expanduser().resolve()
     if not backup.is_file() or not key.is_file():
@@ -379,10 +379,12 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
     if key.stat().st_mode & 0o077:
         raise SyncError("ملف المفتاح يجب أن يكون بصلاحية 600")
     before = file_sha(backup)
-    outbox = private_dir(state_dir / "outbox")
-    # Only generated intake ZIPs are cleared; Drive originals are never touched.
-    for old in outbox.glob("WA-SYNC__*.zip"):
-        old.unlink()
+    outbox = state_dir / "outbox"
+    if write_outbox:
+        outbox = private_dir(outbox)
+        # Only generated intake ZIPs are cleared; Drive originals are never touched.
+        for old in outbox.glob("WA-SYNC__*.zip"):
+            old.unlink()
     state = validate_state(load_json(state_dir / "state.json", empty_state()))
     with tempfile.TemporaryDirectory(prefix="nasr-wa-", dir=state_dir) as tmp:
         work = Path(tmp)
@@ -408,7 +410,7 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")
         for item in chats:
-            if item["status"] in PENDING_STATUSES:
+            if write_outbox and item["status"] in PENDING_STATUSES:
                 item["filename"] = f"WA-SYNC__{item['ref'][:16]}__{item['text_sha256'][:16]}.zip"
                 write_chat_zip(outbox / item["filename"], item)
     return chats, counts, outbox

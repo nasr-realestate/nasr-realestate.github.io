@@ -983,6 +983,15 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     ? bundle.restore_opportunities
     : [];
 
+  // Locally filtered antiX batches include direct-JID evidence, but the legacy
+  // sync path resolves by name and may adopt a legacy conversation by title.
+  // Refuse all writes until phone-based identity and raw-text retention are
+  // implemented end-to-end. Dry-runs must not carry contacts for name matching.
+  if (conversations.some(c => Object.hasOwn(c || {}, 'selected_phone')) &&
+      (!dryRun || vcfContacts.length || restoreOpportunities.length)) {
+    return { ok: false, error: 'antix_phone_verified_write_not_available' };
+  }
+
   const existingContactsRes = await db.prepare(
     "SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'",
   ).all();
