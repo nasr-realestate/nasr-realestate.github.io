@@ -70,6 +70,9 @@ jobs:
             while IFS= read -r line; do
               printf '::error title=Failing test::%s\n' "${line//%/%25}"
             done < <(grep '^not ok ' /tmp/blocking-suite.log | head -20 || true)
+            while IFS= read -r line; do
+              printf '::error title=Python subtest::%s\n' "${line//%/%25}"
+            done < <(grep -E '(FAIL|ERROR): test_[A-Za-z0-9_]+' /tmp/blocking-suite.log | sed -E 's/.*((FAIL|ERROR): test_[A-Za-z0-9_]+).*/\1/' | sort -u | head -20 || true)
             exit 1
           fi
 
