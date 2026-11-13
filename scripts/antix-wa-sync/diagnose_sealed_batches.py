@@ -19,7 +19,7 @@ import { pathToFileURL } from 'node:url';
 const load = p => import(pathToFileURL(path.resolve(p)).href);
 const { extractMetadata, sealMetadataBatches, MAX_RAW_BYTES } = await load('scripts/antix-wa-sync/sealed-batch-plan.mjs');
 const { validateAntixMetadata } = await load('_worker/crm-antix-metadata-write.js');
-const { normalizeInternationalPhone } = await load('_worker/crm-chat-intel.js');
+const { normalizeInternationalPhone, cleanBidiControls } = await load('_worker/crm-chat-intel.js');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const counts = {};
 const inc = k => { counts[k] = (counts[k] || 0) + 1; };
@@ -34,7 +34,18 @@ for (const c of input.conversations) {
   try {
     const meta = await extractMetadata(c);
     try { validateAntixMetadata([meta]); }
-    catch { inc('metadata_invalid'); }
+    catch {
+      inc('metadata_invalid');
+      const title = cleanBidiControls(meta.title);
+      if (!/^wa:\S{1,240}$/u.test(meta.conversation_uid)) inc('metadata_uid_invalid');
+      if (title.includes('🌀')) inc('metadata_excluded_marker');
+      if (/^TEST ONLY/i.test(title.trimStart())) inc('metadata_test_marker');
+      if (!Number.isSafeInteger(meta.message_count) || meta.message_count < 1) inc('metadata_count_invalid');
+      const validDate = v => v === null || (typeof v === 'string' && Number.isFinite(Date.parse(v)) && new Date(Date.parse(v)).toISOString() === v);
+      if (!validDate(meta.first_message_at) || !validDate(meta.last_message_at)) inc('metadata_date_invalid');
+      if (meta.first_message_at && meta.last_message_at && meta.first_message_at > meta.last_message_at) inc('metadata_dates_reversed');
+      if (!/^[a-f\d]{64}$/.test(meta.raw_sha256)) inc('metadata_hash_invalid');
+    }
   } catch (error) {
     inc(error?.message === 'unparseable-transcript' ? 'unparseable_transcript' : 'source_metadata_invalid');
   }
