@@ -367,7 +367,37 @@ def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     return result["index"], when
 
 
-def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
+def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
+                          backup_sha: str, selection: dict) -> dict:
+    """Only explicit human exclusions; cannot approve or include any held identity."""
+    if (not isinstance(decisions, dict) or decisions.get("schema") != "antix-hold-decisions-v1"
+            or decisions.get("backup_sha256") != backup_sha
+            or decisions.get("vcf_sha256") != selection.get("vcf_sha256")
+            or decisions.get("as_of") != selection.get("as_of")):
+        raise SyncError("ملف القرارات لا يطابق النسخة والدفتر ووقت التصفية")
+    rows = decisions.get("rows")
+    if not isinstance(rows, list):
+        raise SyncError("قرارات المراجعة غير صالحة")
+    current = {row["ref"]: row["reason"] for row in review_rows}
+    if len(current) != len(review_rows):
+        raise SyncError("تكررت هوية في تقرير المراجعة")
+    seen = set()
+    result = dict(counts)
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SyncError("قرار مراجعة غير صالح")
+        ref, reason, action = row.get("ref"), row.get("reason"), row.get("action")
+        if ref not in current or ref in seen or current[ref] != reason or action not in {"pending", "exclude"}:
+            raise SyncError("قرار مراجعة قديم أو مكرر أو غير مسموح")
+        seen.add(ref)
+        if action == "exclude":
+            result[reason] -= 1
+            result["excluded_human_review"] = result.get("excluded_human_review", 0) + 1
+    # Missing decisions remain holds. No decision can put a held item in selected.
+    return result
+
+
+def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisions: dict | None = None) -> tuple[list[dict], dict, Path]:
     backup = Path(config["backup_path"]).expanduser().resolve()
     key = Path(config["key_path"]).expanduser().resolve()
     if not backup.is_file() or not key.is_file():
@@ -379,10 +409,12 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
     if key.stat().st_mode & 0o077:
         raise SyncError("ملف المفتاح يجب أن يكون بصلاحية 600")
     before = file_sha(backup)
-    outbox = private_dir(state_dir / "outbox")
-    # Only generated intake ZIPs are cleared; Drive originals are never touched.
-    for old in outbox.glob("WA-SYNC__*.zip"):
-        old.unlink()
+    outbox = state_dir / "outbox"
+    if write_outbox:
+        outbox = private_dir(outbox)
+        # Only generated intake ZIPs are cleared; Drive originals are never touched.
+        for old in outbox.glob("WA-SYNC__*.zip"):
+            old.unlink()
     state = validate_state(load_json(state_dir / "state.json", empty_state()))
     with tempfile.TemporaryDirectory(prefix="nasr-wa-", dir=state_dir) as tmp:
         work = Path(tmp)
@@ -399,7 +431,10 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         scope_counts = {}
         if config.get("selection") is not None:
             index, as_of = selection_index(config, work)
-            exported_data, scope_counts = select_chats(exported_data, index, as_of)
+            review_rows = []
+            exported_data, scope_counts = select_chats(exported_data, index, as_of, review_rows)
+            if decisions is not None:
+                scope_counts = apply_hold_exclusions(decisions, review_rows, scope_counts, before, config['selection'])
             # Unverified preparations carry no committed remote identity. Re-plan them
             # with the selected address-book names; uploaded identities stay frozen.
             state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
@@ -408,7 +443,7 @@ def prepare(config: dict, state_dir: Path) -> tuple[list[dict], dict, Path]:
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")
         for item in chats:
-            if item["status"] in PENDING_STATUSES:
+            if write_outbox and item["status"] in PENDING_STATUSES:
                 item["filename"] = f"WA-SYNC__{item['ref'][:16]}__{item['text_sha256'][:16]}.zip"
                 write_chat_zip(outbox / item["filename"], item)
     return chats, counts, outbox
@@ -529,6 +564,10 @@ def main() -> int:
             if manual and not (args.dry_run or args.prepare_only or confirmed):
                 raise SyncError("وضع النقل اليدوي: شغّل --prepare-only ثم ارفع الملفات من المتصفح ثم --confirm-uploaded MANIFEST")
             do_upload = not (args.dry_run or args.prepare_only or confirmed)
+            # A hold used to be reported only after uploading or committing state.
+            # Stop before either operation; users must resolve the hold first.
+            if (do_upload or confirmed) and any(k.startswith("hold_") and v for k, v in counts.items()):
+                raise SyncError("توجد حالات معلّقة؛ لم يُنفّذ رفع آلي ولم تُعتمد الحالة")
             if do_upload:
                 upload(config["rclone_remote"], outbox, pending, config.get("rclone_bin", "rclone"),
                        Path(config["rclone_config"]).expanduser() if config.get("rclone_config") else None)

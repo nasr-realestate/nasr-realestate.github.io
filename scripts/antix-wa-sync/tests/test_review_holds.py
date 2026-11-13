@@ -29,7 +29,7 @@ class ReviewTests(unittest.TestCase):
             key.write_bytes(b'synthetic key')
             key.chmod(0o600)
             config = {'transport': 'manual', 'state_dir': str(state), 'backup_path': str(backup),
-                      'key_path': str(key)}
+                      'key_path': str(key), 'selection': {'vcf_sha256': 'b' * 64}}
             (home / 'config.json').write_text(json.dumps(config))
             now = datetime(2026, 11, 13, tzinfo=timezone.utc)
             exported = {

@@ -12,6 +12,9 @@ import {
   upsertConversationAndAnalyze,
 } from './crm-chat-intel.js';
 
+import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
+import { validateAntixMetadata, writeAntixMetadataPrototype } from './crm-antix-metadata-write.js';
+
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 
 export function inferTrackFromText(propertyType = '', intent = '', notes = '') {
@@ -983,6 +986,27 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     ? bundle.restore_opportunities
     : [];
 
+  const isAntixPreview = conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'));
+  if (isAntixPreview) {
+    if (vcfContacts.length || restoreOpportunities.length || cleanPolicy) {
+      return { ok: false, error: 'antix_phone_verified_write_not_available' };
+    }
+    if (!dryRun) {
+      // Two trusted server-side gates; an envelope cannot authorize its own backup.
+      const approvedRef = normalizedOpts.antixVerifiedBackupRef;
+      if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_v1' ||
+          typeof approvedRef !== 'string' || !approvedRef.trim() || backupRef !== approvedRef) {
+        return { ok: false, error: 'antix_phone_verified_write_not_available' };
+      }
+    }
+    try { validateAntixMetadata(conversations); }
+    catch { return { ok: false, error: 'antix_invalid_preview_batch' }; }
+    if (!dryRun) {
+      const result = await writeAntixMetadataPrototype(db, conversations, { now, createMissing: true });
+      return { ok: true, dry_run: false, antix_metadata: result };
+    }
+  }
+
   const existingContactsRes = await db.prepare(
     "SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'",
   ).all();
@@ -992,6 +1016,18 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
      JOIN crm_contacts c ON c.id = p.contact_id
      WHERE c.name NOT LIKE 'TEST ONLY%'`,
   ).all();
+
+  if (isAntixPreview) {
+    // Read-only preview: do not run name matching, legacy adoption or analysis.
+    // Limit query size and require every conversation to carry explicit evidence.
+    if (conversations.length > 10 || conversations.some(c => !Object.hasOwn(c || {}, 'selected_phone'))) {
+      return { ok: false, error: 'antix_invalid_preview_batch' };
+    }
+    const uids = conversations.map(c => typeof c?.conversation_uid === 'string' ? c.conversation_uid : '');
+    const placeholders = uids.map(() => '?').join(',');
+    const previous = await db.prepare(`SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid IN (${placeholders})`).bind(...uids).all();
+    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || []) };
+  }
 
   const contactsById = new Map();
   for (const c of existingContactsRes?.results || []) {
