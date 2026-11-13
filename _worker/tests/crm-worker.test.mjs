@@ -10,6 +10,8 @@ import worker, {
   sealIngestPayload,
 } from '../crm-worker.js';
 import { runScheduledCrmNotifications } from '../crm-push.js';
+import { sealDryRunBatches } from '../../scripts/antix-wa-sync/sealed-batch-plan.mjs';
+import { writeAntixMetadataPrototype } from '../crm-antix-metadata-write.js';
 
 const migration0001 = await readFile(new URL('../migrations/0001_crm_opportunities.sql', import.meta.url), 'utf8');
 const migration0002 = await readFile(new URL('../migrations/0002_crm_internal_auth.sql', import.meta.url), 'utf8');
@@ -1070,3 +1072,62 @@ test('POST /api/auth/ci-ticket mints single-use session from received_at and rej
   sqlite.close();
 });
 
+
+
+test('synthetic antiX sealed metadata preview is read-only and cannot be promoted to a write', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env, accessCode } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u } });
+  try {
+    sqlite.prepare("INSERT INTO crm_contacts(id,name) VALUES('phone-owner','عميل اصطناعي')").run();
+    sqlite.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('phone','phone-owner','201111111111')").run();
+    const bundle = { vcf_contacts: [], dry_run: true, conversations: [{
+      conversation_uid: 'wa:synthetic-preview', selected_phone: '+201111111111', title: 'عميل اصطناعي',
+      raw_txt: '13/11/2025, 04:13 - عميل: محتوى خاص اصطناعي لا يجب تخزينه',
+    }] };
+    const batches = await sealDryRunBatches(bundle, keys.publicKeySpkiB64u);
+    assert.equal(batches.length, 1);
+    const envelope = batches[0].envelope;
+    const send = async payload => worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: payload }),
+    }), env);
+    const authorize = async payload => {
+      const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload))).toString('hex');
+      sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${hash}`);
+    };
+    const count = table => sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
+    const before = ['crm_contacts', 'crm_contact_phones', 'crm_conversations', 'crm_conversation_messages'].map(count);
+    assert.equal((await send(envelope)).status, 403);
+    await authorize(envelope);
+    const response = await send(envelope);
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.equal(result.dry_run, true);
+    assert.equal(result.antix_phone_preview.exact_unique_phone, 1);
+    assert.doesNotMatch(JSON.stringify(result), /محتوى خاص|201111111111/);
+    assert.deepEqual(['crm_contacts', 'crm_contact_phones', 'crm_conversations', 'crm_conversation_messages'].map(count), before);
+    assert.equal((await send(envelope)).status, 403);
+    const malicious = await sealIngestPayload({ dry_run: false, sync_bundle: { vcf_contacts: [], conversations: [{
+      conversation_uid: 'wa:synthetic-preview', selected_phone: '+201111111111', title: 'عميل اصطناعي', message_count: 1,
+      first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64),
+    }] } }, keys.publicKeySpkiB64u);
+    await authorize(malicious);
+    const blocked = await send(malicious);
+    assert.equal(blocked.status, 400);
+    assert.equal((await blocked.json()).error, 'antix_phone_verified_write_not_available');
+    assert.deepEqual(['crm_contacts', 'crm_contact_phones', 'crm_conversations', 'crm_conversation_messages'].map(count), before);
+
+    // Test-only direct call: the production endpoint remains blocked above.
+    const synthetic = [{ conversation_uid: 'wa:synthetic-preview', selected_phone: '+201111111111',
+      title: 'عميل اصطناعي', message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) }];
+    assert.equal((await writeAntixMetadataPrototype(env.DB, synthetic)).inserted, 1);
+    const call = makeAuthedApiCall(env, await loginSession(env, accessCode));
+    const list = await (await call('/api/conversations')).json();
+    const chat = list.conversations.find(c => c.conversation_uid === 'wa:synthetic-preview');
+    assert.equal(chat.contact_id, 'phone-owner');
+    assert.equal(chat.message_count, 1);
+    assert.equal(chat.char_length, 0);
+    const detail = await (await call(`/api/conversations/${chat.id}`)).json();
+    assert.equal(detail.conversation.raw_text, '');
+    assert.deepEqual(detail.messages, []);
+  } finally { sqlite.close(); }
+});

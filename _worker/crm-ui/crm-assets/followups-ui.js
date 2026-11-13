@@ -308,26 +308,33 @@ export async function openConversationInViewer(conversationId, deps) {
   if (panel && panel.hidden) deps.openPanel('followups-panel');
   const viewer = document.getElementById('conversation-viewer');
   if (!viewer) return;
-  viewer.replaceChildren(el('p', 'جارٍ تحميل النص الأصلي الكامل للمحادثة…', 'muted'));
+  viewer.replaceChildren(el('p', 'جارٍ تحميل بيانات المحادثة…', 'muted'));
 
   try {
     const detail = await deps.api().getConversation(conversationId);
     const { conversation, messages = [], insights } = detail;
+    const metadataOnly = conversation.source_ref === 'antix_metadata_v1';
     viewer.replaceChildren();
 
     const head = el('div', '', 'card-heading');
     head.append(
       el('h2', conversation.chat_title || 'محادثة واتساب'),
-      el('span', `${messages.length} رسالة · ${(conversation.char_length || 0).toLocaleString('ar-EG')} حرف`, 'pill'),
+      el('span', metadataOnly
+        ? `${conversation.message_count || 0} رسالة في المصدر · النص غير محفوظ`
+        : `${messages.length} رسالة · ${(conversation.char_length || 0).toLocaleString('ar-EG')} حرف`, 'pill'),
     );
     viewer.append(head);
     viewer.append(el('small', `المصدر: ${conversation.source_ref || conversation.source_type} · التحليل: ${conversation.rule_version || '—'} (${fmtDate(conversation.analyzed_at)})`, 'muted'));
 
-    if (Array.isArray(conversation.parse_warnings) && conversation.parse_warnings.length > 0) {
+    if (!metadataOnly && Array.isArray(conversation.parse_warnings) && conversation.parse_warnings.length > 0) {
       viewer.append(el('div', `⚠️ تنبيهات قراءة التنسيق (${conversation.parse_warnings.length}): لم يُفقد أي سطر وتم حفظ النص الأصلي بالكامل.`, 'notice error'));
     }
 
-    appendConversationActionsAndInsights(viewer, conversation, insights, deps);
+    appendConversationActionsAndInsights(viewer, conversation, metadataOnly ? null : insights, deps);
+    if (metadataOnly) {
+      viewer.append(el('p', 'حُفظ عدد الرسائل وتواريخها فقط؛ نص المحادثة غير محفوظ في CRM.', 'notice'));
+      return;
+    }
 
     const msgStream = el('div', '', 'chat-stream');
     for (const msg of messages) msgStream.append(renderChatBubble(msg));
