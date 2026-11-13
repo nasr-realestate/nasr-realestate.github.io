@@ -13,6 +13,7 @@ import {
 } from './crm-chat-intel.js';
 
 import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
+import { validateAntixMetadata } from './crm-antix-metadata-write.js';
 
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 
@@ -994,6 +995,12 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     return { ok: false, error: 'antix_phone_verified_write_not_available' };
   }
 
+  const isAntixPreview = conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'));
+  if (isAntixPreview) {
+    try { validateAntixMetadata(conversations); }
+    catch { return { ok: false, error: 'antix_invalid_preview_batch' }; }
+  }
+
   const existingContactsRes = await db.prepare(
     "SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'",
   ).all();
@@ -1004,7 +1011,7 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
      WHERE c.name NOT LIKE 'TEST ONLY%'`,
   ).all();
 
-  if (conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'))) {
+  if (isAntixPreview) {
     // Read-only preview: do not run name matching, legacy adoption or analysis.
     // Limit query size and require every conversation to carry explicit evidence.
     if (conversations.length > 10 || conversations.some(c => !Object.hasOwn(c || {}, 'selected_phone'))) {

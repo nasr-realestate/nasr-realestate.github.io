@@ -61,14 +61,14 @@ class SealedBridgeTests(unittest.TestCase):
             config = root / 'config.json'
             config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
             item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
-                    'uid': 'wa:fake', 'text': 'رسالة اصطناعية'}
+                    'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: رسالة اصطناعية'}
             argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out)]
             with mock.patch.object(sys, 'argv', argv), mock.patch.object(wa_sync, 'prepare', return_value=([item], {'selected_marked': 1}, None)):
                 bridge.main()
             self.assertFalse((state / 'state.json').exists())
             envelope = next(out.iterdir())
             self.assertEqual(envelope.stat().st_mode & 0o777, 0o600)
-            js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(!x.dry_run||x.sync_bundle.vcf_contacts.length||x.sync_bundle.conversations[0].selected_phone!=='+201111111111')process.exit(1);"""
+            js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(!x.dry_run||x.sync_bundle.vcf_contacts.length||x.sync_bundle.conversations[0].selected_phone!=='+201111111111'||JSON.stringify(x).includes('رسالة اصطناعية')||x.sync_bundle.conversations[0].raw_txt)process.exit(1);"""
             subprocess.run(['node', '-e', js, str(keys), str(envelope)], check=True)
 
     def test_no_outbox_cleanup_for_non_zip_preparation(self):

@@ -3,12 +3,10 @@
 import argparse
 import fcntl
 import json
-import os
 from pathlib import Path
 import re
 import subprocess
 import sys
-import tempfile
 
 import wa_sync
 
@@ -68,23 +66,20 @@ def main():
             decisions = wa_sync.load_json(decisions_path, None)
         chats, counts, _ = wa_sync.prepare(config, state_dir, write_outbox=False, decisions=decisions)
         bundle = build_dry_bundle(chats, counts)
-        with tempfile.TemporaryDirectory(prefix='nasr-sealed-', dir=state_dir) as tmp:
-            bundle_file = Path(tmp) / 'bundle.json'
-            wa_sync.atomic_json(bundle_file, bundle)
-            script = Path(__file__).resolve().with_name('sealed-batch-plan.mjs')
-            result = subprocess.run([config.get('node_bin', 'node'), '--experimental-default-type=module',
-                                     str(script), str(bundle_file), str(key_path), str(out_dir)],
-                                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, timeout=1800, check=False)
-            if result.returncode:
-                raise wa_sync.SyncError('batch preparation failed')
-            summary = result.stdout.decode('utf-8').splitlines()
-            if len(summary) != 2 or summary[1] != 'BATCH_PLAN_OK_NO_DISPATCH':
-                raise wa_sync.SyncError('invalid batch result')
-            data = json.loads(summary[0])
-            print(json.dumps({'counts': counts, 'batches': data['batches'],
-                              'conversations': data['conversations'], 'mode': 'dry_run_only'}, sort_keys=True))
-            print('BLOCK_BATCH_DRY_RUN_OK_NO_DISPATCH')
+        script = Path(__file__).resolve().with_name('sealed-batch-plan.mjs')
+        result = subprocess.run([config.get('node_bin', 'node'), '--experimental-default-type=module',
+                                 str(script), '--stdin', str(key_path), str(out_dir)],
+                                input=json.dumps(bundle, ensure_ascii=False).encode('utf-8'),
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1800, check=False)
+        if result.returncode:
+            raise wa_sync.SyncError('batch preparation failed')
+        summary = result.stdout.decode('utf-8').splitlines()
+        if len(summary) != 2 or summary[1] != 'BATCH_PLAN_OK_NO_DISPATCH':
+            raise wa_sync.SyncError('invalid batch result')
+        data = json.loads(summary[0])
+        print(json.dumps({'counts': counts, 'batches': data['batches'],
+                          'conversations': data['conversations'], 'mode': 'dry_run_only'}, sort_keys=True))
+        print('BLOCK_BATCH_DRY_RUN_OK_NO_DISPATCH')
 
 
 if __name__ == '__main__':

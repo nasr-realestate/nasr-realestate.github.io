@@ -44,9 +44,18 @@ test('preview does not write or return customer data', async () => {
     } };
   } };
   const result = await runSourceSyncBundle(db, { dry_run: true, conversations: [
-    { conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اسم سري', raw_txt: 'نص سري' },
+    { conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اسم سري', message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) },
   ], vcf_contacts: [] });
   assert.equal(result.antix_phone_preview.exact_unique_phone, 1);
   assert.equal(queries.length, 3);
   assert.doesNotMatch(JSON.stringify(result), /اسم سري|نص سري|201111111111/);
+});
+
+
+test('preview rejects raw transcript before querying the database', async () => {
+  const db = { prepare() { throw new Error('unexpected database access'); } };
+  const result = await runSourceSyncBundle(db, { dry_run: true, vcf_contacts: [], conversations: [{
+    conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اختبار', raw_txt: 'سري',
+  }] });
+  assert.deepEqual(result, { ok: false, error: 'antix_invalid_preview_batch' });
 });

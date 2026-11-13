@@ -10,7 +10,7 @@ import { sealDryRunBatches } from '../sealed-batch-plan.mjs';
 
 const keys = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['encrypt', 'decrypt']);
 const pubkey = b64u(await crypto.subtle.exportKey('spki', keys.publicKey));
-const conv = i => ({ conversation_uid: `wa:test-${i}`, title: `اختبار ${i}`, raw_txt: `رسالة اصطناعية ${i}` });
+const conv = i => ({ conversation_uid: `wa:test-${i}`, title: `اختبار ${i}`, selected_phone: '+201111111111', raw_txt: `13/11/2025, 04:13 - عميل: رسالة اصطناعية ${i}` });
 const bundle = conversations => ({ conversations, vcf_contacts: [], dry_run: false });
 
 async function decrypt(envelope) {
@@ -33,13 +33,15 @@ test('batches are complete, bounded, encrypted and forced dry-run', async () => 
     const decoded = await decrypt(b.envelope);
     assert.equal(decoded.dry_run, true);
     assert.equal(decoded.sync_bundle.vcf_contacts.length, 0);
+    assert.ok(!JSON.stringify(decoded).includes('رسالة اصطناعية'));
+    assert.ok(decoded.sync_bundle.conversations.every(c => c.message_count === 1 && !('raw_txt' in c)));
     count += decoded.sync_bundle.conversations.length;
   }
   assert.equal(count, source.length);
 });
 
 test('never split or send oversized conversations; reject ambiguous identities and contacts', async () => {
-  await assert.rejects(sealDryRunBatches(bundle([{ ...conv(1), raw_txt: 'س'.repeat(100000) }]), pubkey), /single-conversation-exceeds-limit/);
+  await assert.rejects(sealDryRunBatches(bundle([{ ...conv(1), raw_txt: 'س'.repeat(5 * 1024 * 1024) }]), pubkey), /invalid-source-metadata/);
   await assert.rejects(sealDryRunBatches(bundle([conv(1), conv(1)]), pubkey), /duplicate/);
   await assert.rejects(sealDryRunBatches({ conversations: [conv(1)], vcf_contacts: [{ fn: '🌀 اختبار' }] }, pubkey), /no-contacts/);
 });
