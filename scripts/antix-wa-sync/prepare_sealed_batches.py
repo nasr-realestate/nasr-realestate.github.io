@@ -44,6 +44,7 @@ def main():
     parser.add_argument('--config', type=Path, default=Path('~/nasr-wa-sync/config.json').expanduser())
     parser.add_argument('--pubkey-file', type=Path, required=True)
     parser.add_argument('--out-dir', type=Path, required=True)
+    parser.add_argument('--exclude-decisions', type=Path)
     args = parser.parse_args()
     config = wa_sync.load_json(args.config, None)
     if not isinstance(config, dict) or not isinstance(config.get('selection'), dict):
@@ -58,7 +59,14 @@ def main():
         raise wa_sync.SyncError('output must not be inside state directory')
     with (state_dir / 'run.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        chats, counts, _ = wa_sync.prepare(config, state_dir, write_outbox=False)
+        decisions = None
+        if args.exclude_decisions:
+            decisions_path = args.exclude_decisions.expanduser().resolve(strict=True)
+            if (not decisions_path.is_file() or decisions_path.stat().st_mode & 0o077 or
+                    decisions_path == repo or repo in decisions_path.parents):
+                raise wa_sync.SyncError('private decisions required')
+            decisions = wa_sync.load_json(decisions_path, None)
+        chats, counts, _ = wa_sync.prepare(config, state_dir, write_outbox=False, decisions=decisions)
         bundle = build_dry_bundle(chats, counts)
         with tempfile.TemporaryDirectory(prefix='nasr-sealed-', dir=state_dir) as tmp:
             bundle_file = Path(tmp) / 'bundle.json'
