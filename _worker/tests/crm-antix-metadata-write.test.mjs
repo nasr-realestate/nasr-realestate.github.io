@@ -170,6 +170,7 @@ test('preview conflicts correspond to protected no-insert cases', async () => {
     assert.equal(previewAntixPhoneMatches(items, phones, [], contacts).phone_conflict, 2);
     assert.deepEqual(await writeAntixMetadataPrototype(db, items, { createMissing: true }),
       { attempted: 2, inserted: 0, not_inserted: 2, created_contacts: 0 });
+    assert.equal(sqlite.prepare("SELECT name FROM crm_contacts WHERE id='a'").get().name, '🟢 جهة اصطناعية');
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
   } finally { sqlite.close(); }
 });

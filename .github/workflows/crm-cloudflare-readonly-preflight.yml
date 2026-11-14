@@ -29,6 +29,7 @@ jobs:
       accounts: ${{ steps.probe.outputs.accounts }}
       d1: ${{ steps.probe.outputs.d1 }}
       d1_usage: ${{ steps.probe.outputs.d1_usage }}
+      verified_backup_presence: ${{ steps.probe.outputs.verified_backup_presence }}
       workers: ${{ steps.probe.outputs.workers }}
       access: ${{ steps.probe.outputs.access }}
       zones: ${{ steps.probe.outputs.zones }}
@@ -51,6 +52,7 @@ jobs:
           accounts='not-run'
           d1='not-run'
           d1_usage='not-run'
+          verified_backup_presence='not-run'
           workers='not-run'
           access='not-run'
           zones='not-run'
@@ -65,6 +67,7 @@ jobs:
               echo "accounts=$accounts"
               echo "d1=$d1"
               echo "d1_usage=$d1_usage"
+              echo "verified_backup_presence=$verified_backup_presence"
               echo "workers=$workers"
               echo "access=$access"
               echo "zones=$zones"
@@ -159,6 +162,15 @@ jobs:
           else
             workers_subdomain="http=$subdomain_code;configured=no-or-unavailable"
           fi
+          # This checks only the existence and identity of the earlier verified backup.
+          # It does not repeat restore or establish that it matches today's live data.
+          backup_id='36621769-8118-4327-9c00-f0924ff2ee9e'
+          backup_code=$(get_json "$API/accounts/$account_id/d1/database/$backup_id" "$TMP/verified-backup.json")
+          if [ "$backup_code" = 200 ] && jq -e --arg id "$backup_id"              '.success == true and .result.uuid == $id and .result.name == "nasr-crm-test-db-backup-20261114122943"'              "$TMP/verified-backup.json" >/dev/null 2>&1; then
+            verified_backup_presence='present-identity-matches-not-a-fresh-restore-test'
+          else
+            verified_backup_presence="unverified-http-${backup_code:-000}"
+          fi
           # GraphQL POST carries a read-only query of account-wide daily analytics;
           # it is not a D1 SQL query and does not touch any database contents.
           day=$(date -u +%F)
@@ -221,6 +233,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-secret D1 inventory is encoded in this check name.'
+  report-verified-backup:
+    name: 'D1 previous backup — ${{ needs.probe.outputs.verified_backup_presence }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Presence check only; not a restore test.'
   report-d1-usage:
     name: 'D1 usage — ${{ needs.probe.outputs.d1_usage }}'
     needs: probe

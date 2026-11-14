@@ -1031,7 +1031,13 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     const uids = conversations.map(c => typeof c?.conversation_uid === 'string' ? c.conversation_uid : '');
     const placeholders = uids.map(() => '?').join(',');
     const previous = await db.prepare(`SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid IN (${placeholders})`).bind(...uids).all();
-    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || [], existingContactsRes?.results || [], normalizedOpts.antixExcludedNames, true) };
+    // Missing or failed snapshots are not empty tables: treating them as such
+    // would incorrectly classify existing phones and names as safe to create.
+    if ([existingContactsRes, existingPhonesRes, previous].some(result =>
+      result?.success === false || !Array.isArray(result?.results))) {
+      return { ok: false, error: 'antix_preview_snapshot_unavailable' };
+    }
+    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes.results, previous.results, existingContactsRes.results, normalizedOpts.antixExcludedNames, true) };
   }
 
   const contactsById = new Map();
