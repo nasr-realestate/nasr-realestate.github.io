@@ -88,7 +88,7 @@ export async function sealMetadataBatches(bundle, publicKey, { limit = MAX_DISPA
   }
   const make = async (conversations) => sealPayload(toPayload({
     conversations, vcf_contacts: [], dry_run: !isWrite,
-    ...(isWrite ? { antix_mode: 'metadata_only_v1', backup_verified_ref: writeBackupRef }
+    ...(isWrite ? { antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: writeBackupRef }
       : { antix_safe_plan_preview: true }),
   }, { dryRun: !isWrite }), publicKey);
   const out = [];
@@ -96,7 +96,7 @@ export async function sealMetadataBatches(bundle, publicKey, { limit = MAX_DISPA
   let current = '';
   for (const conversation of structured) {
     const candidate = [...pending, conversation];
-    if (candidate.length <= batchSize) {
+    if (candidate.length <= (isWrite ? Math.min(batchSize, 5) : batchSize)) {
       const encrypted = await make(candidate);
       if (encrypted.length <= limit) {
         pending = candidate;

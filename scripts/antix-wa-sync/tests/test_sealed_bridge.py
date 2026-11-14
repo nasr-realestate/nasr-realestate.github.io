@@ -168,7 +168,7 @@ class SealedBridgeTests(unittest.TestCase):
             self.assertTrue(envelope.name.startswith('write-'))
             self.assertEqual(envelope.stat().st_mode & 0o777, 0o600)
             self.assertFalse((state / 'state.json').exists())
-            js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(x.dry_run||x.sync_bundle.antix_mode!=='metadata_only_v1'||x.sync_bundle.backup_verified_ref!=='synthetic-backup-01'||JSON.stringify(x).includes('محتوى اصطناعي'))process.exit(1);"""
+            js = """const c=require('crypto'),fs=require('fs');const k=JSON.parse(fs.readFileSync(process.argv[1]));const p=fs.readFileSync(process.argv[2],'utf8').trim().split('.');const aes=c.privateDecrypt({key:k.priv,oaepHash:'sha256'},Buffer.from(p[1],'base64url'));const b=Buffer.from(p[3],'base64url');const d=c.createDecipheriv('aes-256-gcm',aes,Buffer.from(p[2],'base64url'));d.setAuthTag(b.subarray(-16));const x=JSON.parse(Buffer.concat([d.update(b.subarray(0,-16)),d.final()]));if(x.dry_run||x.sync_bundle.antix_mode!=='metadata_only_guarded_v2'||x.sync_bundle.backup_verified_ref!=='synthetic-backup-01'||JSON.stringify(x).includes('محتوى اصطناعي'))process.exit(1);"""
             subprocess.run(['node', '-e', js, str(keys), str(envelope)], check=True)
 
     def test_ref_or_confirmation_without_write_flag_is_rejected_before_config(self):

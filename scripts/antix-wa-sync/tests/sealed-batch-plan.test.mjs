@@ -82,7 +82,7 @@ test('explicit write envelope includes trusted reference and only structured met
   const batches = await sealMetadataBatches(bundle(items), pubkey, { writeBackupRef: 'synthetic-backup-01' });
   const decoded = await decrypt(batches[0].envelope);
   assert.equal(decoded.dry_run, false);
-  assert.equal(decoded.sync_bundle.antix_mode, 'metadata_only_v1');
+  assert.equal(decoded.sync_bundle.antix_mode, 'metadata_only_guarded_v2');
   assert.equal(decoded.sync_bundle.backup_verified_ref, 'synthetic-backup-01');
   assert.ok(!JSON.stringify(decoded).includes('رسالة اصطناعية'));
   await assert.rejects(sealMetadataBatches(bundle(items), pubkey, { writeBackupRef: '' }), /invalid-backup-reference/);
@@ -112,4 +112,15 @@ test('encrypted contact-only metadata contains no invented transcript', async ()
   await assert.rejects(sealDryRunBatches(bundle([{ ...contact, title: 'غير معلّم' }]), pubkey));
   await assert.rejects(sealDryRunBatches(bundle([{ ...contact, title: '🟢 عميل 🌀' }]), pubkey));
   await assert.rejects(sealDryRunBatches(bundle([{ ...contact, raw_txt: 'PRIVATE TEXT' }]), pubkey));
+});
+
+test('guarded write envelopes are capped at five items per D1 transaction', async () => {
+  const batches = await sealMetadataBatches(bundle(Array.from({ length: 12 }, (_, i) => conv(i))), pubkey,
+    { writeBackupRef: 'synthetic-backup-01' });
+  assert.deepEqual(batches.map(batch => batch.conversations), [5, 5, 2]);
+  for (const batch of batches) {
+    const decoded = await decrypt(batch.envelope);
+    assert.equal(decoded.sync_bundle.antix_mode, 'metadata_only_guarded_v2');
+    assert.ok(decoded.sync_bundle.conversations.length <= 5);
+  }
 });

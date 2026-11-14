@@ -65,7 +65,7 @@ test('a caller-supplied backup reference cannot enable writes without both trust
   const db = { prepare() { throw new Error('must reject before database access'); } };
   const item = { conversation_uid: 'wa:synthetic', selected_phone: '+201111111111', title: 'اختبار',
     message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
-  const bundle = { conversations: [item], antix_mode: 'metadata_only_v1', backup_verified_ref: 'fake-backup' };
+  const bundle = { conversations: [item], antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: 'fake-backup' };
   for (const opts of [{}, { allowAntixMetadataWrite: true }, { antixVerifiedBackupRef: 'fake-backup' },
     { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'different-backup' }]) {
     assert.deepEqual(await runSourceSyncBundle(db, bundle, opts), { ok: false, error: 'antix_phone_verified_write_not_available' });
@@ -229,7 +229,38 @@ test('planning flag is never honored in a write request, even with both write ga
   const item = { conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اصطناعي',
     message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
   const result = await runSourceSyncBundle(db, { dry_run: false, antix_safe_plan_preview: true,
-    antix_mode: 'metadata_only_v1', backup_verified_ref: 'test-backup', conversations: [item] },
+    antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: 'test-backup', conversations: [item] },
   { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'test-backup' });
   assert.deepEqual(result, { ok: false, error: 'antix_plan_requires_dry_run' });
+});
+
+test('legacy unguarded writes stay blocked even when both server gates are enabled', async () => {
+  const db = { prepare() { throw new Error('must reject before database access'); } };
+  const item = { conversation_uid: 'wa:legacy', selected_phone: '+201111111111', title: 'اصطناعي',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  const result = await runSourceSyncBundle(db, { dry_run: false, antix_mode: 'metadata_only_v1',
+    backup_verified_ref: 'verified-synthetic', conversations: [item] },
+  { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'verified-synthetic' });
+  assert.deepEqual(result, { ok: false, error: 'antix_phone_verified_write_not_available' });
+});
+
+test('guarded endpoint rejects held contact-only and incomplete snapshot without writing', async () => {
+  const held = { conversation_uid: 'wa:held', selected_phone: '+201111111111', title: '🟢 اسم اصطناعي',
+    message_count: 0, first_message_at: null, last_message_at: null,
+    raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
+  const bundle = { dry_run: false, antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: 'verified-synthetic', conversations: [held] };
+  const opts = { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'verified-synthetic' };
+  const db = { prepare(sql) { return { bind() { return this; }, async all() {
+    if (sql.includes('FROM crm_contacts')) return { results: [{ id: 'a', name: '🟢 اسم اصطناعي' }] };
+    if (sql.includes('FROM crm_contact_phones')) return { results: [{ phone_key: '201111111111', contact_id: 'a' }] };
+    return { results: [] };
+  } }; }, batch() { throw new Error('must not write'); } };
+  assert.deepEqual(await runSourceSyncBundle(db, bundle, opts), { ok: false, error: 'antix_write_batch_has_held_items' });
+  const candidate = { conversation_uid: 'wa:candidate', selected_phone: '+201022222222', title: 'اسم اصطناعي آخر',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  assert.deepEqual(await runSourceSyncBundle(db, { ...bundle, conversations: [held, candidate] }, opts),
+    { ok: false, error: 'antix_write_batch_has_held_items' });
+  const unavailable = { prepare() { return { bind() { return this; }, async all() { return { success: false, results: [] }; } }; },
+    batch() { throw new Error('must not write'); } };
+  assert.deepEqual(await runSourceSyncBundle(unavailable, bundle, opts), { ok: false, error: 'antix_write_snapshot_unavailable' });
 });

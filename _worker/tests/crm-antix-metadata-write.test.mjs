@@ -208,3 +208,44 @@ test('write refuses an owner name changed after the identity snapshot', async ()
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
   } finally { sqlite.close(); }
 });
+
+test('isolated guarded writer inserts candidates and refuses a changed owner atomically', async () => {
+  const { writeGuardedAntixPrototype } = await import('../crm-antix-guarded-write-prototype.js');
+  const { db, sqlite } = await setup();
+  const snapshot = () => ({ contacts: sqlite.prepare('SELECT id,name FROM crm_contacts').all(),
+    phones: sqlite.prepare('SELECT contact_id,phone_key FROM crm_contact_phones').all(),
+    conversations: sqlite.prepare('SELECT conversation_uid FROM crm_conversations').all() });
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('a','اسم اصطناعي موجود'); INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('p','a','201111111111')");
+    const items = [{ ...item('wa:existing', '+201111111111'), title: 'اسم اصطناعي موجود' },
+      { ...item('wa:new', '+201022222222'), title: 'اسم اصطناعي آخر' }];
+    const captured = snapshot();
+    const actualBatch = db.batch;
+    db.batch = async statements => {
+      sqlite.exec("UPDATE crm_contacts SET name='اسم تغير' WHERE id='a'");
+      return actualBatch(statements);
+    };
+    await assert.rejects(writeGuardedAntixPrototype(db, items, captured, { excludedNames: ['مثال مستبعد'] }));
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversations').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_contact_phones').get().n, 1);
+    db.batch = actualBatch;
+    const clean = snapshot();
+    const result = await writeGuardedAntixPrototype(db, items, clean, { excludedNames: ['مثال مستبعد'] });
+    assert.deepEqual(result, { attempted: 2, inserted: 2, not_inserted: 0, created_contacts: 1 });
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversations').get().n, 2);
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM crm_conversation_messages').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('isolated guarded writer rolls back a batch containing two identical new names', async () => {
+  const { writeGuardedAntixPrototype } = await import('../crm-antix-guarded-write-prototype.js');
+  const { db, sqlite } = await setup();
+  try {
+    const items = [item('wa:first', '+201111111111'), item('wa:second', '+201022222222')];
+    await assert.rejects(writeGuardedAntixPrototype(db, items,
+      { contacts: [], phones: [], conversations: [] }, { excludedNames: ['مثال مستبعد'] }));
+    for (const table of ['crm_contacts', 'crm_contact_phones', 'crm_contact_audit_log', 'crm_conversations']) {
+      assert.equal(sqlite.prepare(`SELECT count(*) n FROM ${table}`).get().n, 0);
+    }
+  } finally { sqlite.close(); }
+});
