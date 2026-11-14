@@ -88,7 +88,8 @@ export async function sealMetadataBatches(bundle, publicKey, { limit = MAX_DISPA
   }
   const make = async (conversations) => sealPayload(toPayload({
     conversations, vcf_contacts: [], dry_run: !isWrite,
-    ...(isWrite ? { antix_mode: 'metadata_only_v1', backup_verified_ref: writeBackupRef } : {}),
+    ...(isWrite ? { antix_mode: 'metadata_only_v1', backup_verified_ref: writeBackupRef }
+      : { antix_safe_plan_preview: true }),
   }, { dryRun: !isWrite }), publicKey);
   const out = [];
   let pending = [];

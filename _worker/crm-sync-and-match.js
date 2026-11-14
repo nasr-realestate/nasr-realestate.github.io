@@ -13,6 +13,7 @@ import {
 } from './crm-chat-intel.js';
 
 import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
+import { planAntixBatch } from './crm-antix-safe-plan.js';
 import { validateAntixMetadata, writeAntixMetadataPrototype } from './crm-antix-metadata-write.js';
 
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
@@ -996,6 +997,7 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
       return { ok: false, error: 'antix_phone_verified_write_not_available' };
     }
     if (!dryRun) {
+      if (bundle.antix_safe_plan_preview === true) return { ok: false, error: 'antix_plan_requires_dry_run' };
       // Two trusted server-side gates; an envelope cannot authorize its own backup.
       const approvedRef = normalizedOpts.antixVerifiedBackupRef;
       if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_v1' ||
@@ -1037,7 +1039,18 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
       result?.success === false || !Array.isArray(result?.results))) {
       return { ok: false, error: 'antix_preview_snapshot_unavailable' };
     }
-    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes.results, previous.results, existingContactsRes.results, normalizedOpts.antixExcludedNames, true) };
+    const preview = previewAntixPhoneMatches(conversations, existingPhonesRes.results, previous.results, existingContactsRes.results, normalizedOpts.antixExcludedNames, true);
+    if (bundle.antix_safe_plan_preview === true) {
+      try {
+        const plan = planAntixBatch(conversations, { phones: existingPhonesRes.results,
+          contacts: existingContactsRes.results, conversations: previous.results }, normalizedOpts.antixExcludedNames);
+        return { ok: true, dry_run: true, antix_phone_preview: preview,
+          antix_plan_preview: { candidates: plan.eligible.length, held: plan.held.length } };
+      } catch {
+        return { ok: false, error: 'antix_plan_snapshot_unavailable' };
+      }
+    }
+    return { ok: true, dry_run: true, antix_phone_preview: preview };
   }
 
   const contactsById = new Map();
