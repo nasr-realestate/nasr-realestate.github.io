@@ -104,3 +104,19 @@ test('dry-run passes existing contact names only to private conflict counting', 
   assert.equal(result.antix_phone_preview.phone_not_found, 0);
   assert.doesNotMatch(JSON.stringify(result), /اسم اصطناعي|201111111111/);
 });
+
+test('preview flags existing contact-only phones and excluded existing owners before writes', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const items = [
+    { conversation_uid: 'wa:contact', selected_phone: '+201111111111', title: '🟢 اصطناعي', message_count: 0 },
+    { conversation_uid: 'wa:excluded', selected_phone: '+201022222222', title: 'اصطناعي آخر', message_count: 1 },
+    { conversation_uid: 'wa:normal', selected_phone: '+201033333333', title: 'اصطناعي ثالث', message_count: 1 },
+  ];
+  const phones = [{ phone_key: '201111111111', contact_id: 'a' },
+    { phone_key: '201022222222', contact_id: 'b' }, { phone_key: '201033333333', contact_id: 'c' }];
+  const contacts = [{ id: 'a', name: '🟢 اصطناعي' }, { id: 'b', name: 'اسم 🌀 مستبعد' }, { id: 'c', name: 'اصطناعي ثالث' }];
+  const counts = previewAntixPhoneMatches(items, phones, [], contacts);
+  assert.equal(counts.phone_conflict, 2);
+  assert.equal(counts.exact_unique_phone, 1);
+  assert.doesNotMatch(JSON.stringify(counts), /201111111111|مستبعد/);
+});

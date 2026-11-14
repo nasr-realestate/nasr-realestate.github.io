@@ -152,3 +152,24 @@ test('contact-only name collision never links by name and records no phantom con
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
   } finally { sqlite.close(); }
 });
+
+test('preview conflicts correspond to protected no-insert cases', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('a','🟢 جهة اصطناعية'),('b','جهة 🌀 مستبعدة')");
+    sqlite.exec("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('pa','a','201111111111'),('pb','b','201022222222')");
+    const items = [
+      { ...item('wa:only', '+201111111111'), title: '🟢 جهة اصطناعية', message_count: 0,
+        first_message_at: null, last_message_at: null,
+        raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' },
+      { ...item('wa:blocked', '+201022222222'), title: '🟢 اسم آخر اصطناعي' },
+    ];
+    const phones = sqlite.prepare('SELECT contact_id,phone_key FROM crm_contact_phones').all();
+    const contacts = sqlite.prepare('SELECT id,name FROM crm_contacts').all();
+    assert.equal(previewAntixPhoneMatches(items, phones, [], contacts).phone_conflict, 2);
+    assert.deepEqual(await writeAntixMetadataPrototype(db, items, { createMissing: true }),
+      { attempted: 2, inserted: 0, not_inserted: 2, created_contacts: 0 });
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+  } finally { sqlite.close(); }
+});
