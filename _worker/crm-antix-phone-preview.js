@@ -1,7 +1,7 @@
 // A read-only preflight. No title-based matching and no persistence of chat text.
-import { normalizeInternationalPhone } from './crm-chat-intel.js';
+import { cleanBidiControls, normalizeInternationalPhone } from './crm-chat-intel.js';
 
-export function previewAntixPhoneMatches(conversations, phoneRows, conversationRows) {
+export function previewAntixPhoneMatches(conversations, phoneRows, conversationRows, contactRows = []) {
   const phones = new Map();
   for (const row of phoneRows) {
     if (!row.phone_key || !row.contact_id) continue;
@@ -10,7 +10,8 @@ export function previewAntixPhoneMatches(conversations, phoneRows, conversationR
     phones.set(row.phone_key, ids);
   }
   const existing = new Map(conversationRows.map(row => [row.conversation_uid, row]));
-  const counts = { exact_unique_phone: 0, phone_not_found: 0, phone_conflict: 0, conversation_conflict: 0, invalid: 0 };
+  const names = new Set(contactRows.map(row => cleanBidiControls(row.name || '').trim()).filter(Boolean));
+  const counts = { exact_unique_phone: 0, phone_not_found: 0, phone_conflict: 0, conversation_conflict: 0, name_conflict: 0, invalid: 0 };
   const uids = new Set();
   for (const chat of conversations) {
     const uid = chat?.conversation_uid;
@@ -26,8 +27,10 @@ export function previewAntixPhoneMatches(conversations, phoneRows, conversationR
     const previous = existing.get(uid);
     if (matches.size > 1) { counts.phone_conflict++; continue; }
     const owner = matches.values().next().value || null;
-    // Do not silently reassign an existing conversation or adopt one by title.
-    if (previous?.contact_id && previous.contact_id !== owner) { counts.conversation_conflict++; continue; }
+    // Existing UIDs never insert, including an unlinked or same-owner conversation.
+    if (previous) { counts.conversation_conflict++; continue; }
+    // Name equality is only a warning for the write guard, never identity evidence.
+    if (!owner && names.has(cleanBidiControls(chat.title || '').trim())) { counts.name_conflict++; continue; }
     if (!owner) { counts.phone_not_found++; continue; }
     counts.exact_unique_phone++;
   }

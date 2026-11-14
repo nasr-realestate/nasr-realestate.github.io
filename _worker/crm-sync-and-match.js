@@ -1026,7 +1026,7 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     const uids = conversations.map(c => typeof c?.conversation_uid === 'string' ? c.conversation_uid : '');
     const placeholders = uids.map(() => '?').join(',');
     const previous = await db.prepare(`SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid IN (${placeholders})`).bind(...uids).all();
-    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || []) };
+    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || [], existingContactsRes?.results || []) };
   }
 
   const contactsById = new Map();
