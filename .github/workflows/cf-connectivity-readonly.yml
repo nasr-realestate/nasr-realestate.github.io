@@ -1,0 +1,123 @@
+# ══════════════════════════════════════════════════════════════════════
+# Cloudflare connectivity — READ-ONLY diagnostic (manual only)
+#
+# Purpose: verify that the GitHub secret ARENA_CLOUDFLARE authenticates
+# against the Cloudflare API and that account/resource LIST endpoints are
+# readable. Nothing is created, modified, deployed, or written.
+#
+# Safety rules enforced here:
+#   • trigger: workflow_dispatch ONLY (never on push / schedule / PR)
+#   • permissions: {} (no GITHUB_TOKEN scopes; no checkout needed)
+#   • only HTTP GET requests are issued
+#   • the token is passed to curl via a config file on stdin (not argv,
+#     not an env dump, not a log line)
+#   • only HTTP codes, Cloudflare error codes, and counts are printed
+# ══════════════════════════════════════════════════════════════════════
+
+name: Cloudflare connectivity (read-only)
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: cf-connectivity-readonly
+  cancel-in-progress: false
+
+jobs:
+  cf-readonly:
+    name: Read-only Cloudflare probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CF_ACCOUNT_ID: "717c46b0d78a6f06589b8367a1a3cc5b"
+      CF_API: "https://api.cloudflare.com/client/v4"
+    steps:
+      - name: Probe Cloudflare API (GET only)
+        env:
+          CF_TOKEN: ${{ secrets.ARENA_CLOUDFLARE }}
+        run: |
+          set -u
+          OUT="$RUNNER_TEMP/cf-results.md"
+          BODY="$RUNNER_TEMP/cf-body.json"
+          ERR="$RUNNER_TEMP/cf-err.txt"
+          : > "$OUT"
+          say() { echo "$*" | tee -a "$OUT"; }
+
+          say "## Cloudflare read-only probe"
+          say ""
+          say "| Test | HTTP | Result | Detail |"
+          say "|---|---|---|---|"
+
+          if [ -z "${CF_TOKEN:-}" ]; then
+            say "| secret presence | - | MISSING | ARENA_CLOUDFLARE is empty or not provided to this run |"
+            cat "$OUT" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          say "| secret presence | - | PRESENT | value not printed |"
+
+          # probe <label> <path> [count|status]
+          # Sends one GET. Config (incl. Authorization) is read from stdin.
+          probe() {
+            local label="$1" path="$2" mode="${3:-count}" code rc
+            code=$(curl -sS -m 30 -o "$BODY" -w '%{http_code}' -K - "$CF_API$path" 2>"$ERR" <<EOF
+          header = "Authorization: Bearer $CF_TOKEN"
+          EOF
+            )
+            rc=$?
+            if [ $rc -ne 0 ]; then
+              say "| $label | 000 | NETWORK_ERROR | curl exit $rc |"
+              return 1
+            fi
+            local success codes detail
+            success=$(jq -r '.success // "n/a"' "$BODY" 2>/dev/null)
+            codes=$(jq -r '[.errors[]?.code] | map(tostring) | join(",")' "$BODY" 2>/dev/null)
+            case "$code" in
+              200)
+                if [ "$mode" = "status" ]; then
+                  detail="token status: $(jq -r '.result.status // "n/a"' "$BODY" 2>/dev/null)"
+                else
+                  detail="items: $(jq -r 'if (.result|type)=="array" then (.result|length) else "n/a" end' "$BODY" 2>/dev/null)"
+                fi
+                say "| $label | $code | PASS (success=$success) | $detail |" ;;
+              400) say "| $label | $code | BAD_REQUEST | errors: ${codes:-none} |" ;;
+              401) say "| $label | $code | INVALID_OR_EXPIRED_TOKEN | errors: ${codes:-none} |" ;;
+              403) say "| $label | $code | INSUFFICIENT_PERMISSIONS | errors: ${codes:-none} |" ;;
+              404) say "| $label | $code | NOT_FOUND_OR_NO_ACCESS | errors: ${codes:-none} |" ;;
+              *)   say "| $label | $code | UNEXPECTED | errors: ${codes:-none} |" ;;
+            esac
+            [ "$code" = "200" ]
+          }
+
+          # 1) Token authentication (decides overall result)
+          probe "token verify" "/user/tokens/verify" status
+          TOKEN_OK=$?
+
+          # 2) Account read (requires token + account scope)
+          probe "account read" "/accounts/$CF_ACCOUNT_ID" status || true
+
+          # 3-6) Resource lists (permission-dependent; counts only, no names)
+          probe "workers scripts (list)" "/accounts/$CF_ACCOUNT_ID/workers/scripts" || true
+          probe "pages projects (list)"  "/accounts/$CF_ACCOUNT_ID/pages/projects"  || true
+          probe "D1 databases (list)"    "/accounts/$CF_ACCOUNT_ID/d1/database"     || true
+          probe "KV namespaces (list)"   "/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces" || true
+
+          say ""
+          if [ "$TOKEN_OK" -eq 0 ]; then
+            say "**Overall: token authentication PASSED.** Other rows show which resources this token may read."
+          else
+            say "**Overall: token authentication FAILED.** See the token verify row for the classification."
+          fi
+
+          cat "$OUT" >> "$GITHUB_STEP_SUMMARY"
+          [ "$TOKEN_OK" -eq 0 ]
+
+      - name: Upload results (no secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cf-connectivity-readonly-results
+          path: ${{ runner.temp }}/cf-results.md
+          if-no-files-found: warn
+          retention-days: 3
