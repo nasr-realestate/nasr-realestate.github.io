@@ -12,13 +12,14 @@ concurrency:
 
 jobs:
   diagnostic:
-    if: github.repository == 'nasr-realestate/nasr-realestate.github.io' && github.ref == 'refs/heads/master'
+    if: github.repository == 'nasr-realestate/nasr-realestate.github.io' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/arena/'))
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
     outputs:
       result: ${{ steps.probe.outputs.result }}
+      api_checks: ${{ steps.probe.outputs.api_checks }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,6 +46,13 @@ jobs:
           account=$(jq -r '.result[0].id // empty' "$tmp/accounts")
           if [ -z "$account" ]; then result=account_missing; finish; exit 1; fi
           export CLOUDFLARE_ACCOUNT_ID="$account"
+          base="$API/accounts/$account/workers/scripts/nasr-crm-api-test"
+          content_code=$(curl -sS -H "$AUTH" -o "$tmp/content" -w '%{http_code}' "$base/content" || true)
+          script_code=$(curl -sS -H "$AUTH" -o "$tmp/script" -w '%{http_code}' "$base" || true)
+          content_flag=no; script_flag=no
+          if grep -q 'CRM_ANTIX_WRITE_EXPIRES_MS' "$tmp/content"; then content_flag=yes; fi
+          if grep -q 'CRM_ANTIX_WRITE_EXPIRES_MS' "$tmp/script"; then script_flag=yes; fi
+          echo "api_checks=content-${content_code}-${content_flag}-script-${script_code}-${script_flag}" >> "$GITHUB_OUTPUT"
           if ! curl -fsS -H "$AUTH" "$API/accounts/$account/workers/scripts/nasr-crm-api-test/settings" > "$tmp/settings" 2>/dev/null; then
             result=worker_settings_failed; finish; exit 1
           fi
@@ -75,7 +83,7 @@ jobs:
   summary:
     needs: diagnostic
     if: always()
-    name: 'Read-only diagnostic: ${{ needs.diagnostic.outputs.result }}'
+    name: 'Read-only diagnostic: ${{ needs.diagnostic.outputs.result }} ${{ needs.diagnostic.outputs.api_checks }}'
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Fixed status code only; no customer data'
