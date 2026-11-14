@@ -1001,7 +1001,8 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
       if (bundle.antix_safe_plan_preview === true) return { ok: false, error: 'antix_plan_requires_dry_run' };
       // Two trusted server-side gates; an envelope cannot authorize its own backup.
       const approvedRef = normalizedOpts.antixVerifiedBackupRef;
-      if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_guarded_v2' ||
+      if (normalizedOpts.allowAntixMetadataWrite !== true ||
+          !['metadata_only_guarded_v2', 'metadata_only_selective_v3'].includes(bundle?.antix_mode) ||
           typeof approvedRef !== 'string' || !approvedRef.trim() || backupRef !== approvedRef) {
         return { ok: false, error: 'antix_phone_verified_write_not_available' };
       }
@@ -1015,9 +1016,14 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
       catch { return { ok: false, error: 'antix_write_snapshot_unavailable' }; }
       try {
         const plan = planAntixBatch(conversations, snapshot, normalizedOpts.antixExcludedNames);
-        if (plan.held.length) return { ok: false, error: 'antix_write_batch_has_held_items' };
-        const result = await writeGuardedAntixPrototype(db, conversations, snapshot, { now, excludedNames: normalizedOpts.antixExcludedNames });
-        return { ok: true, dry_run: false, antix_metadata: result };
+        const selective = bundle.antix_mode === 'metadata_only_selective_v3';
+        if (plan.held.length && !selective) return { ok: false, error: 'antix_write_batch_has_held_items' };
+        // Held identities never reach the write transaction. The transaction repeats
+        // all candidate guards, so a changed owner or collision aborts atomically.
+        if (!plan.eligible.length) return { ok: true, dry_run: false,
+          antix_metadata: { attempted: 0, inserted: 0, not_inserted: 0, created_contacts: 0, held: plan.held.length } };
+        const result = await writeGuardedAntixPrototype(db, plan.eligible, snapshot, { now, excludedNames: normalizedOpts.antixExcludedNames });
+        return { ok: true, dry_run: false, antix_metadata: { ...result, ...(selective ? { held: plan.held.length } : {}) } };
       } catch { return { ok: false, error: 'antix_guarded_write_failed' }; }
     }
   }

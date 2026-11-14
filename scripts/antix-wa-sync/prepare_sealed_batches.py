@@ -52,7 +52,10 @@ def main():
     parser.add_argument('--prepare-write-batches', action='store_true')
     parser.add_argument('--backup-ref-file', type=Path)
     parser.add_argument('--confirm-metadata-only', action='store_true')
+    parser.add_argument('--selective', action='store_true', help='Hold conflicts server-side; write eligible items only')
     args = parser.parse_args()
+    if args.selective and not args.prepare_write_batches:
+        raise wa_sync.SyncError('selective mode requires write batches')
     if ((args.prepare_write_batches and not (args.backup_ref_file and args.confirm_metadata_only)) or
             (not args.prepare_write_batches and (args.backup_ref_file or args.confirm_metadata_only))):
         raise wa_sync.SyncError('explicit write batch confirmation and backup reference required')
@@ -84,6 +87,8 @@ def main():
                    str(script), '--stdin', str(key_path), str(out_dir)]
         if args.prepare_write_batches:
             command += ['--write-ref-file', str(args.backup_ref_file.expanduser().resolve(strict=True))]
+            if args.selective:
+                command += ['--selective']
         result = subprocess.run(command,
                                 input=json.dumps(bundle, ensure_ascii=False).encode('utf-8'),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1800, check=False)
