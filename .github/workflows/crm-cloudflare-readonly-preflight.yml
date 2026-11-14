@@ -572,7 +572,14 @@ jobs:
           result=source-export-or-restore-failed
           snapshot source nasr-crm-test-db-v2 _worker/wrangler.crm.toml '' || exit 1
           result=backup-export-restore-or-parity-failed
-          snapshot backup nasr-crm-test-db-backup-20261114122943 "$T/backup.toml" "$T/source-meta.json" || exit 1
+          if snapshot backup nasr-crm-test-db-backup-20261114122943 "$T/backup.toml" "$T/source-meta.json"; then :; else
+            code=$?
+            if [ "$code" = 1 ]; then result=backup-export-failed
+            elif grep -q 'Roundtrip digest mismatch against source' "$T/backup-builder.log"; then result=backup-data-differs-from-source
+            elif grep -q 'Roundtrip .* mismatch against source' "$T/backup-builder.log"; then result=backup-schema-differs-from-source
+            else result=backup-local-restore-failed; fi
+            exit 1
+          fi
           result=source-recheck-or-parity-failed
           snapshot recheck nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json" || exit 1
           # Also require exact table and explicit-index sets, not only their counts.
