@@ -590,6 +590,13 @@ jobs:
                   ([$a | keys[] | select($a[.] != $b[.])] == ["crm_idempotency_receipts"])' \
                   "$T/source-meta.json" "$T/diagnostic-meta.json" >/dev/null; then
                   result=backup-differs-in-receipts-only-still-not-full-match
+                  # Rehearse entirely in memory with private local SQL exports.
+                  # No database, backup, or artifact is created or modified.
+                  if python3 scripts/crm/check_receipt_overlay_sql.py "$T/diagnostic-restore.sql" "$T/source-restore.sql" > "$T/overlay-test.log" 2>&1 &&
+                     grep -Fxq 'RECEIPT_OVERLAY_IN_MEMORY_VERIFIED_NO_BACKUP_SAVED' "$T/overlay-test.log" &&
+                     snapshot final nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json"; then
+                    result=receipt-overlay-rehearsed-in-memory-no-backup-saved
+                  fi
                 fi
               fi
             elif grep -q 'Roundtrip .* mismatch against source' "$T/backup-builder.log"; then result=backup-schema-differs-from-source
