@@ -130,3 +130,23 @@ test('antiX preview and writes fail closed if private exclusions are not configu
       { ok: false, error: 'antix_private_exclusions_not_configured' });
   }
 });
+
+test('phone-conflict detail partitions counts without exposing customer data', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const chats = [
+    { conversation_uid: 'wa:one', selected_phone: '+201111111111', message_count: 0 },
+    { conversation_uid: 'wa:two', selected_phone: '+201022222222', message_count: 1 },
+    { conversation_uid: 'wa:three', selected_phone: '+201033333333', message_count: 1 },
+    { conversation_uid: 'wa:four', selected_phone: '+201044444444', message_count: 0 },
+  ];
+  const phones = [{ phone_key: '201111111111', contact_id: 'a' },
+    { phone_key: '201022222222', contact_id: 'b' },
+    { phone_key: '201033333333', contact_id: 'c' }, { phone_key: '201033333333', contact_id: 'd' },
+    { phone_key: '201044444444', contact_id: 'e' }];
+  const contacts = [{ id: 'a', name: 'عميل اصطناعي' }, { id: 'b', name: '🌀 مستبعد' },
+    { id: 'e', name: 'مثال مستبعد' }];
+  const result = previewAntixPhoneMatches(chats, phones, [], contacts, ['مثال مستبعد'], true);
+  assert.equal(result.phone_conflict, 4);
+  assert.deepEqual(result.phone_conflict_detail, { multiple_owners: 1, protected_owner: 2, contact_only_existing_phone: 1 });
+  assert.doesNotMatch(JSON.stringify(result), /201111111111|عميل اصطناعي|مثال مستبعد/);
+});
