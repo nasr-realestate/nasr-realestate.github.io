@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { previewAntixMessagePlan as plan } from '../crm-antix-message-plan.js';
 
 const h = x => createHash('sha256').update(JSON.stringify(x)).digest('hex');
@@ -51,4 +52,12 @@ test('phone owner, conversation, exclusions and prior message snapshots must agr
     await assert.rejects(plan(input(), db, exclusions));
   }
   await assert.rejects(plan(input(), snapshot(), []), /invalid-plan/);
+});
+
+test('antiX source adapter and private planning interoperate with synthetic data only', async () => {
+  const code = `import json,sys\nfrom datetime import datetime,timezone\nsys.path.insert(0,'scripts/antix-wa-sync')\nfrom message_key_audit import build_text_candidates\nchat={'messages':{'1':{'key_id':'stable_key_01','timestamp':1794398400000,'from_me':False,'message_type':0,'data':'رسالة اصطناعية','meta':False}}}\nprint(json.dumps(build_text_candidates(chat,datetime(2026,11,14,12,0,tzinfo=timezone.utc)),ensure_ascii=False))`;
+  const proc = spawnSync('python3', ['-c', code], { encoding: 'utf8' });
+  assert.equal(proc.status, 0, proc.stderr);
+  const messages = JSON.parse(proc.stdout);
+  assert.deepEqual(await plan(input(messages), snapshot(), exclusions), { candidates: 1, unchanged: 0, held: 0 });
 });

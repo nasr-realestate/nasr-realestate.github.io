@@ -487,7 +487,10 @@ def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
     return result
 
 
-def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisions: dict | None = None) -> tuple[list[dict], dict, Path]:
+def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisions: dict | None = None,
+            selected_audit=None) -> tuple[list[dict], dict, Path]:
+    if selected_audit is not None and (write_outbox or config.get('selection', {}).get('policy') != 'marked-plus-recent-window-v3'):
+        raise SyncError('audit requires read-only v3 selection')
     if write_outbox and config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v3':
         raise SyncError("هذه السياسة تتطلب مسار الدفعات المشفّرة فقط")
     backup = Path(config["backup_path"]).expanduser().resolve()
@@ -531,6 +534,10 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
             scope_counts.update(coverage)
             if decisions is not None:
                 scope_counts = apply_hold_exclusions(decisions, review_rows, scope_counts, before, config['selection'])
+            if selected_audit is not None:
+                if write_outbox or config['selection']['policy'] != 'marked-plus-recent-window-v3':
+                    raise SyncError('audit requires read-only v3 selection')
+                selected_audit(exported_data, as_of)
             # Unverified preparations carry no committed remote identity. Re-plan them
             # with the selected address-book names; uploaded identities stay frozen.
             state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
