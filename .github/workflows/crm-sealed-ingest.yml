@@ -87,7 +87,7 @@ jobs:
           # Refuse to open a lease if the deployed Worker does not enforce expiry.
           content=$(mktemp)
           trap 'rm -f "$content"' EXIT
-          curl -fsS -H "$AUTH" "$base/content" > "$content"
+          curl -fsS -H "$AUTH" "$base" > "$content"
           grep -q 'CRM_ANTIX_WRITE_EXPIRES_MS' "$content"
           cfg='_worker/wrangler.crm.toml'
           printf false | npx --yes wrangler@4 secret put CRM_ANTIX_METADATA_WRITE_ENABLED --config "$cfg"
