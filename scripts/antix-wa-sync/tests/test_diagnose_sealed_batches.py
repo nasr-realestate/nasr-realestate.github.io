@@ -23,7 +23,7 @@ class DiagnosticTests(unittest.TestCase):
             state.mkdir(mode=0o700)
             work = home / 'batch'
             work.mkdir(mode=0o700)
-            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             decisions = work / 'decisions.json'
             decisions.write_text('{}')
             decisions.chmod(0o600)
@@ -53,7 +53,7 @@ class DiagnosticTests(unittest.TestCase):
             state.mkdir(mode=0o700)
             work = home / 'batch'
             work.mkdir(mode=0o700)
-            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {}}))
+            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             decisions = work / 'decisions.json'
             decisions.write_text('{}')
             decisions.chmod(0o600)
@@ -81,7 +81,7 @@ class DiagnosticTests(unittest.TestCase):
             state.mkdir(mode=0o700)
             work = home / 'batch'
             work.mkdir(mode=0o700)
-            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {}}))
+            (home / 'config.json').write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             decisions = work / 'decisions.json'
             decisions.write_text('{}')
             decisions.chmod(0o600)

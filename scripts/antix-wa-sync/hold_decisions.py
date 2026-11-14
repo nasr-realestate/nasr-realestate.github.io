@@ -25,7 +25,9 @@ def make_template(report):
             raise ValueError('bad report row')
         seen.add(row['ref'])
         rows.append({'ref': row['ref'], 'reason': row['reason'], 'action': 'pending'})
-    return {'schema': 'antix-hold-decisions-v1', 'backup_sha256': report['backup_sha256'],
+    if report.get('policy') not in (None, 'marked-or-recent-v1', 'marked-plus-recent-window-v2'):
+        raise ValueError('bad selection policy')
+    return {'schema': 'antix-hold-decisions-v1', **({'policy': report['policy']} if report.get('policy') else {}), 'backup_sha256': report['backup_sha256'],
             'vcf_sha256': report['vcf_sha256'], 'as_of': report['as_of'], 'rows': rows}
 
 

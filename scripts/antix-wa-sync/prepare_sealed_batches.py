@@ -16,10 +16,16 @@ def build_dry_bundle(chats, counts):
         raise wa_sync.SyncError('selection review required')
     conversations = []
     for item in chats:
-        if item.get('status') not in wa_sync.PENDING_STATUSES:
+        if item.get('status') not in wa_sync.PENDING_STATUSES | {'contact_only'}:
             continue
         jid = item.get('jid', '')
-        if not re.fullmatch(r'[0-9]{8,15}@(s\.whatsapp\.net|c\.us)', jid):
+        if item.get('status') == 'contact_only' and item.get('vcf_phone'):
+            phone = item['vcf_phone']
+            if not re.fullmatch(r'[0-9]{8,15}', phone):
+                raise wa_sync.SyncError('invalid vcf phone')
+        elif re.fullmatch(r'[0-9]{8,15}@(s\.whatsapp\.net|c\.us)', jid):
+            phone = jid.split('@', 1)[0]
+        else:
             raise wa_sync.SyncError('unverified direct phone')
         title = item.get('title', '')
         if not title or '🌀' in wa_sync.clean(title):
@@ -27,10 +33,10 @@ def build_dry_bundle(chats, counts):
         conversations.append({
             'conversation_uid': item['uid'], 'title': title,
             'raw_txt': item['text'],
-            # Evidence is the direct JID's exact number, not a name inference.
-            # The current batch format intentionally carries no contacts, and
-            # must not be used for a write until server-side verification exists.
-            'selected_phone': '+' + jid.split('@', 1)[0],
+            **({'contact_only': True} if item['status'] == 'contact_only' else {}),
+            # The phone comes from a direct JID or a single verified VCF number;
+            # no conversation is fabricated for a VCF-only contact.
+            'selected_phone': '+' + phone,
         })
     if not conversations:
         raise wa_sync.SyncError('no pending conversations')
@@ -51,7 +57,8 @@ def main():
             (not args.prepare_write_batches and (args.backup_ref_file or args.confirm_metadata_only))):
         raise wa_sync.SyncError('explicit write batch confirmation and backup reference required')
     config = wa_sync.load_json(args.config, None)
-    if not isinstance(config, dict) or not isinstance(config.get('selection'), dict):
+    if (not isinstance(config, dict) or not isinstance(config.get('selection'), dict) or
+            config['selection'].get('policy') != 'marked-plus-recent-window-v2'):
         raise wa_sync.SyncError('selection required')
     repo = Path(__file__).resolve().parents[2]
     state_dir = wa_sync.private_dir(Path(config.get('state_dir', '~/nasr-wa-sync/state')).expanduser().resolve())

@@ -24,7 +24,10 @@ export function validateAntixMetadata(items) {
         typeof item.selected_phone !== 'string' || !/^\+\d{8,15}$/.test(item.selected_phone) ||
         normalizeInternationalPhone(item.selected_phone) !== item.selected_phone.slice(1) ||
         typeof item.title !== 'string' || !item.title.trim() || item.title.length > MAX_ANTIX_TITLE_LENGTH ||
-        (cleanBidiControls(item.title).includes('🌀') || /^TEST ONLY/i.test(cleanBidiControls(item.title).trimStart())) || !Number.isSafeInteger(item.message_count) || item.message_count < 1 ||
+        (cleanBidiControls(item.title).includes('🌀') || /^TEST ONLY/i.test(cleanBidiControls(item.title).trimStart())) || !Number.isSafeInteger(item.message_count) || item.message_count < 0 ||
+        (item.message_count === 0 && (!/^[🟢🔴🔵🟡✈]/u.test(cleanBidiControls(item.title).trimStart()) ||
+          item.first_message_at !== null || item.last_message_at !== null ||
+          item.raw_sha256 !== 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')) ||
         !validDate(item.first_message_at) || !validDate(item.last_message_at) ||
         (item.first_message_at && item.last_message_at && item.first_message_at > item.last_message_at) ||
         typeof item.raw_sha256 !== 'string' || !/^[a-f\d]{64}$/.test(item.raw_sha256) ||
@@ -57,7 +60,7 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       statements.push(db.prepare(
         `INSERT INTO crm_contact_phones(id, contact_id, phone_key, label, is_primary, raw_input, source_type, source_ref, verified_at)
          SELECT ?, id, ?, 'واتساب', 1, '', 'vcf', 'antix_metadata_v1', ? FROM crm_contacts WHERE id = ?`,
-      ).bind(crypto.randomUUID(), item.selected_phone.slice(1), nowIso, contactId));
+      ).bind(crypto.randomUUID(), item.selected_phone.slice(1), item.message_count === 0 ? null : nowIso, contactId));
       statements.push(db.prepare(
         `INSERT INTO crm_contact_audit_log(id, contact_id, action_type, field_name, old_value, new_value, source_ref, actor, created_at)
          SELECT ?, id, 'source_synced', 'contact_created', NULL, NULL, 'antix_metadata_v1', 'source_sync', ?
@@ -72,10 +75,10 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       ) SELECT ?, ?, c.id, 'whatsapp_export', 'antix_metadata_v1', c.name,
         '', 'matched', 'exact_phone', '', '', ?, ?, ?, ?, '[]', ?, ?
         FROM crm_contact_phones p JOIN crm_contacts c ON c.id = p.contact_id
-        WHERE p.phone_key = ? AND ltrim(c.name) NOT LIKE 'TEST ONLY%' AND c.name NOT LIKE '%🌀%'
+        WHERE p.phone_key = ? AND ? > 0 AND ltrim(c.name) NOT LIKE 'TEST ONLY%' AND c.name NOT LIKE '%🌀%'
         ON CONFLICT(conversation_uid) DO NOTHING`,
     ).bind(crypto.randomUUID(), item.conversation_uid, item.raw_sha256, item.message_count,
-      item.first_message_at, item.last_message_at, nowIso, nowIso, item.selected_phone.slice(1)));
+      item.first_message_at, item.last_message_at, nowIso, nowIso, item.selected_phone.slice(1), item.message_count));
   }
   // D1 batch is transactional: any constraint error rolls back the entire batch.
   const result = await db.batch(statements);
@@ -83,13 +86,21 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       result.some(row => !Number.isInteger(row?.meta?.changes ?? row?.changes))) {
     throw new Error('unverified-write-result');
   }
+  return summarizeAntixResults(result, items, createMissing);
+}
+
+function summarizeAntixResults(result, items, createMissing) {
   const changes = row => row.meta?.changes ?? row.changes;
   const stride = createMissing ? 4 : 1;
   let inserted = 0;
   let createdContacts = 0;
   for (let i = 0; i < items.length; i++) {
     if (createMissing) createdContacts += changes(result[i * stride]);
-    inserted += changes(result[i * stride + stride - 1]);
+    if (items[i].message_count === 0) {
+      if (createMissing) inserted += changes(result[i * stride]);
+    } else {
+      inserted += changes(result[i * stride + stride - 1]);
+    }
   }
   return { attempted: items.length, inserted, not_inserted: items.length - inserted, ...(createMissing ? { created_contacts: createdContacts } : {}) };
 }

@@ -76,7 +76,8 @@ def main():
     if not work.is_dir() or work.stat().st_mode & 0o077:
         raise ValueError('private directory required')
     config = wa_sync.load_json(Path('~/nasr-wa-sync/config.json').expanduser(), None)
-    if not isinstance(config, dict) or not isinstance(config.get('selection'), dict):
+    if (not isinstance(config, dict) or not isinstance(config.get('selection'), dict) or
+            config['selection'].get('policy') != 'marked-plus-recent-window-v2'):
         raise ValueError('selection required')
     state = wa_sync.private_dir(Path(config['state_dir']).expanduser().resolve())
     decisions_path = (work / 'decisions.json').resolve(strict=True)

@@ -1219,3 +1219,34 @@ test('sealed preview failures return fixed stage codes without exposing error da
     }
   } finally { env.DB = original; sqlite.close(); }
 });
+
+test('guarded sealed marked contact-only creates no conversation and remains closed by default', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u } });
+  const bundle = { vcf_contacts: [], conversations: [{ conversation_uid: 'wa:synthetic-contact',
+    selected_phone: '+201111111111', title: '🟢 عميل اصطناعي', raw_txt: '', contact_only: true }] };
+  const send = async () => {
+    const [batch] = await sealMetadataBatches(bundle, keys.publicKeySpkiB64u, { writeBackupRef: 'synthetic-backup-01' });
+    const digest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(batch.envelope))).toString('hex');
+    sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${digest}`);
+    return worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: batch.envelope }),
+    }), env);
+  };
+  try {
+    const blocked = await send();
+    assert.equal(blocked.status, 400);
+    assert.equal((await blocked.json()).error, 'antix_phone_verified_write_not_available');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n, 0);
+    env.CRM_ANTIX_METADATA_WRITE_ENABLED = 'true';
+    env.CRM_ANTIX_VERIFIED_BACKUP_REF = 'synthetic-backup-01';
+    const accepted = await send();
+    assert.equal(accepted.status, 200);
+    const response = await accepted.json();
+    assert.equal(response.antix_metadata.inserted, 1);
+    assert.equal(response.antix_metadata.created_contacts, 1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n, 1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversation_messages').get().n, 0);
+  } finally { sqlite.close(); }
+});

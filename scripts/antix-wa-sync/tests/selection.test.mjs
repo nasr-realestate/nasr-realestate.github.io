@@ -29,3 +29,11 @@ test('excludes embedded spiral marker and its aliases', () => {
   assert.equal(i.index['201000000001'].excluded, true);
   assert.equal(i.index['201000000002'].excluded, true);
 });
+
+test('coverage retains marked card phone groups without excluded aliases', () => {
+  const result = buildIndex(card('🌀 مستبعد', ['+201000000001'])
+    + card('🟢 متداخل', ['+201000000001', '+201000000002'])
+    + card('✈️ مسافر', ['+201000000003', '+201000000004'])
+    + card('🟡 بلا رقم', []));
+  assert.deepEqual(result.marked_phone_groups, [['201000000003', '201000000004'], []]);
+});

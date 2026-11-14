@@ -51,6 +51,13 @@ class HoldDecisionsTests(unittest.TestCase):
             with self.subTest(case=case), self.assertRaises(SyncError):
                 self.apply(case)
 
+    def test_new_policy_cannot_reuse_old_exclusion_decisions(self):
+        self.selection['policy'] = 'marked-plus-recent-window-v2'
+        with self.assertRaises(SyncError):
+            self.apply(self.decisions)
+        self.report['policy'] = 'marked-plus-recent-window-v2'
+        self.assertEqual(self.apply(make_template(self.report)), self.counts)
+
     def test_interactive_choices_never_allow_approval(self):
         answers = iter(['yes', 'e', 'p'])
         messages = []

@@ -45,7 +45,7 @@ def main():
         if file_sha(vcf) != checksum:
             raise ValueError('تغير الدفتر أثناء الفحص؛ لم تتغير الإعدادات')
     # Fixed cutoff makes prepare and confirm reproduce exactly the same selection.
-    config['selection'] = {'policy': 'marked-or-recent-v1', 'vcf_path': str(vcf),
+    config['selection'] = {'policy': 'marked-plus-recent-window-v2', 'vcf_path': str(vcf),
                            'vcf_sha256': checksum, 'as_of': datetime.now(timezone.utc).isoformat()}
     atomic_json(config_path, config)
     config_path.chmod(0o600)

@@ -56,6 +56,67 @@ class SealedBridgeTests(unittest.TestCase):
         with self.assertRaises(wa_sync.SyncError):
             bridge.build_dry_bundle([{'status': 'new', 'jid': jid, 'title': 'اسم 🌀 مستبعد', 'uid': 'wa:test', 'text': 'fake'}], {})
 
+    def test_marked_contact_only_is_preserved_without_inventing_a_conversation(self):
+        item = {'status': 'contact_only', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 اصطناعي',
+                'uid': 'wa:synthetic', 'text': ''}
+        bundle = bridge.build_dry_bundle([item], {'contact_only': 1})
+        self.assertEqual(bundle['conversations'][0]['raw_txt'], '')
+        self.assertTrue(bundle['conversations'][0]['contact_only'])
+        with self.assertRaises(wa_sync.SyncError):
+            bridge.build_dry_bundle([item], {'hold_marked_not_in_backup': 1})
+
+    def test_vcf_only_contact_keeps_phone_without_fabricated_jid(self):
+        item = {'status': 'contact_only', 'vcf_phone': '201111111111', 'title': '🟢 اصطناعي',
+                'uid': 'wa:vcf:synthetic', 'text': ''}
+        bundle = bridge.build_dry_bundle([item], {})
+        self.assertEqual(bundle['conversations'][0]['selected_phone'], '+201111111111')
+        self.assertTrue(bundle['conversations'][0]['contact_only'])
+        self.assertNotIn('jid', bundle['conversations'][0])
+
+    def test_recent_window_preparation_retains_vcf_only_and_old_marked_without_messages(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            state = root / 'state'
+            state.mkdir(mode=0o700)
+            backup = root / 'backup.crypt15'
+            backup.write_bytes(b'synthetic encrypted backup')
+            key = root / 'key'
+            key.write_text('synthetic')
+            key.chmod(0o600)
+            now = datetime(2026, 11, 13, tzinfo=timezone.utc)
+            stamp = now.timestamp()
+            exported = {
+                '201111111111@s.whatsapp.net': {'name': 'A', 'messages': {'1': {'timestamp': stamp-20*86400, 'data': 'OLD'}}},
+                '201222222222@s.whatsapp.net': {'name': 'B', 'messages': {
+                    '2': {'timestamp': stamp-20*86400, 'data': 'OLD'},
+                    '3': {'timestamp': stamp-10, 'data': 'RECENT', 'from_me': True}}},
+            }
+            index = {'201111111111': {'marked': True, 'name': '🟢 قديم', 'ambiguous': False},
+                     '201222222222': {'marked': False, 'name': 'حديث', 'ambiguous': False},
+                     '201333333333': {'marked': True, 'name': '✈️ جهة خارج النسخة', 'ambiguous': False},
+                     '__marked_phone_groups__': [['201111111111'], ['201333333333']]}
+            config = {'backup_path': str(backup), 'key_path': str(key),
+                      'selection': {'policy': 'marked-plus-recent-window-v2'}}
+            def fake_run(argv, work):
+                if '--out' in argv:
+                    Path(argv[argv.index('--out') + 1]).write_text(json.dumps(exported))
+            with mock.patch.object(wa_sync, 'selection_index', return_value=(index, now)), \
+                 mock.patch.object(wa_sync, 'run_tool', side_effect=fake_run), \
+                 mock.patch.object(wa_sync, 'open_message_db', return_value=Path('unused')):
+                chats, counts, _ = wa_sync.prepare(config, state, write_outbox=False)
+            self.assertEqual(counts['contact_only'], 2)
+            self.assertEqual(counts['hold_marked_not_in_backup'], 0)
+            self.assertEqual(counts['hold_marked_without_phone'], 0)
+            bundle = bridge.build_dry_bundle(chats, counts)
+            self.assertEqual(len(bundle['conversations']), 3)
+            self.assertEqual(sum(c.get('contact_only', False) for c in bundle['conversations']), 2)
+            self.assertNotIn('OLD', json.dumps(bundle))
+            self.assertIn('RECENT', json.dumps(bundle))
+            self.assertFalse((state / 'state.json').exists())
+            self.assertFalse((state / 'outbox').exists())
+            with self.assertRaises(wa_sync.SyncError):
+                wa_sync.prepare(config, state, write_outbox=True)
+
     def test_bridge_main_seals_selected_data_without_state_write(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -69,7 +130,7 @@ class SealedBridgeTests(unittest.TestCase):
             key = root / 'public.txt'
             key.write_text(json.loads(keys.read_text())['pub'])
             config = root / 'config.json'
-            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
                     'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: رسالة اصطناعية'}
             argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out)]
@@ -96,7 +157,7 @@ class SealedBridgeTests(unittest.TestCase):
             ref.write_text('synthetic-backup-01')
             ref.chmod(0o600)
             config = root / 'config.json'
-            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
                     'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: محتوى اصطناعي'}
             argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out),

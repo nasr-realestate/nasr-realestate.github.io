@@ -25,7 +25,8 @@ function validateBundle(bundle, limit, batchSize) {
   const seen = new Set();
   for (const conv of bundle.conversations) {
     if (!conv || typeof conv.conversation_uid !== 'string' || !conv.conversation_uid.trim() ||
-        typeof conv.raw_txt !== 'string' || !conv.raw_txt.trim() || seen.has(conv.conversation_uid)) {
+        typeof conv.raw_txt !== 'string' || (!conv.raw_txt.trim() && conv.contact_only !== true) ||
+        (conv.contact_only === true && conv.raw_txt !== '') || seen.has(conv.conversation_uid)) {
       throw new Error('missing-or-duplicate-conversation-identity');
     }
     seen.add(conv.conversation_uid);
@@ -41,6 +42,14 @@ export async function extractMetadata(conv) {
       !title.trim() || title.trimStart().startsWith('🌀') || title.length > MAX_ANTIX_TITLE_LENGTH ||
       Buffer.byteLength(conv.raw_txt, 'utf8') > MAX_RAW_BYTES) {
     throw new Error('invalid-source-metadata');
+  }
+  if (conv.contact_only === true) {
+    if (conv.raw_txt !== '' || !/^[🟢🔴🔵🟡✈]/u.test(title.trimStart())) {
+      throw new Error('invalid-source-metadata');
+    }
+    return { conversation_uid: conv.conversation_uid, selected_phone: phone, title,
+      message_count: 0, first_message_at: null, last_message_at: null,
+      raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
   }
   const parsed = await parseWhatsAppExport(conv.raw_txt, { chatTitle: title });
   if (!parsed.messages.length || parsed.parseWarnings.some(w => w.code === 'plain_text_fallback')) {
