@@ -289,10 +289,12 @@ def open_message_db(decrypted: Path, work: Path) -> Path:
 
 
 def select_chats(exported: dict, index: dict, as_of: datetime,
-                 review: list | None = None) -> tuple[dict, dict]:
+                 review: list | None = None, *, policy: str = 'marked-or-recent-v1') -> tuple[dict, dict]:
     """Apply the user's scope. Unknown JID types are held, never guessed."""
     if as_of.tzinfo is None:
         raise SyncError("تاريخ التصفية يجب أن يتضمن المنطقة الزمنية")
+    if policy not in {'marked-or-recent-v1', 'marked-plus-recent-window-v2'}:
+        raise SyncError("سياسة التصفية غير مدعومة")
     cutoff = (as_of - timedelta(days=15)).timestamp()
     until = as_of.timestamp()
     selected, counts = {}, {}
@@ -312,8 +314,16 @@ def select_chats(exported: dict, index: dict, as_of: datetime,
         if domain in {"g.us", "newsletter", "broadcast"}:
             count("excluded_non_direct")
             continue
+        # Filter the actual payload, not merely the contact's last activity.
+        if policy == 'marked-plus-recent-window-v2':
+            recent_messages = {key: msg for key, msg in chat.get("messages", {}).items()
+                               if not msg.get("meta") and cutoff <= epoch_seconds(msg.get("timestamp")) <= until}
+            chat = {**chat, "messages": recent_messages}
         if domain not in {"s.whatsapp.net", "c.us"} or not re.fullmatch(r"[0-9]{8,15}", local):
-            hold("hold_unresolved_jid", jid, chat)
+            if policy == 'marked-plus-recent-window-v2' and not chat.get('messages'):
+                count("excluded_no_recent_activity")
+            else:
+                hold("hold_unresolved_jid", jid, chat)
             continue
         card = index.get(local)
         if card and card.get("excluded"):
@@ -345,7 +355,7 @@ def select_chats(exported: dict, index: dict, as_of: datetime,
 
 def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     policy = config.get("selection")
-    if not isinstance(policy, dict) or policy.get("policy") != "marked-or-recent-v1":
+    if not isinstance(policy, dict) or policy.get("policy") not in {"marked-or-recent-v1", "marked-plus-recent-window-v2"}:
         raise SyncError("إعداد سياسة التصفية غير صالح")
     try:
         path = Path(policy["vcf_path"]).expanduser().resolve()
@@ -364,7 +374,26 @@ def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     result = load_json(output, None)
     if not isinstance(result, dict) or not isinstance(result.get("index"), dict):
         raise SyncError("فهرس دفتر العناوين غير صالح")
-    return result["index"], when
+    index = result["index"]
+    if policy['policy'] == 'marked-plus-recent-window-v2':
+        groups = result.get('marked_phone_groups')
+        if not isinstance(groups, list) or any(not isinstance(group, list) or
+                any(not isinstance(phone, str) or not re.fullmatch(r'[0-9]{8,15}', phone) for phone in group)
+                for group in groups):
+            raise SyncError("تعذر التحقق من تغطية العملاء الملوّنين")
+        index['__marked_phone_groups__'] = groups
+    return index, when
+
+
+def marked_coverage_gaps(index: dict, exported: dict) -> dict:
+    groups = index.get('__marked_phone_groups__')
+    if not isinstance(groups, list):
+        raise SyncError("تعذر التحقق من تغطية العملاء الملوّنين")
+    direct_numbers = {jid.split('@')[0] for jid in exported
+                      if re.fullmatch(r'[0-9]{8,15}@(s\.whatsapp\.net|c\.us)', jid)}
+    return {'hold_marked_without_phone': sum(not group for group in groups),
+            'hold_marked_not_in_backup': sum(bool(group) and not any(phone in direct_numbers for phone in group)
+                                             for group in groups)}
 
 
 def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
@@ -375,6 +404,8 @@ def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
             or decisions.get("vcf_sha256") != selection.get("vcf_sha256")
             or decisions.get("as_of") != selection.get("as_of")):
         raise SyncError("ملف القرارات لا يطابق النسخة والدفتر ووقت التصفية")
+    if selection.get('policy') == 'marked-plus-recent-window-v2' and decisions.get('policy') != selection['policy']:
+        raise SyncError("قرار المراجعة لا يطابق سياسة التصفية")
     rows = decisions.get("rows")
     if not isinstance(rows, list):
         raise SyncError("قرارات المراجعة غير صالحة")
@@ -432,13 +463,25 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
         if config.get("selection") is not None:
             index, as_of = selection_index(config, work)
             review_rows = []
-            exported_data, scope_counts = select_chats(exported_data, index, as_of, review_rows)
+            coverage = (marked_coverage_gaps(index, exported_data)
+                        if config['selection']['policy'] == 'marked-plus-recent-window-v2' else {})
+            exported_data, scope_counts = select_chats(exported_data, index, as_of, review_rows,
+                                                        policy=config['selection']['policy'])
+            scope_counts.update(coverage)
             if decisions is not None:
                 scope_counts = apply_hold_exclusions(decisions, review_rows, scope_counts, before, config['selection'])
             # Unverified preparations carry no committed remote identity. Re-plan them
             # with the selected address-book names; uploaded identities stay frozen.
             state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
         chats, counts = plan_chats(exported_data, state)
+        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+            # Contact-only records need a distinct, verified ingest path. Never
+            # silently drop marked clients just because they have no recent text.
+            for item in chats:
+                if item['status'] == 'empty':
+                    item['status'] = 'hold_marked_contact_only'
+                    counts['empty'] -= 1
+                    counts['hold_marked_contact_only'] = counts.get('hold_marked_contact_only', 0) + 1
         counts.update(scope_counts)
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")

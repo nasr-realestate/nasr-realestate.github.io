@@ -41,7 +41,7 @@ def main():
                 argv += ['--wa', str(Path(config['wa_db_path']).expanduser().resolve())]
             run_tool(argv, work)
             review = []
-            _, counts = select_chats(read_export(exported), index, as_of, review)
+            _, counts = select_chats(read_export(exported), index, as_of, review, policy=config['selection']['policy'])
             if before != file_sha(backup):
                 raise SyncError('تغيرت النسخة أثناء القراءة؛ لم يُكتب تقرير')
             # This report is informational; it cannot authorize an upload.
@@ -49,7 +49,8 @@ def main():
             fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(fd, 'w', encoding='utf-8') as handle:
                 json.dump({'schema': 'antix-wa-holds-review-v1', 'as_of': as_of.isoformat(),
-                           'backup_sha256': before, 'vcf_sha256': config['selection']['vcf_sha256'], 'rows': review}, handle, ensure_ascii=False, indent=2)
+                           'backup_sha256': before, 'vcf_sha256': config['selection']['vcf_sha256'],
+                           'policy': config['selection']['policy'], 'rows': review}, handle, ensure_ascii=False, indent=2)
             print(json.dumps({'review_file': str(output), 'held': len(review),
                               'counts': {k: v for k, v in counts.items() if k.startswith('hold_')}}, ensure_ascii=False))
             print('REVIEW_REPORT_OK')

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from wa_sync import select_chats
+from wa_sync import select_chats, marked_coverage_gaps
 
 NOW = datetime(2026, 11, 13, tzinfo=timezone.utc)
 
@@ -40,6 +40,44 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(counts['excluded_old_unmarked'], 3)
         self.assertEqual(selected['201000000001@s.whatsapp.net']['name'], '🟢 عميل اصطناعي')
 
+
+    def test_v2_keeps_all_marked_but_only_recent_messages_for_everyone(self):
+        n = NOW.timestamp()
+        marked = '201000000001@s.whatsapp.net'
+        active = '201000000002@s.whatsapp.net'
+        stale = '201000000003@s.whatsapp.net'
+        excluded = '201000000004@s.whatsapp.net'
+        chats = {
+            marked: {'messages': {'old': {'timestamp': n-20*86400, 'data': 'OLD'},
+                                  'boundary': {'timestamp': n-15*86400, 'data': 'BOUNDARY'},
+                                  'future': {'timestamp': n+1, 'data': 'FUTURE'},
+                                  'meta': {'timestamp': n-2, 'meta': True, 'data': 'SYSTEM'}}},
+            active: {'messages': {'sent': {'timestamp': n-1, 'from_me': True, 'data': 'SENT'},
+                                  'received': {'timestamp': n-2, 'from_me': False, 'data': 'RECEIVED'},
+                                  'old': {'timestamp': n-15*86400-1, 'data': 'OLD'}}},
+            stale: conversation(n-20*86400),
+            excluded: {**conversation(n-1), 'name': 'عميل 🌀'},
+            '201000000005@s.whatsapp.net': conversation(n-1),
+        }
+        idx = {'201000000001': {'marked': True, 'name': '🟡 زبون'},
+               '201000000002': {'marked': False, 'name': 'زبون آخر'},
+               '201000000003': {'marked': True, 'name': '✈ مسافر'},
+               '201000000004': {'marked': True, 'name': '🟢 زبون'}}
+        rows = []
+        selected, counts = select_chats(chats, idx, NOW, rows, policy='marked-plus-recent-window-v2')
+        self.assertEqual(set(selected), {marked, active, stale})
+        self.assertEqual(set(selected[marked]['messages']), {'boundary'})
+        self.assertEqual(set(selected[active]['messages']), {'sent', 'received'})
+        self.assertEqual(selected[stale]['messages'], {})
+        self.assertEqual(counts['excluded_spiral'], 1)
+        self.assertEqual(counts['hold_unknown_recent'], 1)
+        self.assertEqual(len(rows), 1)
+
+    def test_marked_coverage_does_not_count_an_alternative_phone_as_missing(self):
+        index = {'__marked_phone_groups__': [['201000000001', '201000000002'], ['201000000003'], []]}
+        chats = {'201000000002@s.whatsapp.net': conversation(NOW.timestamp())}
+        self.assertEqual(marked_coverage_gaps(index, chats), {'hold_marked_without_phone': 1,
+                                                              'hold_marked_not_in_backup': 1})
 
     def test_private_review_omits_excluded_and_message_contents(self):
         n = NOW.timestamp()

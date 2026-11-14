@@ -12,7 +12,7 @@ def reconcile(old, report):
     current = make_template(report)
     if not isinstance(old, dict) or old.get('schema') != 'antix-hold-decisions-v1':
         raise ValueError('invalid decisions')
-    if any(old.get(k) != current[k] for k in ('backup_sha256', 'vcf_sha256', 'as_of')):
+    if any(old.get(k) != current.get(k) for k in ('backup_sha256', 'vcf_sha256', 'as_of', 'policy')):
         raise ValueError('source mismatch')
     rows = old.get('rows')
     if not isinstance(rows, list) or len(rows) != 116:

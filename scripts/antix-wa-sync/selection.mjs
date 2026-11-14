@@ -60,7 +60,13 @@ export function buildIndex(text) {
       candidates: names.length > 1 ? names : [],
     };
   }
-  return { index, card_count: cards.length, excluded_cards: excluded.size, excluded_marker_cards: markerCount };
+  // Retain only phone groups for scope coverage; never send this private index remotely.
+  const markedGroups = cards.flatMap((card, i) => {
+    if (excluded.has(i) || !marked.some(m => hasPrefix(card.fn, m))) return [];
+    return [card.phones.map(p => p.e164.replace(/\D/g, ''))];
+  });
+  return { index, card_count: cards.length, excluded_cards: excluded.size,
+    excluded_marker_cards: markerCount, marked_phone_groups: markedGroups };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -51,7 +51,8 @@ def main():
             (not args.prepare_write_batches and (args.backup_ref_file or args.confirm_metadata_only))):
         raise wa_sync.SyncError('explicit write batch confirmation and backup reference required')
     config = wa_sync.load_json(args.config, None)
-    if not isinstance(config, dict) or not isinstance(config.get('selection'), dict):
+    if (not isinstance(config, dict) or not isinstance(config.get('selection'), dict) or
+            config['selection'].get('policy') != 'marked-plus-recent-window-v2'):
         raise wa_sync.SyncError('selection required')
     repo = Path(__file__).resolve().parents[2]
     state_dir = wa_sync.private_dir(Path(config.get('state_dir', '~/nasr-wa-sync/state')).expanduser().resolve())

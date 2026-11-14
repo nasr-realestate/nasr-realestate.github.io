@@ -69,7 +69,7 @@ class SealedBridgeTests(unittest.TestCase):
             key = root / 'public.txt'
             key.write_text(json.loads(keys.read_text())['pub'])
             config = root / 'config.json'
-            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
                     'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: رسالة اصطناعية'}
             argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out)]
@@ -96,7 +96,7 @@ class SealedBridgeTests(unittest.TestCase):
             ref.write_text('synthetic-backup-01')
             ref.chmod(0o600)
             config = root / 'config.json'
-            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-or-recent-v1'}}))
+            config.write_text(json.dumps({'state_dir': str(state), 'selection': {'policy': 'marked-plus-recent-window-v2'}}))
             item = {'status': 'new', 'jid': '201111111111@s.whatsapp.net', 'title': '🟢 عميل اصطناعي',
                     'uid': 'wa:fake', 'text': '13/11/2025, 04:13 - عميل: محتوى اصطناعي'}
             argv = ['bridge', '--config', str(config), '--pubkey-file', str(key), '--out-dir', str(out),
