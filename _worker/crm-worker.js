@@ -43,6 +43,7 @@ import {
   proposeReviewContactLinkPayload,
   recordReviewDecisionPayload,
 } from './crm-drive-file-review.js';
+import { antixWriteLeaseEnabled } from './crm-antix-write-lease.js';
 import {
   buildFollowupWorkspaceData,
   computeOpportunityMatches,
@@ -1879,7 +1880,7 @@ async function handleSealedIngest(request, env, config) {
     try {
       syncResult = await runSourceSyncBundle(env.DB, unsealed.syncBundle, {
         dryRun: unsealed.dryRun,
-        allowAntixMetadataWrite: env.CRM_ANTIX_METADATA_WRITE_ENABLED === 'true',
+        allowAntixMetadataWrite: antixWriteLeaseEnabled(env),
         antixVerifiedBackupRef: env.CRM_ANTIX_VERIFIED_BACKUP_REF,
         antixExcludedNames: (() => { try { return JSON.parse(env.CRM_ANTIX_EXCLUDED_NAMES || 'null'); } catch { return null; } })(),
       });

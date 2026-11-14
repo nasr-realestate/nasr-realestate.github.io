@@ -15,6 +15,11 @@ on:
         description: 'RSA-OAEP-4096 + AES-256-GCM sealed envelope (enc_v1....) or READ_PUBLIC_KEY'
         required: true
         type: string
+      selective_write_authorization:
+        description: 'Explicit temporary selective-write lease; leave blank for read-only runs'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -63,6 +68,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Open short-lived selective-write lease for the verified test backup
+        if: github.event_name == 'workflow_dispatch' && inputs.selective_write_authorization == 'SELECTIVE-WRITE-VERIFIED-BACKUP-43636370387'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          # Only encrypted batches are allowed in this explicitly authorized mode.
+          printf '%s\n' "$SEALED_PAYLOAD" | awk 'length($0)>65535 || $0 !~ /^enc_v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/ {exit 1} END {if (NR<1 || NR>10) exit 1}'
+          API='https://api.cloudflare.com/client/v4'
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          account=$(curl -fsS -H "$AUTH" "$API/accounts?per_page=100" | jq -er '.result[0].id')
+          export CLOUDFLARE_ACCOUNT_ID="$account"
+          base="$API/accounts/$account/workers/scripts/nasr-crm-api-test"
+          curl -fsS -H "$AUTH" "$base/settings" | jq -e '[.result.bindings[] | select(.name == "DB" and .type == "d1" and (.id // .database_id) == "760079c6-85f9-4a30-aa19-9a66f95d421a")] | length == 1' >/dev/null
+          # Refuse to open a lease if the deployed Worker does not enforce expiry.
+          content=$(mktemp)
+          trap 'rm -f "$content"' EXIT
+          curl -fsS -H "$AUTH" "$base/content" > "$content"
+          grep -q 'CRM_ANTIX_WRITE_EXPIRES_MS' "$content"
+          cfg='_worker/wrangler.crm.toml'
+          printf false | npx --yes wrangler@4 secret put CRM_ANTIX_METADATA_WRITE_ENABLED --config "$cfg"
+          printf '%s' 'crm-encrypted-backup-43636370387' | npx --yes wrangler@4 secret put CRM_ANTIX_VERIFIED_BACKUP_REF --config "$cfg"
+          printf '%s' "$(( ($(date +%s) + 1200) * 1000 ))" | npx --yes wrangler@4 secret put CRM_ANTIX_WRITE_EXPIRES_MS --config "$cfg"
+          printf true | npx --yes wrangler@4 secret put CRM_ANTIX_METADATA_WRITE_ENABLED --config "$cfg"
+
       - name: Authorize one-time D1 ticket and invoke /api/ingest/sealed
         id: run_ingest
         shell: bash
@@ -463,6 +495,19 @@ jobs:
           collect_counts
           result='sealed-ingest-verified'
           finish
+
+      - name: Close selective-write lease
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.selective_write_authorization == 'SELECTIVE-WRITE-VERIFIED-BACKUP-43636370387'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          account=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" 'https://api.cloudflare.com/client/v4/accounts?per_page=100' | jq -er '.result[0].id')
+          export CLOUDFLARE_ACCOUNT_ID="$account"
+          # Expiry is independently enforced by the Worker if this cleanup cannot run.
+          printf 0 | npx --yes wrangler@4 secret put CRM_ANTIX_WRITE_EXPIRES_MS --config _worker/wrangler.crm.toml
+          printf false | npx --yes wrangler@4 secret put CRM_ANTIX_METADATA_WRITE_ENABLED --config _worker/wrangler.crm.toml
 
   pk1:
     if: needs.ingest.outputs.pk1 != ''
