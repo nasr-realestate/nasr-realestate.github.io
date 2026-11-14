@@ -1152,6 +1152,7 @@ test('guarded synthetic antiX write requires independent server gates and consum
     let envelope = await sealAndAuthorize();
     assert.equal((await post(envelope)).status, 400, 'default gate must be off');
     env.CRM_ANTIX_METADATA_WRITE_ENABLED = 'true';
+    env.CRM_ANTIX_WRITE_EXPIRES_MS = String(Date.now() + 600000);
     env.CRM_ANTIX_VERIFIED_BACKUP_REF = 'other-backup';
     envelope = await sealAndAuthorize();
     assert.equal((await post(envelope)).status, 400, 'wrong backup reference must block');
@@ -1172,7 +1173,7 @@ test('guarded synthetic antiX write requires independent server gates and consum
 test('locally prepared encrypted metadata write reaches the guarded worker without transcript text', async () => {
   const keys = await generateIngestKeyPair();
   const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u,
-    CRM_ANTIX_METADATA_WRITE_ENABLED: 'true', CRM_ANTIX_VERIFIED_BACKUP_REF: 'synthetic-backup-01' } });
+    CRM_ANTIX_METADATA_WRITE_ENABLED: 'true', CRM_ANTIX_WRITE_EXPIRES_MS: String(Date.now() + 600000), CRM_ANTIX_VERIFIED_BACKUP_REF: 'synthetic-backup-01' } });
   try {
     const input = { vcf_contacts: [], conversations: [{ conversation_uid: 'wa:from-local-batcher',
       title: '🟢 عميل اصطناعي', selected_phone: '+201111111111',
@@ -1240,6 +1241,7 @@ test('guarded sealed marked contact-only creates no conversation and remains clo
     assert.equal((await blocked.json()).error, 'antix_phone_verified_write_not_available');
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n, 0);
     env.CRM_ANTIX_METADATA_WRITE_ENABLED = 'true';
+    env.CRM_ANTIX_WRITE_EXPIRES_MS = String(Date.now() + 600000);
     env.CRM_ANTIX_VERIFIED_BACKUP_REF = 'synthetic-backup-01';
     const accepted = await send();
     assert.equal(accepted.status, 200);
@@ -1249,5 +1251,34 @@ test('guarded sealed marked contact-only creates no conversation and remains clo
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contacts').get().n, 1);
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversation_messages').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('selective sealed import holds conflicts and blocks writes after lease expiry', async () => {
+  const keys = await generateIngestKeyPair();
+  const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u,
+    CRM_ANTIX_METADATA_WRITE_ENABLED: 'true', CRM_ANTIX_WRITE_EXPIRES_MS: String(Date.now() + 600000),
+    CRM_ANTIX_VERIFIED_BACKUP_REF: 'synthetic-backup-01' } });
+  try {
+    sqlite.prepare("INSERT INTO crm_contacts(id,name,communication_consent,created_at,updated_at) VALUES('synthetic-held','🟢 اصطناعي','request_only','2025-01-01','2025-01-01')").run();
+    sqlite.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key,raw_input,source_type,source_ref) VALUES('synthetic-phone','synthetic-held','201111111111','','vcf','test')").run();
+    const input = { vcf_contacts: [], conversations: [
+      { conversation_uid: 'wa:held-selective', title: '🟢 اصطناعي', selected_phone: '+201111111111', raw_txt: '', contact_only: true },
+      { conversation_uid: 'wa:candidate-selective', title: 'اصطناعي جديد', selected_phone: '+201022222222', raw_txt: '13/11/2025, 04:13 - عميل: رسالة اصطناعية' },
+    ] };
+    const send = async () => {
+      const [batch] = await sealMetadataBatches(input, keys.publicKeySpkiB64u, { writeBackupRef: 'synthetic-backup-01', selective: true });
+      const digest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(batch.envelope))).toString('hex');
+      sqlite.prepare("INSERT INTO crm_idempotency_receipts(submission_key,resource_type,resource_id) VALUES(?,'opportunity','authorized_pending')").run(`sealed-ticket:${digest}`);
+      return worker.fetch(new Request(`${ALLOWED_ORIGIN}/api/ingest/sealed`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sealed_payload: batch.envelope }) }), env);
+    };
+    const result = await send();
+    assert.equal(result.status, 200);
+    assert.deepEqual((await result.json()).antix_metadata, { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1, held: 1 });
+    assert.equal(sqlite.prepare("SELECT count(*) n FROM crm_conversations WHERE conversation_uid='wa:held-selective'").get().n, 0);
+    env.CRM_ANTIX_WRITE_EXPIRES_MS = String(Date.now() - 1000);
+    const blocked = await send();
+    assert.equal(blocked.status, 400);
+    assert.equal((await blocked.json()).error, 'antix_phone_verified_write_not_available');
   } finally { sqlite.close(); }
 });
