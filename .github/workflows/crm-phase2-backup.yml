@@ -8,6 +8,11 @@ on:
       - .github/workflows/crm-phase2-backup.yml
   workflow_dispatch:
     inputs:
+      single_slot_backup:
+        description: 'Create one persistent backup, test local restore and compare, without creating or deleting a restore DB'
+        required: false
+        type: boolean
+        default: false
       backup_suffix:
         description: 'Name suffix for the NEW backup DB (nasr-crm-test-db-backup-NNNNNNNN); blank = today (UTC)'
         required: false
@@ -23,6 +28,7 @@ concurrency:
 
 jobs:
   backup:
+    if: ${{ !inputs.single_slot_backup }}
     name: Full schema+data backup of nasr-crm-test-db-v2 and isolated restore test
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -833,3 +839,31 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
+
+
+  single-slot-backup:
+    if: ${{ inputs.single_slot_backup }}
+    name: One-slot CRM backup with local restore verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      result: ${{ steps.backup.outputs.result }}
+      backup_name: ${{ steps.backup.outputs.backup_name }}
+      backup_id: ${{ steps.backup.outputs.backup_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Backup only test CRM and verify without deleting databases
+        id: backup
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+        run: bash scripts/crm/single-slot-backup.sh
+  single-slot-report:
+    name: 'Single slot — ${{ needs.single-slot-backup.outputs.result }} — ${{ needs.single-slot-backup.outputs.backup_name }} — ${{ needs.single-slot-backup.outputs.backup_id }}'
+    needs: single-slot-backup
+    if: always() && inputs.single_slot_backup
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Result includes no customer data.'
