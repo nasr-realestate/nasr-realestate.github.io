@@ -17,7 +17,7 @@ async function setup() {
     sqlite.exec(await readFile(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
   }
   const db = {
-    prepare(sql) { return { bind(...args) { return { run: () => sqlite.prepare(sql).run(...args) }; } }; },
+    prepare(sql) { return { bind(...args) { return { run: () => sqlite.prepare(sql).run(...args), all: async () => ({ results: sqlite.prepare(sql).all(...args) }) }; } }; },
     async batch(statements) {
       sqlite.exec('SAVEPOINT testbatch');
       try { const rows = statements.map(s => s.run()); sqlite.exec('RELEASE testbatch'); return rows; }
@@ -170,6 +170,40 @@ test('preview conflicts correspond to protected no-insert cases', async () => {
     assert.equal(previewAntixPhoneMatches(items, phones, [], contacts).phone_conflict, 2);
     assert.deepEqual(await writeAntixMetadataPrototype(db, items, { createMissing: true }),
       { attempted: 2, inserted: 0, not_inserted: 2, created_contacts: 0 });
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('named exclusion and test-only owners are blocked in preview and write', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('a','🟢 مَثال مستبعد'),('b','  TEST ONLY synthetic')");
+    sqlite.exec("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('pa','a','201111111111'),('pb','b','201022222222')");
+    const items = [{ ...item('wa:a', '+201111111111'), title: 'اسم بديل' },
+      { ...item('wa:b', '+201022222222'), title: 'اسم بديل آخر' }];
+    const phones = sqlite.prepare('SELECT contact_id,phone_key FROM crm_contact_phones').all();
+    const contacts = sqlite.prepare('SELECT id,name FROM crm_contacts').all();
+    assert.equal(previewAntixPhoneMatches(items, phones, [], contacts, ['مثال مستبعد']).phone_conflict, 2);
+    assert.deepEqual(await writeAntixMetadataPrototype(db, items, { createMissing: true, excludedNames: ['مثال مستبعد'] }),
+      { attempted: 2, inserted: 0, not_inserted: 2, created_contacts: 0 });
+    assert.throws(() => validateAntixMetadata([{ ...items[0], title: '🔴 مَثال \u200fمستبعد' }], ['مثال مستبعد']));
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('write refuses an owner name changed after the identity snapshot', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('a','عميل اصطناعي')");
+    sqlite.exec("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('p','a','201111111111')");
+    const originalBatch = db.batch;
+    db.batch = async statements => {
+      sqlite.exec("UPDATE crm_contacts SET name='مثال مستبعد' WHERE id='a'");
+      return originalBatch(statements);
+    };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [item('wa:race', '+201111111111')], { createMissing: true }),
+      { attempted: 1, inserted: 0, not_inserted: 1, created_contacts: 0 });
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
   } finally { sqlite.close(); }
 });

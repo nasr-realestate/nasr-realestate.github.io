@@ -1,8 +1,9 @@
 // A read-only preflight. No title-based matching and no persistence of chat text.
 import { cleanBidiControls, normalizeInternationalPhone } from './crm-chat-intel.js';
+import { isProtectedAntixOwner } from './crm-antix-exclusions.js';
 
-function wouldSkipExistingOwner(chat, owner, contacts) {
-  return Boolean(owner) && (chat.message_count === 0 || (contacts.get(owner) || '').includes('🌀'));
+function wouldSkipExistingOwner(chat, owner, contacts, excludedNames) {
+  return Boolean(owner) && (chat.message_count === 0 || isProtectedAntixOwner(contacts.get(owner) || '', excludedNames));
 }
 
 function indexPhones(phoneRows) {
@@ -16,7 +17,7 @@ function indexPhones(phoneRows) {
   return phones;
 }
 
-export function previewAntixPhoneMatches(conversations, phoneRows, conversationRows, contactRows = []) {
+export function previewAntixPhoneMatches(conversations, phoneRows, conversationRows, contactRows = [], excludedNames = []) {
   const phones = indexPhones(phoneRows);
   const existing = new Map(conversationRows.map(row => [row.conversation_uid, row]));
   const names = new Set(contactRows.map(row => cleanBidiControls(row.name || '').trim()).filter(Boolean));
@@ -41,7 +42,7 @@ export function previewAntixPhoneMatches(conversations, phoneRows, conversationR
     if (previous) { counts.conversation_conflict++; continue; }
     // Contact-only writes create a new contact and would skip an existing phone.
     // An excluded existing owner must never be linked even for a recent chat.
-    if (wouldSkipExistingOwner(chat, owner, contacts)) {
+    if (wouldSkipExistingOwner(chat, owner, contacts, excludedNames)) {
       counts.phone_conflict++; continue;
     }
     // Name equality is only a warning for the write guard, never identity evidence.

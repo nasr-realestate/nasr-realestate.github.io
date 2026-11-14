@@ -1,6 +1,7 @@
 // Isolated prototype, not wired to any endpoint. Matching is by phone only.
 // This deliberately stores no transcript, message bodies, insights, or alerts.
 import { normalizeInternationalPhone, cleanBidiControls } from './crm-chat-intel.js';
+import { isExcludedAntixName, isProtectedAntixOwner } from './crm-antix-exclusions.js';
 
 export const MAX_ANTIX_TITLE_LENGTH = 4096;
 
@@ -14,7 +15,7 @@ function validDate(value) {
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
-export function validateAntixMetadata(items) {
+export function validateAntixMetadata(items, excludedNames = []) {
   if (!Array.isArray(items) || !items.length || items.length > 10) throw new Error('invalid-batch');
   const seenUid = new Set();
   const seenPhone = new Set();
@@ -24,7 +25,7 @@ export function validateAntixMetadata(items) {
         typeof item.selected_phone !== 'string' || !/^\+\d{8,15}$/.test(item.selected_phone) ||
         normalizeInternationalPhone(item.selected_phone) !== item.selected_phone.slice(1) ||
         typeof item.title !== 'string' || !item.title.trim() || item.title.length > MAX_ANTIX_TITLE_LENGTH ||
-        (cleanBidiControls(item.title).includes('🌀') || /^TEST ONLY/i.test(cleanBidiControls(item.title).trimStart())) || !Number.isSafeInteger(item.message_count) || item.message_count < 0 ||
+        (isExcludedAntixName(item.title, excludedNames) || /^TEST ONLY/i.test(cleanBidiControls(item.title).trimStart())) || !Number.isSafeInteger(item.message_count) || item.message_count < 0 ||
         (item.message_count === 0 && (!/^[🟢🔴🔵🟡✈]/u.test(cleanBidiControls(item.title).trimStart()) ||
           item.first_message_at !== null || item.last_message_at !== null ||
           item.raw_sha256 !== 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')) ||
@@ -39,23 +40,41 @@ export function validateAntixMetadata(items) {
   }
 }
 
+async function snapshotOwners(db, items) {
+  const placeholders = items.map(() => '?').join(',');
+  const existing = await db.prepare(`SELECT p.phone_key, c.id, c.name FROM crm_contact_phones p
+    JOIN crm_contacts c ON c.id = p.contact_id WHERE p.phone_key IN (${placeholders})`)
+    .bind(...items.map(item => item.selected_phone.slice(1))).all();
+  if (!Array.isArray(existing?.results)) throw new Error('unverified-owner-snapshot');
+  return new Map(existing.results.map(row => [row.phone_key, row]));
+}
+
+function ownerSnapshot(owner, contactId, title, excludedNames) {
+  if (!owner) return { id: contactId, name: cleanBidiControls(title).trim() };
+  return isProtectedAntixOwner(owner.name, excludedNames) ? { id: '', name: '' } : owner;
+}
+
 /** Internal prototype. Not connected to any ingest endpoint. */
-export async function writeAntixMetadataPrototype(db, items, { now = new Date(), createMissing = false } = {}) {
-  validateAntixMetadata(items); // Validate the whole batch before issuing any SQL.
+export async function writeAntixMetadataPrototype(db, items, { now = new Date(), createMissing = false, excludedNames = [] } = {}) {
+  validateAntixMetadata(items, excludedNames); // Validate the whole batch before issuing any SQL.
   const nowIso = now.toISOString();
   const statements = [];
+  const owners = await snapshotOwners(db, items);
   for (const item of items) {
     const contactId = crypto.randomUUID();
+    const owner = owners.get(item.selected_phone.slice(1));
+    // Snapshot exact owner identity and name so concurrent changes fail closed.
+    const target = ownerSnapshot(owner, contactId, item.title, excludedNames);
     if (createMissing) {
       // A UID collision or an exact name collision is a review case, not a new
       // person and not evidence for linking to the existing name's owner.
       statements.push(db.prepare(
         `INSERT INTO crm_contacts(id, name, communication_consent, created_at, updated_at)
          SELECT ?, ?, 'request_only', ?, ?
-         WHERE NOT EXISTS (SELECT 1 FROM crm_contact_phones WHERE phone_key = ?)
+         WHERE ? = 1 AND NOT EXISTS (SELECT 1 FROM crm_contact_phones WHERE phone_key = ?)
            AND NOT EXISTS (SELECT 1 FROM crm_conversations WHERE conversation_uid = ?)
            AND NOT EXISTS (SELECT 1 FROM crm_contacts WHERE name = ?)`,
-      ).bind(contactId, cleanBidiControls(item.title).trim(), nowIso, nowIso, item.selected_phone.slice(1),
+      ).bind(contactId, cleanBidiControls(item.title).trim(), nowIso, nowIso, owner ? 0 : 1, item.selected_phone.slice(1),
         item.conversation_uid, cleanBidiControls(item.title).trim()));
       statements.push(db.prepare(
         `INSERT INTO crm_contact_phones(id, contact_id, phone_key, label, is_primary, raw_input, source_type, source_ref, verified_at)
@@ -75,10 +94,11 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       ) SELECT ?, ?, c.id, 'whatsapp_export', 'antix_metadata_v1', c.name,
         '', 'matched', 'exact_phone', '', '', ?, ?, ?, ?, '[]', ?, ?
         FROM crm_contact_phones p JOIN crm_contacts c ON c.id = p.contact_id
-        WHERE p.phone_key = ? AND ? > 0 AND ltrim(c.name) NOT LIKE 'TEST ONLY%' AND c.name NOT LIKE '%🌀%'
+        WHERE p.phone_key = ? AND ? > 0 AND c.id = ? AND c.name = ?
+          AND ltrim(c.name) NOT LIKE 'TEST ONLY%' AND c.name NOT LIKE '%🌀%'
         ON CONFLICT(conversation_uid) DO NOTHING`,
     ).bind(crypto.randomUUID(), item.conversation_uid, item.raw_sha256, item.message_count,
-      item.first_message_at, item.last_message_at, nowIso, nowIso, item.selected_phone.slice(1), item.message_count));
+      item.first_message_at, item.last_message_at, nowIso, nowIso, item.selected_phone.slice(1), item.message_count, target.id, target.name));
   }
   // D1 batch is transactional: any constraint error rolls back the entire batch.
   const result = await db.batch(statements);

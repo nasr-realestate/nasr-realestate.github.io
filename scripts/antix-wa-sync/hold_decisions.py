@@ -25,9 +25,11 @@ def make_template(report):
             raise ValueError('bad report row')
         seen.add(row['ref'])
         rows.append({'ref': row['ref'], 'reason': row['reason'], 'action': 'pending'})
-    if report.get('policy') not in (None, 'marked-or-recent-v1', 'marked-plus-recent-window-v2'):
+    if report.get('policy') not in (None, 'marked-or-recent-v1', 'marked-plus-recent-window-v3'):
         raise ValueError('bad selection policy')
-    return {'schema': 'antix-hold-decisions-v1', **({'policy': report['policy']} if report.get('policy') else {}), 'backup_sha256': report['backup_sha256'],
+    if report.get('policy') == 'marked-plus-recent-window-v3' and not re.fullmatch(r'[0-9a-f]{64}', str(report.get('exclusions_sha256', ''))):
+        raise ValueError('missing exclusion fingerprint')
+    return {'schema': 'antix-hold-decisions-v1', **({'exclusions_sha256': report['exclusions_sha256']} if 'exclusions_sha256' in report else {}), **({'policy': report['policy']} if report.get('policy') else {}), 'backup_sha256': report['backup_sha256'],
             'vcf_sha256': report['vcf_sha256'], 'as_of': report['as_of'], 'rows': rows}
 
 

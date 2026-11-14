@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from hold_decisions import make_template, review_each
-from wa_sync import SyncError, apply_hold_exclusions
+from wa_sync import SyncError, apply_hold_exclusions, exclusion_digest
 
 
 class HoldDecisionsTests(unittest.TestCase):
@@ -52,10 +52,12 @@ class HoldDecisionsTests(unittest.TestCase):
                 self.apply(case)
 
     def test_new_policy_cannot_reuse_old_exclusion_decisions(self):
-        self.selection['policy'] = 'marked-plus-recent-window-v2'
+        self.selection['excluded_names'] = ['مثال مستبعد']
+        self.report['exclusions_sha256'] = exclusion_digest(self.selection['excluded_names'])
+        self.selection['policy'] = 'marked-plus-recent-window-v3'
         with self.assertRaises(SyncError):
             self.apply(self.decisions)
-        self.report['policy'] = 'marked-plus-recent-window-v2'
+        self.report['policy'] = 'marked-plus-recent-window-v3'
         self.assertEqual(self.apply(make_template(self.report)), self.counts)
 
     def test_interactive_choices_never_allow_approval(self):
@@ -98,3 +100,16 @@ class HoldDecisionsTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ExclusionFingerprintTests(unittest.TestCase):
+    def test_changed_private_exclusions_invalidate_decisions(self):
+        selection = {'policy': 'marked-plus-recent-window-v3', 'vcf_sha256': 'b' * 64,
+                     'as_of': '2026-11-13T00:00:00+00:00', 'excluded_names': ['اسم اصطناعي']}
+        report = {'schema': 'antix-wa-holds-review-v1', 'backup_sha256': 'a' * 64,
+                  'vcf_sha256': selection['vcf_sha256'], 'as_of': selection['as_of'],
+                  'policy': selection['policy'], 'exclusions_sha256': exclusion_digest(selection['excluded_names']), 'rows': []}
+        decision = make_template(report)
+        self.assertEqual(apply_hold_exclusions(decision, [], {}, 'a' * 64, selection), {})
+        selection['excluded_names'].append('تغيير اصطناعي')
+        with self.assertRaises(SyncError):
+            apply_hold_exclusions(decision, [], {}, 'a' * 64, selection)

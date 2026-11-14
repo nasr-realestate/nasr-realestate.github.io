@@ -19,6 +19,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
@@ -54,6 +55,23 @@ def file_sha(path: Path) -> str:
 
 def clean(value) -> str:
     return BIDI.sub("", str(value or ""))
+
+
+def is_excluded_name(value, excluded_names=()) -> bool:
+    def normalize(text):
+        return re.sub(r'[\u064b-\u065f\u0670\u0640]', '', unicodedata.normalize('NFKC', clean(text)))
+    name = normalize(value)
+    if '🌀' in name:
+        return True
+    for term in excluded_names:
+        words = re.findall(r'[^\W_]+', normalize(term), re.UNICODE)
+        if words and re.search(r'(?<![^\W_])' + r'[\W_]+'.join(map(re.escape, words)) + r'(?![^\W_])', name):
+            return True
+    return False
+
+
+def exclusion_digest(names) -> str:
+    return sha(json.dumps(names, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
 
 
 def title_key(value: str) -> str:
@@ -250,8 +268,8 @@ def write_chat_zip(path: Path, item: dict) -> None:
             z.writestr(info, data)
 
 
-def run_tool(argv: list[str], cwd: Path, timeout: int = 1800) -> None:
-    env = {**os.environ, "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION": "python", "PYTHONUTF8": "1"}
+def run_tool(argv: list[str], cwd: Path, timeout: int = 1800, extra_env=None) -> None:
+    env = {**os.environ, "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION": "python", "PYTHONUTF8": "1", **(extra_env or {})}
     try:
         result = subprocess.run(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
@@ -289,11 +307,11 @@ def open_message_db(decrypted: Path, work: Path) -> Path:
 
 
 def select_chats(exported: dict, index: dict, as_of: datetime,
-                 review: list | None = None, *, policy: str = 'marked-or-recent-v1') -> tuple[dict, dict]:
+                 review: list | None = None, *, policy: str = 'marked-or-recent-v1', excluded_names=()) -> tuple[dict, dict]:
     """Apply the user's scope. Unknown JID types are held, never guessed."""
     if as_of.tzinfo is None:
         raise SyncError("تاريخ التصفية يجب أن يتضمن المنطقة الزمنية")
-    if policy not in {'marked-or-recent-v1', 'marked-plus-recent-window-v2'}:
+    if policy not in {'marked-or-recent-v1', 'marked-plus-recent-window-v3'}:
         raise SyncError("سياسة التصفية غير مدعومة")
     cutoff = (as_of - timedelta(days=15)).timestamp()
     until = as_of.timestamp()
@@ -307,20 +325,20 @@ def select_chats(exported: dict, index: dict, as_of: datetime,
                            "title": clean(chat.get("name") or ""),
                            "candidates": (card or {}).get("candidates", [])})
     for jid, chat in exported.items():
-        if "🌀" in clean(chat.get("name") or ""):
-            count("excluded_spiral")
+        if is_excluded_name(chat.get("name") or "", excluded_names):
+            count("excluded_spiral" if "🌀" in clean(chat.get("name") or "") else "excluded_named")
             continue
         local, _, domain = jid.partition("@")
         if domain in {"g.us", "newsletter", "broadcast"}:
             count("excluded_non_direct")
             continue
         # Filter the actual payload, not merely the contact's last activity.
-        if policy == 'marked-plus-recent-window-v2':
+        if policy == 'marked-plus-recent-window-v3':
             recent_messages = {key: msg for key, msg in chat.get("messages", {}).items()
                                if not msg.get("meta") and cutoff <= epoch_seconds(msg.get("timestamp")) <= until}
             chat = {**chat, "messages": recent_messages}
         if domain not in {"s.whatsapp.net", "c.us"} or not re.fullmatch(r"[0-9]{8,15}", local):
-            if policy == 'marked-plus-recent-window-v2' and not chat.get('messages'):
+            if policy == 'marked-plus-recent-window-v3' and not chat.get('messages'):
                 count("excluded_no_recent_activity")
             else:
                 hold("hold_unresolved_jid", jid, chat)
@@ -355,7 +373,7 @@ def select_chats(exported: dict, index: dict, as_of: datetime,
 
 def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
     policy = config.get("selection")
-    if not isinstance(policy, dict) or policy.get("policy") not in {"marked-or-recent-v1", "marked-plus-recent-window-v2"}:
+    if not isinstance(policy, dict) or policy.get("policy") not in {"marked-or-recent-v1", "marked-plus-recent-window-v3"}:
         raise SyncError("إعداد سياسة التصفية غير صالح")
     try:
         path = Path(policy["vcf_path"]).expanduser().resolve()
@@ -367,15 +385,19 @@ def selection_index(config: dict, work: Path) -> tuple[dict, datetime]:
         raise SyncError("تاريخ التصفية أو بصمة الدفتر غير صالحين")
     if not path.is_file() or file_sha(path) != expected:
         raise SyncError("دفتر العناوين مفقود أو تغيرت بصمته؛ لم تُجهز دفعة جديدة")
+    names = policy.get("excluded_names", [])
+    if not isinstance(names, list) or (policy["policy"] == "marked-plus-recent-window-v3" and not names) or any(not isinstance(n, str) or not any(ch.isalnum() for ch in n) for n in names):
+        raise SyncError("يلزم إعداد قائمة الاستبعاد الخاصة")
     output = work / "contacts-index.json"
-    run_tool([config.get("node_bin", "node"), "--experimental-default-type=module", str(Path(__file__).with_name("selection.mjs")), str(path), str(output)], work)
+    run_tool([config.get("node_bin", "node"), "--experimental-default-type=module", str(Path(__file__).with_name("selection.mjs")), str(path), str(output)], work,
+             extra_env={"NASR_ANTIX_EXCLUDED_NAMES": json.dumps(names, ensure_ascii=False)})
     if file_sha(path) != expected:
         raise SyncError("تغير دفتر العناوين أثناء قراءته")
     result = load_json(output, None)
     if not isinstance(result, dict) or not isinstance(result.get("index"), dict):
         raise SyncError("فهرس دفتر العناوين غير صالح")
     index = result["index"]
-    if policy['policy'] == 'marked-plus-recent-window-v2':
+    if policy['policy'] == 'marked-plus-recent-window-v3':
         groups = result.get('marked_phone_groups')
         if not isinstance(groups, list) or any(not isinstance(group, list) or
                 any(not isinstance(phone, str) or not re.fullmatch(r'[0-9]{8,15}', phone) for phone in group)
@@ -439,7 +461,9 @@ def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
             or decisions.get("vcf_sha256") != selection.get("vcf_sha256")
             or decisions.get("as_of") != selection.get("as_of")):
         raise SyncError("ملف القرارات لا يطابق النسخة والدفتر ووقت التصفية")
-    if selection.get('policy') == 'marked-plus-recent-window-v2' and decisions.get('policy') != selection['policy']:
+    if selection.get('policy') == 'marked-plus-recent-window-v3' and (not selection.get('excluded_names') or decisions.get('exclusions_sha256') != exclusion_digest(selection['excluded_names'])):
+        raise SyncError('قائمة الاستبعاد تغيرت؛ يلزم تقرير وقرارات جديدة')
+    if selection.get('policy') == 'marked-plus-recent-window-v3' and decisions.get('policy') != selection['policy']:
         raise SyncError("قرار المراجعة لا يطابق سياسة التصفية")
     rows = decisions.get("rows")
     if not isinstance(rows, list):
@@ -464,7 +488,7 @@ def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
 
 
 def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisions: dict | None = None) -> tuple[list[dict], dict, Path]:
-    if write_outbox and config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+    if write_outbox and config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v3':
         raise SyncError("هذه السياسة تتطلب مسار الدفعات المشفّرة فقط")
     backup = Path(config["backup_path"]).expanduser().resolve()
     key = Path(config["key_path"]).expanduser().resolve()
@@ -501,9 +525,9 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
             index, as_of = selection_index(config, work)
             review_rows = []
             vcf_only, coverage = (prepare_missing_marked_contacts(index, exported_data)
-                                  if config['selection']['policy'] == 'marked-plus-recent-window-v2' else ([], {}))
+                                  if config['selection']['policy'] == 'marked-plus-recent-window-v3' else ([], {}))
             exported_data, scope_counts = select_chats(exported_data, index, as_of, review_rows,
-                                                        policy=config['selection']['policy'])
+                                                        policy=config['selection']['policy'], excluded_names=config['selection'].get('excluded_names', []))
             scope_counts.update(coverage)
             if decisions is not None:
                 scope_counts = apply_hold_exclusions(decisions, review_rows, scope_counts, before, config['selection'])
@@ -511,7 +535,7 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
             # with the selected address-book names; uploaded identities stay frozen.
             state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
         chats, counts = plan_chats(exported_data, state)
-        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v3':
             for item in chats:
                 if item['status'] == 'empty':
                     phone = item.get('jid', '').split('@', 1)[0]
@@ -524,7 +548,7 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
                     item['status'] = status
                     counts['empty'] -= 1
                     counts[status] = counts.get(status, 0) + 1
-        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v3':
             # A repeated title or UID is never resolved by guessing a person.
             known_titles = {item.get('title_key') for item in chats if item.get('title_key')}
             known_titles.update(row['title_key'] for row in state['chats'].values() if row.get('title_key'))

@@ -118,6 +118,7 @@ async function createEnv({ useVerifier = true, extraEnv = {} } = {}) {
     CRM_SITE_SOURCE_ID: '1',
     CRM_NASR_AREA_IDS: '1',
     CRM_SESSION_SECRET: sessionSecret,
+    CRM_ANTIX_EXCLUDED_NAMES: JSON.stringify(['مثال مستبعد']),
   };
   if (useVerifier) {
     baseEnv.CRM_ACCESS_CODE_VERIFIER = await createAccessCodeVerifier(accessCode);

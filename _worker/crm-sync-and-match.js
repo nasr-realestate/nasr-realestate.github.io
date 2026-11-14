@@ -988,6 +988,10 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
 
   const isAntixPreview = conversations.some(c => Object.hasOwn(c || {}, 'selected_phone'));
   if (isAntixPreview) {
+    if (!Array.isArray(normalizedOpts.antixExcludedNames) || !normalizedOpts.antixExcludedNames.length ||
+        normalizedOpts.antixExcludedNames.some(n => typeof n !== 'string' || !/[\p{L}\p{N}]/u.test(n))) {
+      return { ok: false, error: 'antix_private_exclusions_not_configured' };
+    }
     if (vcfContacts.length || restoreOpportunities.length || cleanPolicy) {
       return { ok: false, error: 'antix_phone_verified_write_not_available' };
     }
@@ -999,22 +1003,23 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
         return { ok: false, error: 'antix_phone_verified_write_not_available' };
       }
     }
-    try { validateAntixMetadata(conversations); }
+    try { validateAntixMetadata(conversations, normalizedOpts.antixExcludedNames); }
     catch { return { ok: false, error: 'antix_invalid_preview_batch' }; }
     if (!dryRun) {
-      const result = await writeAntixMetadataPrototype(db, conversations, { now, createMissing: true });
+      const result = await writeAntixMetadataPrototype(db, conversations, { now, createMissing: true, excludedNames: normalizedOpts.antixExcludedNames });
       return { ok: true, dry_run: false, antix_metadata: result };
     }
   }
 
   const existingContactsRes = await db.prepare(
-    "SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'",
+    isAntixPreview ? "SELECT id, name, communication_consent FROM crm_contacts" :
+      "SELECT id, name, communication_consent FROM crm_contacts WHERE name NOT LIKE 'TEST ONLY%'",
   ).all();
   const existingPhonesRes = await db.prepare(
     `SELECT p.id, p.contact_id, p.phone_key, p.label, p.is_primary, p.source_type, p.source_ref
      FROM crm_contact_phones p
      JOIN crm_contacts c ON c.id = p.contact_id
-     WHERE c.name NOT LIKE 'TEST ONLY%'`,
+     ${isAntixPreview ? '' : "WHERE c.name NOT LIKE 'TEST ONLY%'"}`,
   ).all();
 
   if (isAntixPreview) {
@@ -1026,7 +1031,7 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     const uids = conversations.map(c => typeof c?.conversation_uid === 'string' ? c.conversation_uid : '');
     const placeholders = uids.map(() => '?').join(',');
     const previous = await db.prepare(`SELECT conversation_uid, contact_id FROM crm_conversations WHERE conversation_uid IN (${placeholders})`).bind(...uids).all();
-    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || [], existingContactsRes?.results || []) };
+    return { ok: true, dry_run: true, antix_phone_preview: previewAntixPhoneMatches(conversations, existingPhonesRes?.results || [], previous?.results || [], existingContactsRes?.results || [], normalizedOpts.antixExcludedNames) };
   }
 
   const contactsById = new Map();
