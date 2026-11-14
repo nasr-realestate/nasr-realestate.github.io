@@ -124,3 +124,17 @@ test('guarded write envelopes are capped at five items per D1 transaction', asyn
     assert.ok(decoded.sync_bundle.conversations.length <= 5);
   }
 });
+
+test('selective mode requires explicit write reference and keeps batches guarded and bounded', async () => {
+  const source = bundle(Array.from({ length: 7 }, (_, i) => conv(i)));
+  await assert.rejects(sealMetadataBatches(source, pubkey, { selective: true }), /selective-write-required/);
+  const batches = await sealMetadataBatches(source, pubkey, { writeBackupRef: 'synthetic-backup-01', selective: true });
+  assert.deepEqual(batches.map(b => b.conversations), [5, 2]);
+  for (const batch of batches) {
+    const decoded = await decrypt(batch.envelope);
+    assert.equal(decoded.dry_run, false);
+    assert.equal(decoded.sync_bundle.antix_mode, 'metadata_only_selective_v3');
+    assert.equal(decoded.sync_bundle.backup_verified_ref, 'synthetic-backup-01');
+    assert.doesNotMatch(JSON.stringify(decoded), /رسالة اصطناعية/);
+  }
+});

@@ -54,3 +54,33 @@ test('local D1 guarded metadata batch aborts partial inserts on an intra-batch c
     assert.deepEqual(result, { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1 });
   } finally { await mf.dispose(); }
 });
+
+test('selective ingest writes only candidates and keeps held identities out of D1', async () => {
+  const { runSourceSyncBundle } = await import('../../_worker/crm-sync-and-match.js');
+  const mf = new Miniflare({ cf: false, modules: true, compatibilityDate: '2025-01-01',
+    script: 'export default { fetch() { return new Response("ok") } }', d1Databases: ['DB'] });
+  try {
+    const db = await mf.getD1Database('DB');
+    for (const sql of [
+      'CREATE TABLE crm_contacts(id TEXT PRIMARY KEY,name TEXT,communication_consent TEXT,created_at TEXT,updated_at TEXT)',
+      'CREATE TABLE crm_contact_phones(id TEXT PRIMARY KEY,contact_id TEXT,phone_key TEXT UNIQUE,label TEXT,is_primary INTEGER,raw_input TEXT,source_type TEXT,source_ref TEXT,verified_at TEXT)',
+      'CREATE TABLE crm_contact_audit_log(id TEXT PRIMARY KEY,contact_id TEXT,action_type TEXT,field_name TEXT,old_value TEXT,new_value TEXT,source_ref TEXT,actor TEXT,created_at TEXT)',
+      'CREATE TABLE crm_conversations(id TEXT PRIMARY KEY,conversation_uid TEXT UNIQUE,contact_id TEXT,source_type TEXT,source_ref TEXT,chat_title TEXT,peer_sender_name TEXT,match_status TEXT,match_method TEXT,review_reason TEXT,raw_text TEXT,raw_sha256 TEXT,message_count INTEGER,first_message_at TEXT,last_message_at TEXT,parse_warnings_json TEXT,created_at TEXT,updated_at TEXT)',
+    ]) await db.prepare(sql).run();
+    await db.prepare("INSERT INTO crm_contacts(id,name) VALUES('existing','🟢 اسم اصطناعي')").run();
+    await db.prepare("INSERT INTO crm_contact_phones(id,contact_id,phone_key) VALUES('p','existing','201111111111')").run();
+    const held = { conversation_uid: 'wa:held', selected_phone: '+201111111111', title: '🟢 اسم اصطناعي', message_count: 0,
+      first_message_at: null, last_message_at: null, raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
+    const candidate = { conversation_uid: 'wa:candidate', selected_phone: '+201022222222', title: 'اسم اصطناعي جديد', message_count: 1,
+      first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+    const opts = { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'verified-synthetic', antixExcludedNames: ['مثال مستبعد'] };
+    const payload = { dry_run: false, antix_mode: 'metadata_only_selective_v3', backup_verified_ref: 'verified-synthetic', conversations: [held, candidate] };
+    const result = await runSourceSyncBundle(db, payload, opts);
+    assert.deepEqual(result, { ok: true, dry_run: false, antix_metadata: { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1, held: 1 } });
+    assert.equal((await db.prepare('SELECT count(*) n FROM crm_contacts').first()).n, 2);
+    assert.equal((await db.prepare('SELECT count(*) n FROM crm_conversations WHERE conversation_uid = ?').bind('wa:held').first()).n, 0);
+    const again = await runSourceSyncBundle(db, { ...payload, conversations: [held] }, opts);
+    assert.deepEqual(again.antix_metadata, { attempted: 0, inserted: 0, not_inserted: 0, created_contacts: 0, held: 1 });
+    assert.equal((await db.prepare('SELECT count(*) n FROM crm_contacts').first()).n, 2);
+  } finally { await mf.dispose(); }
+});

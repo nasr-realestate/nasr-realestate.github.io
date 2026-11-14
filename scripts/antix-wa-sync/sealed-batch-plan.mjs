@@ -79,16 +79,22 @@ async function extractValidatedMetadata(conversations) {
   return structured;
 }
 
-export async function sealMetadataBatches(bundle, publicKey, { limit = MAX_DISPATCH_CHARS, batchSize = MAX_CONVERSATIONS, writeBackupRef = null } = {}) {
-  validateBundle(bundle, limit, batchSize);
-  const structured = await extractValidatedMetadata(bundle.conversations);
+function validateWriteOptions(writeBackupRef, selective) {
   const isWrite = writeBackupRef !== null;
+  if (typeof selective !== 'boolean' || (selective && !isWrite)) throw new Error('selective-write-required');
   if (isWrite && (typeof writeBackupRef !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(writeBackupRef))) {
     throw new Error('invalid-backup-reference');
   }
+  return isWrite;
+}
+
+export async function sealMetadataBatches(bundle, publicKey, { limit = MAX_DISPATCH_CHARS, batchSize = MAX_CONVERSATIONS, writeBackupRef = null, selective = false } = {}) {
+  validateBundle(bundle, limit, batchSize);
+  const structured = await extractValidatedMetadata(bundle.conversations);
+  const isWrite = validateWriteOptions(writeBackupRef, selective);
   const make = async (conversations) => sealPayload(toPayload({
     conversations, vcf_contacts: [], dry_run: !isWrite,
-    ...(isWrite ? { antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: writeBackupRef }
+    ...(isWrite ? { antix_mode: selective ? 'metadata_only_selective_v3' : 'metadata_only_guarded_v2', backup_verified_ref: writeBackupRef }
       : { antix_safe_plan_preview: true }),
   }, { dryRun: !isWrite }), publicKey);
   const out = [];
@@ -125,9 +131,16 @@ function outsideRepo(target) {
   return absolute;
 }
 
+function validateArgs(args) {
+  if (args.length === 3) return;
+  if (args.length === 5 && args[3] === '--write-ref-file') return;
+  if (args.length === 6 && args[3] === '--write-ref-file' && args[5] === '--selective') return;
+  throw new Error('invalid arguments');
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length !== 3 && !(args.length === 5 && args[3] === '--write-ref-file')) throw new Error('invalid arguments');
+  validateArgs(args);
   const input = args[0] === '--stdin' ? null : outsideRepo(args[0]);
   const [pubkey, output] = args.slice(1, 3).map(outsideRepo);
   const dirStat = fs.statSync(output);
@@ -135,12 +148,12 @@ async function main() {
   const bundle = JSON.parse(fs.readFileSync(input ?? 0, 'utf8'));
   const key = fs.readFileSync(pubkey, 'utf8').trim();
   let ref = null;
-  if (args.length === 5) {
+  if (args.length >= 5) {
     const refFile = outsideRepo(args[4]);
     if (!fs.statSync(refFile).isFile() || (fs.statSync(refFile).mode & 0o077)) throw new Error('private-ref-required');
     ref = fs.readFileSync(refFile, 'utf8').trim();
   }
-  const batches = await sealMetadataBatches(bundle, key, { writeBackupRef: ref });
+  const batches = await sealMetadataBatches(bundle, key, { writeBackupRef: ref, selective: args.length === 6 });
   const written = [];
   try {
     for (let i = 0; i < batches.length; i++) {
