@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   probe:
-    name: Read-only Cloudflare GET probes
+    name: Read-only Cloudflare inventory and usage
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -28,6 +28,7 @@ jobs:
       groups: ${{ steps.probe.outputs.groups }}
       accounts: ${{ steps.probe.outputs.accounts }}
       d1: ${{ steps.probe.outputs.d1 }}
+      d1_usage: ${{ steps.probe.outputs.d1_usage }}
       workers: ${{ steps.probe.outputs.workers }}
       access: ${{ steps.probe.outputs.access }}
       zones: ${{ steps.probe.outputs.zones }}
@@ -35,7 +36,7 @@ jobs:
       identity_providers: ${{ steps.probe.outputs.identity_providers }}
       workers_subdomain: ${{ steps.probe.outputs.workers_subdomain }}
     steps:
-      - name: Verify exact secret and inventory read access (GET only)
+      - name: Verify exact secret and read inventory and usage
         id: probe
         shell: bash
         run: |
@@ -49,6 +50,7 @@ jobs:
           groups='not-returned'
           accounts='not-run'
           d1='not-run'
+          d1_usage='not-run'
           workers='not-run'
           access='not-run'
           zones='not-run'
@@ -62,6 +64,7 @@ jobs:
               echo "groups=$groups"
               echo "accounts=$accounts"
               echo "d1=$d1"
+              echo "d1_usage=$d1_usage"
               echo "workers=$workers"
               echo "access=$access"
               echo "zones=$zones"
@@ -156,15 +159,33 @@ jobs:
           else
             workers_subdomain="http=$subdomain_code;configured=no-or-unavailable"
           fi
+          # GraphQL POST carries a read-only query of account-wide daily analytics;
+          # it is not a D1 SQL query and does not touch any database contents.
+          day=$(date -u +%F)
+          graphql='query($accountTag: string!, $day: Date!) { viewer { accounts(filter: {accountTag: $accountTag}) { d1AnalyticsAdaptiveGroups(limit: 10000, filter: {date_geq: $day, date_leq: $day}) { sum { rowsRead rowsWritten } } } } }'
+          jq -n --arg query "$graphql" --arg account "$account_id" --arg day "$day"             '{query:$query,variables:{accountTag:$account,day:$day}}' > "$TMP/gql-request.json"
+          gql_code=$(curl --silent --show-error --connect-timeout 10 --max-time 30             --header "$auth_header" --header 'Content-Type: application/json'             --data-binary "@$TMP/gql-request.json" --output "$TMP/gql-response.json"             --write-out '%{http_code}' "$API/graphql" 2>/dev/null || true)
+          if [ "$gql_code" = 200 ] && jq -e '(.errors // [] | length == 0) and
+            (.data.viewer.accounts | type == "array" and length == 1) and
+            (.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups | type == "array") and
+            ([.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups[].sum | .rowsRead, .rowsWritten] |
+              all(type == "number" and . >= 0 and floor == .))' "$TMP/gql-response.json" >/dev/null 2>&1; then
+            read_count=$(jq -r '[.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups[].sum.rowsRead] | add // 0' "$TMP/gql-response.json")
+            write_count=$(jq -r '[.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups[].sum.rowsWritten] | add // 0' "$TMP/gql-response.json")
+            d1_usage="day=${day};rows_read=${read_count};rows_written=${write_count};source=analytics"
+          else
+            d1_usage="analytics-unavailable-http-${gql_code:-000}"
+          fi
           finish
           {
             echo '## CRM Cloudflare preflight — read-only'
             echo '- Secret: `ARENA_CLOUDFLARE_TOKEN` was passed to this job; its value was not printed or saved as an artifact.'
-            echo '- Requests: GET only. No resources, routes, policies, DNS, D1 rows, or Worker code were created or changed.'
+            echo '- Requests: GET and a read-only GraphQL POST. No resources, routes, policies, DNS, D1 rows, or Worker code were created or changed.'
             echo "- Authentication: $outcome; verification $verify"
             echo "- Token permission metadata: $groups"
             echo "- Accounts: $accounts"
             echo "- D1: $d1"
+            echo "- D1 account analytics: $d1_usage (may lag; not a billing statement)"
             echo "- Workers: $workers"
             echo "- Access applications: $access"
             echo "- Zones: $zones"
@@ -200,6 +221,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-secret D1 inventory is encoded in this check name.'
+  report-d1-usage:
+    name: 'D1 usage — ${{ needs.probe.outputs.d1_usage }}'
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Aggregate account analytics only; no customer data.'
   report-workers:
     name: 'CRM Worker inventory — ${{ needs.probe.outputs.workers }}'
     needs: probe
