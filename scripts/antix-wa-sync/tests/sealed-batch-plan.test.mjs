@@ -98,3 +98,18 @@ test('preserves full long names in encrypted metadata and rejects names beyond s
   assert.equal(decoded.sync_bundle.conversations[0].title, title);
   await assert.rejects(sealDryRunBatches(bundle([{ ...conv(1), title: 'س'.repeat(4097) }]), pubkey), /invalid-source-metadata/);
 });
+
+test('encrypted contact-only metadata contains no invented transcript', async () => {
+  const contact = { ...conv(1), title: '🟢 عميل اصطناعي', raw_txt: '', contact_only: true };
+  const batches = await sealMetadataBatches(bundle([contact]), pubkey, { writeBackupRef: 'synthetic-backup-01' });
+  const decoded = await decrypt(batches[0].envelope);
+  const [stored] = decoded.sync_bundle.conversations;
+  assert.equal(stored.message_count, 0);
+  assert.equal(stored.first_message_at, null);
+  assert.equal(stored.last_message_at, null);
+  assert.equal(stored.raw_sha256, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+  assert.ok(!('raw_txt' in stored));
+  await assert.rejects(sealDryRunBatches(bundle([{ ...contact, title: 'غير معلّم' }]), pubkey));
+  await assert.rejects(sealDryRunBatches(bundle([{ ...contact, title: '🟢 عميل 🌀' }]), pubkey));
+  await assert.rejects(sealDryRunBatches(bundle([{ ...contact, raw_txt: 'PRIVATE TEXT' }]), pubkey));
+});

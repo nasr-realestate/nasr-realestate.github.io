@@ -396,6 +396,41 @@ def marked_coverage_gaps(index: dict, exported: dict) -> dict:
                                              for group in groups)}
 
 
+def prepare_missing_marked_contacts(index: dict, exported: dict) -> tuple[list, dict]:
+    """VCF-only contacts require a single uniquely resolved phone; never invent a JID."""
+    groups = index.get('__marked_phone_groups__')
+    if not isinstance(groups, list):
+        raise SyncError("تعذر التحقق من تغطية العملاء الملوّنين")
+    direct_numbers = {jid.split('@')[0] for jid in exported
+                      if re.fullmatch(r'[0-9]{8,15}@(s\.whatsapp\.net|c\.us)', jid)}
+    pending, seen = [], set()
+    holds = {'hold_marked_without_phone': 0, 'hold_marked_not_in_backup': 0}
+    for group in groups:
+        if not group:
+            holds['hold_marked_without_phone'] += 1
+            continue
+        if any(phone in direct_numbers for phone in group):
+            continue
+        if len(group) != 1:
+            holds['hold_marked_not_in_backup'] += 1
+            continue
+        phone = group[0]
+        card = index.get(phone, {})
+        name = clean(card.get('name', '')).strip()
+        if (not re.fullmatch(r'[0-9]{8,15}', phone) or card.get('excluded') or card.get('ambiguous') or
+                not card.get('marked') or not name.startswith(('🟢', '🔴', '🔵', '🟡', '✈')) or '🌀' in name):
+            holds['hold_marked_not_in_backup'] += 1
+            continue
+        if phone in seen:
+            continue
+        seen.add(phone)
+        ref = sha(('vcf-phone:' + phone).encode())
+        pending.append({'ref': ref, 'uid': 'wa:vcf:' + ref, 'vcf_phone': phone,
+                        'title': name, 'title_key': title_key(name), 'text': '', 'messages': [],
+                        'text_sha256': sha(b''), 'status': 'contact_only'})
+    return pending, holds
+
+
 def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
                           backup_sha: str, selection: dict) -> dict:
     """Only explicit human exclusions; cannot approve or include any held identity."""
@@ -429,6 +464,8 @@ def apply_hold_exclusions(decisions: dict, review_rows: list, counts: dict,
 
 
 def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisions: dict | None = None) -> tuple[list[dict], dict, Path]:
+    if write_outbox and config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+        raise SyncError("هذه السياسة تتطلب مسار الدفعات المشفّرة فقط")
     backup = Path(config["backup_path"]).expanduser().resolve()
     key = Path(config["key_path"]).expanduser().resolve()
     if not backup.is_file() or not key.is_file():
@@ -463,8 +500,8 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
         if config.get("selection") is not None:
             index, as_of = selection_index(config, work)
             review_rows = []
-            coverage = (marked_coverage_gaps(index, exported_data)
-                        if config['selection']['policy'] == 'marked-plus-recent-window-v2' else {})
+            vcf_only, coverage = (prepare_missing_marked_contacts(index, exported_data)
+                                  if config['selection']['policy'] == 'marked-plus-recent-window-v2' else ([], {}))
             exported_data, scope_counts = select_chats(exported_data, index, as_of, review_rows,
                                                         policy=config['selection']['policy'])
             scope_counts.update(coverage)
@@ -475,13 +512,32 @@ def prepare(config: dict, state_dir: Path, *, write_outbox: bool = True, decisio
             state = {**state, "chats": {k: v for k, v in state["chats"].items() if v.get("uploaded")}}
         chats, counts = plan_chats(exported_data, state)
         if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
-            # Contact-only records need a distinct, verified ingest path. Never
-            # silently drop marked clients just because they have no recent text.
             for item in chats:
                 if item['status'] == 'empty':
-                    item['status'] = 'hold_marked_contact_only'
+                    phone = item.get('jid', '').split('@', 1)[0]
+                    card = index.get(phone, {})
+                    # Only a uniquely resolved marked address-book card becomes
+                    # contact-only. A recent but unrenderable chat remains held.
+                    status = ('contact_only' if card.get('marked') and not card.get('ambiguous')
+                              and not card.get('excluded') and not exported_data[item['jid']].get('messages')
+                              else 'hold_empty_recent_chat')
+                    item['status'] = status
                     counts['empty'] -= 1
-                    counts['hold_marked_contact_only'] = counts.get('hold_marked_contact_only', 0) + 1
+                    counts[status] = counts.get(status, 0) + 1
+        if config.get('selection', {}).get('policy') == 'marked-plus-recent-window-v2':
+            # A repeated title or UID is never resolved by guessing a person.
+            known_titles = {item.get('title_key') for item in chats if item.get('title_key')}
+            known_titles.update(row['title_key'] for row in state['chats'].values() if row.get('title_key'))
+            known_uids = {item.get('uid') for item in chats if item.get('uid')}
+            known_uids.update(row['conversation_uid'] for row in state['chats'].values())
+            for item in vcf_only:
+                if item['title_key'] in known_titles or item['uid'] in known_uids:
+                    counts['hold_identity_collision'] = counts.get('hold_identity_collision', 0) + 1
+                    continue
+                known_titles.add(item['title_key'])
+                known_uids.add(item['uid'])
+                chats.append(item)
+                counts['contact_only'] = counts.get('contact_only', 0) + 1
         counts.update(scope_counts)
         if before != file_sha(backup):
             raise SyncError("النسخة الاحتياطية تغيّرت أثناء القراءة؛ أعد النسخ من الهاتف")

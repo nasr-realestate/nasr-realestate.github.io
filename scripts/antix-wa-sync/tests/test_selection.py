@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from wa_sync import select_chats, marked_coverage_gaps
+from wa_sync import select_chats, marked_coverage_gaps, prepare_missing_marked_contacts
 
 NOW = datetime(2026, 11, 13, tzinfo=timezone.utc)
 
@@ -78,6 +78,19 @@ class SelectionTests(unittest.TestCase):
         chats = {'201000000002@s.whatsapp.net': conversation(NOW.timestamp())}
         self.assertEqual(marked_coverage_gaps(index, chats), {'hold_marked_without_phone': 1,
                                                               'hold_marked_not_in_backup': 1})
+
+    def test_vcf_only_marked_clients_do_not_fabricate_jids_or_choose_ambiguous_phones(self):
+        index = {'__marked_phone_groups__': [['201000000001'], ['201000000002', '201000000003'], [],
+                                            ['201000000004'], ['201000000005']],
+                 '201000000001': {'marked': True, 'name': '🟢 عميل اصطناعي', 'ambiguous': False},
+                 '201000000004': {'marked': True, 'name': '🟡 متداخل', 'ambiguous': True},
+                 '201000000005': {'marked': True, 'name': '🌀 مستبعد', 'excluded': True}}
+        pending, counts = prepare_missing_marked_contacts(index, {})
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]['vcf_phone'], '201000000001')
+        self.assertEqual(pending[0]['status'], 'contact_only')
+        self.assertNotIn('jid', pending[0])
+        self.assertEqual(counts, {'hold_marked_without_phone': 1, 'hold_marked_not_in_backup': 3})
 
     def test_private_review_omits_excluded_and_message_contents(self):
         n = NOW.timestamp()

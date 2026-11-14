@@ -114,3 +114,41 @@ test('stores a long synthetic customer name without truncation and still enforce
     assert.throws(() => validateAntixMetadata([{ ...record, title: title + ' 🌀' }]));
   } finally { sqlite.close(); }
 });
+
+test('marked contact with no recent messages creates only contact, phone and audit', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    const emptyHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    const contact = { ...item('wa:contact-only', '+201111111111'), title: '✈️ عميل اصطناعي',
+      message_count: 0, first_message_at: null, last_message_at: null, raw_sha256: emptyHash };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [contact], { createMissing: true }),
+      { attempted: 1, inserted: 1, not_inserted: 0, created_contacts: 1 });
+    assert.equal(sqlite.prepare('SELECT name FROM crm_contacts').get().name, contact.title);
+    const phone = sqlite.prepare('SELECT phone_key,verified_at FROM crm_contact_phones').get();
+    assert.equal(phone.phone_key, '201111111111');
+    assert.equal(phone.verified_at, null);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversation_messages').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_audit_log').get().n, 1);
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [contact], { createMissing: true }),
+      { attempted: 1, inserted: 0, not_inserted: 1, created_contacts: 0 });
+    for (const change of [{ title: 'عميل عادي' }, { title: '🟢 🌀 مستبعد' },
+      { last_message_at: '2025-11-13T02:15:00.000Z' }, { raw_sha256: 'a'.repeat(64) }]) {
+      assert.throws(() => validateAntixMetadata([{ ...contact, ...change }]));
+    }
+  } finally { sqlite.close(); }
+});
+
+test('contact-only name collision never links by name and records no phantom conversation', async () => {
+  const { db, sqlite } = await setup();
+  try {
+    sqlite.exec("INSERT INTO crm_contacts(id,name) VALUES('existing','🟢 عميل اصطناعي')");
+    const contact = { ...item('wa:contact-only', '+201111111111'), title: '🟢 عميل اصطناعي', message_count: 0,
+      first_message_at: null, last_message_at: null,
+      raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
+    assert.deepEqual(await writeAntixMetadataPrototype(db, [contact], { createMissing: true }),
+      { attempted: 1, inserted: 0, not_inserted: 1, created_contacts: 0 });
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_contact_phones').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM crm_conversations').get().n, 0);
+  } finally { sqlite.close(); }
+});
