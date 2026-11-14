@@ -97,6 +97,20 @@ jobs:
           fi
           echo "migrations match at ${remote_last}"
 
+      - name: Configure private antiX exclusion names (no data writes)
+        shell: bash
+        env:
+          PRIVATE_EXCLUSIONS: ${{ secrets.CRM_ANTIX_EXCLUDED_NAMES }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.pre.outputs.account_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PRIVATE_EXCLUSIONS:-}" ]; then
+            echo "::error::Private antiX exclusions are not configured; no deploy attempted."
+            exit 1
+          fi
+          node -e 'const x=JSON.parse(process.env.PRIVATE_EXCLUSIONS); if(!Array.isArray(x)||!x.length||x.some(n=>typeof n!=="string"||!/[\p{L}\p{N}]/u.test(n)))process.exit(1)'
+          printf '%s' "$PRIVATE_EXCLUSIONS" | npx --yes wrangler@4 secret put CRM_ANTIX_EXCLUDED_NAMES --config "$WRANGLER_CFG"
+
       - name: Deploy the Worker (code only — no seeds, no logins, no rows)
         shell: bash
         run: |
