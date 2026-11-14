@@ -196,3 +196,40 @@ test('contact-only name details are aggregate diagnostics and never resolve a co
     { exact_name_and_marker: 1, marker_missing_same_name: 2, other_or_unknown: 2 });
   assert.doesNotMatch(JSON.stringify(counts), /اصطناعي|201111111111/);
 });
+
+test('opt-in dry-run plan returns only candidate and hold counts and never writes', async () => {
+  const db = { prepare(sql) { return { bind() { return this; }, async all() {
+    if (sql.includes('FROM crm_contact_phones')) return { results: [{ phone_key: '201111111111', contact_id: 'a' }] };
+    if (sql.includes('FROM crm_contacts')) return { results: [{ id: 'a', name: '🟢 اصطناعي سري' }] };
+    return { results: [] };
+  } }; }, batch() { throw new Error('unexpected write'); } };
+  const base = { first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64), message_count: 1 };
+  const held = { ...base, conversation_uid: 'wa:held', selected_phone: '+201111111111', title: '🟢 اصطناعي سري',
+    message_count: 0, raw_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
+  const candidate = { ...base, conversation_uid: 'wa:new', selected_phone: '+201022222222', title: 'اسم اصطناعي آخر' };
+  const result = await runSourceSyncBundle(db, { dry_run: true, antix_safe_plan_preview: true,
+    conversations: [held, candidate], vcf_contacts: [] });
+  assert.deepEqual(result.antix_plan_preview, { candidates: 1, held: 1 });
+  assert.doesNotMatch(JSON.stringify(result), /اصطناعي|201111111111|201022222222|wa:held/);
+});
+
+test('opt-in plan fails closed on missing phone-owner snapshot', async () => {
+  const db = { prepare(sql) { return { bind() { return this; }, async all() {
+    if (sql.includes('FROM crm_contact_phones')) return { results: [{ phone_key: '201111111111', contact_id: 'unknown' }] };
+    return { results: [] };
+  } }; } };
+  const item = { conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اصطناعي',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  assert.deepEqual(await runSourceSyncBundle(db, { dry_run: true, antix_safe_plan_preview: true,
+    conversations: [item] }), { ok: false, error: 'antix_plan_snapshot_unavailable' });
+});
+
+test('planning flag is never honored in a write request, even with both write gates', async () => {
+  const db = { prepare() { throw new Error('must reject before database access'); } };
+  const item = { conversation_uid: 'wa:test', selected_phone: '+201111111111', title: 'اصطناعي',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  const result = await runSourceSyncBundle(db, { dry_run: false, antix_safe_plan_preview: true,
+    antix_mode: 'metadata_only_v1', backup_verified_ref: 'test-backup', conversations: [item] },
+  { allowAntixMetadataWrite: true, antixVerifiedBackupRef: 'test-backup' });
+  assert.deepEqual(result, { ok: false, error: 'antix_plan_requires_dry_run' });
+});
