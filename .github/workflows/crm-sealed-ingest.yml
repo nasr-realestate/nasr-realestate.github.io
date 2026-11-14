@@ -50,6 +50,7 @@ jobs:
       dups: ${{ steps.run_ingest.outputs.dups }}
       backup_ref: ${{ steps.run_ingest.outputs.backup_ref }}
       sync_stats: ${{ steps.run_ingest.outputs.sync_stats }}
+      phone_detail: ${{ steps.run_ingest.outputs.phone_detail }}
       restore_stats: ${{ steps.run_ingest.outputs.restore_stats }}
       pk1: ${{ steps.run_ingest.outputs.pk1 }}
       pk2: ${{ steps.run_ingest.outputs.pk2 }}
@@ -94,6 +95,12 @@ jobs:
           dups='0:0'
           backup_ref='unchecked'
           sync_stats='none'
+          phone_detail='none'
+          detail_complete='yes'
+          detail_batches=0
+          contact_only_total=0
+          protected_total=0
+          multiple_total=0
           restore_stats='none'
           pk1=''
           pk2=''
@@ -123,6 +130,7 @@ jobs:
               printf 'dups=%s\n' "$dups"
               printf 'backup_ref=%s\n' "$backup_ref"
               printf 'sync_stats=%s\n' "$sync_stats"
+              printf 'phone_detail=%s\n' "$phone_detail"
               printf 'restore_stats=%s\n' "$restore_stats"
               printf 'pk1=%s\n' "$pk1"
               printf 'pk2=%s\n' "$pk2"
@@ -377,6 +385,22 @@ jobs:
             deliver_envelope "$item_env" "b${batch_idx}" "$TMP/resp_${batch_idx}.json"
             b_stat=$(jq -r 'if has("antix_metadata") then "B'"${batch_idx}"'[dry=false,attempt=\(.antix_metadata.attempted),inserted=\(.antix_metadata.inserted),new_contacts=\(.antix_metadata.created_contacts),skipped=\(.antix_metadata.not_inserted)]" elif has("antix_phone_preview") then "B'"${batch_idx}"'[dry=true,matched=\(.antix_phone_preview.exact_unique_phone),missing=\(.antix_phone_preview.phone_not_found),conflict=\(.antix_phone_preview.phone_conflict + .antix_phone_preview.conversation_conflict + (.antix_phone_preview.name_conflict // 0)),phone=\(.antix_phone_preview.phone_conflict),uid=\(.antix_phone_preview.conversation_conflict),name=\(.antix_phone_preview.name_conflict // 0),invalid=\(.antix_phone_preview.invalid)]" elif has("diff") then "B'"${batch_idx}"'[dry=\(.dry_run),mV=\(.diff.conversations_matched // 0),uV=\(.diff.conversations_unmatched_review // 0),cC=\(.intelligence.conversations_created // 0),iS=\(.intelligence.conversations_incremental_skipped // 0),msg=\(.intelligence.messages_stored // 0)]" else "B'"${batch_idx}"'[proc=\(.processed // 0)]" end' "$TMP/resp_${batch_idx}.json")
             stats_parts+=("$b_stat")
+            # Only aggregate validated integers; never output titles or phones.
+            if jq -e 'has("antix_phone_preview")' "$TMP/resp_${batch_idx}.json" >/dev/null; then
+              detail_batches=$((detail_batches + 1))
+              if jq -e '.antix_phone_preview as $p | $p.phone_conflict_detail as $d |
+                ($d | type == "object") and
+                ([$d.contact_only_existing_phone, $d.protected_owner, $d.multiple_owners] |
+                  all(type == "number" and . >= 0 and floor == .)) and
+                (($d.contact_only_existing_phone + $d.protected_owner + $d.multiple_owners) == $p.phone_conflict)'                 "$TMP/resp_${batch_idx}.json" >/dev/null; then
+                IFS=' ' read -r co pr mu <<< "$(jq -r '.antix_phone_preview.phone_conflict_detail | "\(.contact_only_existing_phone) \(.protected_owner) \(.multiple_owners)"' "$TMP/resp_${batch_idx}.json")"
+                contact_only_total=$((contact_only_total + co))
+                protected_total=$((protected_total + pr))
+                multiple_total=$((multiple_total + mu))
+              else
+                detail_complete='no'
+              fi
+            fi
             # A partially inserted batch must stop here for human review; never
             # report it as fully imported or advance to the next batch.
             if [ "$(jq -r '.antix_metadata.not_inserted // 0' "$TMP/resp_${batch_idx}.json")" != '0' ]; then
@@ -391,6 +415,13 @@ jobs:
 
           if [ "${#stats_parts[@]}" -gt 0 ]; then
             sync_stats=$(IFS=';'; echo "${stats_parts[*]}")
+          fi
+          if [ "$detail_batches" -gt 0 ]; then
+            if [ "$detail_complete" = 'yes' ]; then
+              phone_detail="contact_only_existing_phone=${contact_only_total},protected_owner=${protected_total},multiple_owners=${multiple_total},batches=${detail_batches}"
+            else
+              phone_detail='unavailable'
+            fi
           fi
           if [ "${#restore_parts[@]}" -gt 0 ]; then
             restore_stats=$(IFS=';'; echo "${restore_parts[*]}")
@@ -454,3 +485,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Non-PII opportunity restoration manifest.'
+
+  phone-conflict-report:
+    name: 'Phone conflict breakdown — ${{ needs.ingest.outputs.phone_detail }}'
+    needs: ingest
+    if: always() && needs.ingest.outputs.phone_detail != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Aggregate counts only; no customer identities.'
