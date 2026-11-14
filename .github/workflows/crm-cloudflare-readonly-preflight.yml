@@ -576,7 +576,22 @@ jobs:
           if snapshot backup nasr-crm-test-db-backup-43623125418 "$T/backup.toml" "$T/source-meta.json"; then :; else
             code=$?
             if [ "$code" = 1 ]; then result=backup-export-failed
-            elif grep -q 'Roundtrip digest mismatch against source' "$T/backup-builder.log"; then result=backup-data-differs-from-source
+            elif grep -q 'Roundtrip digest mismatch against source' "$T/backup-builder.log"; then
+              result=backup-data-differs-from-source
+              # Diagnose one known technical table only. This NEVER turns the
+              # failed full comparison into success or authorizes any restore.
+              if snapshot diagnostic nasr-crm-test-db-backup-43623125418 "$T/backup.toml" '' &&
+                 snapshot stable nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json"; then
+                jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables}' "$T/source-meta.json" > "$T/src-schema.json"
+                jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables}' "$T/diagnostic-meta.json" > "$T/bak-schema.json"
+                if cmp -s "$T/src-schema.json" "$T/bak-schema.json" && jq -se '
+                  .[0].tableStats as $a | .[1].tableStats as $b |
+                  ($a | keys) == ($b | keys) and
+                  ([$a | keys[] | select($a[.] != $b[.])] == ["crm_idempotency_receipts"])' \
+                  "$T/source-meta.json" "$T/diagnostic-meta.json" >/dev/null; then
+                  result=backup-differs-in-receipts-only-still-not-full-match
+                fi
+              fi
             elif grep -q 'Roundtrip .* mismatch against source' "$T/backup-builder.log"; then result=backup-schema-differs-from-source
             else result=backup-local-restore-failed; fi
             exit 1
