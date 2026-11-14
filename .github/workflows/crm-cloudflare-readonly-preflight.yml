@@ -504,3 +504,88 @@ jobs:
         run: |
           echo 'Every gate, in order:' "${{ needs.mirror.outputs.gates }}"
           echo 'Any identifier in the check name is one hard stop in crm-cloudflare-test-deploy.yml.'
+
+  compare-verified-backup:
+    name: Compare previously verified CRM backup without modifying databases
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: crm-d1-test-mutex
+      cancel-in-progress: false
+    outputs:
+      result: ${{ steps.compare.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Export test and backup and perform isolated local restore comparisons
+        id: compare
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          T=$(mktemp -d)
+          trap 'rm -rf "$T"' EXIT
+          result=not-completed
+          finish() { echo "result=$result" >> "$GITHUB_OUTPUT"; }
+          trap 'finish; rm -rf "$T"' EXIT
+          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || { result=missing-token; exit 1; }
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          api=https://api.cloudflare.com/client/v4
+          curl -fsS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts?per_page=100" > "$T/accounts.json" 2>/dev/null || { result=account-read-failed; exit 1; }
+          jq -e '.success == true and (.result|length == 1)' "$T/accounts.json" >/dev/null || { result=account-selection-unavailable; exit 1; }
+          account=$(jq -r '.result[0].id' "$T/accounts.json")
+          echo "::add-mask::$account"
+          export CLOUDFLARE_ACCOUNT_ID="$account"
+          source_id=760079c6-85f9-4a30-aa19-9a66f95d421a
+          backup_id=36621769-8118-4327-9c00-f0924ff2ee9e
+          for spec in "$source_id:nasr-crm-test-db-v2" "$backup_id:nasr-crm-test-db-backup-20261114122943"; do
+            id=${spec%%:*}; name=${spec#*:}
+            curl -fsS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$account/d1/database/$id" > "$T/meta.json" 2>/dev/null || { result=database-identity-unavailable; exit 1; }
+            jq -e --arg id "$id" --arg name "$name" '.success == true and .result.uuid == $id and .result.name == $name' "$T/meta.json" >/dev/null || { result=database-identity-mismatch; exit 1; }
+          done
+          grep -Fq "database_id = \"$source_id\"" _worker/wrangler.crm.toml || { result=source-config-mismatch; exit 1; }
+          ! grep -Eq 'nasr-market-db|ace5c9a2-c6b1-47b3-adf1-77e84ac50abf' _worker/wrangler.crm.toml || { result=forbidden-binding; exit 1; }
+          printf 'name = "read-only-backup-check"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "nasr-crm-test-db-backup-20261114122943"\ndatabase_id = "%s"\n' "$backup_id" > "$T/backup.toml"
+          # Extract the established backup workflow's verifier exactly; no SQL dump,
+          # table values, digests or customer data are published as logs/artifacts.
+          python3 - "$T/builder.mjs" <<'PY'
+          import sys, textwrap
+          from pathlib import Path
+          source = Path('.github/workflows/crm-phase2-backup.yml').read_text()
+          start = "          cat << 'EOF_NODE' > \"$TMP/build_and_verify.mjs\"\n"
+          end = '\n          EOF_NODE'
+          assert source.count(start) == 1
+          body = source.split(start, 1)[1].split(end, 1)[0]
+          Path(sys.argv[1]).write_text(textwrap.dedent(body) + '\n')
+          PY
+          snapshot() {
+            local label="$1" dbname="$2" config="$3" expected="$4"
+            npx --yes wrangler@4 d1 export "$dbname" --remote --no-data --config "$config" --output "$T/$label-schema.sql" > "$T/$label-export.log" 2>&1 || return 1
+            npx --yes wrangler@4 d1 export "$dbname" --remote --no-schema --config "$config" --output "$T/$label-data.sql" >> "$T/$label-export.log" 2>&1 || return 1
+            npx --yes wrangler@4 d1 execute "$dbname" --remote --json --config "$config" --command 'SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;' > "$T/$label-migs.json" 2>/dev/null || return 1
+            node "$T/builder.mjs" "$label" "$T/$label-schema.sql" "$T/$label-data.sql" "$T/$label-migs.json" "$T/$label-restore.sql" "$T/$label-meta.json" "$expected" > "$T/$label-builder.log" 2>&1 || return 2
+          }
+          result=source-export-or-restore-failed
+          snapshot source nasr-crm-test-db-v2 _worker/wrangler.crm.toml '' || exit 1
+          result=backup-export-restore-or-parity-failed
+          snapshot backup nasr-crm-test-db-backup-20261114122943 "$T/backup.toml" "$T/source-meta.json" || exit 1
+          result=source-recheck-or-parity-failed
+          snapshot recheck nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json" || exit 1
+          # Also require exact table and explicit-index sets, not only their counts.
+          jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables,tableStats}' "$T/source-meta.json" > "$T/a.json"
+          for label in backup recheck; do
+            jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables,tableStats}' "$T/$label-meta.json" > "$T/b.json"
+            cmp -s "$T/a.json" "$T/b.json" || { result=schema-or-data-parity-failed; exit 1; }
+          done
+          result=backup-and-stable-source-match-local-restore-passed
+  report-backup-comparison:
+    name: 'D1 backup comparison — ${{ needs.compare-verified-backup.outputs.result }}'
+    needs: compare-verified-backup
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Read-only comparison result only; no data was published.'
