@@ -1,0 +1,84 @@
+name: CRM encrypted backup for local verification (no database writes)
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key_b64:
+        description: 'Base64-encoded RSA-4096 public PEM generated on the owner device'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-d1-test-mutex
+  cancel-in-progress: false
+
+jobs:
+  encrypted-backup:
+    name: Export, locally verify, and encrypt CRM test database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      PUBLIC_KEY_B64: ${{ inputs.public_key_b64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify identity, restore two local snapshots, and encrypt
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          T=$(mktemp -d)
+          trap 'rm -rf "$T"' EXIT
+          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || exit 1
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          [ ${#PUBLIC_KEY_B64} -le 16384 ]
+          printf '%s' "$PUBLIC_KEY_B64" | base64 -d > "$T/public.pem"
+          node -e 'const c=require("node:crypto"),f=require("node:fs");const k=c.createPublicKey(f.readFileSync(process.argv[1]));if(k.asymmetricKeyType!=="rsa" || (k.asymmetricKeyDetails?.modulusLength??0)<4096)process.exit(1)' "$T/public.pem"
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          curl -fsS --max-time 30 -H "$AUTH" "$API/accounts?per_page=100" > "$T/accounts.json" 2>/dev/null
+          jq -e '.success == true and (.result|length == 1)' "$T/accounts.json" >/dev/null
+          account=$(jq -r '.result[0].id' "$T/accounts.json")
+          echo "::add-mask::$account"
+          export CLOUDFLARE_ACCOUNT_ID="$account"
+          id=760079c6-85f9-4a30-aa19-9a66f95d421a
+          curl -fsS --max-time 30 -H "$AUTH" "$API/accounts/$account/d1/database/$id" > "$T/identity.json" 2>/dev/null
+          jq -e --arg id "$id" '.success == true and .result.uuid == $id and .result.name == "nasr-crm-test-db-v2"' "$T/identity.json" >/dev/null
+          grep -Fq "database_id = \"$id\"" _worker/wrangler.crm.toml
+          ! grep -Eq 'nasr-market-db|ace5c9a2-c6b1-47b3-adf1-77e84ac50abf' _worker/wrangler.crm.toml
+          python3 - "$T/builder.mjs" <<'PY'
+          import sys, textwrap
+          from pathlib import Path
+          workflow = Path('.github/workflows/crm-phase2-backup.yml').read_text()
+          start = "          cat << 'EOF_NODE' > \"$TMP/build_and_verify.mjs\"\n"
+          end = '\n          EOF_NODE'
+          assert workflow.count(start) == 1
+          Path(sys.argv[1]).write_text(textwrap.dedent(workflow.split(start, 1)[1].split(end, 1)[0]) + '\n')
+          PY
+          snapshot() {
+            local label=$1 expected=$2
+            npx --yes wrangler@4 d1 export nasr-crm-test-db-v2 --remote --no-data --config _worker/wrangler.crm.toml --output "$T/$label-schema.sql" > "$T/$label.log" 2>&1
+            npx --yes wrangler@4 d1 export nasr-crm-test-db-v2 --remote --no-schema --config _worker/wrangler.crm.toml --output "$T/$label-data.sql" >> "$T/$label.log" 2>&1
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config _worker/wrangler.crm.toml --command 'SELECT id, name, applied_at FROM d1_migrations ORDER BY id ASC;' > "$T/$label-migs.json" 2>/dev/null
+            node "$T/builder.mjs" "$label" "$T/$label-schema.sql" "$T/$label-data.sql" "$T/$label-migs.json" "$T/$label-restore.sql" "$T/$label-meta.json" "$expected" > "$T/$label-builder.log" 2>&1
+          }
+          snapshot source ''
+          snapshot stable "$T/source-meta.json"
+          jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables,tableStats}' "$T/source-meta.json" > "$T/source-check.json"
+          jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables,tableStats}' "$T/stable-meta.json" > "$T/stable-check.json"
+          cmp -s "$T/source-check.json" "$T/stable-check.json"
+          mkdir -m 700 "$RUNNER_TEMP/crm-sealed-backup"
+          node scripts/crm/private-backup-crypto.mjs "$T/source-restore.sql" "$T/public.pem" "$RUNNER_TEMP/crm-sealed-backup/sealed-backup.json"
+          echo 'ENCRYPTED_ARTIFACT_READY_REQUIRES_OWNER_LOCAL_DECRYPT_AND_RESTORE_TEST'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crm-encrypted-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/crm-sealed-backup/sealed-backup.json
+          retention-days: 7
+          if-no-files-found: error

@@ -164,9 +164,9 @@ jobs:
           fi
           # This checks only the existence and identity of the earlier verified backup.
           # It does not repeat restore or establish that it matches today's live data.
-          backup_id='36621769-8118-4327-9c00-f0924ff2ee9e'
+          backup_id='2485e8a0-177e-4f9f-be26-8f55b29aeab8'
           backup_code=$(get_json "$API/accounts/$account_id/d1/database/$backup_id" "$TMP/verified-backup.json")
-          if [ "$backup_code" = 200 ] && jq -e --arg id "$backup_id"              '.success == true and .result.uuid == $id and .result.name == "nasr-crm-test-db-backup-20261114122943"'              "$TMP/verified-backup.json" >/dev/null 2>&1; then
+          if [ "$backup_code" = 200 ] && jq -e --arg id "$backup_id"              '.success == true and .result.uuid == $id and .result.name == "nasr-crm-test-db-backup-43623125418"'              "$TMP/verified-backup.json" >/dev/null 2>&1; then
             verified_backup_presence='present-identity-matches-not-a-fresh-restore-test'
           else
             verified_backup_presence="unverified-http-${backup_code:-000}"
@@ -542,15 +542,15 @@ jobs:
           echo "::add-mask::$account"
           export CLOUDFLARE_ACCOUNT_ID="$account"
           source_id=760079c6-85f9-4a30-aa19-9a66f95d421a
-          backup_id=36621769-8118-4327-9c00-f0924ff2ee9e
-          for spec in "$source_id:nasr-crm-test-db-v2" "$backup_id:nasr-crm-test-db-backup-20261114122943"; do
+          backup_id=2485e8a0-177e-4f9f-be26-8f55b29aeab8
+          for spec in "$source_id:nasr-crm-test-db-v2" "$backup_id:nasr-crm-test-db-backup-43623125418"; do
             id=${spec%%:*}; name=${spec#*:}
             curl -fsS --max-time 30 -H "$AUTH" "$api/accounts/$account/d1/database/$id" > "$T/meta.json" 2>/dev/null || { result=database-identity-unavailable; exit 1; }
             jq -e --arg id "$id" --arg name "$name" '.success == true and .result.uuid == $id and .result.name == $name' "$T/meta.json" >/dev/null || { result=database-identity-mismatch; exit 1; }
           done
           grep -Fq "database_id = \"$source_id\"" _worker/wrangler.crm.toml || { result=source-config-mismatch; exit 1; }
           ! grep -Eq 'nasr-market-db|ace5c9a2-c6b1-47b3-adf1-77e84ac50abf' _worker/wrangler.crm.toml || { result=forbidden-binding; exit 1; }
-          printf 'name = "read-only-backup-check"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "nasr-crm-test-db-backup-20261114122943"\ndatabase_id = "%s"\n' "$backup_id" > "$T/backup.toml"
+          printf 'name = "read-only-backup-check"\ncompatibility_date = "2025-11-17"\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "nasr-crm-test-db-backup-43623125418"\ndatabase_id = "%s"\n' "$backup_id" > "$T/backup.toml"
           # Extract the established backup workflow's verifier exactly; no SQL dump,
           # table values, digests or customer data are published as logs/artifacts.
           python3 - "$T/builder.mjs" <<'PY'
@@ -573,10 +573,32 @@ jobs:
           result=source-export-or-restore-failed
           snapshot source nasr-crm-test-db-v2 _worker/wrangler.crm.toml '' || exit 1
           result=backup-export-restore-or-parity-failed
-          if snapshot backup nasr-crm-test-db-backup-20261114122943 "$T/backup.toml" "$T/source-meta.json"; then :; else
+          if snapshot backup nasr-crm-test-db-backup-43623125418 "$T/backup.toml" "$T/source-meta.json"; then :; else
             code=$?
             if [ "$code" = 1 ]; then result=backup-export-failed
-            elif grep -q 'Roundtrip digest mismatch against source' "$T/backup-builder.log"; then result=backup-data-differs-from-source
+            elif grep -q 'Roundtrip digest mismatch against source' "$T/backup-builder.log"; then
+              result=backup-data-differs-from-source
+              # Diagnose one known technical table only. This NEVER turns the
+              # failed full comparison into success or authorizes any restore.
+              if snapshot diagnostic nasr-crm-test-db-backup-43623125418 "$T/backup.toml" '' &&
+                 snapshot stable nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json"; then
+                jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables}' "$T/source-meta.json" > "$T/src-schema.json"
+                jq -S '{orderedNames,expIndexes,schemaObjectsDigest,autoIndexCount,fkTotal,checkTables}' "$T/diagnostic-meta.json" > "$T/bak-schema.json"
+                if cmp -s "$T/src-schema.json" "$T/bak-schema.json" && jq -se '
+                  .[0].tableStats as $a | .[1].tableStats as $b |
+                  ($a | keys) == ($b | keys) and
+                  ([$a | keys[] | select($a[.] != $b[.])] == ["crm_idempotency_receipts"])' \
+                  "$T/source-meta.json" "$T/diagnostic-meta.json" >/dev/null; then
+                  result=backup-differs-in-receipts-only-still-not-full-match
+                  # Rehearse entirely in memory with private local SQL exports.
+                  # No database, backup, or artifact is created or modified.
+                  if python3 scripts/crm/check_receipt_overlay_sql.py "$T/diagnostic-restore.sql" "$T/source-restore.sql" > "$T/overlay-test.log" 2>&1 &&
+                     grep -Fxq 'RECEIPT_OVERLAY_IN_MEMORY_VERIFIED_NO_BACKUP_SAVED' "$T/overlay-test.log" &&
+                     snapshot final nasr-crm-test-db-v2 _worker/wrangler.crm.toml "$T/source-meta.json"; then
+                    result=receipt-overlay-rehearsed-in-memory-no-backup-saved
+                  fi
+                fi
+              fi
             elif grep -q 'Roundtrip .* mismatch against source' "$T/backup-builder.log"; then result=backup-schema-differs-from-source
             else result=backup-local-restore-failed; fi
             exit 1
