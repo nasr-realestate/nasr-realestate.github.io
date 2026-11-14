@@ -9,7 +9,7 @@ import tempfile
 from datetime import datetime, timezone
 
 from wa_sync import (SyncError, file_sha, load_json, open_message_db, private_dir,
-                     read_export, run_tool, select_chats, selection_index)
+                     read_export, run_tool, select_chats, selection_index, exclusion_digest)
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
                 argv += ['--wa', str(Path(config['wa_db_path']).expanduser().resolve())]
             run_tool(argv, work)
             review = []
-            _, counts = select_chats(read_export(exported), index, as_of, review, policy=config['selection']['policy'])
+            _, counts = select_chats(read_export(exported), index, as_of, review, policy=config['selection']['policy'], excluded_names=config['selection'].get('excluded_names', []))
             if before != file_sha(backup):
                 raise SyncError('تغيرت النسخة أثناء القراءة؛ لم يُكتب تقرير')
             # This report is informational; it cannot authorize an upload.
@@ -50,7 +50,9 @@ def main():
             with os.fdopen(fd, 'w', encoding='utf-8') as handle:
                 json.dump({'schema': 'antix-wa-holds-review-v1', 'as_of': as_of.isoformat(),
                            'backup_sha256': before, 'vcf_sha256': config['selection']['vcf_sha256'],
-                           'policy': config['selection']['policy'], 'rows': review}, handle, ensure_ascii=False, indent=2)
+                           'policy': config['selection']['policy'],
+                           **({'exclusions_sha256': exclusion_digest(config['selection']['excluded_names'])}
+                              if config['selection']['policy'] == 'marked-plus-recent-window-v3' else {}), 'rows': review}, handle, ensure_ascii=False, indent=2)
             print(json.dumps({'review_file': str(output), 'held': len(review),
                               'counts': {k: v for k, v in counts.items() if k.startswith('hold_')}}, ensure_ascii=False))
             print('REVIEW_REPORT_OK')

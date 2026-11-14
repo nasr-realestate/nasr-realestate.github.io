@@ -15,11 +15,18 @@ from wa_sync import atomic_json, file_sha, load_json, validate_state, empty_stat
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--vcf', type=Path, required=True)
+    p.add_argument('--excluded-names-file', type=Path, required=True)
     p.add_argument('--config', type=Path, default=Path('~/nasr-wa-sync/config.json').expanduser())
     args = p.parse_args()
+    names_file = args.excluded_names_file.expanduser().resolve(strict=True)
+    repo = Path(__file__).resolve().parents[2]
+    if names_file == repo or repo in names_file.parents or not names_file.is_file() or names_file.stat().st_mode & 0o077:
+        raise ValueError('يلزم ملف استبعاد خاص بصلاحيات آمنة')
+    names = json.loads(names_file.read_text(encoding='utf-8'))
+    if not isinstance(names, list) or not names or any(not isinstance(n, str) or not any(ch.isalnum() for ch in n) for n in names):
+        raise ValueError('قائمة الاستبعاد غير صالحة')
     config_path = args.config.expanduser().resolve()
     vcf = args.vcf.expanduser().resolve()
-    repo = Path(__file__).resolve().parents[2]
     if not vcf.is_file() or vcf == repo or repo in vcf.parents:
         raise ValueError('يجب أن يكون ملف الدفتر موجودًا خارج المستودع')
     config = load_json(config_path, None)
@@ -38,14 +45,15 @@ def main():
         index = Path(td) / 'index.json'
         result = subprocess.run([config.get('node_bin', 'node'), '--experimental-default-type=module', str(Path(__file__).with_name('selection.mjs')),
                                  str(vcf), str(index)], stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL, timeout=180)
+                                stderr=subprocess.DEVNULL, timeout=180,
+                                env={**os.environ, 'NASR_ANTIX_EXCLUDED_NAMES': json.dumps(names, ensure_ascii=False)})
         if result.returncode:
             raise ValueError('تعذر تحليل الدفتر أو التحقق من أرقام الاستبعاد؛ لم تتغير الإعدادات')
         summary = json.loads(index.read_text(encoding='utf-8'))
         if file_sha(vcf) != checksum:
             raise ValueError('تغير الدفتر أثناء الفحص؛ لم تتغير الإعدادات')
     # Fixed cutoff makes prepare and confirm reproduce exactly the same selection.
-    config['selection'] = {'policy': 'marked-plus-recent-window-v2', 'vcf_path': str(vcf),
+    config['selection'] = {'policy': 'marked-plus-recent-window-v3', 'excluded_names': names, 'vcf_path': str(vcf),
                            'vcf_sha256': checksum, 'as_of': datetime.now(timezone.utc).isoformat()}
     atomic_json(config_path, config)
     config_path.chmod(0o600)

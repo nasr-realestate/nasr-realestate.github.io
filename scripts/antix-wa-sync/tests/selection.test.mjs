@@ -37,3 +37,14 @@ test('coverage retains marked card phone groups without excluded aliases', () =>
     + card('🟡 بلا رقم', []));
   assert.deepEqual(result.marked_phone_groups, [['201000000003', '201000000004'], []]);
 });
+
+test('named exclusion and its transitive phone aliases override marked cards', () => {
+  const i = buildIndex(card('🌀 مستبعد', ['+201000000001'])
+    + card('🔴 مَثال \u200fمستبعد', ['+201000000002'])
+    + card('🟢 اسم آخر', ['+201000000002', '+201000000003']), ['مثال مستبعد']);
+  assert.equal(i.excluded_marker_cards, 1);
+  assert.equal(i.index['201000000002'].excluded, true);
+  assert.equal(i.index['201000000003'].excluded, true);
+  assert.deepEqual(i.marked_phone_groups, []);
+  assert.throws(() => buildIndex(card('🌀 مستبعد', ['+201000000001']) + card('مثال مستبعد', []), ['مثال مستبعد']));
+});

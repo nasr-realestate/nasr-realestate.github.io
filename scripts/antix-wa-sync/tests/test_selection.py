@@ -64,7 +64,7 @@ class SelectionTests(unittest.TestCase):
                '201000000003': {'marked': True, 'name': '✈ مسافر'},
                '201000000004': {'marked': True, 'name': '🟢 زبون'}}
         rows = []
-        selected, counts = select_chats(chats, idx, NOW, rows, policy='marked-plus-recent-window-v2')
+        selected, counts = select_chats(chats, idx, NOW, rows, policy='marked-plus-recent-window-v3')
         self.assertEqual(set(selected), {marked, active, stale})
         self.assertEqual(set(selected[marked]['messages']), {'boundary'})
         self.assertEqual(set(selected[active]['messages']), {'sent', 'received'})
@@ -112,3 +112,30 @@ class SelectionTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ExplicitNameExclusionTests(unittest.TestCase):
+    def test_chat_name_is_blocked_before_any_phone_matching(self):
+        chats = {'201000000001@s.whatsapp.net': {**conversation(NOW.timestamp()), 'name': '🔴 مَثال \u200fمستبعد'}}
+        index = {'201000000001': {'marked': True, 'name': '🟢 اسم آخر'}}
+        selected, counts = select_chats(chats, index, NOW, policy='marked-plus-recent-window-v3', excluded_names=['مثال مستبعد'])
+        self.assertEqual(selected, {})
+        self.assertEqual(counts['excluded_named'], 1)
+
+class PrivateExclusionConfigurationTests(unittest.TestCase):
+    def test_v3_private_names_are_used_by_real_index_builder(self):
+        import hashlib, tempfile
+        from wa_sync import selection_index, SyncError
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vcf = root / 'contacts.vcf'
+            vcf.write_text('BEGIN:VCARD\nVERSION:3.0\nFN:🌀 مستبعد\nTEL:+201000000001\nEND:VCARD\n'
+                           'BEGIN:VCARD\nVERSION:3.0\nFN:🟢 مثال مستبعد\nTEL:+201000000002\nEND:VCARD\n', encoding='utf-8')
+            selection = {'policy': 'marked-plus-recent-window-v3', 'vcf_path': str(vcf),
+                         'vcf_sha256': hashlib.sha256(vcf.read_bytes()).hexdigest(),
+                         'as_of': NOW.isoformat(), 'excluded_names': ['مثال مستبعد']}
+            index, _ = selection_index({'selection': selection}, root)
+            self.assertTrue(index['201000000002']['excluded'])
+            (root / 'contacts-index.json').unlink()
+            selection['excluded_names'] = []
+            with self.assertRaises(SyncError):
+                selection_index({'selection': selection}, root)

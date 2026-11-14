@@ -1881,6 +1881,7 @@ async function handleSealedIngest(request, env, config) {
         dryRun: unsealed.dryRun,
         allowAntixMetadataWrite: env.CRM_ANTIX_METADATA_WRITE_ENABLED === 'true',
         antixVerifiedBackupRef: env.CRM_ANTIX_VERIFIED_BACKUP_REF,
+        antixExcludedNames: (() => { try { return JSON.parse(env.CRM_ANTIX_EXCLUDED_NAMES || 'null'); } catch { return null; } })(),
       });
     } catch { return json({ error: 'sealed_sync_failed' }, 500); }
     return json(syncResult, syncResult?.ok === false ? 400 : 200);

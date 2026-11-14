@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { runSourceSyncBundle } from '../crm-sync-and-match.js';
+import { runSourceSyncBundle as runBundle } from '../crm-sync-and-match.js';
+const runSourceSyncBundle = (db, bundle, opts = {}) => runBundle(db, bundle, { antixExcludedNames: ['مثال مستبعد'], ...opts });
 
 test('antiX phone evidence cannot be written or mixed with name-matching contacts', async () => {
   const db = { prepare() { throw new Error('guard must reject before database access'); } };
@@ -94,7 +95,7 @@ test('preview warns for name collisions and any existing UID without adopting by
 
 test('dry-run passes existing contact names only to private conflict counting', async () => {
   const db = { prepare(sql) { return { bind() { return this; }, async all() {
-    if (sql.includes('FROM crm_contacts WHERE')) return { results: [{ id: 'contact', name: 'اسم اصطناعي' }] };
+    if (sql.includes('FROM crm_contacts') && !sql.includes('JOIN')) return { results: [{ id: 'contact', name: 'اسم اصطناعي' }] };
     return { results: [] };
   } }; } };
   const item = { conversation_uid: 'wa:synthetic-name', selected_phone: '+201111111111', title: 'اسم اصطناعي',
@@ -119,4 +120,13 @@ test('preview flags existing contact-only phones and excluded existing owners be
   assert.equal(counts.phone_conflict, 2);
   assert.equal(counts.exact_unique_phone, 1);
   assert.doesNotMatch(JSON.stringify(counts), /201111111111|مستبعد/);
+});
+
+test('antiX preview and writes fail closed if private exclusions are not configured', async () => {
+  const db = { prepare() { throw new Error('must not query'); } };
+  const conversations = [{ selected_phone: '+201111111111' }];
+  for (const antixExcludedNames of [undefined, null, [], ['  ']]) {
+    assert.deepEqual(await runBundle(db, { dry_run: true, conversations }, { antixExcludedNames }),
+      { ok: false, error: 'antix_private_exclusions_not_configured' });
+  }
 });
