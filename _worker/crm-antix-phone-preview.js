@@ -9,6 +9,24 @@ function existingOwnerConflict(chat, owner, contacts, excludedNames) {
   return null;
 }
 
+function classifyContactName(incomingName, current) {
+  const incoming = cleanBidiControls(incomingName || '').trim();
+  const marked = incoming.match(/^([🟢🔴🔵🟡]|✈️|✈)\s*/u);
+  if (current && incoming === current) return 'exact_name_and_marker';
+  if (current && marked && !/^[🟢🔴🔵🟡✈]/u.test(current) && incoming.slice(marked[0].length) === current) {
+    return 'marker_missing_same_name';
+  }
+  return 'other_or_unknown';
+}
+
+function recordPhoneConflict(reason, chat, owner, contacts, counts, detail, contactNameDetail) {
+  counts.phone_conflict++;
+  detail[reason]++;
+  if (reason === 'contact_only_existing_phone') {
+    contactNameDetail[classifyContactName(chat.title, contacts.get(owner) || '')]++;
+  }
+}
+
 function indexPhones(phoneRows) {
   const phones = new Map();
   for (const row of phoneRows) {
@@ -27,6 +45,9 @@ export function previewAntixPhoneMatches(conversations, phoneRows, conversationR
   const contacts = new Map(contactRows.map(row => [row.id, cleanBidiControls(row.name || '').trim()]));
   const counts = { exact_unique_phone: 0, phone_not_found: 0, phone_conflict: 0, conversation_conflict: 0, name_conflict: 0, invalid: 0 };
   const detail = { multiple_owners: 0, protected_owner: 0, contact_only_existing_phone: 0 };
+  // Diagnostic only: classification never changes an existing name or upgrades
+  // a phone conflict to a match, and name equality is not identity evidence.
+  const contactNameDetail = { exact_name_and_marker: 0, marker_missing_same_name: 0, other_or_unknown: 0 };
   const uids = new Set();
   for (const chat of conversations) {
     const uid = chat?.conversation_uid;
@@ -48,12 +69,13 @@ export function previewAntixPhoneMatches(conversations, phoneRows, conversationR
     // An excluded existing owner must never be linked even for a recent chat.
     const reason = existingOwnerConflict(chat, owner, contacts, excludedNames);
     if (reason) {
-      counts.phone_conflict++; detail[reason]++; continue;
+      recordPhoneConflict(reason, chat, owner, contacts, counts, detail, contactNameDetail);
+      continue;
     }
     // Name equality is only a warning for the write guard, never identity evidence.
     if (!owner && names.has(cleanBidiControls(chat.title || '').trim())) { counts.name_conflict++; continue; }
     if (!owner) { counts.phone_not_found++; continue; }
     counts.exact_unique_phone++;
   }
-  return includeConflictDetails ? { ...counts, phone_conflict_detail: detail } : counts;
+  return includeConflictDetails ? { ...counts, phone_conflict_detail: detail, contact_only_name_detail: contactNameDetail } : counts;
 }

@@ -51,6 +51,7 @@ jobs:
       backup_ref: ${{ steps.run_ingest.outputs.backup_ref }}
       sync_stats: ${{ steps.run_ingest.outputs.sync_stats }}
       phone_detail: ${{ steps.run_ingest.outputs.phone_detail }}
+      contact_name_detail: ${{ steps.run_ingest.outputs.contact_name_detail }}
       restore_stats: ${{ steps.run_ingest.outputs.restore_stats }}
       pk1: ${{ steps.run_ingest.outputs.pk1 }}
       pk2: ${{ steps.run_ingest.outputs.pk2 }}
@@ -96,6 +97,11 @@ jobs:
           backup_ref='unchecked'
           sync_stats='none'
           phone_detail='none'
+          contact_name_detail='none'
+          name_detail_complete='yes'
+          exact_name_total=0
+          missing_marker_total=0
+          other_name_total=0
           detail_complete='yes'
           detail_batches=0
           contact_only_total=0
@@ -131,6 +137,7 @@ jobs:
               printf 'backup_ref=%s\n' "$backup_ref"
               printf 'sync_stats=%s\n' "$sync_stats"
               printf 'phone_detail=%s\n' "$phone_detail"
+              printf 'contact_name_detail=%s\n' "$contact_name_detail"
               printf 'restore_stats=%s\n' "$restore_stats"
               printf 'pk1=%s\n' "$pk1"
               printf 'pk2=%s\n' "$pk2"
@@ -400,6 +407,18 @@ jobs:
               else
                 detail_complete='no'
               fi
+              if jq -e '.antix_phone_preview as $p | $p.contact_only_name_detail as $n |
+                ($n | type == "object") and
+                ([$n.exact_name_and_marker, $n.marker_missing_same_name, $n.other_or_unknown] |
+                  all(type == "number" and . >= 0 and floor == .)) and
+                (($n.exact_name_and_marker + $n.marker_missing_same_name + $n.other_or_unknown) == $p.phone_conflict_detail.contact_only_existing_phone)' "$TMP/resp_${batch_idx}.json" >/dev/null; then
+                IFS=' ' read -r ex mi ot <<< "$(jq -r '.antix_phone_preview.contact_only_name_detail | "\(.exact_name_and_marker) \(.marker_missing_same_name) \(.other_or_unknown)"' "$TMP/resp_${batch_idx}.json")"
+                exact_name_total=$((exact_name_total + ex))
+                missing_marker_total=$((missing_marker_total + mi))
+                other_name_total=$((other_name_total + ot))
+              else
+                name_detail_complete='no'
+              fi
             fi
             # A partially inserted batch must stop here for human review; never
             # report it as fully imported or advance to the next batch.
@@ -421,6 +440,13 @@ jobs:
               phone_detail="contact_only_existing_phone=${contact_only_total},protected_owner=${protected_total},multiple_owners=${multiple_total},batches=${detail_batches}"
             else
               phone_detail='unavailable'
+            fi
+          fi
+          if [ "$detail_batches" -gt 0 ]; then
+            if [ "$name_detail_complete" = 'yes' ]; then
+              contact_name_detail="exact=${exact_name_total},marker_missing=${missing_marker_total},other=${other_name_total},batches=${detail_batches}"
+            else
+              contact_name_detail='unavailable'
             fi
           fi
           if [ "${#restore_parts[@]}" -gt 0 ]; then
@@ -493,3 +519,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'Aggregate counts only; no customer identities.'
+
+  contact-name-report:
+    name: 'Contact name breakdown — ${{ needs.ingest.outputs.contact_name_detail }}'
+    needs: ingest
+    if: always() && needs.ingest.outputs.contact_name_detail != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Aggregate diagnostics only; no names or telephone numbers.'

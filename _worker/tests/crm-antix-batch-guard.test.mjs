@@ -150,3 +150,49 @@ test('phone-conflict detail partitions counts without exposing customer data', a
   assert.deepEqual(result.phone_conflict_detail, { multiple_owners: 1, protected_owner: 2, contact_only_existing_phone: 1 });
   assert.doesNotMatch(JSON.stringify(result), /201111111111|عميل اصطناعي|مثال مستبعد/);
 });
+
+test('preview fails closed when any database snapshot is missing or reports failure', async () => {
+  const item = { conversation_uid: 'wa:synthetic', selected_phone: '+201111111111', title: 'اسم اصطناعي',
+    message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
+  for (const brokenIndex of [0, 1, 2]) {
+    for (const broken of [undefined, {}, { success: false, results: [] }]) {
+      let index = 0;
+      const db = { prepare() { const current = index++; return { bind() { return this; },
+        async all() { return current === brokenIndex ? broken : { success: true, results: [] }; } }; } };
+      const result = await runSourceSyncBundle(db, { dry_run: true, conversations: [item], vcf_contacts: [] });
+      assert.deepEqual(result, { ok: false, error: 'antix_preview_snapshot_unavailable' });
+    }
+  }
+});
+
+test('preview reports existing marked contact-only phone as a conflict without exposing values', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const emptyHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  const incoming = { conversation_uid: 'wa:contact', selected_phone: '+201111111111', title: '🔴 اسم اصطناعي جديد',
+    message_count: 0, first_message_at: null, last_message_at: null, raw_sha256: emptyHash };
+  const result = previewAntixPhoneMatches([incoming], [{ phone_key: '201111111111', contact_id: 'existing' }], [],
+    [{ id: 'existing', name: 'اسم اصطناعي قديم' }], [], true);
+  assert.equal(result.phone_conflict_detail.contact_only_existing_phone, 1);
+  assert.equal(result.exact_unique_phone, 0);
+  assert.doesNotMatch(JSON.stringify(result), /اصطناعي|201111111111/);
+});
+
+test('contact-only name details are aggregate diagnostics and never resolve a conflict', async () => {
+  const { previewAntixPhoneMatches } = await import('../crm-antix-phone-preview.js');
+  const items = [
+    { conversation_uid: 'wa:1', selected_phone: '+201111111111', title: '🟢 اسم اصطناعي', message_count: 0 },
+    { conversation_uid: 'wa:2', selected_phone: '+201022222222', title: '🟡 اسم آخر', message_count: 0 },
+    { conversation_uid: 'wa:3', selected_phone: '+201033333333', title: '🔴 اسم جديد', message_count: 0 },
+    { conversation_uid: 'wa:4', selected_phone: '+201044444444', title: '✈️ شخص اصطناعي', message_count: 0 },
+    { conversation_uid: 'wa:5', selected_phone: '+201055555555', title: '🟢 اسم بديل', message_count: 0 },
+  ];
+  const phones = items.map((chat, i) => ({ phone_key: chat.selected_phone.slice(1), contact_id: `c${i}` }));
+  const contacts = [{ id: 'c0', name: '🟢 اسم اصطناعي' }, { id: 'c1', name: 'اسم آخر' },
+    { id: 'c2', name: '🟡 اسم جديد' }, { id: 'c3', name: 'شخص اصطناعي' }];
+  const counts = previewAntixPhoneMatches(items, phones, [], contacts, [], true);
+  assert.equal(counts.phone_conflict, 5);
+  assert.equal(counts.exact_unique_phone, 0);
+  assert.deepEqual(counts.contact_only_name_detail,
+    { exact_name_and_marker: 1, marker_missing_same_name: 2, other_or_unknown: 2 });
+  assert.doesNotMatch(JSON.stringify(counts), /اصطناعي|201111111111/);
+});
