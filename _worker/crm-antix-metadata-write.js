@@ -54,14 +54,44 @@ function ownerSnapshot(owner, contactId, title, excludedNames) {
   return isProtectedAntixOwner(owner.name, excludedNames) ? { id: '', name: '' } : owner;
 }
 
+function assertGuardOptions(guarded, createMissing, snapshot, statements, size) {
+  if (guarded && (!createMissing || !snapshot || !Array.isArray(statements) || statements.length !== size)) {
+    throw new Error('invalid-guarded-write');
+  }
+}
+
+function ownersFromSnapshot(snapshot) {
+  return new Map(snapshot.phones.map(phone => [phone.phone_key, snapshot.contacts.find(row => row.id === phone.contact_id)]));
+}
+
+// A zero-row write aborts the whole transaction rather than being noticed after commit.
+function guardSuccessfulWrites(db, item, target, owner, ids) {
+  return db.prepare(`SELECT CASE WHEN
+    (SELECT COUNT(*) FROM crm_contact_phones WHERE phone_key=?)=1
+    AND EXISTS (SELECT 1 FROM crm_contact_phones p JOIN crm_contacts c ON c.id=p.contact_id
+                WHERE p.phone_key=? AND c.id=? AND c.name=?)
+    AND (?=1 OR (EXISTS (SELECT 1 FROM crm_contact_phones WHERE id=? AND contact_id=?)
+                 AND EXISTS (SELECT 1 FROM crm_contact_audit_log WHERE id=? AND contact_id=?)))
+    AND (?=0 OR EXISTS (SELECT 1 FROM crm_conversations WHERE id=? AND conversation_uid=? AND contact_id=?))
+    THEN 1 ELSE abs(-9223372036854775808) END AS guard`)
+    .bind(item.selected_phone.slice(1), item.selected_phone.slice(1), target.id, target.name,
+      owner ? 1 : 0, ids.phoneId, target.id, ids.auditId, target.id, item.message_count,
+      ids.conversationId, item.conversation_uid, target.id);
+}
+
 /** Internal prototype. Not connected to any ingest endpoint. */
-export async function writeAntixMetadataPrototype(db, items, { now = new Date(), createMissing = false, excludedNames = [] } = {}) {
+export async function writeAntixMetadataPrototype(db, items, { now = new Date(), createMissing = false, excludedNames = [], guardedSnapshot = null, guardedStatements = null } = {}) {
   validateAntixMetadata(items, excludedNames); // Validate the whole batch before issuing any SQL.
+  const guarded = guardedSnapshot !== null || guardedStatements !== null;
+  assertGuardOptions(guarded, createMissing, guardedSnapshot, guardedStatements, items.length);
   const nowIso = now.toISOString();
-  const statements = [];
-  const owners = await snapshotOwners(db, items);
+  const statements = guarded ? [...guardedStatements] : [];
+  const owners = guarded ? ownersFromSnapshot(guardedSnapshot) : await snapshotOwners(db, items);
   for (const item of items) {
     const contactId = crypto.randomUUID();
+    const phoneId = crypto.randomUUID();
+    const auditId = crypto.randomUUID();
+    const conversationId = crypto.randomUUID();
     const owner = owners.get(item.selected_phone.slice(1));
     // Snapshot exact owner identity and name so concurrent changes fail closed.
     const target = ownerSnapshot(owner, contactId, item.title, excludedNames);
@@ -79,12 +109,12 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       statements.push(db.prepare(
         `INSERT INTO crm_contact_phones(id, contact_id, phone_key, label, is_primary, raw_input, source_type, source_ref, verified_at)
          SELECT ?, id, ?, 'واتساب', 1, '', 'vcf', 'antix_metadata_v1', ? FROM crm_contacts WHERE id = ?`,
-      ).bind(crypto.randomUUID(), item.selected_phone.slice(1), item.message_count === 0 ? null : nowIso, contactId));
+      ).bind(phoneId, item.selected_phone.slice(1), item.message_count === 0 ? null : nowIso, contactId));
       statements.push(db.prepare(
         `INSERT INTO crm_contact_audit_log(id, contact_id, action_type, field_name, old_value, new_value, source_ref, actor, created_at)
          SELECT ?, id, 'source_synced', 'contact_created', NULL, NULL, 'antix_metadata_v1', 'source_sync', ?
          FROM crm_contacts WHERE id = ?`,
-      ).bind(crypto.randomUUID(), nowIso, contactId));
+      ).bind(auditId, nowIso, contactId));
     }
     statements.push(db.prepare(
       `INSERT INTO crm_conversations (
@@ -97,8 +127,9 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
         WHERE p.phone_key = ? AND ? > 0 AND c.id = ? AND c.name = ?
           AND ltrim(c.name) NOT LIKE 'TEST ONLY%' AND c.name NOT LIKE '%🌀%'
         ON CONFLICT(conversation_uid) DO NOTHING`,
-    ).bind(crypto.randomUUID(), item.conversation_uid, item.raw_sha256, item.message_count,
+    ).bind(conversationId, item.conversation_uid, item.raw_sha256, item.message_count,
       item.first_message_at, item.last_message_at, nowIso, nowIso, item.selected_phone.slice(1), item.message_count, target.id, target.name));
+    if (guarded) statements.push(guardSuccessfulWrites(db, item, target, owner, { phoneId, auditId, conversationId }));
   }
   // D1 batch is transactional: any constraint error rolls back the entire batch.
   const result = await db.batch(statements);
@@ -106,7 +137,8 @@ export async function writeAntixMetadataPrototype(db, items, { now = new Date(),
       result.some(row => !Number.isInteger(row?.meta?.changes ?? row?.changes))) {
     throw new Error('unverified-write-result');
   }
-  return summarizeAntixResults(result, items, createMissing);
+  const writes = guarded ? result.slice(guardedStatements.length).filter((_, index) => (index + 1) % 5 !== 0) : result;
+  return summarizeAntixResults(writes, items, createMissing);
 }
 
 function summarizeAntixResults(result, items, createMissing) {
