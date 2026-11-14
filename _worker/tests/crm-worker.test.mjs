@@ -1138,7 +1138,7 @@ test('guarded synthetic antiX write requires independent server gates and consum
   const { sqlite, env } = await createEnv({ extraEnv: { CRM_INGEST_PRIVATE_KEY: keys.privateKeyPkcs8B64u } });
   const contact = { conversation_uid: 'wa:synthetic-new', selected_phone: '+201111111111', title: '🟢 عميل اصطناعي',
     message_count: 1, first_message_at: null, last_message_at: null, raw_sha256: 'a'.repeat(64) };
-  const payload = { dry_run: false, sync_bundle: { antix_mode: 'metadata_only_v1', backup_verified_ref: 'synthetic-backup',
+  const payload = { dry_run: false, sync_bundle: { antix_mode: 'metadata_only_guarded_v2', backup_verified_ref: 'synthetic-backup',
     vcf_contacts: [], conversations: [contact] } };
   const sealAndAuthorize = async () => {
     const envelope = await sealIngestPayload(payload, keys.publicKeySpkiB64u);

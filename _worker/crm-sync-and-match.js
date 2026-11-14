@@ -14,7 +14,8 @@ import {
 
 import { previewAntixPhoneMatches } from './crm-antix-phone-preview.js';
 import { planAntixBatch } from './crm-antix-safe-plan.js';
-import { validateAntixMetadata, writeAntixMetadataPrototype } from './crm-antix-metadata-write.js';
+import { validateAntixMetadata } from './crm-antix-metadata-write.js';
+import { readAntixWriteSnapshot, writeGuardedAntixPrototype } from './crm-antix-guarded-write-prototype.js';
 
 const ACTIVE_OPP_SQL = "'active','visit_scheduled','viewing_done','offer','negotiating','near_close'";
 
@@ -1000,7 +1001,7 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
       if (bundle.antix_safe_plan_preview === true) return { ok: false, error: 'antix_plan_requires_dry_run' };
       // Two trusted server-side gates; an envelope cannot authorize its own backup.
       const approvedRef = normalizedOpts.antixVerifiedBackupRef;
-      if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_v1' ||
+      if (normalizedOpts.allowAntixMetadataWrite !== true || bundle?.antix_mode !== 'metadata_only_guarded_v2' ||
           typeof approvedRef !== 'string' || !approvedRef.trim() || backupRef !== approvedRef) {
         return { ok: false, error: 'antix_phone_verified_write_not_available' };
       }
@@ -1008,8 +1009,16 @@ export async function runSourceSyncBundle(db, bundle, opts = {}) {
     try { validateAntixMetadata(conversations, normalizedOpts.antixExcludedNames); }
     catch { return { ok: false, error: 'antix_invalid_preview_batch' }; }
     if (!dryRun) {
-      const result = await writeAntixMetadataPrototype(db, conversations, { now, createMissing: true, excludedNames: normalizedOpts.antixExcludedNames });
-      return { ok: true, dry_run: false, antix_metadata: result };
+      if (conversations.length > 5) return { ok: false, error: 'antix_guard_batch_too_large' };
+      let snapshot;
+      try { snapshot = await readAntixWriteSnapshot(db, conversations); }
+      catch { return { ok: false, error: 'antix_write_snapshot_unavailable' }; }
+      try {
+        const plan = planAntixBatch(conversations, snapshot, normalizedOpts.antixExcludedNames);
+        if (plan.held.length) return { ok: false, error: 'antix_write_batch_has_held_items' };
+        const result = await writeGuardedAntixPrototype(db, conversations, snapshot, { now, excludedNames: normalizedOpts.antixExcludedNames });
+        return { ok: true, dry_run: false, antix_metadata: result };
+      } catch { return { ok: false, error: 'antix_guarded_write_failed' }; }
     }
   }
 
