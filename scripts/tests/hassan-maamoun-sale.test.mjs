@@ -93,8 +93,15 @@ test('Hassan Maamoun: live renderer has valid sale schema, tenancy warning, actu
     assert.equal(new URL(href).pathname, '/201147758857');
     const home = await (await fetch(base + '/')).text();
     assert.match(home, /class="hp-hero-visual"/);
-    assert.ok(home.includes(`/properties/${slug}/`));
-    assert.ok(home.includes('/assets/img/properties/cards/hassan-maamoun-220m.webp'));
+    // الرئيسية تعرض «أحدث 6» من listing_facets.catalog.order — عند نشر عقار أحدث
+    // تتزحزح الحدود ويغادر الأقدم القائمة. الفحص مشتق من الترتيب نفسه حتى لا
+    // تفشل البوابة مع كل نشر مشروع، مع إبقاء تغطية كل الكروت الستة.
+    const facets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
+    for (const s of facets.catalog.order.slice(0, 6)) {
+      assert.ok(home.includes(`/properties/${s}/`), `homepage is missing ${s}`);
+      const card = facets.listings[s] && facets.listings[s].card_image;
+      if (card) assert.ok(home.includes(card), `homepage is missing the card image for ${s}`);
+    }
     const catalog = await (await fetch(base + '/properties/')).text();
     assert.ok(catalog.includes('/assets/img/properties/cards/hassan-maamoun-220m.webp'));
     for (const file of ['hassan-maamoun-220m.webp', 'hassan-maamoun-220m-800w.webp', 'cards/hassan-maamoun-220m.webp', 'og/hassan-maamoun-220m.jpg']) {
