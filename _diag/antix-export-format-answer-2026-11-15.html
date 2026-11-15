@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>صيغة المخرَج — جواب نهائي (antiX → CRM)</title>
+<style>
+  :root{
+    --bg:#0f1720; --card:#151f2b; --line:#26364a; --ink:#e8eef5; --muted:#9db0c6;
+    --accent:#4cc38a; --accent2:#58a6ff; --warn:#e0a33e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px 16px 64px; background:var(--bg); color:var(--ink);
+    font-family:"Cairo","Segoe UI",Tahoma,Arial,sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:1.35rem;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:.9rem;margin:0 0 20px}
+  .bar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;margin-bottom:12px;position:sticky;top:8px;z-index:5;
+  }
+  button{
+    font-family:inherit;font-size:.92rem;cursor:pointer;border-radius:10px;
+    border:1px solid transparent;padding:9px 16px;font-weight:700;
+  }
+  #copy{background:var(--accent);color:#06231a}
+  #copy:hover{filter:brightness(1.08)}
+  #select{background:transparent;color:var(--ink);border-color:var(--line)}
+  #select:hover{border-color:var(--accent2);color:var(--accent2)}
+  #status{font-size:.85rem;color:var(--accent);min-height:1.2em}
+  textarea{
+    width:100%;min-height:70vh;resize:vertical;display:block;
+    background:#0b1219;color:#dfe9f3;border:1px solid var(--line);border-radius:14px;
+    padding:18px;font-family:ui-monospace,"Cascadia Mono","Consolas",monospace;
+    font-size:.86rem;line-height:1.85;direction:rtl;text-align:right;white-space:pre-wrap;
+  }
+  textarea:focus{outline:2px solid var(--accent2);outline-offset:2px}
+  .hint{color:var(--muted);font-size:.82rem;margin-top:10px}
+  code{background:#0b1219;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.82em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>صيغة المخرَج: JSON أم CSV أم غيره؟</h1>
+  <p class="sub">جواب مبني على كود المستودع نفسه (لا افتراض): <code>scripts/antix-wa-sync/wa_sync.py</code> و<code>scripts/crm/build-whatsapp-import.mjs</code> و<code>_worker/crm-chat-intel.js</code> — 2026-11-15.</p>
+
+  <div class="bar">
+    <button id="copy" type="button">📋 انسخ الجواب</button>
+    <button id="select" type="button">تحديد الكل</button>
+    <span id="status" role="status" aria-live="polite"></span>
+  </div>
+
+  <textarea id="answer" readonly spellcheck="false">سؤال: المخرَج JSON أم CSV أم ملف آخر؟ وبأي بنية؟
+جواب: لا CSV. المخرَج على طبقتين، وكلتاهما JSON + نقل ZIP. التفصيل من الكود:
+
+════════════════════════════════════
+١) الطبقة الأولى — ما يخرج من جهاز antiX
+════════════════════════════════════
+المخرج ليس ملفًا واحدًا، بل ملف ZIP لكل محادثة، في مجلد خارج المستودع:
+  ~/nasr-wa-sync/state/outbox/
+واسم الملف بشكل ثابت:
+  WA-SYNC__&lt;أول 16 حرفًا من بصمة JID&gt;__&lt;أول 16 حرفًا من sha256 للنص&gt;.zip
+
+داخل كل ZIP مَدخلان فقط، لا ثالث:
+  chat.txt        ← المحادثة نصًّا (هذا هو «الرسائل»)
+  crm-sync.json   ← بيانات وصفية صغيرة
+
+صلاحيات الملفات 600 والمجلدات 700، والرفع بـ --immutable (لا استبدال لملف موجود على Drive).
+
+── بنية crm-sync.json (مفاتيح مرتّبة أبجديًا) ──
+{
+  "schema": "antix-wa-sync-v1",
+  "chat_title": "اسم المحادثة كما في واتساب/دفتر العناوين",
+  "conversation_uid": "wa:&lt;مفتاح الاسم&gt; أو wa:antix:&lt;بصمة&gt;",
+  "text_sha256": "&lt;64 خانة hex — بصمة نص chat.txt&gt;"
+}
+
+── بنية chat.txt (سطر لكل رسالة) ──
+  DD/MM/YYYY, HH:MM - المرسِل: نص الرسالة
+التوقيت بتوقيت القاهرة (Africa/Cairo)، واسمك يظهر "طارق طنطاوي".
+الوسائط لا تُصدَّر، تُستبدل بعلامة نصية:
+  [صورة] [فيديو] [صوت] [ملف] [موقع] [مكالمة] [مستند] [صورة متحركة] [ملصق]
+وغير النصي بلا علامة: [رسالة غير نصية] — ورسائل النظام: [رسالة نظام]
+
+════════════════════════════════════
+٢) الطبقة الثانية — ما يستهلكه الـCRM
+════════════════════════════════════
+الأمر: node scripts/crm/build-whatsapp-import.mjs --dir &lt;folder&gt; --out &lt;bundle.json&gt;
+المخرج JSON واحد (أو عدّة ملفات دفعات: bundle-01.json, bundle-02.json…).
+البنية العليا:
+{
+  "vcf_contacts": [ ... ],   // جهات الاتصال المطابقة فقط (أو الكل بـ --contacts all)
+  "conversations": [ ... ],  // محادثة لكل عنصر
+  "dry_run": true
+}
+
+عنصر vcf_contacts:
+{
+  "fn": "الاسم كما في دفتر العناوين",
+  "phones": [
+    { "e164": "2010...", "raw": "+20 10 ...", "label": "أساسي (VCF)", "source_ref": "contacts.vcf" }
+  ],
+  "vcf_files": ["contacts.vcf"],
+  "org": "جهة العمل — اختياري"
+}
+
+عنصر conversations (المهم: النص هنا كامل في حقل واحد، لا مصفوفة رسائل):
+{
+  "title": "اسم يُطابق دفتر العناوين (أو العنوان الأصلي إن لم يُحلّ)",
+  "sig": "&lt;أول 16 من sha256 للنص الخام&gt;",
+  "conversation_uid": "wa:...",
+  "raw_txt": "نص المحادثة الكامل كما في chat.txt",
+  "source_ref": "&lt;اسم المجلد&gt;:&lt;اسم الملف&gt;",
+  "first_message_at": "ISO-8601 أو null",
+  "last_message_at": "ISO-8601 أو null"
+}
+
+وملف تقرير منفصل بجواره: bundle.report.json
+{
+  "summary": { "chats": n, "resolved": n, "unknown": n, "messages": n, "methods": {}, "reasons": {} },
+  "report": [
+    { "file", "chat_title", "peer_sender", "messages", "first", "last",
+      "resolved_to", "method", "reason", "candidates": [], "warnings": [] }
+  ]
+}
+الدفعة الواحدة لا تتجاوز 65,535 بايت (سقف dispatch في GitHub)، وتُقسَّم بالحجم لا بالعدد.
+
+════════════════════════════════════
+٣) أين تصبح الرسائل مصفوفة؟
+════════════════════════════════════
+داخل الـWorker، بعد parseWhatsAppExport، سطر chat.txt يتحوّل إلى رسالة بهذه الحقول:
+  seq_no, sender_role (broker | customer | system), sender_label,
+  sent_at, raw_timestamp_text, body_text, links[]
+لا يوجد في المسار كله تُصدير رسائل بصيغة CSV.
+(CSV الموجود في المستودع هو scripts/crm/prune-phonebook.mjs لتقرير تنظيف دفتر العناوين — لا علاقة له بالمحادثات.)
+
+════════════════════════════════════
+٤) تقرير التشغيل (لا يُرفع)
+════════════════════════════════════
+~/nasr-wa-sync/state/last-run.json
+{
+  "schema": "antix-wa-sync-v1",
+  "at": "ISO-8601",
+  "transport": "rclone" | "manual",
+  "uploaded": n, "prepared": n,
+  "counts": {
+    "new": n, "changed": n, "retry_upload": n, "unchanged": n,
+    "empty": n, "contact_only": n, "missing_from_backup": n,
+    "hold_history_changed": n, "hold_empty_backup": n,
+    "hold_identity_collision": n, "hold_unresolved_jid": n,
+    "hold_unknown_recent": n, "hold_contact_ambiguous": n
+  }
+}
+أي مفتاح يبدأ بـ hold_ يعني توقّفًا للمراجعة، ورمز الخروج 3.
+لا نصوص محادثات ولا أسماء داخل هذا التقرير.
+
+════════════════════════════════════
+٥) حدود ثابتة (ليست اختيارية)
+════════════════════════════════════
+- المجموعات والقنوات والبثّ مستبعدة (g.us / newsletter / broadcast).
+- الوسائط الثنائية لا تُصدَّر إطلاقًا، ولا تُرفع.
+- دفتر العناوين كاملًا لا يُصدَّر؛ يخرج منه المطابَق فقط.
+- المخرجات كلها خارج المستودع؛ ولا ملف محادثة أو مفتاح داخل Git.
+- قناة الاستيراد الحقيقية مغلّفة: enc_v1.&lt;RSA-OAEP-4096&gt;.&lt;IV&gt;.&lt;AES-256-GCM&gt; داخل sync_bundle.
+
+════════════════════════════════════
+٦) لو أردت شيئًا آخر
+════════════════════════════════════
+لو احتجت messages[] صريحة أو CSV لفتحه في Excel، فهذا تحويل مشتق من chat.txt
+يمكن إضافته كسكربت قراءة فقط؛ لكنه لن يكون صيغة الاستيراد، لأن العقد الحالي
+(runSourceSyncBundle) يقرأ raw_txt ويُحلّل الرسائل بنفسه في الـWorker.
+قل لي أي صيغة مشتقة تريد بالضبط (وأسماء أعمدتها) وأضيفها كأداة منفصلة.
+  </textarea>
+
+  <p class="hint">المربّع أعلاه للقراءة فقط: اضغط «انسخ الجواب» ثم الصقه في أي محادثة أو مستند. النص كلّه من كود المستودع، وليس تخمينًا.</p>
+</div>
+
+<script>
+  const box = document.getElementById("answer");
+  const status = document.getElementById("status");
+  const flash = (msg) => { status.textContent = msg; setTimeout(() => { if (status.textContent === msg) status.textContent = ""; }, 2600); };
+
+  async function copyAnswer() {
+    const text = box.value;
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("✓ تم النسخ");
+    } catch {
+      box.focus();
+      box.select();
+      box.setSelectionRange(0, text.length);
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      flash(ok ? "✓ تم النسخ" : "حدّدت النص — اضغط Ctrl+C");
+    }
+  }
+
+  document.getElementById("copy").addEventListener("click", copyAnswer);
+  document.getElementById("select").addEventListener("click", () => {
+    box.focus();
+    box.select();
+    flash("تم تحديد النص");
+  });
+</script>
+</body>
+</html>
