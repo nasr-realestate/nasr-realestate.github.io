@@ -135,8 +135,15 @@ test('International Park 225m: live renderer serves valid ForSale schema, verifi
     assert.match(html, /<meta property="og:image" content="[^"]*\/og\/international-park-al-sharq-225m\.jpg"/);
 
     const home = await (await fetch(`${base}/`)).text();
-    assert.ok(home.includes(`/properties/${slug}/`));
-    assert.ok(home.includes('/assets/img/properties/cards/international-park-al-sharq-225m.webp'));
+    // الرئيسية تعرض «أحدث 6» من listing_facets.catalog.order — عند نشر عقار أحدث
+    // تتزحزح الحدود ويغادر الأقدم القائمة (نمط hassan-maamoun-sale). الفحص مشتق
+    // من الترتيب نفسه لتغطية الكروت الستة الحالية بلا فشل عند كل نشر مشروع.
+    const homeFacets = JSON.parse(fs.readFileSync(new URL('../../_data/listing_facets.json', import.meta.url), 'utf8'));
+    for (const s of homeFacets.catalog.order.slice(0, 6)) {
+      assert.ok(home.includes(`/properties/${s}/`), `homepage is missing ${s}`);
+      const card = homeFacets.listings[s] && homeFacets.listings[s].card_image;
+      if (card) assert.ok(home.includes(card), `homepage is missing the card image for ${s}`);
+    }
     const catalog = await (await fetch(`${base}/properties/`)).text();
     assert.ok(catalog.includes('/assets/img/properties/cards/international-park-al-sharq-225m.webp'));
 
