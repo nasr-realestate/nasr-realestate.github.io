@@ -7,9 +7,21 @@
 كررت 1984 مرة ⇒ ملف 26 ميجا ⇒ رفضه جوجل. الحل: 144×144 بجودة 72
 (≈4 كيلو) ⇒ الملف ≈ 11 ميجا، مع بقاء التمييز اللوني واضحًا.
 
+الوضع الافتراضي (`--default-no-photo`):
+
+    المجموعات الأربع المصبوغة (ذكى منير / حارس / الدولاب / قاعدة العملاء)
+    تأخذ صورتها الملوّنة — يراها من بعيد فيعرف مصدر الاتصال.
+    وكل ما عداها (الأسماء الطبيعية + جهات أخرى + أي اسم جديد) **بلا صورة**،
+    فتظهر صورة الشخص الحقيقية كما وضعها هو.
+
+أوضاع أخرى:
+    `--no-photos`  : حذف كل الصور.
+    بدون أي علامة  : صبغ كل الكروت (قديم، غير مستخدم).
+
 Usage:
     .venv/bin/python tools/contact-labels/build-vcf.py \
-        --src ./Diwan.vcf --labels ./tools/contact-labels/out --out ./Diwan-11MB.vcf
+        --src ./Diwan.vcf --labels ./tools/contact-labels/out \
+        --default-no-photo --out ./Diwan.vcf
 """
 from __future__ import annotations
 
@@ -40,14 +52,27 @@ def main() -> None:
     ap.add_argument("--src", required=True, help="ملف vCard الأصلي")
     ap.add_argument("--labels", default="./labels", help="مجلد صور المجموعات")
     ap.add_argument("--out", required=True, help="ملف الإخراج")
+    ap.add_argument(
+        "--default-no-photo",
+        action="store_true",
+        help="المجموعات الأربع الملوّنة فقط تأخذ صورة، والباقي بلا صورة",
+    )
+    ap.add_argument(
+        "--no-photos",
+        action="store_true",
+        help="حذف الصور تمامًا بدل وضع صور المجموعات (تظهر صور الناس الحقيقية)",
+    )
     args = ap.parse_args()
 
-    labels = Path(args.labels)
-    missing = [k for k in KEYS if not (labels / f"{k}.jpg").exists()]
-    if missing:
-        sys.exit(f"صور ناقصة في {labels}: {missing}")
-
-    b64 = {k: base64.b64encode((labels / f"{k}.jpg").read_bytes()).decode() for k in KEYS}
+    if args.no_photos:
+        b64 = {}
+    else:
+        labels = Path(args.labels)
+        need = [k for k in KEYS if k != DEFAULT] if args.default_no_photo else KEYS
+        missing = [k for k in need if not (labels / f"{k}.jpg").exists()]
+        if missing:
+            sys.exit(f"صور ناقصة في {labels}: {missing}")
+        b64 = {k: base64.b64encode((labels / f"{k}.jpg").read_bytes()).decode() for k in need}
 
     out: list[str] = []
     cur: list[str] = []
@@ -70,6 +95,13 @@ def main() -> None:
             continue
         if line.startswith("PHOTO"):
             in_photo = True
+            if args.no_photos:
+                stats["بدون صور"] = stats.get("بدون صور", 0) + 1
+                continue
+            named = group in LABEL_FOR
+            if args.default_no_photo and not named:
+                stats["بدون صور"] = stats.get("بدون صور", 0) + 1
+                continue          # يُحذف الكارت بلا صورة — تظهر صورته الحقيقية
             key = LABEL_FOR.get(group, DEFAULT)
             stats[key] = stats.get(key, 0) + 1
             cur.append("PHOTO;ENCODING=b;TYPE=JPEG:" + fold(b64[key]))
@@ -83,8 +115,8 @@ def main() -> None:
 
     Path(args.out).write_text("\r\n".join(out) + "\r\n", encoding="utf-8", newline="")
     size_mb = os.path.getsize(args.out) / 1024 / 1024
-    print(f"{args.out}: {sum(stats.values())} كارت ({size_mb:.1f} ميجا)")
-    for key in KEYS:
+    print(f"{args.out}: {sum(stats.values())} صورة معالَجة ({size_mb:.2f} ميجا)")
+    for key in KEYS + ["بدون صور"]:
         if key in stats:
             print(f"   {key}: {stats[key]}")
     if size_mb > 20:
