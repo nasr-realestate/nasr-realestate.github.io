@@ -72,7 +72,12 @@ export function peopleFromVcf({ name = 'export.vcf', text }) {
     return { fn, phones, segment: segmentsOf(fn) };
   });
   const parent = cards.map((_, i) => i);
-  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const find = (i) => {
+    if (parent[i] === i) return i;
+    const root = find(parent[i]);
+    parent[i] = root;
+    return root;
+  };
   const union = (a, b) => {
     const ra = find(a);
     const rb = find(b);
@@ -141,9 +146,23 @@ export function gapWeeks(fromWeek, toWeek) {
   return Math.round((b - a) / (7 * 86_400_000));
 }
 
+/** يصف حالة شخص واحد بالنسبة لحالته السابقة — كلمة واحدة تُجمَع بعدها. */
+export function classifyPerson(person, before, week) {
+  if (!before) return 'entered';
+  if (before.lastSeenWeek && before.lastSeenWeek !== week
+    && gapWeeks(before.lastSeenWeek, week) > 1) return 'returned';
+  if (before.segment === person.segment) return 'stayed';
+  if (!before.segment) return 'marked';
+  if (!person.segment) return 'unmarked';
+  return 'moved';
+}
+
 /**
  * الفرق بين أسبوعين. `previous` قد تكون `null` (أول أسبوع) — وكل شخص يكون
  * `entered` حينها، وهذا صحيح: أول مرة نعرف فيك شيء أنت جديد في الدفتر.
+ *
+ * القاعدة التي تُثبّت المعنى: `entered` تعني «لم يكن لنا به علم»، و`returned`
+ * تعني «كان لنا به علم وغاب». خلطهما يجعل الرقم بلا معنى في الأسبوع الثالث.
  */
 export function diffWeeks(people, previous, { week }) {
   const prev = previous?.persons || {};
@@ -156,24 +175,11 @@ export function diffWeeks(people, previous, { week }) {
   for (const person of people) {
     seen.add(person.fp);
     const before = prev[person.fp];
-    if (!before) {
-      counts.entered += 1;
+    const kind = classifyPerson(person, before, week);
+    counts[kind] += 1;
+    if (kind === 'entered') {
       const seg = person.segment || 'unmarked';
       enteredBySegment[seg] = (enteredBySegment[seg] || 0) + 1;
-    } else if (before.lastSeenWeek && before.lastSeenWeek !== week
-      && gapWeeks(before.lastSeenWeek, week) > 1) {
-      // كان عندنا، غاب أسبوعًا أو أكثر، ورجع. هذا ليس «ثابت» ولا «جديد»: هو عائد،
-      // ويبقى أول أسبوع رؤية له كما هو حتى يُعرف عمر العلاقة.
-      counts.returned += 1;
-      if (!before.segment && person.segment) counts.marked += 1;
-      else if (before.segment && !person.segment) counts.unmarked += 1;
-      else if (before.segment !== person.segment) counts.moved += 1;
-    } else if (before.segment !== person.segment) {
-      if (!before.segment && person.segment) counts.marked += 1;
-      else if (before.segment && !person.segment) counts.unmarked += 1;
-      else counts.moved += 1;
-    } else {
-      counts.stayed += 1;
     }
     merged[person.fp] = {
       segment: person.segment,
