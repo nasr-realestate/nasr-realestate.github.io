@@ -1,0 +1,116 @@
+name: CRM daily KPI (read-only, counts only)
+
+# WHY THIS EXISTS
+# The owner asks one question every morning: how many clients came in today, how many
+# closed, and how many left. Nothing in the repository answered it: `/api/dashboard`
+# gives a live board, not a dated movement, and the CRM tables carry no exported daily
+# count. This job answers it with SELECTs against the isolated test DB and prints
+# NUMBERS ONLY — no name, no phone, no free text, nothing that can be traced to a person.
+#
+# GUARDRAILS (the same five every token-holding tool in this repo follows):
+#   1. manual dispatch only — no push, no pull_request, no schedule;
+#   2. the token is masked before the first request and xtrace is never enabled;
+#   3. the token is never echoed, written to a file, or put in a name or artifact;
+#   4. the only database is `nasr-crm-test-db-v2`, asserted against the config file
+#      before any query, and the production id is refused outright;
+#   5. read-only by construction: `assert_read_only()` refuses anything that is not a
+#      single SELECT, so a typo in a later edit cannot become a write.
+on:
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Cairo day to report (YYYY-MM-DD). Empty = today in Africa/Cairo.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-daily-kpi
+  cancel-in-progress: false
+
+jobs:
+  kpi:
+    if: github.repository == 'nasr-realestate/nasr-realestate.github.io' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/arena/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      DAY_INPUT: ${{ inputs.day }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: kpi
+        name: Count daily movement without reading any field about a person
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+
+          cfg=_worker/wrangler.crm.toml
+          TEST_DB_ID='760079c6-85f9-4a30-aa19-9a66f95d421a'
+          PROD_DB_ID='ace5c9a2-c6b1-47b3-adf1-77e84ac50abf'
+
+          # (4) the config must point at the test DB and must never mention production.
+          grep -Fq "database_id = \"$TEST_DB_ID\"" "$cfg" || { echo '::error::config is not bound to the isolated test DB'; exit 1; }
+          if grep -Fq "$PROD_DB_ID" "$cfg"; then echo '::error::production database id present in config'; exit 1; fi
+
+          # (5) one SELECT, nothing else. Uppercase keywords, no semicolon chaining.
+          assert_read_only() {
+            local sql="$1"
+            local upper
+            upper=$(printf '%s' "$sql" | tr '[:lower:]' '[:upper:]')
+            case "$upper" in
+              SELECT*) : ;;
+              *) echo "::error::read-only barrier refused a non-SELECT statement"; exit 1 ;;
+            esac
+            case "$upper" in
+              *INSERT*|*UPDATE*|*DELETE*|*DROP*|*ALTER*|*CREATE*|*PRAGMA*|*ATTACH*|*VACUUM*)
+                echo "::error::read-only barrier found a write keyword"; exit 1 ;;
+            esac
+            case "$sql" in
+              *';'*) echo "::error::read-only barrier refused a chained statement"; exit 1 ;;
+            esac
+          }
+
+          query() {
+            assert_read_only "$1"
+            npx --yes wrangler@4 d1 execute nasr-crm-test-db-v2 --remote --json --config "$cfg" --command "$1" \
+              | jq -r '.[0].results[0] | to_entries | map("\(.key)=\(.value)") | join(" ")'
+          }
+
+          # Cairo day boundaries, expressed as UTC ISO strings, so "today" means the
+          # owner's day and not the runner's.
+          if [ -n "${DAY_INPUT:-}" ]; then
+            printf '%s' "$DAY_INPUT" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' \
+              || { echo '::error::day must be YYYY-MM-DD'; exit 1; }
+            day="$DAY_INPUT"
+          else
+            day=$(TZ=Africa/Cairo date +%F)
+          fi
+          from="$day 00:00:00"
+          to="$day 23:59:59"
+
+          # Daily movement. "won" is the only meaning of a completed client in this
+          # schema (`crm_opportunities.status`); a "visit_scheduled" is not a client.
+          contacts_total=$(query "SELECT COUNT(*) AS contacts_total FROM crm_contacts")
+          contacts_new=$(query "SELECT COUNT(*) AS contacts_new FROM crm_contacts WHERE datetime(created_at) BETWEEN datetime('$from','-2 hours') AND datetime('$to','-2 hours')")
+          opps_open=$(query "SELECT COUNT(*) AS opps_open FROM crm_opportunities WHERE status NOT IN ('won','lost','unqualified','paused')")
+          won_day=$(query "SELECT COUNT(*) AS won_day FROM crm_opportunities WHERE status='won' AND datetime(closed_at) BETWEEN datetime('$from','-2 hours') AND datetime('$to','-2 hours')")
+          lost_day=$(query "SELECT COUNT(*) AS lost_day FROM crm_opportunities WHERE status='lost' AND datetime(closed_at) BETWEEN datetime('$from','-2 hours') AND datetime('$to','-2 hours')")
+          won_total=$(query "SELECT COUNT(*) AS won_total FROM crm_opportunities WHERE status='won'")
+          interactions_day=$(query "SELECT COUNT(*) AS interactions_day FROM crm_interactions WHERE datetime(occurred_at) BETWEEN datetime('$from','-2 hours') AND datetime('$to','-2 hours')")
+          followups_today=$(query "SELECT COUNT(*) AS followups_today FROM crm_interactions WHERE next_followup_at IS NOT NULL AND datetime(next_followup_at) BETWEEN datetime('$from','-2 hours') AND datetime('$to','-2 hours')")
+
+          line="day=$day $contacts_total $contacts_new $opps_open $won_day $lost_day $won_total $interactions_day $followups_today"
+          echo "$line"
+          echo "kpi=$line" >> "$GITHUB_OUTPUT"
+          echo "::notice title=CRM daily KPI::$line"
