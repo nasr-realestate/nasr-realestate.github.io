@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 // بلا كتابة أي ملف على القرص وبلا تأخير بدء تشغيل.
 import {
   renderLlmsFull, renderPropertyMarkdown, renderAiTxt,
-  renderMcpCard, renderOpenApi, renderSearchData, SITE as AI_SITE,
+  renderMcpCard, renderOpenApi, renderSearchData, renderShortlist, SITE as AI_SITE,
 } from './scripts/lib/ai-docs.mjs';
 import { loadProperties as loadAiProperties, buildFacets as buildAiFacets } from './scripts/lib/properties.mjs';
 import { buildFeed as buildAiFeed, buildPropertyDocument as buildAiPropertyDoc } from './scripts/build-ai-artifacts.mjs';
@@ -577,6 +577,21 @@ app.get('/llms-full.txt', (req, res) => {
 
 app.get('/search-data.json', (req, res) => aiJson(res, renderSearchData(aiProperties())));
 
+// فهرس المطابقة الخفيف (2026-11-17). يحتاج نفس ختم النطاق الذي يطبّقه
+// scripts/build-ai-artifacts.mjs، وإلا اختلفت المعاينة المحلية عن المنشور
+// في الوحدات المؤرشفة خارج مدينة نصر.
+app.get('/shortlist.json', (req, res) => {
+  const flags = JSON.parse(fs.readFileSync(path.join(process.cwd(), '_data', 'listing_facets.json'), 'utf8')).listings;
+  const stamped = aiProperties().map((p) => {
+    const l = flags[p.slug];
+    const archive = !!(l && l.in_area === false);
+    return archive
+      ? { ...p, in_nasr_city: false, scope: 'archive' }
+      : { ...p, scope: 'city' };
+  });
+  aiJson(res, renderShortlist(stamped, { stamp: new Date().toISOString() }));
+});
+
 app.get('/api/index.json', (req, res) => {
   const props = aiProperties();
   const facets = buildAiFacets(props);
@@ -597,6 +612,7 @@ app.get('/api/index.json', (req, res) => {
       { path: '/api/properties/{slug}.md', format: 'text/markdown' },
       { path: '/api/openapi.json', format: 'application/json' },
       { path: '/search-data.json', format: 'application/json' },
+      { path: '/shortlist.json', format: 'application/json' },
       { path: '/.well-known/ai.txt', format: 'text/plain' },
       { path: '/.well-known/mcp.json', format: 'application/json' },
     ],

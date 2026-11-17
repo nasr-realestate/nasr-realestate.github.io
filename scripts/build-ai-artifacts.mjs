@@ -15,6 +15,7 @@
  *    api/properties/<slug>.md         ← وحدة واحدة (Markdown)
  *    api/openapi.json                 ← مواصفة OpenAPI 3.1
  *    search-data.json                 ← فهرس البحث الخفيف (كان مذكورًا وغير مُولّد)
+ *    shortlist.json                   ← فهرس مطابقة بلا وصف للوكلاء (مدينة نصر فقط)
  *    .well-known/ai.txt               ← سياسة استخدام المحتوى آليًا
  *    .well-known/mcp.json             ← بطاقة خادم MCP
  *    .well-known/mcp/server-card.json ← المسار البديل للبطاقة
@@ -41,6 +42,7 @@ import {
   renderAiCatalog,
   renderOpenApi,
   renderSearchData,
+  renderShortlist,
   MCP_GATEWAY_STATUS,
 } from './lib/ai-docs.mjs';
 
@@ -123,6 +125,7 @@ export function buildFeed(properties, generatedAt) {
       site: SITE,
       properties_page: `${SITE}/properties/`,
       catalog: `${SITE}/api/properties.json`,
+      shortlist: `${SITE}/shortlist.json`,
       openapi: `${SITE}/api/openapi.json`,
       llms: `${SITE}/llms.txt`,
       llms_full: `${SITE}/llms-full.txt`,
@@ -228,6 +231,7 @@ export function buildApiIndex(properties, generatedAt) {
       { path: '/api/properties/{slug}.md', method: 'GET', format: 'text/markdown', description: 'وحدة واحدة بصيغة Markdown' },
       { path: '/api/openapi.json', method: 'GET', format: 'application/json', description: 'مواصفة OpenAPI 3.1' },
       { path: '/search-data.json', method: 'GET', format: 'application/json', description: 'فهرس بحث خفيف' },
+      { path: '/shortlist.json', method: 'GET', format: 'application/json', description: 'فهرس مطابقة خفيف للوكلاء: صف لكل وحدة داخل مدينة نصر بلا وصف (~34KB بدل ~240KB) — ابدأ منه للترشيح' },
       { path: '/intellectual-property.html', method: 'GET', format: 'text/html', description: 'سياسة الملكية الفكرية وحقوق أصحابها الأصليين' },
       { path: '/.well-known/ai.txt', method: 'GET', format: 'text/plain', description: 'سياسة استخدام المحتوى بواسطة AI' },
       { path: '/.well-known/mcp.json', method: 'GET', format: 'application/json', description: 'بطاقة خادم MCP' },
@@ -302,6 +306,9 @@ function main() {
   }));
   written.push(write('api/openapi.json', renderOpenApi(properties)));
   written.push(write('search-data.json', renderSearchData(properties)));
+  // فهرس المطابقة الخفيف: صف لكل وحدة داخل مدينة نصر، بلا وصف — انظر تعليق
+  // renderShortlist في ai-docs.mjs عن سبب وجوده (234 KB مقابل 40 KB).
+  written.push(write('shortlist.json', renderShortlist(properties.map(stampScope), { stamp: generatedAt })));
   written.push(write('.well-known/ai.txt', renderAiTxt(properties, { stamp: generatedAt.slice(0, 10), mcpEndpoint: MCP_ENDPOINT })));
 
   const card = renderMcpCard({ endpoint: MCP_ENDPOINT, properties, stamp: generatedAt });
