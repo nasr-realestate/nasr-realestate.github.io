@@ -4,6 +4,10 @@
 (`git mv` فقط، بلا تحرير للنصّ) — ترويج `0010` يعني أن `crm-phase3-registry.yml` سيطبّقه على
 `nasr-crm-test-db` في CI؛ هذا هو التطبيق المقصود، وليس هذا المجلد. بقيت هنا مسوّدة واحدة معلَّقة:
 
+- `0015_areas_streets.sql` — **ليست هجرة CRM أصلًا**: تخصّ قاعدة السوق `nasr-market-db`
+  (جدول `areas`)، ولا يجوز أن تدخل `_worker/migrations/` لأن كل سير عمل هناك ينفّذ
+  `wrangler d1 migrations apply` على المجلد كاملًا فتطبّقها على قاعدة CRM التي لا يوجد
+  فيها جدول `areas`. تُطبَّق على قاعدة السوق وحدها بمسار مستقل.
 - `0011_crm_drive_file_intake_review.sql` — **لا تُروَّج** إلا بعد أن قراءة `status_without_version = 0`
   على قاعدة الاختبار (أي بعد زرع `drive_ref` وإعادة §5 من `0010`)؛ الشرط في `CRM_PHASE2_DRIVE_MIGRATION_PLAN.md` §3 خطوة 8.
 

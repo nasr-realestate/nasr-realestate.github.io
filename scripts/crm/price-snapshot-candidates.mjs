@@ -96,12 +96,60 @@ for (const [from, to] of Object.entries(ZONE_ALIASES)) {
 }
 
 /**
+ * خريطة مناطق قابلة للاستبدال. الافتراضي هو الـ31 المُعلنة في محرّك التقييم.
+ * بعد إضافة شوارع إلى جدول areas تُمرَّر الخريطة الحقيقية من القاعدة عبر
+ * `--areas-json`، لأن المعرّفات تمنحها AUTOINCREMENT ولا يجوز اختراعها.
+ */
+let areaLookup = AREA_LOOKUP;
+let areaPatterns = [];
+
+/** يستبدل خريطة المناطق بخريطة مقروءة من القاعدة. الاختبارات تستخدمه أيضًا. */
+export function useAreas(areas) {
+  const lookup = new Map();
+  for (const a of areas) {
+    if (!a || a.id === undefined || a.id === null) continue;
+    const entry = { id: Number(a.id), name_ar: a.name_ar || a.name };
+    if (!entry.name_ar) continue;
+    lookup.set(normalize(entry.name_ar), entry);
+    if (a.alias) lookup.set(normalize(a.alias), entry);
+  }
+  // البدائل المُعلنة في الكود تبقى فعّالة: الخريطة القادمة من القاعدة تحمل
+  // الأسماء الرسمية فقط، وبدون هذا السطر تختفي «مكرم عبيد» ⇒ «ممر مكرم عبيد»
+  // وتسقط عروضها من التجميع (عيب مقيس: فقدنا صفَّين عند أول اختبار).
+  for (const [alias, canonical] of Object.entries(ZONE_ALIASES)) {
+    const target = areas.find((a) => a && (a.name_ar || a.name) === canonical);
+    if (target && target.id !== undefined && target.id !== null) {
+      lookup.set(normalize(alias), { id: Number(target.id), name_ar: target.name_ar || target.name });
+    }
+  }
+  areaLookup = lookup;
+  // أنماط المطابقة: صفوف فيها zone_patterns تُطابق بالاحتواء لا بالتساوي.
+  areaPatterns = areas
+    .filter((a) => a && a.zone_patterns && a.id !== undefined && a.id !== null)
+    .map((a) => ({
+      id: Number(a.id),
+      name_ar: a.name_ar || a.name,
+      patterns: String(a.zone_patterns).split('|').map(normalize).filter(Boolean),
+    }));
+}
+
+/**
  * يحوّل نص منطقة من عرض إلى {id, name_ar} معلن، أو null.
  * لا يختلق معرّفًا: «مصر الجديدة» تُرجع null لا منطقة قريبة.
+ * الترتيب: مطابقة تامة بالاسم ⇒ مطابقة بنمط مُعلن في القاعدة.
  */
 export function resolveAreaId(zone) {
-  const hit = AREA_LOOKUP.get(normalize(zone));
-  return hit ? { id: hit.id, name_ar: hit.name_ar } : null;
+  const exact = areaLookup.get(normalize(zone));
+  if (exact) return { id: exact.id, name_ar: exact.name_ar };
+
+  const key = normalize(zone);
+  if (!key) return null;
+  for (const p of areaPatterns) {
+    if (p.patterns.some((pat) => key.includes(pat))) {
+      return { id: p.id, name_ar: p.name_ar };
+    }
+  }
+  return null;
 }
 
 /**
@@ -324,6 +372,15 @@ if (isMain) {
   if (!today) {
     console.error('✗ مطلوب --today YYYY-MM-DD (لا نشتق التاريخ من ساعة الجهاز — التقرير يجب أن يكون قابلًا لإعادة الإنتاج)');
     process.exit(2);
+  }
+
+  const areasJson = arg('areas-json');
+  if (areasJson) {
+    // الخريطة الحقيقية من القاعدة — المعرّفات تأتي منها لا من رمز مكتوب.
+    const areaRows = JSON.parse(fs.readFileSync(path.resolve(areasJson), 'utf8'));
+    const rowsArr = Array.isArray(areaRows) ? areaRows : (areaRows.areas ?? areaRows.result ?? []);
+    useAreas(rowsArr);
+    console.log(`  المناطق: ${rowsArr.length} من ${areasJson}`);
   }
 
   const { loadProperties } = await import('../lib/properties.mjs');
