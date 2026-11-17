@@ -101,6 +101,12 @@ jobs:
           printf '# جرد جدول الأسعار · %s\n\n' "$(date -u +%FT%TZ)" >> "$REPORT"
           echo "=== price_snapshots audit · $(date -u +%FT%TZ) ==="
 
+          # شكل الجدول أولًا: لا يوجد migration له في المستودع، والأعمدة تُقرأ
+          # من القاعدة نفسها لا من افتراض. (PRAGMA مرفوض في الحاجز عمدًا —
+          # نقرأ sqlite_master عبر SELECT، وهو قراءة خالصة.)
+          q "SELECT sql FROM sqlite_master WHERE type='table' AND name='price_snapshots'" "price_snapshots_schema" || exit 1
+          q "SELECT sql FROM sqlite_master WHERE type='table' AND name='areas'" "areas_schema" || exit 1
+
           q "SELECT COUNT(*) AS rows_total FROM price_snapshots" "rows_total" || exit 1
           q "SELECT COUNT(DISTINCT area_id) AS areas_with_prices FROM price_snapshots" "areas_with_prices" || exit 1
           q "SELECT COUNT(*) AS areas_table_rows FROM areas" "areas_table_rows" || exit 1
