@@ -268,7 +268,8 @@ test("build-ai-artifacts writes the full artifact set and every JSON is parseabl
     assert.match(stdout, /\[ai-artifacts\].*كتابة/);
 
     const expected = [
-      "ai-feed.json", "llms-full.txt", "search-data.json", "api/index.json",
+      // shortlist.json — فهرس المطابقة الخفيف للوكلاء (34KB بدل 240KB، بلا وصف)
+      "ai-feed.json", "llms-full.txt", "search-data.json", "shortlist.json", "api/index.json",
       "api/properties.json", "api/openapi.json", ".well-known/ai.txt",
       ".well-known/mcp.json", ".well-known/mcp/server-card.json",
       // نسخ جذرية موازية: تأمين ضد حجب المجلدات النقطية + أدوات تقرأ الجذر فقط

@@ -36,6 +36,7 @@ export const MCP_GATEWAY_STATUS = {
     `${SITE}/api/properties/{slug}.md`,
     `${SITE}/llms-full.txt`,
     `${SITE}/search-data.json`,
+    `${SITE}/shortlist.json`,
   ],
 };
 
@@ -620,6 +621,69 @@ export function renderOpenApi(properties) {
         Feed: { allOf: [{ $ref: '#/components/schemas/Catalog' }] },
       },
     },
+  };
+}
+
+/**
+ * shortlist.json — فهرس مطابقة خفيف لأدوات البحث والوكلاء (2026-11-17)
+ * ─────────────────────────────────────────────────────────────────────
+ * القياس الذي أوجده: `api/properties.json` = 234 KB و`ai-feed.json` = 225 KB.
+ * أي وكيل يريد الإجابة عن سؤال واحد («عايز شقة ١٦٠م في المنطقة السادسة تحت
+ * ٦ مليون») كان عليه تنزيل الكتالوج كله أولًا. هذا الملف يعطي نفس القدرة على
+ * الترشيح بـ 40 KB: صف واحد لكل وحدة، بلا وصف ولا نص تسويقي.
+ *
+ * قواعد ثابتة:
+ *  • لا يُختلق رقم: الحقل الغائب يُحذف، ولا يُكتب صفر مكانه.
+ *  • الوحدات خارج مدينة نصر تُستبعد تمامًا (لا تُرشَّح)، على عكس الكتالوج.
+ *  • كل صف يحمل `u` رابطًا مطلقًا، فيمكن الاستشهاد به مباشرة.
+ *  • الترتيب من الأحدث، لأن الطلب في مدينة نصر يُحسم بالجديد أولًا.
+ */
+export function renderShortlist(properties, { stamp } = {}) {
+  const city = properties.filter((p) => p.scope !== 'archive' && p.in_nasr_city !== false);
+  const row = (p) => {
+    const r = { id: p.slug, u: p.url };
+    if (p.transaction) r.tx = p.transaction;
+    if (p.propertyType) r.pt = p.propertyType;
+    if (p.zone) r.z = p.zone;
+    // السعر: رقم فقط إن كان معلنًا. «للاستعلام» تبقى غيابًا لا صفرًا.
+    if (Number.isFinite(p.priceNumeric) && p.priceNumeric > 0) r.p = p.priceNumeric;
+    if (Number.isFinite(p.areaNumeric) && p.areaNumeric >= 15) r.a = p.areaNumeric;
+    if (Number.isFinite(p.roomsNumeric) && p.roomsNumeric > 0) r.r = p.roomsNumeric;
+    if (Number.isFinite(p.bathsNumeric) && p.bathsNumeric > 0) r.b = p.bathsNumeric;
+    if (p.furnished === 'furnished') r.f = 1;
+    if (p.date) r.d = String(p.date).slice(0, 10);
+    return r;
+  };
+  const sorted = [...city].sort((x, y) => String(y.date ?? '').localeCompare(String(x.date ?? '')));
+  return {
+    schema_version: '1.0',
+    generated_at: stamp ?? new Date().toISOString(),
+    purpose: 'فهرس مطابقة خفيف: صف لكل وحدة داخل مدينة نصر فقط، بلا وصف. للتفاصيل اقرأ api/properties/<id>.json أو api/properties/<id>.md.',
+    full_catalog: `${SITE}/api/properties.json`,
+    detail_url_template: `${SITE}/api/properties/{id}.json`,
+    fields: {
+      id: 'المعرّف (يُستخدم في تفاصيل الوحدة والرابط)',
+      u: 'رابط صفحة الوحدة المطلق',
+      tx: 'sale أو rent',
+      pt: 'apartment / villa / shop / office / warehouse / clinic',
+      z: 'المنطقة كما أعلنها المالك',
+      p: 'السعر بالجنيه المصري (شهري لو إيجار) — غائب إذا لم يُعلن',
+      a: 'المساحة بالمتر المربع — غائب إذا لم تُعلن',
+      r: 'عدد الغرف',
+      b: 'عدد الحمامات',
+      f: '1 = مفروش (يظهر فقط للمفروش)',
+      d: 'تاريخ النشر (ليس تاريخ تحقق للتوافر)',
+    },
+    rules: [
+      'الحقل الغائب لا يعني صفرًا — يعني أن المالك لم يعلن الرقم. لا تُخمّنه.',
+      'الأسعار أسعار طلب وليست أسعار إتمام؛ لا تفترض قابلية التفاوض.',
+      'الإيجارات أرقام شهرية.',
+      'تاريخ النشر ليس تأكيدًا للتوافر.',
+      `الاستشهاد: «سمسار طلبك» + رابط الوحدة. السياسة: ${RIGHTS.policy_url}`,
+    ],
+    total_count: city.length,
+    withheld_out_of_scope: properties.length - city.length,
+    properties: sorted.map(row),
   };
 }
 

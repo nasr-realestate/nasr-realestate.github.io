@@ -99,6 +99,7 @@
 - [api/index.json](https://nasr-realestate.github.io/api/index.json): **دليل الواجهة** — كل نقاط الوصول المتاحة، الفلاتر المقبولة، وقيمها المسموحة
 - [api/openapi.json](https://nasr-realestate.github.io/api/openapi.json): مواصفة OpenAPI 3.1 لكل الواجهة
 - [search-data.json](https://nasr-realestate.github.io/search-data.json): فهرس بحث خفيف (المعرّف، العنوان، النوع، المنطقة، السعر، المساحة، الغرف)
+- [shortlist.json](https://nasr-realestate.github.io/shortlist.json): **ابدأ من هنا للترشيح** — 34 KB فقط بدل 240 KB: صف لكل وحدة داخل مدينة نصر (بلا وصف ولا نص تسويقي) بالحقول `id` · `u` (رابط مطلق) · `tx` (بيع/إيجار) · `pt` (النوع) · `z` (المنطقة) · `p` (السعر) · `a` (المساحة) · `r` (الغرف) · `b` (الحمامات) · `f` (1 = مفروش) · `d` (تاريخ النشر). الحقل الغائب = المالك لم يعلن الرقم، وليس صفرًا. بعد الترشيح اقرأ تفاصيل الوحدة من `api/properties/<id>.json`
 
 ### الأدوات والبروتوكولات
 
