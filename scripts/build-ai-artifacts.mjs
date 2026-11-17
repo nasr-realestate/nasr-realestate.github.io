@@ -307,8 +307,13 @@ function main() {
   written.push(write('api/openapi.json', renderOpenApi(properties)));
   written.push(write('search-data.json', renderSearchData(properties)));
   // فهرس المطابقة الخفيف: صف لكل وحدة داخل مدينة نصر، بلا وصف — انظر تعليق
-  // renderShortlist في ai-docs.mjs عن سبب وجوده (234 KB مقابل 40 KB).
-  written.push(write('shortlist.json', renderShortlist(properties.map(stampScope), { stamp: generatedAt })));
+  // renderShortlist في ai-docs.mjs عن سبب وجوده (240 KB مقابل 34 KB).
+  //
+  // ⚠️ يُبنى من feed.properties **بعد** ختم النطاق، لا من properties: stampScope
+  // يعدّل الكائن في مكانه، فتمريره لأصل المصفوفة كان يزرع `scope` في كل ملف
+  // api/properties/<slug>.json (116 انحرافًا رصدها حارس التزامن). الفهرس طبقة
+  // قراءة، ولا يجوز أن يغيّر مخرجات غيره.
+  written.push(write('shortlist.json', renderShortlist(feed.properties, { stamp: generatedAt })));
   written.push(write('.well-known/ai.txt', renderAiTxt(properties, { stamp: generatedAt.slice(0, 10), mcpEndpoint: MCP_ENDPOINT })));
 
   const card = renderMcpCard({ endpoint: MCP_ENDPOINT, properties, stamp: generatedAt });

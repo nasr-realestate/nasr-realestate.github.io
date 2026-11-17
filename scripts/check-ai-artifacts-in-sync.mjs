@@ -18,7 +18,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /** المسارات التي تُنشر من الجذر (ai-feed.json مستثنى: مصدره قالب Liquid يبنيه Jekyll). */
-const PUBLISHED = ['llms-full.txt', 'ai.txt', 'mcp.json', 'search-data.json', 'api', '.well-known'];
+// shortlist.json مُدرج صراحةً (2026-11-17): هو الطبقة التي يعتمد عليها أي وكيل
+// للترشيح، وانحرافُه بصمت يعني وكيلًا يرشّح على أرقام قديمة — وهو أسوأ من غيابه.
+const PUBLISHED = ['llms-full.txt', 'ai.txt', 'mcp.json', 'search-data.json', 'shortlist.json', 'api', '.well-known'];
 
 /** يُطبّع القيم المتغيّرة بطبيعتها: طوابع التوليد/التحديث وطوابع «آخر تحديث» اليومية. */
 function normalize(text) {

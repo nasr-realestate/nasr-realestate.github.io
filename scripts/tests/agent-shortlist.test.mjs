@@ -10,7 +10,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { renderShortlist } from '../lib/ai-docs.mjs';
 import { loadProperties } from '../lib/properties.mjs';
@@ -101,4 +103,20 @@ test('الفهرس مُعلن في robots.txt و llms.txt و ai-feed endpoints',
 
   const builder = fs.readFileSync(path.join(ROOT, 'scripts', 'build-ai-artifacts.mjs'), 'utf8');
   assert.match(builder, /shortlist: `\$\{SITE\}\/shortlist\.json`/);
+});
+
+test('بناء الفهرس لا يغيّر مخرجات غيره — لا تسرّب scope إلى ملفات الوحدات', () => {
+  // العطل المقيس (2026-11-17): استُدعي renderShortlist بـproperties (المصفوفة
+  // الأصلية) بعد أن يكون stampScope قد عدّل كائناتها في مكانها، فظهر `scope`
+  // في كل ملف api/properties/<slug>.json — 116 انحرافًا رصدها حارس التزامن.
+  // الفهرس طبقة قراءة، ولا يجوز أن يترك أثرًا في غيره.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'shortlist-side-effect-'));
+  try {
+    execFileSync(process.execPath, ['scripts/build-ai-artifacts.mjs', `--out=${tmp}`, '--skip=ai-feed.json'], { cwd: ROOT, stdio: 'pipe' });
+    const sample = JSON.parse(fs.readFileSync(path.join(tmp, 'api', 'properties', `${properties[0].slug}.json`), 'utf8'));
+    assert.equal('scope' in sample.property, false, `scope تسرّب إلى تفاصيل الوحدة ${properties[0].slug}`);
+    assert.ok(fs.existsSync(path.join(tmp, 'shortlist.json')));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });
