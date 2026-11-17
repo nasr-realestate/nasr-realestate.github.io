@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 // Tests: .github/workflows/areas-streets-apply.yml
 //
 // هذا الـworkflow ينفّذ كتابة على قاعدة الإنتاج nasr-market-db. أي خطأ في
@@ -111,4 +113,31 @@ test('dry_run افتراضي ولا يكتب', () => {
   const dryBlock = src.slice(src.indexOf('if [ "$MODE" = "dry_run" ]'), src.indexOf('else\n            i=0'));
   assert.ok(dryBlock.length > 0, 'كتلة dry_run غير موجودة');
   assert.ok(!/d1 "\$st"/.test(dryBlock), 'dry_run ينفّذ الجمل');
+});
+
+test('YAML صالح: لا مفتاح مكرر (GitHub يرفض الملف كله بـ422)', () => {
+  // العيب المقيس: خطوة كانت تحمل مفتاح env مرتين، فرفض GitHub التشغيل بـ
+  // "Invalid Argument - 'env' is already defined" ولم يعمل الـworkflow أصلًا.
+  const yaml = require('yaml');
+  const doc = yaml.parse(src);
+  assert.ok(doc && doc.jobs, 'الملف لا يُحلَّل كـYAML صالح');
+
+  // كل خطوة: المفاتيح فريدة (المحلّل يدمج المكرر بصمت، فنفحص النص الخام)
+  const stepBlocks = src.split(/\n      - /).slice(1);
+  for (const block of stepBlocks) {
+    const envCount = (block.match(/^        env:/gm) || []).length;
+    assert.ok(envCount <= 1, `خطوة تحمل env ${envCount} مرة`);
+    const runCount = (block.match(/^        run:/gm) || []).length;
+    assert.ok(runCount <= 1, `خطوة تحمل run ${runCount} مرة`);
+  }
+});
+
+test('خطوة التنفيذ الواحدة تحمل كل المتغيرات المطلوبة', () => {
+  const yaml = require('yaml');
+  const doc = yaml.parse(src);
+  const step = doc.jobs.apply.steps.find((s) => s.name && s.name.includes('0015'));
+  assert.ok(step, 'خطوة التنفيذ غير موجودة');
+  for (const key of ['CLOUDFLARE_TOKEN', 'MODE', 'CONFIRM', 'GITHUB_TOKEN']) {
+    assert.ok(step.env[key], `المتغير ${key} غير مضبوط — سيصل فارغًا للـshell`);
+  }
 });

@@ -49,6 +49,7 @@ jobs:
           CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
           MODE: ${{ inputs.mode }}
           CONFIRM: ${{ inputs.confirm }}
+          GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -uo pipefail
@@ -186,5 +187,3 @@ jobs:
           git add areas-streets-apply.md
           git commit -q -m "تطبيق الشوارع — run ${GITHUB_RUN_ID} (${MODE})"
           git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/areas-streets
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
