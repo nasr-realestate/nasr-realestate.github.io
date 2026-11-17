@@ -88,10 +88,17 @@ jobs:
               echo "::error::${label}: http=${http} $(jq -r '.errors[0].message // "-"' "$out" 2>/dev/null | head -c 200)"
               return 1
             fi
+            line=$(jq -c '.result[0].results // []' "$out")
             echo "--- ${label}"
-            jq -c '.result[0].results // []' "$out"
+            echo "$line"
+            # يُجمع في تقرير يظهر في ملخص التشغيل — سجل الـjob محجوب عن بعض
+            # القارئات (شبكة)، والملخص مسار قراءة مضمون.
+            printf '**%s**\n\n```json\n%s\n```\n\n' "$label" "$line" >> "$REPORT"
           }
 
+          REPORT="$RUNNER_TEMP/report.md"
+          : > "$REPORT"
+          printf '# جرد جدول الأسعار · %s\n\n' "$(date -u +%FT%TZ)" >> "$REPORT"
           echo "=== price_snapshots audit · $(date -u +%FT%TZ) ==="
 
           q "SELECT COUNT(*) AS rows_total FROM price_snapshots" "rows_total" || exit 1
@@ -110,3 +117,8 @@ jobs:
           q "SELECT COUNT(*) AS n FROM price_snapshots WHERE observed_at >= date('now','-30 day')" "rows_last_30_days" || true
 
           echo "=== end ==="
+          {
+            echo "## جرد جدول الأسعار (قراءة فقط)"
+            echo
+            cat "$REPORT"
+          } >> "$GITHUB_STEP_SUMMARY"
