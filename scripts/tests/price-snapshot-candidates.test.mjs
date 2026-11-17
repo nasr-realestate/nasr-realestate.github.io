@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildCandidates, percentile, confidenceFor, resolveAreaId, normalize,
-  inAreaMap, toSql, KNOWN_AREAS, MIN_SAMPLES, MIN_AREA_M2, SOURCE_ID,
+  inAreaMap, toSql, KNOWN_AREAS, MIN_SAMPLES, MIN_AREA_M2, SOURCE_ID, useAreas,
 } from '../crm/price-snapshot-candidates.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -198,4 +198,77 @@ test('التشغيل الحقيقي على عروض المستودع: كل صف 
     assert.ok(ids.has(r.area_id), `${r.area_name}: معرّف ${r.area_id} غير معلن`);
     assert.ok(r.sample_count >= MIN_SAMPLES);
   }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  الشوارع كمناطق (migration 0015)
+// ───────────────────────────────────────────────────────────────
+//  القرار: الشوارع تُصبح مناطق معلنة. لكن المعرّفات تمنحها AUTOINCREMENT،
+//  فلا يجوز أن يعرفها الكود مسبقًا. المولّد يقرأ الخريطة من القاعدة عبر
+//  --areas-json. الاختبارات هنا تحمي هذا المسار من عيبين مقيسين:
+//    1) مسح البدائل المُعلنة (فقدنا «مكرم عبيد» و«عباس العقاد»).
+//    2) اختراع معرّف لشارع غير موجود في القاعدة.
+// ═══════════════════════════════════════════════════════════════
+
+const AREAS_WITH_STREETS = [
+  ...KNOWN_AREAS.map((a) => ({ id: a.id, name_ar: a.name_ar })),
+  { id: 32, name_ar: 'حسن المأمون', zone_patterns: 'حسن المأمون|المأمون', area_type: 'street' },
+  { id: 33, name_ar: 'مصطفى النحاس', zone_patterns: 'مصطفى النحاس|النحاس', area_type: 'street' },
+  { id: 34, name_ar: 'شارع الطيران', zone_patterns: 'الطيران', area_type: 'street' },
+];
+
+test('useAreas: خريطة القاعدة لا تمسح البدائل المُعلنة', () => {
+  useAreas(AREAS_WITH_STREETS);
+  // العيب المقيس: بعد بناء الخريطة من القاعدة رجعت null لهذين
+  assert.deepEqual(resolveAreaId('مكرم عبيد'), { id: 29, name_ar: 'ممر مكرم عبيد' });
+  assert.deepEqual(resolveAreaId('عباس العقاد'), { id: 30, name_ar: 'ممر عباس العقاد' });
+  assert.deepEqual(resolveAreaId('ممر مكرم عبيد'), { id: 29, name_ar: 'ممر مكرم عبيد' });
+});
+
+test('useAreas: الشوارع تُطابق بالمعرّف الذي منحته القاعدة لا بمعرّف مخترع', () => {
+  useAreas(AREAS_WITH_STREETS);
+  assert.deepEqual(resolveAreaId('حسن المأمون'), { id: 32, name_ar: 'حسن المأمون' });
+  assert.deepEqual(resolveAreaId('مصطفى النحاس'), { id: 33, name_ar: 'مصطفى النحاس' });
+  assert.deepEqual(resolveAreaId('شارع الطيران'), { id: 34, name_ar: 'شارع الطيران' });
+});
+
+test('useAreas: نمط جزئي يُطابق، والنص الأجنبي يبقى null', () => {
+  useAreas(AREAS_WITH_STREETS);
+  // «شقة على الطيران» تحتوي النمط المعلن ⇒ تُطابق
+  assert.equal(resolveAreaId('شقة على الطيران')?.id, 34);
+  // منطقة خارج القائمة لا تُقرب إلى أقرب اسم
+  assert.equal(resolveAreaId('مصر الجديدة'), null);
+  assert.equal(resolveAreaId('التجمع الخامس'), null);
+});
+
+test('useAreas: معرّفات من القاعدة فقط — صف بلا id يُتجاهل', () => {
+  useAreas([
+    ...KNOWN_AREAS.map((a) => ({ id: a.id, name_ar: a.name_ar })),
+    { name_ar: 'شارع بلا معرّف', zone_patterns: 'بلا معرّف' }, // بلا id
+  ]);
+  assert.equal(resolveAreaId('شارع بلا معرّف'), null, 'معرّف مخترع لصف بلا id');
+});
+
+test('الشوارع تضيف صفوفًا فعلية ولا تُسقط الصفوف القديمة', () => {
+  const base = buildCandidates([
+    prop({ slug: 'a', zone: 'ممر مكرم عبيد', priceNumeric: 4_500_000, areaNumeric: 150 }),
+    prop({ slug: 'b', zone: 'ممر مكرم عبيد', priceNumeric: 4_650_000, areaNumeric: 150 }),
+    prop({ slug: 'c', zone: 'ممر مكرم عبيد', priceNumeric: 4_800_000, areaNumeric: 150 }),
+  ], { today: TODAY });
+  assert.equal(base.rows.length, 1, 'الصف القديم يجب أن يُكتب');
+
+  useAreas(AREAS_WITH_STREETS);
+
+  const withStreets = buildCandidates([
+    prop({ slug: 'a', zone: 'ممر مكرم عبيد', priceNumeric: 4_500_000, areaNumeric: 150 }),
+    prop({ slug: 'b', zone: 'ممر مكرم عبيد', priceNumeric: 4_650_000, areaNumeric: 150 }),
+    prop({ slug: 'c', zone: 'ممر مكرم عبيد', priceNumeric: 4_800_000, areaNumeric: 150 }),
+    prop({ slug: 'd', zone: 'مصطفى النحاس', priceNumeric: 3_300_000, areaNumeric: 150 }),
+    prop({ slug: 'e', zone: 'مصطفى النحاس', priceNumeric: 3_450_000, areaNumeric: 150 }),
+    prop({ slug: 'f', zone: 'مصطفى النحاس', priceNumeric: 3_600_000, areaNumeric: 150 }),
+  ], { today: TODAY });
+
+  assert.equal(withStreets.rows.length, 2, 'الصف القديم + صف الشارع');
+  const ids = withStreets.rows.map((r) => r.area_id).sort((x, y) => x - y);
+  assert.deepEqual(ids, [29, 33], 'الصف القديم اختفى عند إضافة الشوارع');
 });

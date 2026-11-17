@@ -1,0 +1,190 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  areas-streets-apply — تطبيق مسوّدة 0015 على قاعدة السوق
+# ═══════════════════════════════════════════════════════════════════════════
+#  لماذا ملف منفصل: الهجرات في _worker/migrations/ تُطبَّق بـ`wrangler d1
+#  migrations apply` على مجلدها كاملًا، وكل سير عمل هناك يستهدف قاعدة CRM.
+#  0015 تخصّ جدول `areas` في قاعدة السوق فقط — ووضعها هناك كان سيُنفّذ
+#  `ALTER TABLE areas` على قاعدة لا يوجد فيها `areas` (عيب مقيس كسر 4 اختبارات).
+#
+#  الأمان — مقصود:
+#    • الهدف مُثبَّت: nasr-market-db فقط. قاعدة CRM مرفوضة صراحةً بثابتين
+#      يُقارنان قبل أي طلب.
+#    • تصريح صريح: dry_run فقط، أو apply مع تأكيد نصّي في مدخل التشغيل.
+#    • كل جملة تمرّ على حاجز: INSERT / ALTER TABLE areas ADD COLUMN فقط.
+#      لا DELETE ولا DROP ولا UPDATE — يُرفض التشغيل كله.
+#    • خطوة تحقق قبل التطبيق: جدول areas يجب أن يوجد فعلًا.
+#    • التقرير يُنشر على فرع ci/areas-streets لأن سجل الـjob محجوب عن القارئ.
+#
+#  التشغيل: يدوي فقط (workflow_dispatch).
+# ═══════════════════════════════════════════════════════════════════════════
+name: Areas streets apply (draft 0015)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry_run يعرض الخطة فقط · apply ينفّذها'
+        required: true
+        default: dry_run
+        type: choice
+        options: [dry_run, apply]
+      confirm:
+        description: 'للتطبيق الفعلي اكتب: APPLY-AREAS-0015'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write   # فقط لنشر التقرير على فرع ci/areas-streets
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply draft 0015 to nasr-market-db
+        env:
+          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          REPORT="$RUNNER_TEMP/report.md"
+          : > "$REPORT"
+          printf '# تطبيق الشوارع كمناطق · %s\n\n' "$(date -u +%FT%TZ)" >> "$REPORT"
+          echo "=== areas streets apply · $(date -u +%FT%TZ) ==="
+
+          if [ -z "${CLOUDFLARE_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_DEPLOY_TOKEN غير مضبوط"; exit 1
+          fi
+          echo "::add-mask::$CLOUDFLARE_TOKEN"
+
+          # بوابة التأكيد: لا كتابة بلا تصريح مطابق حرفيًا
+          if [ "$MODE" = "apply" ] && [ "$CONFIRM" != "APPLY-AREAS-0015" ]; then
+            echo "::error::وضع apply يتطلب confirm = APPLY-AREAS-0015"; exit 1
+          fi
+          if [ "$MODE" != "apply" ] && [ "$MODE" != "dry_run" ]; then
+            echo "::error::mode غير معروف: $MODE"; exit 1
+          fi
+
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_TOKEN}"
+          MARKET_DB=ace5c9a2-c6b1-47b3-adf1-77e84ac50abf
+          CRM_DB=760079c6-85f9-4a30-aa19-9a66f95d421a
+          # قاعدة CRM محظورة على شغل السوق — يُرفض التنفيذ لا يُحذَّر
+          if [ "$MARKET_DB" = "$CRM_DB" ]; then
+            echo "::error::الهدف هو قاعدة CRM — رفض"; exit 1
+          fi
+
+          account_id=$(curl -sS -m 25 -H "$AUTH" "$API/accounts?per_page=100" | jq -r '.result[0].id // empty')
+          if [ -z "$account_id" ]; then
+            echo "::error::GET /accounts غير قابل للقراءة بهذا المفتاح"; exit 1
+          fi
+
+          d1() { # d1 "<sql>" "<label>" — يُعيد نتائج JSON، ويُسجّل في التقرير
+            local sql="$1" label="$2" out http
+            out="$RUNNER_TEMP/d1.json"
+            http=$(curl -sS -m 45 -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg s "$sql" '{sql:$s}')" \
+              -o "$out" -w '%{http_code}' \
+              "$API/accounts/${account_id}/d1/database/${MARKET_DB}/query" 2>/dev/null || echo 000)
+            if [ "$http" != 200 ]; then
+              echo "::error::${label}: http=${http} $(jq -r '.errors[0].message // "-"' "$out" 2>/dev/null | head -c 300)"
+              return 1
+            fi
+            local line; line=$(jq -c '.result[0].results // []' "$out")
+            echo "--- ${label}"; echo "$line"
+            printf '**%s**\n\n```json\n%s\n```\n\n' "$label" "$line" >> "$REPORT"
+          }
+
+          # ── حاجز الكتابة: يسمح فقط بما تعنيه هذه المسوّدة ──
+          assert_allowed() {
+            local sql="$1" upper
+            upper=$(printf '%s' "$sql" | tr '[:lower:]' '[:upper:]')
+            # ممنوع دائمًا، أيًا كان الوضع
+            if printf '%s' "$upper" | grep -Eq '(^|[^A-Z_])(DELETE|DROP|TRUNCATE|ATTACH|DETACH|VACUUM|REPLACE|UPDATE)([^A-Z_]|$)'; then
+              echo "::error::الحاجز وجد كلمة محظورة"; return 1
+            fi
+            case "$upper" in
+              SELECT*|PRAGMA*) return 0 ;;
+              INSERT*|ALTER\ TABLE\ AREAS\ ADD\ COLUMN*) return 0 ;;
+              *) echo "::error::الحاجز رفض جملة غير مسموحة"; return 1 ;;
+            esac
+          }
+
+          # ── 0) تحقق: الجدول موجود؟ لا نطبّق على قاعدة بلا areas ──
+          d1 "SELECT name FROM sqlite_master WHERE type='table' AND name='areas'" "areas_exists" || exit 1
+          has_areas=$(jq -r '.result[0].results | length' "$RUNNER_TEMP/d1.json")
+          if [ "$has_areas" = "0" ]; then
+            echo "::error::جدول areas غير موجود في nasr-market-db — رفض التطبيق"; exit 1
+          fi
+
+          d1 "SELECT COUNT(*) AS n FROM areas" "areas_before" || exit 1
+          d1 "SELECT name_ar FROM areas WHERE name_ar IN ('حسن المأمون','مصطفى النحاس','شارع الطيران')" "streets_before" || exit 1
+
+          # ── 1) العمود الجديد: يُضاف فقط إن كان غائبًا ──
+          d1 "SELECT name FROM pragma_table_info('areas') WHERE name='zone_patterns'" "zone_patterns_exists" || exit 1
+          has_col=$(jq -r '.result[0].results | length' "$RUNNER_TEMP/d1.json")
+          echo "zone_patterns موجود: $has_col"
+
+          # ── 2) الخطة: تُستخرج جمل الـmigration من الملف نفسه، لا تُعاد كتابتها ──
+          DRAFT=_worker/migrations-draft/0015_areas_streets.sql
+          [ -f "$DRAFT" ] || { echo "::error::المسوّدة غير موجودة: $DRAFT"; exit 1; }
+
+          # جمل الـSQL: بلا تعليقات، مقسّمة على ';' في نهاية السطر
+          mapfile -t STATEMENTS < <(
+            grep -v '^[[:space:]]*--' "$DRAFT" \
+            | sed 's/;[[:space:]]*$//' \
+            | awk 'BEGIN{RS=";"} NF{gsub(/^[[:space:]]+|[[:space:]]+$/,""); if(length($0)>0) print $0}'
+          )
+          echo "عدد الجمل: ${#STATEMENTS[@]}"
+
+          # في dry_run نفحص فقط ولا ننفّذ
+          if [ "$MODE" = "dry_run" ]; then
+            i=0
+            for st in "${STATEMENTS[@]}"; do
+              i=$((i+1))
+              assert_allowed "$st" || { echo "::error::الجملة $i مرفوضة"; exit 1; }
+              # ALTER يُتخطى إن كان العمود موجودًا
+              case "$(printf '%s' "$st" | tr '[:lower:]' '[:upper:]')" in
+                ALTER*)
+                  if [ "$has_col" != "0" ]; then echo "  [$i] ALTER — يُتخطى (العمود موجود)"; continue; fi ;;
+              esac
+              echo "  [$i] ${st:0:90}..."
+            done
+            printf '\n**الوضع**\n\n```json\n[{"mode":"dry_run","statements":%d,"zone_patterns_present":%s}]\n```\n\n' \
+              "${#STATEMENTS[@]}" "$([ "$has_col" != "0" ] && echo true || echo false)" >> "$REPORT"
+          else
+            i=0
+            for st in "${STATEMENTS[@]}"; do
+              i=$((i+1))
+              assert_allowed "$st" || { echo "::error::الجملة $i مرفوضة — توقف"; exit 1; }
+              case "$(printf '%s' "$st" | tr '[:lower:]' '[:upper:]')" in
+                ALTER*)
+                  if [ "$has_col" != "0" ]; then echo "  [$i] ALTER — يُتخطى"; continue; fi ;;
+              esac
+              d1 "$st" "exec_${i}" || { echo "::error::فشل تنفيذ الجملة $i"; exit 1; }
+            done
+            printf '\n**الوضع**\n\n```json\n[{"mode":"apply","statements":%d}]\n```\n\n' "$i" >> "$REPORT"
+          fi
+
+          # ── 3) القياس بعد التطبيق ──
+          d1 "SELECT COUNT(*) AS n FROM areas" "areas_after" || true
+          d1 "SELECT id, name_ar, level, area_type, zone_patterns FROM areas WHERE level='street' ORDER BY id" "streets_after" || true
+
+          # ── 4) نشر التقرير: سجل الـjob محجوب، الفرع مسار القراءة الوحيد ──
+          mkdir -p "$RUNNER_TEMP/pub"
+          cp "$REPORT" "$RUNNER_TEMP/pub/areas-streets-apply.md"
+          printf '\n---\n\nrun: %s · commit: %s · mode: %s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$MODE" >> "$RUNNER_TEMP/pub/areas-streets-apply.md"
+          cd "$RUNNER_TEMP/pub"
+          git init -q -b ci/areas-streets
+          git config user.name  "arena-agent"
+          git config user.email "arena-agent@users.noreply.github.com"
+          git add areas-streets-apply.md
+          git commit -q -m "تطبيق الشوارع — run ${GITHUB_RUN_ID} (${MODE})"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/areas-streets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
