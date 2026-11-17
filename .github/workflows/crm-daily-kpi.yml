@@ -63,7 +63,12 @@ jobs:
           grep -Fq "database_id = \"$TEST_DB_ID\"" "$cfg" || { echo '::error::config is not bound to the isolated test DB'; exit 1; }
           if grep -Fq "$PROD_DB_ID" "$cfg"; then echo '::error::production database id present in config'; exit 1; fi
 
-          # (5) one SELECT, nothing else. Uppercase keywords, no semicolon chaining.
+          # (5) one SELECT, nothing else.
+          #
+          # Keywords are matched as WHOLE WORDS. A substring match rejects every
+          # legitimate query touching `created_at` (it contains CREATE) — measured
+          # failure, run 44132622848. A barrier that refuses the read it exists to
+          # permit is a defect, so the word boundaries are explicit.
           assert_read_only() {
             local sql="$1"
             local upper
@@ -72,10 +77,10 @@ jobs:
               SELECT*) : ;;
               *) echo "::error::read-only barrier refused a non-SELECT statement"; exit 1 ;;
             esac
-            case "$upper" in
-              *INSERT*|*UPDATE*|*DELETE*|*DROP*|*ALTER*|*CREATE*|*PRAGMA*|*ATTACH*|*VACUUM*)
-                echo "::error::read-only barrier found a write keyword"; exit 1 ;;
-            esac
+            if printf '%s' "$upper" | grep -Eq '(^|[^A-Z_])(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|PRAGMA|ATTACH|DETACH|VACUUM|REPLACE|TRUNCATE)([^A-Z_]|$)'; then
+              echo "::error::read-only barrier found a write keyword"
+              exit 1
+            fi
             case "$sql" in
               *';'*) echo "::error::read-only barrier refused a chained statement"; exit 1 ;;
             esac
