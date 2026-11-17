@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # فقط لنشر تقرير الأرقام على فرع ci/price-audit
 
 jobs:
   audit:
@@ -122,3 +122,23 @@ jobs:
             echo
             cat "$REPORT"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # سجل الـjob وملخص التشغيل غير قابلين للقراءة من كل قارئ (شبكة).
+      # فيُنشر التقرير على فرع مستقل — قراءة عبر git تعمل دائمًا.
+      # لا يلمس master ولا أي ملف مصدر.
+      - name: Publish the audit report to ci/price-audit
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/pub"
+          cp "$RUNNER_TEMP/report.md" "$RUNNER_TEMP/pub/price-snapshots-audit.md"
+          printf '\n---\n\nrun: %s · commit: %s · %s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$(date -u +%FT%TZ)" >> "$RUNNER_TEMP/pub/price-snapshots-audit.md"
+          cd "$RUNNER_TEMP/pub"
+          git init -q -b ci/price-audit
+          git config user.name  "arena-agent"
+          git config user.email "arena-agent@users.noreply.github.com"
+          git add price-snapshots-audit.md
+          git commit -q -m "جرد جدول الأسعار — run ${GITHUB_RUN_ID}"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/price-audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

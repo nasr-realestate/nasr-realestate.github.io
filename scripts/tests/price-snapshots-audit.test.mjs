@@ -93,3 +93,11 @@ test('لا يطبع حقولًا نصية حرة من الجدول', () => {
     assert.ok(!sqlCalls.includes(forbidden), `استعلام الجرد يقرأ ${forbidden}`);
   }
 });
+
+test('التقرير يُنشر على فرع مستقل ولا يلمس master', () => {
+  // السجل والملخص محجوبان عن بعض القارئات، فالتقرير يُنشر على ci/price-audit.
+  assert.match(yml, /ci\/price-audit/);
+  assert.match(yml, /git push -q --force .*ci\/price-audit/);
+  assert.doesNotMatch(yml, /git push[^\n]*master/, 'الـworkflow يدفع إلى master — ممنوع');
+  assert.match(yml, /contents: write/, 'صلاحية الكتابة مطلوبة لنشر الفرع');
+});
