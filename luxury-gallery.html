@@ -333,56 +333,64 @@ sitemap: false
                 price: "13,000,000 ج.م",
                 img: "mahmoud-elbadry-8th-district-380m.webp",
                 desc: "380م · مساحة واسعة · ألترا سوبر لوكس — أرضيات رخام",
-                url: "/properties/apartment-sale-mahmoud-elbadry-8th-district-380m/"
+                url: "/properties/apartment-sale-mahmoud-elbadry-8th-district-380m/",
+                video: "/assets/video/preview/apartment-sale-mahmoud-elbadry-8th-district-380m.mp4"
             },
             {
                 title: "عبد الرزاق السنهوري | 250م",
                 price: "12,000,000 ج.م",
                 img: "abdul-razzaq-al-sanhuri.webp",
                 desc: "250م · مساحة واسعة · نصف تشطيب (مرونة التصميم)",
-                url: "/properties/sanhoori-luxury-250m/"
+                url: "/properties/sanhoori-luxury-250m/",
+                video: "/assets/video/preview/sanhoori-luxury-250m.mp4"
             },
             {
                 title: "عباس العقاد | 220م",
                 price: "8,200,000 ج.م (مسجلة شهر عقاري)",
                 img: "Abbas-Elakkad-Main-View.webp",
                 desc: "220م · تشطيب فاخر · ألترا سوبر لوكس (تصميم هندسي)",
-                url: "/properties/abbas-elakkad-220m-2026/"
+                url: "/properties/abbas-elakkad-220m-2026/",
+                video: "/assets/video/preview/abbas-elakkad-220m-2026.mp4"
             },
             {
                 title: "مكرم عبيد | 260م",
                 price: "8,000,000 ج.م (سعر نهائي)",
                 img: "Kabul-Street-Makram-Ebeid-260m.webp",
                 desc: "260م · مساحة واسعة · سوبر لوكس (ديكورات روشن وقطيفة)",
-                url: "/properties/kabul-st-makram-ebeid-260m/"
+                url: "/properties/kabul-st-makram-ebeid-260m/",
+                video: "/assets/video/preview/kabul-st-makram-ebeid-260m.mp4"
             },
             {
                 title: "حسن المأمون | 220م",
                 price: "8,000,000 ج.م",
                 img: "hassan-maamoun-220m.webp",
                 desc: "220م · تشطيب فاخر",
-                url: "/properties/apartment-sale-hassan-maamoun-220m-rented-2027/"
+                url: "/properties/apartment-sale-hassan-maamoun-220m-rented-2027/",
+                video: "/assets/video/preview/apartment-sale-hassan-maamoun-220m-rented-2027.mp4"
             },
             {
                 title: "أحمد الزمر | 260م",
                 price: "8,000,000 ج.م",
                 img: "ahmed-zomor-260m.webp",
                 desc: "260م · مساحة واسعة",
-                url: "/properties/apartment-sale-ahmed-zomor-260m/"
+                url: "/properties/apartment-sale-ahmed-zomor-260m/",
+                video: "/assets/video/preview/apartment-sale-ahmed-zomor-260m.mp4"
             },
             {
                 title: "مكرم عبيد | 250م",
                 price: "8,000,000 ج.م",
                 img: "mkram-ebid.webp",
                 desc: "250م · مساحة واسعة · سوبر لوكس",
-                url: "/properties/makram-ebid-main-250m/"
+                url: "/properties/makram-ebid-main-250m/",
+                video: "/assets/video/preview/makram-ebid-main-250m.mp4"
             },
             {
                 title: "الطيران | 225م",
                 price: "8,000,000 ج.م (قابل للتفاوض)",
                 img: "al-Tayaranstreet.webp",
                 desc: "225م · تشطيب فاخر · الترا سوبر لوكس",
-                url: "/properties/tayaran-main-225m-luxury/"
+                url: "/properties/tayaran-main-225m-luxury/",
+                video: "/assets/video/preview/tayaran-main-225m-luxury.mp4"
             }
         ];
 
@@ -410,6 +418,12 @@ sitemap: false
                         <h2>${p.title}</h2>
                         <p>${p.desc}</p>
                         <strong class="prop-price">${p.price}</strong>
+                        ${p.video ? `
+                        <button type="button" class="btn-video" data-video="${p.video}"
+                                data-title="${p.title}" aria-label="شاهد فيديو ${p.title}">
+                            <i class="fas fa-play" aria-hidden="true"></i>
+                            شاهد الفيديو
+                        </button>` : ''}
                         <div>
                             <a href="${p.url}" class="btn-link">
                                 <i class="fas fa-arrow-left"></i>
@@ -502,13 +516,81 @@ sitemap: false
         document.addEventListener('keydown', (e) => {
             // Escape أثناء فتح القائمة تلتقطه قائمة الموقع أولاً — لا نغادر الصفحة (2026-10-07)
             if (e.key === 'Escape') {
+                if (videoOverlay) { closeVideo(); return; }
                 if (menuIsOpen()) return;
                 window.location.href = document.querySelector('.ui-exit')?.getAttribute('href') || '/';
                 return;
             }
-            if (menuIsOpen()) return;
+            if (menuIsOpen() || videoOverlay) return;
             if (e.key === 'ArrowLeft') goToSlide(currentIdx + 1);
             if (e.key === 'ArrowRight') goToSlide(currentIdx - 1);
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // مشغّل فيديو الوحدة داخل المعرض (2026-11-18)
+        // ───────────────────────────────────────────────────────────────
+        // القرار: الفيديو يبقى **داخل المعرض** وليس صفحات العرض المفردة.
+        // الوزن: `preload="none"` — لا يُطلب الملف إلا بعد ضغط «شاهد الفيديو»،
+        // فلا يُضاف بايت واحد على وقت فتح الصفحة (كان 244KB قبل الإضافة).
+        // العرض التلقائي يتوقف أثناء الفيديو: مشهد سينمائي لا سباق شرائح.
+        // ═══════════════════════════════════════════════════════════════
+        let videoOverlay = null;
+
+        function stopEngine() {
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+        }
+
+        function closeVideo() {
+            if (!videoOverlay) return;
+            const v = videoOverlay.querySelector('video');
+            if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+            videoOverlay.remove();
+            videoOverlay = null;
+            document.body.style.overflow = '';
+            if (!autoPlayTimer) startEngine();
+        }
+
+        function openVideo(src, title) {
+            if (videoOverlay) return;
+            stopEngine();
+            videoOverlay = document.createElement('div');
+            videoOverlay.className = 'lx-video-overlay';
+            videoOverlay.setAttribute('role', 'dialog');
+            videoOverlay.setAttribute('aria-modal', 'true');
+            videoOverlay.setAttribute('aria-label', title || 'فيديو الوحدة');
+            videoOverlay.innerHTML = `
+                <div class="lx-video-box">
+                    <button type="button" class="lx-video-close" aria-label="إغلاق الفيديو">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                    <p class="lx-video-title"></p>
+                    <video controls autoplay playsinline preload="none"></video>
+                    <a class="lx-video-more" href="#">صفحة العرض كاملة ←</a>
+                </div>`;
+            // النص عبر textContent لا innerHTML: عنوان العرض بيانات لا HTML
+            videoOverlay.querySelector('.lx-video-title').textContent = title || '';
+            const vid = videoOverlay.querySelector('video');
+            vid.setAttribute('src', src);
+            // رابط «صفحة العرض» يُؤخذ من الشريحة الظاهرة نفسها
+            const more = videoOverlay.querySelector('.lx-video-more');
+            const link = document.querySelector('.slide.active .btn-link');
+            if (link) more.setAttribute('href', link.getAttribute('href'));
+            else more.remove();
+
+            videoOverlay.querySelector('.lx-video-close')
+                .addEventListener('click', closeVideo);
+            videoOverlay.addEventListener('click', (e) => {
+                if (e.target === videoOverlay) closeVideo();
+            });
+            document.body.appendChild(videoOverlay);
+            document.body.style.overflow = 'hidden';
+            vid.play().catch(() => { /* سياسة التشغيل التلقائي: يبقى زر التشغيل */ });
+        }
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-video');
+            if (!btn) return;
+            openVideo(btn.getAttribute('data-video'), btn.getAttribute('data-title'));
         });
 
         // ⚠️ إصلاح (2026-10-07): كان الإطلاق على window.onload وحده — أي مورد خارجي

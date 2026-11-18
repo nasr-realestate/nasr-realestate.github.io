@@ -4,7 +4,7 @@
 // متاحة بالرابط المباشر لكن noindex وخارج sitemap وخارج كل القوائم.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import fs, { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildListingFacets } from '../lib/listing-facets.mjs';
@@ -91,6 +91,32 @@ test('معرض النخبة: شقق بيع داخل النطاق من 8 مليو
       `تحت حد الفخامة (8 مليون): ${slug} = ${u.price}`,
     );
   }
+});
+
+test('كل شريحة نخبة لها فيديو موجود فعليًا — لا مسار مكسور', () => {
+  const html = read('luxury-gallery.html');
+  const block = html.split('const properties = [')[1].split('        ];')[0];
+  const vids = [...block.matchAll(/video:\s*"([^"]*)"/g)].map((m) => m[1]);
+  assert.equal(vids.length, 8, 'يجب أن تحمل كل شريحة مفتاح video');
+  const withVideo = vids.filter(Boolean);
+  assert.equal(withVideo.length, 8, `شرائح بلا فيديو: ${vids.length - withVideo.length}`);
+  for (const v of withVideo) {
+    assert.match(v, /^\/assets\/video\/preview\/[a-z0-9-]+\.mp4$/, `مسار غير متوقع: ${v}`);
+    assert.ok(existsSync('.' + v), `ملف الفيديو غير موجود: ${v}`);
+  }
+});
+
+test('فيديو المعرض لا يضيف وزنًا: preload=none وخلف زر ضغط', () => {
+  const html = read('luxury-gallery.html');
+  // المشغّل يُبنى عند الضغط فقط — لا <video src=...> في الـHTML الثابت
+  assert.doesNotMatch(html, /<video[^>]*\ssrc=/i, 'فيديو مُضمَّن فورًا في الـHTML');
+  assert.match(html, /preload="none"/, 'المشغّل يجب أن يكون preload=none');
+  assert.match(html, /class="btn-video"/, 'زر تشغيل الفيديو');
+  // ويوقف العرض التلقائي: مشهد سينمائي لا سباق شرائح
+  assert.match(html, /function stopEngine\(\)/);
+  // بعد الإغلاق يعود العرض التلقائي (وإلا تجمّد المعرض بعد أول فيديو)
+  const closeFn = html.split('function closeVideo()')[1].split('function openVideo(')[0];
+  assert.match(closeFn, /startEngine\(\)/, 'لا يُستأنف العرض بعد إغلاق الفيديو');
 });
 
 test('معرض النخبة مطابق لمولّده — لا تعديل يدوي يفلت', () => {

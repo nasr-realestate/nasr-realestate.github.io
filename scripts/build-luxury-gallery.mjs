@@ -102,6 +102,12 @@ export function selectLuxury(facets, properties, titles = new Map()) {
       const big = u.area >= 250 ? 'مساحة واسعة' : 'تشطيب فاخر';
       const area = u.area ? `${u.area}م` : '';
       const desc = [area, big, p.finish || ''].filter(Boolean).join(' · ');
+      // فيديو الوحدة: يُضمَّن فقط لو ملفه موجود فعلًا — لا مسار مكسور في الصفحة.
+      // الوزن لا يتأثر: كل مشغّل `preload="none"` فلا يُحمَّل شيء قبل الضغط.
+      const videoFile = `/assets/video/preview/${u.slug}.mp4`;
+      const hasVideo = fs.existsSync(
+        path.join(ROOT, 'assets', 'video', 'preview', `${u.slug}.mp4`),
+      );
       return {
         title: shortTitle(rawTitle, u),
         price: fmtPrice(u.price, p.price),
@@ -109,6 +115,7 @@ export function selectLuxury(facets, properties, titles = new Map()) {
         img: path.basename(u.image),
         desc,
         url: `/properties/${u.slug}/`,
+        video: hasVideo ? videoFile : '',
       };
     });
 }
@@ -189,7 +196,8 @@ export function renderBlock(items) {
                 price: ${JSON.stringify(p.price)},
                 img: ${JSON.stringify(p.img)},
                 desc: ${JSON.stringify(p.desc)},
-                url: ${JSON.stringify(p.url)}
+                url: ${JSON.stringify(p.url)},
+                video: ${JSON.stringify(p.video || '')}
             }`,
     )
     .join(',\n');
