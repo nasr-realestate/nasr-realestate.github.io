@@ -37,10 +37,17 @@ DIM = (176, 184, 176)
 
 
 def read_front_matter(slug):
-    files = [f for f in os.listdir(f'{ROOT}/_properties') if slug in f]
-    if not files:
+    # نطابق حقل slug في الـfront matter، لا اسم الملف: اسم الملف قد يخالفه
+    md, hit = '', None
+    for f in sorted(os.listdir(f'{ROOT}/_properties')):
+        if not f.endswith('.md'):
+            continue
+        text = open(f'{ROOT}/_properties/{f}', encoding='utf-8').read()
+        if re.search(rf'^slug:\s*"?{re.escape(slug)}"?\s*$', text, re.M):
+            md, hit = text, f
+            break
+    if hit is None:
         raise SystemExit(f'لا يوجد عرض بالـslug: {slug}')
-    md = open(f'{ROOT}/_properties/{files[0]}', encoding='utf-8').read()
     fm = md.split('---')[1]
 
     def g(key):
