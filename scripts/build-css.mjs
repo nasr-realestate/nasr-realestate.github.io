@@ -40,7 +40,7 @@ const SCOPES = [
   'page-agent', 'page-luxury', 'page-valuation', 'page-generator', 'page-pgimages',
   'page-add', 'page-about', 'page-contact', 'page-requests', 'page-properties',
   'layout-property_page', 'layout-request_page', 'layout-landing', 'layout-app',
-  'homepage', 'page-404', 'page-privacy', 'page-notifications',
+  'homepage', 'page-404', 'page-privacy', 'page-notifications', 'page-video-preview',
 ];
 
 /**
@@ -65,6 +65,7 @@ const ROUTES = {
   'page-contact|default': { name: 'contact', scopes: ['page-contact'] },
   'page-privacy|default': { name: 'privacy', scopes: ['page-privacy'] },
   'page-404|default': { name: 'notfound', scopes: ['page-404'] },
+  'page-video-preview|default': { name: 'videopreview', scopes: ['page-video-preview'] },
 };
 
 /** يُضاف تلقائيًا لو ظهرت تركيبة غير معروفة أثناء البناء */
