@@ -128,6 +128,34 @@ test('معرض النخبة مطابق لمولّده — لا تعديل يدو
   assert.equal(r.status, 0, `المعرض خارج التزامن مع المولّد:\n${r.stdout || ''}${r.stderr || ''}`);
 });
 
+// ═══ 2026-11-18: «النصوص بحروف مبعثرة» — سبب قابل للقياس والفحص ═══
+test('عناوين الرئيسية لا تستخدم الوزن 900: النقاط العربية تطفو فتبدو الحروف مفكّكة', () => {
+  const css = read('assets/css/style.css');
+  for (const sel of [
+    'body.homepage .hp-cinematic-content h2',
+    'body.homepage .hp-section-title',
+    'body.homepage .hp-cinematic h2',
+    'body.homepage .hp-final-cta h2',
+  ]) {
+    const i = css.indexOf(sel + ' {');
+    assert.ok(i !== -1, `قاعدة مفقودة: ${sel}`);
+    const block = css.slice(i, css.indexOf('}', i));
+    assert.doesNotMatch(block, /font-weight:\s*900/, `${sel}: الوزن 900 يفكّك النص العربي`);
+    assert.doesNotMatch(block, /letter-spacing:\s*-/, `${sel}: تباعد سالب يفكّك النص العربي`);
+  }
+});
+
+test('صفحتا النخبة مفهرستان: index/follow وsitemap — لا تناقض', () => {
+  for (const f of ['luxury-gallery.html', 'video-preview.html']) {
+    const src = read(f);
+    // الـfront matter فقط: التعليقات داخل الصفحة قد تذكر الاسم بلا أن تنفّذه
+    const fm = src.split('---')[1] || '';
+    assert.match(fm, /^sitemap:\s*true/m, `${f}: مستبعدة من الخريطة رغم طلب الترشيح`);
+    assert.match(fm, /^robots:\s*"index, follow/m, `${f}: robots`);
+    assert.doesNotMatch(fm, /noindex/, `${f}: noindex`);
+  }
+});
+
 // ═══ اختبار رجوع من التدقيق العملي (2026-10-25): تعارض وصف MCP والنطاق ═══
 test('وثائق MCP لا تعِد بمناطق خارج مدينة نصر، ووصف البحث مطابق للنطاق المعلن', () => {
   for (const f of ['mcp.json', '.well-known/mcp.json', '.well-known/mcp/server-card.json']) {
