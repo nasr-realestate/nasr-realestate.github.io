@@ -2353,7 +2353,7 @@ async function sendLocalRequest(txt) {
       const confirmed = p.last_confirmed_at ? "آخر تأكيد موثق من المالك: " + p.last_confirmed_at + "، وقد يتغير بعده." : "لا يوجد تاريخ تأكيد موثق؛ التوافر يحتاج إلى تأكيد من المالك.";
       renderMsg([p.title, (p.price || "السعر غير معلن") + (p.area ? " — " + p.area : ""), p.location || "",
         "تاريخ النشر: " + (p.datePosted || "غير مسجل") + ". " + confirmed,
-        "العمولة المنشورة على الموقع للبيع 2.5% بعد إتمام الصفقة؛ الترخيص والتأمين وعمولة الإيجار غير منشورة ولا تُفترض.",
+        "عمولة البيع 1.5% بعد إتمام الصفقة؛ الترخيص والتأمين وعمولة الإيجار غير منشورة ولا تُفترض، ولا تُذكر العمولة إلا إذا سأل العميل عنها صراحةً.",
         new URL("/properties/" + p.slug + "/", location.origin).href].filter(Boolean).join("\n"), "bot");
       return;
     }
