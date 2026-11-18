@@ -104,6 +104,15 @@ def main() -> None:
         action="store_true",
         help="حذف الصور تمامًا بدل وضع صور المجموعات (تظهر صور الناس الحقيقية)",
     )
+    ap.add_argument(
+        "--org-prefix",
+        default="",
+        help=(
+            "بادئة تُضاف إلى اسم المجموعة في ORG وTITLE، مثل 'مؤسسة '. "
+            "الغرض: البحث باسم المؤسسة في Google Contacts يجد كل بطاقات "
+            "المجموعة مجتمعة تحت اسم واحد."
+        ),
+    )
     args = ap.parse_args()
 
     if args.no_photos:
@@ -151,8 +160,25 @@ def main() -> None:
                 candidates.append(
                     _clean(value).split("المجموعة:", 1)[1].split("\n")[0].strip()
                 )
+        # احتياط أخير: عشرات البطاقات تكتب المجموعة في الاسم نفسه
+        # («حارس | ام يوسف») مع ORG وTITLE فارغين. بلا هذا السطر تبقى بلا
+        # صورة فتفقد المجموعة توحّدها البصري.
+        if not any(candidates):
+            for name, value in fields:
+                if name.startswith("FN"):
+                    head = _clean(value).split("|")[0].strip()
+                    if head in LABEL_FOR:
+                        candidates.append(head)
+                        break
         group = next((c for c in candidates if c), "")
         _write(card, group, stats)
+
+    def _label(group: str) -> str:
+        """اسم المجموعة كما يُكتب في ORG/TITLE — مع بادئة المؤسسة إن طُلبت."""
+        if not group or not args.org_prefix:
+            return group
+        prefix = args.org_prefix
+        return group if group.startswith(prefix.strip()) else prefix + group
 
     def _clean(value: str) -> str:
         """يفكّ QUOTED-PRINTABLE وينزع بادئة الدفتر."""
@@ -210,7 +236,62 @@ def main() -> None:
                 stats[key] = stats.get(key, 0) + 1
                 out_card.append("PHOTO;ENCODING=b;TYPE=JPEG:" + fold(b64[key]))
                 continue
+            if args.org_prefix and group in LABEL_FOR:
+                head = line.split(":", 1)[0].upper()
+                if head.startswith("ORG") or head.startswith("TITLE"):
+                    sep = line.find(":")
+                    if sep != -1:
+                        value = line[sep + 1:]
+                        label = _label(group)
+                        if "QUOTED-PRINTABLE" in head:
+                            encoded = "".join(
+                                f"={b:02X}" if (b < 32 or b > 126 or b in (61, 63, 95))
+                                else chr(b)
+                                for b in label.encode("utf-8")
+                            )
+                            out_card.append(line[:sep + 1] + encoded)
+                            continue
+                        out_card.append(line[:sep + 1] + label)
+                        continue
             out_card.append(line)
+
+        # ⚠️ عيب مُصلَح (2026-11-18): 33 بطاقة في «حارس» تحمل ORG صحيحًا
+        # لكن **بلا سطر PHOTO إطلاقًا** (لم تُسجَّل لها صورة قط). الحلقة
+        # السابقة كانت تُضيف صورة المجموعة فقط عند مصادفة PHOTO موجود،
+        # فبقيت هذه البطاقات بلا صورة رغم انتمائها للمجموعة. نُضيف الصورة
+        # هنا إن كانت المجموعة من الأربع ولم تُكتب لها صورة بعد. N
+        # TITLE فارغ في عشرات البطاقات ⇒ نكتبه ليكتمل اسم المؤسسة في البحث
+        # (Google Contacts يعرض ORG وTITLE معًا في البطاقة والبحث).
+        if args.org_prefix and group in LABEL_FOR:
+            label = _label(group)
+            has_title = any(
+                ln.upper().split(":", 1)[0].startswith("TITLE") for ln in out_card
+            )
+            if not has_title:
+                encoded = "".join(
+                    f"={b:02X}" if (b < 32 or b > 126 or b in (61, 63, 95))
+                    else chr(b)
+                    for b in label.encode("utf-8")
+                )
+                out_card.insert(
+                    len(out_card) - 1
+                    if out_card and out_card[-1] == "END:VCARD"
+                    else len(out_card),
+                    "TITLE;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:" + encoded,
+                )
+
+        wants = (
+            args.default_no_photo
+            and not args.no_photos
+            and group in LABEL_FOR
+        )
+        if wants and not any(l.upper().startswith("PHOTO") for l in out_card):
+            stats[LABEL_FOR[group]] = stats.get(LABEL_FOR[group], 0) + 1
+            # قبل END:VCARD — الترتيب لا يهم في vCard لكن النظافة تفيد
+            out_card.insert(
+                len(out_card) - 1 if out_card and out_card[-1] == "END:VCARD" else len(out_card),
+                "PHOTO;ENCODING=b;TYPE=JPEG:" + fold(b64[LABEL_FOR[group]]),
+            )
         out.extend(out_card)
 
     for raw in open(args.src, encoding="utf-8", errors="replace"):

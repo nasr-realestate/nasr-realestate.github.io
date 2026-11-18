@@ -61,13 +61,13 @@ function cardAfter({ name, group, photo = true }) {
   ].join('\n');
 }
 
-function run(cards) {
+function run(cards, extraArgs = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vcf-'));
   const src = path.join(dir, 'in.vcf');
   const out = path.join(dir, 'out.vcf');
   fs.writeFileSync(src, cards.join('\n') + '\n');
   execFileSync('python3', [SCRIPT, '--src', src, '--labels', LABELS,
-    '--default-no-photo', '--out', out], { encoding: 'utf8' });
+    '--default-no-photo', ...extraArgs, '--out', out], { encoding: 'utf8' });
   const text = fs.readFileSync(out, 'utf8');
   const parsed = text.split('BEGIN:VCARD').slice(1).map((c) => ({
     hasPhoto: /^PHOTO/m.test(c),
@@ -117,4 +117,41 @@ test('لا تُفقد بطاقة ولا يتغيّر اسم أو رقم', { skip
     assert.ok(t.includes(qp(n)), `الاسم ${n} تغيّر أو فُقد`);
   }
   assert.equal((text.match(/TEL;CELL:\+201000000001/g) || []).length, 3);
+});
+
+test('--org-prefix يكتب اسم المؤسسة في ORG وTITLE ولو كانا فارغين', { skip: skipDeps }, () => {
+  // «حارس | ام يوسف» في الدفتر الحقيقي: ORG = «حارس»، TITLE غائب تمامًا.
+  const bare = [
+    'BEGIN:VCARD', 'VERSION:2.1',
+    `FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:${qp('حارس | ام يوسف')}`,
+    'TEL;CELL:+201000000009',
+    `ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:${qp('حارس')}`,
+    'END:VCARD',
+  ].join('\n');
+  const { text } = run([bare], ['--org-prefix', 'مؤسسة ']);
+  // نفكّ الترميز كما يفعل القارئ: البايت المطبوع يبقى حرفًا، وغيره `=XX`.
+  const decode = (v) => Buffer.from(
+    v.replace(/=(\r?\n)?/g, (m) => (m.length > 1 ? '' : m))
+      .replace(/=([0-9A-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16))),
+    'latin1',
+  ).toString('utf8');
+  const orgLine = (text.match(/^ORG[^\n]*/m) || [''])[0].split(':').slice(1).join(':');
+  const titleLine = (text.match(/^TITLE[^\n]*/m) || [''])[0].split(':').slice(1).join(':');
+  assert.equal(decode(orgLine).trim(), 'مؤسسة حارس', `ORG = ${decode(orgLine)}`);
+  assert.equal(decode(titleLine).trim(), 'مؤسسة حارس', `TITLE = ${decode(titleLine)}`);
+  assert.equal((text.match(/^TITLE/mg) || []).length, 1, 'TITLE لم يُكتب — البحث بالمؤسسة ينقص');
+});
+
+test('بطاقة مجموعتها في الاسم فقط تحصل على صورة المجموعة', { skip: skipDeps }, () => {
+  // ORG = «حارس» بلا سطر PHOTO إطلاقًا (33 بطاقة في الدفتر الحقيقي).
+  const noPhoto = [
+    'BEGIN:VCARD', 'VERSION:2.1',
+    `FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:${qp('حارس | ابو الليل')}`,
+    'TEL;CELL:+201000000010',
+    `ORG;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:${qp('حارس')}`,
+    'END:VCARD',
+  ].join('\n');
+  const { parsed } = run([noPhoto]);
+  assert.ok(parsed[0].hasPhoto, 'بطاقة المجموعة بقيت بلا صورة');
+  assert.ok(parsed[0].photoLen > 4000, 'الصورة المضافة ليست صورة المجموعة');
 });
