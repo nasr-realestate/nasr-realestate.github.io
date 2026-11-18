@@ -17,6 +17,7 @@
  * ═══════════════════════════════════════════════════════════════════════
  */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -104,10 +105,18 @@ export function selectLuxury(facets, properties, titles = new Map()) {
       const desc = [area, big, p.finish || ''].filter(Boolean).join(' · ');
       // فيديو الوحدة: يُضمَّن فقط لو ملفه موجود فعلًا — لا مسار مكسور في الصفحة.
       // الوزن لا يتأثر: كل مشغّل `preload="none"` فلا يُحمَّل شيء قبل الضغط.
-      const videoFile = `/assets/video/preview/${u.slug}.mp4`;
-      const hasVideo = fs.existsSync(
-        path.join(ROOT, 'assets', 'video', 'preview', `${u.slug}.mp4`),
-      );
+      const videoAbs = path.join(ROOT, 'assets', 'video', 'preview', `${u.slug}.mp4`);
+      const hasVideo = fs.existsSync(videoAbs);
+      // بصمة قصيرة على اسم الملف: إعادة بناء الفيديو تغيّر البصمة فيجلب
+      // المتصفح النسخة الجديدة بدل نسخته المخزّنة (الفيديوهات كانت تُقدَّم
+      // بلا أي كاسح كاش، فالمالك ظل يرى العربية المكسورة بعد الإصلاح).
+      const videoFile = hasVideo
+        ? `/assets/video/preview/${u.slug}.mp4?v=${crypto
+            .createHash('sha256')
+            .update(fs.readFileSync(videoAbs))
+            .digest('hex')
+            .slice(0, 8)}`
+        : '';
       return {
         title: shortTitle(rawTitle, u),
         price: fmtPrice(u.price, p.price),

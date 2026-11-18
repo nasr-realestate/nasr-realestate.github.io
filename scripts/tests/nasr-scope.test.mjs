@@ -101,8 +101,26 @@ test('كل شريحة نخبة لها فيديو موجود فعليًا — ل�
   const withVideo = vids.filter(Boolean);
   assert.equal(withVideo.length, 8, `شرائح بلا فيديو: ${vids.length - withVideo.length}`);
   for (const v of withVideo) {
-    assert.match(v, /^\/assets\/video\/preview\/[a-z0-9-]+\.mp4$/, `مسار غير متوقع: ${v}`);
-    assert.ok(existsSync('.' + v), `ملف الفيديو غير موجود: ${v}`);
+    // ?v=<بصمة> تكسر كاش المتصفح حين يُعاد بناء الفيديو — مقبولة ومطلوبة.
+    assert.match(
+      v,
+      /^\/assets\/video\/preview\/[a-z0-9-]+\.mp4(\?v=[a-f0-9]{8})?$/,
+      `مسار غير متوقع: ${v}`,
+    );
+    const filePath = '.' + v.split('?')[0];
+    assert.ok(existsSync(filePath), `ملف الفيديو غير موجود: ${v}`);
+  }
+});
+
+test('روابط الفيديو تحمل بصمة تكسر الكاش — وإلا ظل المالك يرى النسخة القديمة', () => {
+  const html = read('luxury-gallery.html');
+  const block = html.split('const properties = [')[1].split('        ];')[0];
+  const vids = [...block.matchAll(/video:\s*"([^"]*)"/g)]
+    .map((m) => m[1])
+    .filter(Boolean);
+  assert.equal(vids.length, 8);
+  for (const v of vids) {
+    assert.match(v, /\?v=[a-f0-9]{8}$/, `بلا بصمة كاش: ${v}`);
   }
 });
 
