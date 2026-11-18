@@ -128,3 +128,42 @@ test('migration 0015: الأنماط تُطابق فعليًا نصوص zone ف�
   // نص غريب لا يُقرب إلى شارع
   assert.equal(resolveAreaId('كمبوند حياة'), null);
 });
+
+// ═══════════════════════════════════════════════════════════════
+//  تقسيم الجمل — العيب الذي أوقف أول dry_run
+// ═══════════════════════════════════════════════════════════════
+//  التقسيم السابق بـawk RS=";" كسر كل INSERT متعدد الأسطر إلى ثلاثة أجزاء
+//  (INSERT… / SELECT… / WHERE…): 13 جملة بدل 4. تنفيذ الأجزاء منفصلة على
+//  قاعدة الإنتاج كان سيولّد SQL مبتورًا. هذه الاختبارات تمنع رجوعه.
+
+test('تقسيم المسوّدة: 4 جمل سليمة لا 13 جزءًا مبتورًا', async () => {
+  const { splitStatements } = await import('../lib/sql-split.mjs');
+  const stmts = splitStatements(migrationSql());
+  assert.equal(stmts.length, 4, `عدد الجمل ${stmts.length} لا 4 — التقسيم انكسر`);
+  assert.match(stmts[0], /^ALTER TABLE areas ADD COLUMN zone_patterns TEXT$/);
+  for (const s of stmts.slice(1)) {
+    // كل إدراج جملة كاملة: INSERT + SELECT + WHERE NOT EXISTS
+    assert.match(s, /^INSERT INTO areas/);
+    assert.match(s, /WHERE NOT EXISTS \(SELECT 1 FROM areas WHERE name_ar = '/);
+    // ولا جزء مبتور
+    assert.ok(!/^\s*$/.test(s));
+  }
+});
+
+test('الـmigration المقسَّم يُنفَّذ فعلًا على SQLite (لا أجزاء مبتورة)', async () => {
+  if (skip) return;
+  const { splitStatements } = await import('../lib/sql-split.mjs');
+  const db = makeDb();
+  for (const stmt of splitStatements(migrationSql())) db.exec(stmt);
+  const streets = db.prepare("SELECT name_ar FROM areas WHERE level='street' ORDER BY id;").all();
+  assert.deepEqual(streets.map((r) => r.name_ar), ['حسن المأمون', 'مصطفى النحاس', 'شارع الطيران']);
+  assert.equal(Number(db.prepare('SELECT COUNT(*) AS n FROM areas;').get().n), 34);
+});
+
+test('تقسيم: يحترم الفاصلة المنقوطة داخل النص العربي', async () => {
+  const { splitStatements } = await import('../lib/sql-split.mjs');
+  const sql = "INSERT INTO t (a) SELECT 'نص; يحمل فاصلة'\nWHERE NOT EXISTS (SELECT 1);\n";
+  const stmts = splitStatements(sql);
+  assert.equal(stmts.length, 1, 'انقسم عند فاصلة داخل النص');
+  assert.match(stmts[0], /نص; يحمل فاصلة/);
+});

@@ -138,13 +138,32 @@ jobs:
           DRAFT=_worker/migrations-draft/0015_areas_streets.sql
           [ -f "$DRAFT" ] || { echo "::error::المسوّدة غير موجودة: $DRAFT"; exit 1; }
 
-          # جمل الـSQL: بلا تعليقات، مقسّمة على ';' في نهاية السطر
-          mapfile -t STATEMENTS < <(
-            grep -v '^[[:space:]]*--' "$DRAFT" \
-            | sed 's/;[[:space:]]*$//' \
-            | awk 'BEGIN{RS=";"} NF{gsub(/^[[:space:]]+|[[:space:]]+$/,""); if(length($0)>0) print $0}'
-          )
+          # التقسيم يتم بـscripts/lib/sql-split.mjs — وهو مُختبَر بـnode --test.
+          # لاذ سببين متروكين:
+          #   • awk 'BEGIN{RS=";"}' كسر كل INSERT متعدد الأسطر إلى ثلاثة أجزاء.
+          #   • awk بلا RS يقسّم السطور على المسافات، فـ$0 يصبح كلمة واحدة
+          #     وينجح خطأً في مطابقة ';[[:space:]]*$' لأي كلمة تنتهي بفاصلة.
+          # كلاهما أُثبت بالتشغيل (run 44204766837 واختبار محلي): 10–13 جملة
+          # بدل 4. تنفيذ أجزاء مبتورة على قاعدة الإنتاج غير مقبول.
+          if ! command -v node >/dev/null 2>&1; then
+            echo "::error::node غير متاح — لا يمكن تقسيم الـSQL بأمان"; exit 1
+          fi
+          node -e '
+            import("./scripts/lib/sql-split.mjs").then(({ splitStatements }) => {
+              const fs = require("fs");
+              const stmts = splitStatements(fs.readFileSync(process.argv[1], "utf8"));
+              fs.writeFileSync(process.argv[2], stmts.join("\u0000"));
+            });
+          ' "$DRAFT" "$RUNNER_TEMP/stmts.bin" || { echo "::error::فشل تقسيم الـSQL"; exit 1; }
+          mapfile -d '' -t STATEMENTS < "$RUNNER_TEMP/stmts.bin"
           echo "عدد الجمل: ${#STATEMENTS[@]}"
+          # حاجز على العدد: ثلاث إدراجات + تعديل عمود واحد. أي رقم آخر يعني
+          # أن التقسيم انكسر — نرفض بدل أن ننفّذ أجزاءً مبتورة.
+          if [ "${#STATEMENTS[@]}" -lt 1 ] || [ "${#STATEMENTS[@]}" -gt 6 ]; then
+            echo "::error::عدد الجمل ${#STATEMENTS[@]} غير متوقع — التقسيم انكسر"
+            printf '\n**خطأ**\n\n```json\n[{"error":"statement_split","count":%d}]\n```\n\n' "${#STATEMENTS[@]}" >> "$REPORT"
+            exit 1
+          fi
 
           # في dry_run نفحص فقط ولا ننفّذ
           if [ "$MODE" = "dry_run" ]; then

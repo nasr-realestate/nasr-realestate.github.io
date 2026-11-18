@@ -153,3 +153,18 @@ test('النشر يعمل عند الفشل: خطوة مستقلة بـif always
   // ولا تحمل منطق التنفيذ
   assert.ok(!/INSERT INTO/.test(pub.run), 'خطوة النشر تحمل SQL تنفيذ');
 });
+
+test('تقسيم الجمل يتم بـsql-split.mjs لا بـawk', () => {
+  // عيبان مقيسان في awk:
+  //   1) RS=";" كسر كل INSERT متعدد الأسطر (13 جملة بدل 4)
+  //   2) بلا RS، awk يقسّم السطور على المسافات فـ$0 كلمة واحدة، و'$0 ~ /;$/'
+  //      ينجح خطأً مع أي كلمة تنتهي بفاصلة (10 جمل)
+  // الحل: splitter JS مُختبَر. هذا الاختبار يمنع الرجوع إلى awk.
+  // نفحص الكود التنفيذي لا التعليقات: التعليق يذكر awk عمدًا ليشرح العيب
+  const code = src.split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n');
+  assert.match(code, /scripts\/lib\/sql-split\.mjs/, 'الـworkflow لا يستخدم المُحلّل المُختبَر');
+  assert.ok(!/BEGIN\{RS=";"\}/.test(code), 'الـworkflow عاد إلى awk RS=";"');
+  assert.ok(!/^\s*awk /m.test(code), 'الـworkflow عاد إلى awk للتقسيم');
+  // وحاجز العدد موجود: تقسيم انكسر ⇒ فشل لا تنفيذ
+  assert.match(src, /عدد الجمل \$\{#STATEMENTS\[@\]\} غير متوقع/);
+});
