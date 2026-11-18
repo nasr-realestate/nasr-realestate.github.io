@@ -129,8 +129,17 @@ def segments(text):
     return [s for s in out if s[1]]
 
 
-def _shape_run(text, font_path):
-    """يرجّع (قائمة gid, قائمة advance بالـem) بترتيب بصري."""
+def _shape_run(text, font_path, rtl=False):
+    """
+    يرجّع (قائمة gid, قائمة (advance, x_offset, y_offset) بالـem) بترتيب بصري.
+
+    ⚠️ 2026-11-18: كان هذا العيب يجعل كل نص عربي في الفيديو معكوسًا —
+    «تشطيب» تُرسم «بيطشت»، و«مستويين» تبدو «مسستتويينن». القياس:
+    HarfBuzz يرصف المقطع RTL بمواضع متناقصة، فالأولى منطقيًا (ت) تأخذ
+    أكبر x. الكود كان يجمع الـadvance تصاعديًا من 0، فيضعها في أقصى
+    اليسار = انعكاس كامل. الحل: نطرح من العرض الكلي للمقطع بدل الجمع.
+    وأُضيف x_offset المهمَل (همزات وألف خنجرية تُزحزَح أفقيًا).
+    """
     fnt, upem = _hb(font_path)
     buf = hb.Buffer()
     buf.add_str(text)
@@ -138,24 +147,50 @@ def _shape_run(text, font_path):
     hb.shape(fnt, buf, {'kern': True, 'liga': True, 'rlig': True, 'calt': True,
                         'init': True, 'medi': True, 'fina': True, 'ccmp': True})
     gids = [i.codepoint for i in buf.glyph_infos]
-    advs = [(p.x_advance / upem, p.y_offset / upem) for p in buf.glyph_positions]
+    # x_advance[i] = العرض الذي *يسبق* الحرف i (لأن HarfBuzz يرصف من اليمين).
+    # فالموضع النهائي للحرف i = مجموع عروض ما يليه. نجمع هنا ونعيد المواضع
+    # الجاهزة بدل الإزاحات — لا لبس بعد اليوم.
+    raw = [p.x_advance / upem for p in buf.glyph_positions]
+    xo = [p.x_offset / upem for p in buf.glyph_positions]
+    yo = [p.y_offset / upem for p in buf.glyph_positions]
+    total = sum(raw)
+    # مؤشر يجري من اليمين (total) نحو اليسار
+    advs, pos = [], total
+    for i in range(len(raw)):
+        pos -= raw[i]
+        advs.append((pos, xo[i], yo[i]))
     return gids, advs
 
 
 def layout(text, weight='700'):
     """
-    يرجّع [(gid, font_path, pen_x_em, dy_em)] بترتيب بصري، والعرض بالـem.
-    الفقرة RTL: تُرصف المقاطع من اليسار بترتيب معكوس منطقيًا.
-    """
-    segs = list(reversed(segments(text)))
-    items, x = [], 0.0
-    for kind, s in segs:
-        # اختيار الخط حسب نوع المقطع: عربي ⇒ Cairo Arabic، غيره ⇒ Cairo Latin
-        path = FONT_AR[weight] if kind == 'R' else FONT_LA[weight]
-        gids, advs = _shape_run(s, path)
+    يرجّع ([(gid, font_path, pen_x_em, dy_em)], عرض_كلي_em) بترتيب بصري من
+    اليسار لليمين — وهو نظام الرسم على اللوحة.
+
+    ⚠️ سجلّ عيب (2026-11-18) — سبب «الحروف المبعثرة» في كل فيديو:
+    HarfBuzz يرصف المقطع العربي ويُعيد الحروف **بترتيب بصري جاهز من اليسار**،
+    مع x_advance عرض كل حرف في موضعه. الكود القديم:
         for g, (a, dy) in zip(gids, advs):
-            items.append((g, path, x, dy))
-            x += a
+            items.append((g, path, x, dy)); x += a
+    كان يمرّر dy مكان الإزاحة ويستخدم عروض الحروف بلا مواضع صحيحة، فانقلب
+    ترتيب الكلمة وتباعدت حروفها. الصحيح: تراكم بسيط بترتيب HarfBuzz نفسه.
+    """
+    items, x = [], 0.0
+    for kind, s in reversed(segments(text)):
+        path = FONT_AR[weight] if kind == 'R' else FONT_LA[weight]
+        fnt, upem = _hb(path)
+        buf = hb.Buffer()
+        buf.add_str(s)
+        buf.guess_segment_properties()
+        # ⚠️ لا تُمرّر init/medi/fina يدويًا: HarfBuzz يطبّقها تلقائيًا
+        # لسكربت Arabic، وتمريرها صريحًا يُعطّل الـligatures فيفكّ «ست»
+        # (uniFC94) و«ي» النهائية (uniFEF3) ⇒ «مسستتوينن».
+        hb.shape(fnt, buf, {'kern': True, 'liga': True, 'calt': True, 'ccmp': True})
+        for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+            items.append((info.codepoint, path,
+                          x + pos.x_offset / upem,
+                          pos.y_offset / upem))
+            x += pos.x_advance / upem
     return items, x
 
 
