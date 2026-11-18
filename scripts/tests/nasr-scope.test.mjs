@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildListingFacets } from '../lib/listing-facets.mjs';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -65,13 +66,40 @@ test('default.html: robots يحترم page.robots ويجعل الوحدات خا
   assert.match(read('404.html'), /^robots:\s*"noindex, follow"/m);
 });
 
-test('روابط معرض النخبة اليدوية تشير لوحدات داخل مدينة نصر فقط', () => {
+test('روابط معرض النخبة تشير لوحدات داخل مدينة نصر فقط', () => {
   const urls = [...read('luxury-gallery.html').matchAll(/url:\s*"\/properties\/([^/"]+)\/"/g)].map((m) => m[1]);
   assert.ok(urls.length > 0);
   for (const slug of urls) {
     assert.ok(facets.listings[slug], `رابط مكسور: ${slug}`);
     assert.equal(facets.listings[slug].in_area, true, `خارج النطاق: ${slug}`);
   }
+});
+
+// ═══ 2026-11-18: «المعرض السينمائي» صار مشتقًّا من البيانات لا مكتوبًا يدويًا ═══
+test('معرض النخبة: شقق بيع داخل النطاق من 8 مليون فقط — ما يطابق وعد «أفخم الوحدات»', () => {
+  const block = read('luxury-gallery.html')
+    .split('const properties = [')[1]
+    .split('        ];')[0];
+  const urls = [...block.matchAll(/url:\s*"\/properties\/([^/"]+)\//g)].map((m) => m[1]);
+  assert.ok(urls.length > 0, 'المعرض لا يمكن أن يكون فارغًا');
+  for (const slug of urls) {
+    const u = facets.listings[slug];
+    assert.equal(u.deal, 'sale', `معرض الفخامة للبيع فقط: ${slug}`);
+    assert.equal(u.type, 'apartment', `معرض الفخامة للشقق فقط: ${slug}`);
+    assert.ok(
+      u.price >= 8_000_000,
+      `تحت حد الفخامة (8 مليون): ${slug} = ${u.price}`,
+    );
+  }
+});
+
+test('معرض النخبة مطابق لمولّده — لا تعديل يدوي يفلت', () => {
+  // يُشغَّل المولّد بـ--check: يفشل لو حُرِّر الملف يدويًا أو تغيّر سعر/عرض.
+  const r = spawnSync(process.execPath, [path.join('scripts', 'build-luxury-gallery.mjs'), '--check'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(r.status, 0, `المعرض خارج التزامن مع المولّد:\n${r.stdout || ''}${r.stderr || ''}`);
 });
 
 // ═══ اختبار رجوع من التدقيق العملي (2026-10-25): تعارض وصف MCP والنطاق ═══
