@@ -53,6 +53,9 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          # set -x: السجل محجوب عن بعض القارئين، لكن عند قراءته لاحقًا نحتاج
+          # معرفة الأمر الذي فشل. التوكن مقنّع بـadd-mask قبله.
+          set -x
           REPORT="$RUNNER_TEMP/report.md"
           : > "$REPORT"
           printf '# تطبيق الشوارع كمناطق · %s\n\n' "$(date -u +%FT%TZ)" >> "$REPORT"
@@ -176,14 +179,28 @@ jobs:
           d1 "SELECT COUNT(*) AS n FROM areas" "areas_after" || true
           d1 "SELECT id, name_ar, level, area_type, zone_patterns FROM areas WHERE level='street' ORDER BY id" "streets_after" || true
 
-          # ── 4) نشر التقرير: سجل الـjob محجوب، الفرع مسار القراءة الوحيد ──
+      # ── النشر يعمل حتى عند الفشل ──
+      # سجل الـjob محجوب عن القارئ (شبكة)، فالفرع هو مسار القراءة الوحيد.
+      # بدونه فشل التشغيل بلا سبب معروف — وهو ما حدث فعلًا في أول dry_run.
+      - name: Publish the report to ci/areas-streets (always)
+        if: always()
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -uo pipefail
+          REPORT="$RUNNER_TEMP/report.md"
           mkdir -p "$RUNNER_TEMP/pub"
-          cp "$REPORT" "$RUNNER_TEMP/pub/areas-streets-apply.md"
-          printf '\n---\n\nrun: %s · commit: %s · mode: %s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$MODE" >> "$RUNNER_TEMP/pub/areas-streets-apply.md"
+          {
+            if [ -s "$REPORT" ]; then cat "$REPORT"; else echo "(التقرير لم يُكتب — فشل مبكر قبل أي استعلام)"; fi
+            printf '\n---\n\nrun: %s · commit: %s · mode: %s · status: %s\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_SHA" "${MODE:-?}" "${{ job.status }}"
+          } > "$RUNNER_TEMP/pub/areas-streets-apply.md"
           cd "$RUNNER_TEMP/pub"
           git init -q -b ci/areas-streets
           git config user.name  "arena-agent"
           git config user.email "arena-agent@users.noreply.github.com"
           git add areas-streets-apply.md
-          git commit -q -m "تطبيق الشوارع — run ${GITHUB_RUN_ID} (${MODE})"
+          git commit -q -m "تطبيق الشوارع — run ${GITHUB_RUN_ID}"
           git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/areas-streets
