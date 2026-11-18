@@ -101,11 +101,11 @@ audio_script: "عايز شقة واسعة في حسن المأمون؟ ميتي�
         </p>
     </div>
 
-    <div class="property-contact-section">
-        <a href="https://wa.me/201000000000?text=%D8%A7%D9%87%D8%AA%D9%85%D8%A7%D9%85%20%D8%A8%D8%B4%D9%82%D8%A9%20220%D9%85%20%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D9%85%D8%A3%D9%85%D9%88%D9%86"
-           class="btn btn-whatsapp">
-            <i class="fab fa-whatsapp"></i> استفسر عن الشقة
-        </a>
+    <div class="final-payment-alert">
+        <i class="fas fa-handshake gold-text"></i>
+        <span>الوحدة متاحة للمعاينة في أي وقت - <strong>المطلوب 6,400,000 ج.م</strong> - قابل للتفاوض في حالة الجدية التامة بعد المعاينة الميدانية.</span>
     </div>
+
+
 
 </div>
