@@ -43,30 +43,25 @@ def pad(freqs, dur, amp=0.2):
     out *= env_ad(n, dur * 0.35, 1.2) * amp
     return out
 
-def reverb(x, amount=0.22, decay=1.4):
-    """ريفيرب بسيط: التفاف بطيف متراجع."""
-    ir_len = int(decay * SR)
-    ir = np.random.randn(ir_len) * np.exp(-np.linspace(0, 6, ir_len))
-    ir /= np.abs(ir).sum() ** 0.5
-    wet = np.convolve(x, ir, mode='full')[: len(x)]
-    return (1 - amount) * x + amount * wet
+def reverb(x, amount=0.18, decay=1.2):
+    """ريفيرب نقي بلا ضوضاء: صدى نغمي (comb) بدل التفاف ضوضاء بيضاء.
 
-def whoosh(dur=0.9, amp=0.16):
-    """متدرّج دخول ناعم (فلتر ضوضاء يفتح)."""
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    noise = np.random.randn(n)
-    # مرشح منخفض بسيط يفتح تدريجيًا
-    out = np.zeros(n)
-    lp = 0.0
-    for i in range(n):  # بطيء لكن مقبول لمرة واحدة
-        k = 0.02 + 0.30 * (i / n)
-        lp += k * (noise[i] - lp)
-        out[i] = lp
-    env = np.sin(np.linspace(0, np.pi, n)) ** 2
-    out = out * env * amp
-    out /= (np.abs(out).max() or 1)
-    return out * amp
+    الالتفاف بضوضاء بيضاء يُدخل «هسيس» مسموعًا (noise floor يرتفع).
+    هنا نبني الصدى من الإشارة نفسها متأخرة ومتضائلة ⇒ لا ضوضاء مُضافة.
+    """
+    out = x.copy()
+    taps = [(0.045, 0.34), (0.083, 0.22), (0.131, 0.14), (0.197, 0.09)]
+    for delay_s, gain in taps:
+        d = int(delay_s * SR)
+        if d >= len(x):
+            continue
+        delayed = np.zeros_like(x)
+        delayed[d:] = x[:-d] * gain
+        out += delayed * (amount * 2.2)
+    peak = np.abs(out).max() or 1
+    if peak > 1:
+        out = out / peak
+    return out
 
 def sparkle(dur=1.1, amp=0.10):
     """لمعة ختامية (نداء للتواصل) — نغمات عالية متتابعة."""
@@ -150,12 +145,21 @@ def main():
 
     bed = build_bed(total=total)
 
-    # مؤثرات: دخول ناعم في البداية + لمعة في النهاية
-    w = whoosh(0.9, amp=0.05)
-    bed[: len(w)] += w
-    sp = sparkle(1.2, amp=0.045)
+    # مؤثرات: لمعة نغمية ختامية فقط (لا ضوضاء بيضاء إطلاقًا)
+    sp = sparkle(1.2, amp=0.05)
     start = len(bed) - len(sp) - int(0.15 * SR)
     bed[start:start + len(sp)] += sp
+
+    # دخول: نغمة صاعدة خفيفة (Bells) — موسيقى لا ضوضاء
+    intro = np.zeros(int(1.4 * SR))
+    for i, f0 in enumerate([523.25, 659.25, 783.99]):
+        seg = note(f0, 1.4 - i * 0.22, amp=0.035, attack=0.06, decay=3.4,
+                   harm=(1, 0.25, 0.08))
+        off = int(i * 0.22 * SR)
+        ln = min(len(seg), len(intro) - off)
+        if ln > 0:
+            intro[off:off + ln] += seg[:ln]
+    bed[: len(intro)] += intro
 
     # خفض تدريجي في الخروج (fade out)
     fo = int(1.8 * SR)
