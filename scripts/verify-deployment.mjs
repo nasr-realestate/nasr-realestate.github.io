@@ -80,6 +80,11 @@ export function extractSocialMeta(html) {
   const ogTitle = grab(/<meta\s+property=["']og:title["']\s+content=["']([^"']*)["'][^>]*>/gi);
   const twitterTitle = grab(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']*)["'][^>]*>/gi);
   const ogImageType = grab(/<meta\s+property=["']og:image:type["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  // ⭐ (2026-11-18) كان الفحص يقرأ og:image:type وحده — والفشل الحقيقي كان أن
+  // **og:image نفسه غير موجود**: الصفحة كانت تحمل width/height/type بلا وسم
+  // الصورة الأساسي، فما ظهرتش أي معاينة في واتساب. نقرأ الصورة نفسها الآن.
+  const ogImage = grab(/<meta\s+property=["']og:image["']\s+content=["']([^"']*)["'][^>]*>/gi);
+  const twitterImage = grab(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']*)["'][^>]*>/gi);
   const viewport = grab(/<meta\s+name=["']viewport["']\s+content=["']([^"']*)["'][^>]*>/gi);
   const title = grab(/<title[^>]*>([\s\S]*?)<\/title>/gi);
   return {
@@ -90,6 +95,9 @@ export function extractSocialMeta(html) {
     ogTitleCount: ogTitle.length,
     twitterTitleCount: twitterTitle.length,
     ogImageType: normText(ogImageType[0]).toLowerCase(),
+    ogImage: normText(ogImage[0]),
+    ogImageCount: ogImage.length,
+    twitterImage: normText(twitterImage[0]),
     viewport: normText(viewport[0]),
     title: normText(title[0]),
   };
@@ -116,7 +124,16 @@ export function checkSocialHead(html, target, sourceText = '') {
     }
   }
   if (target.kind === 'agent') {
-    if (meta.ogImageType !== 'image/webp') problems.push(`og:image:type=${meta.ogImageType || '<none>'} (المتوقع image/webp)`);
+    // ⚠️ واتساب/تيليجرام لا يبنيان معاينة من webp — يلزم PNG أو JPEG بمقاس 1200×630.
+    if (!meta.ogImage) {
+      problems.push('og:image مفقود (لا معاينة بلا وسم الصورة الأساسي)');
+    } else {
+      const ext = (meta.ogImage.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+      const okType = meta.ogImageType === 'image/png' || meta.ogImageType === 'image/jpeg';
+      if (!okType) problems.push(`og:image:type=${meta.ogImageType || '<none>'} (المتوقع image/png أو image/jpeg — webp لا يُعاين)`);
+      if (ext === '.webp') problems.push('og:image بصيغة webp (لا تُعاين في واتساب)');
+      if (!meta.twitterImage) problems.push('twitter:image مفقود');
+    }
     if (!meta.viewport.includes('interactive-widget=resizes-content')) problems.push('viewport بلا interactive-widget=resizes-content');
     if (!meta.viewport.includes('viewport-fit=cover')) problems.push('viewport بلا viewport-fit=cover');
     if (/user-scalable=no|maximum-scale=1(\.0)?/.test(meta.viewport)) problems.push('viewport يعطّل التكبير');
