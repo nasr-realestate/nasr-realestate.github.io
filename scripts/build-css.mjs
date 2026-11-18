@@ -26,6 +26,7 @@
  * ═══════════════════════════════════════════════════════════════════
  */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import CleanCSS from 'clean-css';
@@ -34,6 +35,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'assets', 'css', 'style.css');
 const OUT_DIR = path.join(ROOT, 'assets', 'css');
 const MAP_FILE = path.join(ROOT, '_data', 'css_scopes.json');
+// بصمة محتوى لكل ملف أنماط — تُستخدم في ?v= بدل رقم ثابت.
+// ⚠️ 2026-11-18: كان الرقم ثابتًا (?v=20261108-perf) فبقي الزائر يرى
+// نسخة قديمة من الكاش بعد كل تعديل CSS — شكوى المالك «نفس المشكلة».
+const VERS_FILE = path.join(ROOT, '_data', 'css_versions.json');
 
 /** كل نطاق صفحة له ملف مستقل — المفتاح هو ما يظهر في المحدِّد */
 const SCOPES = [
@@ -220,6 +225,39 @@ function main() {
     return;
   }
   fs.writeFileSync(MAP_FILE, mapJson, 'utf8');
+
+  // بصمة محتوى (8 أحرف) لكل ملف — «style» = الاحتياط style.min.css
+  const versions = {};
+  const hashOf = (abs) =>
+    crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 8);
+  for (const w of written) {
+    const key = w.file.replace('.min.css', '').replace('route-', '');
+    versions[key] = hashOf(path.join(OUT_DIR, w.file));
+  }
+  versions.style = hashOf(path.join(OUT_DIR, 'style.min.css'));
+  const versJson = `${JSON.stringify(versions, null, 2)}\n`;
+  const versStale = fs.existsSync(VERS_FILE)
+    ? fs.readFileSync(VERS_FILE, 'utf8') !== versJson
+    : true;
+  if (versStale) {
+    if (checkOnly) {
+      console.error('✖ _data/css_versions.json غير متزامن — شغّل node scripts/build-css.mjs');
+      process.exitCode = 1;
+      return;
+    }
+    fs.writeFileSync(VERS_FILE, versJson, 'utf8');
+  }
+  if (checkOnly && versions) {
+    // مفاتيح الملفات المنشورة يجب أن تكون كلها موجودة
+    for (const w of written) {
+      const key = w.file.replace('.min.css', '').replace('route-', '');
+      if (!(key in versions)) {
+        console.error(`✖ بصمة مفقودة للملف: ${w.file}`);
+        process.exitCode = 1;
+        return;
+      }
+    }
+  }
 
   const total = written.reduce((a, b) => a + b.minKb, 0);
   const biggest = [...written].sort((a, b) => b.minKb - a.minKb).slice(0, 4);

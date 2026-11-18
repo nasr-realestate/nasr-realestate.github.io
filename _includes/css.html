@@ -21,12 +21,17 @@
   {%- if css_pair[0] == css_key -%}
     {%- assign css_found = true -%}
     {%- for css_file in css_pair[1] -%}
-  <link rel="stylesheet" href="{{ '/assets/css/' | append: css_file | relative_url }}?v=20261108-perf">
+    {%- comment -%} بصمة محتوى من _data/css_versions.json (يكتبها build-css.mjs):
+       تتغيّر فقط حين يتغيّر الملف، فلا كسر كاش بلا داعٍ ولا كاش قديم. {%- endcomment -%}
+    {%- assign css_key_ver = css_file | replace: '.min.css', '' -%}
+    {%- assign css_ver = site.data.css_versions[css_key_ver] | default: '0' -%}
+  <link rel="stylesheet" href="{{ '/assets/css/' | append: css_file | relative_url }}?v={{ css_ver }}">
     {%- endfor -%}
   {%- endif -%}
 {%- endfor -%}
 {%- unless css_found -%}
   {%- comment -%} احتياط: تركيبة (body_class|layout) جديدة غير مسجّلة في
      scripts/build-css.mjs — نحمّل الملف الكامل حتى لا تفقد الصفحة تنسيقها. {%- endcomment -%}
-  <link rel="stylesheet" href="{{ '/assets/css/style.min.css?v=20261108-perf' | relative_url }}">
+  {%- assign fb_ver = site.data.css_versions['style'] | default: '0' -%}
+  <link rel="stylesheet" href="{{ '/assets/css/style.min.css' | relative_url }}?v={{ fb_ver }}">
 {%- endunless -%}

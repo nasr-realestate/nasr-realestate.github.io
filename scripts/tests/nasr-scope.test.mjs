@@ -156,6 +156,43 @@ test('صفحتا النخبة مفهرستان: index/follow وsitemap — لا 
   }
 });
 
+// ═══ 2026-11-18: «الحروف المبعثرة» — ثلاثة أسباب حقيقية، كلها مقيسة ═══
+test('عناوين الرئيسية: لا تباعد سالب ولا قطع كلمات ولا عرض أضيق من الكلمة', () => {
+  const css = read('assets/css/style.css');
+  const rules = [];
+  for (const m of css.matchAll(/(body\.homepage \.hp-hero-title[^{]*)\{([^}]*)\}/g)) {
+    rules.push({ sel: m[1].trim(), body: m[2] });
+  }
+  assert.ok(rules.length >= 4, `قواعد العنوان قليلة: ${rules.length}`);
+
+  for (const { sel, body } of rules) {
+    // ١) التباعد السالب يدمج الحروف العربية فيبدو النص مشوّهًا
+    assert.doesNotMatch(
+      body, /letter-spacing:\s*-[\d.]/,
+      `${sel}: تباعد سالب يكسر وصل الحروف العربية`,
+    );
+    // ٢) flex-wrap على العنوان نفسه يجعل كل كلمة عنصرًا يُقطع
+    assert.doesNotMatch(
+      body, /display:\s*flex[^;]*;[^}]*flex-wrap/,
+      `${sel}: flex-wrap على العنوان يقطع الكلمة الواحدة`,
+    );
+    // ٣) max-width بوحدة em أصغر من الكلمة الأطول يُجبر القطع
+    const mw = body.match(/max-width:\s*([\d.]+)em/);
+    if (mw) {
+      assert.ok(
+        Number(mw[1]) >= 9,
+        `${sel}: max-width:${mw[1]}em أضيق من الكلمة العربية الأطول`,
+      );
+    }
+  }
+
+  // ٤) على الجوال: المقاس لا يتجاوز ما يجعل الكلمة أوسع من الشاشة
+  const mobile = css.match(/@media \(max-width: 480px\)[\s\S]{0,600}?hp-hero-title[^}]*font-size:\s*clamp\(([\d.]+)rem,\s*([\d.]+)vw/);
+  assert.ok(mobile, 'قاعدة العنوان على الجوال 480px');
+  const vw = Number(mobile[2]);
+  assert.ok(vw <= 8.5, `الجوال: ${vw}vw = ${(vw * 3.6).toFixed(0)}px على 360px — تُقطع الكلمة`);
+});
+
 // ═══ اختبار رجوع من التدقيق العملي (2026-10-25): تعارض وصف MCP والنطاق ═══
 test('وثائق MCP لا تعِد بمناطق خارج مدينة نصر، ووصف البحث مطابق للنطاق المعلن', () => {
   for (const f of ['mcp.json', '.well-known/mcp.json', '.well-known/mcp/server-card.json']) {
