@@ -8277,9 +8277,10 @@ body.layout-request_page .rq-floating-wa {
   }
 }
 
-/* ┄┄┄ صفحة: معاينة فيديو العرض — النطاق: body.page-video-preview ┄┄┄
-   معاينة داخلية غير مفهرسة (noindex) — لاتخاذ قرار قبل تعميم الفيديو.
-   كل القواعد مُنطَّقة بـ body.page-video-preview حتى لا تتسرّب لبقية الصفحات. */
+/* ┄┄┄ صفحة: شقق بالفيديو — النطاق: body.page-video-preview ┄┄┄
+   الصفحة مفهرسة ومرشَّحة (index, follow + sitemap) — الوصف القديم «noindex»
+   لم يعد صحيحًا. كل القواعد مُنطَّقة بـ body.page-video-preview حتى لا تتسرّب
+   لبقية الصفحات. */
 
 body.page-video-preview .vp-wrap {
   max-width: 1080px;
@@ -8334,6 +8335,23 @@ body.page-video-preview .vp-facts {
 }
 body.page-video-preview .vp-facts li { padding: 3px 0; }
 body.page-video-preview .vp-facts b { color: #e8ede8; }
+/* التسمية بلون أهدأ ثم القيمة — الفصل بلون لا بمسافة كبيرة.
+   لا letter-spacing ولا font-weight 900 (يفكّ الوصل العربي). */
+body.page-video-preview .vp-facts li > span {
+  color: #7d887d;
+  font-size: .8rem;
+  margin-inline-end: 6px;
+}
+body.page-video-preview .vp-facts li > span::after { content: ':'; }
+/* سطر مواصفة بلا تسمية (حين يكون نص المصدر لا يطابق الحقل) */
+body.page-video-preview .vp-facts li.vp-fact-free { color: #c3cdc3; }
+body.page-video-preview .vp-facts li.vp-fact-free b { font-weight: 600; }
+/* عدّاد أعلى الشبكة */
+body.page-video-preview .vp-count {
+  margin: 0 0 14px;
+  color: #9aa69a;
+  font-size: .85rem;
+}
 body.page-video-preview .vp-link {
   display: inline-flex;
   align-items: center;
