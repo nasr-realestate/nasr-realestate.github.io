@@ -8493,3 +8493,85 @@ body.page-luxury .lx-video-more {
 @media (prefers-reduced-motion: reduce) {
   body.page-luxury .btn-video { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   صفحة المعرض السينمائي — نصوص الشريحة متجاوبة (2026-11-18)
+
+   المالك لاحظ تداخل أزرار وعناوين الصفحة على الهاتف، وأرسل قواعد مقترحة.
+   صُحِّحت أربعة عيوب قبل التطبيق — كانت في الكود القديم:
+     ١) الوصف `display: none` تحت 380px ⇒ الزائر يرى السعر بلا وصف إطلاقًا.
+     ٢) `right/left: 16px` ثابتة ⇒ نص يلتصق بالحافة على الشاشات الضيقة جدًا.
+     ٣) العنوان بوزن 900 ومقاس ثابت ⇒ يُبعِد النقاط عن جسم الحرف (شكوى
+        «الحروف المبعثرة» قبل ذلك على الرئيسية، ونفس السبب هنا).
+     ٤) السعر بلا `unicode-bidi` ⇒ «13,000,000 ج.م» يتبدّد ترتيبه في سياق RTL.
+
+   المطلوب من كل هذا: لا نص يتجاوز الحاوية ولا يلتصق بالحافة، من 240px
+   إلى 4K، بلا إخفاء أي معلومة. القواعد مقيّدة بـ body.page-luxury فلا
+   تمسّ صفحة أخرى ولا تضيف بايتًا على مسار غير المعرض.
+   ═══════════════════════════════════════════════════════════════════════ */
+body.page-luxury .prop-data {
+  direction: rtl;
+  text-align: right;
+  right: clamp(16px, 5vw, 25px);
+  left: clamp(16px, 5vw, 25px);
+  max-width: min(700px, 100% - 2 * clamp(16px, 5vw, 25px));
+}
+body.page-luxury .prop-data h2 {
+  /* 700 لا 900: النقاط تبقى قريبة من جسم الحرف على المقاسات الصغيرة */
+  color: var(--gold);
+  font-weight: 700;
+  font-size: clamp(1.25rem, 5vw, 2rem);
+  line-height: 1.45;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px #000;
+}
+body.page-luxury .prop-data p {
+  /* بلا -webkit-line-clamp ولا display:none: الوصف معلومة بيع لا زينة */
+  color: #ddd;
+  font-size: clamp(0.9rem, 3.6vw, 1.1rem);
+  line-height: 1.7;
+  letter-spacing: 0;
+  margin-bottom: 12px;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  overflow: visible;
+}
+body.page-luxury .prop-price {
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: 0;
+  /* عزل الأرقام: «13,000,000 ج.م» يبقى بترتيبه داخل سياق عربي */
+  direction: rtl;
+  unicode-bidi: isolate;
+  display: inline-block;
+  margin-bottom: 16px;
+  padding-right: 14px;
+  border-right: 4px solid var(--gold);
+  color: #fff;
+  text-shadow: 0 2px 8px #000;
+}
+/* الأزرار: لا تتجاوز العرض ولا تتلامس على الهاتف */
+body.page-luxury .prop-data .btn-link,
+body.page-luxury .prop-data .btn-video {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+}
+@media (max-width: 480px) {
+  /* الحاوية ترتفع لتستوعب الوصف كاملًا بعد إعادته */
+  body.page-luxury .prop-data { bottom: calc(56px + var(--safe-bottom)); }
+  body.page-luxury .prop-data .btn-link { font-size: .82rem; padding: 9px 14px; }
+  body.page-luxury .prop-data .btn-video { font-size: .82rem; padding: 8px 14px; }
+}
+@media (max-height: 640px) {
+  /* شاشة قصيرة: نصّ أصغر لا محذوف */
+  body.page-luxury .prop-data h2 { font-size: clamp(1.1rem, 4.4vw, 1.5rem); }
+  body.page-luxury .prop-data p { font-size: clamp(0.82rem, 3.2vw, 0.95rem); line-height: 1.55; }
+  body.page-luxury .prop-price { font-size: clamp(1.2rem, 5vw, 1.7rem); }
+}

@@ -193,6 +193,50 @@ test('عناوين الرئيسية: لا تباعد سالب ولا قطع كل
   assert.ok(vw <= 8.5, `الجوال: ${vw}vw = ${(vw * 3.6).toFixed(0)}px على 360px — تُقطع الكلمة`);
 });
 
+// ═══ 2026-11-18: نصوص شريحة المعرض على الهاتف ═══
+// المالك شكا من تداخل الأزرار والعناوين على الجوال. القواعد صارت clamp()
+// مقيّدة بـ body.page-luxury، والوصف لم يبقَ مخفيًا على الشاشات الضيقة.
+test('نصوص شريحة المعرض متجاوبة: clamp + الوصف ظاهر + السعر معزول', () => {
+  const css = read('assets/css/style.css');
+  const block = css.slice(css.indexOf('body.page-luxury .prop-data {\n  direction: rtl;'));
+  assert.ok(block.length > 500, 'كتلة prop-data المتجاوبة');
+
+  // clamp على العنوان والوصف والسعر
+  for (const [sel, re] of [
+    ['h2', /body\.page-luxury \.prop-data h2 \{[^}]*font-size: clamp\(1\.25rem, 5vw, 2rem\)/],
+    ['p', /body\.page-luxury \.prop-data p \{[^}]*font-size: clamp\(0\.9rem, 3\.6vw, 1\.1rem\)/],
+    ['price', /body\.page-luxury \.prop-price \{[^}]*font-size: clamp\(1\.4rem, 6vw, 2\.2rem\)/],
+  ]) {
+    assert.match(block.replace(/\s+/g, ' '), re, `${sel}: مقاس متجاوب بـ clamp()`);
+  }
+
+  // السعر معزول اتجاهيًا: «13,000,000 ج.م» لا يتبدّد ترتيبه
+  assert.match(block.replace(/\s+/g, ' '), /prop-price \{[^}]*unicode-bidi: isolate/);
+
+  // ⚠️ كان الوصف display:none تحت 380px — معلومة بيع تُخفى
+  const propsData = css.slice(css.lastIndexOf('body.page-luxury .prop-data p {'));
+  assert.doesNotMatch(
+    css.match(/@media \(max-width: 380px\) \{[\s\S]*?\}/)?.[0] || '',
+    /prop-data p \{ display: none/,
+    'الوصف ممنوع يُخفى على الهاتف',
+  );
+  assert.ok(propsData.length > 0);
+});
+
+test('صور المعرض وخلفيته بلا نص مدموج — لا حاجة لتعديل الفيديو', () => {
+  // الخلفية والشرائح صور فوتوغرافية خام من العروض. النص كله HTML فوقها.
+  const html = read('luxury-gallery.html');
+  // النص يأتي من مصفوفة JS كنصوص HTML لا من صورة
+  assert.match(html, /\$\{p\.title\}/, 'العنوان نص HTML');
+  assert.match(html, /\$\{p\.price\}/, 'السعر نص HTML');
+  assert.match(html, /\$\{p\.desc\}/, 'الوصف نص HTML');
+  // ولا صورة تحمل نصًا: الشرائح كلها صور عقارات
+  for (const m of html.matchAll(/img:\s*"([^"]+)"/g)) {
+    assert.match(m[1], /\.(webp|jpe?g|png)$/i, `صورة غير متوقعة: ${m[1]}`);
+    assert.ok(existsSync(path.join(ROOT, 'assets', 'img', 'properties', m[1])), `صورة مفقودة: ${m[1]}`);
+  }
+});
+
 // ═══ اختبار رجوع من التدقيق العملي (2026-10-25): تعارض وصف MCP والنطاق ═══
 test('وثائق MCP لا تعِد بمناطق خارج مدينة نصر، ووصف البحث مطابق للنطاق المعلن', () => {
   for (const f of ['mcp.json', '.well-known/mcp.json', '.well-known/mcp/server-card.json']) {
