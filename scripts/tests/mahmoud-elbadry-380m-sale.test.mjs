@@ -4,7 +4,7 @@
 //   • البنية المعيارية الكاملة (.main-stats-card · .detail-section · .technical-specs · .features-columns · .final-payment-alert)
 //   • خلو المتن من الفئات غير المعرّفة (specs-grid · highlight-box · features-section · location-info)
 //   • سلامة عناصر Flex داخل .spec-item و .features-list li لمنع التمدد الأفقي وإزاحة زر الوكيل
-//   • جودة وأبعاد الصور المشتقة (840×1400 · 800×1333 · 800×600 · 1200×630)
+//   • جودة وأبعاد الصور المشتقة (960×1280 · 800×1067 · 800×600 · 1200×630)
 //   • ظهور بطاقة الوكيل وزر الوكيل العائم دون تصادم مع زر واتساب العائم
 //   • سلامة طبقة الذكاء الاصطناعي، المزامنة مع D1، بوابة الصوت، وعدم اختلاق أي بيانات أو PII.
 import test from 'node:test';
@@ -130,11 +130,12 @@ test('الصورة الرئيسية والنسخ المشتقة محسّنة ب�
   const identify = readImageInfo;
 
   const main = identify(`assets/img/properties/${IMAGE_BASE}.webp`);
-  assert.deepEqual({ w: main.w, h: main.h }, { w: 840, h: 1400 });
+  // 2026-11-18: الصورة استُبدلت بصورة الاستقبال الجديدة (960×1280 أصلًا).
+  assert.deepEqual({ w: main.w, h: main.h }, { w: 960, h: 1280 });
   assert.ok(main.bytes > 15_000 && main.bytes <= 120_000, `حجم الصورة الرئيسية غير متوقع: ${main.bytes}`);
 
   const wide = identify(`assets/img/properties/${IMAGE_BASE}-800w.webp`);
-  assert.deepEqual({ w: wide.w, h: wide.h }, { w: 800, h: 1333 });
+  assert.deepEqual({ w: wide.w, h: wide.h }, { w: 800, h: 1067 });
 
   const card = identify(`assets/img/properties/cards/${IMAGE_BASE}.webp`);
   assert.deepEqual({ w: card.w, h: card.h }, { w: 800, h: 600 });
@@ -145,7 +146,7 @@ test('الصورة الرئيسية والنسخ المشتقة محسّنة ب�
   assert.ok(og.bytes <= 80 * 1024, 'نسخة المشاركة الاجتماعية ضمن سقف 80KB');
 
   const dims = read('_data/image_dims.yml');
-  assert.match(dims, /"mahmoud-elbadry-8th-district-380m":\s*\{w:\s*840,\s*h:\s*1400\}/);
+  assert.match(dims, /"mahmoud-elbadry-8th-district-380m":\s*\{w:\s*960,\s*h:\s*1280\}/);
 });
 
 test('الوكيل ظاهر بلا تصادم بصري: زر الوكيل العائم وبطاقة الوكيل وقاعدة فصل زر واتساب', () => {
