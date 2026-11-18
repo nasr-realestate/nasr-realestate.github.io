@@ -141,3 +141,15 @@ test('خطوة التنفيذ الواحدة تحمل كل المتغيرات ا
     assert.ok(step.env[key], `المتغير ${key} غير مضبوط — سيصل فارغًا للـshell`);
   }
 });
+
+test('النشر يعمل عند الفشل: خطوة مستقلة بـif always()', () => {
+  // العيب المقيس: أول dry_run فشل ولم يُنشر تقرير، فلم نعرف السبب — سجل
+  // الـjob محجوب. النشر يجب ألا يعتمد على نجاح خطوة التنفيذ.
+  const yaml = require('yaml');
+  const doc = yaml.parse(src);
+  const pub = doc.jobs.apply.steps.find((s2) => (s2.name || '').includes('Publish'));
+  assert.ok(pub, 'خطوة النشر غير موجودة');
+  assert.equal(pub.if, 'always()', 'النشر لا يعمل عند الفشل');
+  // ولا تحمل منطق التنفيذ
+  assert.ok(!/INSERT INTO/.test(pub.run), 'خطوة النشر تحمل SQL تنفيذ');
+});
