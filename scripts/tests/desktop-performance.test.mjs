@@ -95,10 +95,19 @@ test('credibility badge has AA text contrast on its actual green background', ()
 });
 
 test('hero width and minimum line height do not depend on font zero-glyph width', () => {
+  // ⚠️ 2026-11-18: هذا الاختبار كان يثبّت `max-width: 7.2em` و`min-height: 3.6em`
+  // على عنوان الهيرو — وهي بالضبط القيم التي كانت تقطع الكلمة العربية الواحدة
+  // فتُظهر النص «بحروف مبعثرة». القيمة المقصودة ليست رقمًا بعينه بل **ألا يعتمد
+  // العرض على عرض صفر-الحرف في الخط**: نستخدم clamp() بوحدة vw + عرضًا كاملًا
+  // + ارتفاع سطر بوحدة em محسوبة من مقاس النص نفسه.
   const css = read('assets/css/style.css');
-  assert.match(css, /max-width: 6.65em;\s*min-height: 3.6em;/);
-  assert.match(css, /\.hp-hero-title \{ max-width: 7.2em;/);
-  assert.match(read('_includes/cairo.html'), /cairo-arabic-900-normal.woff2/);
+  const hero = css.split('body.homepage .hp-hero-title {');
+  assert.ok(hero.length > 3, 'قواعد عنوان الهيرو');
+  const joined = hero.slice(1).map((b) => b.split('}')[0]).join('\n');
+  assert.match(joined, /font-size:\s*clamp\([^)]*vw/, 'عرض متجاوب بوحدة vw لا em ثابت');
+  assert.match(joined, /max-width:\s*100%/, 'العنوان يأخذ عرض الحاوية كاملًا');
+  assert.doesNotMatch(joined, /max-width:\s*\d+(\.\d+)?em/, 'عرض بالـem يقطع الكلمة العربية');
+  assert.match(read('_includes/cairo.html'), /cairo-arabic-900-normal\.woff2/);
 });
 
 test('both layouts share the loader and preserve the noscript GTM fallback', () => {
