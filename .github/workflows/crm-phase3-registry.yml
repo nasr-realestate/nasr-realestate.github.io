@@ -2,13 +2,8 @@ name: CRM Phase 3 Drive File Registry Migration and Metadata Sync
 
 on:
   push:
-    # `arena/**`, not one session's branch name. A gate pinned to a name is a gate that goes silent the
-    # moment the session that pinned it merges and the next session works on a new branch — which is exactly
-    # how this file's isolated D1 verification sat untriggered while its checks still looked green (§2.7 of
-    # CRM_PHASE2_DRIVE_MIGRATION_PLAN.md). What bounds this job is not the branch: it is the target-database
-    # allowlist, the `nasr-market-db` prohibition, the guards that prove nothing else moved, and the fact
-    # that `crm-cloudflare-test-deploy.yml` stays workflow_dispatch-only. So no branch edit can turn this
-    # into a deploy, and no branch edit can make it write to production.
+    # Pushes run synthetic local checks only. They must not create/delete D1
+    # databases, migrate the test database, sync metadata, or access secrets.
     branches:
       - "arena/**"
     paths:
@@ -40,6 +35,11 @@ on:
       - _worker/tests/crm-drive-registry-envelope-sync.test.mjs
       - _worker/ingest-queue/drive-registry-sealed.txt
   workflow_dispatch:
+    inputs:
+      authorize_live_phase3:
+        description: 'Type RUN-PHASE3-LIVE-MIGRATION-AND-SYNC to request the guarded live operation.'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -49,7 +49,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  push-local-checks:
+    name: Phase 3 synthetic checks only (no Cloudflare access)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run boundary, envelope and synthetic database tests
+        run: |
+          set -euo pipefail
+          node scripts/crm/verify-phase3-metadata-boundary.mjs selftest
+          node scripts/crm/drive-registry-envelope.mjs selftest
+          node --test _worker/tests/crm-drive-file-registry.test.mjs \
+            _worker/tests/crm-phase3-metadata-boundary.test.mjs \
+            _worker/tests/crm-drive-ref-bootstrap.test.mjs \
+            _worker/tests/crm-drive-file-versions.test.mjs \
+            _worker/tests/crm-drive-registry-envelope-sync.test.mjs
+
+  authorize-live-phase3:
+    name: Validate explicit Phase 3 live request
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require master and explicit authorization
+        env:
+          AUTHORIZATION: ${{ inputs.authorize_live_phase3 }}
+          REF: ${{ github.ref }}
+        run: |
+          test "$REF" = 'refs/heads/master'
+          test "$AUTHORIZATION" = 'RUN-PHASE3-LIVE-MIGRATION-AND-SYNC'
+
   registry-phase3:
+    if: github.event_name == 'workflow_dispatch'
+    needs: authorize-live-phase3
+    environment: crm-test-deploy
     name: Test 0007 in isolated D1, verify backup, migrate nasr-crm-test-db-v2, and sync sealed metadata
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -708,42 +747,42 @@ jobs:
           finish
 
   p3-r1:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 status — ${{ needs.registry-phase3.outputs.result }} | utc=${{ needs.registry-phase3.outputs.ts_utc }} | unit=${{ needs.registry-phase3.outputs.unit_tests }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
   p3-r2:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 iso+bak — iso=${{ needs.registry-phase3.outputs.iso_d1_test }} | bak=${{ needs.registry-phase3.outputs.backup_check }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
   p3-r3:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 live mig — ${{ needs.registry-phase3.outputs.live_mig }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
   p3-r4:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 sync — ${{ needs.registry-phase3.outputs.sync_stats }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
   p3-r5:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 guards — ${{ needs.registry-phase3.outputs.guards }}'
     runs-on: ubuntu-latest
     steps: [{ run: echo ok }]
 
   p3-r6:
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     needs: registry-phase3
     name: 'P3 recipient key — ${{ needs.registry-phase3.outputs.pubkey }}'
     runs-on: ubuntu-latest

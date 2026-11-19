@@ -270,18 +270,26 @@ test('A5-7 قوائم العمل: طلبات بلا عقار مؤكَّد، وف
   const unmatched = await call('/api/requests?unmatched=1');
   assert.equal(unmatched.body.total, 1);
   assert.equal(unmatched.body.requests[0].id, request.id);
+  // crm_stale_opportunities_v uses SQLite's real clock, so fixed historical
+  // dates eventually make even the "recent" fixture stale. Anchor both events
+  // to the same current clock and keep this test stable as calendar time moves.
+  const clock = Date.now();
+  const oldAt = new Date(clock - 33 * 86400000).toISOString();
+  const recentAt = new Date(clock - 86400000).toISOString();
+  const asOf = new Date(clock).toISOString();
   const inserted = sqlite.prepare(`INSERT INTO crm_opportunities (id, contact_id, lead_label, city, area_label, intent, source, status, track, property_type, notes, next_action, next_followup_at, created_at, updated_at)
-      VALUES ('opp-synth-1', '${contactId}', 'فرصة صناعية', 'مدينة نصر', 'الأندلس', 'buy', 'whatsapp', 'active', 'sale_apt', 'apartment', 'وصف صناعي', 'إرسال وحدات بديلة', '2026-11-04T10:00:00.000Z', '2026-10-01T09:00:00.000Z', '2026-10-01T09:00:00.000Z')`).run();
+      VALUES ('opp-synth-1', ?, 'فرصة صناعية', 'مدينة نصر', 'الأندلس', 'buy', 'whatsapp', 'active', 'sale_apt', 'apartment', 'وصف صناعي', 'إرسال وحدات بديلة', ?, ?, ?)`).run(contactId, asOf, oldAt, oldAt);
   assert.equal(inserted.changes, 1);
-  const queues = await call('/api/queues?now=2026-11-03T00:00:00.000Z');
+  const queues = await call(`/api/queues?now=${encodeURIComponent(asOf)}`);
   assert.equal(queues.body.stale_opportunities.length, 1, 'a month-old opportunity with no interaction is stale');
   assert.ok(queues.body.stale_opportunities[0].days_silent >= 30);
   assert.equal(queues.body.opportunity_stages[0].status, 'active');
-  await call(`/api/interactions`, { method: 'POST', body: { contact_id: contactId, opportunity_id: 'opp-synth-1', kind: 'viewing', occurred_at: '2026-11-02T09:00:00.000Z', summary: 'معاينة صناعية', source: 'manual', actor: 'منى' } });
-  const afterVisit = await call('/api/queues?now=2026-11-03T00:00:00.000Z');
+  const visit = await call(`/api/interactions`, { method: 'POST', body: { contact_id: contactId, opportunity_id: 'opp-synth-1', kind: 'viewing', occurred_at: recentAt, summary: 'معاينة صناعية', source: 'manual', actor: 'منى' } });
+  assert.ok(visit.status < 400, `synthetic visit rejected: ${visit.status}`);
+  const afterVisit = await call(`/api/queues?now=${encodeURIComponent(asOf)}`);
   assert.equal(afterVisit.body.stale_opportunities.length, 0, 'a recorded interaction stops the silence clock');
   assert.equal(afterVisit.body.opportunity_stages[0].viewings, 1, 'the stage view counts viewings from the unified log');
-  const needs = await call('/api/followups/needs?now=2026-11-03T00:00:00.000Z');
+  const needs = await call(`/api/followups/needs?now=${encodeURIComponent(asOf)}`);
   assert.equal(needs.body.count, 0, 'no follow-up is invented for a customer that has none');
 });
 
