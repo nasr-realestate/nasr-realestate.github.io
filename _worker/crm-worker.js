@@ -44,6 +44,7 @@ import {
   recordReviewDecisionPayload,
 } from './crm-drive-file-review.js';
 import { antixWriteLeaseEnabled } from './crm-antix-write-lease.js';
+import { verifyReviewerKeyProof } from './crm-antix-reviewer-key-proof.js';
 import {
   buildFollowupWorkspaceData,
   computeOpportunityMatches,
@@ -2562,6 +2563,16 @@ const EXACT_GET_ROUTES = {
 };
 
 const EXACT_POST_ROUTES = {
+  // Disabled by default: proof of key possession only, never enrollment.
+  '/api/antix/reviewer-key-proof': async (request, env) => {
+    if (env.CRM_ANTIX_ENROLL_PROOF_ENABLED !== 'true') return json({ error: 'proof_not_configured' }, 503);
+    const body = await readJson(request, 4096);
+    try { return json(await verifyReviewerKeyProof(body, env)); }
+    catch (error) {
+      if (error?.message === 'not-configured') return json({ error: 'proof_not_configured' }, 503);
+      return json({ error: 'key_proof_refused' }, 400);
+    }
+  },
   '/api/contacts': (request, env) => createContact(request, env),
   '/api/opportunities': (request, env) => createOpportunity(request, env),
   '/api/conversations/import': (request, env) => handleConversationImportPost(request, env),
