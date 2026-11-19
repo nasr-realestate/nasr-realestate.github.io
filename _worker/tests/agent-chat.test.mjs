@@ -189,9 +189,9 @@ test("C5: a landlord who gave area, size and price is asked only the most import
 // ═════════════ C6 ═════════════
 test("C6: commission, registration and deposit — the documented sale commission is kept, anything undocumented is removed", async () => {
   const c = new Conversation();
-  const ok = await c.say("العمولة كام؟", reply("العمولة 2.5% من قيمة البيع وبتتدفع بعد إتمام الصفقة، ومفيش رسوم مبدئية.", {}, { intent: "site_question" }));
-  assert.equal(ok.json.reply, "العمولة 2.5% من قيمة البيع وبتتدفع بعد إتمام الصفقة، ومفيش رسوم مبدئية.");
-  assert.match(ok.gemini[0].system, /2\.5% من قيمة البيع، تُدفع فقط بعد إتمام الصفقة/);
+  const ok = await c.say("العمولة كام؟", reply("العمولة 1.5% من قيمة البيع وبتتدفع بعد إتمام الصفقة، ومفيش رسوم مبدئية.", {}, { intent: "site_question" }));
+  assert.equal(ok.json.reply, "العمولة 1.5% من قيمة البيع وبتتدفع بعد إتمام الصفقة، ومفيش رسوم مبدئية.");
+  assert.match(ok.gemini[0].system, /1\.5% من قيمة البيع، تُدفع فقط بعد إتمام الصفقة/);
   assert.match(ok.gemini[0].system, /لا يوجد نص منشور عن عمولة الإيجار/);
 
   const rent = await c.say("وعمولة الإيجار كام؟", reply("عمولة الإيجار نص شهر.", {}, { intent: "site_question" }));

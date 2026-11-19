@@ -3758,12 +3758,15 @@ body.homepage .hp-hero-badge {
   }
 body.homepage .hp-hero-badge i { font-size: 0.9rem; }
 body.homepage .hp-hero-title {
-    font-size: 3rem;
-    font-weight: 900;
+    /* 2026-11-18: letter-spacing سالب على العربي يدمج الحروف فيبدو النص
+       مفكّكًا/مشوّهًا، ووزن 900 يُبعد النقاط عن جسم الحرف. صُفِّر التباعد
+       ونزل الوزن إلى 700 — بلا تغيير نص أو ترتيب. */
+    font-size: clamp(1.9rem, 7.4vw, 2.7rem);
+    font-weight: 700;
     color: #f5f5f5;
-    line-height: 1.2;
+    line-height: 1.45;
     margin-bottom: 1rem;
-    letter-spacing: -1px;
+    letter-spacing: 0;
     position: relative;
     z-index: 2;
   }
@@ -3870,10 +3873,10 @@ body.homepage .hp-section-header {
   }
 body.homepage .hp-section-title {
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 700;
     color: #42c541;
     margin-bottom: 12px;
-    letter-spacing: -0.5px;
+    letter-spacing: 0;
   }
 body.homepage .hp-section-title i { margin-left: 10px; opacity: 0.9; }
 body.homepage .hp-section-subtitle {
@@ -4034,11 +4037,13 @@ body.homepage .hp-cinematic {
 body.homepage .hp-cinematic h2 {
     color: #f5f5f5;
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 700;
     margin-bottom: 2.5rem;
     position: relative;
     z-index: 1;
-  }
+  letter-spacing: 0;
+  line-height: 1.55;
+}
 body.homepage .hp-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -4131,11 +4136,13 @@ body.homepage .hp-final-cta {
   }
 body.homepage .hp-final-cta h2 {
     font-size: 1.6rem;
-    font-weight: 900;
+    font-weight: 700;
     color: #f5f5f5;
     margin-bottom: 12px;
     line-height: 1.4;
-  }
+  letter-spacing: 0;
+  line-height: 1.55;
+}
 body.homepage .hp-final-cta h2 span {
     background: #42c541;
     -webkit-background-clip: text;
@@ -4326,6 +4333,12 @@ body.homepage .hp-property-card:hover .hp-property-arrow {
     background: #42c541;
     color: #050505;
   }
+
+/* ═══ 2026-11-18: قابلية قراءة العناوين العربية على الجوال ═══
+   المالك اشتكى أن النصوص تظهر «بحروف مبعثرة». القياس: خط Cairo بوزن 900
+   على مقاس كبير يُبعد النقاط والحركات عن جسم الحرف، فتظهر الكلمة مفكّكة
+   على شاشة صغيرة. التحويل إلى 700 يُعيد الوصل ويُثقل الجسم البصري بلا
+   تغيير النص أو الترتيب أو الوزن (صفر بايت إضافي). */
 /* ═══ Cinematic Gallery Section ═══ */body.homepage .hp-cinematic-gallery {
   position: relative;
   padding: 4rem 2rem;
@@ -4368,13 +4381,20 @@ body.homepage .hp-cinematic-badge {
   font-size: 0.85rem;
   margin-bottom: 20px;
 }
+/* 2026-11-18: المالك اشتكى أن العنوان يظهر «بحروف مبعثرة».
+   السبب: وزن 900 مع مقاس 2.2rem على خط Cairo — النقاط والحركات البعيدة
+   عن جسم الحرف تطفو فتبدو الكلمة مفكّكة على شاشة الجوال.
+   العلاج: وزن 700 (الوصل أوضح وأثقل بصريًا) + مقاس أصغر + line-height
+   أوسع + letter-spacing صريح صفر. لا تغيير في النص أو الترتيب. */
 body.homepage .hp-cinematic-content h2 {
   color: #fff;
-  font-size: 2.2rem;
-  font-weight: 900;
+  font-size: clamp(1.45rem, 4.6vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  word-spacing: normal;
+  line-height: 1.6;
   margin-bottom: 16px;
-  line-height: 1.3;
-  text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  text-shadow: 0 3px 10px rgba(0,0,0,0.55);
 }
 body.homepage .hp-cinematic-content p {
   color: #ccc;
@@ -4421,6 +4441,22 @@ html.page-luxury, body.page-luxury {
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 body.page-luxury * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ═══ 2026-11-18: محتوى المعرض النصي للفهرسة ═══
+   المعرض تجربة ملء الشاشة (position:fixed) ولا موضع فيه لنصّ طويل. القسم
+   موجود في الـHTML ليقرأه الزاحف (عناوين + أسعار + روابط حقيقية)، ومخفي
+   بصريًا — لا display:none لأنه يُسقط المحتوى من بعض الزواحف.
+   clip-path + حجم 1px = مخفي للعين، مقروء للزاحف. */
+body.page-luxury .lx-seo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: normal;
+  border: 0;
+}
 /* ✅ الحل الجذري: 100dvh + position fixed */html.page-luxury, body.page-luxury {
             height: 100%;
             height: 100dvh;
@@ -5546,7 +5582,17 @@ body.homepage .hp-hero .hp-trust-item i.fas { display: block; width: auto; }
   body.homepage .hp-hero-actions .hp-btn { flex: 1 1 0; min-width: 0; max-width: 220px; justify-content: center; white-space: nowrap; }
 }
 @media (max-width: 768px) {
-  body.homepage .hp-hero-title { min-height: 2.4em; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 0.25em; }
+  /* 2026-11-18: كان display:flex + flex-wrap على العنوان نفسه. النتيجة أن كل
+   كلمة تصير عنصرًا مستقلًا بلا قواعد قطع، فتتقطّع الكلمة الواحدة بين سطرين
+   وتظهر «بحروف مبعثرة» على الجوال. الآن: كتلة نصية عادية — المتصفح يقطع
+   عند المسافات فقط، والكلمة العربية تبقى كتلة واحدة لا تنقسم. */
+body.homepage .hp-hero-title {
+  min-height: 2.4em;
+  display: block;
+  text-align: center;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
 }
 body.homepage .hp-hero-contact span { display: block; white-space: nowrap; }
 body.homepage .hp-hero-contact a { color: #42c541; font-weight: 700; text-decoration: none; display: inline-block; padding: 6px 2px; }
@@ -7662,12 +7708,17 @@ body.homepage .hp-hero-badge {
   color: var(--brand-green-soft);
 }
 body.homepage .hp-hero-title {
-  max-width: 6.65em;
-  min-height: 3.6em;
+  /* 2026-11-18: نفس شكوى «الحروف المبعثرة». كان: clamp(2.35rem, 5vw, 4.15rem)
+     مع letter-spacing سالب — على جوال 360px يعطي 35px+ فالكلمات تُقطع.
+     الآن: مقاس محسوب لجوال أولًا + تباعد صفر + قطع عند المسافات فقط. */
+  max-width: 100%;
+  min-height: 2.6em;
   margin: 0 0 1rem;
-  font-size: clamp(2.35rem, 5vw, 4.15rem);
-  line-height: 1.2;
-  letter-spacing: -1.15px;
+  font-size: clamp(1.85rem, 8.2vw, 3.4rem);
+  line-height: 1.4;
+  letter-spacing: 0;
+  overflow-wrap: normal;
+  word-break: keep-all;
   text-align: right;
 }
 body.homepage .hp-hero-title span {
@@ -7918,7 +7969,10 @@ body.homepage .hp-bottom-btn { min-height: 46px; }
 }
 @media (max-width: 480px) {
   body.homepage .hp-hero { padding: 2rem 1rem 1.25rem; }
-  body.homepage .hp-hero-title { max-width: 7.2em; font-size: clamp(2.1rem, 10vw, 2.65rem); }
+  /* 2026-11-18: كان 10vw (36px على 360px) مع max-width:7.2em — الكلمة
+     الواحدة تتجاوز العرض فتُقطع، وهو «الحروف المبعثرة» بعينه.
+     الآن 7.6vw ≈ 27px على 360px + عرض كامل. */
+  body.homepage .hp-hero-title { max-width: 100%; font-size: clamp(1.7rem, 7.6vw, 2.3rem); }
   body.homepage .hp-hero-visual { min-height: 245px; border-radius: 18px; }
   body.homepage .hp-hero-visual-caption { inset-inline: 14px; bottom: 14px; }
   body.homepage .hp-hero-actions { display: grid; grid-template-columns: 1fr 1fr; }
@@ -8221,4 +8275,321 @@ body.layout-request_page .rq-floating-wa {
     bottom: 92px;
     left: 16px;
   }
+}
+
+/* ┄┄┄ صفحة: شقق بالفيديو — النطاق: body.page-video-preview ┄┄┄
+   الصفحة مفهرسة ومرشَّحة (index, follow + sitemap) — الوصف القديم «noindex»
+   لم يعد صحيحًا. كل القواعد مُنطَّقة بـ body.page-video-preview حتى لا تتسرّب
+   لبقية الصفحات. */
+
+body.page-video-preview .vp-wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+body.page-video-preview .vp-head { margin-bottom: 1.6rem; }
+body.page-video-preview .vp-head h1 {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  margin: 0 0 .4rem;
+  color: #f5f7f5;
+}
+body.page-video-preview .vp-head p { color: #a5aaa5; margin: 0; font-size: .95rem; }
+body.page-video-preview .vp-banner {
+  display: grid;
+  gap: .5rem;
+  padding: 14px 18px;
+  margin-bottom: 1.8rem;
+  border: 1px solid rgba(66, 197, 65, .4);
+  border-radius: 14px;
+  background: rgba(66, 197, 65, .07);
+  color: #d7e2d7;
+  font-size: .9rem;
+}
+body.page-video-preview .vp-banner strong { color: #42c541; }
+body.page-video-preview .vp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.5rem;
+}
+body.page-video-preview .vp-card {
+  background: #0c110c;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 18px;
+  padding: 16px;
+}
+body.page-video-preview .vp-card h2 { font-size: 1.05rem; margin: 0 0 .25rem; color: #f5f7f5; }
+body.page-video-preview .vp-meta { color: #9aa69a; font-size: .82rem; margin: 0 0 12px; }
+body.page-video-preview .vp-card video {
+  width: 100%;
+  border-radius: 12px;
+  background: #000;
+  display: block;
+  aspect-ratio: 9 / 16;
+}
+body.page-video-preview .vp-facts {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  font-size: .84rem;
+  color: #9aa69a;
+}
+body.page-video-preview .vp-facts li { padding: 3px 0; }
+body.page-video-preview .vp-facts b { color: #e8ede8; }
+/* التسمية بلون أهدأ ثم القيمة — الفصل بلون لا بمسافة كبيرة.
+   لا letter-spacing ولا font-weight 900 (يفكّ الوصل العربي). */
+body.page-video-preview .vp-facts li > span {
+  color: #7d887d;
+  font-size: .8rem;
+  margin-inline-end: 6px;
+}
+body.page-video-preview .vp-facts li > span::after { content: ':'; }
+/* سطر مواصفة بلا تسمية (حين يكون نص المصدر لا يطابق الحقل) */
+body.page-video-preview .vp-facts li.vp-fact-free { color: #c3cdc3; }
+body.page-video-preview .vp-facts li.vp-fact-free b { font-weight: 600; }
+/* عدّاد أعلى الشبكة */
+body.page-video-preview .vp-count {
+  margin: 0 0 14px;
+  color: #9aa69a;
+  font-size: .85rem;
+}
+body.page-video-preview .vp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: #42c541;
+  font-size: .86rem;
+  font-weight: 700;
+  min-height: 44px;
+}
+body.page-video-preview .vp-notes {
+  margin-top: 2.2rem;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #0a0f0a;
+  border-inline-start: 3px solid #42c541;
+  font-size: .9rem;
+  color: #b6c0b6;
+}
+body.page-video-preview .vp-notes h3 { color: #f5f7f5; font-size: 1rem; margin: 0 0 .7rem; }
+body.page-video-preview .vp-notes ol { margin: 0; padding-inline-start: 1.2rem; display: grid; gap: .6rem; }
+body.page-video-preview .vp-notes b { color: #e8ede8; }
+body.page-video-preview .vp-notes code,
+body.page-video-preview .vp-ask code {
+  background: rgba(255, 255, 255, .07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: .85em;
+}
+body.page-video-preview .vp-ask {
+  margin-top: 1.8rem;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #0c110c;
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+body.page-video-preview .vp-ask h3 { margin: 0 0 .6rem; font-size: 1rem; color: #f5f7f5; }
+body.page-video-preview .vp-ask ol {
+  margin: 0;
+  padding-inline-start: 1.2rem;
+  color: #b6c0b6;
+  font-size: .92rem;
+  display: grid;
+  gap: .45rem;
+}
+
+/* ═══ رابط الفيديو تحت زر المعرض السينمائي (2026-11-18) ═══ */
+body.homepage .hp-cinematic-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: .9rem;
+  padding: .6rem 1.1rem;
+  min-height: 44px;
+  color: #d5f5d5;
+  font-size: .9rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  transition: border-color .2s, background-color .2s;
+}
+body.homepage .hp-cinematic-video-link:hover {
+  border-color: var(--brand-green, #42c541);
+  background-color: rgba(66, 197, 65, .1);
+}
+
+/* ═══ فيديو الوحدة داخل المعرض السينمائي (2026-11-18) ═══ */
+body.page-luxury .btn-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: .55rem 0 .15rem;
+  padding: .55rem 1.15rem;
+  min-height: 44px;
+  font-size: .88rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, .42);
+  border: 1px solid rgba(255, 255, 255, .38);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color .2s, border-color .2s;
+}
+body.page-luxury .btn-video:hover,
+body.page-luxury .btn-video:focus-visible {
+  background: var(--brand-green, #42c541);
+  border-color: var(--brand-green, #42c541);
+}
+body.page-luxury .btn-video i { font-size: .8rem; }
+
+body.page-luxury .lx-video-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, .88);
+  backdrop-filter: blur(6px);
+}
+body.page-luxury .lx-video-box {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  padding: 1rem;
+  background: #0d1410;
+  border: 1px solid rgba(66, 197, 65, .3);
+  border-radius: 16px;
+}
+body.page-luxury .lx-video-box video {
+  width: 100%;
+  max-height: 66vh;
+  border-radius: 10px;
+  background: #000;
+}
+body.page-luxury .lx-video-title {
+  margin: 0;
+  padding-inline-end: 2.4rem;
+  font-size: .95rem;
+  font-weight: 700;
+  color: #d5f5d5;
+}
+body.page-luxury .lx-video-close {
+  position: absolute;
+  top: .5rem;
+  inset-inline-end: .5rem;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+body.page-luxury .lx-video-close:hover { background: rgba(255, 255, 255, .24); }
+body.page-luxury .lx-video-more {
+  align-self: flex-start;
+  padding: .5rem .9rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: .85rem;
+  font-weight: 700;
+  color: #42c541;
+  text-decoration: none;
+  border: 1px solid rgba(66, 197, 65, .45);
+  border-radius: 999px;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.page-luxury .btn-video { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   صفحة المعرض السينمائي — نصوص الشريحة متجاوبة (2026-11-18)
+
+   المالك لاحظ تداخل أزرار وعناوين الصفحة على الهاتف، وأرسل قواعد مقترحة.
+   صُحِّحت أربعة عيوب قبل التطبيق — كانت في الكود القديم:
+     ١) الوصف `display: none` تحت 380px ⇒ الزائر يرى السعر بلا وصف إطلاقًا.
+     ٢) `right/left: 16px` ثابتة ⇒ نص يلتصق بالحافة على الشاشات الضيقة جدًا.
+     ٣) العنوان بوزن 900 ومقاس ثابت ⇒ يُبعِد النقاط عن جسم الحرف (شكوى
+        «الحروف المبعثرة» قبل ذلك على الرئيسية، ونفس السبب هنا).
+     ٤) السعر بلا `unicode-bidi` ⇒ «13,000,000 ج.م» يتبدّد ترتيبه في سياق RTL.
+
+   المطلوب من كل هذا: لا نص يتجاوز الحاوية ولا يلتصق بالحافة، من 240px
+   إلى 4K، بلا إخفاء أي معلومة. القواعد مقيّدة بـ body.page-luxury فلا
+   تمسّ صفحة أخرى ولا تضيف بايتًا على مسار غير المعرض.
+   ═══════════════════════════════════════════════════════════════════════ */
+body.page-luxury .prop-data {
+  direction: rtl;
+  text-align: right;
+  right: clamp(16px, 5vw, 25px);
+  left: clamp(16px, 5vw, 25px);
+  max-width: min(700px, 100% - 2 * clamp(16px, 5vw, 25px));
+}
+body.page-luxury .prop-data h2 {
+  /* 700 لا 900: النقاط تبقى قريبة من جسم الحرف على المقاسات الصغيرة */
+  color: var(--gold);
+  font-weight: 700;
+  font-size: clamp(1.25rem, 5vw, 2rem);
+  line-height: 1.45;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px #000;
+}
+body.page-luxury .prop-data p {
+  /* بلا -webkit-line-clamp ولا display:none: الوصف معلومة بيع لا زينة */
+  color: #ddd;
+  font-size: clamp(0.9rem, 3.6vw, 1.1rem);
+  line-height: 1.7;
+  letter-spacing: 0;
+  margin-bottom: 12px;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  overflow: visible;
+}
+body.page-luxury .prop-price {
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: 0;
+  /* عزل الأرقام: «13,000,000 ج.م» يبقى بترتيبه داخل سياق عربي */
+  direction: rtl;
+  unicode-bidi: isolate;
+  display: inline-block;
+  margin-bottom: 16px;
+  padding-right: 14px;
+  border-right: 4px solid var(--gold);
+  color: #fff;
+  text-shadow: 0 2px 8px #000;
+}
+/* الأزرار: لا تتجاوز العرض ولا تتلامس على الهاتف */
+body.page-luxury .prop-data .btn-link,
+body.page-luxury .prop-data .btn-video {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+}
+@media (max-width: 480px) {
+  /* الحاوية ترتفع لتستوعب الوصف كاملًا بعد إعادته */
+  body.page-luxury .prop-data { bottom: calc(56px + var(--safe-bottom)); }
+  body.page-luxury .prop-data .btn-link { font-size: .82rem; padding: 9px 14px; }
+  body.page-luxury .prop-data .btn-video { font-size: .82rem; padding: 8px 14px; }
+}
+@media (max-height: 640px) {
+  /* شاشة قصيرة: نصّ أصغر لا محذوف */
+  body.page-luxury .prop-data h2 { font-size: clamp(1.1rem, 4.4vw, 1.5rem); }
+  body.page-luxury .prop-data p { font-size: clamp(0.82rem, 3.2vw, 0.95rem); line-height: 1.55; }
+  body.page-luxury .prop-price { font-size: clamp(1.2rem, 5vw, 1.7rem); }
 }

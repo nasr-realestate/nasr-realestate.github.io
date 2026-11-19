@@ -2,16 +2,22 @@
   "_comment": "مولّد آليًا — لا تعدّله يدويًا. node scripts/build-listing-facets.mjs",
   "min_listings_for_index": 6,
   "totals": {
-    "all": 112,
-    "in_area": 100,
+    "all": 118,
+    "in_area": 106,
     "out_of_area": 12,
-    "in_area_sale": 82,
-    "in_area_rent": 18
+    "in_area_sale": 87,
+    "in_area_rent": 19
   },
   "catalog": {
     "per_page": 24,
     "total_pages": 5,
     "order": [
+      "muqrafi-hassan-maamoun-150m",
+      "gamal-eldin-afifi-220m",
+      "apartment-sale-lusaka-6th-district-160m",
+      "apartment-sale-attiya-salwahi-180m",
+      "apartment-sale-ibn-bard-dar-al-arqam-180m",
+      "apartment-rent-mostafa-nahas-main-25k",
       "apartment-sale-ahmed-zomor-260m",
       "apartment-sale-mahmoud-elbadry-8th-district-380m",
       "apartment-sale-al-hayaa-al-arabia-110m",
@@ -130,12 +136,12 @@
   ],
   "segments": {
     "apartments-for-sale": {
-      "count": 71,
+      "count": 76,
       "indexable": true,
-      "sale": 71,
+      "sale": 76,
       "rent": 0,
       "by_type": {
-        "apartment": 68,
+        "apartment": 73,
         "villa": 3
       },
       "sale_price": {
@@ -149,12 +155,12 @@
       }
     },
     "apartments-for-rent": {
-      "count": 10,
+      "count": 11,
       "indexable": true,
       "sale": 0,
-      "rent": 10,
+      "rent": 11,
       "by_type": {
-        "apartment": 10
+        "apartment": 11
       },
       "sale_price": null,
       "rent_price": {
@@ -258,12 +264,12 @@
       }
     },
     "mostafa-el-nahas": {
-      "count": 7,
+      "count": 8,
       "indexable": true,
       "sale": 6,
-      "rent": 1,
+      "rent": 2,
       "by_type": {
-        "apartment": 5,
+        "apartment": 6,
         "office": 1,
         "shop": 1
       },
@@ -272,7 +278,7 @@
         "max": 6000000
       },
       "rent_price": {
-        "min": 55000,
+        "min": 25000,
         "max": 55000
       },
       "area": {
@@ -301,6 +307,28 @@
       "area": {
         "min": 120,
         "max": 400
+      }
+    },
+    "sixth-district": {
+      "count": 10,
+      "indexable": true,
+      "sale": 8,
+      "rent": 2,
+      "by_type": {
+        "apartment": 8,
+        "shop": 2
+      },
+      "sale_price": {
+        "min": 4200000,
+        "max": 7000000
+      },
+      "rent_price": {
+        "min": 16000,
+        "max": 35000
+      },
+      "area": {
+        "min": 67,
+        "max": 600
       }
     }
   },
@@ -366,12 +394,13 @@
       "card_image": "/assets/img/properties/cards/al-muqrafi-street.webp",
       "image": "/assets/img/properties/al-muqrafi-street.webp",
       "segments": [
-        "apartments-for-sale"
+        "apartments-for-sale",
+        "sixth-district"
       ],
       "related": [
-        "makram-ebid-177m",
-        "genena-mall-186m-office-residence",
-        "sunview-mall-207m"
+        "apartment-sale-lusaka-6th-district-160m",
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "apartment-sale-golden-square-243m"
       ]
     },
     "helmy-hassan-ali-160m": {
@@ -464,9 +493,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m",
-        "abu-dawood-fakhry-167m"
+        "ibrahim-nawara-175m"
       ]
     },
     "elnozha-saudi-170m": {
@@ -557,8 +586,8 @@
       "segments": [],
       "related": [
         "ahly-club-ext-158m",
-        "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m"
+        "muqrafi-hassan-maamoun-150m",
+        "apartment-sale-rabaa-investment-abbas-elakkad-165m"
       ]
     },
     "helmy-hassan-ali-220m-lux": {
@@ -674,9 +703,9 @@
         "apartments-for-sale"
       ],
       "related": [
-        "apartment-sale-abdul-halim-abdullah-195m",
-        "helmy-hassan-ali-220m-lux",
-        "mohie-eldin-abbas-akkad-4rooms"
+        "apartment-sale-attiya-salwahi-180m",
+        "apartment-sale-ibn-bard-dar-al-arqam-180m",
+        "apartment-sale-abdul-halim-abdullah-195m"
       ]
     },
     "abbas-elakkad-220m-2026": {
@@ -721,9 +750,9 @@
         "apartments-for-sale"
       ],
       "related": [
-        "apartment-sale-ahmed-zomor-260m",
-        "apartment-sale-mahmoud-elbadry-8th-district-380m",
-        "apartment-sale-al-hayaa-al-arabia-110m"
+        "muqrafi-hassan-maamoun-150m",
+        "gamal-eldin-afifi-220m",
+        "apartment-sale-lusaka-6th-district-160m"
       ]
     },
     "shop-abbas-elakkad-60m-jan26": {
@@ -791,9 +820,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "apartment-sale-lusaka-6th-district-160m",
         "makram-ebid-177m",
-        "makaryafi-260m",
-        "sunview-mall-207m"
+        "makaryafi-260m"
       ]
     },
     "shop-rent-makram-ebeid-67m": {
@@ -812,7 +841,8 @@
       "image": "/assets/img/properties/Luxury-Shop-Makram-Ebeid-67m.webp",
       "segments": [
         "commercial",
-        "makram-ebeid"
+        "makram-ebeid",
+        "sixth-district"
       ],
       "related": [
         "commercial-hq-rent-kabul-street-nasr-city-130m",
@@ -858,12 +888,13 @@
       "card_image": "/assets/img/properties/cards/Abu-Dawood-Ahmed-Fakhry-View.webp",
       "image": "/assets/img/properties/Abu-Dawood-Ahmed-Fakhry-View.webp",
       "segments": [
-        "apartments-for-sale"
+        "apartments-for-sale",
+        "sixth-district"
       ],
       "related": [
-        "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m",
-        "rabaa-square-135m-lux"
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "apartment-sale-makarif-6th-district-130m",
+        "apartment-sale-lusaka-6th-district-160m"
       ]
     },
     "villa-new-cairo-1st-district-568m": {
@@ -1002,8 +1033,8 @@
       "segments": [],
       "related": [
         "apartment-sale-international-park-al-sharq-225m",
-        "apartment-sale-hassan-hassanein-heikal-200m",
-        "apartment-sale-golden-square-243m"
+        "gamal-eldin-afifi-220m",
+        "apartment-sale-hassan-hassanein-heikal-200m"
       ]
     },
     "kabul-st-makram-ebeid-260m": {
@@ -1094,9 +1125,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "apartment-sale-lusaka-6th-district-160m",
         "makram-ebid-177m",
-        "genena-mall-186m-office-residence",
-        "makaryafi-260m"
+        "genena-mall-186m-office-residence"
       ]
     },
     "commercial-shop-for-rent-nozha-street-nasr-city": {
@@ -1209,12 +1240,13 @@
       "card_image": "/assets/img/properties/cards/Abdul-Halim-Balcony-View-195m.webp",
       "image": "/assets/img/properties/Abdul-Halim-Balcony-View-195m.webp",
       "segments": [
-        "apartments-for-sale"
+        "apartments-for-sale",
+        "sixth-district"
       ],
       "related": [
-        "golden-square-garden-156m",
-        "helmy-hassan-ali-220m-lux",
-        "mohie-eldin-abbas-akkad-4rooms"
+        "apartment-sale-lusaka-6th-district-160m",
+        "makaryafi-260m",
+        "abu-dawood-fakhry-167m"
       ]
     },
     "apartment-sale-makarif-6th-district-130m": {
@@ -1232,12 +1264,13 @@
       "card_image": "/assets/img/properties/cards/Makarif-Street-6th-District-130m.webp",
       "image": "/assets/img/properties/Makarif-Street-6th-District-130m.webp",
       "segments": [
-        "apartments-for-sale"
+        "apartments-for-sale",
+        "sixth-district"
       ],
       "related": [
-        "seraj-mall-apartment-170m",
-        "nasr-street-furnished",
-        "green-hills-190m"
+        "abu-dawood-fakhry-167m",
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "apartment-sale-lusaka-6th-district-160m"
       ]
     },
     "apartment-sale-rabaa-investment-abbas-elakkad-165m": {
@@ -1258,9 +1291,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "ibrahim-nawara-175m",
-        "abu-dawood-fakhry-167m",
-        "rabaa-square-135m-lux"
+        "abu-dawood-fakhry-167m"
       ]
     },
     "rent-abdel-hamid-lotfy-tayaran-150m": {
@@ -1375,9 +1408,9 @@
         "apartments-for-rent"
       ],
       "related": [
+        "apartment-rent-mostafa-nahas-main-25k",
         "police-towers-rent-280m",
-        "rent-waha-50th-street-163m",
-        "rent-furnished-batrawy-30k"
+        "rent-waha-50th-street-163m"
       ]
     },
     "luxury-apartment-rent-al-azhar-street-nasr-city-200m": {
@@ -1446,8 +1479,8 @@
       ],
       "related": [
         "apartment-sale-bashar-ibn-burd-makram-ebeid-190m",
-        "apartment-sale-abdul-halim-abdullah-195m",
-        "golden-square-garden-156m"
+        "apartment-sale-attiya-salwahi-180m",
+        "apartment-sale-ibn-bard-dar-al-arqam-180m"
       ]
     },
     "administrative-unit-rent-nasr-city-41m": {
@@ -1516,9 +1549,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "gamal-eldin-afifi-220m",
         "apartment-sale-international-park-al-sharq-225m",
-        "makram-ebid-177m",
-        "genena-mall-186m-office-residence"
+        "apartment-sale-lusaka-6th-district-160m"
       ]
     },
     "apartment-sale-bashar-ibn-burd-makram-ebeid-190m": {
@@ -1563,9 +1596,9 @@
         "apartments-for-sale"
       ],
       "related": [
-        "apartment-sale-ahmed-zomor-260m",
-        "apartment-sale-mahmoud-elbadry-8th-district-380m",
-        "apartment-sale-al-hayaa-al-arabia-110m"
+        "muqrafi-hassan-maamoun-150m",
+        "gamal-eldin-afifi-220m",
+        "apartment-sale-lusaka-6th-district-160m"
       ]
     },
     "apartment-sale-moussa-el-kazem-nasr-city-280m": {
@@ -1632,9 +1665,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "gamal-eldin-afifi-220m",
         "apartment-sale-hassan-hassanein-heikal-200m",
-        "apartment-sale-golden-square-243m",
-        "apartment-sale-moussa-el-kazem-nasr-city-280m"
+        "apartment-sale-golden-square-243m"
       ]
     },
     "apartment-sale-golden-square-243m": {
@@ -1652,12 +1685,13 @@
       "card_image": "/assets/img/properties/cards/golden-square-243m.webp",
       "image": "/assets/img/properties/golden-square-243m.webp",
       "segments": [
-        "apartments-for-sale"
+        "apartments-for-sale",
+        "sixth-district"
       ],
       "related": [
-        "apartment-sale-moussa-el-kazem-nasr-city-280m",
-        "apartment-sale-gamal-afifi-ahly-club-250m",
-        "apartment-sale-abbas-elakkad-refaai-200m-roi"
+        "ali-amer-240m",
+        "apartment-sale-lusaka-6th-district-160m",
+        "makaryafi-260m"
       ]
     },
     "apartment-sale-al-hayaa-al-arabia-110m": {
@@ -1728,6 +1762,146 @@
         "apartment-sale-hassan-maamoun-220m-rented-2027",
         "kabul-st-makram-ebeid-260m",
         "makram-ebid-main-250m"
+      ]
+    },
+    "apartment-rent-mostafa-nahas-main-25k": {
+      "id": "mostafa-nahas-main-25k",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "rent",
+      "type": "apartment",
+      "furnished": null,
+      "price": 25000,
+      "area": null,
+      "rooms": 3,
+      "baths": 2,
+      "date": "2026-11-15",
+      "card_image": "/assets/img/properties/cards/mostafa-nahas-main-25k.webp",
+      "image": "/assets/img/properties/mostafa-nahas-main-25k.webp",
+      "segments": [
+        "apartments-for-rent",
+        "mostafa-el-nahas"
+      ],
+      "related": [
+        "police-towers-rent-280m",
+        "rent-furnished-batrawy-30k",
+        "degla-landmark-122m-rent"
+      ]
+    },
+    "apartment-sale-attiya-salwahi-180m": {
+      "id": "attiya-salwahi-180m",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "sale",
+      "type": "apartment",
+      "furnished": "furnished",
+      "price": 5500000,
+      "area": 180,
+      "rooms": 3,
+      "baths": 2,
+      "date": "2026-11-16",
+      "card_image": "/assets/img/properties/cards/attiya-salwahi-180m.webp",
+      "image": "/assets/img/properties/attiya-salwahi-180m.webp",
+      "segments": [
+        "apartments-for-sale"
+      ],
+      "related": [
+        "apartment-sale-ibn-bard-dar-al-arqam-180m",
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "golden-square-garden-156m"
+      ]
+    },
+    "apartment-sale-ibn-bard-dar-al-arqam-180m": {
+      "id": "ibn-bard-dar-al-arqam-180m",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "sale",
+      "type": "apartment",
+      "furnished": "furnished",
+      "price": 5500000,
+      "area": 180,
+      "rooms": 3,
+      "baths": 2,
+      "date": "2026-11-16",
+      "card_image": "/assets/img/properties/cards/ibn-bard-dar-al-arqam-180m.webp",
+      "image": "/assets/img/properties/ibn-bard-dar-al-arqam-180m.webp",
+      "segments": [
+        "apartments-for-sale"
+      ],
+      "related": [
+        "apartment-sale-attiya-salwahi-180m",
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "golden-square-garden-156m"
+      ]
+    },
+    "apartment-sale-lusaka-6th-district-160m": {
+      "id": "lusaka-6th-district-160m",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "sale",
+      "type": "apartment",
+      "furnished": null,
+      "price": 6000000,
+      "area": 160,
+      "rooms": 3,
+      "baths": 2,
+      "date": "2026-11-17",
+      "card_image": "/assets/img/properties/cards/lusaka-6th-district-160m.webp",
+      "image": "/assets/img/properties/lusaka-6th-district-160m.webp",
+      "segments": [
+        "apartments-for-sale",
+        "sixth-district"
+      ],
+      "related": [
+        "makaryafi-260m",
+        "apartment-sale-abdul-halim-abdullah-195m",
+        "apartment-sale-golden-square-243m"
+      ]
+    },
+    "gamal-eldin-afifi-220m": {
+      "id": "gamal-eldin-afifi-220m",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "sale",
+      "type": "apartment",
+      "furnished": "unfurnished",
+      "price": 6400000,
+      "area": 220,
+      "rooms": 3,
+      "baths": 3,
+      "date": "2026-11-18",
+      "card_image": "/assets/img/properties/cards/gamal-eldin-afifi-220m.webp",
+      "image": "/assets/img/properties/gamal-eldin-afifi-220m.webp",
+      "segments": [
+        "apartments-for-sale"
+      ],
+      "related": [
+        "apartment-sale-hassan-hassanein-heikal-200m",
+        "apartment-sale-international-park-al-sharq-225m",
+        "apartment-sale-lusaka-6th-district-160m"
+      ]
+    },
+    "muqrafi-hassan-maamoun-150m": {
+      "id": "muqrafi-hassan-maamoun-150m",
+      "in_area": true,
+      "out_of_area_reasons": [],
+      "deal": "sale",
+      "type": "apartment",
+      "furnished": null,
+      "price": 5000000,
+      "area": 150,
+      "rooms": 3,
+      "baths": 1,
+      "date": "2026-11-19",
+      "card_image": "/assets/img/properties/cards/muqrafi-150m-master-bedroom.webp",
+      "image": "/assets/img/properties/muqrafi-150m-master-bedroom.webp",
+      "segments": [
+        "apartments-for-sale"
+      ],
+      "related": [
+        "apartment-sale-rabaa-investment-abbas-elakkad-165m",
+        "ibrahim-nawara-175m",
+        "abu-dawood-fakhry-167m"
       ]
     },
     "admin-hq-enppi": {
@@ -1886,12 +2060,13 @@
       "image": "/assets/img/properties/ali-amer.webp",
       "segments": [
         "apartments-for-sale",
-        "makram-ebeid"
+        "makram-ebeid",
+        "sixth-district"
       ],
       "related": [
+        "apartment-sale-golden-square-243m",
         "kabul-st-makram-ebeid-260m",
-        "makram-ebid-main-250m",
-        "makram-ebid-177m"
+        "makram-ebid-main-250m"
       ]
     },
     "andalus1-duplex-285m": {
@@ -2147,9 +2322,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "abu-dawood-fakhry-167m",
-        "rabaa-square-135m-lux"
+        "abu-dawood-fakhry-167m"
       ]
     },
     "ismail-wahby-160m-luxury": {
@@ -2289,9 +2464,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m",
-        "abu-dawood-fakhry-167m"
+        "ibrahim-nawara-175m"
       ]
     },
     "nasr-street-furnished": {
@@ -2481,9 +2656,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m",
-        "abu-dawood-fakhry-167m"
+        "ibrahim-nawara-175m"
       ]
     },
     "obour-buildings-rent-47": {
@@ -2525,7 +2700,8 @@
       "image": "/assets/img/properties/mfroosh-tiran.webp",
       "segments": [
         "apartments-for-rent",
-        "el-tayaran"
+        "el-tayaran",
+        "sixth-district"
       ],
       "related": [
         "police-towers-rent-280m",
@@ -2553,7 +2729,7 @@
       "related": [
         "rent-abdel-hamid-lotfy-tayaran-150m",
         "apartment-rent-gamal-dewidar-enppi-nasr-city-160m",
-        "police-towers-rent-280m"
+        "apartment-rent-mostafa-nahas-main-25k"
       ]
     },
     "republican-guard-197m": {
@@ -2692,9 +2868,9 @@
       "image": "/assets/img/properties/sheraton-nozha.webp",
       "segments": [],
       "related": [
+        "apartment-rent-mostafa-nahas-main-25k",
         "police-towers-rent-280m",
-        "rent-furnished-batrawy-30k",
-        "degla-landmark-122m-rent"
+        "rent-furnished-batrawy-30k"
       ]
     },
     "shop-sale-abbas-akkad-invest": {
@@ -2736,7 +2912,8 @@
       "card_image": "/assets/img/properties/cards/trade-fair.webp",
       "image": "/assets/img/properties/trade-fair.webp",
       "segments": [
-        "commercial"
+        "commercial",
+        "sixth-district"
       ],
       "related": [
         "saudi-buildings-golf-110m",
@@ -2833,9 +3010,9 @@
         "apartments-for-sale"
       ],
       "related": [
+        "muqrafi-hassan-maamoun-150m",
         "apartment-sale-rabaa-investment-abbas-elakkad-165m",
-        "ibrahim-nawara-175m",
-        "abu-dawood-fakhry-167m"
+        "ibrahim-nawara-175m"
       ]
     },
     "tayaran-main-225m-luxury": {

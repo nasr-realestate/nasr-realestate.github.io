@@ -108,6 +108,26 @@ test('icons: fa-subset.css يغطي كل صنف fa-* مستخدم في الصف�
     + '   الحل: python3 scripts/fonts/subset-icons.py  (ثم أعد تشغيل الاختبارات)');
 });
 
+// ═══ 2026-11-18: «نفس المشكلة غير محلولة» — كان الكاش ═══
+// الرقم في ?v= كان ثابتًا (20261108-perf) رغم تغيّر الملفات، فبقي الزائر
+// يرى نسخة CSS قديمة بعد كل نشر. الآن بصمة محتوى من _data/css_versions.json.
+test('css: رابط كل ملف أنماط يحمل بصمة محتواه لا رقمًا ثابتًا', () => {
+  const inc = read('_includes/css.html');
+  assert.doesNotMatch(inc, /\?v=20\d{6}/, 'رقم إصدار ثابت في رابط CSS يعيد الكاش القديم');
+  assert.match(inc, /css_versions/, 'يجب أن يقرأ البصمات من _data/css_versions.json');
+
+  const versions = JSON.parse(read('_data/css_versions.json'));
+  const scopes = JSON.parse(read('_data/css_scopes.json'));
+  for (const files of Object.values(scopes)) {
+    for (const f of files) {
+      const key = f.replace('.min.css', '').replace('route-', '');
+      assert.ok(versions[key], `بصمة مفقودة: ${key} (${f})`);
+      assert.match(versions[key], /^[0-9a-f]{8}$/, `بصمة غير صالحة: ${key}`);
+    }
+  }
+  assert.ok(versions.style, 'بصمة الاحتياط style.min.css');
+});
+
 test('css: الملفات المولَّدة مطابقة للمصدر (build-css --check)', () => {
   const { execFileSync } = require('node:child_process');
   try {

@@ -6,24 +6,21 @@
   "country": "مصر",
   "currency": "EGP",
   "area_unit": "متر مربع",
-  "last_updated": "2026-09-28",
+  "last_updated": "2026-11-17",
   "data_sources": [
-    "Manus (verified - 4 areas)",
-    "Gemini Deep Research (estimated - 20 areas)",
-    "Firecrawl (raw listings - 196 results)",
-    "Aqarmap",
-    "OLX Egypt",
-    "Dubizzle Egypt",
-    "PropertyFinder"
+    "سمسار طلبك (source_id=9 — عروض المنشورة على الموقع)",
+    "Manus Verified (source_id=8 — 3 مناطق موثقة)"
   ],
   "coverage": {
-    "total_areas": 20,
-    "verified_areas": 4,
-    "estimated_areas": 16,
+    "total_areas": 33,
+    "verified_areas": 3,
+    "estimated_areas": 30,
     "total_samples": 485,
-    "disclaimer": "البيانات مبنية على متوسطات السوق المتاحة. الأسعار تقديرية للاسترشاد فقط وليست بديلاً عن تقييم ميداني."
+    "disclaimer": "البيانات مبنية على متوسطات السوق المتاحة. الأسعار تقديرية للاسترشاد فقط وليست بديلاً عن تقييم ميداني.",
+    "areas_in_worker": 31,
+    "areas_not_in_worker": 2,
+    "areas_without_prices": 13
   },
-
   "city_avg": {
     "sale_apartment_per_meter": 23500,
     "sale_apartment_min": 12500,
@@ -36,46 +33,98 @@
     "office_rent_per_meter": 320,
     "rental_yield_percent": 8.5
   },
-
   "areas": [
     {
       "name": "المنطقة الأولى",
       "name_en": "First District",
       "level": "premium",
       "level_ar": "راقٍ (المربع الذهبي)",
-      "landmarks": ["جنينة مول", "مستشفى دار الفؤاد", "جامعة الأزهر", "طيبة مول"],
-      "main_streets": ["عباس العقاد", "محمد طلعت سالم", "الطيران", "البطراوي", "الفداء", "أنور المفتي"],
+      "landmarks": [
+        "جنينة مول",
+        "مستشفى دار الفؤاد",
+        "جامعة الأزهر",
+        "طيبة مول"
+      ],
+      "main_streets": [
+        "عباس العقاد",
+        "محمد طلعت سالم",
+        "الطيران",
+        "البطراوي",
+        "الفداء",
+        "أنور المفتي"
+      ],
       "building_type": "عمارات سكنية فاخرة",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 29544, "min": 22727, "max": 34091, "samples": 5, "confidence": "medium" },
+        "apartment": {
+          "avg": 29544,
+          "min": 22727,
+          "max": 34091,
+          "samples": 5,
+          "confidence": "medium"
+        },
         "villa": null,
         "duplex": null,
         "roof": null
       },
-      "commercial_sale": { "avg": 135000, "min": 85000, "max": 210000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 42000, "min": 32000, "max": 55000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 135000,
+        "min": 85000,
+        "max": 210000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 42000,
+        "min": 32000,
+        "max": 55000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
         "unfurnished": null,
-        "furnished": { "avg": 259, "min": 187, "max": 350, "samples": 4, "confidence": "medium" },
+        "furnished": {
+          "avg": 259,
+          "min": 187,
+          "max": 350,
+          "samples": 4,
+          "confidence": "medium"
+        },
         "commercial": null,
         "office": null
       },
       "data_source": "Manus (verified)",
       "verified": true,
-      "notes": "بيانات من 9 إعلانات حقيقية على Aqarmap/OLX/Property Finder"
+      "notes": "بيانات من 9 إعلانات حقيقية على Aqarmap/OLX/Property Finder",
+      "worker_id": 17,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة الثانية",
       "name_en": "Second District",
       "level": "middle",
       "level_ar": "متوسط",
-      "landmarks": ["جامعة الأزهر بنات", "نادي الفتح", "مستشفى حسبو"],
-      "main_streets": ["خضر التوني", "النصر", "الإستاد"],
+      "landmarks": [
+        "جامعة الأزهر بنات",
+        "نادي الفتح",
+        "مستشفى حسبو"
+      ],
+      "main_streets": [
+        "خضر التوني",
+        "النصر",
+        "الإستاد"
+      ],
       "building_type": "عمارات سكنية",
       "building_age": "25-40 سنة",
       "sale": {
-        "apartment": { "avg": 21000, "min": 17500, "max": 26000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 21000,
+          "min": 17500,
+          "max": 26000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
         "duplex": null,
         "roof": null
@@ -90,536 +139,2031 @@
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "⚠️ Manus لم يجد إعلانات فعلية. البيانات تقديرية."
+      "notes": "⚠️ Manus لم يجد إعلانات فعلية. البيانات تقديرية.",
+      "worker_id": 18,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة الثالثة",
       "name_en": "Third District",
       "level": "upper_middle",
       "level_ar": "فوق المتوسط",
-      "landmarks": ["مستشفى حسبو الدولي", "حديقة الطفل", "مدرسة التربية الحديثة"],
-      "main_streets": ["حسن المأمون", "مصطفى النحاس", "عبد الله العربي", "أحمد فخري"],
+      "landmarks": [
+        "مستشفى حسبو الدولي",
+        "حديقة الطفل",
+        "مدرسة التربية الحديثة"
+      ],
+      "main_streets": [
+        "حسن المأمون",
+        "مصطفى النحاس",
+        "عبد الله العربي",
+        "أحمد فخري"
+      ],
       "building_type": "عمارات سكنية حديثة",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 24000, "min": 19500, "max": 30000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 24000,
+          "min": 19500,
+          "max": 30000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 25500, "min": 21000, "max": 31000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 16000, "min": 13500, "max": 20000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 25500,
+          "min": 21000,
+          "max": 31000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 16000,
+          "min": 13500,
+          "max": 20000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 85000, "min": 55000, "max": 130000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 34000, "min": 27000, "max": 42000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 85000,
+        "min": 55000,
+        "max": 130000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 34000,
+        "min": 27000,
+        "max": 42000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 175, "min": 140, "max": 220, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 260, "min": 210, "max": 340, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 650, "min": 420, "max": 950, "samples": 0, "confidence": "low" },
-        "office": { "avg": 320, "min": 250, "max": 410, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 175,
+          "min": 140,
+          "max": 220,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 260,
+          "min": 210,
+          "max": 340,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 650,
+          "min": 420,
+          "max": 950,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 320,
+          "min": 250,
+          "max": 410,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "بيانات تقديرية — تحتاج تأكيد ميداني"
+      "notes": "بيانات تقديرية — تحتاج تأكيد ميداني",
+      "worker_id": 19,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة الرابعة",
       "name_en": "Fourth District",
       "level": "middle",
       "level_ar": "متوسط",
-      "landmarks": ["مستشفى التأمين الصحي", "سوق القوات المسلحة", "مدرسة طيبة"],
-      "main_streets": ["الطيران", "يوسف عباس", "أسامة بن زيد"],
+      "landmarks": [
+        "مستشفى التأمين الصحي",
+        "سوق القوات المسلحة",
+        "مدرسة طيبة"
+      ],
+      "main_streets": [
+        "الطيران",
+        "يوسف عباس",
+        "أسامة بن زيد"
+      ],
       "building_type": "عمارات سكنية",
       "building_age": "25-40 سنة",
       "sale": {
-        "apartment": { "avg": 20500, "min": 16500, "max": 25000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 20500,
+          "min": 16500,
+          "max": 25000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
         "duplex": null,
-        "roof": { "avg": 14000, "min": 11500, "max": 17000, "samples": 0, "confidence": "low" }
+        "roof": {
+          "avg": 14000,
+          "min": 11500,
+          "max": 17000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 60000, "min": 40000, "max": 85000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 28000, "min": 22000, "max": 35000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 60000,
+        "min": 40000,
+        "max": 85000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 28000,
+        "min": 22000,
+        "max": 35000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 150, "min": 120, "max": 185, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 210, "min": 170, "max": 270, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 480, "min": 320, "max": 700, "samples": 0, "confidence": "low" },
-        "office": { "avg": 260, "min": 200, "max": 330, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 150,
+          "min": 120,
+          "max": 185,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 210,
+          "min": 170,
+          "max": 270,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 480,
+          "min": 320,
+          "max": 700,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 260,
+          "min": 200,
+          "max": 330,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "⚠️ تعارض كبير مع بيانات سابقة (29,000 vs 20,500). تحتاج تدقيق."
+      "notes": "⚠️ تعارض كبير مع بيانات سابقة (29,000 vs 20,500). تحتاج تدقيق.",
+      "worker_id": 20,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة الخامسة",
       "name_en": "Fifth District",
       "level": "middle",
       "level_ar": "متوسط",
-      "landmarks": ["مستشفى التخصصي", "سوق السيارات القديم", "مجمع المدارس"],
-      "main_streets": ["أسامة بن زيد", "مصطفى النحاس", "علي أمين"],
+      "landmarks": [
+        "مستشفى التخصصي",
+        "سوق السيارات القديم",
+        "مجمع المدارس"
+      ],
+      "main_streets": [
+        "أسامة بن زيد",
+        "مصطفى النحاس",
+        "علي أمين"
+      ],
       "building_type": "عمارات سكنية",
       "building_age": "25-40 سنة",
       "sale": {
-        "apartment": { "avg": 19500, "min": 15500, "max": 24000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 19500,
+          "min": 15500,
+          "max": 24000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 20500, "min": 17000, "max": 24500, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 13500, "min": 11000, "max": 16000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 20500,
+          "min": 17000,
+          "max": 24500,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 13500,
+          "min": 11000,
+          "max": 16000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 55000, "min": 38000, "max": 78000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 26000, "min": 20000, "max": 33000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 55000,
+        "min": 38000,
+        "max": 78000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 26000,
+        "min": 20000,
+        "max": 33000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 145, "min": 115, "max": 180, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 200, "min": 160, "max": 250, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 420, "min": 300, "max": 600, "samples": 0, "confidence": "low" },
-        "office": { "avg": 240, "min": 190, "max": 300, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 145,
+          "min": 115,
+          "max": 180,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 200,
+          "min": 160,
+          "max": 250,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 420,
+          "min": 300,
+          "max": 600,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 240,
+          "min": 190,
+          "max": 300,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "بيانات تقديرية"
+      "notes": "بيانات تقديرية",
+      "worker_id": 21,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة السادسة",
       "name_en": "Sixth District",
       "level": "upper_middle",
       "level_ar": "فوق المتوسط (المربع الذهبي)",
-      "landmarks": ["النادي الأهلي", "سيتي ستارز", "حديقة الدولية", "مستشفى الشرطة"],
-      "main_streets": ["مكرم عبيد", "حسن المأمون", "محمد النادي", "أحمد الصاوي", "أحمد فخري", "حسنين هيكل", "محمود غنيم"],
+      "landmarks": [
+        "النادي الأهلي",
+        "سيتي ستارز",
+        "حديقة الدولية",
+        "مستشفى الشرطة"
+      ],
+      "main_streets": [
+        "مكرم عبيد",
+        "حسن المأمون",
+        "محمد النادي",
+        "أحمد الصاوي",
+        "أحمد فخري",
+        "حسنين هيكل",
+        "محمود غنيم"
+      ],
       "building_type": "عمارات سكنية حديثة",
       "building_age": "15-30 سنة",
       "sale": {
-        "apartment": { "avg": 31533, "min": 26000, "max": 42308, "samples": 7, "confidence": "medium" },
+        "apartment": {
+          "avg": 31533,
+          "min": 26000,
+          "max": 42308,
+          "samples": 7,
+          "confidence": "medium"
+        },
         "villa": null,
         "duplex": null,
         "roof": null
       },
-      "commercial_sale": { "avg": 120000, "min": 75000, "max": 180000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 38000, "min": 29000, "max": 48000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 120000,
+        "min": 75000,
+        "max": 180000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 38000,
+        "min": 29000,
+        "max": 48000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 150, "min": 150, "max": 150, "samples": 1, "confidence": "low" },
+        "unfurnished": {
+          "avg": 150,
+          "min": 150,
+          "max": 150,
+          "samples": 1,
+          "confidence": "low"
+        },
         "furnished": null,
         "commercial": null,
         "office": null
       },
       "data_source": "Manus (verified)",
       "verified": true,
-      "notes": "بيانات من 8 إعلانات حقيقية — عينة الإيجار صغيرة جدًا"
+      "notes": "بيانات من 8 إعلانات حقيقية — عينة الإيجار صغيرة جدًا",
+      "worker_id": 22,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة السابعة",
       "name_en": "Seventh District",
       "level": "upper_middle",
       "level_ar": "فوق المتوسط",
-      "landmarks": ["مستشفى السكة الحديد", "معهد ناصر", "حديقة وندر لاند", "محكمة مدينة نصر"],
-      "main_streets": ["عباس العقاد", "مصطفى النحاس", "الطيران", "الخليفة الواثق", "عبدالله العربي"],
+      "landmarks": [
+        "مستشفى السكة الحديد",
+        "معهد ناصر",
+        "حديقة وندر لاند",
+        "محكمة مدينة نصر"
+      ],
+      "main_streets": [
+        "عباس العقاد",
+        "مصطفى النحاس",
+        "الطيران",
+        "الخليفة الواثق",
+        "عبدالله العربي"
+      ],
       "building_type": "عمارات سكنية حديثة",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 26500, "min": 21500, "max": 33000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 26500,
+          "min": 21500,
+          "max": 33000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 28000, "min": 23000, "max": 34500, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 17800, "min": 14500, "max": 22000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 28000,
+          "min": 23000,
+          "max": 34500,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 17800,
+          "min": 14500,
+          "max": 22000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 115000, "min": 70000, "max": 175000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 36000, "min": 28000, "max": 45000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 115000,
+        "min": 70000,
+        "max": 175000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 36000,
+        "min": 28000,
+        "max": 45000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 190, "min": 150, "max": 240, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 280, "min": 210, "max": 370, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 800, "min": 500, "max": 1300, "samples": 0, "confidence": "low" },
-        "office": { "avg": 360, "min": 270, "max": 460, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 190,
+          "min": 150,
+          "max": 240,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 280,
+          "min": 210,
+          "max": 370,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 800,
+          "min": 500,
+          "max": 1300,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 360,
+          "min": 270,
+          "max": 460,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "بيانات تقديرية — تمت مطابقتها مع Firecrawl (متوسط 4.05M لشقة نموذجية)"
+      "notes": "بيانات تقديرية — تمت مطابقتها مع Firecrawl (متوسط 4.05M لشقة نموذجية)",
+      "worker_id": 23,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة الثامنة",
       "name_en": "Eighth District",
       "level": "upper_middle",
       "level_ar": "فوق المتوسط",
-      "landmarks": ["السراج مول", "مستشفى حسبو", "سيتي سنتر ألماظة", "مسجد السلام"],
-      "main_streets": ["مكرم عبيد", "مصطفى النحاس", "السراج", "محسن رشدي", "حسن إبراهيم"],
+      "landmarks": [
+        "السراج مول",
+        "مستشفى حسبو",
+        "سيتي سنتر ألماظة",
+        "مسجد السلام"
+      ],
+      "main_streets": [
+        "مكرم عبيد",
+        "مصطفى النحاس",
+        "السراج",
+        "محسن رشدي",
+        "حسن إبراهيم"
+      ],
       "building_type": "عمارات سكنية حديثة",
       "building_age": "15-30 سنة",
       "sale": {
-        "apartment": { "avg": 25500, "min": 20500, "max": 32000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 25500,
+          "min": 20500,
+          "max": 32000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 27000, "min": 22000, "max": 33000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 17000, "min": 14000, "max": 21000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 27000,
+          "min": 22000,
+          "max": 33000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 17000,
+          "min": 14000,
+          "max": 21000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 95000, "min": 60000, "max": 145000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 35000, "min": 27000, "max": 43000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 95000,
+        "min": 60000,
+        "max": 145000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 35000,
+        "min": 27000,
+        "max": 43000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 185, "min": 145, "max": 230, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 270, "min": 200, "max": 350, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 700, "min": 450, "max": 1100, "samples": 0, "confidence": "low" },
-        "office": { "avg": 340, "min": 260, "max": 430, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 185,
+          "min": 145,
+          "max": 230,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 270,
+          "min": 200,
+          "max": 350,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 700,
+          "min": 450,
+          "max": 1100,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 340,
+          "min": 260,
+          "max": 430,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "بيانات تقديرية — Firecrawl أشار لمتوسط 6.75M لشقة"
+      "notes": "بيانات تقديرية — Firecrawl أشار لمتوسط 6.75M لشقة",
+      "worker_id": 24,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة التاسعة",
       "name_en": "Ninth District",
       "level": "middle",
       "level_ar": "متوسط إلى فوق متوسط",
-      "landmarks": ["مسجد المنهراوي", "مستشفى الجنزوري", "مجمع مدارس العبور", "الوفاء والأمل"],
-      "main_streets": ["مصطفى النحاس", "الوفاء والأمل", "الضباط", "أحمد الزمر"],
+      "landmarks": [
+        "مسجد المنهراوي",
+        "مستشفى الجنزوري",
+        "مجمع مدارس العبور",
+        "الوفاء والأمل"
+      ],
+      "main_streets": [
+        "مصطفى النحاس",
+        "الوفاء والأمل",
+        "الضباط",
+        "أحمد الزمر"
+      ],
       "building_type": "عمارات سكنية",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 28546, "min": 21563, "max": 35556, "samples": 5, "confidence": "medium" },
+        "apartment": {
+          "avg": 28546,
+          "min": 21563,
+          "max": 35556,
+          "samples": 5,
+          "confidence": "medium"
+        },
         "villa": null,
         "duplex": null,
         "roof": null
       },
-      "commercial_sale": { "avg": 65000, "min": 42000, "max": 95000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 29000, "min": 23000, "max": 36000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 65000,
+        "min": 42000,
+        "max": 95000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 29000,
+        "min": 23000,
+        "max": 36000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
         "unfurnished": null,
-        "furnished": { "avg": 175, "min": 175, "max": 175, "samples": 2, "confidence": "low" },
+        "furnished": {
+          "avg": 175,
+          "min": 175,
+          "max": 175,
+          "samples": 2,
+          "confidence": "low"
+        },
         "commercial": null,
         "office": null
       },
       "data_source": "Manus (verified)",
       "verified": true,
-      "notes": "بيانات من 10 إعلانات حقيقية (5 بيع + 5 إيجار)"
+      "notes": "بيانات من 10 إعلانات حقيقية (5 بيع + 5 إيجار)",
+      "worker_id": 25,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
       "name": "المنطقة العاشرة",
       "name_en": "Tenth District",
       "level": "middle",
       "level_ar": "متوسط (عالي الكثافة)",
-      "landmarks": ["موقف العاشر", "سوق السيارات القديم", "مسجد السلام", "مركز شباب نصر"],
-      "main_streets": ["مصطفى النحاس", "أحمد الزمر", "الميثاق", "متولي الشعراوي"],
+      "landmarks": [
+        "موقف العاشر",
+        "سوق السيارات القديم",
+        "مسجد السلام",
+        "مركز شباب نصر"
+      ],
+      "main_streets": [
+        "مصطفى النحاس",
+        "أحمد الزمر",
+        "الميثاق",
+        "متولي الشعراوي"
+      ],
       "building_type": "عمارات سكنية متراصة",
       "building_age": "15-25 سنة",
       "sale": {
-        "apartment": { "avg": 17500, "min": 13500, "max": 22000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 17500,
+          "min": 13500,
+          "max": 22000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 18500, "min": 15000, "max": 22500, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 12000, "min": 9500, "max": 15000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 18500,
+          "min": 15000,
+          "max": 22500,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 12000,
+          "min": 9500,
+          "max": 15000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 58000, "min": 38000, "max": 85000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 24000, "min": 19000, "max": 30000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 58000,
+        "min": 38000,
+        "max": 85000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 24000,
+        "min": 19000,
+        "max": 30000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 130, "min": 100, "max": 165, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 185, "min": 145, "max": 240, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 450, "min": 280, "max": 700, "samples": 0, "confidence": "low" },
-        "office": { "avg": 220, "min": 170, "max": 280, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 130,
+          "min": 100,
+          "max": 165,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 185,
+          "min": 145,
+          "max": 240,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 450,
+          "min": 280,
+          "max": 700,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 220,
+          "min": 170,
+          "max": 280,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "⚠️ تعارض مع بيانات سابقة (21,500). تحتاج تدقيق ميداني."
+      "notes": "⚠️ تعارض مع بيانات سابقة (21,500). تحتاج تدقيق ميداني.",
+      "worker_id": 26,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
-      "name": "المنطقة الحادية عشر",
+      "name": "المنطقة الحادية عشرة",
       "name_en": "Eleventh District",
       "level": "middle",
       "level_ar": "متوسط (حديث امتدادي)",
-      "landmarks": ["مجمع المدارس الدولية", "محطة السوبر جيت الجديدة", "حديقة العاشر"],
-      "main_streets": ["امتداد مصطفى النحاس", "الميثاق"],
+      "landmarks": [
+        "مجمع المدارس الدولية",
+        "محطة السوبر جيت الجديدة",
+        "حديقة العاشر"
+      ],
+      "main_streets": [
+        "امتداد مصطفى النحاس",
+        "الميثاق"
+      ],
       "building_type": "عمارات حديثة",
       "building_age": "5-15 سنة",
       "sale": {
-        "apartment": { "avg": 16500, "min": 13000, "max": 20500, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 16500,
+          "min": 13000,
+          "max": 20500,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
         "duplex": null,
-        "roof": { "avg": 11500, "min": 9000, "max": 14000, "samples": 0, "confidence": "low" }
+        "roof": {
+          "avg": 11500,
+          "min": 9000,
+          "max": 14000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 48000, "min": 32000, "max": 68000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 22000, "min": 17000, "max": 27000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 48000,
+        "min": 32000,
+        "max": 68000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 22000,
+        "min": 17000,
+        "max": 27000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 120, "min": 95, "max": 150, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 170, "min": 135, "max": 210, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 380, "min": 250, "max": 550, "samples": 0, "confidence": "low" },
-        "office": { "avg": 200, "min": 150, "max": 250, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 120,
+          "min": 95,
+          "max": 150,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 170,
+          "min": 135,
+          "max": 210,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 380,
+          "min": 250,
+          "max": 550,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 200,
+          "min": 150,
+          "max": 250,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "منطقة جديدة — بيانات محدودة"
+      "notes": "منطقة جديدة — بيانات محدودة",
+      "worker_id": 27,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
-      "name": "المنطقة الثانية عشر",
+      "name": "المنطقة الثانية عشرة",
       "name_en": "Twelfth District",
       "level": "middle",
       "level_ar": "متوسط (حديث)",
-      "landmarks": ["ميدان الساعة (امتداد)", "حديقة الأمل"],
-      "main_streets": ["امتداد حسن المأمون", "طريق النصر امتداد"],
+      "landmarks": [
+        "ميدان الساعة (امتداد)",
+        "حديقة الأمل"
+      ],
+      "main_streets": [
+        "امتداد حسن المأمون",
+        "طريق النصر امتداد"
+      ],
       "building_type": "عمارات حديثة",
       "building_age": "5-15 سنة",
       "sale": {
-        "apartment": { "avg": 17000, "min": 13500, "max": 21000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 17000,
+          "min": 13500,
+          "max": 21000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
         "duplex": null,
         "roof": null
       },
-      "commercial_sale": { "avg": 50000, "min": 35000, "max": 70000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 23000, "min": 18000, "max": 28000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 50000,
+        "min": 35000,
+        "max": 70000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 23000,
+        "min": 18000,
+        "max": 28000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 125, "min": 100, "max": 155, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 175, "min": 140, "max": 220, "samples": 0, "confidence": "low" },
+        "unfurnished": {
+          "avg": 125,
+          "min": 100,
+          "max": 155,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 175,
+          "min": 140,
+          "max": 220,
+          "samples": 0,
+          "confidence": "low"
+        },
         "commercial": null,
         "office": null
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "بيانات محدودة — منطقة حديثة"
+      "notes": "بيانات محدودة — منطقة حديثة",
+      "worker_id": 28,
+      "worker_scope": "zone",
+      "in_worker": true
     },
     {
-      "name": "حي السفارات",
+      "name": "الحي الدبلوماسي",
       "name_en": "Diplomatic District",
       "level": "upper_middle",
       "level_ar": "فوق المتوسط (هادئ وراقي)",
-      "landmarks": ["السفارات الدولية", "الشركة المصرية للاتصالات", "مدرسة رواد المستقبل"],
-      "main_streets": ["شارع السفارات الرئيسي", "أحمد الزمر"],
+      "landmarks": [
+        "السفارات الدولية",
+        "الشركة المصرية للاتصالات",
+        "مدرسة رواد المستقبل"
+      ],
+      "main_streets": [
+        "شارع السفارات الرئيسي",
+        "أحمد الزمر"
+      ],
       "building_type": "عمارات راقية وفيلات",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 23500, "min": 19000, "max": 29000, "samples": 0, "confidence": "low" },
-        "villa": { "avg": 35000, "min": 29000, "max": 43000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 23500,
+          "min": 19000,
+          "max": 29000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "villa": {
+          "avg": 35000,
+          "min": 29000,
+          "max": 43000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "duplex": null,
         "roof": null
       },
-      "commercial_sale": { "avg": 68000, "min": 45000, "max": 98000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 32000, "min": 25000, "max": 40000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 68000,
+        "min": 45000,
+        "max": 98000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 32000,
+        "min": 25000,
+        "max": 40000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 170, "min": 135, "max": 210, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 250, "min": 195, "max": 320, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 520, "min": 350, "max": 750, "samples": 0, "confidence": "low" },
-        "office": { "avg": 310, "min": 240, "max": 390, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 170,
+          "min": 135,
+          "max": 210,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 250,
+          "min": 195,
+          "max": 320,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 520,
+          "min": 350,
+          "max": 750,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 310,
+          "min": 240,
+          "max": 390,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 3.5M لشقة — يحتاج تدقيق"
+      "notes": "Firecrawl أشار لمتوسط 3.5M لشقة — يحتاج تدقيق",
+      "worker_id": 14,
+      "worker_scope": "district",
+      "in_worker": true
     },
     {
-      "name": "حي الواحة",
+      "name": "الواحة",
       "name_en": "El Waha District",
       "level": "middle",
       "level_ar": "متوسط (حديث العمران)",
-      "landmarks": ["محور المشير طنطاوي", "مسجد المشير", "كمبوندات إميرالد", "محور شينزو آبي"],
-      "main_streets": ["شارع الواحة الرئيسي", "محور جيهان السادات", "الميثاق", "الخمسين"],
+      "landmarks": [
+        "محور المشير طنطاوي",
+        "مسجد المشير",
+        "كمبوندات إميرالد",
+        "محور شينزو آبي"
+      ],
+      "main_streets": [
+        "شارع الواحة الرئيسي",
+        "محور جيهان السادات",
+        "الميثاق",
+        "الخمسين"
+      ],
       "building_type": "عمارات حديثة وأبراج مسورة",
       "building_age": "5-12 سنة",
       "sale": {
-        "apartment": { "avg": 18500, "min": 14500, "max": 23500, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 18500,
+          "min": 14500,
+          "max": 23500,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 19500, "min": 16000, "max": 24000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 12800, "min": 10000, "max": 16000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 19500,
+          "min": 16000,
+          "max": 24000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 12800,
+          "min": 10000,
+          "max": 16000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 62000, "min": 40000, "max": 90000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 26000, "min": 20000, "max": 33000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 62000,
+        "min": 40000,
+        "max": 90000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 26000,
+        "min": 20000,
+        "max": 33000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 140, "min": 110, "max": 175, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 205, "min": 160, "max": 260, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 460, "min": 300, "max": 680, "samples": 0, "confidence": "low" },
-        "office": { "avg": 250, "min": 190, "max": 320, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 140,
+          "min": 110,
+          "max": 175,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 205,
+          "min": 160,
+          "max": 260,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 460,
+          "min": 300,
+          "max": 680,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 250,
+          "min": 190,
+          "max": 320,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 2.9M لشقة — متوافق مع التقدير"
+      "notes": "Firecrawl أشار لمتوسط 2.9M لشقة — متوافق مع التقدير",
+      "worker_id": 15,
+      "worker_scope": "district",
+      "in_worker": true
     },
     {
-            "name": "زهراء مدينة نصر",
+      "name": "زهراء مدينة نصر",
       "name_en": "Zahraa Nasr City",
       "level": "middle",
       "level_ar": "متوسط",
-      "landmarks": ["نادي توليب", "صن سيتي مول", "أسواق بدر المنسي", "مستشفى القوات المسلحة"],
-      "main_streets": ["شارع الزهراء الرئيسي", "الميثاق", "محور المشير", "السلاب"],
+      "landmarks": [
+        "نادي توليب",
+        "صن سيتي مول",
+        "أسواق بدر المنسي",
+        "مستشفى القوات المسلحة"
+      ],
+      "main_streets": [
+        "شارع الزهراء الرئيسي",
+        "الميثاق",
+        "محور المشير",
+        "السلاب"
+      ],
       "building_type": "عمارات سكنية",
       "building_age": "15-30 سنة",
       "sale": {
-        "apartment": { "avg": 16500, "min": 12500, "max": 21000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 16500,
+          "min": 12500,
+          "max": 21000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 17500, "min": 14000, "max": 21500, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 11000, "min": 8500, "max": 14000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 17500,
+          "min": 14000,
+          "max": 21500,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 11000,
+          "min": 8500,
+          "max": 14000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 52000, "min": 32000, "max": 78000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 23000, "min": 18000, "max": 29000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 52000,
+        "min": 32000,
+        "max": 78000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 23000,
+        "min": 18000,
+        "max": 29000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 125, "min": 95, "max": 160, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 180, "min": 140, "max": 230, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 400, "min": 250, "max": 620, "samples": 0, "confidence": "low" },
-        "office": { "avg": 210, "min": 160, "max": 270, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 125,
+          "min": 95,
+          "max": 160,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 180,
+          "min": 140,
+          "max": 230,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 400,
+          "min": 250,
+          "max": 620,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 210,
+          "min": 160,
+          "max": 270,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 3.39M لشقة — يحتاج تدقيق"
+      "notes": "Firecrawl أشار لمتوسط 3.39M لشقة — يحتاج تدقيق",
+      "worker_id": 16,
+      "worker_scope": "district",
+      "in_worker": true
     },
     {
       "name": "رابعة العدوية",
       "name_en": "Rabaa Al-Adawiya",
       "level": "premium",
       "level_ar": "راقٍ للغاية",
-      "landmarks": ["مسجد رابعة العدوية", "مستشفى رابعة", "طيبة مول", "جامعة الأزهر", "استاد القاهرة"],
-      "main_streets": ["شارع النصر", "الطيران", "يوسف عباس"],
+      "landmarks": [
+        "مسجد رابعة العدوية",
+        "مستشفى رابعة",
+        "طيبة مول",
+        "جامعة الأزهر",
+        "استاد القاهرة"
+      ],
+      "main_streets": [
+        "شارع النصر",
+        "الطيران",
+        "يوسف عباس"
+      ],
       "building_type": "عمارات راقية",
       "building_age": "20-35 سنة",
       "sale": {
-        "apartment": { "avg": 31000, "min": 25000, "max": 40000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 31000,
+          "min": 25000,
+          "max": 40000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 32500, "min": 27000, "max": 41000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 21000, "min": 17000, "max": 26000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 32500,
+          "min": 27000,
+          "max": 41000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 21000,
+          "min": 17000,
+          "max": 26000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 140000, "min": 90000, "max": 220000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 44000, "min": 34000, "max": 58000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 140000,
+        "min": 90000,
+        "max": 220000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 44000,
+        "min": 34000,
+        "max": 58000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 220, "min": 175, "max": 285, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 330, "min": 250, "max": 450, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 1100, "min": 700, "max": 1800, "samples": 0, "confidence": "low" },
-        "office": { "avg": 450, "min": 340, "max": 600, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 220,
+          "min": 175,
+          "max": 285,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 330,
+          "min": 250,
+          "max": 450,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 1100,
+          "min": 700,
+          "max": 1800,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 450,
+          "min": 340,
+          "max": 600,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 4.44M (12 عينة) — يحتاج تدقيق"
+      "notes": "Firecrawl أشار لمتوسط 4.44M (12 عينة) — يحتاج تدقيق",
+      "worker_id": 31,
+      "worker_scope": "market_area",
+      "in_worker": true
     },
     {
-      "name": "مكرم عبيد",
+      "name": "ممر مكرم عبيد",
       "name_en": "Makram Ebeid Street",
       "level": "premium",
       "level_ar": "تجاري / سكني راقٍ",
-      "landmarks": ["سيتي ستارز", "حديقة الطفل", "مفكو حلوان", "سيتي سنتر مكرم عبيد"],
-      "main_streets": ["شارع مكرم عبيد الرئيسي", "حافظ رمضان", "عبد الرازق السنهوري"],
+      "landmarks": [
+        "سيتي ستارز",
+        "حديقة الطفل",
+        "مفكو حلوان",
+        "سيتي سنتر مكرم عبيد"
+      ],
+      "main_streets": [
+        "شارع مكرم عبيد الرئيسي",
+        "حافظ رمضان",
+        "عبد الرازق السنهوري"
+      ],
       "building_type": "أبراج سكنية وتجارية",
       "building_age": "15-30 سنة",
       "sale": {
-        "apartment": { "avg": 32000, "min": 23500, "max": 42000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 32000,
+          "min": 23500,
+          "max": 42000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 34000, "min": 28000, "max": 44000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 21500, "min": 17500, "max": 27000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 34000,
+          "min": 28000,
+          "max": 44000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 21500,
+          "min": 17500,
+          "max": 27000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 175000, "min": 110000, "max": 280000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 46000, "min": 35000, "max": 62000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 175000,
+        "min": 110000,
+        "max": 280000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 46000,
+        "min": 35000,
+        "max": 62000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 230, "min": 180, "max": 300, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 340, "min": 260, "max": 480, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 1300, "min": 850, "max": 2200, "samples": 0, "confidence": "low" },
-        "office": { "avg": 480, "min": 360, "max": 650, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 230,
+          "min": 180,
+          "max": 300,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 340,
+          "min": 260,
+          "max": 480,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 1300,
+          "min": 850,
+          "max": 2200,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 480,
+          "min": 360,
+          "max": 650,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 5.48M (9 عينات) — يحتاج تدقيق"
+      "notes": "Firecrawl أشار لمتوسط 5.48M (9 عينات) — يحتاج تدقيق",
+      "worker_id": 29,
+      "worker_scope": "corridor",
+      "in_worker": true
     },
     {
-      "name": "عباس العقاد",
+      "name": "ممر عباس العقاد",
       "name_en": "Abbas El-Akkad Street",
       "level": "premium",
       "level_ar": "تجاري رئيسي / سكني راقٍ",
-      "landmarks": ["الحديقة الدولية", "جنينة مول", "الجامعة العمالية", "بنك مصر"],
-      "main_streets": ["شارع عباس العقاد الرئيسي", "حسنين هيكل", "محمود مصطفى", "البطراوي"],
+      "landmarks": [
+        "الحديقة الدولية",
+        "جنينة مول",
+        "الجامعة العمالية",
+        "بنك مصر"
+      ],
+      "main_streets": [
+        "شارع عباس العقاد الرئيسي",
+        "حسنين هيكل",
+        "محمود مصطفى",
+        "البطراوي"
+      ],
       "building_type": "أبراج متعددة الاستخدامات",
       "building_age": "15-35 سنة",
       "sale": {
-        "apartment": { "avg": 34000, "min": 28000, "max": 45000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 34000,
+          "min": 28000,
+          "max": 45000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 33000, "min": 27000, "max": 42000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 21000, "min": 17000, "max": 26000, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 33000,
+          "min": 27000,
+          "max": 42000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 21000,
+          "min": 17000,
+          "max": 26000,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 185000, "min": 120000, "max": 310000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 45000, "min": 34000, "max": 60000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 185000,
+        "min": 120000,
+        "max": 310000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 45000,
+        "min": 34000,
+        "max": 60000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 225, "min": 175, "max": 290, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 335, "min": 250, "max": 460, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 1400, "min": 900, "max": 2400, "samples": 0, "confidence": "low" },
-        "office": { "avg": 470, "min": 350, "max": 630, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 225,
+          "min": 175,
+          "max": 290,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 335,
+          "min": 250,
+          "max": 460,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 1400,
+          "min": 900,
+          "max": 2400,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 470,
+          "min": 350,
+          "max": 630,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 5.38M (6 عينات) — يحتاج تدقيق"
+      "notes": "Firecrawl أشار لمتوسط 5.38M (6 عينات) — يحتاج تدقيق",
+      "worker_id": 30,
+      "worker_scope": "corridor",
+      "in_worker": true
     },
     {
       "name": "مصطفى النحاس",
       "name_en": "Mostafa El-Nahas Street",
       "level": "upper_middle",
       "level_ar": "تجاري / شريان حيوي",
-      "landmarks": ["محطات المونوريل", "مستشفى دار الدفاع الجوي", "توحيد والنور", "مركز تجاري النحاس"],
-      "main_streets": ["شارع مصطفى النحاس الرئيسي", "عز الدين عمر", "امتداد حسن المأمون"],
+      "landmarks": [
+        "محطات المونوريل",
+        "مستشفى دار الدفاع الجوي",
+        "توحيد والنور",
+        "مركز تجاري النحاس"
+      ],
+      "main_streets": [
+        "شارع مصطفى النحاس الرئيسي",
+        "عز الدين عمر",
+        "امتداد حسن المأمون"
+      ],
       "building_type": "أبراج سكنية حديثة",
       "building_age": "10-25 سنة",
       "sale": {
-        "apartment": { "avg": 27000, "min": 20000, "max": 35000, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 27000,
+          "min": 20000,
+          "max": 35000,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
-        "duplex": { "avg": 28500, "min": 23000, "max": 36000, "samples": 0, "confidence": "low" },
-        "roof": { "avg": 18000, "min": 14500, "max": 22500, "samples": 0, "confidence": "low" }
+        "duplex": {
+          "avg": 28500,
+          "min": 23000,
+          "max": 36000,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "roof": {
+          "avg": 18000,
+          "min": 14500,
+          "max": 22500,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 130000, "min": 80000, "max": 200000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 39000, "min": 30000, "max": 50000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 130000,
+        "min": 80000,
+        "max": 200000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 39000,
+        "min": 30000,
+        "max": 50000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 195, "min": 155, "max": 250, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 285, "min": 215, "max": 380, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 950, "min": 600, "max": 1500, "samples": 0, "confidence": "low" },
-        "office": { "avg": 390, "min": 290, "max": 520, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 195,
+          "min": 155,
+          "max": 250,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 285,
+          "min": 215,
+          "max": 380,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 950,
+          "min": 600,
+          "max": 1500,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 390,
+          "min": 290,
+          "max": 520,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "Firecrawl أشار لمتوسط 3.61M (6 عينات) — متوافق مع التقدير"
+      "notes": "Firecrawl أشار لمتوسط 3.61M (6 عينات) — متوافق مع التقدير",
+      "in_worker": false
     },
     {
       "name": "الوفاء والأمل",
       "name_en": "El Wafaa Wal Amal / Ezbet El Haggana",
       "level": "economic",
       "level_ar": "اقتصادي / شعبية",
-      "landmarks": ["محور الشينزو آبي", "مجمع خدمات مدينة الأمل", "ورش الوفاء والأمل"],
-      "main_streets": ["شارع الورش", "الأمل الرئيسي", "طريق الكيلو 4.5"],
+      "landmarks": [
+        "محور الشينزو آبي",
+        "مجمع خدمات مدينة الأمل",
+        "ورش الوفاء والأمل"
+      ],
+      "main_streets": [
+        "شارع الورش",
+        "الأمل الرئيسي",
+        "طريق الكيلو 4.5"
+      ],
       "building_type": "بناء عشوائي وغير منتظم",
       "building_age": "10-25 سنة",
       "sale": {
-        "apartment": { "avg": 8500, "min": 6000, "max": 11500, "samples": 0, "confidence": "low" },
+        "apartment": {
+          "avg": 8500,
+          "min": 6000,
+          "max": 11500,
+          "samples": 0,
+          "confidence": "low"
+        },
         "villa": null,
         "duplex": null,
-        "roof": { "avg": 5500, "min": 4000, "max": 7500, "samples": 0, "confidence": "low" }
+        "roof": {
+          "avg": 5500,
+          "min": 4000,
+          "max": 7500,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
-      "commercial_sale": { "avg": 25000, "min": 15000, "max": 40000, "samples": 0, "confidence": "low" },
-      "office_sale": { "avg": 12000, "min": 9000, "max": 16000, "samples": 0, "confidence": "low" },
+      "commercial_sale": {
+        "avg": 25000,
+        "min": 15000,
+        "max": 40000,
+        "samples": 0,
+        "confidence": "low"
+      },
+      "office_sale": {
+        "avg": 12000,
+        "min": 9000,
+        "max": 16000,
+        "samples": 0,
+        "confidence": "low"
+      },
       "rent": {
-        "unfurnished": { "avg": 65, "min": 45, "max": 90, "samples": 0, "confidence": "low" },
-        "furnished": { "avg": 95, "min": 70, "max": 130, "samples": 0, "confidence": "low" },
-        "commercial": { "avg": 180, "min": 110, "max": 280, "samples": 0, "confidence": "low" },
-        "office": { "avg": 110, "min": 80, "max": 150, "samples": 0, "confidence": "low" }
+        "unfurnished": {
+          "avg": 65,
+          "min": 45,
+          "max": 90,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "furnished": {
+          "avg": 95,
+          "min": 70,
+          "max": 130,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "commercial": {
+          "avg": 180,
+          "min": 110,
+          "max": 280,
+          "samples": 0,
+          "confidence": "low"
+        },
+        "office": {
+          "avg": 110,
+          "min": 80,
+          "max": 150,
+          "samples": 0,
+          "confidence": "low"
+        }
       },
       "data_source": "Gemini (estimate)",
       "verified": false,
-      "notes": "منطقة شعبية — بيانات محدودة"
+      "notes": "منطقة شعبية — بيانات محدودة",
+      "in_worker": false
+    },
+    {
+      "name": "مدينة نصر (ككل)",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 1,
+      "worker_scope": "city",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الأول",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 2,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الثاني",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 3,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الثالث",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 4,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الرابع",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 5,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الخامس",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 6,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي السادس",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 7,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي السابع",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 8,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الثامن",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 9,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي التاسع",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 10,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي العاشر",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 11,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الحادي عشر",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 12,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
+    },
+    {
+      "name": "الحي الثاني عشر",
+      "name_en": "",
+      "level": "middle",
+      "level_ar": "متوسط",
+      "landmarks": [],
+      "main_streets": [],
+      "building_type": "",
+      "building_age": "",
+      "sale": {
+        "apartment": null,
+        "villa": null,
+        "duplex": null,
+        "roof": null
+      },
+      "commercial_sale": null,
+      "office_sale": null,
+      "rent": {
+        "unfurnished": null,
+        "furnished": null
+      },
+      "data_source": "worker:nasr-valuation v6.2 (names only, no prices)",
+      "verified": false,
+      "in_worker": true,
+      "worker_id": 13,
+      "worker_scope": "district",
+      "notes": "أُضيفت من قائمة الـworker في 2026-11-17 — بلا أسعار، الوصف فارغ بانتظار تحقق ميداني."
     }
   ],
-
   "adjustments": {
     "finishing": {
-      "ultra_lux": { "factor": 1.20, "label": "ألترا سوبر لوكس" },
-      "super_lux": { "factor": 1.00, "label": "سوبر لوكس" },
-      "half_finished": { "factor": 0.78, "label": "نصف تشطيب" },
-      "red_brick": { "factor": 0.68, "label": "طوب أحمر" }
+      "ultra_lux": {
+        "factor": 1.2,
+        "label": "ألترا سوبر لوكس"
+      },
+      "super_lux": {
+        "factor": 1,
+        "label": "سوبر لوكس"
+      },
+      "half_finished": {
+        "factor": 0.78,
+        "label": "نصف تشطيب"
+      },
+      "red_brick": {
+        "factor": 0.68,
+        "label": "طوب أحمر"
+      }
     },
     "floor": {
-      "ground_with_garden": { "factor": 1.08, "label": "أرضي مع حديقة" },
-      "ground_no_garden": { "factor": 0.90, "label": "أرضي بدون حديقة" },
-      "middle": { "factor": 1.00, "label": "أدوار متوسطة" },
-      "high_with_elevator": { "factor": 1.03, "label": "أدوار عليا مع مصعد" },
-      "high_no_elevator": { "factor": 0.78, "label": "أدوار عليا بدون مصعد" }
+      "ground_with_garden": {
+        "factor": 1.08,
+        "label": "أرضي مع حديقة"
+      },
+      "ground_no_garden": {
+        "factor": 0.9,
+        "label": "أرضي بدون حديقة"
+      },
+      "middle": {
+        "factor": 1,
+        "label": "أدوار متوسطة"
+      },
+      "high_with_elevator": {
+        "factor": 1.03,
+        "label": "أدوار عليا مع مصعد"
+      },
+      "high_no_elevator": {
+        "factor": 0.78,
+        "label": "أدوار عليا بدون مصعد"
+      }
     },
     "age": {
-      "new": { "factor": 1.12, "label": "جديد (أقل من 10 سنوات)" },
-      "medium": { "factor": 1.00, "label": "متوسط (10-25 سنة)" },
-      "old": { "factor": 0.85, "label": "قديم (25-40 سنة)" },
-      "very_old": { "factor": 0.73, "label": "قديم جدًا (+40 سنة)" }
+      "new": {
+        "factor": 1.12,
+        "label": "جديد (أقل من 10 سنوات)"
+      },
+      "medium": {
+        "factor": 1,
+        "label": "متوسط (10-25 سنة)"
+      },
+      "old": {
+        "factor": 0.85,
+        "label": "قديم (25-40 سنة)"
+      },
+      "very_old": {
+        "factor": 0.73,
+        "label": "قديم جدًا (+40 سنة)"
+      }
     },
     "street_type": {
-      "main_street": { "factor": 1.28, "label": "شارع رئيسي" },
-      "side_street": { "factor": 0.80, "label": "شارع جانبي" }
+      "main_street": {
+        "factor": 1.28,
+        "label": "شارع رئيسي"
+      },
+      "side_street": {
+        "factor": 0.8,
+        "label": "شارع جانبي"
+      }
     },
     "furnished": {
-      "yes": { "factor": 1.35, "label": "مفروش" },
-      "no": { "factor": 1.00, "label": "غير مفروش" }
+      "yes": {
+        "factor": 1.35,
+        "label": "مفروش"
+      },
+      "no": {
+        "factor": 1,
+        "label": "غير مفروش"
+      }
     }
   },
-
   "property_type_multipliers": {
-    "شقة": 1.00,
+    "شقة": 1,
     "فيلا": 1.25,
     "دوبلكس": 1.15,
     "روف": 0.75,
-    "محل تجاري": 1.80,
-    "مكتب إداري": 1.30,
+    "محل تجاري": 1.8,
+    "مكتب إداري": 1.3,
     "مخزن": 0.65
   },
-
   "market_insights": {
     "trend": "صاعد بثبات",
     "annual_growth_estimate": "15-25%",
@@ -638,11 +2182,13 @@
       "تأثير المونوريل إيجابي على مصطفى النحاس (+20% للمكاتب والمحلات)."
     ]
   },
-
   "confidence_scale": {
     "high": "10+ عينات موثقة من مصادر حقيقية",
     "medium": "5-9 عينات موثقة",
     "low": "تقديري — بدون عينات موثقة",
     "none": "لا توجد بيانات"
-  }
+  },
+  "data_sources_note": "القائمة تُطابق ما يعلنه الـworker الحيّ في GET / (sources). لا يُضاف مصدر إلا بتحقق.",
+  "worker_areas_synced_at": "2026-11-17T21:45:00.000Z",
+  "worker_source": "https://noisy-bush-fd84.footcai-555.workers.dev/"
 }

@@ -126,7 +126,10 @@ test("البوابة تنجح على المستودع الحقيقي (45 ملف�
   const r = spawnSync(process.execPath, [GATE], { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(r.status, 0, `البوابة سقطت على المستودع:\n${r.stdout}${r.stderr}`);
   assert.match(r.stdout, /بوابة ملف الصوت والصوت الموثّق: كل الفحوص الملزمة نجحت/);
-  assert.match(r.stdout, new RegExp(`السجل: ${LOG.entries.length} ملفًا`));
+  // ⚠️ تصحيح 2026-11-18: كانت الرسالة المطبوعة «السجل: N سطر» (سطر 261 في البوابة)
+  // والاختبار يبحث عن «N ملفًا» — فلا يطابق أبدًا. السياسة نفسها لم تتغيّر؛
+  // الرقم الذي يُفحص هو عدد أسطر السجل الفعلي.
+  assert.match(r.stdout, new RegExp(`السجل: ${LOG.entries.length} سطر`));
 });
 
 test("البوابة تنجح على النسخة المصغّرة (أساس الحالات السلبية)", () => {

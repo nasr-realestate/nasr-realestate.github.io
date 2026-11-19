@@ -5,7 +5,7 @@ title: "الوكيل العقاري الذكي لعقارات مدينة نصر"
 permalink: /agent.html
 hide_navbar: true
 custom_viewport: true   # وسم <viewport> خاص بالصفحة يُدرج من extra_head (بدل وسم القالب — ر.أ _layouts/app.html)
-image: "/assets/img/google-local.webp"
+image: "/assets/img/agent-preview.png"
 description: "بتدور على عقار أو عايز تبيع أو تأجر؟ احكي طلبك للوكيل الذكي، وخليه يساعدك تبدأ خطوتك الجاية. اضغط وابدأ المحادثة."
 extra_head: |
   <!-- ⭐ وسم viewport خاص بالصفحة (مُنقَّح 2026-10-19)
@@ -15,10 +15,15 @@ extra_head: |
        maximum-scale / user-scalable مرفوضة (WCAG 1.4.4). -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
-  <meta property="og:image:width" content="1424">
-  <meta property="og:image:height" content="752">
-  <meta property="og:image:secure_url" content="https://nasr-realestate.github.io/assets/img/google-local.webp">
-  <meta property="og:image:type" content="image/webp">
+  <!-- ⭐ إصلاح معاينة واتساب (2026-11-18):
+       كانت هنا وسوم og:image:width/height/secure_url/type **بلا وسم og:image** —
+       وسوم يتيمة لا تُنتج معاينة، والمصدر الحقيقي {% seo %} كان يقرأ
+       image: /assets/img/google-local.webp (صيغة webp لا يعرضها واتساب).
+       الآن الصورة PNG 1200×630 في Front Matter (image:) و{% seo %} يصدر
+       og:image و twitter:image منها — تبقى هذه الوسوم المساعدة فقط. -->
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:alt" content="الوكيل العقاري الذكي من سمسار طلبك — احكي طلبك وابدأ المحادثة">
   <meta name="twitter:image:alt" content="الوكيل العقاري الذكي من سمسار طلبك — احكي طلبك وابدأ المحادثة">
   <style>
@@ -2353,7 +2358,7 @@ async function sendLocalRequest(txt) {
       const confirmed = p.last_confirmed_at ? "آخر تأكيد موثق من المالك: " + p.last_confirmed_at + "، وقد يتغير بعده." : "لا يوجد تاريخ تأكيد موثق؛ التوافر يحتاج إلى تأكيد من المالك.";
       renderMsg([p.title, (p.price || "السعر غير معلن") + (p.area ? " — " + p.area : ""), p.location || "",
         "تاريخ النشر: " + (p.datePosted || "غير مسجل") + ". " + confirmed,
-        "العمولة المنشورة على الموقع للبيع 2.5% بعد إتمام الصفقة؛ الترخيص والتأمين وعمولة الإيجار غير منشورة ولا تُفترض.",
+        "عمولة البيع 1.5% بعد إتمام الصفقة؛ الترخيص والتأمين وعمولة الإيجار غير منشورة ولا تُفترض، ولا تُذكر العمولة إلا إذا سأل العميل عنها صراحةً.",
         new URL("/properties/" + p.slug + "/", location.origin).href].filter(Boolean).join("\n"), "bot");
       return;
     }

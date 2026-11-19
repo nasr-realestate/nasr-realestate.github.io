@@ -63,12 +63,21 @@ test("كل طلب منشور: description في المصدر + JSON-LD لا يس�
   assert.match(layout, /"description":\s*\{\{\s*page\.description\s*\|\s*default:\s*page\.title\s*\|\s*jsonify\s*\}\}/);
 });
 
-test("agent.html: og:image:type = image/webp ويطابق امتداد الصورة", () => {
+test("agent.html: صورة المعاينة PNG/JPEG 1200×630 وتطابق og:image:type", () => {
+  // ⚠️ سبب الإصلاح (2026-11-18): كان الاختبار يثبّت `image/webp` — وهي بالضبط
+  // الصيغة التي لا يعرضها واتساب في معاينة الرابط. صار يتحقق من التطابق
+  // والامتداد المعاين، لا من صيغة بعينها.
   const html = read('agent.html');
   const type = html.match(/<meta property="og:image:type" content="([^"]+)">/);
-  assert.equal(type?.[1], 'image/webp');
+  assert.match(type?.[1] || '', /^image\/(png|jpeg)$/, 'واتساب لا يعاين webp');
   const img = html.match(/^image:\s*"([^"]+)"/m);
-  assert.equal(path.extname(img?.[1] || ''), '.webp');
+  const ext = path.extname(img?.[1] || '').toLowerCase();
+  assert.match(ext, /^\.(png|jpg|jpeg)$/);
+  const w = html.match(/<meta property="og:image:width" content="(\d+)">/);
+  const h = html.match(/<meta property="og:image:height" content="(\d+)">/);
+  assert.equal(w?.[1], '1200');
+  assert.equal(h?.[1], '630');
+  assert.ok(fs.existsSync(path.join(ROOT, img[1])), `صورة المعاينة غير موجودة: ${img[1]}`);
 });
 
 test("agent.html: viewport-fit + interactive-widget بلا تعطيل التكبير (WCAG 1.4.4)", () => {

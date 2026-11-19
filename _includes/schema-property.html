@@ -130,6 +130,15 @@
   "image": ["{{ site.url }}{{ site.baseurl }}/assets/img/properties/{{ page.image_file }}"],
   {%- endif %}
   "datePosted": "{{ page.date | date_to_xmlschema }}",
+  {%- comment -%}
+    2026-11-17 — dateModified (اختياري): يُضاف فقط إذا كان الملف يعلن تاريخ
+    مراجعة حقيقيًا (last_modified / updated في الـfront matter). لا نضع تاريخ
+    البناء هنا: تاريخ إعادة النشر ليس تاريخ تحديث محتوى، وإعلانه مضلّل.
+  {%- endcomment -%}
+  {%- assign updated_at = page.last_modified | default: page.updated -%}
+  {%- if updated_at -%}
+  "dateModified": "{{ updated_at | date_to_xmlschema }}",
+  {%- endif -%}
   "inLanguage": "ar-EG",
   "isPartOf": { "@id": "{{ site.url }}/properties/#collection" },
   "mainEntityOfPage": { "@id": "{{ page_url }}" },
@@ -153,7 +162,7 @@
   ],
   "offers": {
     "@type": "Offer",
-    "@id": "{{ page_url }}#offer",
+    "@id": "{{ page_url }}#offer",{%- comment -%} 2026-11-17 — كان "#offer" مطلقًا سابقًا لكن @id في offers ظهر نسبيًا في مخرجات المعاينة المحلية: نُثبّته صريحًا على page_url. {%- endcomment -%}
     "url": "{{ page_url }}",
     "priceCurrency": "EGP",
     {%- if price_num > 0 %}

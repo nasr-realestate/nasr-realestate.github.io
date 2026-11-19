@@ -147,11 +147,15 @@ test('acceptance 17: licence, rent commission and deposit get no invented answer
     const r = A.reduce(searchDraft(), q);
     assert.match(r.response, /غير منشورة/);
     assert.match(r.response, /تحتاج تأكيدًا/);
-    // 2026-10-27: عمولة البيع منشورة فعلًا (index.html FAQ + llms.txt) — كان الرد يقول إنها غير منشورة
-    assert.match(r.response, /2\.5% من قيمة البيع، تُدفع فقط بعد إتمام الصفقة/);
-    assert.doesNotMatch(r.response, /نص شهر|شهر واحد|1%|3%/, 'no invented rent commission');
+    // 2026-11-18: عمولة البيع 1.5% (قرار المالك) — كانت 2.5% وأُصلحت في كل المنشور.
+    assert.match(r.response, /1\.5% من قيمة البيع/);
+    assert.doesNotMatch(r.response, /نص شهر|شهر واحد|2\.5%|3%/, 'no invented rent commission');
   }
-  assert.match(read('index.html'), /العمولة 2\.5% من قيمة البيع/, 'the quoted figure is the published one');
+  assert.match(read('index.html'), /عمولة البيع 1\.5% من قيمة البيع/, 'the quoted figure is the published one');
+  // النسبة المنشورة في كل السطح العام — لا مكان يخالف الرقم المعتمد
+  for (const f of ['index.html', '_layouts/property_page.html', 'llms.txt']) {
+    assert.doesNotMatch(read(f), /2\.5%/, `${f}: الرقم القديم 2.5% ما زال منشورًا`);
+  }
 });
 test('acceptance 18: fallback valuation is disclosed before the number with limited confidence', () => {
   const e = V.assess({ area_found: 'مدينة نصر', fallback_used: true, confidence: 'high', sample_count: 49, calculated_at: '2026-10-20', notes: 'اختبار إدخال snapshot واحد' }, { area: 'عباس العقاد' }, Date.parse('2026-10-26'));

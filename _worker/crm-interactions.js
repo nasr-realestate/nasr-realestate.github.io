@@ -251,8 +251,19 @@ export async function operationalQueuesPayload(db, { now, limit = 50 } = {}) {
         WHERE datetime(q.due_at) > datetime(?, ?) ORDER BY q.due_at ASC LIMIT ?`).bind(at, CAIRO_OFFSET, size).all(),
     db.prepare(`SELECT q.* FROM crm_followups_queue_v q
         WHERE datetime(q.due_at) <= datetime(?, ?) ORDER BY q.due_at ASC LIMIT ?`).bind(at, CAIRO_OFFSET, size).all(),
-    db.prepare(`SELECT * FROM crm_stale_opportunities_v
-        WHERE days_silent >= 14 ORDER BY days_silent DESC LIMIT ?`).bind(size).all(),
+    // أيام الصمت تُحسب من «الآن» المطلوب (at) لا من ساعة الحقيقة داخل العرض:
+    // كان crm_stale_opportunities_v يستخدم julianday('now') فتتغيّر النتيجة بمرور
+    // الأيام حتى لو طلب المستدعي نفس اللحظة (اختبار A5-7 فشل 2026-11-16 لأن آخر
+    // تفاعل 2026-11-02 بلغ 14 يومًا من ساعة الجدار). الترتيب والتعريف كما في العرض.
+    db.prepare(`SELECT * FROM (
+          SELECT o.id AS opportunity_id, o.contact_id, o.status, o.next_followup_at,
+                 (SELECT MAX(i.occurred_at) FROM crm_interactions i WHERE i.opportunity_id = o.id) AS last_interaction_at,
+                 CAST((julianday(?) - julianday(COALESCE(
+                        (SELECT MAX(i.occurred_at) FROM crm_interactions i WHERE i.opportunity_id = o.id),
+                        o.updated_at))) * 24 * 60 AS INTEGER) / 1440 AS days_silent
+            FROM crm_opportunities o
+           WHERE o.status NOT IN ('won', 'lost'))
+        WHERE days_silent >= 14 ORDER BY days_silent DESC LIMIT ?`).bind(at, size).all(),
     db.prepare(`SELECT * FROM crm_requests_unmatched_v ORDER BY updated_at ASC LIMIT ?`).bind(size).all(),
     db.prepare(`SELECT * FROM crm_opportunity_stages_v ORDER BY updated_at DESC LIMIT ?`).bind(size).all(),
   ]);

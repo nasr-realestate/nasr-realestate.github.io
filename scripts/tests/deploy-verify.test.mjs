@@ -36,7 +36,7 @@ function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 }
 
-function pageHtml({ title = 'عنوان الصفحة', description = '', ogImageType = 'image/webp', duplicateDescription = false } = {}) {
+function pageHtml({ title = 'عنوان الصفحة', description = '', ogImageType = 'image/png', ogImage = 'https://site.test/assets/img/agent-preview.png', twitterImage = 'https://site.test/assets/img/agent-preview.png', duplicateDescription = false } = {}) {
   const meta = [
     `<meta name="description" content="${description}">`,
     duplicateDescription ? `<meta name="description" content="${description}">` : '',
@@ -44,6 +44,8 @@ function pageHtml({ title = 'عنوان الصفحة', description = '', ogImage
     `<meta property="og:description" content="${description}">`,
     `<meta name="twitter:title" content="${title}">`,
     `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">`,
+    ogImage ? `<meta property="og:image" content="${ogImage}">` : '',
+    twitterImage ? `<meta name="twitter:image" content="${twitterImage}">` : '',
     ogImageType ? `<meta property="og:image:type" content="${ogImageType}">` : '',
   ].filter(Boolean).join('\n');
   return `<!doctype html><html dir="rtl"><head><title>${title}</title>\n${meta}\n</head><body></body></html>`;
@@ -53,7 +55,7 @@ function htmlResponse(html, status = 200) {
   return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
-function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/webp', deployInfo = 'ok', styleBody = null } = {}) {
+function fakeSite({ sha = 'abc123', feedCount, mcpCount, audioStatus = 206, mcpStatus = 200, duplicateDescription = false, agentOgType = 'image/png', deployInfo = 'ok', styleBody = null } = {}) {
   const properties = Array.from({ length: feedCount ?? REPO_COUNT }, (_, i) => ({ slug: `p-${i}` }));
   const calls = { audio: 0, feed: 0, health: 0 };
   const fetchImpl = async (url, init = {}) => {
@@ -129,10 +131,11 @@ test("extractSocialMeta: يعدّ الوسوم ويستخرج المحتوى", (
   assert.equal(meta.ogTitleCount, 1);
   assert.equal(meta.twitterTitleCount, 1);
   assert.equal(meta.description, 'وصف كامل');
-  assert.equal(meta.ogImageType, 'image/webp');
+  assert.equal(meta.ogImageType, 'image/png');
+  assert.match(meta.ogImage, /agent-preview\.png$/);
 });
 
-test("checkSocialHead: يمرّ ويطابق وصف المصدر، ويفشل عند التكرار/عدم التطابق", () => {
+test("checkSocialHead: يمرّ ويطابق وصف المصدر، ويفشل عند التكرار/عدم التطابق/غياب og:image", () => {
   const good = checkSocialHead(pageHtml({ description: propertyDesc }), { kind: 'property' }, propertyDesc);
   assert.equal(good.ok, true, JSON.stringify(good.problems));
 
@@ -144,9 +147,14 @@ test("checkSocialHead: يمرّ ويطابق وصف المصدر، ويفشل ع
   assert.equal(mismatch.ok, false);
   assert.ok(mismatch.problems.some((p) => /لا يبدأ بوصف المصدر/.test(p)));
 
-  const badAgent = checkSocialHead(pageHtml({ description: 'وصف', ogImageType: 'image/png' }), { kind: 'agent' }, '');
+  const badAgent = checkSocialHead(pageHtml({ description: 'وصف', ogImageType: 'image/webp', ogImage: 'https://site.test/a.webp' }), { kind: 'agent' }, '');
   assert.equal(badAgent.ok, false);
   assert.ok(badAgent.problems.some((p) => /og:image:type/.test(p)));
+
+  // ⭐ (2026-11-18) العيب الأصلي: وسوم width/height/type بلا og:image — لا معاينة.
+  const noImage = checkSocialHead(pageHtml({ description: 'وصف', ogImage: null, twitterImage: null }), { kind: 'agent' }, '');
+  assert.equal(noImage.ok, false);
+  assert.ok(noImage.problems.some((p) => /og:image مفقود/.test(p)), JSON.stringify(noImage.problems));
 });
 
 test("verifyDeployment: نجاح كامل عندما يتطابق SHA والعدد والصوت", async () => {
@@ -178,7 +186,7 @@ test("verifyDeployment: SHA مختلف أو MCP ناقص أو صوت مكسور 
   assert.equal(rh.ok, false);
   assert.ok(rh.failures.some((f) => f.check === 'head:property-helmy'), JSON.stringify(rh.failures));
 
-  const badAgentHead = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT, agentOgType: 'image/png' });
+  const badAgentHead = fakeSite({ sha: 'abc123', feedCount: REPO_COUNT, mcpCount: REPO_COUNT, agentOgType: 'image/webp' });
   const ra = await verifyDeployment({ site: 'https://site.test', expectedSha: 'abc123', fetchImpl: badAgentHead.fetchImpl });
   assert.equal(ra.ok, false);
   assert.ok(ra.failures.some((f) => f.check === 'head:agent'));

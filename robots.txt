@@ -25,6 +25,9 @@ User-agent: *
 Allow: /
 Allow: /ai-feed.json
 Allow: /search-data.json
+# 2026-11-17 — فهرس المطابقة الخفيف (صف لكل وحدة بلا وصف، مدينة نصر فقط).
+# وُضع هنا لأن الوكيل الذي ينزّله يرشّح بـ34KB بدل 240KB.
+Allow: /shortlist.json
 # ⚠️ لا يوجد هنا توجيه Agentmap (ARD) — متعمّد وموثّق (2026-10-21):
 # تدقيق SEO الخاص بـLighthouse يرفض أي توجيه robots لا يعرفه (Unknown
 # directive) وأنزل النتيجة 96 ← 92. اكتشاف كتالوج ARD لا يفقد شيئًا:

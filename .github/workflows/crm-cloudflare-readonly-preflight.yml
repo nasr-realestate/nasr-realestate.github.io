@@ -21,7 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.ARENA_CLOUDFLARE_TOKEN }}
+      # 2026-11-17 — المفتاح الجديد أولًا، والقديم كاحتياط فقط.
+      # الاسم الجديد يصف صلاحيته؛ والسلسلة القديمة (7 أسماء) تبقى للتشغيلات
+      # السابقة فلا ينكسر شيء. هذا الملف قراءة فقط ولا يكتب أي شيء.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN || secrets.ARENA_CLOUDFLARE_TOKEN }}
     outputs:
       outcome: ${{ steps.probe.outputs.outcome }}
       verify: ${{ steps.probe.outputs.verify }}
