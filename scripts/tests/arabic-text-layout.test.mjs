@@ -22,15 +22,35 @@ function py(code) {
   }).trim();
 }
 
-const HAS_MODULES = (() => {
+/*
+ * عيب 2026-11-20: كان الفحص `import uharfbuzz, freetype` — حزمتان فقط من
+ * خمس. فكان نقص numpy أو fonttools أو brotli يُنتج SKIP «كل شيء سليم»
+ * بينما الاختبارات الثلاثة تفشل فعلًا. حارس يتجاوز ما يحرسه = إشارة
+ * تُعلّم الجميع التجاهل (نفس نمط عيب verify-deployment).
+ *
+ * الإصلاح: نستورد السكربت نفسه. أي تبعية ناقصة تُفشل الاستيراد هنا،
+ * فتصير معروفة باسمها بدل أن تُخفى. لا قائمة أسماء تُنسى تحديثها.
+ */
+const importError = (() => {
   try {
-    py('import uharfbuzz, freetype; print("ok")');
-    return true;
-  } catch {
+    py('import arabic_text; print("ok")');
     return false;
+  } catch (err) {
+    const msg = String(err.stderr || err.message || err);
+    const missing = msg.match(/No module named '([^']+)'/);
+    return missing ? `حزمة بايثون ناقصة: ${missing[1]}` : msg.split('\n').filter(Boolean).pop();
   }
 })();
-const skipDeps = skip || (HAS_MODULES ? false : 'uharfbuzz/freetype غير مثبّتة');
+
+if (importError) {
+  console.error(
+    `\n⚠️  اختبارات تشكيل النص العربي لم تُشغَّل: ${importError}\n` +
+    '    ثبّت التبعيات: python3 -m pip install -r scripts/audio/requirements.txt\n',
+  );
+}
+// ⚠️ `false` لا `''`: Node يعتبر { skip: '' } تجاوزًا (يفحص النوع لا القيمة)
+// فيتخطى الاختبار بصمت وبلا سبب ظاهر. وقعتُ فيها فعليًا 2026-11-20.
+const skipDeps = skip || importError;
 
 test('layout: يرصف الحروف تصاعديًا بلا تراكب', { skip: skipDeps }, () => {
   const out = py(`
