@@ -141,25 +141,74 @@ export function checkSocialHead(html, target, sourceText = '') {
   return { ok: problems.length === 0, problems, meta };
 }
 
-/** قائمة كل ملفات MP3 المنشورة (مسار URL + حجم محلي للمقارنة) */
+/**
+ * قائمة ملفات MP3 **المنشورة فعلًا** (مسار URL + حجم محلي للمقارنة).
+ *
+ * ⚠️ عيب مُصلَح (2026-11-20): كانت تمشي على `assets/audio/` بلا استثناء،
+ * فتشمل `assets/audio/requests/` — أربعة عشر ملفًا لدفعة طلبات أُغلقت
+ * (`"productionSession": "requests b1 (منتهٍ)"` في _data/audio_voice_log.json)
+ * ولم يُنشأ لها صفحة قط. النتيجة: `verify` يفشل في **كل** نشر بـ
+ * «14/132 ملف فاشل» ويرشّح عيبًا حقيقيًا بين ضجيج دائم.
+ *
+ * المعيار الآن ليس مجلدًا مستثنى بالاسم — بل سؤال واحد يُجاب من الملفات:
+ * «هل يشير هذا الملف الصوتي إلى صفحة منشورة؟» يُقرأ من `audio_file:` في
+ * `_properties/` و`_requests/`. ما لا صفحة له لا يُنشر، فلا يُتحقق منه.
+ */
 export function listAudioFiles(root = ROOT) {
   const base = path.join(root, 'assets', 'audio');
   const out = [];
+  const referenced = referencedAudioPaths(root);
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith('.mp3')) {
         const rel = path.relative(path.join(root, 'assets', 'audio'), full).split(path.sep).join('/');
-        out.push({
-          url: `${AUDIO_PREFIX}${rel}`,
-          bytes: fs.statSync(full).size,
-        });
+        const url = `${AUDIO_PREFIX}${rel}`;
+        // ملف بلا صفحة منشورة = أصل لم يُنشر، لا يُتحقق من توفره على الموقع.
+        if (!referenced.has(url)) continue;
+        out.push({ url, bytes: fs.statSync(full).size });
       }
     }
   };
   if (fs.existsSync(base)) walk(base);
   return out.sort((a, b) => a.url.localeCompare(b.url));
+}
+
+/**
+ * مسارات الصوت التي تشير إليها صفحة منشورة (`audio_file:` في front matter).
+ * تُقرأ من `_properties/` و`_requests/` — هما المصدران اللذان يبني منهما
+ * Jekyll صفحاتٍ تحمل المشغّل. المجموعة الناتجة هي تعريف «المنشور» بلا تخمين.
+ */
+export function referencedAudioPaths(root = ROOT) {
+  const out = new Set();
+  const dirs = ['_properties', '_requests'].map((n) => path.join(root, n));
+
+  // قيمة الحقل في سطر front matter: بلا علامات اقتباس إن وُجدت.
+  // لا تعبير نمطي هنا: النمط `^audio_file:\\s*"?([^"\\n]+)"?\\s*$` كان يتجاوز
+  // قاعدة sonarjs/super-linear-regex الحاجزة بسبب تداخل `\\s*` مع `[^"]+`.
+  const fieldValue = (text) => {
+    for (const line of text.split('\n')) {
+      const t = line.trim();
+      if (t.startsWith('audio_file:')) {
+        const v = t.slice('audio_file:'.length).trim().replace(/^"|"$/g, '');
+        return v || null;
+      }
+    }
+    return null;
+  };
+
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith('.md')) continue;
+      let text = '';
+      try { text = fs.readFileSync(path.join(dir, file), 'utf8'); } catch { continue; }
+      const value = fieldValue(text);
+      if (value) out.add(value);
+    }
+  }
+  return out;
 }
 
 /**
