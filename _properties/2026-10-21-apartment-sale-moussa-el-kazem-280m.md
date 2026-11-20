@@ -7,6 +7,7 @@ price: "7,000,000 ج.م"
 category: apartments
 id: "moussa-el-kazem-280m-sale"
 slug: "apartment-sale-moussa-el-kazem-nasr-city-280m"
+image: "/assets/img/properties/og/Moussa-El-Kazem-Nasr-City-280m.jpg"
 image_file: "Moussa-El-Kazem-Nasr-City-280m.webp"
 area: "280 متر مربع (صافي)"
 rooms: "مساحة مفتوحة قابلة للتعديل والتقسيم"
