@@ -1,0 +1,27 @@
+# ═══════════════════════════════════════════════════════════════════
+# حزم بايثون التي يحتاجها راسم النص العربي (arabic_text.py)
+# ───────────────────────────────────────────────────────────────────
+# ما لا يعمل بدونها:
+#   • uharfbuzz   → ترصيف العربية RTL + الوصلات (ligatures). بدونه لا نص.
+#   • freetype-py → تحميل الحرف من TTF للحصول على الكيرنينغ والحدود.
+#   • numpy       → حسابات المواضع والأبعاد.
+#   • fonttools   → تحويل خطوط Cairo من woff2 إلى ttf (assets/fonts).
+#   • brotli      → فكّ ضغط woff2 — fonttools يفشل بدونه:
+#                   ImportError: No module named brotli
+#
+# سبب وجود هذا الملف (2026-11-20):
+# الاختبارات الحارسة (scripts/tests/arabic-text-layout.test.mjs) كانت
+# تُتجاوز (SKIP) لأن حزمتين فقط من الخمس تُفحص. وأثناء التحقق ظهر أن
+# numpy ثم fonttools ثم brotli ناقصة كلها تُنتج SKIP كاذبًا — أي أن
+# الحارس كان يُعمي نفسه. التثبيت:
+#
+#     python3 -m pip install -r scripts/audio/requirements.txt
+#
+# (تثبيت نظامي ممنوع في هذه البيئة — استخدم بيئة افتراضية:
+#  python3 -m venv /tmp/vv && /tmp/vv/bin/pip install -r ...)
+# ═══════════════════════════════════════════════════════════════════
+uharfbuzz==0.57.0
+freetype-py>=2.4
+numpy>=1.24
+fonttools[woff]>=4.40
+brotli>=1.1
