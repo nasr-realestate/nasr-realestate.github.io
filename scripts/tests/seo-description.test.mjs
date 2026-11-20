@@ -95,6 +95,7 @@ test("add-your-property.html: لا extra_head مكرر، والوصف والصو
   const fm = html.slice(0, html.indexOf('\n---', 4));
   assert.doesNotMatch(fm, /^extra_head:/m, 'extra_head يعيد تكرار OG/Twitter خارج {% seo %}');
   assert.match(fm, /^description:\s*\S/m);
-  assert.match(fm, /^image:\s*"\/assets\/img\/social-add-property\.png"/m);
+  // 2026-11-20: الصور أُعيد توليدها بالهوية الخضراء بصيغة JPG
+  assert.match(fm, /^image:\s*"\/assets\/img\/social-add-property\.jpg"/m);
   assert.doesNotMatch(html, /<meta name="description"/i, 'يجب أن يبقى {% seo %} هو مصدر وسم الوصف الوحيد');
 });
