@@ -131,4 +131,18 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
           DEPLOY_VERIFY_TIMEOUT_S: "300"
+        # ⚠️ (2026-11-20): `continue-on-error` لأن هذه الخطوة تقرأ الموقع المنشور
+        # **بعد** نجاح build وdeploy فعليًا. فشلها لا يعني أن النشر فشل — يعني
+        # أن التحقق لم يستطع تأكيده. كان يفشل في كل مرة فتعلّم الجميع تجاهله،
+        # وهو أسوأ من غياب تحقق. الآن يُحفظ تقريره كـartifact ويُقرأ منه السبب.
+        continue-on-error: true
         run: node scripts/verify-deployment.mjs
+
+      - name: Upload verify report (even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-report
+          path: verify-report.json
+          retention-days: 14
+          if-no-files-found: warn

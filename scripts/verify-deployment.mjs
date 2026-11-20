@@ -492,7 +492,24 @@ if (isMain) {
     expectedSha: process.env.EXPECTED_SHA || '',
     timeoutS: process.env.DEPLOY_VERIFY_TIMEOUT_S || 300,
   });
-  console.log(JSON.stringify(result.report, null, 2));
+  const reportText = JSON.stringify(
+    { ok: result.ok, failures: result.failures, report: result.report },
+    null,
+    2,
+  );
+  console.log(reportText);
+
+  // حفظ التقرير على القرص (2026-11-20): سجل Actions محجوب عن التحليل من
+  // خارج GitHub (روابط Azure المنقضية)، فكان كل فشل في `verify` أعمى:
+  // نعرف أنه فشل ولا نعرف في أي فحص. الآن يرفعه الـworkflow كـartifact.
+  const outPath = process.env.VERIFY_REPORT_PATH || 'verify-report.json';
+  try {
+    fs.writeFileSync(outPath, reportText + '\n');
+    console.log(`📄 التقرير: ${outPath}`);
+  } catch (err) {
+    console.error(`تعذّر كتابة ${outPath}: ${err.message}`);
+  }
+
   if (result.ok) {
     console.log(`✅ النشر متطابق: ${result.report.audio_checked} ملف صوت · ${result.report.feed?.properties} وحدة · MCP ${result.report.mcp?.properties}`);
   } else {
